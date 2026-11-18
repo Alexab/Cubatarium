@@ -232,7 +232,19 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                   " chunks=" + std::to_string(result.chunks.size()) +
                   " read_set=" + std::to_string(result.read_set.size()) +
                   " frontier_unfinished=" +
-                  std::to_string(result.frontier_unfinished));
+                  std::to_string(result.frontier_unfinished) +
+                  " sky_seed_candidates=" +
+                  std::to_string(result.sky_flood_work.candidate_seeds) +
+                  " sky_seeds=" +
+                  std::to_string(result.sky_flood_work.queued_seeds) +
+                  " sky_neighbor_visits=" +
+                  std::to_string(result.sky_flood_work.neighbor_visits) +
+                  " sky_saturated_tiles=" +
+                  std::to_string(result.sky_flood_work.saturated_tiles) +
+                  " block_seeds=" +
+                  std::to_string(result.block_flood_work.queued_seeds) +
+                  " block_neighbor_visits=" +
+                  std::to_string(result.block_flood_work.neighbor_visits));
         }
         result.job_id = job_id;
         result.submitEpoch = submit_epoch;

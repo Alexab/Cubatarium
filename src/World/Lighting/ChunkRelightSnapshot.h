@@ -80,6 +80,17 @@ inline bool BlockLightUnchanged(const std::array<uint8_t, CHUNK_VOLUME> &before,
   return true;
 }
 
+/// Observed solver work; never used as proof of light/input readiness.
+struct RelightFloodWork
+{
+  uint64_t candidate_seeds{0};
+  uint64_t queued_seeds{0};
+  uint64_t popped_nodes{0};
+  uint64_t neighbor_visits{0};
+  uint64_t propagated_cells{0};
+  uint64_t saturated_tiles{0};
+};
+
 struct RelightComputeResult
 {
   uint64_t job_id{0};
@@ -104,6 +115,8 @@ struct RelightComputeResult
   bool include_skylight{true};
   bool include_block_light{true};
   std::vector<glm::ivec3> source_block_positions;
+  RelightFloodWork sky_flood_work;
+  RelightFloodWork block_flood_work;
 };
 
 /// Immutable geometry input for relight with a full-section influence halo.

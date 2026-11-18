@@ -6214,9 +6214,116 @@
       "status": "Open; next work must reduce measured service latency and make motion forecasting cover it, without weakening readiness or pixel references.",
       "counterexample": "Retain geometry_only_no_surface_authority native failing creature samples and its producer receipt: 930.58ms compute, total1.329s submission-to-apply, first missing samples before completion. Later all-ready runs do not negate it.",
       "current_source": "LightSampleApproach.h claims1second measured motion but clamps each displacement to32blocks; at actual50blocks/sec terminal fall this covers only0.64seconds. World.cpp requests these approaches before draw and fair service already exists. Simply increasing queue fairness again does not address this bound.",
-      "solver_source": "ChunkRelightSnapshot::Compute already caches material definitions/topology and uses level buckets. It currently enqueues every sky>1cell, including saturated15interiors that cannot raise neighbors in the same saturated tile. Investigate safe frontier-only seeding with independent dense Jacobi8000-cell parity, negative control for omitted cross-tile seeds and measured work/time counters before claiming speedup.",
+      "solver_source": "Saturated sky frontier optimization now implemented and independently checked; see saturated_skylight_frontier. Native delivery deadlines and bounded motion forecasting still open.",
       "forecast_requirement": "Use actual physics/velocity and observed bounded delivery costs; cover falling acceleration and terminal motion without an unbounded3D box or invented readiness. Verify startup/movement actual native receipts, not only forecast helper tests.",
       "other_required_work": "Complete normal renderer physical-field shader cutover and source-epoch authority, capacity fallback, typed section publication/NoDraw diagnostics, persisted content certificates, GPU solver/backend parity, RGB/transparency and cold/warm/edit/eviction/memory/performance matrix remain required by original plan."
+    },
+    "saturated_skylight_frontier": {
+      "status": "Implemented; independent reference,13restored Release unit/driver tests and7synchronous-light variants PASS. Exact app build/native pending.",
+      "root_cause": "A27tile fully sunlit AIR computation queued110592max-level seeds, visited663552neighbors and changed0cells. Saturated interiors cannot raise their already maximum neighbors; only interfaces with non-saturated compute tiles can initiate useful transport.",
+      "implementation": "Classify exact full tile sky15 once after direct column seeding. Build signed-axis boundary mask for adjacent non-saturated compute tiles; seed only these planes from saturated tiles. All seeds retained in other tiles; block light unchanged. No halo/world extent or input/read-set/certificate contract change. Per-channel candidate/queued/pop/neighbor/update counters and saturated-tile count are observation only. Async worker_done receipts expose sky/block work alongside compute_ms.",
+      "independent_reference": "section_skylight_frontier_test: four authored geometry cases including allAIR, roof with lateral entry, cave/hole plus water curtain, deterministic mixed shadow/water. Direct column skylight plus15Jacobi iterations over48cube, comparing every8000padded cell and zero block channel. Existing unknown/clipped-profile/source removal tests also retained.",
+      "work_reduction": "AllAIR seeds110592->0 and neighbor visits663552->0. Lateral roof seeds102400->2304, same7936transported cells. Cave/hole seeds36896->2336, same11855transported cells. Mixed geometry has no saturated tile and retains same47752seeds/61490updates.",
+      "local_timing": {
+        "schema": "sky-frontier-local-release-benchmark.v1",
+        "scope": "Same four independent8000cell physical reference cases,9warmed Compute calls per scenario, median wall time in isolated unit executable. No native throughput or latency acceptance. Initial preoptimization source was uncommitted; baseline log retained, no exact baseline binary SHA claim. Deterministic seed/node counts support work reduction independently of timings.",
+        "before": [
+          {
+            "scenario": 0,
+            "candidates": 110592,
+            "seeds": 110592,
+            "popped": 110592,
+            "visits": 663552,
+            "updates": 0,
+            "saturated_tiles": 0,
+            "median_ms": 25.606
+          },
+          {
+            "scenario": 1,
+            "candidates": 102400,
+            "seeds": 102400,
+            "popped": 110336,
+            "visits": 662016,
+            "updates": 7936,
+            "saturated_tiles": 0,
+            "median_ms": 22.4505
+          },
+          {
+            "scenario": 2,
+            "candidates": 36896,
+            "seeds": 36896,
+            "popped": 47356,
+            "visits": 284136,
+            "updates": 11855,
+            "saturated_tiles": 0,
+            "median_ms": 12.9488
+          },
+          {
+            "scenario": 3,
+            "candidates": 47752,
+            "seeds": 47752,
+            "popped": 109242,
+            "visits": 637800,
+            "updates": 61490,
+            "saturated_tiles": 0,
+            "median_ms": 26.0431
+          }
+        ],
+        "after": [
+          {
+            "scenario": 0,
+            "candidates": 110592,
+            "seeds": 0,
+            "popped": 0,
+            "visits": 0,
+            "updates": 0,
+            "saturated_tiles": 27,
+            "median_ms": 1.5093
+          },
+          {
+            "scenario": 1,
+            "candidates": 102400,
+            "seeds": 2304,
+            "popped": 10240,
+            "visits": 61440,
+            "updates": 7936,
+            "saturated_tiles": 25,
+            "median_ms": 3.1737
+          },
+          {
+            "scenario": 2,
+            "candidates": 36896,
+            "seeds": 2336,
+            "popped": 12796,
+            "visits": 76776,
+            "updates": 11855,
+            "saturated_tiles": 9,
+            "median_ms": 3.6523
+          },
+          {
+            "scenario": 3,
+            "candidates": 47752,
+            "seeds": 47752,
+            "popped": 109242,
+            "visits": 637800,
+            "updates": 61490,
+            "saturated_tiles": 0,
+            "median_ms": 25.1458
+          }
+        ],
+        "speed_ratios": [
+          16.96548068641092,
+          7.073920030248606,
+          3.5453823617994145,
+          1.0356838915445123
+        ]
+      },
+      "negative_control": "engine-sky-frontier-frontier-red-test.log: omitting needed cross-tile frontier seeds fails independent8000cell reference. Source restored byte-exact per engine-sky-frontier-negative-control.json, followed by13/13tests PASS. No RED application build/launch.",
+      "test_logs": [
+        "engine-sky-frontier-restored-tests.log",
+        "engine-sky-frontier-synchronous-seven-test.log"
+      ],
+      "limits": "Local Compute timing is not a native delivery-latency or overall FPS claim. Prior930.58ms/1.329s falling-consumer counterexample and0.64s capped forecast remain open; native work receipts and physics/latency-aware bounded forecasting still required."
     }
   }
 }

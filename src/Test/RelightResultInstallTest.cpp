@@ -11,6 +11,7 @@
 #include "World/Streaming/MeshLitGate.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <deque>
 #include <iostream>
@@ -876,6 +877,172 @@ void TestGeometryHaloAgainstDenseReference()
     const auto repeated = snapshot.Compute(registry);
     Expect(repeated.chunks[0].light_packed == result.chunks[0].light_packed,
            "reusing immutable snapshot recomputes the same field");
+  }
+}
+
+// Independent direct-column seed plus synchronous dense Jacobi relaxation.
+// In particular, a fully sunlit neighboring tile must illuminate a roofed
+// tile laterally even when its own interior needs no propagation.
+void TestSkyFrontierAgainstDenseReference(bool benchmark = false)
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone, water;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  water.Physics.IsLiquid = true;
+  water.Physics.Movement.Occupancy = 0;
+  water.Render.Style = BlockRenderStyle::Fluid;
+  definitions->ReplaceAll({{8, stone}, {9, water}},
+                          {{"stone", 8}, {"water", 9}});
+  UBlockRegistry registry(nullptr, definitions);
+  constexpr int width = 48;
+  const auto index = [=](int x, int y, int z)
+  { return x + width * (y + width * z); };
+  const glm::ivec3 origin(-32, -48, -16), target(-1, -2, 0);
+  for (int scenario = 0; scenario < 4; ++scenario)
+  {
+    UBlockWorld world;
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.GetChunkManager().EnsureChunk(target);
+    std::vector<BlockId> cells(width * width * width, BLOCK_AIR);
+    const auto place = [&](int x, int y, int z, BlockId id)
+    {
+      cells[index(x, y, z)] = id;
+      world.SetBlock(origin + glm::ivec3(x, y, z), id);
+    };
+    if (scenario == 1 || scenario == 2)
+    {
+      const int low = scenario == 1 ? 16 : 0;
+      const int high = scenario == 1 ? 32 : width;
+      for (int z = low; z < high; ++z)
+        for (int x = low; x < high; ++x)
+          if (scenario == 1 || x != 8 || z != 24)
+            place(x, 31, z, 8);
+      for (int y = 12; y < 29; ++y)
+        for (int x = 16; x < 32; ++x)
+          place(x, y, 24, 9);
+    }
+    if (scenario == 3)
+    {
+      // Repeatable mixed skylight/shadow/water across all six tile boundaries.
+      uint32_t random = 0x81a67u;
+      for (int z = 0; z < width; ++z)
+        for (int y = 0; y < width; ++y)
+          for (int x = 0; x < width; ++x)
+          {
+            random = random * 1664525u + 1013904223u;
+            if ((random >> 24) < 10)
+              place(x, y, z, 8);
+            else if ((random >> 24) < 18)
+              place(x, y, z, 9);
+          }
+    }
+    std::vector<uint8_t> reference(cells.size()), next;
+    for (int z = 0; z < width; ++z)
+      for (int x = 0; x < width; ++x)
+      {
+        int level = 15;
+        for (int y = width - 1; y >= 0; --y)
+        {
+          const int i = index(x, y, z);
+          if (cells[i] == 8)
+            level = 0;
+          reference[i] = static_cast<uint8_t>(level);
+          if (cells[i] == 9 && level > 0)
+            --level;
+        }
+      }
+    for (int iteration = 0; iteration < 15; ++iteration)
+    {
+      next = reference;
+      for (int z = 1; z < width - 1; ++z)
+        for (int y = 1; y < width - 1; ++y)
+          for (int x = 1; x < width - 1; ++x)
+          {
+            const int i = index(x, y, z);
+            if (cells[i] == 8)
+              continue;
+            const int adjacent = std::max(
+                {reference[i - 1], reference[i + 1], reference[i - width],
+                 reference[i + width], reference[i - width * width],
+                 reference[i + width * width]});
+            next[i] = static_cast<uint8_t>(std::max<int>(
+                reference[i], adjacent - (cells[i] == 9 ? 2 : 1)));
+          }
+      reference.swap(next);
+    }
+    RelightJobSpec spec;
+    spec.min_world_y = -32;
+    spec.max_world_y = -17;
+    spec.include_block_light = false;
+    auto snapshot =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {target});
+    const auto result = snapshot.Compute(registry);
+    Expect(result.inputs_complete && result.chunks.size() == 1 &&
+               result.chunks[0].padded_light,
+           "sky frontier reference has complete geometry-derived output");
+    int nonzero_shadow = 0, dark = 0;
+    for (int z = -2; z < 18; ++z)
+      for (int y = -2; y < 18; ++y)
+        for (int x = -2; x < 18; ++x)
+        {
+          const auto expected = reference[index(x + 16, y + 16, z + 16)];
+          const auto packed =
+              result.chunks[0]
+                  .padded_light->cells[SectionLightVolume::Index(x, y, z)];
+          Expect(UnpackSky(packed) == expected && UnpackBlock(packed) == 0,
+                 "all8000 sky/water/cave halo cells match independent Jacobi "
+                 "reference");
+          nonzero_shadow += expected > 0 && expected < 15;
+          dark += expected == 0;
+        }
+    if (scenario != 0)
+      Expect(nonzero_shadow > 0 && dark > 0,
+             "reference actually exercises both transported shadow light and "
+             "darkness");
+    if (scenario == 0)
+      Expect(result.sky_flood_work.candidate_seeds == 27u * CHUNK_VOLUME &&
+                 result.sky_flood_work.saturated_tiles == 27 &&
+                 result.sky_flood_work.queued_seeds == 0 &&
+                 result.sky_flood_work.neighbor_visits == 0,
+             "fully saturated sky avoids all redundant propagation work");
+    if (scenario == 1)
+      Expect(result.sky_flood_work.saturated_tiles > 0 &&
+                 result.sky_flood_work.queued_seeds > 0 &&
+                 result.sky_flood_work.queued_seeds <
+                     result.sky_flood_work.candidate_seeds / 2,
+             "roof shadow keeps cross-tile frontier seeds while pruning sunlit "
+             "interiors");
+    const auto repeated = snapshot.Compute(registry);
+    Expect(
+        repeated.chunks[0].padded_light->cells ==
+            result.chunks[0].padded_light->cells,
+        "reused skylight snapshot resets working light before recomputation");
+    if (benchmark)
+    {
+      std::vector<double> timings;
+      for (int run = 0; run < 9; ++run)
+      {
+        const auto start = std::chrono::steady_clock::now();
+        const auto measured = snapshot.Compute(registry);
+        timings.push_back(std::chrono::duration<double, std::milli>(
+                              std::chrono::steady_clock::now() - start)
+                              .count());
+        Expect(measured.chunks[0].padded_light->cells ==
+                   result.chunks[0].padded_light->cells,
+               "benchmark consumes unchanged correct physical result");
+      }
+      std::sort(timings.begin(), timings.end());
+      const auto &work = result.sky_flood_work;
+      std::cout << "sky_frontier scenario=" << scenario
+                << " candidates=" << work.candidate_seeds
+                << " seeds=" << work.queued_seeds
+                << " popped=" << work.popped_nodes
+                << " visits=" << work.neighbor_visits
+                << " updates=" << work.propagated_cells
+                << " saturated_tiles=" << work.saturated_tiles
+                << " median_ms=" << timings[timings.size() / 2] << '\n';
+    }
   }
 }
 
@@ -2137,6 +2304,12 @@ void TestPendingCoverageRequiresCurrentKnownProof()
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--sky-frontier")
+  {
+    TestSkyFrontierAgainstDenseReference(true);
+    std::cout << "section_skylight_frontier_test: OK\n";
+    return 0;
+  }
   if (argc == 2 && std::string(argv[1]) == "--pending-coverage")
   {
     TestPendingCoverageRequiresCurrentKnownProof();
@@ -2159,6 +2332,7 @@ int main(int argc, char **argv)
   {
     TestSectionLightUsesKnownEmitterGeometry();
     TestGeometryHaloAgainstDenseReference();
+    TestSkyFrontierAgainstDenseReference();
     TestUnknownGeometryAndPinnedCatalog();
     TestClippedProfileDoesNotSeedOutOfWorldSource();
     std::cout << "section_light_geometry_test: OK\n";
@@ -2185,6 +2359,7 @@ int main(int argc, char **argv)
   TestRelightInputContextAndSeparateChannels();
   TestSectionLightUsesKnownEmitterGeometry();
   TestGeometryHaloAgainstDenseReference();
+  TestSkyFrontierAgainstDenseReference();
   TestUnknownGeometryAndPinnedCatalog();
   TestClippedProfileDoesNotSeedOutOfWorldSource();
   std::cout << "relight_result_install_test: OK\n";

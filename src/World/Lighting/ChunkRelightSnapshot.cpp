@@ -408,6 +408,8 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
     int min_local_y;
     int max_local_y;
     std::array<Tile *, 6> neighbors{};
+    bool saturated_sky{false};
+    uint8_t sky_seed_planes{0};
   };
   std::vector<Tile> tiles;
   tiles.reserve(Light.size());
@@ -432,8 +434,26 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
       if (it != tile_indices.end())
         tile.neighbors[face] = &tiles[it->second];
     }
+  if (Spec.include_skylight)
+  {
+    for (auto &tile : tiles)
+      tile.saturated_sky =
+          std::all_of(tile.light->begin(), tile.light->end(), [](uint8_t packed)
+                      { return UnpackSky(packed) == kMaxLightLevel; });
+    for (auto &tile : tiles)
+      if (tile.saturated_sky)
+        for (size_t face = 0; face < 6; ++face)
+          if (tile.neighbors[face] && !tile.neighbors[face]->saturated_sky)
+          {
+            const auto d = NEIGHBOR_OFFSETS[face];
+            const int axis = d.x != 0 ? 0 : d.y != 0 ? 1 : 2;
+            tile.sky_seed_planes |=
+                static_cast<uint8_t>(1u << (axis * 2 + (d[axis] > 0 ? 1 : 0)));
+          }
+  }
   const auto flood = [&](bool sky)
   {
+    auto &work = sky ? result.sky_flood_work : result.block_flood_work;
     static_assert(CHUNK_VOLUME <=
                   static_cast<int>(std::numeric_limits<uint16_t>::max()) + 1);
     struct Node
@@ -443,18 +463,45 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
     };
     std::array<std::deque<Node>, kMaxLightLevel + 1> buckets;
     for (auto &tile : tiles)
+    {
+      work.saturated_tiles += sky && tile.saturated_sky;
       for (int i = 0; i < CHUNK_VOLUME; ++i)
       {
         const auto packed = (*tile.light)[i];
         const int level = sky ? UnpackSky(packed) : UnpackBlock(packed);
         if (level > 1)
+        {
+          ++work.candidate_seeds;
+          // A maximum-light interior cannot improve another cell in this
+          // already saturated tile. Only faces adjoining a darker tile can
+          // initiate useful transport. Non-saturated tiles retain all seeds.
+          if (sky && tile.saturated_sky)
+          {
+            const auto planes = tile.sky_seed_planes;
+            if (planes == 0)
+              continue;
+            const int x = i % CHUNK_SIZE;
+            const int y = (i / CHUNK_SIZE) % CHUNK_SIZE;
+            const int z = i / (CHUNK_SIZE * CHUNK_SIZE);
+            if (!((x == 0 && (planes & 1u)) ||
+                  (x == CHUNK_SIZE - 1 && (planes & 2u)) ||
+                  (y == 0 && (planes & 4u)) ||
+                  (y == CHUNK_SIZE - 1 && (planes & 8u)) ||
+                  (z == 0 && (planes & 16u)) ||
+                  (z == CHUNK_SIZE - 1 && (planes & 32u))))
+              continue;
+          }
+          ++work.queued_seeds;
           buckets[level].push_back({&tile, static_cast<uint16_t>(i)});
+        }
       }
+    }
     for (int level = kMaxLightLevel; level > 1; --level)
       while (!buckets[level].empty())
       {
         const auto node = buckets[level].front();
         buckets[level].pop_front();
+        ++work.popped_nodes;
         const auto packed = (*node.tile->light)[node.index];
         if ((sky ? UnpackSky(packed) : UnpackBlock(packed)) != level)
           continue;
@@ -463,6 +510,7 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
                                node.index / (CHUNK_SIZE * CHUNK_SIZE));
         for (size_t face = 0; face < 6; ++face)
         {
+          ++work.neighbor_visits;
           auto next_local = local + NEIGHBOR_OFFSETS[face];
           Tile *tile = node.tile;
           if (!InChunkLocal(next_local))
@@ -495,6 +543,7 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
             continue;
           target = sky ? PackLight(next, UnpackBlock(target))
                        : PackLight(UnpackSky(target), next);
+          ++work.propagated_cells;
           if (next > 1)
             buckets[next].push_back({tile, static_cast<uint16_t>(index)});
         }
