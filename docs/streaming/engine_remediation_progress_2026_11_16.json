@@ -6691,11 +6691,52 @@
       "limits": "Default separate GPU field shaders, Cross/MDI handle transport, full underwater/RGB/backend/performance matrix, persistence content certificates and originalS0..S6completion remain open."
     },
     "exact_internal_air_absence": {
-      "status": "Implemented; three Release tests PASS including actual physical compute/install/provenance. Required app build and sprint native pending. Does not yet guarantee same-frame refresh after real roof mutation.",
+      "status": "Implemented and verified:3Release tests including actual physical compute/install/provenance, two RED controls with exact restore, required application build/static6DLLcheck. Native sprint verifies no observed falseKnownAir-toUnknown failure, but11current-input refresh failures remain; full motion gate still FAIL.",
       "implementation": "Disk directory index retains exact signed Y membership per column as well as highest Y. Saves update membership, removals invalidate/rebuild even below highest; cold index reconstructs both supported format memberships. BlockWorld optional exact internal absence query shares terrain/disk revision authority with floor query. Production admits internal absence only for complete terrain, nonempty world identity, no pending column write, no resident section and exact disk absence. World ray/camera missing-section policy uses the same BlockWorld authority.",
       "validation": "engine-exact-absence-physical-tests.log:3/3PASS. Native-derived upper-island regression retains negative internal AIR stamp with and without batch validation. Actual padded field initially completes, real upper geometry invalidates it, fresh solver computes/installs complete successor with0unknown inputs. Incomplete terrain, pending save, unloaded saved internal data reject AIR. Save/delete below unchanged higher disk roof and cold index cases covered. Legacy highest-only policy remains conservative.",
       "negative_controls": "engine-exact-absence-negative-controls.json: removing exact internal query fails native-derived upper-island assertion; unconditional disk absence fails unloaded persisted-data protection. Byte-exact production source restore, rebuilt3testsPASS. Added physical solver/install coverage afterwards and final3testsPASS. No RED application build/launch.",
-      "remaining": "Real roof changes still correctly invalidate old read sets. Exact absence removes false unknown gaps and allows complete recalculation; readiness before paint still requires native validation and may need focused refresh/publication work. Original232frame sprint failure is retained, never reclassified."
+      "remaining": "After actual roof mutations, complete field successor still arrives3and8paints late in two observed sections. Need current-input refresh/publication before paint for affected consumers; exact absence alone deliberately does not make old roof stamps current. Original fullS0..S6scope remains active.",
+      "release_build": "engine-exact-absence-release-build.log: required Cubatarium Release command exits0, static executable dependency verification PASS.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-exact-absence-sprint-native",
+        "observation": "exact-absence-sprint-observation.json",
+        "source_commit": "934d2d220cf8d4414390a55371aa9f801c001898",
+        "overall": "FAIL",
+        "app_exit": 0,
+        "observed_shell_exit": 1,
+        "runtime": {
+          "ingame_frames": 3392,
+          "wall_elapsed_sec": 139.909,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 2081,
+          "diagnostic_relocations_after_start": 0
+        },
+        "camera_ready": "3381/3392",
+        "first_person_faults": 11,
+        "inspection_pngs": "30/30",
+        "failure_classes": {
+          "resident_content_or_identity_change": 11
+        },
+        "failure_sections": {
+          "(-7,-3,3)": {
+            "first": 1409,
+            "last": 1411,
+            "frames": 3,
+            "stale_inputs": [
+              "(-8,2,4)"
+            ]
+          },
+          "(-9,-3,3)": {
+            "first": 1572,
+            "last": 1579,
+            "frames": 8,
+            "stale_inputs": [
+              "(-8,2,2)"
+            ]
+          }
+        },
+        "scope": "No absentKnownAir-toUnknown transition among observed camera failures. All11failureframes instead cite actual newly resident upper geometry with nonzero incarnation/content revision. Prior sprint232frames retained; different scheduling prevents controlled performance/percentage claims. Other named scoped references PASS; genericRGBUNTESTED. Sourceworld/config/EXE independently checked alltrue."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -6720,6 +6761,6 @@
       "S5": "resource infrastructure verified, default renderer integration pending",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
-    "latest_native_counterexample": "579239597native:20camera/first-person unready frames in a previously ready AIR field, inc6498. S2motion acceptance remains incomplete; exact stale dependency must be diagnosed before closing."
+    "latest_native_counterexample": "934d2d220sprint:11camera/first-person unready frames(3+8), all caused by actual upper geometry identity/content change,0observed false absentKnownAir-toUnknown transitions. Earlier62c35c69d232frameand57923959720frame failures retained. Current-input refresh/publication is the next S2/S4priority."
   }
 }
