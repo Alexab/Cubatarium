@@ -129,6 +129,15 @@ struct ChunkMeshSnapshot
   FluidCellState GetFluid(glm::ivec3 worldPos) const;
   glm::ivec3 ChunkOrigin() const;
   NeighborLoadState GetNeighborLoadState(glm::ivec3 worldPos) const;
+
+private:
+  friend class UGreedyMesher;
+  static ChunkMeshSnapshot CaptureGeometry(const UBlockWorld &world,
+                                           glm::ivec3 coord);
+  static ChunkMeshSnapshot CaptureImpl(const UBlockWorld &world,
+                                       glm::ivec3 coord, uint64_t revision,
+                                       NeighborVisualDrawableFn drawable,
+                                       void *ctx, bool capture_light);
 };
 
 } // namespace cutum

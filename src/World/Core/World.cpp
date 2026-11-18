@@ -2824,6 +2824,29 @@ void UWorld::EnqueueVoidDarkColumnRelightNote(glm::ivec2 col_xz)
                                 __FUNCTION__);
 }
 
+bool UWorld::HasCurrentNoSurfaceProof(glm::ivec3 coord) const
+{
+  if (!BlockRegistry || !BlockWorld.GetChunkManager().HasChunk(coord))
+    return false;
+  const auto catalog = BlockRegistry->GetDefinitionsCatalogSnapshot();
+  const auto inputs = BlockWorld.CaptureGeometryRenderInputs(coord, catalog);
+  if (!inputs.valid)
+    return false;
+  const auto found = NoSurfaceCache.find(coord);
+  if (found != NoSurfaceCache.end() && found->second.inputs.Matches(inputs))
+    return found->second.proof && found->second.proof->Matches(inputs);
+  auto proof = UGreedyMesher::CaptureNoSurface(BlockWorld, coord,
+                                               *BlockRegistry, catalog);
+  // Bounded across long flights and world resets. Clearing only drops cached
+  // evidence; it cannot make a section ready or preserve stale evidence.
+  if (NoSurfaceCache.size() >= 16384)
+    NoSurfaceCache.clear();
+  const bool ready = proof && proof->Matches(inputs);
+  NoSurfaceCache.insert_or_assign(
+      coord, NoSurfaceCacheEntry{inputs, std::move(proof)});
+  return ready;
+}
+
 bool UWorld::HasCurrentColumnLightCoverage(glm::ivec2 column, int min_y,
                                            int max_y) const
 {
@@ -2843,7 +2866,13 @@ bool UWorld::HasCurrentColumnLightCoverage(glm::ivec2 column, int min_y,
     const glm::ivec3 coord(column.x, cy, column.y);
     if (BlockWorld.GetChunkManager().HasChunk(coord))
     {
-      if (!BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
+      const bool sample_required =
+          MeshService &&
+          GetRenderDemandStore().HasLightSampleDemand(
+              coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+              StreamingFrameEpoch);
+      if ((sample_required || !HasCurrentNoSurfaceProof(coord)) &&
+          !BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog))
         return false;
     }
     else
@@ -3595,6 +3624,11 @@ bool UWorld::ShouldDrawProvisionalLightPreview(glm::ivec3 chunk_coord) const
 
 bool UWorld::IsChunkSliceRenderReady(glm::ivec3 chunk_coord) const
 {
+  // NoDraw is separate from light-ready. Suppress any predecessor geometry
+  // before the frame memo; a new proof must also hide an old surface mesh.
+  if (HasCurrentNoSurfaceProof(chunk_coord))
+    return false;
+
   if (!MeshService)
   {
     return false;
@@ -11792,6 +11826,7 @@ json RequiredPresentationJson(const RequiredPresentationCoverage &s,
           {"known_air_sections", s.known_air_sections},
           {"resident_air_sections", s.resident_air_sections},
           {"surface_sections", s.surface_sections},
+          {"certified_no_surface_sections", s.certified_no_surface_sections},
           {"light_unready_sections", s.light_unready_sections},
           {"publication_unready_sections", s.publication_unready_sections},
           {"ready", s.Ready()}};
@@ -12011,11 +12046,19 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage(
             return out;
           continue;
         }
+        const bool no_surface = HasCurrentNoSurfaceProof(coord);
+        if (no_surface)
+          ++out.certified_no_surface_sections;
+        const bool sample_required =
+            MeshService &&
+            GetRenderDemandStore().HasLightSampleDemand(
+                coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+                StreamingFrameEpoch);
         const bool light =
-            !RequiresLightingLitGate() ||
+            !RequiresLightingLitGate() || (no_surface && !sample_required) ||
             BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog);
         const bool publication =
-            chunk->IsAirOnly() ||
+            no_surface || chunk->IsAirOnly() ||
             CurrentSlicePublicationReadyForWarmup(*this, coord);
         out.ObserveResident(chunk->IsAirOnly(), light, publication);
         if (stop_on_debt && (!light || !publication))
@@ -12041,7 +12084,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
       [&](glm::ivec3 coord)
       {
         const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        if (!chunk || chunk->IsAirOnly() ||
+        if (!chunk || HasCurrentNoSurfaceProof(coord) || chunk->IsAirOnly() ||
             CurrentSlicePublicationReadyForWarmup(*this, coord) ||
             !ChunkSliceHasCurrentLightSettlement(*this, coord))
           return;

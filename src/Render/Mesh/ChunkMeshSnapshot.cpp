@@ -287,6 +287,22 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
     NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)
 {
+  return CaptureImpl(world, chunkCoord, sourceRevision, neighbor_drawable,
+                     neighbor_drawable_ctx, true);
+}
+
+ChunkMeshSnapshot ChunkMeshSnapshot::CaptureGeometry(const UBlockWorld &world,
+                                                     glm::ivec3 coord)
+{
+  return CaptureImpl(world, coord, 0, nullptr, nullptr, false);
+}
+
+ChunkMeshSnapshot
+ChunkMeshSnapshot::CaptureImpl(const UBlockWorld &world, glm::ivec3 chunkCoord,
+                               uint64_t sourceRevision,
+                               NeighborVisualDrawableFn neighbor_drawable,
+                               void *neighbor_drawable_ctx, bool capture_light)
+{
   const auto capture_t0 = std::chrono::steady_clock::now();
   auto stage_t0 = capture_t0;
   const auto note_slow_stage = [&](const char *stage)
@@ -321,7 +337,8 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   snapshot.blocks = chunk->GetData();
   snapshot.inputStampsValid = true;
   snapshot.fluid_packed = chunk->GetFluidData();
-  snapshot.light_packed = chunk->GetLightData();
+  if (capture_light)
+    snapshot.light_packed = chunk->GetLightData();
   note_slow_stage("center_chunk_copy");
   if (const char *trace_env = []() -> const char *
       {
@@ -349,86 +366,90 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
   const glm::ivec3 origin = snapshot.ChunkOrigin();
   // Capture exactly the radius-2 light neighborhood read by FaceLightPacked.
   // Copy by chunk once (27 lookups), not by voxel through the chunk map.
-  size_t signature_index = 0;
-  for (int dy = -1; dy <= 1; ++dy)
+  if (capture_light)
   {
-    for (int dz = -1; dz <= 1; ++dz)
+    size_t signature_index = 0;
+    for (int dy = -1; dy <= 1; ++dy)
     {
-      for (int dx = -1; dx <= 1; ++dx)
+      for (int dz = -1; dz <= 1; ++dz)
       {
-        const glm::ivec3 chunk_offset(dx, dy, dz);
-        const UChunk *light_chunk =
-            world.GetChunkManager().GetChunk(chunkCoord + chunk_offset);
-        if (light_chunk && (dx != 0 || dy != 0 || dz != 0))
+        for (int dx = -1; dx <= 1; ++dx)
         {
-          glm::ivec3 dst_min(0);
-          glm::ivec3 dst_max(CHUNK_SIZE - 1);
-          for (int axis = 0; axis < 3; ++axis)
+          const glm::ivec3 chunk_offset(dx, dy, dz);
+          const UChunk *light_chunk =
+              world.GetChunkManager().GetChunk(chunkCoord + chunk_offset);
+          if (light_chunk && (dx != 0 || dy != 0 || dz != 0))
           {
-            if (chunk_offset[axis] < 0)
+            glm::ivec3 dst_min(0);
+            glm::ivec3 dst_max(CHUNK_SIZE - 1);
+            for (int axis = 0; axis < 3; ++axis)
             {
-              dst_min[axis] = -kLightHaloRadius;
-              dst_max[axis] = -1;
-            }
-            else if (chunk_offset[axis] > 0)
-            {
-              dst_min[axis] = CHUNK_SIZE;
-              dst_max[axis] = CHUNK_SIZE + kLightHaloRadius - 1;
-            }
-          }
-          for (int y = dst_min.y; y <= dst_max.y; ++y)
-          {
-            for (int z = dst_min.z; z <= dst_max.z; ++z)
-            {
-              for (int x = dst_min.x; x <= dst_max.x; ++x)
+              if (chunk_offset[axis] < 0)
               {
-                const glm::ivec3 dst_local(x, y, z);
-                const glm::ivec3 neighbor_local =
-                    dst_local - chunk_offset * CHUNK_SIZE;
-                snapshot.paddedLight[static_cast<size_t>(
-                    LightHaloFlatIndex(dst_local))] =
-                    light_chunk->GetLightPackedLocal(neighbor_local);
+                dst_min[axis] = -kLightHaloRadius;
+                dst_max[axis] = -1;
+              }
+              else if (chunk_offset[axis] > 0)
+              {
+                dst_min[axis] = CHUNK_SIZE;
+                dst_max[axis] = CHUNK_SIZE + kLightHaloRadius - 1;
+              }
+            }
+            for (int y = dst_min.y; y <= dst_max.y; ++y)
+            {
+              for (int z = dst_min.z; z <= dst_max.z; ++z)
+              {
+                for (int x = dst_min.x; x <= dst_max.x; ++x)
+                {
+                  const glm::ivec3 dst_local(x, y, z);
+                  const glm::ivec3 neighbor_local =
+                      dst_local - chunk_offset * CHUNK_SIZE;
+                  snapshot.paddedLight[static_cast<size_t>(
+                      LightHaloFlatIndex(dst_local))] =
+                      light_chunk->GetLightPackedLocal(neighbor_local);
+                }
               }
             }
           }
-        }
-        const bool absent_open_sky =
-            (dx != 0 || dy != 0 || dz != 0) && !light_chunk &&
-            IsAbsentOpenSkyChunk(world, chunkCoord + chunk_offset);
-        if (absent_open_sky)
-        {
-          snapshot.openSkyAbsentMask |=
-              1u << ((dy + 1) * 9 + (dz + 1) * 3 + (dx + 1));
-        }
-        if (dx != 0 || dy != 0 || dz != 0)
-        {
-          snapshot.lightHaloSignatures[signature_index++] =
-              PaddedLightHaloSignature(snapshot.paddedLight, chunk_offset,
-                                       absent_open_sky);
+          const bool absent_open_sky =
+              (dx != 0 || dy != 0 || dz != 0) && !light_chunk &&
+              IsAbsentOpenSkyChunk(world, chunkCoord + chunk_offset);
+          if (absent_open_sky)
+          {
+            snapshot.openSkyAbsentMask |=
+                1u << ((dy + 1) * 9 + (dz + 1) * 3 + (dx + 1));
+          }
+          if (dx != 0 || dy != 0 || dz != 0)
+          {
+            snapshot.lightHaloSignatures[signature_index++] =
+                PaddedLightHaloSignature(snapshot.paddedLight, chunk_offset,
+                                         absent_open_sky);
+          }
         }
       }
     }
+    snapshot.renderLight = world.CaptureRenderLightSnapshot(chunkCoord);
+    const auto captured_volume =
+        snapshot.renderLight ? snapshot.renderLight->Volume()
+                             : world.GetCurrentLightSamplingVolume(chunkCoord);
+    if (const auto &volume = captured_volume)
+    {
+      static_assert(SectionLightVolume::Width == kLightHaloSize);
+      for (int z = -kLightHaloRadius; z < CHUNK_SIZE + kLightHaloRadius; ++z)
+        for (int y = -kLightHaloRadius; y < CHUNK_SIZE + kLightHaloRadius; ++y)
+          for (int x = -kLightHaloRadius; x < CHUNK_SIZE + kLightHaloRadius;
+               ++x)
+            snapshot.paddedLight[LightHaloFlatIndex({x, y, z})] =
+                volume->cells[SectionLightVolume::Index(x, y, z)];
+      snapshot.openSkyAbsentMask = 0;
+      snapshot.certifiedPaddedLight = true;
+    }
+    snapshot.provisionalLightPreview =
+        !snapshot.certifiedPaddedLight &&
+        world.GetLightingConfigurationIdentity() !=
+            static_cast<uint64_t>(LightingMode::Flat);
+    note_slow_stage("light_halo_capture");
   }
-  snapshot.renderLight = world.CaptureRenderLightSnapshot(chunkCoord);
-  const auto captured_volume =
-      snapshot.renderLight ? snapshot.renderLight->Volume()
-                           : world.GetCurrentLightSamplingVolume(chunkCoord);
-  if (const auto &volume = captured_volume)
-  {
-    static_assert(SectionLightVolume::Width == kLightHaloSize);
-    for (int z = -kLightHaloRadius; z < CHUNK_SIZE + kLightHaloRadius; ++z)
-      for (int y = -kLightHaloRadius; y < CHUNK_SIZE + kLightHaloRadius; ++y)
-        for (int x = -kLightHaloRadius; x < CHUNK_SIZE + kLightHaloRadius; ++x)
-          snapshot.paddedLight[LightHaloFlatIndex({x, y, z})] =
-              volume->cells[SectionLightVolume::Index(x, y, z)];
-    snapshot.openSkyAbsentMask = 0;
-    snapshot.certifiedPaddedLight = true;
-  }
-  snapshot.provisionalLightPreview =
-      !snapshot.certifiedPaddedLight &&
-      world.GetLightingConfigurationIdentity() !=
-          static_cast<uint64_t>(LightingMode::Flat);
-  note_slow_stage("light_halo_capture");
 
   // Keep center + six face stamps at stable indices for existing consumers.
   uint8_t missing_faces = 0;
@@ -513,6 +534,12 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     }
   }
   note_slow_stage("face_shell_capture");
+  if (!capture_light)
+  {
+    BoundaryOverlaySetMissingFaces(snapshot.boundaryOverlay, missing_faces);
+    return snapshot;
+  }
+
   size_t stamp_index = 7;
   for (int dy = -1; dy <= 1; ++dy)
   {

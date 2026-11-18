@@ -284,6 +284,21 @@ UBlockWorld::GetCurrentLightSamplingVolume(glm::ivec3 coord) const
   return Chunks.GetSectionLightField(coord)->GetPaddedData();
 }
 
+SectionGeometryRenderInputs UBlockWorld::CaptureGeometryRenderInputs(
+    glm::ivec3 coord,
+    std::shared_ptr<const BlockDefinitionCatalog> catalog) const
+{
+  static constexpr glm::ivec3 offsets[] = {{0, 0, 0},  {-1, 0, 0}, {1, 0, 0},
+                                           {0, -1, 0}, {0, 1, 0},  {0, 0, -1},
+                                           {0, 0, 1}};
+  std::array<ChunkInputStamp, 7> inputs;
+  for (size_t n = 0; n < inputs.size(); ++n)
+    inputs[n] = CaptureInputStamp(coord + offsets[n], false, true);
+  return SectionGeometryRenderInputs::FromStamps(
+      coord, Chunks.GetGeometryInputRevisionIdentity(), VerticalProfile,
+      std::move(catalog), inputs);
+}
+
 std::optional<SectionRenderLightSnapshot>
 UBlockWorld::CaptureRenderLightSnapshot(glm::ivec3 coord) const
 {
@@ -294,16 +309,8 @@ UBlockWorld::CaptureRenderLightSnapshot(glm::ivec3 coord) const
     return std::nullopt;
   const auto field = Chunks.GetSectionLightField(coord);
   const auto volume = field->GetPaddedData();
-  static constexpr glm::ivec3 offsets[] = {{0, 0, 0},  {-1, 0, 0}, {1, 0, 0},
-                                           {0, -1, 0}, {0, 1, 0},  {0, 0, -1},
-                                           {0, 0, 1}};
-  std::array<ChunkInputStamp, 7> inputs;
-  for (size_t n = 0; n < inputs.size(); ++n)
-    inputs[n] = CaptureInputStamp(coord + offsets[n], false, true);
   SectionRenderLightSnapshot snapshot;
-  snapshot.Geometry = SectionGeometryRenderInputs::FromStamps(
-      coord, Chunks.GetGeometryInputRevisionIdentity(), VerticalProfile,
-      catalog, inputs);
+  snapshot.Geometry = CaptureGeometryRenderInputs(coord, catalog);
   if (!snapshot.Geometry.valid ||
       FluidDefinitions->GetCatalogSnapshot() != catalog)
     return std::nullopt;

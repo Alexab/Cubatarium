@@ -20,6 +20,7 @@
 #include "World/Physics/FluidBlockResolver.h"
 
 #include <algorithm>
+#include <limits>
 #include <cstdlib>
 
 #include <cstring>
@@ -981,6 +982,64 @@ UGreedyMesher::BuildChunkMesh(const ChunkMeshSnapshot &snapshot,
   USnapshotChunkReader reader(snapshot);
 
   return BuildChunkMeshImpl(reader, registry, catalog);
+}
+
+std::optional<SectionNoSurfaceProof> UGreedyMesher::CaptureNoSurface(
+    const UBlockWorld &world, glm::ivec3 coord, UBlockRegistry &registry,
+    std::shared_ptr<const BlockDefinitionCatalog> catalog)
+{
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    const int64_t origin = int64_t(coord[axis]) * CHUNK_SIZE;
+    if (origin < int64_t(std::numeric_limits<int>::min()) + 1 ||
+        origin > int64_t(std::numeric_limits<int>::max()) - CHUNK_SIZE)
+      return std::nullopt;
+  }
+  const auto inputs = world.CaptureGeometryRenderInputs(coord, catalog);
+  if (!inputs.valid || !world.GetChunkManager().GetChunk(coord))
+    return std::nullopt;
+  const auto snapshot = ChunkMeshSnapshot::CaptureGeometry(world, coord);
+  if (!inputs.Matches(snapshot.GeometryRenderInputs(catalog)))
+    return std::nullopt;
+  USnapshotChunkReader reader(snapshot);
+  // The conservative opaque-cube subset never enters the mesher's radius-2
+  // transparent-neighbor branch. Seven geometry stamps cover every read.
+  const auto opaque_cube = [&](BlockId id)
+  {
+    return id != BLOCK_AIR && FindCatalogDefinition(catalog.get(), id) &&
+           CatalogGetRenderStyle(catalog.get(), id) ==
+               BlockRenderStyle::UCube &&
+           !CatalogIsTransparent(catalog.get(), id) &&
+           !MeshIsLiquid(registry, catalog.get(), id) &&
+           MeshBlocksMovement(registry, catalog.get(), id);
+  };
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 local(x, y, z);
+        if (FluidCellHasActiveFluid(reader.GetFluidPackedLocal(local)))
+          return std::nullopt;
+        const auto id = reader.GetBlockLocal(local);
+        if (id == BLOCK_AIR)
+          continue;
+        if (!opaque_cube(id))
+          return std::nullopt;
+        const auto pos = snapshot.ChunkOrigin() + local;
+        for (int axis = 0; axis < 3; ++axis)
+          for (int sign : {-1, 1})
+          {
+            glm::ivec3 offset(0);
+            offset[axis] = sign;
+            if (!opaque_cube(reader.GetBlock(pos + offset)) ||
+                !NeighborHidesFace(reader, registry, catalog.get(), id, pos,
+                                   offset))
+              return std::nullopt;
+          }
+      }
+  if (!inputs.Matches(world.CaptureGeometryRenderInputs(coord, catalog)))
+    return std::nullopt;
+  return SectionNoSurfaceProof(inputs);
 }
 
 } // namespace cutum

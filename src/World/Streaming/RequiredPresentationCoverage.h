@@ -22,6 +22,8 @@ struct RequiredPresentationCoverage
   int known_air_sections{0};
   int resident_air_sections{0};
   int surface_sections{0};
+  /// Subset of resident sections with a current geometry-only NoDraw proof.
+  int certified_no_surface_sections{0};
   int light_unready_sections{0};
   int publication_unready_sections{0};
 

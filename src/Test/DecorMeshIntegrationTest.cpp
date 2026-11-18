@@ -456,6 +456,117 @@ TestOverflowRetryWithNoDirtyAdmission(cutum::UBlockRegistry &registry)
   Expect(!cache.HasPendingDirty(), "retry leaves no orphan demand");
 }
 
+static void
+TestNoSurfaceGeometryProof(cutum::UBlockRegistry &registry,
+                           const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  const glm::ivec3 center(0, -3, 0);
+  for (int x = -1; x <= CHUNK_SIZE; ++x)
+    for (int y = -49; y <= -32; ++y)
+      for (int z = -1; z <= CHUNK_SIZE; ++z)
+        world.SetBlock({x, y, z}, kStone);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  const auto classify = [&]()
+  { return UGreedyMesher::CaptureNoSurface(world, center, registry, catalog); };
+  const auto proof = classify();
+  Expect(proof.has_value(),
+         "enclosed geometry has a NoSurface proof before light calculation");
+  Expect(!world.HasCompleteLightSamplingCalculation(center, catalog),
+         "NoSurface does not synthesize a physical light calculation");
+  Expect(proof->Matches(world.CaptureGeometryRenderInputs(center, catalog)),
+         "NoSurface carries current complete geometry inputs");
+  world.GetChunkManager().GetChunk(center)->SetLightLocal({8, 8, 8}, 15, 15);
+  Expect(proof->Matches(world.CaptureGeometryRenderInputs(center, catalog)),
+         "light bytes do not invalidate geometry-only proof");
+  const glm::ivec3 opening(16, -40, 8);
+  world.SetBlock(opening, BLOCK_AIR);
+  Expect(!proof->Matches(world.CaptureGeometryRenderInputs(center, catalog)) &&
+             !classify(),
+         "neighbor opening invalidates NoSurface and requires surface "
+         "publication");
+  Expect(!UGreedyMesher::BuildChunkMesh(world, center, registry, catalog.get())
+              .empty(),
+         "independent actual mesher emits the exposed neighbor wall");
+  world.SetBlock(opening, kStone);
+  Expect(classify().has_value(), "closing neighbor restores geometry proof");
+  const glm::ivec3 interior(8, -40, 8);
+  for (BlockId id : {kTallGrass, kCutoutLeaves, BlockId(65000)})
+  {
+    world.SetBlock(interior, id);
+    Expect(!classify(),
+           "sprites, cutouts and unknown materials cannot certify NoSurface");
+  }
+  world.SetBlock(interior, BLOCK_AIR);
+  Expect(!classify(),
+         "interior cavity has visible walls even with closed outer boundary");
+  world.SetFluidState(interior,
+                      FluidCellState::Source().WithKind(FluidKind::Water));
+  Expect(!classify(), "active fluid in AIR cannot certify NoSurface");
+  world.SetFluidState(interior, FluidCellState{});
+  world.SetBlock(interior, kStone);
+  const auto current = classify();
+  Expect(current.has_value(), "restored solid section is certified");
+  auto other_catalog = std::make_shared<BlockDefinitionCatalog>(*catalog);
+  Expect(!current->Matches(
+             world.CaptureGeometryRenderInputs(center, other_catalog)),
+         "catalog identity invalidates retained NoSurface evidence");
+  UBlockWorld other;
+  Expect(!current->Matches(other.CaptureGeometryRenderInputs(center, catalog)),
+         "another world cannot reuse the proof");
+  const auto profile = world.GetVerticalProfile();
+  for (int component = 0; component < 5; ++component)
+  {
+    auto changed = profile;
+    switch (component)
+    {
+    case 0:
+      --changed.MinY;
+      break;
+    case 1:
+      ++changed.MaxY;
+      break;
+    case 2:
+      ++changed.SeaLevelY;
+      break;
+    case 3:
+      ++changed.BedrockTopY;
+      break;
+    case 4:
+      ++changed.DatumY;
+      break;
+    }
+    world.SetVerticalProfile(changed);
+    Expect(
+        !current->Matches(world.CaptureGeometryRenderInputs(center, catalog)),
+        "each vertical profile component invalidates retained evidence");
+  }
+  world.SetVerticalProfile(profile);
+  world.GetChunkManager().RemoveChunk({1, -3, 0});
+  Expect(!classify(),
+         "unknown face neighbor cannot masquerade as occluded geometry");
+  Expect(!current->Matches(world.CaptureGeometryRenderInputs(center, catalog)),
+         "neighbor unload invalidates retained geometry evidence");
+  for (int y = -48; y <= -33; ++y)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      world.SetBlock({16, y, z}, kStone);
+  Expect(
+      classify().has_value() &&
+          !current->Matches(world.CaptureGeometryRenderInputs(center, catalog)),
+      "same-coordinate neighbor reload produces fresh evidence");
+  for (int y = -48; y <= -33; ++y)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+        world.SetBlock({x, y, z}, BLOCK_AIR);
+  Expect(classify().has_value(),
+         "resident AIR proves no draw before calculating light");
+  world.SetFluidState(interior,
+                      FluidCellState::Source().WithKind(FluidKind::Water));
+  Expect(!classify(), "fluid rejects a previously certified AIR-only section");
+}
+
 static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
 {
   using namespace cutum;
@@ -517,8 +628,8 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
   cache.MarkDirty({0, 0, 0});
   cache.RebuildDirtyChunksWithStats(world, registry, 100, 100);
   cache.UpdateVisibleInstances(frustum, view_projection, eye);
-  Expect(CountGreedyVerticesForBlock(
-             cache, cache.GetGreedyTransparentRefs(), kFire) > 0,
+  Expect(CountGreedyVerticesForBlock(cache, cache.GetGreedyTransparentRefs(),
+                                     kFire) > 0,
          "replacement publication immediately refreshes material draw refs");
 }
 
@@ -1054,6 +1165,7 @@ int main(int argc, char **argv)
   TestCampfireStoneMesh(world, registry);
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);
   TestOverflowRetryWithNoDirtyAdmission(registry);
+  TestNoSurfaceGeometryProof(registry, definitions.get());
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
   TestFirstComputedLightPublication(registry, definitions.get());

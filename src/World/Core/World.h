@@ -15,6 +15,7 @@
 #include "Game/Physics/ThrowSettings.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
+#include "Render/Mesh/GreedyMesher.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/StreamingAltitudePolicy.h"
 #include "World/Collision/WorldCollision.h"
@@ -1381,6 +1382,8 @@ public:
   bool ClearPendingLightBeforeMesh(glm::ivec2 ground_xz);
   /// Explicit cancellation when the column is unloaded, never a completion.
   void RetirePendingLightBeforeMesh(glm::ivec2 ground_xz);
+  /// Current geometry proof only. Does not attest physical-light readiness.
+  bool HasCurrentNoSurfaceProof(glm::ivec3 coord) const;
   bool HasCurrentColumnLightCoverage(glm::ivec2 ground_xz, int min_y,
                                      int max_y) const;
   void NoteVisibleFirstMeshRelightBand(glm::ivec2 chunk_xz, int min_y,
@@ -2028,6 +2031,14 @@ private:
   /// Perf-root P2: per-frame memo for IsChunkSliceRenderReady (draw path).
   mutable uint64_t SliceReadyMemoEpoch{UINT64_MAX};
   mutable std::unordered_map<glm::ivec3, bool, IVec3Hash> SliceReadyMemo;
+  struct NoSurfaceCacheEntry
+  {
+    SectionGeometryRenderInputs inputs;
+    std::optional<SectionNoSurfaceProof> proof;
+  };
+  mutable std::unordered_map<glm::ivec3, NoSurfaceCacheEntry, IVec3Hash>
+      NoSurfaceCache;
+
   /// Phase5 S2: same-frame memo for NeedsEnterGameMeshWarmup (enter phase
   /// only).
   mutable uint64_t EnterWarmupSampleEpoch{UINT64_MAX};

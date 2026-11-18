@@ -131,6 +131,11 @@ public:
   std::shared_ptr<const SectionLightVolume>
   GetCurrentLightSamplingVolume(glm::ivec3 coord) const;
 
+  /// Geometry provenance only; never reads or certifies a light field.
+  SectionGeometryRenderInputs CaptureGeometryRenderInputs(
+      glm::ivec3 coord,
+      std::shared_ptr<const BlockDefinitionCatalog> catalog) const;
+
   /// Full current physical proof and immutable GPU-upload bytes, paired with
   /// geometry-only provenance from the same main-thread observation.
   std::optional<SectionRenderLightSnapshot>
