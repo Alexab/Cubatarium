@@ -6010,7 +6010,7 @@
       }
     },
     "diagnostic_capture_backpressure": {
-      "status": "C++ controller/RED/restored/Release PASS; first frozen native all scoped references and30PNG PASS but actual encoder delay was sanitized, so saturation acceptance UNTESTED. Explicit harness stress option and saturation oracle added;66Python tests PASS. Repeat actual stress pending; creature latency defect remains open.",
+      "status": "Production bounded capture handoff/pose backpressure, controller RED/restored/Release PASS;66Python tests PASS. Frozen explicit5000ms native saturation+all30PNG+all scoped physical/depth references PASS. Generic full RGB still UNTESTED; prior measured creature latency defect remains open.",
       "failure_evidence": "28d644df2 moving native requested30/PBOqueued30 but26PNGverified. Completed inspection0008/0010/0012/0014 dropped from PollCompleted when ImageJobs had4queued images; native failure preserved under engine-no-surface-visible-items-native.",
       "fix": "Keep completed Frame/Pixels in its existing PBO slot if QueueImage rejects; do not release before successful handoff. Retry without another GPU readback; shutdown also reuses retained CPU copy. Existing3PBOslots+4PNGqueue+1worker remain bounded; main/render thread never waits for encoder. Nonblocking IsDiagnosticCaptureReady pumps completed work before the bot/periodic admission, preventing periodic starvation. Controller observation captureReady defaults true for existing users, holds orientation/movement/capture counter when pipeline is full; resumes once admitted. Desktop adapter forwards new window capability. Trace adds capture_ready.",
       "tests": "diagnostic_flight_controller_test:20sec saturated pipeline emits no movement/capture/waypoint advancement;5sec saturation after first capture retains orientation and ID without duplicate; recovery captures all12 exactly once. Remove actual captureReady guard: unitREDbuild succeeds, testFAIL; original exact bytes restored and fresh build/testGREEN. Logs engine-flight-capture-backpressure-{red,restored}-{build,test}.log, hash JSON.",
@@ -6040,7 +6040,44 @@
         "paused_inspection_samples": 0,
         "warning": "Inherited CUBA_FLIGHT_* delay env sanitized by harness; route environment lacks requested2500, so this is not a saturated-encoder test. New all-ready creature run does not fix prior measured latency defect; negative retained."
       },
-      "harness_stress": "Explicit --capture-encode-delay-ms validates integer0..10000 before fixture/process mutation, installs known delay AFTER dangerous QA env sanitation, records argument and actual passed environment in route.json. Positive delay requests mandatory capture_backpressure component: real retention witness AND actual inspection admission-blocked observations AND zero drops/nonmovement faults AND all pose-joined PNGs. Lack of saturation remains UNTESTED. Python66 suite PASS in engine-capture-backpressure-python-tests.log; invalid delay inputs, no-pressure UNT, retention PASS, moving/reissued/drop/missingPNG FAIL tested."
+      "harness_stress": "Explicit --capture-encode-delay-ms validates integer0..10000 before fixture/process mutation, installs known delay AFTER dangerous QA env sanitation, records argument and actual passed environment in route.json. Positive delay requests mandatory capture_backpressure component: real retention witness AND actual inspection admission-blocked observations AND zero drops/nonmovement faults AND all pose-joined PNGs. Lack of saturation remains UNTESTED. Python66 suite PASS in engine-capture-backpressure-python-tests.log; invalid delay inputs, no-pressure UNT, retention PASS, moving/reissued/drop/missingPNG FAIL tested.",
+      "native_saturation": {
+        "source_commit": "ac96f6f174f6139da399704a34045897e79a5142",
+        "cpp_source_commit": "38e01db33",
+        "artifacts": "build/desktop-msvc/engine-capture-backpressure-5000ms-native",
+        "app_exit": 0,
+        "tool_shell_exit": 1,
+        "overall": "UNTESTED missing generic RGB reference; all scoped components PASS. Python main maps UNT to2 but raw PowerShell nonzero command surfaced tool shell1; do not confuse with app0 or legacy runner1.",
+        "encoder_delay_ms": 5000,
+        "retention_witnesses": 13,
+        "paused_inspection_samples": 109,
+        "dropped_completed_frames": 0,
+        "paused_pose_faults": 0,
+        "png_verified": "30/30",
+        "frames": 2210,
+        "chunks": 22,
+        "outside_initial_samples": 1287,
+        "relocations": 0,
+        "camera_ready": "2210/2210",
+        "first_person_ready": "2210/2210",
+        "creature_ready": "1906/1906",
+        "item_draws": 678,
+        "item_primitives": 2034,
+        "depth_checks": 636,
+        "packed_gpu_source_checks": 255,
+        "reference_faults": 0,
+        "warmup_ms": 102682,
+        "wall_seconds": 409.708,
+        "performance": "Intentional encoder saturation; not a performance benchmark. Retention witnesses are logarithmic retry aggregate records, not a count of unique photos.",
+        "provenance": "Frozen C++/EXE and harness+fixtures through terminal. Observation JSON verifies exact EXE digest, unchanged source World_261 fingerprint and byte-exact runtime config restore. Inspected native start/endpoint targeted PNGs0012/0029; no full-scene RGB acceptance inferred.",
+        "followup_build_identity": "HUD still displays configure-time529a0c1 despite later C++/harness commits. Use frozen route.git_sha+EXE digest and source manifest as authority; make embedded build identity current in a later diagnostic/build change."
+      },
+      "next_sequence": [
+        "Reproduce/fix axial second-plane snapshot geometry omission with actual live-vs-snapshot six-face regression.",
+        "Fix current NoSurface blocker attribution to exclude certified NoDraw publication debt while retaining physical-sample debt.",
+        "Instrument/shorten physical solve deadlines and improve falling-consumer prewarm using real physics/latency; retained job1152 took1.329sec total,0.9306sec compute, so one-second/two-section forecast is insufficient for terminal50blocks/sec. Solver already has tile-neighbor and dense material caches; do not redo those. Consider mathematically exact saturated-sky tile boundary seeding to avoid queuing every max15 interior cell, with independent all8000-cell references and negative controls.",
+        "Continue complete original plan: authoritative capture epochs, ordinary owner/shader cutover across every draw/backend, bounded resource capacity/fallback, durable content certificates, actual GPU physical solver parity, RGB/transparency and cold/warm/eviction/RD/performance matrix."
+      ]
     }
   }
 }
