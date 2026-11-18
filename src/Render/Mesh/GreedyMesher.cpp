@@ -5,6 +5,7 @@
 #include "Blocks/BlockRegistry.h"
 
 #include "Render/Mesh/ChunkMeshSnapshot.h"
+#include "World/Mesh/Contracts/CubeFaceVisibility.h"
 #include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 
 #include "World/Mesh/IUChunkMeshReader.h"
@@ -291,6 +292,15 @@ bool NeighborHidesFace(IUChunkMeshReader &reader, UBlockRegistry &registry,
   const BlockRenderStyle neighbor_style =
       catalog ? CatalogGetRenderStyle(catalog, neighbor)
               : registry.GetRenderStyle(neighbor);
+
+  if (face_style != BlockRenderStyle::Fluid &&
+      !MeshIsLiquid(registry, catalog, face_id))
+  {
+    const auto decision =
+        DecideCubeFace(CubeFaceMaterialWord(face_id, registry, catalog),
+                       CubeFaceMaterialWord(neighbor, registry, catalog));
+    return decision == CubeFaceDecision::Hidden;
+  }
 
   // Cross plants are separate card geometry. Their movement occupancy (which
   // may be explicitly solid for unusual content) must never hide the cube

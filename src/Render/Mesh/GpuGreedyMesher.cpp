@@ -1,10 +1,11 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
+#include "Render/Backend/RenderBackendCaps.h"
+#include "Render/GlIncludes.h"
+#include "Render/Mesh/FaceMaskComputeSource.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/MeshLightSampling.h"
-#include "Render/Backend/RenderBackendCaps.h"
-#include "Render/GlIncludes.h"
 #include "glog/logging.h"
 #include <array>
 #include <cstdlib>
@@ -27,47 +28,6 @@ uint64_t gMeshVboDispatches = 0;
 uint64_t gMaskReadbacks = 0;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-// Padded occupancy → FaceMask[CHUNK_VOLUME] (6 bits: -X+X-Y+Y-Z+Z).
-// occ layout: side=CHUNK_SIZE+2; interior voxel (x,y,z) at
-// ((y+1)*side+(z+1))*side+(x+1).
-const char *kFaceExtractCompute = R"(#version 430
-layout(local_size_x = 64) in;
-layout(std430, binding = 0) readonly buffer Occ { uint occ[]; }; // packed 4 bytes
-layout(std430, binding = 1) writeonly buffer Mask { uint mask[]; };
-uniform uint volume; // CHUNK_VOLUME
-uniform uint side;   // CHUNK_SIZE
-uniform uint pad;    // CHUNK_SIZE+2
-
-uint occAtPad(int px, int py, int pz) {
-  uint i = uint((py * int(pad) + pz) * int(pad) + px);
-  uint word = occ[i >> 2];
-  return (word >> ((i & 3u) * 8u)) & 0xffu;
-}
-
-void main() {
-  uint i = gl_GlobalInvocationID.x;
-  if (i >= volume) return;
-  int side_i = int(side);
-  int x = int(i % uint(side_i));
-  int y = int(i / uint(side_i * side_i));
-  int z = int((i / uint(side_i)) % uint(side_i));
-  int px = x + 1;
-  int py = y + 1;
-  int pz = z + 1;
-  if (occAtPad(px, py, pz) == 0u) {
-    mask[i] = 0u;
-    return;
-  }
-  uint m = 0u;
-  if (occAtPad(px - 1, py, pz) == 0u) m |= 1u;
-  if (occAtPad(px + 1, py, pz) == 0u) m |= 2u;
-  if (occAtPad(px, py - 1, pz) == 0u) m |= 4u;
-  if (occAtPad(px, py + 1, pz) == 0u) m |= 8u;
-  if (occAtPad(px, py, pz - 1) == 0u) m |= 16u;
-  if (occAtPad(px, py, pz + 1) == 0u) m |= 32u;
-  mask[i] = m;
-}
-)";
 #endif
 
 } // namespace
@@ -166,7 +126,9 @@ bool UGpuGreedyMesher::EnsureCompute()
   }
   State->InitAttempted = true;
   const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
-  glShaderSource(sh, 1, &kFaceExtractCompute, nullptr);
+  const auto source = FaceMaskComputeSource(false);
+  const auto *source_bytes = source.c_str();
+  glShaderSource(sh, 1, &source_bytes, nullptr);
   glCompileShader(sh);
   GLint ok = 0;
   glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
@@ -226,13 +188,9 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
   const char *legacy = std::getenv("CUBATARIUM_GPU_MASK_READBACK");
   if (legacy && legacy[0] == '1' && EnsureCompute())
   {
-    std::vector<uint8_t> occ;
-    BuildPaddedOccupancy(snapshot, registry, occ);
-    std::vector<uint32_t> occ_words((occ.size() + 3) / 4, 0);
-    for (size_t i = 0; i < occ.size(); ++i)
-    {
-      occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
-    }
+    std::vector<uint32_t> occ_words;
+    const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+    BuildPaddedFaceVisibility(snapshot, registry, catalog.get(), occ_words);
     const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, State->OccSsbo);
     glBufferData(GL_SHADER_STORAGE_BUFFER,
@@ -249,7 +207,7 @@ UGpuGreedyMesher::TryComputeExtract(const ChunkMeshSnapshot &snapshot,
     glUniform1ui(glGetUniformLocation(State->Program, "side"),
                  static_cast<uint32_t>(CHUNK_SIZE));
     glUniform1ui(glGetUniformLocation(State->Program, "pad"),
-                 static_cast<uint32_t>(kGpuOccPad));
+                 static_cast<uint32_t>(kGpuFaceVisibilityPad));
     glDispatchCompute((volume + 63u) / 64u, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
     glUseProgram(0);

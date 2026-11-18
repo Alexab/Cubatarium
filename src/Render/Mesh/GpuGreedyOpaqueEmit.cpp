@@ -1,6 +1,7 @@
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
-#include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/FaceMaskComputeSource.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "World/Chunks/Chunk.h"
 #include "glog/logging.h"
 #include <array>
@@ -25,46 +26,6 @@ constexpr uint32_t kGpuPlaneWorkgroups = 102u;
 constexpr int kGpuVertFloats = 10;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-
-const char *kMaskCompute = R"(#version 430
-layout(local_size_x = 64) in;
-layout(std430, binding = 0) readonly buffer Occ { uint occ[]; };
-layout(std430, binding = 1) writeonly buffer Mask { uint mask[]; };
-uniform uint volume;
-uniform uint side;
-uniform uint pad;
-uint occAtPad(int px, int py, int pz) {
-  uint i = uint((py * int(pad) + pz) * int(pad) + px);
-  uint word = occ[i >> 2];
-  return (word >> ((i & 3u) * 8u)) & 0xffu;
-}
-void main() {
-  uint i = gl_GlobalInvocationID.x;
-  if (i >= volume) return;
-  int side_i = int(side);
-  int x = int(i % uint(side_i));
-  int y = int(i / uint(side_i * side_i));
-  int z = int((i / uint(side_i)) % uint(side_i));
-  int px = x + 1, py = y + 1, pz = z + 1;
-  uint self = occAtPad(px, py, pz);
-  if (self == 0u) { mask[i] = 0u; return; }
-  // self: 1=opaque, 3=transparent/cutout
-  // neighbor: 0=air, 1=opaque, 2=unloaded(skip), 3=transparent
-  // Emit face when neighbor is air(0) or different transparency class.
-  // Opaque(1) emits vs air(0) and transparent(3).
-  // Transparent(3) emits vs air(0) and opaque(1).
-  // Never emit vs unloaded(2).
-  uint m = 0u;
-  uint n;
-  n = occAtPad(px-1,py,pz); if (n != 2u && n != self) m |= 1u;
-  n = occAtPad(px+1,py,pz); if (n != 2u && n != self) m |= 2u;
-  n = occAtPad(px,py-1,pz); if (n != 2u && n != self) m |= 4u;
-  n = occAtPad(px,py+1,pz); if (n != 2u && n != self) m |= 8u;
-  n = occAtPad(px,py,pz-1); if (n != 2u && n != self) m |= 16u;
-  n = occAtPad(px,py,pz+1); if (n != 2u && n != self) m |= 32u;
-  mask[i] = m;
-}
-)";
 
 // Binary greedy merge: 1 workgroup per plane (102 total = 3 axes × 2 signs × 17 slices).
 // Uses uint16 bitmasks for row scanning — findLSB/popcount for fast run detection.
@@ -343,7 +304,8 @@ bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
            state.EmitProgram != 0;
   }
   state.InitAttempted = true;
-  state.MaskProgram = CompileCompute(kMaskCompute, "mask");
+  const auto mask_source = FaceMaskComputeSource(false);
+  state.MaskProgram = CompileCompute(mask_source.c_str(), "mask");
   state.GreedyProgram = CompileCompute(kGreedyRectCompute, "greedy");
   state.EmitProgram = CompileCompute(kVertexEmitCompute, "emit");
   state.PackedEmitProgram = CompileCompute(kPackedEmitCompute, "packed_emit");
@@ -418,17 +380,8 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
     return false;
   }
 
-  std::vector<uint8_t> occ;
-  if (catalog)
-  {
-    BuildPaddedOccupancy(snapshot, catalog, occ);
-  }
-  else
-  {
-    BuildPaddedOccupancy(snapshot, registry, occ);
-  }
   std::vector<uint32_t> occ_words;
-  PackBytes(occ.data(), occ.size(), occ_words);
+  BuildPaddedFaceVisibility(snapshot, registry, catalog, occ_words);
 
   std::vector<uint8_t> padded_lights;
   BuildPaddedLight(snapshot, padded_lights);
@@ -464,7 +417,7 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   glUniform1ui(glGetUniformLocation(state.MaskProgram, "volume"), volume);
   glUniform1ui(glGetUniformLocation(state.MaskProgram, "side"), side);
   glUniform1ui(glGetUniformLocation(state.MaskProgram, "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+               static_cast<uint32_t>(kGpuFaceVisibilityPad));
   glDispatchCompute((volume + 63u) / 64u, 1, 1);
   glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
@@ -482,7 +435,7 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
   glUniform1ui(glGetUniformLocation(state.GreedyProgram, "lightPad"),
                static_cast<uint32_t>(kGpuLightPad));
   glDispatchCompute(kGpuPlaneWorkgroups, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
   std::array<uint32_t, 4> counters{};
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.CountersSsbo);
@@ -512,7 +465,7 @@ bool TryGpuOpaqueEmitToBatches(GpuGreedyEmitState &state,
               coord.y, coord.z);
   glUniform1ui(glGetUniformLocation(state.EmitProgram, "side"), side);
   glDispatchCompute((rect_count + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
   glUseProgram(0);
 
   struct GpuRectCpu

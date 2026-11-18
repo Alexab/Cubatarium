@@ -1,10 +1,11 @@
 #include "Render/Mesh/AndroidGpuGreedyMesher.h"
-#include "Render/Mesh/GpuGreedyFaceExtract.h"
-#include "Render/Mesh/GreedyMeshEmitter.h"
-#include "Render/Mesh/MeshLightSampling.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Gl/ComputeProgram.h"
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/FaceMaskComputeSource.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GreedyMeshEmitter.h"
+#include "Render/Mesh/MeshLightSampling.h"
 #include "glog/logging.h"
 #include <cstring>
 #include <unordered_map>
@@ -29,38 +30,6 @@ AndroidMaskState &MaskState()
   return s;
 }
 
-const char *kFaceMaskGlesFallback = R"(#version 310 es
-layout(local_size_x = 64) in;
-layout(std430, binding = 0) readonly buffer Occ { uint occ[]; };
-layout(std430, binding = 1) writeonly buffer Mask { uint mask[]; };
-uniform uint volume;
-uniform uint side;
-uniform uint pad;
-uint occAtPad(int px, int py, int pz) {
-  uint i = uint((py * int(pad) + pz) * int(pad) + px);
-  uint word = occ[i >> 2];
-  return (word >> ((i & 3u) * 8u)) & 0xffu;
-}
-void main() {
-  uint i = gl_GlobalInvocationID.x;
-  if (i >= volume) return;
-  int side_i = int(side);
-  int x = int(i % uint(side_i));
-  int y = int(i / uint(side_i * side_i));
-  int z = int((i / uint(side_i)) % uint(side_i));
-  int px = x + 1, py = y + 1, pz = z + 1;
-  if (occAtPad(px, py, pz) == 0u) { mask[i] = 0u; return; }
-  uint m = 0u;
-  if (occAtPad(px - 1, py, pz) == 0u) m |= 1u;
-  if (occAtPad(px + 1, py, pz) == 0u) m |= 2u;
-  if (occAtPad(px, py - 1, pz) == 0u) m |= 4u;
-  if (occAtPad(px, py + 1, pz) == 0u) m |= 8u;
-  if (occAtPad(px, py, pz - 1) == 0u) m |= 16u;
-  if (occAtPad(px, py, pz + 1) == 0u) m |= 32u;
-  mask[i] = m;
-}
-)";
-
 bool EnsureAndroidMaskCompute()
 {
   auto &s = MaskState();
@@ -74,21 +43,14 @@ bool EnsureAndroidMaskCompute()
   {
     return false;
   }
-  if (!s.Program.CompileForCaps(caps, "shaders/compute/face_mask_extract.comp",
-                                "shaders/gles/compute/face_mask_extract.comp"))
-  {
-    if (caps.Platform == RenderPlatformKind::Android)
-    {
-      if (!s.Program.CompileSource(kFaceMaskGlesFallback))
-      {
-        return false;
-      }
-    }
-    else
-    {
-      return false;
-    }
-  }
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  const auto source = FaceMaskComputeSource(true);
+#else
+  const auto source =
+      FaceMaskComputeSource(caps.Platform == RenderPlatformKind::Android);
+#endif
+  if (!s.Program.CompileSource(source.c_str()))
+    return false;
   glGenBuffers(1, &s.OccSsbo);
   glGenBuffers(1, &s.MaskSsbo);
   return s.Program.Valid() && s.OccSsbo != 0 && s.MaskSsbo != 0;
@@ -103,13 +65,9 @@ bool TryGpuFaceMaskExtract(const ChunkMeshSnapshot &snapshot,
     return false;
   }
   auto &s = MaskState();
-  std::vector<uint8_t> occ;
-  BuildPaddedOccupancy(snapshot, registry, occ);
-  std::vector<uint32_t> occ_words((occ.size() + 3) / 4, 0);
-  for (size_t i = 0; i < occ.size(); ++i)
-  {
-    occ_words[i >> 2] |= static_cast<uint32_t>(occ[i]) << ((i & 3u) * 8u);
-  }
+  std::vector<uint32_t> occ_words;
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  BuildPaddedFaceVisibility(snapshot, registry, catalog.get(), occ_words);
   const uint32_t volume = static_cast<uint32_t>(CHUNK_VOLUME);
   out_masks.assign(volume, 0);
 
@@ -128,9 +86,9 @@ bool TryGpuFaceMaskExtract(const ChunkMeshSnapshot &snapshot,
   glUniform1ui(glGetUniformLocation(s.Program.Program(), "side"),
                static_cast<uint32_t>(CHUNK_SIZE));
   glUniform1ui(glGetUniformLocation(s.Program.Program(), "pad"),
-               static_cast<uint32_t>(kGpuOccPad));
+               static_cast<uint32_t>(kGpuFaceVisibilityPad));
   glDispatchCompute((volume + 63u) / 64u, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
 
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.MaskSsbo);
   void *mapped =

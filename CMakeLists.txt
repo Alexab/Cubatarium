@@ -2438,6 +2438,14 @@ endif()
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   target_link_libraries(decor_mesh_integration_test glfw)
   target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1)
+  add_test(NAME gpu_material_visibility_gles_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --face-visibility-gles-driver)
+  set_tests_properties(gpu_material_visibility_gles_driver_test PROPERTIES
+    LABELS "gpu;integration;gles" SKIP_RETURN_CODE 77 TIMEOUT 120)
+  add_test(NAME gpu_material_visibility_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --face-visibility-driver)
+  set_tests_properties(gpu_material_visibility_driver_test PROPERTIES
+    LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 120)
   add_test(NAME section_render_light_bindings_driver_test
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --light-binding-driver)
   set_tests_properties(section_render_light_bindings_driver_test PROPERTIES

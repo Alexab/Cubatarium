@@ -9,6 +9,9 @@
 #include <GLFW/glfw3.h>
 #endif
 #include "Render/Mesh/ChunkMeshCache.h"
+#include "Render/Mesh/FaceMaskComputeSource.h"
+#include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
@@ -20,6 +23,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
+#include <set>
+#include <tuple>
 #include <unordered_map>
 
 namespace cutum
@@ -67,6 +72,11 @@ constexpr cutum::BlockId kFire = 631;
 constexpr cutum::BlockId kTallGrass = 568;
 constexpr cutum::BlockId kCutoutLeaves = 633;
 constexpr cutum::BlockId kSolidGlass = 634;
+constexpr cutum::BlockId kSolidCutout = 635;
+constexpr cutum::BlockId kTransparentCutout = 636;
+constexpr cutum::BlockId kSolidCross = 637;
+constexpr cutum::BlockId kWater = 638;
+constexpr cutum::BlockId kCubeLiquid = 639;
 
 // Only a lifetime/publication test double. The GPU driver's separate tests
 // exercise actual allocation, uploads, shader reads and fences.
@@ -231,6 +241,32 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   name_to_id["cutout_leaves"] = kCutoutLeaves;
   name_to_id["solid_glass"] = kSolidGlass;
 
+  auto solid_cutout = stone;
+  solid_cutout.Name = "solid_cutout";
+  solid_cutout.Render.Style = cutum::BlockRenderStyle::Cutout;
+  by_id[kSolidCutout] = solid_cutout;
+  auto transparent_cutout = solid_cutout;
+  transparent_cutout.Name = "transparent_cutout";
+  transparent_cutout.Render.Transparent = true;
+  by_id[kTransparentCutout] = transparent_cutout;
+  auto solid_cross = stone;
+  solid_cross.Name = "solid_cross";
+  solid_cross.Render.Style = cutum::BlockRenderStyle::Cross;
+  by_id[kSolidCross] = solid_cross;
+  auto water = stone;
+  water.Name = "water";
+  water.Physics = cutum::BlockPhysicsProfile::FromPreset("water");
+  water.Render.Style = cutum::BlockRenderStyle::Fluid;
+  water.Render.Transparent = true;
+  by_id[kWater] = water;
+  auto cube_liquid = water;
+  cube_liquid.Name = "cube_liquid";
+  cube_liquid.Render.Style = cutum::BlockRenderStyle::UCube;
+  cube_liquid.Physics.Movement.Occupancy = 1.0f;
+  by_id[kCubeLiquid] = cube_liquid;
+  for (auto id :
+       {kSolidCutout, kTransparentCutout, kSolidCross, kWater, kCubeLiquid})
+    name_to_id[by_id[id].Name] = id;
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
 }
@@ -650,14 +686,294 @@ TestSecondPlaneGeometryParity(cutum::UBlockRegistry &registry,
              "second-plane edit invalidates provenance without changing "
              "retained bytes");
       const auto opened = ChunkMeshSnapshot::Capture(world, coord, 1);
-      Expect(face_count(UGreedyMesher::BuildChunkMesh(world, coord, registry,
-                                                      catalog.get())) == 0 &&
-                 face_count(UGreedyMesher::BuildChunkMesh(opened, registry,
-                                                          catalog.get())) == 0,
-             "fresh live and snapshot meshes agree after second-plane opening");
+      Expect(
+          face_count(UGreedyMesher::BuildChunkMesh(world, coord, registry,
+                                                   catalog.get())) == 1 &&
+              face_count(UGreedyMesher::BuildChunkMesh(opened, registry,
+                                                       catalog.get())) == 1,
+          "opening behind glass preserves the opaque surface in both readers");
     }
   Expect(mismatches == 0, "all six section seams preserve the live mesher "
                           "second-plane face decision");
+}
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void
+TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
+                        cutum::UBlockRegistry &registry,
+                        const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 coord(0, -3, 0);
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+        world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(x, y, z),
+                       (x + y + z) % 2 ? kSolidCutout : kTransparentCutout);
+  const auto snapshot = ChunkMeshSnapshot::Capture(world, coord, 1);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  std::vector<GreedyMeshBatch> batches;
+  Expect(!TryGpuOpaqueEmitToBatches(state, snapshot, registry, coord, batches,
+                                    catalog.get()) &&
+             batches.empty(),
+         "dense cutout GPU rectangle overflow is rejected without partial "
+         "geometry");
+  const auto complete =
+      UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog.get());
+  Expect(complete.size() == CHUNK_VOLUME * 6u,
+         "CPU route preserves all 24576 checkerboard cutout faces after "
+         "bounded GPU rejection");
+  Expect(glGetError() == GL_NO_ERROR,
+         "dense cutout rejection does not issue invalid GL operations");
+}
+#endif
+
+using FaceCells = std::set<std::tuple<int, int, int, int, int>>;
+static FaceCells ExpandFaceCells(const std::vector<cutum::GreedyQuad> &quads)
+{
+  FaceCells cells;
+  for (const auto &q : quads)
+    for (int u = q.u; u < q.u + q.width; ++u)
+      for (int v = q.v; v < q.v + q.height; ++v)
+      {
+        glm::ivec3 p;
+        p[q.axis] = q.slice;
+        p[(q.axis + 1) % 3] = u;
+        p[(q.axis + 2) % 3] = v;
+        cells.emplace(q.axis, q.faceSign, p.x, p.y, p.z);
+      }
+  return cells;
+}
+
+static void
+TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
+                             const cutum::UBlockDefinitionStorage *definitions,
+                             bool gpu, bool gles = false)
+{
+  using namespace cutum;
+  ChunkMeshSnapshot unsupported;
+  unsupported.blocks[0] = kCubeLiquid;
+  const auto pinned = registry.GetDefinitionsCatalogSnapshot();
+  Expect(
+      !SnapshotIsGpuExtractEligible(unsupported, registry) &&
+          !SnapshotIsGpuExtractEligible(unsupported, pinned.get()),
+      "physical liquid remains on the fluid path even with cube render style");
+  unsupported.blocks[0] = kStone;
+  unsupported.fluid_packed[0] =
+      PackFluidCellState(FluidCellState::Source().WithKind(FluidKind::Water));
+  Expect(!SnapshotIsGpuExtractEligible(unsupported, registry) &&
+             !SnapshotIsGpuExtractEligible(unsupported, pinned.get()),
+         "supplementary fluid geometry must not be lost through opaque GPU "
+         "eligibility");
+  int cases = 0, mismatches = 0;
+  uint64_t physical_hash = 1469598103934665603ull;
+  int physical_mismatches = 0;
+  uint64_t canonical_hash = 1469598103934665603ull;
+  const auto hash_value = [&](int value)
+  {
+    const auto bits = static_cast<uint32_t>(value);
+    for (int shift = 0; shift < 32; shift += 8)
+    {
+      canonical_hash ^= (bits >> shift) & 255u;
+      canonical_hash *= 1099511628211ull;
+    }
+  };
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  GpuGreedyEmitState state;
+  if (gpu && !gles)
+    Expect(EnsureGpuOpaqueEmit(state),
+           "actual production compute programs compile");
+  if (gpu && gles)
+  {
+    const auto source = FaceMaskComputeSource(true);
+    const auto *bytes = source.c_str();
+    const auto shader = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(shader, 1, &bytes, nullptr);
+    glCompileShader(shader);
+    GLint ok = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok)
+    {
+      char message[4096];
+      glGetShaderInfoLog(shader, sizeof(message), nullptr, message);
+      std::cerr << message << '\n';
+    }
+    Expect(ok == GL_TRUE,
+           "production GLES mask source compiles on actual ES context");
+    state.MaskProgram = glCreateProgram();
+    glAttachShader(state.MaskProgram, shader);
+    glLinkProgram(state.MaskProgram);
+    glDeleteShader(shader);
+    glGetProgramiv(state.MaskProgram, GL_LINK_STATUS, &ok);
+    Expect(ok == GL_TRUE, "production GLES mask source links");
+    glGenBuffers(1, &state.OccSsbo);
+    glGenBuffers(1, &state.MaskSsbo);
+  }
+#endif
+  for (auto source : {kStone, kSolidGlass, kSolidCutout, kTransparentCutout})
+    for (auto neighbor :
+         {BlockId(BLOCK_AIR), kStone, kSolidGlass, kSolidCutout,
+          kTransparentCutout, kSolidCross, kWater, kCutoutLeaves})
+      for (int backing = 0; backing < 4; ++backing)
+        for (int axis = 0; axis < 3; ++axis)
+          for (int sign : {-1, 1})
+          {
+            UBlockWorld world;
+            world.SetFluidDefinitions(definitions);
+            world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+            const glm::ivec3 coord(0, -3, 0);
+            glm::ivec3 local(8), direction(0);
+            local[axis] = sign < 0 ? 0 : CHUNK_SIZE - 1;
+            direction[axis] = sign;
+            const auto position = coord * CHUNK_SIZE + local;
+            world.SetBlock(position, source);
+            world.SetBlock(position + direction, neighbor);
+            if (backing & 1)
+              world.SetBlock(position - direction, kStone);
+            if (backing & 2)
+              world.SetBlock(position + 2 * direction, kStone);
+            const auto snap = ChunkMeshSnapshot::Capture(world, coord, 1);
+            const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+            const auto expected = ExpandFaceCells(UGreedyMesher::BuildChunkMesh(
+                world, coord, registry, catalog.get()));
+            Expect(expected == ExpandFaceCells(UGreedyMesher::BuildChunkMesh(
+                                   snap, registry, catalog.get())),
+                   "live/snapshot reference parity in material matrix");
+            hash_value(cases);
+            hash_value(static_cast<int>(expected.size()));
+            for (const auto &cell : expected)
+            {
+              const auto [a, face_sign, x, y, z] = cell;
+              for (int value : {a, face_sign, x, y, z})
+                hash_value(value);
+            }
+            // Independent correction to the captured legacy oracle: every
+            // opaque cube/cutout face behind a transparent solid must exist.
+            // Collision occupancy and cells beyond that neighbor cannot make
+            // the transparent material an opaque occluder.
+            auto physical = expected;
+            for (int z = 0; z < CHUNK_SIZE; ++z)
+              for (int y = 0; y < CHUNK_SIZE; ++y)
+                for (int x = 0; x < CHUNK_SIZE; ++x)
+                {
+                  const glm::ivec3 cell(x, y, z);
+                  const auto id = snap.GetBlockLocal(cell);
+                  if (id == BLOCK_AIR ||
+                      CatalogIsTransparent(catalog.get(), id) ||
+                      CatalogIsLiquid(catalog.get(), id))
+                    continue;
+                  for (int a = 0; a < 3; ++a)
+                    for (int face_sign : {-1, 1})
+                    {
+                      glm::ivec3 offset(0);
+                      offset[a] = face_sign;
+                      const auto other =
+                          snap.GetBlock(snap.ChunkOrigin() + cell + offset);
+                      const auto style =
+                          CatalogGetRenderStyle(catalog.get(), other);
+                      if (CatalogIsTransparent(catalog.get(), other) &&
+                          CatalogBlocksMovement(catalog.get(), other) &&
+                          style != BlockRenderStyle::Cross &&
+                          style != BlockRenderStyle::Fluid)
+                        physical.emplace(a, face_sign, x, y, z);
+                    }
+                }
+            const auto physical_value = [&](int value)
+            {
+              const auto bits = static_cast<uint32_t>(value);
+              for (int shift = 0; shift < 32; shift += 8)
+              {
+                physical_hash ^= (bits >> shift) & 255u;
+                physical_hash *= 1099511628211ull;
+              }
+            };
+            physical_value(cases);
+            physical_value(static_cast<int>(physical.size()));
+            for (const auto &cell : physical)
+            {
+              const auto [a, fs, x, y, z] = cell;
+              for (int value : {a, fs, x, y, z})
+                physical_value(value);
+            }
+            FaceCells actual;
+            if (!gpu)
+              actual = ExpandFaceCells(ExtractOpaqueFacesCpu(snap, registry));
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+            else
+            {
+              std::vector<uint32_t> words, mask(CHUNK_VOLUME);
+              BuildPaddedFaceVisibility(snap, registry, catalog.get(), words);
+              glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.OccSsbo);
+              glBufferData(GL_SHADER_STORAGE_BUFFER,
+                           words.size() * sizeof(uint32_t), words.data(),
+                           GL_DYNAMIC_DRAW);
+              glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.MaskSsbo);
+              glBufferData(GL_SHADER_STORAGE_BUFFER,
+                           mask.size() * sizeof(uint32_t), nullptr,
+                           GL_DYNAMIC_DRAW);
+              glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, state.OccSsbo);
+              glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, state.MaskSsbo);
+              glUseProgram(state.MaskProgram);
+              glUniform1ui(glGetUniformLocation(state.MaskProgram, "volume"),
+                           CHUNK_VOLUME);
+              glUniform1ui(glGetUniformLocation(state.MaskProgram, "side"),
+                           CHUNK_SIZE);
+              glUniform1ui(glGetUniformLocation(state.MaskProgram, "pad"),
+                           kGpuFaceVisibilityPad);
+              glDispatchCompute((CHUNK_VOLUME + 63) / 64, 1, 1);
+              glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT |
+                              GL_BUFFER_UPDATE_BARRIER_BIT);
+              const auto *mapped =
+                  static_cast<const uint32_t *>(glMapBufferRange(
+                      GL_SHADER_STORAGE_BUFFER, 0,
+                      mask.size() * sizeof(uint32_t), GL_MAP_READ_BIT));
+              Expect(mapped != nullptr,
+                     "actual compute result maps for driver reference");
+              std::copy_n(mapped, mask.size(), mask.begin());
+              Expect(glUnmapBuffer(GL_SHADER_STORAGE_BUFFER) == GL_TRUE,
+                     "visibility readback remains valid");
+              Expect(glGetError() == GL_NO_ERROR,
+                     "actual compute visibility readback succeeds");
+              for (int n = 0; n < CHUNK_VOLUME; ++n)
+                for (int face = 0; face < 6; ++face)
+                  if (mask[n] & (1u << face))
+                    actual.emplace(face / 2, face % 2 ? 1 : -1, n % CHUNK_SIZE,
+                                   n / (CHUNK_SIZE * CHUNK_SIZE),
+                                   (n / CHUNK_SIZE) % CHUNK_SIZE);
+            }
+#endif
+            if (actual != physical)
+              ++physical_mismatches;
+            ++cases;
+            if (actual != expected)
+            {
+              if (++mismatches <= 4)
+                std::cerr << "visibility mismatch gpu=" << gpu
+                          << " source=" << source << " neighbor=" << neighbor
+                          << " backing=" << backing << " axis=" << axis
+                          << " sign=" << sign << '\n';
+            }
+          }
+  std::cout << "material visibility cases=" << cases
+            << " mismatches=" << mismatches << " gpu=" << gpu << '\n';
+  // Frozen independently from the original live oracle plus the explicit
+  // opaque-behind-transparent correction, before changing the shared rules.
+  Expect(canonical_hash == 6223292245338193327ull,
+         "material rules match the independent corrected visibility oracle");
+  std::cout << "canonical_material_visibility_hash=" << canonical_hash << '\n';
+  std::cout << "physical_visibility_hash=" << physical_hash
+            << " physical_mismatches=" << physical_mismatches << '\n';
+  Expect(physical_mismatches == 0,
+         "transparent solid must not erase opaque surfaces");
+  Expect(mismatches == 0,
+         "GPU eligible material faces match canonical live mesher");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  if (gpu && !gles)
+    TestDenseCutoutFallback(state, registry, definitions);
+#endif
 }
 
 static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
@@ -1215,14 +1531,25 @@ int main(int argc, char **argv)
   world.SetFluidDefinitions(definitions.get());
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
-  if (argc == 2 && std::string(argv[1]) == "--light-binding-driver")
+  const bool gles_visibility_driver =
+      argc == 2 && std::string(argv[1]) == "--face-visibility-gles-driver";
+  const bool visibility_driver =
+      gles_visibility_driver ||
+      (argc == 2 && std::string(argv[1]) == "--face-visibility-driver");
+  if (visibility_driver ||
+      (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
     if (!glfwInit())
       return 77;
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_CLIENT_API, gles_visibility_driver ? GLFW_OPENGL_ES_API
+                                                           : GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,
+                   visibility_driver && !gles_visibility_driver ? 4 : 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gles_visibility_driver ? 1 : 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, gles_visibility_driver
+                                            ? GLFW_OPENGL_ANY_PROFILE
+                                            : GLFW_OPENGL_CORE_PROFILE);
     auto *window = glfwCreateWindow(32, 32, "Certified render light test",
                                     nullptr, nullptr);
     if (!window)
@@ -1241,13 +1568,30 @@ int main(int argc, char **argv)
     while (glGetError() != GL_NO_ERROR)
     {
     }
+    if (visibility_driver &&
+        (!glDispatchCompute || !glMemoryBarrier || !glBindBufferBase))
+    {
+      glfwDestroyWindow(window);
+      glfwTerminate();
+      return 77;
+    }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
-    TestFirstComputedLightPublication(registry, definitions.get(), true);
+    if (visibility_driver)
+      TestMaterialVisibilityParity(registry, definitions.get(), true,
+                                   gles_visibility_driver);
+    else
+      TestFirstComputedLightPublication(registry, definitions.get(), true);
     Expect(glGetError() == GL_NO_ERROR,
            "certified binding integration has no GL errors");
     glfwDestroyWindow(window);
     glfwTerminate();
+    if (visibility_driver)
+    {
+      std::cout << "gpu_material_visibility_driver_test: PASS (actual "
+                   "production compute mask)\n";
+      return 0;
+    }
     std::cout << "section_render_light_bindings_driver_test: PASS "
                  "(physical proof/publication/resource lifetime; no world "
                  "shader acceptance)\n";
@@ -1260,6 +1604,7 @@ int main(int argc, char **argv)
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestNoSurfaceGeometryProof(registry, definitions.get());
   TestSecondPlaneGeometryParity(registry, definitions.get());
+  TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
   TestFirstComputedLightPublication(registry, definitions.get());

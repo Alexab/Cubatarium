@@ -5,6 +5,7 @@
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Mesh/Contracts/CubeFaceVisibility.h"
 #include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <algorithm>
 #include <array>
@@ -12,7 +13,7 @@
 #include <unordered_map>
 #include <vector>
 
-// BuildPaddedOccupancy uses std::vector.
+// CPU/GPU visibility uploads share full material words and adjacent geometry.
 
 namespace cutum
 {
@@ -110,7 +111,7 @@ inline bool IsGpuFaceExtractEligible(UBlockRegistry &registry, BlockId id)
   {
     return false;
   }
-  return registry.IsSolid(id);
+  return registry.IsSolid(id) && !registry.IsLiquid(id);
 }
 
 /// Q4 WorkerCompute: same eligibility from pinned catalog (no live registry).
@@ -127,25 +128,18 @@ inline bool IsGpuFaceExtractEligible(const BlockDefinitionCatalog *catalog,
     return false;
   }
   // IsSolid ≡ BlocksMovement on the registry path.
-  return CatalogBlocksMovement(catalog, id);
-}
-
-/// Legacy alias kept for callers that need the strict opaque-only check.
-inline bool IsOpaqueSolidForGpuExtract(UBlockRegistry &registry, BlockId id)
-{
-  return IsGpuFaceExtractEligible(registry, id) && !registry.IsTransparent(id);
-}
-
-inline bool IsOpaqueSolidForGpuExtract(const BlockDefinitionCatalog *catalog,
-                                       BlockId id)
-{
-  return IsGpuFaceExtractEligible(catalog, id) &&
-         !CatalogIsTransparent(catalog, id);
+  const auto *definition = FindCatalogDefinition(catalog, id);
+  return CatalogBlocksMovement(catalog, id) &&
+         (!definition || !definition->Physics.IsLiquid);
 }
 
 inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
                                          UBlockRegistry &registry)
 {
+  if (std::any_of(snap.fluid_packed.begin(), snap.fluid_packed.end(),
+                  [](uint8_t packed) { return packed != 0; }))
+    return false;
+
   for (BlockId id : snap.blocks)
   {
     if (id == 0)
@@ -163,6 +157,10 @@ inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
 inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
                                          const BlockDefinitionCatalog *catalog)
 {
+  if (std::any_of(snap.fluid_packed.begin(), snap.fluid_packed.end(),
+                  [](uint8_t packed) { return packed != 0; }))
+    return false;
+
   if (!catalog)
   {
     return false;
@@ -181,131 +179,72 @@ inline bool SnapshotIsGpuExtractEligible(const ChunkMeshSnapshot &snap,
   return true;
 }
 
-/// Occupancy: 1 = opaque solid, 0 = empty/other. Size CHUNK_VOLUME.
-inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
-                           UBlockRegistry &registry,
-                           std::array<uint8_t, CHUNK_VOLUME> &occ)
-{
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    {
-      const BlockId id = snap.blocks[static_cast<size_t>(i)];
-      if (!IsGpuFaceExtractEligible(registry, id))
-        occ[static_cast<size_t>(i)] = 0u;
-      else if (registry.IsTransparent(id) ||
-               registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
-        occ[static_cast<size_t>(i)] = 3u;
-      else
-        occ[static_cast<size_t>(i)] = 1u;
-    }
-  }
-}
-
-/// Q4: occupancy from pinned catalog (main-thread GPU extract).
-inline void BuildOccupancy(const ChunkMeshSnapshot &snap,
-                           const BlockDefinitionCatalog *catalog,
-                           std::array<uint8_t, CHUNK_VOLUME> &occ)
-{
-  for (int i = 0; i < CHUNK_VOLUME; ++i)
-  {
-    const BlockId id = snap.blocks[static_cast<size_t>(i)];
-    if (!IsGpuFaceExtractEligible(catalog, id))
-    {
-      occ[static_cast<size_t>(i)] = 0u;
-    }
-    else if (CatalogIsTransparent(catalog, id) ||
-             CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
-    {
-      occ[static_cast<size_t>(i)] = 3u;
-    }
-    else
-    {
-      occ[static_cast<size_t>(i)] = 1u;
-    }
-  }
-}
-
-/// Padded (CHUNK_SIZE+2)^3 occupancy including one-block shell for GPU extract.
-inline constexpr int kGpuOccPad = CHUNK_SIZE + 2;
-inline constexpr int kGpuOccPadVolume = kGpuOccPad * kGpuOccPad * kGpuOccPad;
 inline constexpr int kGpuLightPad = CHUNK_SIZE + 4;
 inline constexpr int kGpuLightPadVolume =
     kGpuLightPad * kGpuLightPad * kGpuLightPad;
 
-inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
-                                 UBlockRegistry &registry,
-                                 std::vector<uint8_t> &occ)
+inline constexpr int kGpuFaceVisibilityPad = CHUNK_SIZE + 2 * kFaceGeometryHalo;
+inline constexpr int kGpuFaceVisibilityVolume =
+    kGpuFaceVisibilityPad * kGpuFaceVisibilityPad * kGpuFaceVisibilityPad;
+inline size_t FaceVisibilityIndex(glm::ivec3 local)
 {
-  occ.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
-  const int pad = kGpuOccPad;
-  for (int y = -1; y <= CHUNK_SIZE; ++y)
-  {
-    for (int z = -1; z <= CHUNK_SIZE; ++z)
-    {
-      for (int x = -1; x <= CHUNK_SIZE; ++x)
-      {
-        const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
-        const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
-        if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
-        {
-          occ[static_cast<size_t>(pi)] = 2u;
-          continue;
-        }
-        const BlockId id = snap.GetBlock(world);
-        if (!IsGpuFaceExtractEligible(registry, id))
-        {
-          occ[static_cast<size_t>(pi)] = 0u;
-        }
-        else if (registry.IsTransparent(id) ||
-                 registry.GetRenderStyle(id) == BlockRenderStyle::Cutout)
-        {
-          occ[static_cast<size_t>(pi)] = 3u;
-        }
-        else
-        {
-          occ[static_cast<size_t>(pi)] = 1u;
-        }
-      }
-    }
-  }
+  return static_cast<size_t>(
+      ((local.y + kFaceGeometryHalo) * kGpuFaceVisibilityPad + local.z +
+       kFaceGeometryHalo) *
+          kGpuFaceVisibilityPad +
+      local.x + kFaceGeometryHalo);
 }
-
-inline void BuildPaddedOccupancy(const ChunkMeshSnapshot &snap,
-                                 const BlockDefinitionCatalog *catalog,
-                                 std::vector<uint8_t> &occ)
+template <typename MaterialWord>
+inline void BuildPaddedFaceVisibilityWith(const ChunkMeshSnapshot &snapshot,
+                                          MaterialWord word_for,
+                                          std::vector<uint32_t> &words)
 {
-  occ.assign(static_cast<size_t>(kGpuOccPadVolume), 0);
-  const int pad = kGpuOccPad;
-  for (int y = -1; y <= CHUNK_SIZE; ++y)
-  {
-    for (int z = -1; z <= CHUNK_SIZE; ++z)
-    {
-      for (int x = -1; x <= CHUNK_SIZE; ++x)
+  words.assign(kGpuFaceVisibilityVolume, 0);
+  std::vector<uint32_t> material_words(1u << 16, 0);
+  for (int y = -kFaceGeometryHalo; y < CHUNK_SIZE + kFaceGeometryHalo; ++y)
+    for (int z = -kFaceGeometryHalo; z < CHUNK_SIZE + kFaceGeometryHalo; ++z)
+      for (int x = -kFaceGeometryHalo; x < CHUNK_SIZE + kFaceGeometryHalo; ++x)
       {
-        const glm::ivec3 world = snap.ChunkOrigin() + glm::ivec3(x, y, z);
-        const int pi = ((y + 1) * pad + (z + 1)) * pad + (x + 1);
-        if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
-        {
-          occ[static_cast<size_t>(pi)] = 2u;
+        const glm::ivec3 local(x, y, z);
+        if (ShouldSkipFaceForNeighbor(
+                snapshot.GetNeighborLoadState(snapshot.ChunkOrigin() + local)))
           continue;
-        }
-        const BlockId id = snap.GetBlock(world);
-        if (!IsGpuFaceExtractEligible(catalog, id))
-        {
-          occ[static_cast<size_t>(pi)] = 0u;
-        }
-        else if (CatalogIsTransparent(catalog, id) ||
-                 CatalogGetRenderStyle(catalog, id) == BlockRenderStyle::Cutout)
-        {
-          occ[static_cast<size_t>(pi)] = 3u;
-        }
-        else
-        {
-          occ[static_cast<size_t>(pi)] = 1u;
-        }
+        const auto id = snapshot.GetBlock(snapshot.ChunkOrigin() + local);
+        auto &material = material_words[id];
+        if (!material)
+          material = word_for(id);
+        auto word = material;
+        if (x >= 0 && y >= 0 && z >= 0 && x < CHUNK_SIZE && y < CHUNK_SIZE &&
+            z < CHUNK_SIZE &&
+            FluidCellHasActiveFluid(snapshot.GetFluidPackedLocal(local)))
+          word &= ~kFaceEligible;
+        words[FaceVisibilityIndex(local)] = word;
       }
-    }
-  }
+}
+inline void BuildPaddedFaceVisibility(const ChunkMeshSnapshot &snapshot,
+                                      const BlockDefinitionCatalog *catalog,
+                                      std::vector<uint32_t> &words)
+{
+  BuildPaddedFaceVisibilityWith(
+      snapshot, [&](BlockId id) { return CubeFaceMaterialWord(id, catalog); },
+      words);
+}
+inline void BuildPaddedFaceVisibility(const ChunkMeshSnapshot &snapshot,
+                                      UBlockRegistry &registry,
+                                      const BlockDefinitionCatalog *catalog,
+                                      std::vector<uint32_t> &words)
+{
+  BuildPaddedFaceVisibilityWith(
+      snapshot, [&](BlockId id)
+      { return CubeFaceMaterialWord(id, registry, catalog); }, words);
+}
+inline bool CubeFaceVisible(const std::vector<uint32_t> &words,
+                            glm::ivec3 local, glm::ivec3 direction)
+{
+  const auto decision =
+      DecideCubeFace(words[FaceVisibilityIndex(local)],
+                     words[FaceVisibilityIndex(local + direction)]);
+  return decision == CubeFaceDecision::Visible;
 }
 
 /// Padded light: center plus the radius-2 shell used by FaceLightPacked
@@ -364,34 +303,15 @@ inline uint8_t FaceLightPackedSnap(const ChunkMeshSnapshot &snap,
   return snap.GetLightPacked(snap.ChunkOrigin() + local_solid);
 }
 
-inline BlockId NeighborBlock(const ChunkMeshSnapshot &snap, int lx, int ly,
-                             int lz, int axis, int sign)
-{
-  glm::ivec3 local(lx, ly, lz);
-  local[axis] += sign;
-  const glm::ivec3 world = snap.ChunkOrigin() + local;
-  if (ShouldSkipFaceForNeighbor(snap.GetNeighborLoadState(world)))
-  {
-    return BLOCK_AIR;
-  }
-  return snap.GetBlock(world);
-}
-
-inline bool NeighborFaceSkipped(const ChunkMeshSnapshot &snap, int lx, int ly,
-                                int lz, int axis, int sign)
-{
-  glm::ivec3 local(lx, ly, lz);
-  local[axis] += sign;
-  return ShouldSkipFaceForNeighbor(
-      snap.GetNeighborLoadState(snap.ChunkOrigin() + local));
-}
-
-/// Emit 1x1 greedy quads for exposed opaque faces (CPU reference / decode).
+/// Emit 1x1 quads for all eligible non-fluid materials using canonical rules.
 inline std::vector<GreedyQuad>
 ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
 {
   std::vector<GreedyQuad> quads;
   quads.reserve(256);
+  std::vector<uint32_t> visibility;
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  BuildPaddedFaceVisibility(snap, registry, catalog.get(), visibility);
   const int n = CHUNK_SIZE;
   for (int y = 0; y < n; ++y)
   {
@@ -401,7 +321,7 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
       {
         // ChunkMeshSnapshot blocks use Chunk::LocalIndex (x + n*y + n^2*z).
         const BlockId id = snap.GetBlockLocal(glm::ivec3(x, y, z));
-        if (!IsOpaqueSolidForGpuExtract(registry, id))
+        if (!(visibility[FaceVisibilityIndex({x, y, z})] & kFaceEligible))
         {
           continue;
         }
@@ -409,15 +329,10 @@ ExtractOpaqueFacesCpu(const ChunkMeshSnapshot &snap, UBlockRegistry &registry)
         {
           for (int sign : {-1, 1})
           {
-            const BlockId nb = NeighborBlock(snap, x, y, z, axis, sign);
-            if (NeighborFaceSkipped(snap, x, y, z, axis, sign))
-            {
+            glm::ivec3 direction(0);
+            direction[axis] = sign;
+            if (!CubeFaceVisible(visibility, {x, y, z}, direction))
               continue;
-            }
-            if (IsOpaqueSolidForGpuExtract(registry, nb))
-            {
-              continue;
-            }
             GreedyQuad q;
             q.axis = axis;
             // UGreedyMesher convention: slice = voxel coordinate; u/v =

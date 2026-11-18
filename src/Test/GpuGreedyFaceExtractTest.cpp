@@ -69,59 +69,28 @@ int main()
   const auto faces = ExtractOpaqueFacesCpu(snap, registry);
   Expect(faces.size() == 24, "2x2x2 exterior faces == 24");
 
-  std::array<uint8_t, CHUNK_VOLUME> occ{};
-  BuildOccupancy(snap, registry, occ);
-  Expect(occ[0] == 1, "origin occupied");
-
-  // Shell-aware face masks must match ExtractOpaqueFacesCpu count.
-  std::vector<uint32_t> masks(static_cast<size_t>(CHUNK_VOLUME), 0);
-  const int n = CHUNK_SIZE;
-  for (int y = 0; y < n; ++y)
-  {
-    for (int z = 0; z < n; ++z)
-    {
-      for (int x = 0; x < n; ++x)
+  std::vector<uint32_t> visibility;
+  BuildPaddedFaceVisibility(snap, registry, nullptr, visibility);
+  Expect((visibility[FaceVisibilityIndex({0, 0, 0})] & kFaceSolid) != 0,
+         "origin has solid material semantics");
+  std::vector<uint32_t> masks(CHUNK_VOLUME, 0);
+  for (int y = 0; y < CHUNK_SIZE; ++y)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
       {
-        const int li = (y * n + z) * n + x;
-        if (!occ[static_cast<size_t>(li)])
-        {
+        const glm::ivec3 local(x, y, z);
+        if (!(visibility[FaceVisibilityIndex(local)] & kFaceEligible))
           continue;
-        }
-        uint32_t m = 0;
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 0, -1)))
-        {
-          m |= 1u;
-        }
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 0, 1)))
-        {
-          m |= 2u;
-        }
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 1, -1)))
-        {
-          m |= 4u;
-        }
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 1, 1)))
-        {
-          m |= 8u;
-        }
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 2, -1)))
-        {
-          m |= 16u;
-        }
-        if (!IsOpaqueSolidForGpuExtract(registry,
-                                        NeighborBlock(snap, x, y, z, 2, 1)))
-        {
-          m |= 32u;
-        }
-        masks[static_cast<size_t>(li)] = m;
+        for (int axis = 0; axis < 3; ++axis)
+          for (int sign : {-1, 1})
+          {
+            glm::ivec3 direction(0);
+            direction[axis] = sign;
+            if (CubeFaceVisible(visibility, local, direction))
+              masks[x + CHUNK_SIZE * z + CHUNK_SIZE * CHUNK_SIZE * y] |=
+                  1u << (axis * 2 + (sign > 0 ? 1 : 0));
+          }
       }
-    }
-  }
   size_t mask_faces = 0;
   for (uint32_t m : masks)
   {

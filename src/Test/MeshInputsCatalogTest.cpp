@@ -95,11 +95,10 @@ int main()
          "stone eligible via catalog");
   Expect(!cutum::IsGpuFaceExtractEligible(catalog_a.get(), 12),
          "liquid not GPU-extract eligible via catalog");
-  std::array<uint8_t, cutum::CHUNK_VOLUME> occ{};
-  snap.blocks.fill(0);
-  snap.blocks[0] = 13;
-  cutum::BuildOccupancy(snap, catalog_a.get(), occ);
-  Expect(occ[0] == 1, "catalog BuildOccupancy marks solid=1");
+  const auto word = cutum::CubeFaceMaterialWord(13, catalog_a.get());
+  Expect((word & (cutum::kFaceSolid | cutum::kFaceEligible)) ==
+             (cutum::kFaceSolid | cutum::kFaceEligible),
+         "pinned catalog material word retains solidity and eligibility");
 
   if (gFails != 0)
   {
