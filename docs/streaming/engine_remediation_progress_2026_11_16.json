@@ -2,13 +2,13 @@
   "schema": "engine-remediation-progress.v1",
   "goal_status": "active",
   "stages": {
-    "isolated_automated_test_stand": "in_progress: isolated native stand and configured-ring first-paint witness verified; physical-light/transparent/full-screen references and full matrix remain.",
-    "diagnostic_bot": "verified baseline: native takeoff, route, inspection; expand scenario matrix",
+    "isolated_automated_test_stand": "Implemented and used: isolated worlds/config/Release manifests, real-input frontier routes and pose-joined PNGs. Full reference/performance/backend matrix remains open.",
+    "diagnostic_bot": "Implemented baseline: native takeoff, route, inspection and authored falling-actor observation without runtime relocation. Expanded return/walking/cave/replay scenario coverage remains.",
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
-    "correct_light_solver_and_persistence": "in_progress: common geometry solver, domain certificates and durable section coverage integrated; persisted section certificates and native physical-light reference pending",
-    "single_section_lifecycle_and_publication": "in_progress:441a8471e full radius4 frontier/24views/startup pass after exact fulfilled-work retirement; radius1 first-paint historical pass; configured radius8 startup/performance fails. Geometry-only validation clock under verification; canonical section lifecycle, actual draw domain and independent AIR light pending.",
-    "independent_light_resource_and_performance": "pending",
-    "full_smoke_and_regression_matrix": "in_progress: surface frontier, dry negative cave and flooded negative cave routes; independent analytic near-opaque-depth checks; startup, light/transparent reference, air pocket and eviction round trip still pending"
+    "correct_light_solver_and_persistence": "Partial: independent geometry-derived CPU fields, read-set/material/epoch validation, AIR ownership, dense8000cell references, optimized saturated sky and producer-aware motion coverage verified. Persisted content certificates and actual GPU solver/backend parity remain.",
+    "single_section_lifecycle_and_publication": "Partial: required configured-ring census, geometry NoSurface authority and captured source epoch propagation verified; unified state/NoDraw publication/legacy diagnostic ownership still open. Later radius8startup-only PASS405.8s supersedes earlier timeout for readiness only, not performance/route.",
+    "independent_light_resource_and_performance": "Infrastructure verified: bounded GL3.3/GLES field atlas, stable table handles, typed leases/epochs and physical-proof publication tests. Default GeometryEngine field shaders, capacity fallback and removal of light-driven geometry work are not implemented.",
+    "full_smoke_and_regression_matrix": "Partial: frontier/dry/wet cave and analytic depth, physical camera/viewmodel/creature/item and camera-independent50blocks/sec falling actor references available. Generic RGB/transparency, full seed/save/backend/edit/eviction/memory/performance matrix pending."
   },
   "native_baseline": {
     "artifacts": "build/desktop-msvc/diagnostic-bot-frontier-v2",
@@ -3239,7 +3239,7 @@
     }
   },
   "continuous_world_input_closure": {
-    "status": "in_progress:441a8471e scoped full radius4 acceptance restored; radius8 startup and independent field/lifecycle/resource work pending",
+    "status": "Active: configured radius4 frontier/startup/actor field references pass. Radius8 has a later startup-only PASS at405.8s, with performance/full route not accepted. Canonical CPU physical field and tested GPU resource infrastructure exist; default renderer cutover and full original matrix remain open.",
     "source": "81891ac87",
     "current_diagnostics_source": "76f52003b current Release; radius4 scoped startup PASS, radius8 publication debt632 at timeout600; a0/e6 full route evidence retained",
     "build": "build/desktop-msvc/engine-required-job-lifecycle-witness-release-build.log",
@@ -3558,11 +3558,11 @@
     },
     "evidence_limit": "Configured ring publication/input readiness and near opaque cave depth are verified only in stated runs. Radius-8 progression disproves a completely frozen queue but does not establish acceptable startup latency or eventual convergence. AIR geometry knowledge is not an independently computed physical-light field.",
     "remaining": [
-      "Complete a0a704ad6 full radius4 verification; radius8 startup remains failing. Next cutover must cover canonical field/AIR ownership, exact section lifecycle and production/render admission without redundant preview work.",
-      "Native configured radius 1 and larger-than-four tests; continuous consumer request/physical dependency convergence beyond initial residency.",
-      "Unify renderer actual admission/frustum domain and section lifecycle; eliminate remaining RGB/coarse authority and fair bounded maintenance cost.",
-      "Known empty geometry is not computed light: CPU/GPU light volumes must own required AIR/halo fields, especially emitter propagation across an AIR-only section.",
-      "Persisted content certificates, independent light resource, physical-light/transparent/full-screen oracle, full eviction/reload/seed/backend matrix."
+      "Complete unified section lifecycle/presentation authority, including explicit NoDraw states and remaining legacy diagnostic blockers. Keep physical input readiness distinct from geometry and resource residency.",
+      "Install normal GeometryEngine physical field owner and every CPU/direct/MDI/packed/Cross/transparent/GLES consumer, with artifact-specific handles/leases and bounded atlas-capacity fallback. Remove baked-light merge/geometry invalidation only after full consumer cutover.",
+      "Persist content-based light certificates; finish actual GPU solver/backend parity and material/unknown input matrix. Runtime epochs and raw persisted light are not disk authority.",
+      "Complete independent RGB/transparency references and cold/warm, signed dry/wet/air-pocket, light edit/removal, eviction/reload/round trip, seed/save/backend/render-distance/memory/performance native matrix.",
+      "Close point-demand pre-admission and final-install delivery timing; retain historical falling3Missing and RD8timeout evidence. RD8startup-only later passed with405.8s cost; no current large-radius performance acceptance."
     ],
     "root_cause_evidence": {
       "source": "74dac2e06",
@@ -3615,7 +3615,9 @@
             "publication_unready_sections": 1181
           },
           "scope": "separate nondeterministic repeat; do not infer improvement relative to shorter run"
-        }
+        },
+        "evidence_role": "Historical failure retained. Later startup-only success is recorded separately; do not use this old row as current readiness status.",
+        "later_startup_evidence": "geometry_only_no_surface_authority.native_startup:28d644df2,engine-no-surface-rd8-startup-native,PASS6936/6936sections,405798ms; no performance/route acceptance."
       }
     ],
     "maintenance_refinement": {
@@ -5871,7 +5873,7 @@
       "world_lifetime_evidence": "Wrong source epoch and geometry rejected; independent sync cache has its own capture epoch after RebuildAll. BeginWorld with reused logical epoch invalidates retained old binding/Refresh and yields different shader handle incarnation. Zero logical epoch remains valid.",
       "test_development": "Initial test build exposed GLFW-before-GLEW include order, then an unqualified CHUNK_SIZE in probe; fixed before passing builds. Initial unchanged-geometry remesh was legitimately elided; fixture now actually edits a block/recalculates proof before fault injection. Whole-cache dirty assertions replaced with target-coordinate scope because independent neighbor obligations are outside this test. Original failed logs retained; no failed/RED app launch.",
       "limits": "Normal world renderer still uses baked light; no full shader/backend cutover, typed NoSurface, GPU resource capacity fallback, field-only world scheduling, GLES parity, full visual/RGB/transparency or performance acceptance claimed. Cross-instance per-section metadata/resource lifetime and MDI metadata still need integration. Before default GPU mode, bind owner at engine lifecycle, carry authoritative capture-world epoch (not observational traces), feed all world draw consumers and verify reset/eviction/failure behavior.",
-      "next": "Before normal cutover: authoritative source capture-world epoch propagation, typed geometry NoSurface/current section readiness and bounded atlas/binding capacity coverage; then GeometryEngine lifecycle binding and every CPU/MDI/packed/cross/transparent/GLES world shader consumer. Full RGB/transparency, persistent content proofs, edit/eviction/high-speed/RD8/backend/performance matrix remain open. Do not remove baked lighting/job keys before all draw paths consume physical field resources.",
+      "next": "Captured source epoch propagation is now verified; see captured_render_source_epoch. Remaining prerequisites: explicit NoDraw/resource admission, bounded atlas/binding capacity fallback; then GeometryEngine lifecycle and every CPU/MDI/packed/Cross/transparent/GLES shader consumer. Keep baked lighting/job keys until all draw paths consume physical resources.",
       "negative_controls": [
         "world-epoch-red: remove source epoch gate from real Prepare; driver wrong-epoch authority assertionFAIL",
         "physical-bytes-red: upload all-zero volume instead of certified field; actual shader all8000cell comparisonFAIL (headless alone insufficient)",
@@ -6558,12 +6560,84 @@
       }
     },
     "captured_render_source_epoch": {
-      "status": "Implemented authoritative captured epoch through CPU/packed publication.7Release unit/driver/capture tests PASS after source restoration; app build/native pending before ordinary renderer cutover.",
+      "status": "Implemented and verified:7Release unit/driver/capture tests, required application build and all named native references PASS. Source epoch remains distinct from worker/trace epochs. Normal renderer field-shader cutover still pending.",
       "baseline_red": "engine-render-source-epoch-red-test.log: unchanged geometry/physical inputs and cache epoch bump allow old snapshot into resource preparation because old gate borrowed CaptureStore.WorldEpoch at apply time. Dedicated regression fails before fix.",
       "implementation": "ChunkMeshSnapshot and MeshBuildResult carry sourceWorldEpoch separately from worker submitEpoch and observational trace. Store TryCommit stamps raw captures from its original capture token and refuses relabeling an already owned older snapshot; CaptureAndStore retains epoch before capture and returns null on commit rejection, avoiding operator[] default Ready. Incremental shell retains source epoch. Actual worker copies provenance; all3packed commit paths pass snapshot source, synchronous capture saves epoch before Capture. Publication gate checks nonzero/current source before optional GPU callback and again after it; epoch authority applies to legacy rendering too.",
       "validation": "engine-render-source-epoch-restored-seven-tests.log:7/7PASS, including actual GL/GLES visibility and GL3.3physical binding driver, actual async CPU/packed fallback integration, capture worker/incremental/token tests. Dedicated cases cover stale/missing/future source, callback epoch transition, current owner success, Store relabel rejection and actual worker result source epoch different from its submit epoch.",
       "negative_controls": "engine-render-source-epoch-negative-controls.json: disabling admission guard reaches forbidden allocation callback; disabling post-callback check accepts epoch transition; removing worker provenance is caught earlier by existing actual async successor-publication test. Source restored exact, rebuilt and7tests pass. Orchestrator initially expected a later worker-check message; corrected assertion without repeating mutations. No RED application build/launch.",
-      "remaining": "Normal GeometryEngine still does not install physical field resource owner or consume field textures in production shaders. Shared owner lookup must cover CPU/MDI/packed/Cross/transparent/GLES; bounded atlas-capacity fallback and explicit NoDraw resource semantics are prerequisites. Keep full original goal active."
+      "remaining": "Normal GeometryEngine still does not install physical field resource owner or consume field textures in production shaders. Shared owner lookup must cover CPU/MDI/packed/Cross/transparent/GLES; bounded atlas-capacity fallback and explicit NoDraw resource semantics are prerequisites. Keep full original goal active.",
+      "release_build": "engine-render-source-epoch-release-build.log: exact required Cubatarium Release target/parallel8 exits0; static executable verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-render-source-epoch-falling-native",
+        "observation": "render-source-epoch-native-observation.json",
+        "source_commit": "b3cdb7e6df2ede22f442f39aff3ba83f96e4a2ef",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "ingame_frames": 1711,
+        "chunks": 22,
+        "outside_initial_samples": 1091,
+        "relocations_after_start": 0,
+        "inspection_pngs": "30/30",
+        "camera_ready": "1711/1711",
+        "first_person_ready": "1711/1711",
+        "creature_ready": "926/926",
+        "falling_actor": {
+          "schema": "engine-falling-creature-reference.v1",
+          "status": "PASS",
+          "reason": "identity_joined_falling_creature_fields",
+          "identity": 4,
+          "samples": 8,
+          "frames": 8,
+          "sections": 2,
+          "vertical_span": 19,
+          "independent_frames": 8,
+          "missing_identity_rows": 0,
+          "skipped": 38,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "declared saved actor identity, measured downward speed, multiple sections and canonical sky15 field at actual draw samples; no GPU issue, RGB or universal delivery guarantee"
+        },
+        "saved_item_draws": 317,
+        "saved_item_primitives": 951,
+        "opaque_depth_checks": 449,
+        "packed_floor_light_checks": 168,
+        "warmup": [
+          {
+            "reason": "live_blockers",
+            "elapsed_ms": 40438.6,
+            "visibility_debt": 0,
+            "underfeet_ready": true,
+            "forced_with_debt": false
+          }
+        ],
+        "provenance": "EXE digest/current source World_261/byte-exact configuration restoration independently verified. Native confirms normal producer/publication compatibility; optional field preparation callback is exercised by real driver integration, not falsely claimed enabled in GeometryEngine."
+      }
+    }
+  },
+  "execution_status_review_2026_11_18": {
+    "reviewed_at_utc": "2026-11-18T13:28:38.753780+00:00",
+    "goal": "active; full originalS0..S6scope unchanged",
+    "basis": "Current source, Release unit/driver/native receipts and remaining acceptance requirements; no completion percentage inferred from commit/test counts. Corrected stale top-level RD8/AIR/resource status summaries while retaining original failures.",
+    "forecast": {
+      "first_end_to_end_S5_variant": "1..2days of focused work; engineering estimate, not commitment",
+      "full_original_plan": "5..10working days of focused work; low confidence until S5integration passes",
+      "critical_path": [
+        "Bounded GPU capacity fallback and artifact-specific handle/lease transport across all draw paths",
+        "Default physical field shaders and geometry/light invalidation separation",
+        "Unified lifecycle, persisted content certificates and actual GPU/backend parity",
+        "Independent RGB/transparency and complete native/performance/memory matrix"
+      ]
+    },
+    "stage_view": {
+      "S0_S1": "implemented baseline and in active use; expanded scenarios remain",
+      "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
+      "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
+      "S4": "partial lifecycle and publication ownership",
+      "S5": "resource infrastructure verified, default renderer integration pending",
+      "S6": "scoped references verified, full visual/performance matrix incomplete"
     }
   }
 }
