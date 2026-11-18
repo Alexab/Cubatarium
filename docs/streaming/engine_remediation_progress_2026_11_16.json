@@ -6128,7 +6128,7 @@
       }
     },
     "material_face_visibility_contract": {
-      "status": "Implemented corrected CPU/GPU material contract. Release7/7 tests and application build PASS; native scoped references PASS, full RGB remains UNTESTED. Async packed failure recovery is next independent defect.",
+      "status": "Corrected CPU/GPU material contract validated by seven Release tests and scoped native references; asynchronous failure recovery subsequently implemented and verified in async_packed_failure_recovery. Full RGB remains UNTESTED.",
       "baseline_red": "engine-material-visibility-red-build/test.log:768 combinations of4source materials,8neighbors,4backing patterns and6directions; actual AMD OpenGL4.3 production mask differs from live CPU in438cases, old extraction CPU reference426. These are real-driver failures, not shader-text assertions. Never built application from RED.",
       "independent_oracles": "Before refactoring live CPU, captured deterministic aggregate10230175130368584557 from all original face cells. Shared-rule refactor matched it on CPU/Desktop GL/GLES, then a separate physical requirement added every opaque face behind a transparent solid irrespective of backing geometry. Derived corrected oracle6223292245338193327 before changing shared rules. engine-material-visibility-physical-red-test.log proves90bad cases on CPU, real GL4.3 and real OpenGL ES3.2, despite cross-backend agreement. Fix targets intended visibility rather than merely matching old bugs.",
       "history": "a094f6709c June21 async greedy builder copied before/beyond transparent-solid heuristic;92eb51ed22 July1 IU reader refactor retained it. af776f82d9 July27 GPU mask and1c3e75cae0 July29 n!=self two-class transparency diverged from full CPU semantics. e353bd3a9 July27 Android mask used empty-neighbor-only rule. a484ef4acb July3 fluid rollback added fluid exceptions; f1c65bcdb7 September13 catalog pinning and3c3e507930 November13 movement queries retained legacy glass heuristic. These histories explain why multiple render paths appeared fixed independently while diverging.",
@@ -6141,7 +6141,7 @@
         "negative_controls": "engine-material-visibility-negative-controls.json plus coordinate-red/shared-rule-red logs:coordinate permutation causes512/768 real GPU differences; identical wrong Cutout rule in CPU/GLSL gives mutual agreement but independently frozen oracle rejects both. Unit targets only; headers restored byte-exact before GREEN builds.",
         "buffer_ordering": "Added GL_BUFFER_UPDATE_BARRIER_BIT where shader outputs are subsequently read/mapped/copied by buffer commands. Khronos OpenGL-Refpages glMemoryBarrier.xml documents this domain. Actual driver tests pass; no claim that hardware reproduced a stale-cache failure without it."
       },
-      "remaining_scope": "No full native RGB/transparency or Android application parity claim. Separate asynchronous packed pipeline overflow currently returns Failed and cache requeues; bounded CPU recovery needs an independent end-to-end regression, unlike verified synchronous direct-emitter fallback.",
+      "remaining_scope": "No full native RGB/transparency or Android application parity claim. Asynchronous packed overflow now has actual driver coverage and bounded CPU recovery; see async_packed_failure_recovery.",
       "release_build": "engine-material-visibility-release-build.log: exact required Cubatarium Release target/parallel8 exits0, static executable verification PASS with6system DLLs.",
       "native_regression": {
         "artifacts": "build/desktop-msvc/engine-material-visibility-visible-items-native",
@@ -6168,14 +6168,55 @@
       }
     },
     "async_packed_failure_recovery": {
-      "status": "Implemented; actual GL4.3 regression and7restored Release tests PASS. Final app build/native pending.",
+      "status": "Implemented and verified: final7/7 Release tests, exact application build and all named native scoped references PASS. Full RGB remains UNTESTED; overall remediation active.",
       "defects": "Counter overflow sets ticket.valid=false; old fail_ticket used that flag to gate staging free, leaking capacity. Failure requeued same GPU-eligible geometry indefinitely. RemoveChunk erased pending tickets without fence/staging/readback cleanup.",
       "history": "git blame:8cd712ee48 Aug1 guarded staging release byvalid;7af7c9074d Aug1 marked overflow ticket invalid; f1b28c0b5c Jul29 erased pending ownership on RemoveChunk;3c3e507930 Nov13 retained retry-only requeue path.",
       "implementation": "One ReleasePendingGpuTicket releases owned staging independent of output validity, deletes fence, returns readback lease and resets ticket; shared by failure, outside-focus cancellation and RemoveChunk. All three async dispatch sites pass per-job force_cpu through Enqueue/EnqueueDetailed. Worker bypasses GPU backend entirely and builds canonical CPU geometry under unchanged admission/snapshot/result budgets and pinned catalog. Immediate rebuild honors same routing. Failed coordinates remain CPU-routed until eviction or full reset; this policy never creates readiness/light proof. Predecessor remains drawable while fresh CPU result is pending. First transition logs GpuMeshRecovery cpu_fallback.",
       "baseline_red": "engine-packed-recovery-red-test.log: actual production mask/greedy dispatch overflow with2slot pool fails independent capacity assertion; no RED application build/launch.",
       "validation": "engine-packed-recovery-eviction-seven-test.log and engine-packed-recovery-restored-seven-test.log:7/7 PASS. Dense16cube alternating two Cutouts has24576independently required faces; actual overflow terminates, returns both slots, bounded worker publishes98304vertices with zero GPU eligibility callbacks. Repeat overflow retains complete predecessor without advancing publication. Twelve actual Dispatched-ticket evictions exceed8PBO ring and recover2/2slots each time; eviction removes CPU routing.",
       "negative_controls": "engine-packed-recovery-negative-controls.json: disabling CPU routing in all3dispatch sites produces eligibility=1 and fails complete recovery; omitting RemoveChunk cleanup fails real in-flight eviction resource assertion. Exact cache-source restoration followed by7/7PASS.",
-      "limits": "Native compatibility scene does not intentionally overflow; actual driver integration covers fault paths. General frame/CPU mesh memory bounds, field shader cutover, falling consumer latency, complete RGB/transparency and backend matrix remain open."
+      "limits": "Native compatibility scene does not intentionally overflow; actual driver integration covers fault paths. General frame/CPU mesh memory bounds, field shader cutover, falling consumer latency, complete RGB/transparency and backend matrix remain open.",
+      "release_build": "engine-packed-recovery-release-build.log: exact required Cubatarium Release target/parallel8 exits0; static executable verification PASS with6system DLLs.",
+      "final_units": "engine-packed-recovery-final-seven-test.log:7/7 PASS after final source cleanup. Current ChunkMeshCache.cpp matches the exact restored negative-control source receipt.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-packed-recovery-visible-items-native",
+        "observation": "packed-recovery-native-observation.json",
+        "source_commit": "9965147907a11bd4e633f16db305f9815015069c",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "ingame_frames": 1930,
+        "chunks": 22,
+        "outside_initial_samples": 1167,
+        "relocations_after_start": 0,
+        "inspection_pngs": "30/30",
+        "camera_ready": "1930/1930",
+        "first_person_ready": "1930/1930",
+        "creature_ready": "625/625",
+        "saved_item_draws": 358,
+        "saved_item_primitives": 1074,
+        "opaque_depth_checks": 474,
+        "packed_floor_light_checks": 186,
+        "warmup": [
+          {
+            "reason": "live_blockers",
+            "elapsed_ms": 38998.5,
+            "visibility_debt": 0,
+            "underfeet_ready": true,
+            "forced_with_debt": false
+          }
+        ],
+        "provenance": "Observation verifies current EXE digest, unchanged source World_261 and byte-exact runtime config restoration. Native proof scene uses dense audit instrumentation and is not a performance benchmark."
+      }
+    },
+    "light_sample_delivery_deadline_audit": {
+      "status": "Open; next work must reduce measured service latency and make motion forecasting cover it, without weakening readiness or pixel references.",
+      "counterexample": "Retain geometry_only_no_surface_authority native failing creature samples and its producer receipt: 930.58ms compute, total1.329s submission-to-apply, first missing samples before completion. Later all-ready runs do not negate it.",
+      "current_source": "LightSampleApproach.h claims1second measured motion but clamps each displacement to32blocks; at actual50blocks/sec terminal fall this covers only0.64seconds. World.cpp requests these approaches before draw and fair service already exists. Simply increasing queue fairness again does not address this bound.",
+      "solver_source": "ChunkRelightSnapshot::Compute already caches material definitions/topology and uses level buckets. It currently enqueues every sky>1cell, including saturated15interiors that cannot raise neighbors in the same saturated tile. Investigate safe frontier-only seeding with independent dense Jacobi8000-cell parity, negative control for omitted cross-tile seeds and measured work/time counters before claiming speedup.",
+      "forecast_requirement": "Use actual physics/velocity and observed bounded delivery costs; cover falling acceleration and terminal motion without an unbounded3D box or invented readiness. Verify startup/movement actual native receipts, not only forecast helper tests.",
+      "other_required_work": "Complete normal renderer physical-field shader cutover and source-epoch authority, capacity fallback, typed section publication/NoDraw diagnostics, persisted content certificates, GPU solver/backend parity, RGB/transparency and cold/warm/edit/eviction/memory/performance matrix remain required by original plan."
     }
   }
 }
