@@ -7200,14 +7200,131 @@
       }
     },
     "shader_failure_handling_audit": {
-      "status": "Implemented;6Release testsPASS, four negative controlsRED with byte-exact source restore and6restoredGREEN. Required application build/native pending. Full originalS0..S6goal remains active.",
+      "status": "Implemented and driver-verified:6Release testsPASS,4controlsRED/exactrestore/6GREEN; required app Release/static6DLLsPASS. Native wet first run detects287opaque-depth faults; unchanged EXE target-trace repeat has0/8628. Shader startup succeeds, but rendering/streaming acceptance remains incomplete. Full originalgoal active.",
       "evidence": "ShaderManager.cpp CompileShader returns shaderID!=0 after logging compile status; LinkProgram returns programID!=0 after logging link status. CreateFromStrings overwrites prior programID before link success and retains uniformLocations cache. InitShaders unconditionally requests desktop430 packed shader; no GLES packed vertex asset exists, while actual packed cache pipeline is desktop-only.",
-      "next": "Required Release/native verification, then cube/CPU/MDI/packed physical field consumers with artifact-specific ownership and portable fallback. Audit capability coherence before broader low-end/backend acceptance.",
+      "next": "Prioritize wet frontier publication counterexample. Trace resource admission reasons, captured geometry/source/light validity and mesh scheduling for failed sections; fix underlying lost/blocked publication without treating canonical darkness as invalid or enabling stale placeholders. Then continue full cube/CPU/MDI/packed physical consumers and geometry/light separation.",
       "implementation": "ShaderProgram checks actual compile/link status, owns candidate program/shaders with RAII, and publishes only a fully linked/default-initialized program. Rejected candidates retain previous program/uniform cache; successful replacement retires old program and clears obsolete locations. File-asset render defaults initialize while candidate is private, restoring prior active GL program before publication. String-created generic programs retain ordinary GLSL semantics. GeometryEngine requests optional desktop430 packed shader only on desktop compute/SSBO caps and not forcedCPU; GLES does not request a missing packed vertex asset.",
       "gles_discovery": "New actual production vertex+fragment pair tests exposed forbidden uniform initializers in GLES greedy fragment; first engine-shader-publication-tests.log fails bothGLES driver invocations at actual compiler error. Same pattern existed in rigid/skinned creature fragments. Removed GLES uniform initializers, initialized known file defaults explicitly before publication on both backends, including opaque alpha1, white tint, direct-sky light, environment and disabled fog defaults. Existing creature shader parity remainsGREEN.",
-      "validation": "engine-shader-defaults-tests.log and engine-shader-publication-restored-tests.log:6/6PASS. GL3.3,GL4.3 and realGLES driver invocations reject actual malformed vertex/fragment and incompatible stage interfaces; previous program repeatedly renders expected .75red integer-readback-checkedRGBA8 framebuffer. Manager named cache survives failed replacement. Successful replacement removes old program and stale uniform name lookup. Production greedy/Cross and rigid/skinned pairs load+link and report expected GL uniforms on both backends; supported desktop packed pair links. File reload while predecessor active restores prior GL binding until successor Use retires deferred predecessor.",
+      "validation": "engine-shader-defaults-tests.log and engine-shader-publication-restored-tests.log:6/6PASS. GL3.3,GL4.3 and realGLES driver invocations reject actual malformed vertex/fragment and incompatible stage interfaces; previous program repeatedly renders expected .75red RGBA8 framebuffer. Manager named cache survives failed replacement. Successful replacement removes old program and stale uniform name lookup. Production greedy/Cross and rigid/skinned pairs load+link and report expected GL uniforms on both backends; supported desktop packed pair links. File reload while predecessor active restores prior GL binding until successor Use retires deferred predecessor.",
       "negative_controls": "engine-shader-publication-negative-controls.json: nonzeroID instead of actual link status, deleting predecessor on failed link, retaining obsolete uniform locations each fail4driver invocations; omitting explicit default alpha fails2GLESinvocations while desktop initializer remains1. Exact source bytes restored/rebuilt,6testsGREEN. No RED app build/launch.",
-      "remaining": "Windows Release app build/native pending for this source. Full GL3.3/GLES application startup/draw acceptance, extension-only compute capability selection and complete backend shader-failure fallback matrix are not proved by these resource/program driver tests. Cube/CPU/MDI/packed field shader activation and geometry/light invalidation separation still open."
+      "remaining": "Native geometric counterexample remains unresolved despite successful shader startup and6driver tests. Need publication/admission diagnostics and reproducer; full backend startup/fallback matrix, cube/CPU/MDI/packed field shaders, light-independent geometry and performance remain open.",
+      "native_verification": {
+        "first": {
+          "artifacts": "build/desktop-msvc/engine-shader-publication-wet-native",
+          "observation": "shader-publication-wet-observation.json",
+          "source_commit": "d65538f35e28cfa5a1efc1d2c932b201606157cd",
+          "overall": "FAIL",
+          "runtime": {
+            "ingame_frames": 1576,
+            "wall_elapsed_sec": 324.578,
+            "chunks_traveled_cheb": 19,
+            "outside_initial_resident_samples": 1200,
+            "diagnostic_relocations_after_start": 0
+          },
+          "camera": "1576/1576 ready canonical0/0 observations",
+          "opaque_depth": "287faults/11912checks over96epochs",
+          "fault_sections": [
+            {
+              "coord": [
+                -5,
+                -3,
+                3
+              ],
+              "faults": 70
+            },
+            {
+              "coord": [
+                -5,
+                -3,
+                2
+              ],
+              "faults": 58
+            },
+            {
+              "coord": [
+                -6,
+                -2,
+                3
+              ],
+              "faults": 49
+            },
+            {
+              "coord": [
+                -4,
+                -3,
+                3
+              ],
+              "faults": 40
+            },
+            {
+              "coord": [
+                -5,
+                -2,
+                3
+              ],
+              "faults": 29
+            },
+            {
+              "coord": [
+                -4,
+                -3,
+                2
+              ],
+              "faults": 26
+            },
+            {
+              "coord": [
+                -5,
+                -2,
+                2
+              ],
+              "faults": 15
+            }
+          ],
+          "example": "frames480/489 camera(-6,-3,3)ready0/0, expected ceiling8..10blocks, framebuffer−1 or~30blocks; section(-6,-2,3)had long unpublished dirty state after light settlement",
+          "provenance": "EXE, sourceWorld_261 and restoredconfig independently alltrue"
+        },
+        "unchanged_exe_repeat": {
+          "artifacts": "build/desktop-msvc/engine-wet-publication-trace-native",
+          "observation": "wet-publication-target-trace-observation.json",
+          "overall": "UNTESTED",
+          "opaque_depth": {
+            "status": "PASS",
+            "reason": "analytic_near_cave_opaque_depth",
+            "checked": 8628,
+            "faults": 0,
+            "frame_epochs": 75,
+            "skipped_unscoped_or_occluded": 196,
+            "examples": [],
+            "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+          },
+          "runtime": {
+            "ingame_frames": 1737,
+            "wall_elapsed_sec": 291.003,
+            "chunks_traveled_cheb": 19,
+            "outside_initial_resident_samples": 1301,
+            "diagnostic_relocations_after_start": 0
+          },
+          "camera_observations": {
+            "observations": 1737,
+            "ready": 1737,
+            "ready_zero_light": 1737
+          },
+          "target": [
+            -5,
+            -3,
+            3
+          ],
+          "trace_rows": 54,
+          "provenance": {
+            "exe": true,
+            "config_restored": true,
+            "source_world": true
+          },
+          "wrapper_process_exit": 2
+        },
+        "interpretation": "Observed timing-dependent geometric coverage counterexample. No shader-versus-streaming regression attribution or repair inferred from a passing repeat. Preserve originalFAIL. All-camera-ready does not certify surface geometry. GenericRGB/transparency remainUNTESTED."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7232,6 +7349,6 @@
       "S5": "resource infrastructure verified, default renderer integration pending",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
-    "latest_native_counterexample": "Historical latestFAIL remains934d2d220sprint11unready frames after real roof changes. Successor b3d57a586sprint has2908/2908camera/first-person ready with an actual12.4366msforeground repair; all named scoped references PASS, RGBUNTESTED. No universal/matrix closure or deletion of prior failures."
+    "latest_native_counterexample": "d65538f35wet sprint:287analytic opaque-depth faults/11912checks across7expected surface sections despite1576/1576camera-ready0/0. SameEXE trace repeat0/8628does not close originalFAIL. Shader publication tests6PASS and4REDcontrols restoredGREEN; native startup/route pass. Core moving-world geometry coverage and performance remain incomplete."
   }
 }
