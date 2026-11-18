@@ -492,7 +492,9 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
         version.min_y = ProceduralTemplate.MinHeight;
         version.max_y = ProceduralTemplate.MaxHeight;
         return version;
-      });
+      },
+      [this](glm::ivec3 coord)
+      { return IsKnownAbsentInternalTerrainSlice(*this, coord); });
   SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;

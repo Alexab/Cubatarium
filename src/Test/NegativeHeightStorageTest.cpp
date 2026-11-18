@@ -1,6 +1,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
@@ -62,6 +63,108 @@ int main()
   Expect(
       storage.GetHighestChunkSliceOnDisk(world_folder.string(), ground) == -4,
       "lower-only disk index provides known-air evidence above its signed top");
+  // Reproduce the native failure: adding an upper island raises the column
+  // maximum while an independently absent negative section remains empty.
+  UBlockWorld sparse;
+  sparse.SetFluidDefinitions(definitions.get());
+  bool terrain_complete = true;
+  const auto folder = world_folder.string();
+  sparse.SetKnownAirColumnFloorQuery(
+      [&](glm::ivec3 column) -> std::optional<int>
+      {
+        if (!terrain_complete || storage.IsColumnSavePending(column))
+          return {};
+        return std::max(
+                   GetHighestNonAirChunkSlice(sparse, column, kMaxY, kMinY),
+                   storage.GetHighestChunkSliceOnDisk(folder, column)) +
+               1;
+      },
+      [&]()
+      {
+        UBlockWorld::KnownAirEvidenceVersion version;
+        version.producers[0] = terrain_complete ? 1 : 0;
+        version.producers[2] = storage.GetKnownAirEvidenceIdentity();
+        version.producers[3] = storage.GetKnownAirEvidenceRevision();
+        version.folder = folder;
+        return version;
+      },
+      [&](glm::ivec3 coord)
+      {
+        return terrain_complete &&
+               !storage.IsColumnSavePending({coord.x, 0, coord.z}) &&
+               storage.IsChunkSliceAbsentOnDisk(folder, coord);
+      });
+  const glm::ivec3 internal(ground.x, -3, ground.z);
+  sparse.SetBlock({ground.x * CHUNK_SIZE + 4, kMinY, ground.z * CHUNK_SIZE + 7},
+                  kStone);
+  RelightJobSpec sparse_spec;
+  sparse_spec.min_world_y = -48;
+  sparse_spec.max_world_y = -33;
+  sparse_spec.include_known_air_outputs = true;
+  const auto install_sparse_calculation = [&]()
+  {
+    const auto computed =
+        UChunkRelightSnapshot::CaptureSections(sparse, sparse_spec, {internal})
+            .Compute(registry);
+    Expect(computed.inputs_complete && computed.unknown_input_chunks == 0 &&
+               computed.chunks.size() == 1,
+           "exact absence closes every physical halo and roof dependency");
+    InstallComputedLight(sparse, computed.chunks[0], true, true);
+    Expect(sparse.RecordLightCalculation(computed, catalog) == 1 &&
+               sparse.HasCompleteLightSamplingCalculation(internal, catalog),
+           "actual computed padded AIR field obtains current physical proof");
+  };
+  install_sparse_calculation();
+  const auto originally_empty = sparse.CaptureInputStamp(internal, false, true);
+  Expect(originally_empty.missingEvidence == MissingChunkEvidence::KnownAir,
+         "lower-only column proves its empty negative internal section");
+  sparse.SetBlock({ground.x * CHUNK_SIZE, 48, ground.z * CHUNK_SIZE}, kStone);
+  UBlockWorld::InputStampValidationBatch validation_batch;
+  Expect(sparse.IsKnownAbsentAirChunk(internal) &&
+             sparse.InputStampStillMatches(originally_empty) &&
+             sparse.InputStampStillMatches(originally_empty, &validation_batch),
+         "upper island must not turn independently empty negative section "
+         "unknown");
+  Expect(!sparse.HasCompleteLightSamplingCalculation(internal, catalog),
+         "upper geometry mutation still invalidates its real physical inputs");
+  install_sparse_calculation();
+  terrain_complete = false;
+  Expect(!sparse.IsKnownAbsentAirChunk(internal),
+         "exact disk absence cannot certify an incomplete terrain producer");
+  terrain_complete = true;
+  storage.MarkColumnSavePending(ground);
+  Expect(!sparse.InputStampStillMatches(originally_empty),
+         "exact absence cannot bypass a pending column write");
+  storage.ClearColumnSavePending(ground);
+  UChunk saved_internal(internal);
+  saved_internal.SetBlockLocal({1, 1, 1}, kStone);
+  Expect(storage.SaveChunk(internal, saved_internal, folder, registry) &&
+             !sparse.InputStampStillMatches(originally_empty) &&
+             !storage.IsChunkSliceAbsentOnDisk(folder, internal),
+         "unloaded persisted internal data is never classified as AIR");
+  Expect(storage.RemoveChunkSliceFromDisk(folder, internal) &&
+             sparse.InputStampStillMatches(originally_empty),
+         "exact index observes signed slice removal");
+  UChunk saved_roof({ground.x, 3, ground.z});
+  saved_roof.SetBlockLocal({1, 1, 1}, kStone);
+  Expect(storage.SaveChunk({ground.x, 3, ground.z}, saved_roof, folder,
+                           registry) &&
+             sparse.InputStampStillMatches(originally_empty),
+         "higher disk occupancy does not erase independent internal absence");
+  Expect(storage.SaveChunk(internal, saved_internal, folder, registry) &&
+             !storage.IsChunkSliceAbsentOnDisk(folder, internal),
+         "lower internal saved slice enters exact membership below disk top");
+  Expect(storage.RemoveChunkSliceFromDisk(folder, internal) &&
+             storage.GetHighestChunkSliceOnDisk(folder, ground) == 3 &&
+             storage.IsChunkSliceAbsentOnDisk(folder, internal),
+         "removing a non-highest slice refreshes exact membership too");
+  UChunkStorageService reopened;
+  Expect(
+      reopened.IsChunkSliceAbsentOnDisk(folder, internal) &&
+          !reopened.IsChunkSliceAbsentOnDisk(folder, {ground.x, 3, ground.z}),
+      "cold complete index distinguishes an internal gap from a saved roof");
+  Expect(storage.RemoveChunkSliceFromDisk(folder, {ground.x, 3, ground.z}),
+         "remove temporary sparse upper fixture before legacy coverage");
   UBlockWorld probe;
   const glm::ivec3 probe_coord(ground.x, -3, ground.z);
   probe.GetChunkManager().EnsureChunk(probe_coord);

@@ -49,6 +49,10 @@ public:
 
   int GetHighestChunkSliceOnDisk(const std::string &worldFolder,
                                  glm::ivec3 groundCoord) const;
+  /// Exact membership from the same complete directory index as the highest
+  /// slice query. Absence alone does not certify terrain generation or AIR.
+  bool IsChunkSliceAbsentOnDisk(const std::string &worldFolder,
+                                glm::ivec3 chunkCoord) const;
   /// Update the initialized disk index after an asynchronous slice write.
   void RecordChunkSliceSaved(const std::string &worldFolder,
                              glm::ivec3 chunkCoord) const;
@@ -133,6 +137,9 @@ private:
     std::unordered_map<DiskTerrainColumnKey, int,
                        DiskTerrainColumnKeyHash>
         highest_cy;
+    std::unordered_map<DiskTerrainColumnKey, std::unordered_set<int>,
+                       DiskTerrainColumnKeyHash>
+        slice_cys;
     std::unordered_set<DiskTerrainColumnKey, DiskTerrainColumnKeyHash>
         dirty_columns;
   };
@@ -142,8 +149,12 @@ private:
   std::string HighestChunkSliceIndexKey(const std::string &worldFolder) const;
   void BuildHighestChunkSliceIndex(const std::string &worldFolder,
                                    DiskTerrainColumnIndex &index) const;
-  int ScanHighestChunkSliceOnDisk(const std::string &worldFolder,
-                                  glm::ivec3 groundCoord) const;
+  int ScanHighestChunkSliceOnDisk(
+      const std::string &worldFolder, glm::ivec3 groundCoord,
+      std::unordered_set<int> *slices = nullptr) const;
+  void RefreshDiskColumnIndex(const std::string &worldFolder,
+                              glm::ivec3 groundCoord,
+                              DiskTerrainColumnIndex &index) const;
 
   inline static std::atomic<uint64_t> NextKnownAirEvidenceIdentity{1};
   uint64_t KnownAirEvidenceIdentity{NextKnownAirEvidenceIdentity.fetch_add(1)};

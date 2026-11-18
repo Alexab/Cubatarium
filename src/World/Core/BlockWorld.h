@@ -43,6 +43,7 @@ public:
     KnownAirEvidenceVersionQuery = {};
     LightInputMemo = {};
     KnownAirColumnFloorQuery = {};
+    KnownAirInternalSliceQuery = {};
     KnownOpenSkyAbsentQuery = std::move(query);
   }
   struct KnownAirEvidenceVersion
@@ -53,14 +54,18 @@ public:
     std::string_view folder;
   };
   /// Production terrain evidence is a column floor: every absent slice above
-  /// that floor is proven air. No evidence is inferred for arbitrary callbacks.
+  /// that floor is proven air. An optional exact internal-section query must
+  /// use the same producer/version contract and reject incomplete/pending data.
+  /// No evidence is inferred for arbitrary callbacks.
   void SetKnownAirColumnFloorQuery(
       std::function<std::optional<int>(glm::ivec3)> query,
-      std::function<KnownAirEvidenceVersion()> version = {})
+      std::function<KnownAirEvidenceVersion()> version = {},
+      std::function<bool(glm::ivec3)> internal_slice_query = {})
   {
     KnownOpenSkyAbsentQuery = {};
     KnownAirColumnFloorQuery = std::move(query);
     KnownAirEvidenceVersionQuery = std::move(version);
+    KnownAirInternalSliceQuery = std::move(internal_slice_query);
     LightInputMemo = {};
   }
   bool HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const;
@@ -223,6 +228,7 @@ private:
   std::function<bool(glm::ivec3)> KnownOpenSkyAbsentQuery;
   std::function<std::optional<int>(glm::ivec3)> KnownAirColumnFloorQuery;
   std::function<KnownAirEvidenceVersion()> KnownAirEvidenceVersionQuery;
+  std::function<bool(glm::ivec3)> KnownAirInternalSliceQuery;
 };
 
 } // namespace cutum

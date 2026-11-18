@@ -134,6 +134,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
       continue;
     }
     const DiskTerrainColumnKey column{x, z};
+    index.slice_cys[column].insert(cy);
     auto [it, inserted] = index.highest_cy.emplace(column, cy);
     if (!inserted)
     {
@@ -145,7 +146,8 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
 }
 
 int UChunkStorageService::ScanHighestChunkSliceOnDisk(
-    const std::string &worldFolder, glm::ivec3 groundCoord) const
+    const std::string &worldFolder, glm::ivec3 groundCoord,
+    std::unordered_set<int> *slices) const
 {
   const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
   if (!std::filesystem::exists(chunks_dir) ||
@@ -180,6 +182,8 @@ int UChunkStorageService::ScanHighestChunkSliceOnDisk(
         prefix.size(), stem.size() - prefix.size() - suffix.size());
     if (TryParseInt(cy_text, cy))
     {
+      if (slices)
+        slices->insert(cy);
       highest = highest == kNoChunkSliceOnDisk ? cy : std::max(highest, cy);
     }
   }
@@ -345,6 +349,7 @@ void UChunkStorageService::RecordChunkSliceSaved(
     {
       DiskTerrainColumnIndex &index = folder_index->second;
       const DiskTerrainColumnKey column{ground.x, ground.z};
+      index.slice_cys[column].insert(chunkCoord.y);
       if (index.dirty_columns.count(column) == 0)
       {
         auto [cached, inserted] = index.highest_cy.emplace(column, chunkCoord.y);
@@ -381,16 +386,10 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   return placed;
 }
 
-int UChunkStorageService::GetHighestChunkSliceOnDisk(
-    const std::string &worldFolder, glm::ivec3 groundCoord) const
+void UChunkStorageService::RefreshDiskColumnIndex(
+    const std::string &worldFolder, glm::ivec3 groundCoord,
+    DiskTerrainColumnIndex &index) const
 {
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
-  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-  DiskTerrainColumnIndex &index = HighestChunkSliceIndexByFolder[cache_key];
   if (!index.initialized)
   {
     BuildHighestChunkSliceIndex(worldFolder, index);
@@ -399,7 +398,13 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   if (index.dirty_columns.erase(column) > 0)
   {
     KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
-    const int highest = ScanHighestChunkSliceOnDisk(worldFolder, groundCoord);
+    std::unordered_set<int> slices;
+    const int highest =
+        ScanHighestChunkSliceOnDisk(worldFolder, groundCoord, &slices);
+    if (slices.empty())
+      index.slice_cys.erase(column);
+    else
+      index.slice_cys[column] = std::move(slices);
     if (highest != kNoChunkSliceOnDisk)
     {
       index.highest_cy[column] = highest;
@@ -409,9 +414,32 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
       index.highest_cy.erase(column);
     }
   }
-  const auto cached = index.highest_cy.find(column);
+}
+
+int UChunkStorageService::GetHighestChunkSliceOnDisk(
+    const std::string &worldFolder, glm::ivec3 groundCoord) const
+{
+  groundCoord.y = 0;
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  auto &index = HighestChunkSliceIndexByFolder[cache_key];
+  RefreshDiskColumnIndex(worldFolder, groundCoord, index);
+  const auto cached = index.highest_cy.find({groundCoord.x, groundCoord.z});
   return cached != index.highest_cy.end() ? cached->second
                                           : kNoChunkSliceOnDisk;
+}
+
+bool UChunkStorageService::IsChunkSliceAbsentOnDisk(
+    const std::string &worldFolder, glm::ivec3 chunkCoord) const
+{
+  if (worldFolder.empty())
+    return false;
+  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  auto &index = HighestChunkSliceIndexByFolder[cache_key];
+  RefreshDiskColumnIndex(worldFolder, {chunkCoord.x, 0, chunkCoord.z}, index);
+  const auto found = index.slice_cys.find({chunkCoord.x, chunkCoord.z});
+  return found == index.slice_cys.end() || !found->second.count(chunkCoord.y);
 }
 
 void UChunkStorageService::PrepareHighestChunkSliceIndex(
@@ -440,13 +468,8 @@ bool UChunkStorageService::RemoveChunkSliceFromDisk(
     if (folder_index != HighestChunkSliceIndexByFolder.end() &&
         folder_index->second.initialized)
     {
-      const auto cached = folder_index->second.highest_cy.find(column);
-      if (cached != folder_index->second.highest_cy.end() &&
-          chunkCoord.y >= cached->second)
-      {
-        folder_index->second.dirty_columns.insert(column);
-        KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
-      }
+      folder_index->second.dirty_columns.insert(column);
+      KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
     }
   };
 

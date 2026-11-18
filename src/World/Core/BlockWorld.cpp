@@ -359,7 +359,8 @@ bool UBlockWorld::HasKnownOpenSkyAbsentProof(glm::ivec3 coord) const
   if (KnownAirColumnFloorQuery)
   {
     const auto floor = KnownAirColumnFloorQuery({coord.x, 0, coord.z});
-    return floor && coord.y >= *floor;
+    return (floor && coord.y >= *floor) ||
+           (KnownAirInternalSliceQuery && KnownAirInternalSliceQuery(coord));
   }
   return KnownOpenSkyAbsentQuery && KnownOpenSkyAbsentQuery(coord);
 }
@@ -384,7 +385,8 @@ bool UBlockWorld::IsKnownAbsentAirChunk(glm::ivec3 coord,
   if (it == batch->air_floors.end())
     it = batch->air_floors.emplace(column, KnownAirColumnFloorQuery(column))
              .first;
-  return it->second && coord.y >= *it->second;
+  return (it->second && coord.y >= *it->second) ||
+         (KnownAirInternalSliceQuery && KnownAirInternalSliceQuery(coord));
 }
 
 ChunkInputStamp UBlockWorld::CaptureInputStamp(glm::ivec3 coord,

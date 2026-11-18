@@ -42,7 +42,21 @@ inline bool IsKnownAirTerrainSlice(const UWorld &world, glm::ivec3 chunk)
       FloorDiv(world.GetProceduralSettings().MaxHeight, CHUNK_SIZE);
   if (chunk.y < minCy || chunk.y > maxCy)
     return true;
-  const auto floor = KnownAirTerrainColumnFloor(world, {chunk.x, 0, chunk.z});
-  return floor && chunk.y >= *floor;
+  return world.GetBlockWorld().IsKnownAbsentAirChunk(chunk);
+}
+
+/// A completed terrain producer and an exact disk membership index can also
+/// prove a missing internal section. A column maximum cannot do so: adding an
+/// upper island must not turn an independently empty lower section unknown.
+inline bool IsKnownAbsentInternalTerrainSlice(const UWorld &world,
+                                              glm::ivec3 chunk)
+{
+  const glm::ivec3 column(chunk.x, 0, chunk.z);
+  const auto &folder = world.GetWorldFolderPath();
+  const auto &storage = world.GetChunkStorage();
+  return !folder.empty() && world.IsTerrainColumnCompleteFast(column) &&
+         !storage.IsColumnSavePending(column) &&
+         !world.GetBlockWorld().GetChunkManager().HasChunk(chunk) &&
+         storage.IsChunkSliceAbsentOnDisk(folder, chunk);
 }
 }

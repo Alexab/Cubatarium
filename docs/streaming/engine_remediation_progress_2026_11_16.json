@@ -6689,6 +6689,13 @@
         "Actual changed upper geometry still invalidates its own physical inputs. Establish current-focus light refresh before paint, or a consistent publication mechanism, rather than presenting stale light or relaxing readiness. Re-run the exact sprint scenario and retain all earlier failures."
       ],
       "limits": "Default separate GPU field shaders, Cross/MDI handle transport, full underwater/RGB/backend/performance matrix, persistence content certificates and originalS0..S6completion remain open."
+    },
+    "exact_internal_air_absence": {
+      "status": "Implemented; three Release tests PASS including actual physical compute/install/provenance. Required app build and sprint native pending. Does not yet guarantee same-frame refresh after real roof mutation.",
+      "implementation": "Disk directory index retains exact signed Y membership per column as well as highest Y. Saves update membership, removals invalidate/rebuild even below highest; cold index reconstructs both supported format memberships. BlockWorld optional exact internal absence query shares terrain/disk revision authority with floor query. Production admits internal absence only for complete terrain, nonempty world identity, no pending column write, no resident section and exact disk absence. World ray/camera missing-section policy uses the same BlockWorld authority.",
+      "validation": "engine-exact-absence-physical-tests.log:3/3PASS. Native-derived upper-island regression retains negative internal AIR stamp with and without batch validation. Actual padded field initially completes, real upper geometry invalidates it, fresh solver computes/installs complete successor with0unknown inputs. Incomplete terrain, pending save, unloaded saved internal data reject AIR. Save/delete below unchanged higher disk roof and cold index cases covered. Legacy highest-only policy remains conservative.",
+      "negative_controls": "engine-exact-absence-negative-controls.json: removing exact internal query fails native-derived upper-island assertion; unconditional disk absence fails unloaded persisted-data protection. Byte-exact production source restore, rebuilt3testsPASS. Added physical solver/install coverage afterwards and final3testsPASS. No RED application build/launch.",
+      "remaining": "Real roof changes still correctly invalidate old read sets. Exact absence removes false unknown gaps and allows complete recalculation; readiness before paint still requires native validation and may need focused refresh/publication work. Original232frame sprint failure is retained, never reclassified."
     }
   },
   "execution_status_review_2026_11_18": {
