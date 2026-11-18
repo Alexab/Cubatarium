@@ -3152,6 +3152,27 @@ static void TestMdiLightDrawTable()
   program.Use();
   program.SetMat4("mvp_matrix", glm::mat4(1));
   UMdiVertexPoolStore store;
+  UMdiVertexPoolStore legacy_store(false);
+  Expect(!legacy_store.SupportsDrawLightRows(),
+         "legacy indirect capability disables base-instance light rows");
+  std::vector<DrawElementsIndirectCommand> legacy_commands;
+  Expect(legacy_store.BuildIndirectCommandsRange(cache, 0, 3,
+                                                 legacy_commands) == 3 &&
+             std::all_of(legacy_commands.begin(), legacy_commands.end(),
+                         [](const auto &command)
+                         { return command.baseInstance == 0; }),
+         "legacy indirect producer keeps the reserved command word zero");
+  MdiVertexPoolStoreDriverTestAccess::Rebuild(legacy_store, cache);
+  std::array<DrawElementsIndirectCommand, 3> legacy_gpu_commands{};
+  glBindBuffer(GL_COPY_READ_BUFFER, cache.IndirectCmdsBuffer);
+  glGetBufferSubData(GL_COPY_READ_BUFFER, 0, sizeof(legacy_gpu_commands),
+                     legacy_gpu_commands.data());
+  Expect(!cache.IndirectUsesLightRows &&
+             std::all_of(legacy_gpu_commands.begin(), legacy_gpu_commands.end(),
+                         [](const auto &command)
+                         { return command.baseInstance == 0; }),
+         "legacy GPU command table keeps reserved base-instance words zero");
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
   const auto draw = [&](bool gpu_commands, bool hidden_middle = false)
   {
     Expect(table.BindAttribute(), "MDI exact metadata attribute binds");
@@ -3281,6 +3302,7 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
   glGenBuffers(1, &vbo);
   GreedyGpuPassCache mdi_cache;
   UMdiVertexPoolStore mdi_store;
+  UMdiVertexPoolStore legacy_store(false);
   SectionLightDrawTable draw_table;
   if (mdi)
   {
@@ -3418,12 +3440,11 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
     }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
-    for (unsigned submit = 0; submit < (mdi ? 3u : 1u); ++submit)
+    for (unsigned submit = 0; submit < (mdi ? 4u : 1u); ++submit)
     {
-      program.SetBool("uUseSurfaceSectionLightDrawTable", mdi && submit != 2);
-      const auto uniform_handle = mdi && submit != 2
-                                      ? SectionLightDrawTable::Words{}
-                                      : *handle;
+      program.SetBool("uUseSurfaceSectionLightDrawTable", mdi && submit < 2);
+      const auto uniform_handle =
+          mdi && submit < 2 ? SectionLightDrawTable::Words{} : *handle;
       glUniform4uiv(program.GetUniformLocation("uSurfaceSectionLightHandle"), 1,
                     uniform_handle.data());
       const float clear[] = {0, 0, 0, 0};
@@ -3444,8 +3465,18 @@ TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
         Expect(mdi_store.SubmitIndirectCommandsGpuRange(mdi_cache, 1, 2),
                "physical surface uses production GPU-resident command at row1");
       }
-      else
+      else if (submit == 2)
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+      else
+      {
+        std::vector<DrawElementsIndirectCommand> commands;
+        Expect(legacy_store.BuildIndirectCommandsRange(mdi_cache, 1, 2,
+                                                       commands) == 1 &&
+                   commands[0].baseInstance == 0 &&
+                   legacy_store.SubmitIndirectCommands(commands),
+               "legacy indirect surface draws exact uniform field with "
+               "reserved zero");
+      }
       std::array<uint8_t, 64> actual{};
       glReadPixels(0, 0, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
       for (int x = 0; x < 16; ++x)

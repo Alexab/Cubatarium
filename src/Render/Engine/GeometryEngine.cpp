@@ -1040,7 +1040,8 @@ void CaptureGpuRangeWitness(const GreedyGpuPassCache &pass,
           gpu_command.baseVertex ==
               static_cast<int32_t>(gpu_batch->vboByteOffset /
                                    sizeof(GreedyMeshVertex)) &&
-          gpu_command.baseInstance == command_slot;
+          gpu_command.baseInstance ==
+              (pass.IndirectUsesLightRows ? command_slot : 0);
       record.renderer_pixel_voxel_mesh_ray_gpu_command_match =
           command_matches ? 1u : 0u;
     }
@@ -3380,7 +3381,10 @@ void CaptureTransparentPixelProbe(
                           static_cast<uint32_t>(gpu_batch->indexCountGl) &&
                       command.firstIndex == expected_first_index &&
                       command.baseVertex == expected_base_vertex &&
-                      command.baseInstance == gpu_batch_index)
+                      command.baseInstance ==
+                          (mdi_transparent_pass.IndirectUsesLightRows
+                               ? gpu_batch_index
+                               : 0))
                   {
                     record.renderer_mdi_command_flags |= 1u << 1;
                   }
@@ -4084,7 +4088,8 @@ void NoteFrustumCoverageGaps(
                   static_cast<uint32_t>(payload_batch->indexCountGl) &&
               command.firstIndex == expected_first_index &&
               command.baseVertex == expected_base_vertex &&
-              command.baseInstance == payload_index)
+              command.baseInstance ==
+                  (payload_pass->IndirectUsesLightRows ? payload_index : 0))
           {
             record.renderer_mdi_command_flags |= 1u << 1;
           }
@@ -6003,7 +6008,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   };
   std::vector<SectionLightDrawTable::Words> light_rows;
   std::vector<uint8_t> resident_light_rows;
-  if (physical_light && use_mdi &&
+  if (physical_light && use_mdi && store.SupportsDrawLightRows() &&
       cache.batches.size() <= SectionLightDrawTable::MaxRows)
   {
     light_rows.resize(cache.batches.size());

@@ -150,6 +150,7 @@ struct GreedyGpuPassCache
   bool IndirectCullReady{false};
   /// True when IndirectCmdsBuffer is authoritative for MultiDraw ranges.
   bool GpuCompactActive{false};
+  bool IndirectUsesLightRows{false};
   /// CPU drawInstanceCount synced from CullVisSsbo (lazy, fallback draws).
   bool CompactVisCpuSynced{false};
   /// Per-pass GPU compact cull probe / fail-open history (M04/A02).

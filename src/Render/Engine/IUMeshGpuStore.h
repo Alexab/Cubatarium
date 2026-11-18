@@ -60,6 +60,8 @@ public:
   virtual void FlipBucketOwnership(MeshGpuBucketHandle /*handle*/) {}
 
   virtual bool SupportsMultiDrawIndirect() const { return false; }
+  /// Nonzero baseInstance must be supported before indexing per-draw handles.
+  virtual bool SupportsDrawLightRows() const { return false; }
 
   /// Build indirect cmds for pooled batches in [begin, end). Local indices +
   /// baseVertex (vertex byte offset / stride).

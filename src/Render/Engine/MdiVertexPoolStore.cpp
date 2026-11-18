@@ -464,6 +464,15 @@ double UMdiVertexPoolStore::LastCullGpuExecMs() const
   return LastCullGpuExecMs_;
 }
 
+bool UMdiVertexPoolStore::SupportsDrawLightRows() const
+{
+#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  return false;
+#else
+  return AllowBaseInstance && (GLEW_VERSION_4_2 || GLEW_ARB_base_instance);
+#endif
+}
+
 size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
     const GreedyGpuPassCache &cache, size_t begin, size_t end,
     std::vector<DrawElementsIndirectCommand> &out)
@@ -496,7 +505,7 @@ size_t UMdiVertexPoolStore::BuildIndirectCommandsRange(
         static_cast<uint32_t>(gpu.eboByteOffset / sizeof(uint32_t));
     cmd.baseVertex =
         static_cast<int32_t>(gpu.vboByteOffset / sizeof(GreedyMeshVertex));
-    cmd.baseInstance = static_cast<uint32_t>(i);
+    cmd.baseInstance = SupportsDrawLightRows() ? static_cast<uint32_t>(i) : 0;
     out.push_back(cmd);
   }
   return out.size();
@@ -697,6 +706,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
     return;
   }
   std::vector<DrawElementsIndirectCommand> cmds(n);
+  cache.IndirectUsesLightRows = SupportsDrawLightRows();
   std::vector<float> spheres(n * 4);
   std::vector<float> aabb_min(n * 4, 0.f);
   std::vector<float> aabb_max(n * 4, 0.f);
@@ -716,7 +726,7 @@ void UMdiVertexPoolStore::RebuildIndirectCmdTable(GreedyGpuPassCache &cache)
           static_cast<uint32_t>(b.eboByteOffset / sizeof(uint32_t));
       cmd.baseVertex =
           static_cast<int32_t>(b.vboByteOffset / sizeof(GreedyMeshVertex));
-      cmd.baseInstance = static_cast<uint32_t>(i);
+      cmd.baseInstance = SupportsDrawLightRows() ? static_cast<uint32_t>(i) : 0;
     }
     spheres[i * 4 + 0] = b.cullSphere[0];
     spheres[i * 4 + 1] = b.cullSphere[1];

@@ -280,6 +280,7 @@ void UGreedyGpuBackend::DestroyPass(GreedyGpuPassCache &cache)
   cache.FailOpenProbeTick = 0;
   cache.IndirectCullReady = false;
   cache.GpuCompactActive = false;
+  cache.IndirectUsesLightRows = false;
 }
 
 void UGreedyGpuBackend::DestroyAll(GreedyGpuPassCache &opaque,

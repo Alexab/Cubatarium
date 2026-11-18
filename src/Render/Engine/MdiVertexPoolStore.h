@@ -15,11 +15,16 @@ namespace cutum
 class UMdiVertexPoolStore final : public UCpuStagingGpuStore
 {
 public:
+  explicit UMdiVertexPoolStore(bool allow_base_instance = true)
+      : AllowBaseInstance(allow_base_instance)
+  {
+  }
   ~UMdiVertexPoolStore() override;
 
   const char *BackendName() const override { return "mdi_vertex_pool"; }
 
   bool SupportsMultiDrawIndirect() const override { return true; }
+  bool SupportsDrawLightRows() const override;
 
   uint64_t LastSubmitDrawCmds() const override { return LastDrawCmds; }
 
@@ -110,6 +115,7 @@ public:
 
 private:
   friend struct MdiVertexPoolStoreDriverTestAccess;
+  bool AllowBaseInstance{true};
   bool EnsureCullProgram();
   void RebuildIndirectCmdTable(GreedyGpuPassCache &cache);
 
