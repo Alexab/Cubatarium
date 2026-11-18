@@ -138,6 +138,37 @@ def prepare_open_sky_plane(fixture: Path, minimum_chunks: int) -> dict:
     return scene
 
 
+def prepare_cross_plane(fixture: Path, minimum_chunks: int) -> dict:
+    """The same direct-sky plane with saved non-solid Cross plants on the route."""
+    import hashlib
+    scene = prepare_open_sky_plane(fixture, minimum_chunks)
+    path = fixture.parent.parent / "resource_packs/cubatarium_worldgen_cc0/blocks/tall_grass.json"
+    payload = path.read_bytes()
+    material = json.loads(payload)
+    if (material.get("name") != "tall_grass" or material.get("id") != 568 or
+            material.get("render", {}).get("style") != "cross" or
+            material.get("lighting", {}).get("emission", 0) != 0 or
+            material.get("physics", {}).get("movement", {}).get("occupancy") != 0):
+        raise ValueError("Cross fixture requires non-solid, non-emitting tall grass")
+    count = 0
+    for cx in range(scene["chunk_x_bounds"][0], scene["chunk_x_bounds"][1] + 1):
+        path = fixture / "chunks" / f"{cx}_-4_3.json"
+        if path.is_symlink():
+            raise ValueError("fixture chunk symlinks are forbidden")
+        chunk = json.loads(path.read_text(encoding="utf-8"))
+        plants = [dict(lx=x, ly=4, lz=z, type="tall_grass")
+                  for x in (2, 6, 10, 14) for z in (0, 2, 4, 6)]
+        chunk["voxels"].extend(plants)
+        path.write_text(json.dumps(chunk, separators=(",", ":")), encoding="utf-8")
+        count += len(plants)
+    # Keep the base plane's light/depth references: these plants neither emit
+    # nor obstruct light and are outside the opaque-depth pass.
+    scene.update(variant="cross", cross_fixture=dict(material_id=568,
+        material_name="tall_grass", material_sha256=hashlib.sha256(payload).hexdigest(),
+        count=count, plant_y=-60, z_bounds=[48, 54]))
+    return scene
+
+
 def prepare_falling_creature_plane(fixture: Path, minimum_chunks: int) -> dict:
     """An existing saved actor starts above the plane; gravity moves it normally."""
     path = fixture / "creatures.json"

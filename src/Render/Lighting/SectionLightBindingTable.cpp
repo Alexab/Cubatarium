@@ -323,6 +323,15 @@ std::array<uint32_t, 2> SectionLightBindingTable::ShaderIncarnation() const
   return {uint32_t(Incarnation), uint32_t(Incarnation >> 32)};
 }
 
+std::string SectionLightBindingTable::ExpandShaderInterface(std::string source)
+{
+  const std::string marker = "/* CUBATARIUM_SECTION_LIGHT_INTERFACE */";
+  const auto at = source.find(marker);
+  if (at != std::string::npos)
+    source.replace(at, marker.size(), ShaderInterface());
+  return source;
+}
+
 const char *SectionLightBindingTable::ShaderInterface()
 {
   return R"glsl(

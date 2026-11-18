@@ -23,10 +23,12 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <tuple>
 #include <unordered_map>
 
@@ -2082,6 +2084,127 @@ ProbeCrossGpuHandles(const cutum::CrossGpuBatch &gpu,
 #endif
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void ProbeCrossPhysicalShader(
+    cutum::UCrossGpuBackend &backend, const cutum::CrossGpuBatch &gpu,
+    cutum::SectionRenderLightBindings &owner,
+    const std::shared_ptr<cutum::SectionRenderLightBinding> &binding,
+    size_t index, glm::ivec3 cell, std::array<uint32_t, 4> expected, bool gles,
+    bool override_handle = false, bool invalid_handle = false)
+{
+  using namespace cutum;
+  std::ifstream file(std::string(CUBATARIUM_SOURCE_DIR) +
+                     (gles ? "/shaders/gles/vshader_cross_instanced.glsl"
+                           : "/shaders/vshader_cross_instanced.glsl"));
+  std::ostringstream contents;
+  contents << file.rdbuf();
+  Expect(file.good() && !contents.str().empty(),
+         "production Cross vertex shader is available");
+  const auto compile = [](GLenum type, const std::string &source)
+  {
+    const auto shader = glCreateShader(type);
+    const auto *text = source.c_str();
+    glShaderSource(shader, 1, &text, nullptr);
+    glCompileShader(shader);
+    GLint ok = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok)
+    {
+      char log[4096]{};
+      glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+      std::cerr << log << '\n';
+    }
+    Expect(ok != 0, "production Cross physical shader compiles");
+    return shader;
+  };
+  const auto vs =
+      compile(GL_VERTEX_SHADER,
+              SectionLightBindingTable::ExpandShaderInterface(contents.str()));
+  const std::string version =
+      gles ? "#version 300 es\nprecision highp float;precision highp int;\n"
+           : "#version 330 core\n";
+  const auto fs = compile(
+      GL_FRAGMENT_SHADER,
+      version + "in float vSkyLight;in float vBlockLight;flat in float "
+                "vSectionLightValid;"
+                "layout(location=0) out uvec4 value;void main(){value=uvec4("
+                "uint(round(vSkyLight*15.)),uint(round(vBlockLight*15.)),"
+                "uint(vSectionLightValid),1u);}");
+  const auto program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
+  GLint ok = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &ok);
+  Expect(ok != 0, "production Cross physical shader links");
+  GLuint texture = 0, fbo = 0;
+  glGenTextures(1, &texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI, 1, 1, 0, GL_RGBA_INTEGER,
+               GL_UNSIGNED_INT, nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "Cross physical integer framebuffer is complete");
+  const std::array<uint32_t, 4> clear{};
+  glClearBufferuiv(GL_COLOR, 0, clear.data());
+  glViewport(0, 0, 1, 1);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_CULL_FACE);
+  glUseProgram(program);
+  const glm::mat4 matrix =
+      glm::ortho(float(cell.x) - .25f, float(cell.x) + .25f,
+                 float(cell.y) - .25f, float(cell.y) + .25f, -100.f, 100.f);
+  glUniformMatrix4fv(glGetUniformLocation(program, "mvp_matrix"), 1, GL_FALSE,
+                     &matrix[0][0]);
+  glUniform1i(glGetUniformLocation(program, "uDecorShape"), 0);
+  glUniform1i(glGetUniformLocation(program, "uUseSectionLight"), 1);
+  glUniform1i(glGetUniformLocation(program, "uOverrideSectionLightHandle"),
+              override_handle || invalid_handle);
+  auto words = owner.PrepareDraw(binding);
+  Expect(words && owner.Bind(7, 8),
+         "Cross physical range prepares exact field");
+  if (invalid_handle)
+    *words = {};
+  glUniform4uiv(glGetUniformLocation(program, "uSectionLightHandle"), 1,
+                words->data());
+  const auto incarnation = owner.ShaderIncarnation();
+  glUniform2uiv(glGetUniformLocation(program, "uSectionLightTableIncarnation"),
+                1, incarnation.data());
+  glUniform1i(glGetUniformLocation(program, "uSectionLightAtlas"), 7);
+  glUniform1i(glGetUniformLocation(program, "uSectionLightBindings"), 8);
+  Expect(backend.DrawRange(gpu, index, 1),
+         "actual Cross range draw accepts nonzero first instance");
+  std::array<uint32_t, 4> actual{};
+  glReadPixels(0, 0, 1, 1, GL_RGBA_INTEGER, GL_UNSIGNED_INT, actual.data());
+  if (actual != expected)
+    std::cerr << "Cross physical actual=" << actual[0] << ',' << actual[1]
+              << ',' << actual[2] << ',' << actual[3]
+              << " expected=" << expected[0] << ',' << expected[1] << ','
+              << expected[2] << ',' << expected[3] << '\n';
+  Expect(actual == expected,
+         "production Cross shader samples canonical sky/block and validity");
+  glBindVertexArray(gpu.vao);
+  void *offset = nullptr;
+  glGetVertexAttribPointerv(3, GL_VERTEX_ATTRIB_ARRAY_POINTER, &offset);
+  Expect(offset == nullptr, "Cross range restores instance base after draw");
+  glBindVertexArray(0);
+  glUseProgram(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &texture);
+  glDeleteProgram(program);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+  Expect(glGetError() == GL_NO_ERROR, "Cross physical probe has no GL errors");
+}
+#endif
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
 static void
 TestCrossPassFailureAtomicity(cutum::UBlockRegistry &registry,
                               const cutum::UBlockDefinitionStorage *definitions,
@@ -2346,6 +2469,7 @@ static void TestCrossLightArtifactTransport(
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     for (int x : {4, 5, 20, 21})
       world.SetBlock({x, 4, 4}, kTallGrass);
+    world.SetBlock({15, 8, 15}, kTallGrass);
     RelightJobSpec spec;
     spec.min_world_y = 0;
     spec.max_world_y = 15;
@@ -2366,19 +2490,13 @@ static void TestCrossLightArtifactTransport(
     settings.AsyncMeshing = false;
     cache.SetRenderSettings(settings);
     const auto epoch = cache.GetCaptureStore().WorldEpoch();
-    if (gpu)
-      Expect(owner.BeginWorld(
-                 epoch,
-                 world.GetChunkManager().GetGeometryInputRevisionIdentity(), 8,
-                 8u * SectionLightVolume::CellCount, 8),
-             "Cross physical resource owner initializes");
     cache.SetPrepareRenderLightFn(
         [&](uint64_t source, const SectionGeometryRenderInputs &geometry,
             const SectionRenderLightSnapshot &light)
             -> std::shared_ptr<SectionRenderLightBinding>
         {
           if (gpu)
-            return owner.Prepare(source, geometry, light);
+            return owner.PrepareForWorld(source, geometry, light);
           return std::make_shared<TestRenderLightBinding>(source, geometry,
                                                           light);
         });
@@ -2392,13 +2510,13 @@ static void TestCrossLightArtifactTransport(
     weak_first = first;
     weak_second = second;
     auto flattened = cache.GetCrossBatches();
-    Expect(flattened.size() == 1 && flattened[0].instances.size() == 4 &&
+    Expect(flattened.size() == 1 && flattened[0].instances.size() == 5 &&
                flattened[0].lightRanges.size() == 2,
            "actual cache flatten retains two source section ranges");
     auto filtered =
         FilterCrossInstances(flattened[0], [](const CrossInstanceGpu &i)
                              { return i.center.x >= 5.0f; });
-    Expect(filtered.instances.size() == 3 && filtered.lightRanges.size() == 2,
+    Expect(filtered.instances.size() == 4 && filtered.lightRanges.size() == 2,
            "actual Cross filter compacts instances and both source ranges");
     size_t covered = 0;
     for (const auto &range : filtered.lightRanges)
@@ -2429,6 +2547,10 @@ static void TestCrossLightArtifactTransport(
                  pass.batches[0].lightRanges.size() == 2,
              "production Cross GPU pass owns both field leases");
       ProbeCrossGpuHandles(pass.batches[0], expected, gles);
+      ProbeCrossPhysicalShader(backend, pass.batches[0], owner, first, 1,
+                               {15, 8, 15}, {15, 0, 1, 1}, gles);
+      ProbeCrossPhysicalShader(backend, pass.batches[0], owner, first, 1,
+                               {15, 8, 15}, {0, 0, 0, 1}, gles, true, true);
       const auto buffer = pass.batches[0].instanceVbo;
       const auto words = first->ShaderWords();
       world.SetBlock({16, 8, 16}, kFire);
@@ -2451,6 +2573,20 @@ static void TestCrossLightArtifactTransport(
               owner.Refresh(first, epoch, *successor) &&
               first->ShaderWords() == words,
           "Cross source changes physical light with the same geometry handle");
+      ProbeCrossPhysicalShader(backend, pass.batches[0], owner, first, 1,
+                               {15, 8, 15}, {15, 12, 1, 1}, gles);
+      SectionRenderLightBindings fallback;
+      Expect(fallback.BeginWorld(
+                 epoch, first->GeometryInputs().world_geometry_identity, 1,
+                 SectionLightVolume::CellCount, 1, true),
+             "minimal Cross fallback owner initializes");
+      auto fallback_binding =
+          fallback.Prepare(epoch, first->GeometryInputs(), *successor);
+      Expect(fallback_binding && !fallback.IsResident(fallback_binding),
+             "minimal Cross owner requires ordered fallback");
+      ProbeCrossPhysicalShader(backend, pass.batches[0], fallback,
+                               fallback_binding, 1, {15, 8, 15}, {15, 12, 1, 1},
+                               gles, true);
       glBindBuffer(GL_ARRAY_BUFFER, buffer);
       const auto bytes = filtered.instances.size() * sizeof(CrossInstanceGpu);
       const auto *mapped = glMapBufferRange(
@@ -2485,6 +2621,60 @@ static void TestCrossLightArtifactTransport(
     Expect(weak_first.expired() && weak_second.expired(),
            "CPU range owners retire with their geometry artifacts");
 }
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void
+TestCrossCanonicalDark(cutum::UBlockRegistry &registry,
+                       const cutum::UBlockDefinitionStorage *definitions,
+                       bool gles)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock({4, 4, 4}, kTallGrass);
+  // Every path around this roof to the sample exceeds the maximum indirect
+  // light reach of15cells; no emitter is present. Expected sky/block is0/0.
+  for (int x = -16; x < 32; ++x)
+    for (int z = -16; z < 32; ++z)
+      world.SetBlock({x, 15, z}, kStone);
+  RelightJobSpec spec;
+  spec.min_world_y = 0;
+  spec.max_world_y = 31;
+  const auto field =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {{0, 0, 0}})
+          .Compute(registry);
+  Expect(field.inputs_complete && field.chunks.size() == 1 &&
+             field.chunks[0]
+                     .padded_light->cells[SectionLightVolume::Index(4, 4, 4)] ==
+                 0,
+         "roofed Cross fixture independently expects canonical zero light");
+  world.GetChunkManager().ReplaceComputedSectionLightVolume(
+      {0, 0, 0}, *field.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(
+             field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+         "roofed Cross fixture records completed physical proof");
+  const auto light = world.CaptureRenderLightSnapshot({0, 0, 0});
+  SectionRenderLightBindings owner;
+  auto binding = owner.PrepareForWorld(37, light->GeometryInputs(), *light);
+  Expect(bool(binding), "canonical dark Cross source obtains a valid binding");
+  CrossInstanceBatch batch;
+  batch.blockId = kTallGrass;
+  CrossInstanceGpu instance;
+  instance.center = {4, 4, 4};
+  instance.skyLight = instance.blockLight =
+      1; // Deliberately wrong baked values.
+  instance.renderLightHandle = binding->ShaderWords();
+  AppendCrossInstance(batch, instance, binding);
+  UCrossGpuBackend backend;
+  CrossGpuPassCache pass;
+  Expect(backend.RefreshPass(pass, {batch}, 1, 1, 1, 1),
+         "canonical dark Cross geometry publishes");
+  ProbeCrossPhysicalShader(backend, pass.batches[0], owner, binding, 0,
+                           {4, 4, 4}, {0, 0, 1, 1}, gles);
+  backend.DestroyAll(pass);
+}
+#endif
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 static void
@@ -2685,6 +2875,7 @@ int main(int argc, char **argv)
     {
       TestCrossLightArtifactTransport(registry, definitions.get(), true, true);
       TestCrossPassFailureAtomicity(registry, definitions.get(), true);
+      TestCrossCanonicalDark(registry, definitions.get(), true);
     }
     else
     {
@@ -2693,6 +2884,7 @@ int main(int argc, char **argv)
       TestOrderedFieldBindings(registry, definitions.get());
       TestCrossLightArtifactTransport(registry, definitions.get(), true);
       TestCrossPassFailureAtomicity(registry, definitions.get(), false);
+      TestCrossCanonicalDark(registry, definitions.get(), false);
     }
     Expect(glGetError() == GL_NO_ERROR,
            "certified binding integration has no GL errors");

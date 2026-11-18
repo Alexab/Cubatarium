@@ -17,11 +17,11 @@ typedef int GLint;
 #include "Render/Backend/RenderBackendFactory.h"
 #include "Render/Blocks/BlockBreakFxPass.h"
 #include "Render/Blocks/BlockCrackOverlayPass.h"
+#include "Render/Camera/CullInputKey.h"
 #include "Render/Effects/InfluenceFxPass.h"
 #include "Render/Engine/AnimationClock.h"
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/FluidSurfaceMap.h"
-#include "Render/Camera/CullInputKey.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/IUMeshGpuStore.h"
@@ -29,6 +29,7 @@ typedef int GLint;
 #include "Render/Engine/SkyGradientPass.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/Engine/UnderwaterFogPass.h"
+#include "Render/Lighting/SectionRenderLightBindings.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "Render/Pipeline/GreedyShaderMode.h"
@@ -363,6 +364,9 @@ private:
   GreedyGpuPassCache GreedyGpuTransparent;
   std::vector<PackedOpaqueDrawTrace> LastOpaquePackedDrawTrace;
   CrossGpuPassCache CrossGpuPass;
+  std::shared_ptr<SectionRenderLightBindings> SectionLightOwner;
+  bool PhysicalLightPublicationBound_{false};
+  uint64_t CrossPhysicalDrawCount_{0};
   std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
   uint64_t CachedTransparentSortRevision{0};
   uint64_t CachedTransparentMeshRevision{0};

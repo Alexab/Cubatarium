@@ -334,7 +334,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items", "open-sky-falling-creature"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
@@ -344,6 +344,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             elif fixture_scene == "open-sky-items":
                 from engine_smoke_fixtures import prepare_visible_items_plane
                 scene = prepare_visible_items_plane(fixture, minimum_chunks)
+            elif fixture_scene == "open-sky-cross":
+                from engine_smoke_fixtures import prepare_cross_plane
+                scene = prepare_cross_plane(fixture, minimum_chunks)
             elif fixture_scene == "open-sky-plane":
                 from engine_smoke_fixtures import prepare_open_sky_plane
                 scene = prepare_open_sky_plane(fixture, minimum_chunks)
@@ -610,7 +613,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

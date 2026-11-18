@@ -6,6 +6,13 @@ layout (location = 2) in vec2 aUV;
 layout (location = 3) in vec3 aInstanceOffset;
 layout (location = 4) in float aSkyLight;
 layout (location = 5) in float aBlockLight;
+layout (location = 6) in highp uvec4 aRenderLightHandle;
+
+/* CUBATARIUM_SECTION_LIGHT_INTERFACE */
+uniform bool uUseSectionLight;
+uniform bool uOverrideSectionLightHandle;
+uniform highp uvec4 uSectionLightHandle;
+flat out float vSectionLightValid;
 
 out vec3 vWorldPos;
 flat out vec3 vInstanceCell;
@@ -111,6 +118,17 @@ void main()
     vFaceIndex = int(aFaceIndex + 0.5);
     vSkyLight = aSkyLight;
     vBlockLight = aBlockLight;
+    vSectionLightValid = 1.0;
+    if (uUseSectionLight)
+    {
+        highp uint packed;
+        bool valid = sectionLightFetch(
+            uOverrideSectionLightHandle ? uSectionLightHandle : aRenderLightHandle,
+            ivec3(vInstanceCell), packed);
+        vSectionLightValid = valid ? 1.0 : 0.0;
+        vSkyLight = valid ? float(packed & 15u) / 15.0 : 0.0;
+        vBlockLight = valid ? float((packed >> 4u) & 15u) / 15.0 : 0.0;
+    }
     vWetness = 0.0;
     vLightPreview = 0.0;
 }

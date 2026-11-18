@@ -2,6 +2,7 @@
 
 #include "Render/Lighting/SectionLightAtlas.h"
 #include <array>
+#include <string>
 
 namespace cutum
 {
@@ -63,6 +64,9 @@ public:
   /// Common GL3.3 / GLES3 integer-texture interface. Inject after #version and
   /// GLES precision declarations. A failed lookup is explicit, never sky zero.
   static const char *ShaderInterface();
+  /// Expand the explicit marker in production shaders using the same
+  /// interface exercised by driver tests; leave other shaders unchanged.
+  static std::string ExpandShaderInterface(std::string source);
 
 private:
   struct Slot

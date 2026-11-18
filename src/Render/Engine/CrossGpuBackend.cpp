@@ -178,28 +178,58 @@ bool UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
   glEnableVertexAttribArray(2);
   glBindBuffer(kElementArrayBuffer, mesh.ebo);
   glBindBuffer(kArrayBuffer, gpu.instanceVbo);
-  constexpr GLsizei kInstanceStride =
-      static_cast<GLsizei>(sizeof(CrossInstanceGpu));
-  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, kInstanceStride, (void *)0);
-  glEnableVertexAttribArray(3);
-  glVertexAttribDivisor(3, 1);
-  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
-                        (void *)(offsetof(CrossInstanceGpu, skyLight)));
-  glEnableVertexAttribArray(4);
-  glVertexAttribDivisor(4, 1);
-  glVertexAttribPointer(5, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
-                        (void *)(offsetof(CrossInstanceGpu, blockLight)));
-  glEnableVertexAttribArray(5);
-  glVertexAttribDivisor(5, 1);
-  glVertexAttribIPointer(
-      6, 4, GL_UNSIGNED_INT, kInstanceStride,
-      (void *)(offsetof(CrossInstanceGpu, renderLightHandle)));
-  glEnableVertexAttribArray(6);
-  glVertexAttribDivisor(6, 1);
+  BindInstanceAttributes(0);
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
   return gpu.vao && glGetError() == GL_NO_ERROR;
+}
+
+void UCrossGpuBackend::BindInstanceAttributes(size_t first)
+{
+  const size_t base = first * sizeof(CrossInstanceGpu);
+  constexpr GLsizei kInstanceStride =
+      static_cast<GLsizei>(sizeof(CrossInstanceGpu));
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, kInstanceStride,
+                        reinterpret_cast<void *>(base));
+  glEnableVertexAttribArray(3);
+  glVertexAttribDivisor(3, 1);
+  glVertexAttribPointer(
+      4, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
+      reinterpret_cast<void *>(base + offsetof(CrossInstanceGpu, skyLight)));
+  glEnableVertexAttribArray(4);
+  glVertexAttribDivisor(4, 1);
+  glVertexAttribPointer(
+      5, 1, GL_FLOAT, GL_FALSE, kInstanceStride,
+      reinterpret_cast<void *>(base + offsetof(CrossInstanceGpu, blockLight)));
+  glEnableVertexAttribArray(5);
+  glVertexAttribDivisor(5, 1);
+  glVertexAttribIPointer(
+      6, 4, GL_UNSIGNED_INT, kInstanceStride,
+      reinterpret_cast<void *>(base +
+                               offsetof(CrossInstanceGpu, renderLightHandle)));
+  glEnableVertexAttribArray(6);
+  glVertexAttribDivisor(6, 1);
+}
+
+bool UCrossGpuBackend::DrawRange(const CrossGpuBatch &batch, size_t first,
+                                 size_t count)
+{
+  if (!batch.vao || !batch.instanceVbo || !count ||
+      first > batch.instanceCount || count > batch.instanceCount - first ||
+      count > static_cast<size_t>(std::numeric_limits<GLsizei>::max()) ||
+      first > std::numeric_limits<size_t>::max() / sizeof(CrossInstanceGpu))
+    return false;
+  glBindVertexArray(batch.vao);
+  glBindBuffer(kArrayBuffer, batch.instanceVbo);
+  BindInstanceAttributes(first);
+  glDrawElementsInstanced(GL_TRIANGLES, GetTemplateIndexCount(batch.shape),
+                          GL_UNSIGNED_INT, nullptr,
+                          static_cast<GLsizei>(count));
+  BindInstanceAttributes(0);
+  glBindVertexArray(0);
+  glBindBuffer(kArrayBuffer, 0);
+  return true;
 }
 
 bool UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,

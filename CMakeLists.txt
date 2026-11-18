@@ -2441,7 +2441,7 @@ if(WIN32)
 endif()
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   target_link_libraries(decor_mesh_integration_test glfw)
-  target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1)
+  target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1 CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   add_test(NAME gpu_material_visibility_gles_driver_test
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --face-visibility-gles-driver)
   set_tests_properties(gpu_material_visibility_gles_driver_test PROPERTIES

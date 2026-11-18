@@ -51,6 +51,9 @@ public:
                    const std::vector<uint8_t> &instance_selection = {});
   void DestroyPass(CrossGpuPassCache &cache);
   void DestroyAll(CrossGpuPassCache &cache);
+  /// GLES3 has no base-instance draw. Shift all instance attributes together,
+  /// submit this contiguous artifact range, and restore the VAO's zero base.
+  bool DrawRange(const CrossGpuBatch &batch, size_t first, size_t count);
 
   GLuint GetTemplateVao() const { return Templates[0].vao; }
   GLsizei GetTemplateIndexCount() const
@@ -69,6 +72,7 @@ private:
   bool EnsureTemplateMesh(BlockDecorShape shape);
   bool UploadInstances(CrossGpuBatch &gpu, const CrossInstanceBatch &batch);
   bool EnsureBatchVao(CrossGpuBatch &gpu);
+  void BindInstanceAttributes(size_t first);
   void DestroyInstanceBuffer(CrossGpuBatch &batch);
   bool UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);

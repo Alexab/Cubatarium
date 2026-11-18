@@ -4270,9 +4270,13 @@ UGeometryEngine::UGeometryEngine(
 
 UGeometryEngine::~UGeometryEngine()
 {
+  if (WorldInstance && PhysicalLightPublicationBound_)
+    WorldInstance->GetMeshService().GetCache().SetPrepareRenderLightFn({});
   DestroyCubeBuffers();
   DestroyFaceQuadBuffers();
   DestroyGreedyMeshBuffers();
+  if (SectionLightOwner)
+    SectionLightOwner->Reset();
   FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
@@ -4348,6 +4352,32 @@ void UGeometryEngine::EnsureRenderBackendsBound()
     auto &mesh = WorldInstance->GetMeshService();
     mesh.SetCullBackend(RenderBackends.Cull.get());
     mesh.SetMesherBackend(RenderBackends.Mesher.get());
+    if (GetActiveRenderBackendCaps().ProbeCompleted)
+    {
+      const bool physical =
+          WorldInstance->GetLightingPipeline().GetMode() == LightingMode::Full;
+      if (physical && !PhysicalLightPublicationBound_)
+      {
+        SectionLightOwner = std::make_shared<SectionRenderLightBindings>();
+        const std::weak_ptr<SectionRenderLightBindings> owner =
+            SectionLightOwner;
+        mesh.GetCache().SetPrepareRenderLightFn(
+            [owner](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+                    const SectionRenderLightSnapshot &light)
+            {
+              const auto live = owner.lock();
+              return live ? live->PrepareForWorld(epoch, geometry, light)
+                          : nullptr;
+            });
+        PhysicalLightPublicationBound_ = true;
+      }
+      else if (!physical && PhysicalLightPublicationBound_)
+      {
+        mesh.GetCache().SetPrepareRenderLightFn({});
+        SectionLightOwner->Reset();
+        PhysicalLightPublicationBound_ = false;
+      }
+    }
     // R03: bind before first packed CommitGpuMeshResult (not only first draw).
     if (!PackedRepresentationSwitchBound_ && RenderBackends.Store)
     {
@@ -6705,6 +6735,22 @@ void UGeometryEngine::DrawCrossInstancedBatches(
             UnderwaterFogPass_.GetUnderwaterFogSubmerged() > 0.5f));
   }
   ApplyGreedyEnvironmentUniforms(crossInstancedShader);
+  const bool physical_light =
+      WorldInstance->GetLightingPipeline().GetMode() == LightingMode::Full;
+  crossInstancedShader->SetBool("uUseSectionLight", physical_light);
+  crossInstancedShader->SetBool("uOverrideSectionLightHandle", physical_light);
+  bool physical_bound = false;
+  if (physical_light && SectionLightOwner)
+  {
+    SectionLightOwner->CollectRetired();
+    physical_bound = SectionLightOwner->Bind(7, 8);
+    crossInstancedShader->SetInt("uSectionLightAtlas", 7);
+    crossInstancedShader->SetInt("uSectionLightBindings", 8);
+    const auto incarnation = SectionLightOwner->ShaderIncarnation();
+    glUniform2uiv(crossInstancedShader->GetUniformLocation(
+                      "uSectionLightTableIncarnation"),
+                  1, incarnation.data());
+  }
   glActiveTexture(GL_TEXTURE0);
 
   for (const CrossGpuBatch &gpu : CrossGpuPass.batches)
@@ -6726,10 +6772,44 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     glBindTexture(GL_TEXTURE_2D, textureId);
     SetBlockAnimUniforms(crossInstancedShader, gpu.blockId, textures);
     crossInstancedShader->SetInt("uDecorShape", static_cast<int>(gpu.shape));
-    glBindVertexArray(gpu.vao);
-    glDrawElementsInstanced(
-        GL_TRIANGLES, CrossGpuBackend.GetTemplateIndexCount(gpu.shape),
-        GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(gpu.instanceCount));
+    if (physical_light)
+    {
+      if (!physical_bound)
+        continue;
+      for (const auto &range : gpu.lightRanges)
+      {
+        if (!range.binding || !range.binding->IsLive())
+          continue;
+        const auto current =
+            WorldInstance->GetBlockWorld().CaptureRenderLightSnapshot(
+                range.binding->GeometryInputs().coord);
+        if (!current ||
+            !SectionLightOwner->Refresh(range.binding,
+                                        range.binding->WorldEpoch(), *current))
+          continue;
+        const auto words = SectionLightOwner->PrepareDraw(range.binding);
+        if (!words)
+          continue;
+        glUniform4uiv(
+            crossInstancedShader->GetUniformLocation("uSectionLightHandle"), 1,
+            words->data());
+        // The fallback page is transient. Draw this artifact before preparing
+        // another range; never persist its handle in the instance VBO.
+        if (CrossGpuBackend.DrawRange(gpu, range.first, range.count) &&
+            ++CrossPhysicalDrawCount_ == 1)
+        {
+          const auto coord = range.binding->GeometryInputs().coord;
+          CubatariumLogInfo(
+              "SectionLightCross",
+              "first_physical_draw coord=(" + std::to_string(coord.x) + "," +
+                  std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                  ") count=" + std::to_string(range.count) +
+                  " revision=" + std::to_string(current->FieldRevision()));
+        }
+      }
+    }
+    else
+      CrossGpuBackend.DrawRange(gpu, 0, gpu.instanceCount);
   }
   glBindVertexArray(0);
   crossInstancedShader->Unuse();

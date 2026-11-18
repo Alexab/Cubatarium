@@ -24,6 +24,12 @@ public:
                   uint32_t page_limit = 4096,
                   bool enable_ordered_fallback = false);
   void Reset();
+  /// Publication-thread entry point. The mesh cache validates source epoch
+  /// against its live world before calling; initialize GL resources lazily.
+  std::shared_ptr<SectionRenderLightBinding>
+  PrepareForWorld(uint64_t source_world_epoch,
+                  const SectionGeometryRenderInputs &geometry,
+                  const SectionRenderLightSnapshot &light);
   std::shared_ptr<SectionRenderLightBinding>
   Prepare(uint64_t source_world_epoch,
           const SectionGeometryRenderInputs &geometry,

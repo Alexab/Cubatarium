@@ -2,6 +2,7 @@
 #include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
 #include "Render/GlIncludes.h"
+#include "Render/Lighting/SectionLightBindingTable.h"
 #include <fstream>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
@@ -176,7 +177,8 @@ bool UShaderProgram::CompileShader(GLuint &shaderID, GLenum shaderType,
                                    const std::string &source)
 {
   shaderID = glCreateShader(shaderType);
-  const char *sourcePtr = source.c_str();
+  const auto expanded = SectionLightBindingTable::ExpandShaderInterface(source);
+  const char *sourcePtr = expanded.c_str();
   glShaderSource(shaderID, 1, &sourcePtr, nullptr);
   glCompileShader(shaderID);
 

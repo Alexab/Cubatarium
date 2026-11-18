@@ -78,6 +78,24 @@ bool SectionRenderLightBindings::BeginWorld(
   return true;
 }
 
+std::shared_ptr<SectionRenderLightBinding>
+SectionRenderLightBindings::PrepareForWorld(
+    uint64_t source_world_epoch, const SectionGeometryRenderInputs &geometry,
+    const SectionRenderLightSnapshot &light)
+{
+  if (!source_world_epoch || !geometry.valid ||
+      !light.MatchesGeometry(geometry))
+    return nullptr;
+  if (!Current || Current->epoch != source_world_epoch ||
+      Current->geometry_identity != geometry.world_geometry_identity)
+  {
+    if (!BeginWorld(source_world_epoch, geometry.world_geometry_identity, 4096,
+                    32u * 1024u * 1024u, 4096, true))
+      return nullptr;
+  }
+  return Prepare(source_world_epoch, geometry, light);
+}
+
 void SectionRenderLightBindings::Reset()
 {
   if (Current)
