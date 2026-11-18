@@ -6010,13 +6010,37 @@
       }
     },
     "diagnostic_capture_backpressure": {
-      "status": "Implemented bounded lossless encoder handoff and bot admission/pose hold; controller unit and detected RED mutation PASS after exact source restore. Exact Release rebuild/static6DLL PASS; native encoder saturation verification pending. Creature latency defect remains open.",
+      "status": "C++ controller/RED/restored/Release PASS; first frozen native all scoped references and30PNG PASS but actual encoder delay was sanitized, so saturation acceptance UNTESTED. Explicit harness stress option and saturation oracle added;66Python tests PASS. Repeat actual stress pending; creature latency defect remains open.",
       "failure_evidence": "28d644df2 moving native requested30/PBOqueued30 but26PNGverified. Completed inspection0008/0010/0012/0014 dropped from PollCompleted when ImageJobs had4queued images; native failure preserved under engine-no-surface-visible-items-native.",
       "fix": "Keep completed Frame/Pixels in its existing PBO slot if QueueImage rejects; do not release before successful handoff. Retry without another GPU readback; shutdown also reuses retained CPU copy. Existing3PBOslots+4PNGqueue+1worker remain bounded; main/render thread never waits for encoder. Nonblocking IsDiagnosticCaptureReady pumps completed work before the bot/periodic admission, preventing periodic starvation. Controller observation captureReady defaults true for existing users, holds orientation/movement/capture counter when pipeline is full; resumes once admitted. Desktop adapter forwards new window capability. Trace adds capture_ready.",
       "tests": "diagnostic_flight_controller_test:20sec saturated pipeline emits no movement/capture/waypoint advancement;5sec saturation after first capture retains orientation and ID without duplicate; recovery captures all12 exactly once. Remove actual captureReady guard: unitREDbuild succeeds, testFAIL; original exact bytes restored and fresh build/testGREEN. Logs engine-flight-capture-backpressure-{red,restored}-{build,test}.log, hash JSON.",
       "stress_control": "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS delays only encoder worker, clamp0..10000ms, production default0; enable explicit native stress. Retention emits power-of-two encoder_backpressure aggregate witnesses. No extra queue capacity or render-thread waiting.",
       "build_development": "Initial exact Release build failed because AppRunner uses UDesktopPlatformWindow wrapper, not WindowManager directly. Added required forwarding method; initial failed build log retained. Never launched failed build.",
-      "release": "engine-flight-capture-backpressure-release-rebuild.log terminal0 exact required Release command, static6systemDLL PASS; initial failed compile retained separately."
+      "release": "engine-flight-capture-backpressure-release-rebuild.log terminal0 exact required Release command, static6systemDLL PASS; initial failed compile retained separately.",
+      "native_no_pressure": {
+        "source_commit": "38e01db33",
+        "artifacts": "build/desktop-msvc/engine-capture-backpressure-stress-native",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED missing generic RGB reference; all scoped references PASS",
+        "frames": 1431,
+        "chunks": 22,
+        "outside_initial_samples": 936,
+        "relocations": 0,
+        "png_verified": "30/30",
+        "camera_ready": "1431/1431",
+        "fp_ready": "1431/1431",
+        "creature_ready": "768/768",
+        "item_draws": 218,
+        "item_primitives": 654,
+        "depth_checks": 287,
+        "packed_source_checks": 112,
+        "faults": 0,
+        "retention_witnesses": 0,
+        "paused_inspection_samples": 0,
+        "warning": "Inherited CUBA_FLIGHT_* delay env sanitized by harness; route environment lacks requested2500, so this is not a saturated-encoder test. New all-ready creature run does not fix prior measured latency defect; negative retained."
+      },
+      "harness_stress": "Explicit --capture-encode-delay-ms validates integer0..10000 before fixture/process mutation, installs known delay AFTER dangerous QA env sanitation, records argument and actual passed environment in route.json. Positive delay requests mandatory capture_backpressure component: real retention witness AND actual inspection admission-blocked observations AND zero drops/nonmovement faults AND all pose-joined PNGs. Lack of saturation remains UNTESTED. Python66 suite PASS in engine-capture-backpressure-python-tests.log; invalid delay inputs, no-pressure UNT, retention PASS, moving/reissued/drop/missingPNG FAIL tested."
     }
   }
 }

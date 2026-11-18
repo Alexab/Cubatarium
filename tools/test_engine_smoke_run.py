@@ -136,13 +136,50 @@ class IsolatedFixtureTest(unittest.TestCase):
              patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
              patch.object(engine_smoke_run.subprocess, "Popen", return_value=child), \
              patch("engine_smoke_fixtures.prepare_open_sky_plane", return_value=scene):
-            engine_smoke_run.run("Saved", self.artifacts, fixture_scene="open-sky-plane")
+            engine_smoke_run.run("Saved", self.artifacts, fixture_scene="open-sky-plane",
+                                 capture_encode_delay_ms=2500)
         manifest = json.loads((self.artifacts / "route.json").read_text(encoding="utf-8"))
         env = manifest["diagnostic_environment"]
         self.assertEqual(env["CUBA_FLIGHT_BENCH_OVERLAY"], "0")
+        self.assertEqual(env["CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS"], "2500")
+        self.assertEqual(manifest["capture_encode_delay_ms"], 2500)
         self.assertNotIn("CUBA_FLIGHT_QA_FP_ITEM", env)
         self.assertNotIn("CUBA_FLIGHT_QA_WORLD_USER", env)
         self.assertEqual(self.config.read_bytes(), self.original)
+
+    def test_encoder_delay_validation_precedes_process_or_fixture_changes(self):
+        for invalid in (-1, 10001, True, "2500", 2.5, float("nan")):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                engine_smoke_run.run("Saved", self.artifacts,
+                                     capture_encode_delay_ms=invalid)
+        self.assertFalse(self.artifacts.exists())
+        self.assertEqual(self.config.read_bytes(), self.original)
+
+    def test_backpressure_requires_saturation_and_lossless_stationary_capture(self):
+        logs = self.artifacts / "logs"
+        logs.mkdir(parents=True)
+        log = logs / "app.log.INFO.1"
+        log.write_text("")
+        trace = self.artifacts / "diagnostic_bot.jsonl"
+        row = dict(state="inspect", capture_ready=0, capture_request=0,
+                   forward=0, up=0, down=0)
+        trace.write_text(json.dumps(row)+"\n")
+        complete = dict(verified=2, requested=2)
+        check = lambda: engine_smoke_run.capture_backpressure_evidence(self.artifacts, complete)
+        self.assertEqual(check()["status"], "UNTESTED")
+        log.write_text("[FlightCapture] encoder_backpressure retained=1\n")
+        self.assertEqual(check()["status"], "PASS")
+        trace.write_text(json.dumps(dict(row, forward=1))+"\n")
+        self.assertEqual(check()["status"], "FAIL")
+        trace.write_text(json.dumps(dict(row, capture_request=1))+"\n")
+        self.assertEqual(check()["status"], "FAIL")
+        trace.write_text(json.dumps(row)+"\n")
+        log.write_text("[FlightCapture] encoder_backpressure retained=1\n"
+                       "[FlightCapture] PNG worker queue full; dropped completed frame index=4\n")
+        self.assertEqual(check()["status"], "FAIL")
+        log.write_text("[FlightCapture] encoder_backpressure retained=1\n")
+        complete["verified"] = 1
+        self.assertEqual(check()["status"], "FAIL")
 
     def test_startup_observation_checks_native_inputs_and_three_dimensional_drift(self):
         trace = self.root / "startup.jsonl"

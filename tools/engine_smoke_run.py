@@ -183,6 +183,44 @@ def inspection_evidence(artifacts: Path, report: dict) -> dict:
             "reason": "inspection_views_joined_to_png"}
 
 
+def capture_backpressure_evidence(artifacts: Path, inspection: dict) -> dict:
+    """Require actual saturation, native bot waits, and saved joined poses."""
+    retained = dropped = waits = faults = 0
+    for path in sorted((artifacts / "logs").glob("*.log.INFO.*")):
+        with path.open(encoding="utf-8", errors="replace") as stream:
+            for line in stream:
+                if "[FlightCapture]" not in line:
+                    continue
+                retained += "encoder_backpressure retained=" in line
+                dropped += "dropped completed frame" in line
+    trace = artifacts / "diagnostic_bot.jsonl"
+    if trace.exists():
+        with trace.open(encoding="utf-8") as stream:
+            for line in stream:
+                try:
+                    row = json.loads(line)
+                    if row.get("state") == "inspect" and row.get("capture_ready") == 0:
+                        waits += 1
+                        if (row.get("capture_request") or
+                                any(row.get(k) != 0 for k in ("forward", "up", "down"))):
+                            faults += 1
+                except (ValueError, TypeError, AttributeError):
+                    faults += 1
+    complete = (isinstance(inspection.get("requested"), int) and
+                inspection["requested"] > 0 and
+                inspection.get("verified") == inspection["requested"])
+    bad = dropped > 0 or faults > 0 or not complete
+    return dict(status="FAIL" if bad else "PASS" if retained and waits else "UNTESTED",
+                reason="encoder_backpressure_drops_or_pose_faults" if bad else
+                       "bounded_encoder_backpressure_observed" if retained and waits else
+                       "encoder_saturation_not_observed",
+                retention_witnesses=retained, dropped_frames=dropped,
+                paused_inspection_samples=waits, pose_faults=faults,
+                complete_saved_inspection=complete,
+                scope="native bounded encoder retention, bot nonmovement while admission blocked, "
+                      "and pose-joined PNG coverage; no performance or RGB acceptance")
+
+
 @contextmanager
 def isolated_fixture(runtime: Path, world_name: str, artifacts: Path):
     if (not world_name or not all(c.isalnum() or c in "_.-" for c in world_name)
@@ -276,7 +314,11 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         minimum_chunks: int = 16, fixture_scene: str | None = None,
         process_timeout: float | None = None,
         render_distance: int | None = None, sprint: bool = False,
-        startup_only: bool = False) -> dict:
+        startup_only: bool = False, capture_encode_delay_ms: int = 0) -> dict:
+    if (isinstance(capture_encode_delay_ms, bool) or
+            not isinstance(capture_encode_delay_ms, int) or
+            not 0 <= capture_encode_delay_ms <= 10000):
+        raise ValueError("capture encoder delay must be an integer in 0..10000 ms")
     if process_timeout is not None:
         import math
         if not math.isfinite(process_timeout) or process_timeout <= 0:
@@ -331,6 +373,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             "CUBA_WORLD_COLUMN_SOURCE_TRACE": "1",
             "CUBA_FLIGHT_CAPTURE_DIR": str((artifacts / "captures").resolve()),
             "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "10",
+            "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS": str(capture_encode_delay_ms),
         })
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
             # Exercise the normal FP viewmodel consumer. The default flight
@@ -398,6 +441,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "bot_route_sha256": digest(bot_path),
                  "render_distance_override": render_distance,
                  "sprint": sprint, "startup_only": startup_only,
+                 "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
                  "idle_seconds": idle_seconds, "yaw": yaw, "pitch": pitch,
@@ -509,6 +553,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif world_items["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if capture_encode_delay_ms:
+            pressure = capture_backpressure_evidence(artifacts, inspection)
+            verdict["components"]["capture_backpressure"] = pressure
+            if pressure["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif pressure["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
@@ -532,6 +583,8 @@ def main() -> int:
     parser.add_argument("--yaw", type=float, default=180)
     parser.add_argument("--pitch", type=float, default=-25)
     parser.add_argument("--minimum-chunks", type=int, default=16)
+    parser.add_argument("--capture-encode-delay-ms", type=int, default=0,
+                        help="encoder-only stress delay (0..10000 ms); requires saturation evidence")
     parser.add_argument("--render-distance", type=int, choices=range(1, 33),
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
@@ -543,6 +596,7 @@ def main() -> int:
                                          args.idle_seconds, args.yaw, args.pitch]) or
             min(args.fly_seconds, args.stop_seconds, args.idle_seconds) < 0 or
             args.minimum_chunks < 1 or
+            not 0 <= args.capture_encode_delay_ms <= 10000 or
             (args.process_timeout is not None and
              (not math.isfinite(args.process_timeout) or args.process_timeout <= 0))):
         parser.error("finite nonnegative durations and positive coverage are required")
@@ -551,7 +605,8 @@ def main() -> int:
                   yaw=args.yaw, pitch=args.pitch, minimum_chunks=args.minimum_chunks,
                   fixture_scene=args.fixture_scene, process_timeout=args.process_timeout,
                   render_distance=args.render_distance, sprint=args.sprint,
-                  startup_only=args.startup_only)
+                  startup_only=args.startup_only,
+                  capture_encode_delay_ms=args.capture_encode_delay_ms)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 
