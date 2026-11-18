@@ -8,6 +8,7 @@
 #include "World/Lighting/LightCalculationSettlement.h"
 #include "World/Lighting/PendingLightCoverage.h"
 #include "World/Lighting/RelightInputValidation.h"
+#include "World/Lighting/SceneLightRefresh.h"
 #include "World/Streaming/MeshLitGate.h"
 
 #include <algorithm>
@@ -25,6 +26,104 @@ void Expect(bool condition, const char *message)
     std::cerr << "relight_result_install_test: " << message << '\n';
     std::exit(1);
   }
+}
+
+void TestSceneLightRefreshBeforePaint()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get());
+  bool known = true;
+  world.SetKnownOpenSkyAbsentQuery(
+      [&](glm::ivec3 coord)
+      { return known || coord != glm::ivec3(-1, 10, -1); });
+  const std::vector<glm::ivec3> targets{{0, -3, 0}, {1, -3, 0}, {2, -3, 0}};
+  RelightJobSpec spec;
+  spec.min_world_y = -48;
+  spec.max_world_y = -33;
+  spec.include_known_air_outputs = true;
+  const auto initial =
+      UChunkRelightSnapshot::CaptureSections(world, spec, targets)
+          .Compute(registry);
+  for (const auto &data : initial.chunks)
+    InstallComputedLight(world, data, true, true);
+  Expect(initial.inputs_complete &&
+             world.RecordLightCalculation(initial, catalog) == 3,
+         "paint refresh fixture installs three physical AIR fields");
+  world.SetBlock({4, 32, 4}, 8);
+  Expect(!world.GetCurrentLightSamplingVolume(targets[0]),
+         "late roof arrival reproduces invalid field before paint");
+  SceneLightRefresh repair(2, 100000);
+  repair.BeginFrame(17, 1);
+  const auto repaired = repair.Refresh(world, registry, targets[0]);
+  Expect(repaired.status == SceneLightRefresh::Status::Refreshed &&
+             repaired.changed && repair.AttemptCount() == 1 &&
+             world.GetCurrentLightSamplingVolume(targets[0]),
+         "paint repair publishes a current full physical field after roof "
+         "arrival");
+  Expect(
+      UnpackSky(*world.SampleSceneLight({4, -40, 4}).packed) == 14 &&
+          UnpackSky(*world.SampleSceneLight({5, -40, 4}).packed) == 15,
+      "repair computes analytic lateral shadow rather than constant open sky");
+  Expect(
+      repair.Refresh(world, registry, targets[0]).status ==
+              SceneLightRefresh::Status::Current &&
+          repair.AttemptCount() == 1,
+      "multiple consumers reuse the same current field without another solve");
+  Expect(repair.Refresh(world, registry, targets[1]).status ==
+                 SceneLightRefresh::Status::Refreshed &&
+             repair.Refresh(world, registry, targets[2]).status ==
+                 SceneLightRefresh::Status::Budget,
+         "one paint cannot run more than two foreground solves");
+  repair.BeginFrame(17, 1);
+  Expect(repair.Refresh(world, registry, targets[2]).status ==
+             SceneLightRefresh::Status::Budget,
+         "repeated begin for same paint cannot replenish work credit");
+  repair.BeginFrame(17, 2);
+  Expect(repair.Refresh(world, registry, targets[2]).status ==
+             SceneLightRefresh::Status::Refreshed,
+         "next paint can service remaining field debt");
+  world.SetBlock({4, 32, 4}, BLOCK_AIR);
+  known = false;
+  const auto before =
+      world.GetChunkManager().GetSectionLightField(targets[0])->GetRevision();
+  repair.BeginFrame(17, 3);
+  Expect(repair.Refresh(world, registry, targets[0]).status ==
+                 SceneLightRefresh::Status::Rejected &&
+             !world.GetCurrentLightSamplingVolume(targets[0]) &&
+             world.GetChunkManager()
+                     .GetSectionLightField(targets[0])
+                     ->GetRevision() == before,
+         "unknown context cannot overwrite bytes or fabricate sampling "
+         "completion");
+  Expect(
+      repair.Refresh(world, registry, targets[0]).status ==
+              SceneLightRefresh::Status::Budget &&
+          repair.AttemptCount() == 1,
+      "repeated rejection of same section cannot spend another paint credit");
+  Expect(repair.Refresh(world, registry, {20, -3, 20}).status ==
+                 SceneLightRefresh::Status::NoReceipt &&
+             !world.GetChunkManager().GetSectionLightField({20, -3, 20}),
+         "ordinary missing sections remain owned by prefetch and do not "
+         "allocate here");
+  known = true;
+  SceneLightRefresh timed(2, 1e-9);
+  timed.BeginFrame(17, 4);
+  Expect(timed.Refresh(world, registry, targets[0]).status ==
+                 SceneLightRefresh::Status::Refreshed &&
+             timed.Refresh(world, registry, targets[1]).status ==
+                 SceneLightRefresh::Status::Budget,
+         "soft time budget stops additional solves after one measured attempt");
+  repair.BeginFrame(0, 5);
+  Expect(repair.Refresh(world, registry, targets[1]).status ==
+             SceneLightRefresh::Status::Rejected,
+         "unowned source epoch cannot start a foreground solve");
 }
 
 void TestDomainsAndRevision()
@@ -2365,6 +2464,7 @@ int main(int argc, char **argv)
   TestAbsentFieldInputStampIdentity();
   TestWorldOwnedLightCertificates();
   TestBatchAbsenceEvidenceIsFreshAndExact();
+  TestSceneLightRefreshBeforePaint();
   TestDomainsAndRevision();
   TestLightChannelIdentityAndBufferedWrites();
   TestHorizontalLightBoundaryChangeMask();

@@ -63,6 +63,7 @@
 #include "World/Lighting/LightingPipelineFactory.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/RelightResultInstall.h"
+#include "World/Lighting/SceneLightRefresh.h"
 #include "World/Math/ChunkMeshFace.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
@@ -1499,6 +1500,49 @@ const IULightingPipeline &UWorld::GetLightingPipeline() const
   return const_cast<UWorld *>(this)->GetLightingPipeline();
 }
 
+void UWorld::RefreshSceneLightSampleBeforePaint(glm::ivec3 cell)
+{
+  if (!MeshService || !BlockRegistry || !RequiresLightingLitGate())
+    return;
+  const auto coord = UChunkManager::WorldToChunk(cell);
+  const auto focus = UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
+  const auto domain = RequiredWorldDomain::ForRenderDistance(
+      GetRequiredPresentationRadius(), true);
+  if (std::max(std::abs(coord.x - focus.x), std::abs(coord.z - focus.z)) >=
+      domain.data)
+    return;
+  if (!SceneLightRefreshBeforePaint)
+    SceneLightRefreshBeforePaint = std::make_unique<SceneLightRefresh>();
+  SceneLightRefreshBeforePaint->BeginFrame(
+      MeshService->GetCache().GetCaptureStore().WorldEpoch(),
+      StreamingFrameEpoch);
+  const auto result =
+      SceneLightRefreshBeforePaint->Refresh(BlockWorld, *BlockRegistry, coord);
+  if (result.status == SceneLightRefresh::Status::Refreshed)
+  {
+    NoteChunkSliceLightCalculationSettled(coord);
+    if (result.changed)
+    {
+      MeshService->QueueMeshDependencyInvalidations(
+          BlockWorld, {coord}, "required_scene_light_refresh");
+      if (BlockWorld.GetChunkManager().HasChunk(coord))
+        MeshService->MarkDirtyPriority(coord);
+    }
+    InvalidateChunkSliceRenderReadyMemo();
+  }
+  if (result.elapsed_ms > 0 &&
+      IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+    CubatariumLogInfo(
+        "SceneLightRefresh",
+        "frame_epoch=" + std::to_string(StreamingFrameEpoch) + " coord=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) +
+            ") status=" + std::to_string(static_cast<int>(result.status)) +
+            " changed=" + std::to_string(result.changed) + " attempts=" +
+            std::to_string(SceneLightRefreshBeforePaint->AttemptCount()) +
+            " elapsed_ms=" + std::to_string(result.elapsed_ms));
+}
+
 SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
                                                  SceneLightConsumer consumer,
                                                  uint64_t consumer_identity)
@@ -1523,6 +1567,7 @@ SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
           coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
           StreamingFrameEpoch, 8);
   }
+  RefreshSceneLightSampleBeforePaint(cell);
   const auto sample = BlockWorld.SampleSceneLight(cell, policy);
   if (UJobStageTrace::VisualBlackTraceEnabled() && MeshService)
   {

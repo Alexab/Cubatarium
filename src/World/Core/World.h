@@ -179,6 +179,7 @@ struct CreatureDefinition;
 
 class UWorldViewBinding;
 class UAsyncRelightBuilder;
+class SceneLightRefresh;
 class IULightingPipeline;
 class UViewEngine;
 class UTextureCubeStorage;
@@ -513,6 +514,7 @@ public:
   void PrepareEnterGameSession();
   int GetRequiredPresentationRadius() const;
   void MaintainRequiredWorldInputs(int data_budget, int light_visit_budget);
+  void RefreshSceneLightSampleBeforePaint(glm::ivec3 cell);
   /// StopOnDebt may return a partial, necessarily unready census. Only the
   /// default complete traversal supplies a diagnostic/first-paint witness.
   RequiredPresentationCoverage SampleRequiredPresentationCoverage(
@@ -1967,6 +1969,7 @@ private:
   double LastAppUpdateMs{0.0};
   double LastWorldTickMs{0.0};
   double LastPrepareFrameMs{0.0};
+  std::unique_ptr<SceneLightRefresh> SceneLightRefreshBeforePaint;
   double LastRenderWindowSetupMs{0.0};
   double LastRenderFrameSetupMs{0.0};
   double LastRenderEquipmentSetupMs{0.0};

@@ -6737,6 +6737,14 @@
         },
         "scope": "No absentKnownAir-toUnknown transition among observed camera failures. All11failureframes instead cite actual newly resident upper geometry with nonzero incarnation/content revision. Prior sprint232frames retained; different scheduling prevents controlled performance/percentage claims. Other named scoped references PASS; genericRGBUNTESTED. Sourceworld/config/EXE independently checked alltrue."
       }
+    },
+    "scene_light_refresh_before_paint": {
+      "status": "Implemented; actual canonical solver/provenance/budget test PASS and two negative controls RED with exact restore. Required Release application build/native sprint pending.",
+      "implementation": "Main-thread SceneLightRefresh repairs only existing recorded sky/block fields that lost current-input proof. Uses same pinned-catalog physical snapshot/solver, requires complete current input context and matching padded interior before installation/recording. Camera preparation runs before paint; existing creature/item/first-person requests share the same per-world/per-streaming-frame budget. At most2attempts,4mssoft accumulated budget, no repeated attempt for same section. One solve is not preemptible and may exceed4ms. Missing/unloaded/unknown fields remain streaming/prefetch debt, never guessed AIR or marked ready.",
+      "publication": "Successful repair records canonical provenance and settlement. Changed fields queue normal mesh dependency invalidation; changed resident sections receive priority legacy remesh. AIR repair allocates no geometry. Background jobs remain subject to current input checks; geometry-only captures do not stale merely because foreground light was updated.",
+      "validation": "engine-paint-light-refresh-restored-test.log PASS relight_result_install_test. Real late roof arrival invalidates prior physical AIR field, foreground solve yields analytic sky14shadow/15neighbor. Same-field consumers reuse it, two-attempt hard bound and same-frame credit retention checked, new frame services remaining section, soft time cutoff tested. Unknown roof context preserves old bytes/revision and cannot fabricate readiness; duplicate rejected section, no-receipt section and zero epoch covered.",
+      "negative_controls": "engine-paint-light-refresh-negative-controls.json: allowing unknown context fails preserved-byte/revision check; replenishing same-frame credit fails bounded-work check. Header restored byte-exact, target rebuilt and test GREEN. No RED application build/launch.",
+      "limits": "This is a bounded correctness fallback for stale fields, not universal missing-field delivery, a hard4msdeadline or final performance acceptance. Normal separate GPU field shaders, persistent certificates, unified lifecycle and full visual/backend matrix remain open."
     }
   },
   "execution_status_review_2026_11_18": {

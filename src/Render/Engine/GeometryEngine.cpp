@@ -5506,6 +5506,9 @@ void UGeometryEngine::PrepareFrameRendering()
     return;
   }
   WorldInstance->EnsureDefaultCelestialBodies();
+  if (const auto camera = WorldInstance->GetCurrentUserCamera())
+    WorldInstance->RefreshSceneLightSampleBeforePaint(
+        WorldPosToBlock(camera->GetRenderPosition()));
   WorldInstance->RefreshSkyVisualStateForRender();
   glm::mat3 inv_view_rot(1.0f);
   if (auto camera = WorldInstance->GetCurrentUserCamera())
