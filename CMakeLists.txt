@@ -2395,6 +2395,7 @@ cubatarium_add_test(NAME fluid_placement_liquid_decor_test
 
 cubatarium_add_test(NAME decor_mesh_integration_test
     SOURCES
+        src/Render/Engine/CrossGpuBackend.cpp
         src/Render/Lighting/SectionLightAtlas.cpp
         src/Render/Lighting/SectionLightBindingTable.cpp
         src/Render/Lighting/SectionRenderLightBindings.cpp
@@ -2453,6 +2454,10 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --light-binding-driver)
   set_tests_properties(section_render_light_bindings_driver_test PROPERTIES
     LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 60)
+  add_test(NAME cross_light_bindings_gles_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --cross-light-gles-driver)
+  set_tests_properties(cross_light_bindings_gles_driver_test PROPERTIES
+    LABELS "gpu;integration;gles" SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
 
 cubatarium_add_test(NAME mesh_schedule_retry_test

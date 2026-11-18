@@ -4797,9 +4797,9 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   const auto merge_from_cache = [&](const Frustum *cull_frustum,
                                     const glm::vec3 *cull_camera,
                                     float cull_distance)
-      -> std::unordered_map<BlockId, std::vector<CrossInstanceGpu>>
+      -> std::unordered_map<BlockId, CrossInstanceBatch>
   {
-    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> merged;
+    std::unordered_map<BlockId, CrossInstanceBatch> merged;
     for (const auto &entry : GreedyCache)
     {
       if (!ChunkPassesFrustum(cull_frustum, cull_camera, cull_distance,
@@ -4809,14 +4809,21 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
       }
       for (const auto &pair : entry.second.crossCenters)
       {
-        std::vector<CrossInstanceGpu> &dst = merged[pair.first];
-        dst.insert(dst.end(), pair.second.begin(), pair.second.end());
+        auto &dst = merged[pair.first];
+        dst.blockId = pair.first;
+        const auto &binding = entry.second.RenderLightBinding;
+        for (auto instance : pair.second)
+        {
+          instance.renderLightHandle =
+              binding ? binding->ShaderWords() : std::array<uint32_t, 4>{};
+          AppendCrossInstance(dst, instance, binding);
+        }
       }
     }
     return merged;
   };
 
-  std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> merged =
+  std::unordered_map<BlockId, CrossInstanceBatch> merged =
       merge_from_cache(frustum, cameraPos, maxCullDistance);
   if (frustum && cameraPos && merged.empty() && !GreedyCache.empty() &&
       (CrossBatchesDirty || CrossBatches.empty()))
@@ -4871,10 +4878,7 @@ void UChunkMeshCache::RebuildFlatCrossInstances(const Frustum *frustum,
   CrossBatches.reserve(merged.size());
   for (auto &pair : merged)
   {
-    CrossInstanceBatch batch;
-    batch.blockId = pair.first;
-    batch.instances = std::move(pair.second);
-    CrossBatches.push_back(std::move(batch));
+    CrossBatches.push_back(std::move(pair.second));
   }
   CrossBatchesDirty = false;
 }

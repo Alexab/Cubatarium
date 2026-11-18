@@ -4,6 +4,7 @@
 #include "Render/Camera/Frustum.h"
 #include "Render/Lighting/SectionRenderLightBindings.h"
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+#include "Render/Engine/CrossGpuBackend.h"
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include <GLFW/glfw3.h>
@@ -21,6 +22,7 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <cstring>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
@@ -1780,6 +1782,245 @@ static void TestFirstComputedLightPublication(
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 static void
+ProbeCrossGpuHandles(const cutum::CrossGpuBatch &gpu,
+                     const std::vector<std::array<uint32_t, 4>> &expected,
+                     bool gles)
+{
+  const std::string version =
+      gles ? "#version 300 es\nprecision highp float;\nprecision highp int;\n"
+           : "#version 330 core\n";
+  const auto compile = [&](GLenum type, const std::string &body)
+  {
+    const auto shader = glCreateShader(type);
+    const auto source = version + body;
+    const auto *text = source.c_str();
+    glShaderSource(shader, 1, &text, nullptr);
+    glCompileShader(shader);
+    GLint ok = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    Expect(ok == GL_TRUE, "Cross integer handle probe shader compiles");
+    return shader;
+  };
+  const auto vs = compile(GL_VERTEX_SHADER,
+                          "layout(location=6) in uvec4 field; flat out uvec4 "
+                          "handle; uniform float width;"
+                          "void "
+                          "main(){handle=field;gl_Position=vec4(-1.+(float(gl_"
+                          "InstanceID)+.5)*2./width,0,0,1);gl_PointSize=1.;}");
+  const auto fs =
+      compile(GL_FRAGMENT_SHADER, "flat in uvec4 handle; layout(location=0) "
+                                  "out uvec4 value;void main(){value=handle;}");
+  const auto program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
+  GLint ok = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &ok);
+  Expect(ok == GL_TRUE, "Cross handle probe program links");
+  GLuint texture = 0, fbo = 0;
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32UI,
+               static_cast<GLsizei>(expected.size()), 1, 0, GL_RGBA_INTEGER,
+               GL_UNSIGNED_INT, nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "Cross handle integer framebuffer complete");
+  glViewport(0, 0, static_cast<GLsizei>(expected.size()), 1);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glDisable(GL_SCISSOR_TEST);
+  glUseProgram(program);
+  glUniform1f(glGetUniformLocation(program, "width"), float(expected.size()));
+  glBindVertexArray(gpu.vao);
+  GLint integer = 0, divisor = 0, stride = 0;
+  glGetVertexAttribiv(6, GL_VERTEX_ATTRIB_ARRAY_INTEGER, &integer);
+  glGetVertexAttribiv(6, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &divisor);
+  glGetVertexAttribiv(6, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+  Expect(integer && divisor == 1 && stride == sizeof(cutum::CrossInstanceGpu),
+         "production Cross VAO transports integer words per instance");
+  glDrawArraysInstanced(GL_POINTS, 0, 1, static_cast<GLsizei>(expected.size()));
+  std::vector<std::array<uint32_t, 4>> actual(expected.size());
+  glReadPixels(0, 0, static_cast<GLsizei>(expected.size()), 1, GL_RGBA_INTEGER,
+               GL_UNSIGNED_INT, actual.data());
+  Expect(actual == expected,
+         "actual Cross instanced draw retains all four artifact handle words");
+  glBindVertexArray(0);
+  glUseProgram(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &texture);
+  glDeleteProgram(program);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+  Expect(glGetError() == GL_NO_ERROR, "Cross handle probe has no GL errors");
+}
+#endif
+
+static void TestCrossLightArtifactTransport(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions, bool gpu = false,
+    bool gles = false)
+{
+  using namespace cutum;
+  SectionRenderLightBindings owner;
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  UCrossGpuBackend backend;
+  CrossGpuPassCache pass;
+#endif
+  std::weak_ptr<SectionRenderLightBinding> weak_first, weak_second;
+  std::vector<std::array<uint32_t, 4>> expected;
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    for (int x : {4, 5, 20, 21})
+      world.SetBlock({x, 4, 4}, kTallGrass);
+    RelightJobSpec spec;
+    spec.min_world_y = 0;
+    spec.max_world_y = 15;
+    const auto physical = UChunkRelightSnapshot::CaptureSections(
+                              world, spec, {{0, 0, 0}, {1, 0, 0}})
+                              .Compute(registry);
+    Expect(physical.inputs_complete && physical.chunks.size() == 2,
+           "Cross fixture computes two real physical fields");
+    for (const auto &data : physical.chunks)
+      world.GetChunkManager().ReplaceComputedSectionLightVolume(
+          data.coord, *data.padded_light, true, true);
+    Expect(world.RecordLightCalculation(
+               physical, registry.GetDefinitionsCatalogSnapshot()) == 2,
+           "Cross fixture installs physical field provenance");
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.FrustumCulling = false;
+    settings.AsyncMeshing = false;
+    cache.SetRenderSettings(settings);
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    if (gpu)
+      Expect(owner.BeginWorld(
+                 epoch,
+                 world.GetChunkManager().GetGeometryInputRevisionIdentity(), 8,
+                 8u * SectionLightVolume::CellCount, 8),
+             "Cross physical resource owner initializes");
+    cache.SetPrepareRenderLightFn(
+        [&](uint64_t source, const SectionGeometryRenderInputs &geometry,
+            const SectionRenderLightSnapshot &light)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          if (gpu)
+            return owner.Prepare(source, geometry, light);
+          return std::make_shared<TestRenderLightBinding>(source, geometry,
+                                                          light);
+        });
+    cache.RebuildChunkImmediate(world, registry, {0, 0, 0});
+    cache.RebuildChunkImmediate(world, registry, {1, 0, 0});
+    cache.UpdateVisibleInstances(Frustum{}, glm::mat4(1), glm::vec3(0));
+    auto first = cache.GetPublishedRenderLightBinding({0, 0, 0});
+    auto second = cache.GetPublishedRenderLightBinding({1, 0, 0});
+    Expect(first && second && first != second,
+           "Cross section artifacts own distinct physical leases");
+    weak_first = first;
+    weak_second = second;
+    auto flattened = cache.GetCrossBatches();
+    Expect(flattened.size() == 1 && flattened[0].instances.size() == 4 &&
+               flattened[0].lightRanges.size() == 2,
+           "actual cache flatten retains two source section ranges");
+    auto filtered =
+        FilterCrossInstances(flattened[0], [](const CrossInstanceGpu &i)
+                             { return i.center.x >= 5.0f; });
+    Expect(filtered.instances.size() == 3 && filtered.lightRanges.size() == 2,
+           "actual Cross filter compacts instances and both source ranges");
+    size_t covered = 0;
+    for (const auto &range : filtered.lightRanges)
+    {
+      Expect(range.first == covered && range.count > 0 && range.binding,
+             "filtered ranges cover each retained instance exactly once");
+      for (size_t n = range.first; n < range.first + range.count; ++n)
+      {
+        const auto &i = filtered.instances[n];
+        const auto binding = i.center.x < 16 ? first : second;
+        Expect(range.binding == binding &&
+                   i.renderLightHandle == binding->ShaderWords(),
+               "flatten/filter words and lease belong to the exact original "
+               "artifact");
+        expected.push_back(i.renderLightHandle);
+      }
+      covered += range.count;
+    }
+    Expect(covered == filtered.instances.size(),
+           "filtered lease ranges cover whole GPU input");
+    if (gpu)
+    {
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+      Expect(first->ShaderWords() != second->ShaderWords(),
+             "actual GPU owner gives source sections distinguishable handles");
+      backend.RefreshPass(pass, {filtered}, 1, 1, 1, 1);
+      Expect(pass.batches.size() == 1 &&
+                 pass.batches[0].lightRanges.size() == 2,
+             "production Cross GPU pass owns both field leases");
+      ProbeCrossGpuHandles(pass.batches[0], expected, gles);
+      const auto buffer = pass.batches[0].instanceVbo;
+      const auto words = first->ShaderWords();
+      world.SetBlock({16, 8, 16}, kFire);
+      const auto changed =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {{0, 0, 0}})
+              .Compute(registry);
+      Expect(changed.inputs_complete && changed.chunks.size() == 1,
+             "Cross field-only successor has complete real transport inputs");
+      world.GetChunkManager().ReplaceComputedSectionLightVolume(
+          {0, 0, 0}, *changed.chunks[0].padded_light, true, true);
+      Expect(world.RecordLightCalculation(
+                 changed, registry.GetDefinitionsCatalogSnapshot()) == 1,
+             "Cross field successor installs canonical proof");
+      const auto successor = world.CaptureRenderLightSnapshot({0, 0, 0});
+      Expect(
+          successor && successor->MatchesGeometry(first->GeometryInputs()) &&
+              UnpackBlock(successor->Volume()
+                              ->cells[SectionLightVolume::Index(15, 8, 15)]) ==
+                  12 &&
+              owner.Refresh(first, epoch, *successor) &&
+              first->ShaderWords() == words,
+          "Cross source changes physical light with the same geometry handle");
+      glBindBuffer(GL_ARRAY_BUFFER, buffer);
+      const auto bytes = filtered.instances.size() * sizeof(CrossInstanceGpu);
+      const auto *mapped = glMapBufferRange(
+          GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(bytes), GL_MAP_READ_BIT);
+      Expect(mapped &&
+                 std::memcmp(mapped, filtered.instances.data(), bytes) == 0,
+             "physical Cross light refresh leaves every actual instance byte "
+             "unchanged");
+      Expect(glUnmapBuffer(GL_ARRAY_BUFFER) == GL_TRUE &&
+                 pass.batches[0].instanceVbo == buffer &&
+                 pass.meshRevision == 1 && pass.cullRevision == 1,
+             "Cross field refresh preserves geometry buffer and publication "
+             "revisions");
+      glBindBuffer(GL_ARRAY_BUFFER, 0);
+      ProbeCrossGpuHandles(pass.batches[0], expected, gles);
+#endif
+    }
+  }
+  if (gpu)
+  {
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+    Expect(!weak_first.expired() && !weak_second.expired(),
+           "GPU Cross pass retains source fields after CPU geometry cache and "
+           "ranges are destroyed");
+    ProbeCrossGpuHandles(pass.batches[0], expected, gles);
+    backend.DestroyAll(pass);
+    Expect(weak_first.expired() && weak_second.expired(),
+           "GPU pass destruction releases all Cross field leases");
+#endif
+  }
+  else
+    Expect(weak_first.expired() && weak_second.expired(),
+           "CPU range owners retire with their geometry artifacts");
+}
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void
 TestOrderedFieldBindings(cutum::UBlockRegistry &registry,
                          const cutum::UBlockDefinitionStorage *definitions)
 {
@@ -1923,21 +2164,24 @@ int main(int argc, char **argv)
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   const bool gles_visibility_driver =
       argc == 2 && std::string(argv[1]) == "--face-visibility-gles-driver";
+  const bool gles_cross_driver =
+      argc == 2 && std::string(argv[1]) == "--cross-light-gles-driver";
+  const bool gles_context = gles_visibility_driver || gles_cross_driver;
   const bool visibility_driver =
       gles_visibility_driver ||
       (argc == 2 && std::string(argv[1]) == "--face-visibility-driver");
-  if (visibility_driver ||
+  if (visibility_driver || gles_cross_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
     if (!glfwInit())
       return 77;
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-    glfwWindowHint(GLFW_CLIENT_API, gles_visibility_driver ? GLFW_OPENGL_ES_API
-                                                           : GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_CLIENT_API,
+                   gles_context ? GLFW_OPENGL_ES_API : GLFW_OPENGL_API);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,
                    visibility_driver && !gles_visibility_driver ? 4 : 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gles_visibility_driver ? 1 : 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, gles_visibility_driver
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gles_context ? 1 : 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, gles_context
                                             ? GLFW_OPENGL_ANY_PROFILE
                                             : GLFW_OPENGL_CORE_PROFILE);
     auto *window = glfwCreateWindow(32, 32, "Certified render light test",
@@ -1970,10 +2214,13 @@ int main(int argc, char **argv)
     if (visibility_driver)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);
+    else if (gles_cross_driver)
+      TestCrossLightArtifactTransport(registry, definitions.get(), true, true);
     else
     {
       TestFirstComputedLightPublication(registry, definitions.get(), true);
       TestOrderedFieldBindings(registry, definitions.get());
+      TestCrossLightArtifactTransport(registry, definitions.get(), true);
     }
     Expect(glGetError() == GL_NO_ERROR,
            "certified binding integration has no GL errors");
@@ -2001,6 +2248,7 @@ int main(int argc, char **argv)
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
   TestFirstComputedLightPublication(registry, definitions.get());
+  TestCrossLightArtifactTransport(registry, definitions.get());
   TestWorldDemandIsolation();
 
   std::cout << kTestName << ": OK" << std::endl;

@@ -6629,19 +6629,16 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     return;
   }
 
-  std::unordered_map<int64_t, bool> render_ready_cache;
+  std::unordered_map<glm::ivec3, bool, IVec3Hash> render_ready_cache;
   auto is_slice_render_ready = [&](glm::ivec3 chunk) -> bool
   {
-    const int64_t key = (static_cast<int64_t>(chunk.x) << 42) ^
-                        ((static_cast<int64_t>(chunk.y) & 0x3ffll) << 32) ^
-                        (static_cast<int64_t>(chunk.z) & 0xffffffffll);
-    const auto it = render_ready_cache.find(key);
+    const auto it = render_ready_cache.find(chunk);
     if (it != render_ready_cache.end())
     {
       return it->second;
     }
     const bool ready = WorldInstance->IsChunkSliceRenderReady(chunk);
-    render_ready_cache.emplace(key, ready);
+    render_ready_cache.emplace(chunk, ready);
     return ready;
   };
   std::vector<CrossInstanceBatch> filtered_batches;
@@ -6650,24 +6647,19 @@ void UGeometryEngine::DrawCrossInstancedBatches(
       WorldInstance->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
   for (const CrossInstanceBatch &batch : batches)
   {
-    CrossInstanceBatch fb;
-    fb.blockId = batch.blockId;
+    auto fb = FilterCrossInstances(
+        batch,
+        [&](const CrossInstanceGpu &inst)
+        {
+          const glm::ivec3 chunk = UChunkManager::WorldToChunk(
+              glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
+                         static_cast<int>(std::floor(inst.center.y)),
+                         static_cast<int>(std::floor(inst.center.z))));
+          return is_slice_render_ready(chunk);
+        });
     if (const BlockDefinition *definition =
             FindCatalogDefinition(block_catalog.get(), batch.blockId))
-    {
       fb.shape = definition->Render.DecorShape;
-    }
-    for (const CrossInstanceGpu &inst : batch.instances)
-    {
-      const glm::ivec3 chunk = UChunkManager::WorldToChunk(
-          glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
-                     static_cast<int>(std::floor(inst.center.y)),
-                     static_cast<int>(std::floor(inst.center.z))));
-      if (is_slice_render_ready(chunk))
-      {
-        fb.instances.push_back(inst);
-      }
-    }
     if (!fb.instances.empty())
     {
       filtered_batches.push_back(std::move(fb));

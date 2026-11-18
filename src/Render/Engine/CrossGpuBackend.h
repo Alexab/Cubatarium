@@ -23,6 +23,7 @@ struct CrossGpuBatch
   BlockDecorShape vaoShape{BlockDecorShape::Cross};
   GLuint instanceVbo{0};
   size_t instanceCapacityBytes{0};
+  std::vector<CrossLightRange> lightRanges;
 };
 
 struct CrossGpuPassCache

@@ -130,6 +130,7 @@ void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
   }
   batch.instanceCapacityBytes = 0;
   batch.instanceCount = 0;
+  batch.lightRanges.clear();
 }
 
 void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
@@ -175,6 +176,11 @@ void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
                         (void *)(offsetof(CrossInstanceGpu, blockLight)));
   glEnableVertexAttribArray(5);
   glVertexAttribDivisor(5, 1);
+  glVertexAttribIPointer(
+      6, 4, GL_UNSIGNED_INT, kInstanceStride,
+      (void *)(offsetof(CrossInstanceGpu, renderLightHandle)));
+  glEnableVertexAttribArray(6);
+  glVertexAttribDivisor(6, 1);
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
@@ -186,6 +192,7 @@ void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
   gpu.blockId = batch.blockId;
   gpu.shape = batch.shape;
   gpu.instanceCount = batch.instances.size();
+  gpu.lightRanges = batch.lightRanges;
   const size_t byte_size = batch.instances.size() * sizeof(CrossInstanceGpu);
   UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
                batch.instances.data(), byte_size);
