@@ -246,6 +246,20 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                   std::to_string(result.block_flood_work.queued_seeds) +
                   " block_neighbor_visits=" +
                   std::to_string(result.block_flood_work.neighbor_visits));
+          unsigned reported_unknown = 0;
+          for (const auto &stamp : result.read_set)
+            if ((stamp.readsContent || stamp.readsLight) &&
+                !stamp.incarnation &&
+                stamp.missingEvidence != MissingChunkEvidence::KnownAir)
+            {
+              CubatariumLogInfo("RelightUnknownInput",
+                                "job=" + std::to_string(job_id) + " coord=(" +
+                                    std::to_string(stamp.coord.x) + "," +
+                                    std::to_string(stamp.coord.y) + "," +
+                                    std::to_string(stamp.coord.z) + ")");
+              if (++reported_unknown == 8)
+                break;
+            }
         }
         result.job_id = job_id;
         result.submitEpoch = submit_epoch;

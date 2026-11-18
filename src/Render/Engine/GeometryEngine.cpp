@@ -58,6 +58,7 @@
 #include "World/Diagnostics/ScopedPhase.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Lighting/RelightInputValidation.h"
 #include "World/Math/ChunkMeshFace.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
@@ -4813,6 +4814,44 @@ void UGeometryEngine::DrawCubeGeometry()
             " sky=" + std::to_string(UnpackSky(packed)) + " block_light=" +
             std::to_string(UnpackBlock(packed)) + " field_incarnation=" +
             std::to_string(field ? field->GetIncarnation() : 0));
+    if (!volume && WorldInstance->RequiresLightingLitGate())
+      for (const auto domain : {LightDomain::Sky, LightDomain::Block})
+      {
+        const auto context = world.GetRecordedLightInputContext(coord, domain);
+        const ChunkInputStamp *stale = nullptr;
+        const auto validation =
+            context
+                ? ValidateRelightInputs(*context, world,
+                                        WorldInstance->GetBlockRegistry()
+                                            .GetDefinitionsCatalogSnapshot(),
+                                        true, &stale)
+                : RelightInputValidation::MissingContext;
+        const auto stamp_words = [](const ChunkInputStamp &stamp)
+        {
+          return std::to_string(stamp.incarnation) + ":" +
+                 std::to_string(stamp.content) + ":" +
+                 std::to_string(static_cast<int>(stamp.missingEvidence));
+        };
+        CubatariumLogInfo(
+            "CameraLightInputFailure",
+            "frame_epoch=" +
+                std::to_string(WorldInstance->GetStreamingFrameEpoch()) +
+                " coord=(" + std::to_string(coord.x) + "," +
+                std::to_string(coord.y) + "," + std::to_string(coord.z) +
+                ") domain=" +
+                std::to_string(domain == LightDomain::Sky ? 0 : 1) +
+                " validation=" + std::to_string(static_cast<int>(validation)) +
+                " unknown_inputs=" +
+                std::to_string(context ? context->unknown_input_chunks : 0) +
+                " stale_coord=(" + std::to_string(stale ? stale->coord.x : 0) +
+                "," + std::to_string(stale ? stale->coord.y : 0) + "," +
+                std::to_string(stale ? stale->coord.z : 0) + ") captured=" +
+                (stale ? stamp_words(*stale) : "none") + " current=" +
+                (stale ? stamp_words(world.CaptureInputStamp(
+                             stale->coord, stale->readsLight,
+                             stale->readsContent))
+                       : "none"));
+      }
   }
   static bool logged_first_paint_diag = false;
   if (!logged_first_paint_diag && WorldInstance)

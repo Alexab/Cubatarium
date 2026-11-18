@@ -1601,6 +1601,15 @@ void TestWorldOwnedLightCertificates()
          "installed known sky and block channels certify the section");
   Expect(world.HasCompleteLightSamplingCalculation(coord, catalog),
          "full installed padded output carries current physical authority");
+  const auto retained_inputs =
+      world.GetRecordedLightInputContext(coord, LightDomain::Sky);
+  Expect(retained_inputs &&
+             ValidateRelightInputs(*retained_inputs, world, catalog, true) ==
+                 RelightInputValidation::Current &&
+             !world.GetRecordedLightInputContext({1024, 0, 1024},
+                                                 LightDomain::Sky),
+         "diagnostic receipt exposes installed inputs without fabricating a "
+         "missing context");
   auto legacy_output = result;
   legacy_output.chunks[0].padded_light.reset();
   world.RecordLightCalculation(legacy_output, catalog);
@@ -1634,6 +1643,16 @@ void TestWorldOwnedLightCertificates()
          "render gate admits current explicit complete calculation");
   const auto own_field = chunk->GetLightFieldRevision();
   world.SetBlock({16, -40, 8}, 8);
+  const auto invalidated_inputs =
+      world.GetRecordedLightInputContext(coord, LightDomain::Sky);
+  const ChunkInputStamp *stale_input = nullptr;
+  Expect(invalidated_inputs &&
+             ValidateRelightInputs(*invalidated_inputs, world, catalog, true,
+                                   &stale_input) ==
+                 RelightInputValidation::ReadSet &&
+             stale_input && stale_input->coord == glm::ivec3(1, -3, 0),
+         "diagnostic receipt identifies exact stale neighbor after geometry "
+         "mutation without granting readiness");
   Expect(
       own_field == chunk->GetLightFieldRevision() &&
           !world.HasCompleteLightCalculation(coord, catalog),

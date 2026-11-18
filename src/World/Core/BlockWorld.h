@@ -106,6 +106,10 @@ public:
   int RecordLightCalculation(
       const RelightComputeResult &result,
       const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog);
+  /// Diagnostic receipt only: retained inputs may already be stale or unknown.
+  /// Never use this context as a readiness certificate.
+  std::shared_ptr<const RelightComputeResult>
+  GetRecordedLightInputContext(glm::ivec3 coord, LightDomain domain) const;
   LightCalculationState
   GetLightCalculationState(glm::ivec3 coord, LightDomain domain,
                            const std::shared_ptr<const BlockDefinitionCatalog>

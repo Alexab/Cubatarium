@@ -3367,6 +3367,13 @@ void UWorldStreaming::PublishFluidSealMutations(
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash> relight_bands;
   for (const glm::ivec3 changed_coord : changed_chunks)
   {
+    if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
+      CubatariumLogInfo(
+          "FluidSealInputMutation",
+          "frame_epoch=" + std::to_string(world.GetStreamingFrameEpoch()) +
+              " coord=(" + std::to_string(changed_coord.x) + "," +
+              std::to_string(changed_coord.y) + "," +
+              std::to_string(changed_coord.z) + ")");
     world.ModifiedChunks.insert(changed_coord);
     DeferredPhysicsSeedQueue.push_back(changed_coord);
     if (const UChunk *chunk =

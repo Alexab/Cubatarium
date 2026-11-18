@@ -185,6 +185,17 @@ bool UBlockWorld::StoredLightInputsStillMatch(
   return current;
 }
 
+std::shared_ptr<const RelightComputeResult>
+UBlockWorld::GetRecordedLightInputContext(glm::ivec3 coord,
+                                          LightDomain domain) const
+{
+  const auto field = Chunks.GetSectionLightField(coord);
+  if (!field)
+    return {};
+  const auto &proof = field->LightProofs[domain == LightDomain::Sky ? 0 : 1];
+  return proof.owner == LightCalculationOwner ? proof.input : nullptr;
+}
+
 LightCalculationState UBlockWorld::GetLightCalculationState(
     glm::ivec3 coord, LightDomain domain,
     const std::shared_ptr<const BlockDefinitionCatalog> &current_catalog) const
