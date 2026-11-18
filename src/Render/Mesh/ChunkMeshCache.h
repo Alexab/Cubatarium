@@ -37,6 +37,7 @@
 #include <vector>
 namespace cutum
 {
+class SectionNoSurfaceProof;
 
 enum class PublishedLightHaloState : uint8_t
 {
@@ -1348,7 +1349,8 @@ private:
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
       const SectionGeometryRenderInputs &geometry,
       const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
-      std::shared_ptr<SectionRenderLightBinding> &prepared);
+      std::shared_ptr<SectionRenderLightBinding> &prepared,
+      const SectionNoSurfaceProof *no_surface = nullptr);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t

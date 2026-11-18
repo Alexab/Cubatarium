@@ -266,35 +266,24 @@ bool IsFullyEnclosed(const UBlockWorld &world, glm::ivec3 pos)
 constexpr int kCrossScanBelow = 2;
 constexpr int kCrossScanAbove = 4;
 
-int MaxSolidLocalY(const UChunk &chunk, const UBlockRegistry &registry)
+bool GeometryMatchesSourceStamps(
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
+    const SectionGeometryRenderInputs &geometry)
 {
-  int max_y = 0;
-  for (int ly = 0; ly < CHUNK_SIZE; ++ly)
-  {
-    for (int lz = 0; lz < CHUNK_SIZE; ++lz)
-    {
-      for (int lx = 0; lx < CHUNK_SIZE; ++lx)
-      {
-        const BlockId id = chunk.GetBlockLocal(glm::ivec3(lx, ly, lz));
-        if (id == BLOCK_AIR ||
-            registry.GetRenderStyle(id) == BlockRenderStyle::Cross)
-        {
-          continue;
-        }
-        max_y = std::max(max_y, ly);
-      }
-    }
-  }
-  return max_y;
+  if (!stamps || !geometry.valid)
+    return false;
+  std::array<ChunkInputStamp, 7> source;
+  std::copy_n(stamps->begin(), source.size(), source.begin());
+  return geometry.Matches(SectionGeometryRenderInputs::FromStamps(
+      source[0].coord, geometry.world_geometry_identity, geometry.profile,
+      geometry.catalog, source));
 }
 
-void CollectCrossInstancesInBand(
-    const UChunk &chunk, glm::ivec3 chunk_coord, const UBlockRegistry &registry,
-    int max_local_y,
-    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &cross_instances)
+bool HasCrossInstances(
+    const std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> &centers)
 {
-  (void)max_local_y;
-  CollectCrossInstancesFromChunk(chunk, chunk_coord, registry, cross_instances);
+  return std::any_of(centers.begin(), centers.end(),
+                     [](const auto &entry) { return !entry.second.empty(); });
 }
 void MergeGreedyBatch(GreedyMeshBatch &dst, const GreedyMeshBatch &src)
 {
@@ -3037,7 +3026,8 @@ bool UChunkMeshCache::TryPrepareRenderLight(
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
     const SectionGeometryRenderInputs &geometry,
     const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
-    std::shared_ptr<SectionRenderLightBinding> &prepared)
+    std::shared_ptr<SectionRenderLightBinding> &prepared,
+    const SectionNoSurfaceProof *no_surface)
 {
   prepared.reset();
   if (source_world_epoch == 0 ||
@@ -3045,15 +3035,13 @@ bool UChunkMeshCache::TryPrepareRenderLight(
     return false;
   if (!PrepareRenderLight)
     return true;
-  if (provisional || !stamps || !geometry.valid || !light ||
-      !light->MatchesGeometry(geometry))
+  if (!GeometryMatchesSourceStamps(stamps, geometry))
     return false;
-  std::array<ChunkInputStamp, 7> source;
-  std::copy_n(stamps->begin(), source.size(), source.begin());
-  const auto expected = SectionGeometryRenderInputs::FromStamps(
-      source[0].coord, geometry.world_geometry_identity, geometry.profile,
-      geometry.catalog, source);
-  if (!geometry.Matches(expected))
+  // This private geometry proof is independent of output light. An empty
+  // result alone cannot bypass resource admission or certify physical light.
+  if (no_surface && no_surface->Matches(geometry))
+    return true;
+  if (provisional || !light || !light->MatchesGeometry(geometry))
     return false;
   auto candidate = PrepareRenderLight(source_world_epoch, geometry, *light);
   if (source_world_epoch != CaptureStore.WorldEpoch() || !candidate ||
@@ -5789,6 +5777,15 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     note_terminal(JobTerminalReason::ChunkNotResident);
     return false;
   }
+  std::optional<SectionNoSurfaceProof> no_surface;
+  if (gpu_result.quadCount == 0 && !HasCrossInstances(cross_centers) &&
+      source_world_epoch != 0 &&
+      source_world_epoch == CaptureStore.WorldEpoch() &&
+      GeometryMatchesSourceStamps(source_stamps, source_geometry))
+    no_surface = UGreedyMesher::CaptureNoSurface(
+        world, coord, registry, registry.GetDefinitionsCatalogSnapshot());
+  const bool verified_no_surface =
+      no_surface && no_surface->Matches(source_geometry);
   const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
   const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(coord);
@@ -5825,7 +5822,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
        boundary_overlay.missingNeighborFaces == 0) &&
       current_computed_candidate;
   if (!had_mesh && !gpu_result.provisionalLightPreview &&
-      !current_computed_candidate)
+      !current_computed_candidate && !verified_no_surface)
   {
     // A normal first publication has no certified predecessor to retain.
     // Never let stale-accept policy promote a formerly current capture after
@@ -6092,7 +6089,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   std::shared_ptr<SectionRenderLightBinding> prepared_light;
   if (!TryPrepareRenderLight(source_world_epoch, source_stamps, source_geometry,
                              source_light, gpu_result.provisionalLightPreview,
-                             prepared_light))
+                             prepared_light,
+                             no_surface ? &*no_surface : nullptr))
   {
     if (GpuPipeline && gpu_result.slotIndex >= 0)
       GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
@@ -8180,6 +8178,21 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
       slice_demand->incarnation == current_incarnation;
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::CandidateValidation);
+  std::optional<SectionNoSurfaceProof> no_surface;
+  const bool has_drawable_output = std::any_of(
+      result.batches.begin(), result.batches.end(), [](const auto &batch)
+      { return !batch.vertices.empty() && !batch.indices.empty(); });
+  if (!has_drawable_output && !HasCrossInstances(result.crossCenters) &&
+      result.sourceWorldEpoch != 0 &&
+      result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+      GeometryMatchesSourceStamps(result.InputStampsValid ? &result.InputStamps
+                                                          : nullptr,
+                                  result.GeometryInputs))
+    no_surface = UGreedyMesher::CaptureNoSurface(
+        world, result.coord, registry,
+        registry.GetDefinitionsCatalogSnapshot());
+  const bool verified_no_surface =
+      no_surface && no_surface->Matches(result.GeometryInputs);
   const bool current_computed_candidate =
       result.InputStampsValid && !refresh_after_accept_stale &&
       MeshCandidateMatchesSettledDemand(
@@ -8200,7 +8213,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
        result.BoundaryOverlay.missingNeighborFaces == 0) &&
       current_computed_candidate;
   if (!had_mesh && !result.ProvisionalLightPreview &&
-      !current_computed_candidate)
+      !current_computed_candidate && !verified_no_surface)
   {
     if (kChunkDemandShadow())
       GetRenderDemandStore().NoteInstallResult(
@@ -8343,7 +8356,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                              result.InputStampsValid ? &result.InputStamps
                                                      : nullptr,
                              result.GeometryInputs, result.RenderLight,
-                             result.ProvisionalLightPreview, prepared_light))
+                             result.ProvisionalLightPreview, prepared_light,
+                             no_surface ? &*no_surface : nullptr))
   {
     MarkDirtyPriority(result.coord);
     note_terminal(JobTerminalReason::PublicationRejected);
@@ -12003,7 +12017,6 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       return;
     }
     ClearPriorLitHoldAge(chunkCoord);
-    const int max_local_y = MaxSolidLocalY(*chunk, registry);
     ChunkGreedyMesh &chunkMesh = GreedyCache[chunkCoord];
     // Era15 TD-ARCH-049: publish CPU batches before FreeChunk (MeshResidency).
     const bool had_gpu_resident = chunkMesh.GpuResident && GpuPipeline;
@@ -12145,11 +12158,21 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         sync_catalog == registry.GetDefinitionsCatalogSnapshot()
             ? sync_snap.GeometryRenderInputs(sync_catalog)
             : SectionGeometryRenderInputs{};
+    std::unordered_map<BlockId, std::vector<CrossInstanceGpu>>
+        sync_cross_centers;
+    CollectCrossInstancesFromSnapshot(sync_snap, registry, sync_catalog.get(),
+                                      sync_cross_centers);
+    std::optional<SectionNoSurfaceProof> no_surface;
+    if (PrepareRenderLight && !new_cpu_drawable &&
+        !HasCrossInstances(sync_cross_centers))
+      no_surface = UGreedyMesher::CaptureNoSurface(world, chunkCoord, registry,
+                                                   sync_catalog);
     std::shared_ptr<SectionRenderLightBinding> prepared_light;
     if (!TryPrepareRenderLight(
             sync_snap.sourceWorldEpoch,
             sync_snap.inputStampsValid ? &sync_snap.inputStamps : nullptr,
-            sync_geometry_inputs, sync_snap.renderLight, false, prepared_light))
+            sync_geometry_inputs, sync_snap.renderLight, false, prepared_light,
+            no_surface ? &*no_surface : nullptr))
     {
       MarkDirtyPriority(chunkCoord);
       return;
@@ -12265,9 +12288,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
       GreedyVertexCountByChunk[chunkCoord] = new_vertex_count;
       GreedyVertexCountTotal += new_vertex_count;
-      chunkMesh.crossCenters.clear();
-      CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
-                                  chunkMesh.crossCenters);
+      chunkMesh.crossCenters = std::move(sync_cross_centers);
       PendingMeshRevisionBump = true;
       CrossBatchesDirty = true;
       if (IsPendingGpuApply(chunkCoord) &&
@@ -12331,9 +12352,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     }
     GreedyVertexCountByChunk[chunkCoord] = new_vertex_count;
     GreedyVertexCountTotal += new_vertex_count;
-    chunkMesh.crossCenters.clear();
-    CollectCrossInstancesInBand(*chunk, chunkCoord, registry, max_local_y,
-                                chunkMesh.crossCenters);
+    chunkMesh.crossCenters = std::move(sync_cross_centers);
     NoteGeometryDirty(chunkCoord);
     if (OnLitPendingNeeded && !had_mesh && (defer_until_lit || new_dark))
     {

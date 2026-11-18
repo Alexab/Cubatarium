@@ -74,14 +74,31 @@ struct ChunkMeshCaptureAdmissionTestAccess
   }
   static bool PrepareOnly(UChunkMeshCache &cache,
                           const ChunkMeshSnapshot &snapshot,
-                          UBlockRegistry &registry)
+                          UBlockRegistry &registry,
+                          const SectionNoSurfaceProof *no_surface = nullptr)
   {
     std::shared_ptr<SectionRenderLightBinding> prepared;
     return cache.TryPrepareRenderLight(
         snapshot.sourceWorldEpoch,
         snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight, snapshot.provisionalLightPreview, prepared);
+        snapshot.renderLight, snapshot.provisionalLightPreview, prepared,
+        no_surface);
+  }
+  static bool CommitEmptyPacked(UChunkMeshCache &cache,
+                                const UBlockWorld &world,
+                                UBlockRegistry &registry,
+                                const ChunkMeshSnapshot &snapshot)
+  {
+    GpuMeshProcessResult result;
+    result.success = true;
+    return cache.CommitGpuMeshResult(
+        world, registry, snapshot.coord,
+        cache.GetChunkMeshRevision(snapshot.coord), std::move(result), {},
+        false, 0, false, {}, false, {},
+        snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
+        snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
+        snapshot.renderLight, snapshot.sourceWorldEpoch);
   }
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   static void QueuePacked(UChunkMeshCache &cache, ChunkMeshSnapshot snapshot,
@@ -1269,6 +1286,182 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
          "replacement publication immediately refreshes material draw refs");
 }
 
+static void TestNoDrawPhysicalResourceAdmission(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  const glm::ivec3 root(0);
+  for (const bool hidden : {false, true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.GetChunkManager().EnsureChunk(root);
+    if (hidden)
+      for (auto coord : std::vector<glm::ivec3>{root,
+                                                {-1, 0, 0},
+                                                {1, 0, 0},
+                                                {0, -1, 0},
+                                                {0, 1, 0},
+                                                {0, 0, -1},
+                                                {0, 0, 1}})
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+              world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(x, y, z), kStone);
+    const auto proof =
+        UGreedyMesher::CaptureNoSurface(world, root, registry, catalog);
+    Expect(bool(proof),
+           "actual AIR/hidden-solid geometry obtains private NoSurface proof");
+    Expect(!world.HasCompleteLightSamplingCalculation(root, catalog),
+           "NoDraw fixture has no physical light completion");
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    int callbacks = 0;
+    cache.SetPrepareRenderLightFn(
+        [&](uint64_t, const SectionGeometryRenderInputs &,
+            const SectionRenderLightSnapshot &)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          ++callbacks;
+          return {};
+        });
+    auto snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, snapshot,
+                                                             registry),
+           "empty-looking data without private geometry proof cannot skip "
+           "physical resource admission");
+    Expect(ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, snapshot,
+                                                            registry, &*proof),
+           "private NoSurface proof admits no-draw geometry without a light "
+           "resource");
+    auto stale = snapshot;
+    stale.sourceWorldEpoch = 0;
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, stale,
+                                                             registry, &*proof),
+           "NoDraw cannot bypass missing source epoch");
+    cache.GetRenderDemandStore().RequestLightSample(
+        root, cache.GetCaptureStore().WorldEpoch(), 5, 8);
+    cache.RebuildChunkImmediate(world, registry, root);
+    Expect(
+        cache.GetRenderDemandStore().HasLightSampleDemand(
+            root, cache.GetCaptureStore().WorldEpoch(), 5),
+        "NoDraw publication preserves an active physical point consumer lease");
+    Expect(cache.GetPublishedGeometryRenderInputs(root).has_value() &&
+               !cache.GetPublishedRenderLightBinding(root) &&
+               !cache.GetPublishedRenderLightSnapshot(root) &&
+               !cache.HasDrawableGreedyMesh(root) && callbacks == 0,
+           "synchronous NoDraw publication allocates no light and publishes no "
+           "triangles");
+    const auto old_epoch = snapshot.sourceWorldEpoch;
+    cache.GetCaptureStore().BumpWorldEpoch();
+    Expect(cache.GetCaptureStore().WorldEpoch() != old_epoch &&
+               !ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                   cache, snapshot, registry, &*proof),
+           "private NoDraw evidence cannot revive a previous world epoch");
+    UChunkMeshCache packed;
+    packed.SetRenderSettings(settings);
+    packed.SetPrepareRenderLightFn(
+        [&](uint64_t, const SectionGeometryRenderInputs &,
+            const SectionRenderLightSnapshot &)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          ++callbacks;
+          return {};
+        });
+    packed.MarkDirtyPriority(root);
+    const auto packed_snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(packed, world, root);
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CommitEmptyPacked(
+               packed, world, registry, packed_snapshot) &&
+               callbacks == 0 && !packed.GetPublishedRenderLightBinding(root),
+           "packed zero-quad admission independently verifies actual NoSurface "
+           "without allocating light");
+    Expect(!world.HasCompleteLightSamplingCalculation(root, catalog),
+           "NoDraw publication never certifies a physical field");
+    const auto *record = cache.GetRenderDemandStore().Find(root);
+    Expect(!record || !record->has_settled_light,
+           "NoDraw publication cannot fabricate light settlement");
+    snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    auto wrong_geometry = snapshot;
+    ++wrong_geometry.inputStamps[0].content;
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+               cache, wrong_geometry, registry, &*proof),
+           "NoDraw proof must match exact seven geometry stamps");
+    if (hidden)
+    {
+      UChunkMeshCache asynchronous;
+      settings.AsyncMeshing = true;
+      asynchronous.SetRenderSettings(settings);
+      asynchronous.SetMeshRebuildFocus(root, 4, 1);
+      asynchronous.SetPrepareRenderLightFn(
+          [&](uint64_t, const SectionGeometryRenderInputs &,
+              const SectionRenderLightSnapshot &)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            ++callbacks;
+            return {};
+          });
+      asynchronous.MarkDirtyPriority(root);
+      Expect(asynchronous.GetCaptureStore()
+                 .CaptureAndStore(world, root,
+                                  asynchronous.GetChunkMeshRevision(root))
+                 .has_value(),
+             "hidden NoDraw fixture captures owned async inputs");
+      const auto scheduled = asynchronous.RebuildDirtyChunksWithStats(
+          world, registry, 0, 1, false, 0);
+      Expect(scheduled.Scheduled == 1 &&
+                 asynchronous.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+             "actual async hidden-solid mesh job completes");
+      asynchronous.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      Expect(asynchronous.GetPublishedGeometryRenderInputs(root).has_value() &&
+                 !asynchronous.GetPublishedRenderLightBinding(root) &&
+                 callbacks == 0,
+             "actual async NoDraw publication needs no physical allocation "
+             "callback");
+    }
+    world.SetBlock({4, 4, 4}, hidden ? BLOCK_AIR : kStone);
+    auto changed =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, changed,
+                                                             registry, &*proof),
+           "old NoDraw proof rejects a changed exposed surface");
+  }
+  for (const BlockId block : {kStone, kTallGrass, kSolidCutout, kWater})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({4, 4, 4}, block);
+    Expect(!UGreedyMesher::CaptureNoSurface(world, root, registry, catalog),
+           "visible cube sprite cutout and fluid cannot claim NoSurface");
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetPrepareRenderLightFn(
+        [](uint64_t, const SectionGeometryRenderInputs &,
+           const SectionRenderLightSnapshot &)
+            -> std::shared_ptr<SectionRenderLightBinding> { return {}; });
+    cache.RebuildChunkImmediate(world, registry, root);
+    Expect(
+        !cache.GetPublishedGeometryRenderInputs(root) &&
+            cache.IsChunkMeshDirty(root),
+        "drawable source without computed light retains its publication retry");
+  }
+  UBlockWorld unknown;
+  unknown.SetFluidDefinitions(definitions);
+  unknown.GetChunkManager().EnsureChunk(root);
+  Expect(!UGreedyMesher::CaptureNoSurface(unknown, root, registry, catalog),
+         "unknown neighbors cannot certify absent surfaces");
+}
+
 static void TestFirstComputedLightPublication(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions,
@@ -2454,6 +2647,7 @@ int main(int argc, char **argv)
     }
     else
     {
+      TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
       TestFirstComputedLightPublication(registry, definitions.get(), true);
       TestOrderedFieldBindings(registry, definitions.get());
       TestCrossLightArtifactTransport(registry, definitions.get(), true);
@@ -2484,6 +2678,7 @@ int main(int argc, char **argv)
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
+  TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestFirstComputedLightPublication(registry, definitions.get());
   TestCrossLightArtifactTransport(registry, definitions.get());
   TestWorldDemandIsolation();
