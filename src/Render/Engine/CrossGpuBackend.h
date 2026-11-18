@@ -39,7 +39,9 @@ class UCrossGpuBackend
 public:
   bool EnsureTemplateMesh();
   GLsizei GetTemplateIndexCount(BlockDecorShape shape) const;
-  void RefreshPass(CrossGpuPassCache &cache,
+  /// Publish buffers, field leases and revisions together. Failure retains
+  /// the complete predecessor. Scratch storage is reused across refreshes.
+  bool RefreshPass(CrossGpuPassCache &cache,
                    const std::vector<CrossInstanceBatch> &batches,
                    uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
                    uint64_t expected_mesh_rev, uint64_t expected_cull_rev);
@@ -61,13 +63,20 @@ private:
     GLsizei indexCount{0};
   };
   bool EnsureTemplateMesh(BlockDecorShape shape);
-  void UploadInstances(CrossGpuBatch &gpu, const CrossInstanceBatch &batch);
-  void EnsureBatchVao(CrossGpuBatch &gpu);
+  bool UploadInstances(CrossGpuBatch &gpu, const CrossInstanceBatch &batch);
+  bool EnsureBatchVao(CrossGpuBatch &gpu);
   void DestroyInstanceBuffer(CrossGpuBatch &batch);
-  void UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
+  bool UploadBuffer(GLuint &buffer, size_t &capacity_bytes, unsigned int target,
                     const void *data, size_t byte_size);
 
   std::array<TemplateMesh, 8> Templates{};
+  CrossGpuPassCache Staging;
+  void *StagingFence{nullptr};
+  // Narrow driver-test seam: inject an actual transfer error after allocation.
+  // Runtime never assigns this hook.
+  friend struct CrossGpuBackendDriverTestAccess;
+  void (*BeforeTransfer)(unsigned, void *){nullptr};
+  void *TransferContext{nullptr};
 };
 
 } // namespace cutum

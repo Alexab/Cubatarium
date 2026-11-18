@@ -6618,10 +6618,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
 {
   if (batches.empty())
   {
-    return;
-  }
-  if (!CrossGpuBackend.EnsureTemplateMesh())
-  {
+    CrossGpuBackend.DestroyPass(CrossGpuPass);
     return;
   }
   if (!crossInstancedShader || !crossInstancedShader->IsValid())
@@ -6667,6 +6664,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   }
   if (filtered_batches.empty())
   {
+    CrossGpuBackend.DestroyPass(CrossGpuPass);
     return;
   }
   CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches,

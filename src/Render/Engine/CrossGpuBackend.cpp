@@ -4,8 +4,10 @@
 #include "Render/Mesh/CrossMeshEmitter.h"
 #include "Render/Mesh/GreedyMeshVertex.h"
 #include "World/Mesh/Contracts/MeshPublishContract.h"
+#include <algorithm>
 #include <cstddef>
 #include <glm/glm.hpp>
+#include <limits>
 #include <vector>
 
 namespace cutum
@@ -44,11 +46,12 @@ bool UCrossGpuBackend::EnsureTemplateMesh(BlockDecorShape shape)
   {
     return false;
   }
-  TemplateMesh &mesh = Templates[templateIndex];
-  if (mesh.vao != 0)
-  {
-    return true;
-  }
+  if (Templates[templateIndex].vao)
+    return Templates[templateIndex].vbo && Templates[templateIndex].ebo &&
+           Templates[templateIndex].indexCount > 0;
+  if (glGetError() != GL_NO_ERROR)
+    return false;
+  TemplateMesh mesh;
 
   std::vector<GreedyMeshVertex> vertices;
   std::vector<uint32_t> indices;
@@ -87,33 +90,47 @@ bool UCrossGpuBackend::EnsureTemplateMesh(BlockDecorShape shape)
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
-  return mesh.vao != 0;
+  if (!mesh.vao || !mesh.vbo || !mesh.ebo || glGetError() != GL_NO_ERROR)
+  {
+    if (mesh.vao)
+      glDeleteVertexArrays(1, &mesh.vao);
+    if (mesh.vbo)
+      glDeleteBuffers(1, &mesh.vbo);
+    if (mesh.ebo)
+      glDeleteBuffers(1, &mesh.ebo);
+    return false;
+  }
+  Templates[templateIndex] = mesh;
+  return true;
 }
 
-void UCrossGpuBackend::UploadBuffer(GLuint &buffer, size_t &capacity_bytes,
+bool UCrossGpuBackend::UploadBuffer(GLuint &buffer, size_t &capacity_bytes,
                                     unsigned int target, const void *data,
                                     size_t byte_size)
 {
-  if (byte_size == 0)
-  {
-    return;
-  }
-  if (buffer == 0)
-  {
+  if (!byte_size ||
+      byte_size > static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()) ||
+      glGetError() != GL_NO_ERROR)
+    return false;
+  if (!buffer)
     glGenBuffers(1, &buffer);
-  }
+  if (!buffer)
+    return false;
   glBindBuffer(target, buffer);
+  // RefreshPass retires scratch with a fence. Reuse its actual store only
+  // after queued readers finish, rather than accumulating orphaned stores.
   if (byte_size > capacity_bytes)
   {
     glBufferData(target, static_cast<GLsizeiptr>(byte_size), nullptr,
                  GL_DYNAMIC_DRAW);
+    if (glGetError() != GL_NO_ERROR)
+      return false;
     capacity_bytes = byte_size;
-    glBufferSubData(target, 0, static_cast<GLsizeiptr>(byte_size), data);
   }
-  else
-  {
-    glBufferSubData(target, 0, static_cast<GLsizeiptr>(byte_size), data);
-  }
+  if (BeforeTransfer)
+    BeforeTransfer(target, TransferContext);
+  glBufferSubData(target, 0, static_cast<GLsizeiptr>(byte_size), data);
+  return glGetError() == GL_NO_ERROR;
 }
 
 void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
@@ -133,12 +150,10 @@ void UCrossGpuBackend::DestroyInstanceBuffer(CrossGpuBatch &batch)
   batch.lightRanges.clear();
 }
 
-void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
+bool UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
 {
   if (!EnsureTemplateMesh(gpu.shape) || gpu.instanceVbo == 0)
-  {
-    return;
-  }
+    return false;
   if (gpu.vao != 0 && gpu.vaoShape != gpu.shape)
   {
     glDeleteVertexArrays(1, &gpu.vao);
@@ -184,35 +199,39 @@ void UCrossGpuBackend::EnsureBatchVao(CrossGpuBatch &gpu)
   glBindVertexArray(0);
   glBindBuffer(kArrayBuffer, 0);
   glBindBuffer(kElementArrayBuffer, 0);
+  return gpu.vao && glGetError() == GL_NO_ERROR;
 }
 
-void UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
+bool UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
                                        const CrossInstanceBatch &batch)
 {
-  gpu.blockId = batch.blockId;
+  if (batch.instances.size() >
+          static_cast<size_t>(std::numeric_limits<GLsizei>::max()) ||
+      batch.instances.size() >
+          std::numeric_limits<size_t>::max() / sizeof(CrossInstanceGpu))
+    return false;
+  const size_t byte_size = batch.instances.size() * sizeof(CrossInstanceGpu);
+  if (!UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
+                    batch.instances.data(), byte_size))
+    return false;
   gpu.shape = batch.shape;
+  if (!EnsureBatchVao(gpu))
+    return false;
+  gpu.blockId = batch.blockId;
   gpu.instanceCount = batch.instances.size();
   gpu.lightRanges = batch.lightRanges;
-  const size_t byte_size = batch.instances.size() * sizeof(CrossInstanceGpu);
-  UploadBuffer(gpu.instanceVbo, gpu.instanceCapacityBytes, kArrayBuffer,
-               batch.instances.data(), byte_size);
-  EnsureBatchVao(gpu);
+  return true;
 }
 
-void UCrossGpuBackend::RefreshPass(
+bool UCrossGpuBackend::RefreshPass(
     CrossGpuPassCache &cache, const std::vector<CrossInstanceBatch> &batches,
     uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
     uint64_t expected_mesh_rev, uint64_t expected_cull_rev)
 {
-  if (candidate_mesh_rev == cache.meshRevision &&
-      candidate_cull_rev == cache.cullRevision)
-  {
-    return;
-  }
   // A37 H3: reject stale/backwards refresh.
   if (cache.meshRevision != 0 && candidate_mesh_rev < cache.meshRevision)
   {
-    return;
+    return false;
   }
   // A39 P5: got = candidate; expected = live desire (NOT a copy of got).
   // Epochs left zero so TableEpochStale does not block intentional forward
@@ -225,38 +244,81 @@ void UCrossGpuBackend::RefreshPass(
         /*expected_light=*/expected_cull_rev);
     if (!PublicationCandidateAccepted(v))
     {
-      return; // keep prior resident
+      return false; // keep prior resident
     }
   }
 
-  size_t write_index = 0;
-  for (const CrossInstanceBatch &batch : batches)
+  if ((cache.meshRevision || cache.cullRevision || !cache.batches.empty()) &&
+      candidate_mesh_rev == cache.meshRevision &&
+      candidate_cull_rev == cache.cullRevision)
+    return true;
+  if (glGetError() != GL_NO_ERROR)
+    return false;
+  if (StagingFence)
   {
-    if (batch.instances.empty())
+    const auto status =
+        glClientWaitSync(static_cast<GLsync>(StagingFence), 0, 0);
+    if (status == GL_TIMEOUT_EXPIRED)
+      return false; // Never stall a paint waiting to replace a valid pass.
+    glDeleteSync(static_cast<GLsync>(StagingFence));
+    StagingFence = nullptr;
+    if (status == GL_WAIT_FAILED)
     {
-      continue;
+      DestroyPass(Staging);
+      glGetError();
+      return false;
     }
-    if (write_index < cache.batches.size())
-    {
-      UploadInstances(cache.batches[write_index], batch);
-      ++write_index;
-      continue;
-    }
-    CrossGpuBatch gpu;
-    UploadInstances(gpu, batch);
-    cache.batches.push_back(gpu);
-    ++write_index;
   }
 
-  for (size_t i = write_index; i < cache.batches.size(); ++i)
+  const auto release_staged_leases = [&]()
   {
-    DestroyInstanceBuffer(cache.batches[i]);
+    for (auto &batch : Staging.batches)
+      batch.lightRanges.clear();
+    glBindVertexArray(0);
+    glBindBuffer(kArrayBuffer, 0);
+  };
+  try
+  {
+    const size_t count = static_cast<size_t>(std::count_if(
+        batches.begin(), batches.end(), [](const CrossInstanceBatch &batch)
+        { return !batch.instances.empty(); }));
+    for (size_t n = count; n < Staging.batches.size(); ++n)
+      DestroyInstanceBuffer(Staging.batches[n]);
+    Staging.batches.resize(count);
+    size_t write_index = 0;
+    for (const auto &batch : batches)
+      if (!batch.instances.empty())
+      {
+        if (!UploadInstances(Staging.batches[write_index++], batch))
+        {
+          release_staged_leases();
+          return false;
+        }
+      }
   }
-  cache.batches.resize(write_index);
-
-  glBindBuffer(kArrayBuffer, 0);
+  catch (...)
+  {
+    release_staged_leases();
+    return false;
+  }
+  // Only this swap publishes new geometry and its matching field ownership.
+  cache.batches.swap(Staging.batches);
+  if (!Staging.batches.empty())
+  {
+    StagingFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!StagingFence)
+    {
+      // Deletion preserves queued GL readers even if retirement cannot be
+      // tracked. Do not reuse unprotected storage after a failed fence.
+      DestroyPass(Staging);
+      glGetError();
+    }
+  }
+  release_staged_leases(); // Scratch is never drawn; old queued draws precede
+                           // release.
   cache.meshRevision = candidate_mesh_rev;
   cache.cullRevision = candidate_cull_rev;
+  return true;
 }
 
 void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)
@@ -272,7 +334,11 @@ void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)
 
 void UCrossGpuBackend::DestroyAll(CrossGpuPassCache &cache)
 {
+  if (StagingFence)
+    glDeleteSync(static_cast<GLsync>(StagingFence));
+  StagingFence = nullptr;
   DestroyPass(cache);
+  DestroyPass(Staging);
   for (TemplateMesh &mesh : Templates)
   {
     if (mesh.ebo != 0)

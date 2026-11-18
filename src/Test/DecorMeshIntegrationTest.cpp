@@ -32,6 +32,34 @@
 
 namespace cutum
 {
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+struct CrossGpuBackendDriverTestAccess
+{
+  struct Fault
+  {
+    unsigned fail_on{0}, calls{0};
+  };
+  static void Arm(UCrossGpuBackend &backend, Fault &fault)
+  {
+    backend.TransferContext = &fault;
+    backend.BeforeTransfer = [](unsigned target, void *context)
+    {
+      auto &f = *static_cast<Fault *>(context);
+      if (++f.calls == f.fail_on)
+        glBindBuffer(target, 0); // The actual following transfer must fail.
+    };
+  }
+  static void *Fence(const UCrossGpuBackend &backend)
+  {
+    return backend.StagingFence;
+  }
+  static void Clear(UCrossGpuBackend &backend)
+  {
+    backend.BeforeTransfer = nullptr;
+    backend.TransferContext = nullptr;
+  }
+};
+#endif
 struct ChunkMeshCaptureAdmissionTestAccess
 {
   static ChunkMeshSnapshot CaptureOwned(UChunkMeshCache &cache,
@@ -1860,6 +1888,211 @@ ProbeCrossGpuHandles(const cutum::CrossGpuBatch &gpu,
 }
 #endif
 
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void
+TestCrossPassFailureAtomicity(cutum::UBlockRegistry &registry,
+                              const cutum::UBlockDefinitionStorage *definitions,
+                              bool gles)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock({4, 4, 4}, kTallGrass);
+  world.SetBlock({20, 4, 4}, kSolidCross);
+  RelightJobSpec spec;
+  spec.min_world_y = 0;
+  spec.max_world_y = 15;
+  const auto physical = UChunkRelightSnapshot::CaptureSections(
+                            world, spec, {{0, 0, 0}, {1, 0, 0}})
+                            .Compute(registry);
+  Expect(physical.inputs_complete && physical.chunks.size() == 2,
+         "Cross atomic fixture computes real physical fields");
+  for (const auto &data : physical.chunks)
+    world.GetChunkManager().ReplaceComputedSectionLightVolume(
+        data.coord, *data.padded_light, true, true);
+  Expect(world.RecordLightCalculation(
+             physical, registry.GetDefinitionsCatalogSnapshot()) == 2,
+         "Cross atomic fixture installs physical proof");
+  const std::array<SectionRenderLightSnapshot, 2> fields{
+      *world.CaptureRenderLightSnapshot({0, 0, 0}),
+      *world.CaptureRenderLightSnapshot({1, 0, 0})};
+  SectionRenderLightBindings owner;
+  Expect(owner.BeginWorld(
+             23, world.GetChunkManager().GetGeometryInputRevisionIdentity(), 16,
+             8u * SectionLightVolume::CellCount, 8),
+         "Cross atomic physical resource owner initializes");
+  using Weak = std::weak_ptr<SectionRenderLightBinding>;
+  const auto make_rows = [&](std::vector<Weak> &weak)
+  {
+    std::vector<CrossInstanceBatch> result;
+    weak.clear();
+    for (size_t n = 0; n < fields.size(); ++n)
+    {
+      auto binding = owner.Prepare(23, fields[n].GeometryInputs(), fields[n]);
+      Expect(bool(binding),
+             "Cross atomic candidate obtains certified physical lease");
+      weak.push_back(binding);
+      CrossInstanceBatch batch;
+      batch.blockId = n ? kSolidCross : kTallGrass;
+      CrossInstanceGpu instance;
+      instance.center = glm::vec3(float(n * 16 + 4), 4, 4);
+      instance.renderLightHandle = binding->ShaderWords();
+      AppendCrossInstance(batch, instance, binding);
+      result.push_back(std::move(batch));
+    }
+    return result;
+  };
+  const auto expired = [](const std::vector<Weak> &weak)
+  {
+    return std::all_of(weak.begin(), weak.end(),
+                       [](const Weak &w) { return w.expired(); });
+  };
+  const auto all_live = [](const std::vector<Weak> &weak)
+  {
+    return std::all_of(weak.begin(), weak.end(),
+                       [](const Weak &w) { return !w.expired(); });
+  };
+  const auto words = [](const std::vector<CrossInstanceBatch> &rows)
+  {
+    std::vector<std::array<uint32_t, 4>> result;
+    for (const auto &row : rows)
+      result.push_back(row.instances[0].renderLightHandle);
+    return result;
+  };
+  UCrossGpuBackend backend;
+  CrossGpuPassCache pass;
+  std::vector<Weak> original_weak;
+  auto initial = make_rows(original_weak);
+  const auto original_words = words(initial);
+  Expect(backend.RefreshPass(pass, initial, 1, 1, 1, 1),
+         "Cross atomic initial pass publishes");
+  initial.clear();
+  const std::array<GLuint, 2> original_buffers{pass.batches[0].instanceVbo,
+                                               pass.batches[1].instanceVbo};
+  const std::array<GLuint, 2> original_vaos{pass.batches[0].vao,
+                                            pass.batches[1].vao};
+  const auto unchanged = [&]()
+  {
+    Expect(pass.batches.size() == 2 && pass.meshRevision == 1 &&
+               pass.cullRevision == 1 &&
+               pass.batches[0].instanceVbo == original_buffers[0] &&
+               pass.batches[1].instanceVbo == original_buffers[1] &&
+               pass.batches[0].vao == original_vaos[0] &&
+               pass.batches[1].vao == original_vaos[1] &&
+               all_live(original_weak),
+           "failed Cross publication retains complete predecessor buffers "
+           "leases and revisions");
+    for (size_t n = 0; n < 2; ++n)
+      ProbeCrossGpuHandles(pass.batches[n], {original_words[n]}, gles);
+  };
+  std::vector<Weak> rejected_weak;
+  auto rejected = make_rows(rejected_weak);
+  glBindBuffer(GL_TEXTURE_2D, 0);
+  Expect(!backend.RefreshPass(pass, rejected, 2, 2, 2, 2),
+         "Cross caller GL error rejects before publication");
+  unchanged();
+  CrossGpuBackendDriverTestAccess::Fault late{2};
+  CrossGpuBackendDriverTestAccess::Arm(backend, late);
+  Expect(!backend.RefreshPass(pass, rejected, 2, 2, 2, 2) && late.calls == 2,
+         "actual second Cross transfer error rejects whole staged pass");
+  CrossGpuBackendDriverTestAccess::Clear(backend);
+  rejected.clear();
+  Expect(expired(rejected_weak),
+         "failed staged Cross uploads release every candidate field lease");
+  unchanged();
+  Expect(glGetError() == GL_NO_ERROR,
+         "handled Cross transfer failure leaves no latent GL error");
+  auto invalid_shape = make_rows(rejected_weak);
+  invalid_shape[1].shape = static_cast<BlockDecorShape>(255);
+  Expect(!backend.RefreshPass(pass, invalid_shape, 2, 2, 2, 2),
+         "invalid later Cross shape cannot publish a valid prefix");
+  invalid_shape.clear();
+  Expect(expired(rejected_weak),
+         "invalid shape rollback releases staged field leases");
+  unchanged();
+  std::vector<Weak> committed_weak;
+  auto recovered = make_rows(committed_weak);
+  auto expected = words(recovered);
+  Expect(backend.RefreshPass(pass, recovered, 2, 2, 2, 2),
+         "same desired Cross revision retries successfully after transfer "
+         "failure");
+  recovered.clear();
+  Expect(expired(original_weak) && all_live(committed_weak),
+         "atomic swap releases predecessor ownership and keeps only committed "
+         "fields");
+  for (size_t n = 0; n < 2; ++n)
+    ProbeCrossGpuHandles(pass.batches[n], {expected[n]}, gles);
+  Expect(CrossGpuBackendDriverTestAccess::Fence(backend) != nullptr,
+         "retired Cross scratch owns a fence before reuse");
+  std::set<GLuint> buffer_names(original_buffers.begin(),
+                                original_buffers.end());
+  for (const auto &batch : pass.batches)
+    buffer_names.insert(batch.instanceVbo);
+  Expect(!backend.RefreshPass(pass, {}, 2, 2, 3, 3),
+         "Cross same-revision shortcut cannot bypass live desire validation");
+  for (uint64_t revision = 3; revision <= 6; ++revision)
+  {
+    std::vector<Weak> next_weak;
+    auto next = make_rows(next_weak);
+    expected = words(next);
+    Expect(
+        backend.RefreshPass(pass, next, revision, revision, revision, revision),
+        "Cross scratch storage publishes repeated successors");
+    next.clear();
+    Expect(expired(committed_weak),
+           "scratch buffers do not retain obsolete physical ownership");
+    committed_weak = std::move(next_weak);
+    for (size_t n = 0; n < 2; ++n)
+    {
+      buffer_names.insert(pass.batches[n].instanceVbo);
+      ProbeCrossGpuHandles(pass.batches[n], {expected[n]}, gles);
+    }
+  }
+  Expect(buffer_names.size() == 4,
+         "two Cross batches reuse only two complete sets of instance buffers");
+  const auto retired_fence =
+      static_cast<GLsync>(CrossGpuBackendDriverTestAccess::Fence(backend));
+  Expect(retired_fence && glIsSync(retired_fence),
+         "Cross scratch fence remains owned until reuse or shutdown");
+  // Keep page owners alive during the sync query. Their final release can
+  // create atlas retirement fences and immediately reuse the deleted address.
+  std::vector<std::shared_ptr<SectionRenderLightBinding>> closing_leases;
+  for (const auto &batch : pass.batches)
+    for (const auto &range : batch.lightRanges)
+      closing_leases.push_back(range.binding);
+  backend.DestroyAll(pass);
+  Expect(!CrossGpuBackendDriverTestAccess::Fence(backend) &&
+             !glIsSync(retired_fence),
+         "Cross shutdown deletes its scratch fence before releasing page owners");
+  closing_leases.clear();
+  Expect(expired(committed_weak),
+         "Cross shutdown releases committed and scratch field leases");
+  for (auto buffer : buffer_names)
+    Expect(!glIsBuffer(buffer),
+           "Cross shutdown deletes active and scratch instance storage");
+
+  UCrossGpuBackend empty_backend;
+  CrossGpuPassCache empty;
+  std::vector<Weak> first_weak;
+  auto first = make_rows(first_weak);
+  CrossGpuBackendDriverTestAccess::Fault first_fault{2};
+  CrossGpuBackendDriverTestAccess::Arm(empty_backend, first_fault);
+  Expect(
+      !empty_backend.RefreshPass(empty, first, 1, 1, 1, 1) &&
+          empty.batches.empty() && empty.meshRevision == 0 &&
+          empty.cullRevision == 0,
+      "failed first Cross publication cannot expose a partially uploaded pass");
+  CrossGpuBackendDriverTestAccess::Clear(empty_backend);
+  Expect(empty_backend.RefreshPass(empty, first, 1, 1, 1, 1),
+         "first Cross publication recovers without changing desired revision");
+  first.clear();
+  empty_backend.DestroyAll(empty);
+  Expect(expired(first_weak) && glGetError() == GL_NO_ERROR,
+         "initial Cross failure recovery retires all resources cleanly");
+}
+#endif
+
 static void TestCrossLightArtifactTransport(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions, bool gpu = false,
@@ -2215,12 +2448,16 @@ int main(int argc, char **argv)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);
     else if (gles_cross_driver)
+    {
       TestCrossLightArtifactTransport(registry, definitions.get(), true, true);
+      TestCrossPassFailureAtomicity(registry, definitions.get(), true);
+    }
     else
     {
       TestFirstComputedLightPublication(registry, definitions.get(), true);
       TestOrderedFieldBindings(registry, definitions.get());
       TestCrossLightArtifactTransport(registry, definitions.get(), true);
+      TestCrossPassFailureAtomicity(registry, definitions.get(), false);
     }
     Expect(glGetError() == GL_NO_ERROR,
            "certified binding integration has no GL errors");
