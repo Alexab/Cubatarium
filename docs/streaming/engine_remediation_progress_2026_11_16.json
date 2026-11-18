@@ -5857,7 +5857,7 @@
         "wrap-red: shader ignores mathematical sign of unsigned difference; oppositeINT-limit false adjacent cell fails"
       ],
       "restoration": "Exact original source bytes restored in finally; only section_light_atlas_driver_test built from mutations, never app. Fresh rebuild/testGREEN after all3 controls.",
-      "release": "Exact Release app build pending; CMake includes new module in app render-lighting sources.",
+      "release": "engine-section-light-binding-release-build.log: exact cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8, terminal0; static verification PASS6systemDLL; source99d4aa338, unmutated binding module compiled. Driver restoredGREEN before app build. No ordinary-render GPU cutover acceptance inferred from linking an unused module.",
       "limits": "Storage and executable shader interface proof only. Not instantiated in normal world renderer; no world field+geometry GPU atomic publication or all-backend cutover acceptance yet. No removal of light merge keys/job stamps, no GLES/native parity/performance claim. Existing typed SectionRenderLightSnapshot validation must gate future production Create/Replace calls.",
       "next": "Connect typed geometry+physical snapshots to prepared GPU binding leases before destructive mesh commit. Retain leases with actual CPU/MDI/packed/cross/transparent artifacts through final draw. Feed shared interface to all world shaders/backends, including generation/epoch metadata; only then remove baked lighting dependency."
     }
