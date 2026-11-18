@@ -434,8 +434,7 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     }
   };
 
-  // UTerrain columns are generated at world Y=0..surface; only fill ground
-  // layer chunks.
+  // Column request keys use y=0 independently of their resident section Ys.
   if (chunkCoord.y != 0)
   {
     return false;
@@ -481,8 +480,10 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   const UChunk *existing = World.GetChunkManager().GetChunk(chunkCoord);
   bool clearedPartialDiskLoad = false;
-  if (existing != nullptr &&
-      IsTerrainChunkCompleteCached(chunkCoord))
+  // Complete columns can end below cy=0. The column key is not a
+  // representative geometry section; requiring its residency repeatedly
+  // reloads low terrain through the collision/underfeet path.
+  if (IsTerrainChunkCompleteCached(chunkCoord))
   {
     ++TerrainEvidenceRevision;
     ProcedurallyGenerated.insert(chunkCoord);

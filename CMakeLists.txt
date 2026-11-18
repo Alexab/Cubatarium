@@ -1071,6 +1071,29 @@ cubatarium_add_test(NAME terrain_column_util_test
     DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME chunk_streamer_committed_column_test
+    SOURCES
+        src/World/Chunks/Chunk.cpp
+        src/World/Chunks/ChunkManager.cpp
+        src/World/Chunks/ChunkBuffer.cpp
+        src/World/Chunks/TerrainColumnUtil.cpp
+        src/World/Chunks/ChunkStreamer.cpp
+        src/World/Chunks/ChunkLoadPriority.cpp
+        src/World/Physics/CollisionReadiness.cpp
+        src/World/Core/RuntimeTuning.cpp
+        src/World/Core/BlockWorld.cpp
+        src/World/Core/IUBlockWriter.cpp
+        src/Blocks/BlockRegistry.cpp
+        src/Blocks/BlockDefinition.cpp
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Physics/MaterialReactionRules.cpp
+        src/World/Physics/MaterialReactionRulesRegistry.cpp
+        src/World/Math/FluidCellState.cpp
+        src/World/Math/GridMath.cpp
+        src/Test/ChunkStreamerCommittedColumnTest.cpp
+    DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
 cubatarium_add_test(NAME negative_height_storage_test
     SOURCES
         src/World/Chunks/Chunk.cpp
@@ -3407,6 +3430,7 @@ set(CUBATARIUM_CTEST_UNIT_TARGETS
   decor_mesh_integration_test
   relight_result_install_test
   required_data_coverage_test
+  chunk_streamer_committed_column_test
   mesh_neighbor_policy_test
   mesh_light_stale_policy_test
   column_emerge_bump_test

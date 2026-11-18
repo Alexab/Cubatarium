@@ -5387,10 +5387,57 @@
       }
     },
     "negative_height_committed_column_prefetch": {
-      "status": "Implemented;terrain_column_util_testPASS;Release/native pending",
+      "status": "Prefetch callback corrected;ReleasePASS;nativeFAIL10. Direct Ensure path still reloads complete columns.",
       "cause": "WorldStreaming OnIsChunkCommitted rejected a complete column unless its y=0 section was resident. Negative-height-only saved terrain has a complete floor below0 and no y=0 geometry. Prefetch repeats disk requests, repeatedly changes inputs, floods result application and delays required halo/light. Source trace proves same column repeatedly reloaded while resident.",
       "change": "Use world.IsTerrainColumnCompleteFast for normalized ground column after existing scheduler-owner guard. No sky geometry materialization, no light requirement for data completion. Existing cache invalidation and exact full-column readiness are retained.",
-      "tests": "terrain_column_util_test adds complete256-cell negative floor without cy0, read-only count, missing floor cell rejects completeness, eviction rejects completeness. Fresh Release build/testPASS. Native unchanged visible-item oracle pending."
+      "tests": "terrain_column_util_test adds complete256-cell negative floor without cy0, read-only count, missing floor cell rejects completeness, eviction rejects completeness. Fresh Release build/testPASS. Native unchanged visible-item oracle pending.",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-low-column-commit-visible-items-native",
+        "source": "c131f04dd",
+        "reference": {
+          "schema": "engine-world-item-reference.v1",
+          "status": "FAIL",
+          "reason": "saved_world_item_field_and_primitive_issue",
+          "checked_draws": 282,
+          "frame_epochs": 282,
+          "issued_primitives": 846,
+          "instance_frame_counts": {
+            "117625122491269153": 90,
+            "117625122491269154": 192
+          },
+          "skipped_other_instance_or_world": 0,
+          "unjoined_draws": 0,
+          "unsupported_mode_draws": 0,
+          "faults": 10,
+          "examples": [
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field",
+            "fixture_item_without_current_computed_field"
+          ],
+          "missing_coverage": [],
+          "scope": "declared saved loose-item identity, canonical CPU field and actual nonempty primitive draw issue; no raster visibility, shader RGB/uniform readback, transparency, smoothing or performance acceptance"
+        },
+        "disk_requests": 1473,
+        "distinct_disk_columns": 203,
+        "endpoint_disk_requests": 230,
+        "route_chunks": 22,
+        "inspections": 30,
+        "finding": "Prefetch callback alone does not close root issue. EnsureChunkLoaded first completion return also required existingChunk(y0), so complete low terrain enters OnLoadChunk repeatedly through collision/underfeet checks. New actual UChunkStreamer regression under construction; no threshold change."
+      }
+    },
+    "negative_height_direct_column_load": {
+      "status": "Implemented;actual streamer RED then final3/3GREEN;Release/native pending",
+      "cause": "EnsureChunkLoaded near/collision path guarded cached full-column completion by existing section at columnKey.y=0. Complete below-zero terrain therefore entered OnLoadChunk each frame despite positive column completion. Prefetch callback fix alone retained1473 disk requests across203columns and10unready endpoint draws.",
+      "runtime": "Early completion return now uses IsTerrainChunkCompleteCached without y0-section residency. Existing pending owner handling, full-column authority, partial/evicted reload, mesh seam notification and world-format behavior retained. Column-key comment corrected.",
+      "regression": "New chunk_streamer_committed_column_test links actual ChunkStreamer, terrain utilities, registry, runtime tuning and collision readiness. 32EnsureCollisionChunks calls over9completed negative-floor columns must issue zero disk/async requests and no phantom sky geometry. Known floor edit preserved without reload; removed section and independent never-completed partial column must request reload. Registered unit;streaming CTest.",
+      "red": "engine-low-column-direct-red-build.log successful unmodified runtime build; engine-low-column-direct-red-test.log fails repeated collision checks must not reload complete low columns. App not built from a temporary mutation.",
+      "green": "engine-low-column-direct-final-green-build.log and engine-low-column-direct-final-green-test.log:3/3PASS. Earlier green attempt failed a test assumption that digging a known floor required reload; corrected test to preserve player edits and use independent never-completed partial input for missing-data rejection. Runtime not changed to reload edited worlds.",
+      "next": "Build Release exact required command; repeat same open-sky-items native, preserve both priorFAIL runs, no oracle relaxation. Independent GPU-field atlas/binding/publication cutover and full matrix remain required."
     }
   }
 }
