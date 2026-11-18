@@ -6640,6 +6640,7 @@ void UGeometryEngine::DrawCrossInstancedBatches(
   };
   std::vector<CrossInstanceBatch> filtered_batches;
   filtered_batches.reserve(batches.size());
+  std::vector<uint8_t> instance_selection;
   const auto block_catalog =
       WorldInstance->GetBlockRegistry().GetDefinitionsCatalogSnapshot();
   for (const CrossInstanceBatch &batch : batches)
@@ -6652,7 +6653,9 @@ void UGeometryEngine::DrawCrossInstancedBatches(
               glm::ivec3(static_cast<int>(std::floor(inst.center.x)),
                          static_cast<int>(std::floor(inst.center.y)),
                          static_cast<int>(std::floor(inst.center.z))));
-          return is_slice_render_ready(chunk);
+          const bool ready = is_slice_render_ready(chunk);
+          instance_selection.push_back(ready ? 1 : 0);
+          return ready;
         });
     if (const BlockDefinition *definition =
             FindCatalogDefinition(block_catalog.get(), batch.blockId))
@@ -6667,10 +6670,11 @@ void UGeometryEngine::DrawCrossInstancedBatches(
     CrossGpuBackend.DestroyPass(CrossGpuPass);
     return;
   }
-  CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches,
-                              /*candidate*/ meshRevision, cullRevision,
-                              /*expected live desire*/ meshRevision,
-                              cullRevision);
+  if (!CrossGpuBackend.RefreshPass(CrossGpuPass, filtered_batches,
+                                   /*candidate*/ meshRevision, cullRevision,
+                                   /*expected live desire*/ meshRevision,
+                                   cullRevision, instance_selection))
+    return; // Retain buffers for retry, but do not draw an obsolete selection.
   if (WorldInstance)
   {
     WorldInstance->GetPhysicsTelemetryMutable().CrossBatchCount =

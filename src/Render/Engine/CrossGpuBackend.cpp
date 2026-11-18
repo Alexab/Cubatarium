@@ -226,7 +226,8 @@ bool UCrossGpuBackend::UploadInstances(CrossGpuBatch &gpu,
 bool UCrossGpuBackend::RefreshPass(
     CrossGpuPassCache &cache, const std::vector<CrossInstanceBatch> &batches,
     uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
-    uint64_t expected_mesh_rev, uint64_t expected_cull_rev)
+    uint64_t expected_mesh_rev, uint64_t expected_cull_rev,
+    const std::vector<uint8_t> &instance_selection)
 {
   // A37 H3: reject stale/backwards refresh.
   if (cache.meshRevision != 0 && candidate_mesh_rev < cache.meshRevision)
@@ -250,7 +251,8 @@ bool UCrossGpuBackend::RefreshPass(
 
   if ((cache.meshRevision || cache.cullRevision || !cache.batches.empty()) &&
       candidate_mesh_rev == cache.meshRevision &&
-      candidate_cull_rev == cache.cullRevision)
+      candidate_cull_rev == cache.cullRevision &&
+      instance_selection == cache.instanceSelection)
     return true;
   if (glGetError() != GL_NO_ERROR)
     return false;
@@ -279,6 +281,9 @@ bool UCrossGpuBackend::RefreshPass(
   };
   try
   {
+    // Allocate the selection before publication so allocation failure also
+    // preserves the complete predecessor and its selection identity.
+    Staging.instanceSelection = instance_selection;
     const size_t count = static_cast<size_t>(std::count_if(
         batches.begin(), batches.end(), [](const CrossInstanceBatch &batch)
         { return !batch.instances.empty(); }));
@@ -303,6 +308,7 @@ bool UCrossGpuBackend::RefreshPass(
   }
   // Only this swap publishes new geometry and its matching field ownership.
   cache.batches.swap(Staging.batches);
+  cache.instanceSelection.swap(Staging.instanceSelection);
   if (!Staging.batches.empty())
   {
     StagingFence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
@@ -328,6 +334,7 @@ void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)
     DestroyInstanceBuffer(batch);
   }
   cache.batches.clear();
+  cache.instanceSelection.clear();
   cache.meshRevision = 0;
   cache.cullRevision = 0;
 }

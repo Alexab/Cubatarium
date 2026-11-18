@@ -31,6 +31,9 @@ struct CrossGpuPassCache
   std::vector<CrossGpuBatch> batches;
   uint64_t meshRevision{0};
   uint64_t cullRevision{0};
+  // Exact ordered keep/drop mask from the source instances. Readiness can
+  // change without either geometry or cull revision changing.
+  std::vector<uint8_t> instanceSelection;
 };
 
 /// Retained GPU instance buffers for cross vegetation (one draw per block type).
@@ -44,7 +47,8 @@ public:
   bool RefreshPass(CrossGpuPassCache &cache,
                    const std::vector<CrossInstanceBatch> &batches,
                    uint64_t candidate_mesh_rev, uint64_t candidate_cull_rev,
-                   uint64_t expected_mesh_rev, uint64_t expected_cull_rev);
+                   uint64_t expected_mesh_rev, uint64_t expected_cull_rev,
+                   const std::vector<uint8_t> &instance_selection = {});
   void DestroyPass(CrossGpuPassCache &cache);
   void DestroyAll(CrossGpuPassCache &cache);
 

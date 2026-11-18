@@ -6963,6 +6963,13 @@
         },
         "limits": "Stationary startup only. No frontier, pixel, transparency or physical-light oracle. About573s gate is a performance concern; no controlled A/B comparison."
       }
+    },
+    "cross_readiness_selection": {
+      "status": "Implemented;5Release testsPASS and restored5PASS. Actual GL3.3/GLES3.2 negative control RED. Application build/native pending with next renderer integration.",
+      "implementation": "Exact ordered keep/drop mask participates in Cross GPU cache identity independently of mesh/cull revisions. Mask allocation/publication and rollback are atomic with buffers/leases. A failed refresh retains predecessor storage for retry but GeometryEngine does not draw an obsolete readiness selection. No probabilistic fingerprint.",
+      "validation": "engine-cross-selection-tests.log and engine-cross-selection-restored-tests.log:5/5PASS. GL/GLES framebuffer words verify readiness loss and recovery at fixed mesh7/cull9, unchanged selection has no transfer, failed replacement retains previous selection and source words, shutdown releases leases/mask.",
+      "negative_control": "engine-cross-selection-negative-control.json: ignore exact mask in same-revision shortcut; both GL/GLES fail readiness-loss publication assertion; byte-exact source restore and5GREEN. No RED app build/launch.",
+      "limits": "One byte retained per source instance plus staging mask. Full memory/performance matrix and default field consumption remain open."
     }
   },
   "execution_status_review_2026_11_18": {

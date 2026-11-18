@@ -2283,6 +2283,47 @@ TestCrossPassFailureAtomicity(cutum::UBlockRegistry &registry,
   empty_backend.DestroyAll(empty);
   Expect(expired(first_weak) && glGetError() == GL_NO_ERROR,
          "initial Cross failure recovery retires all resources cleanly");
+
+  auto selection_rows = make_rows(first_weak);
+  Expect(empty_backend.RefreshPass(empty, selection_rows, 7, 9, 7, 9, {1, 1}),
+         "Cross selection initially publishes both ready sections");
+  const auto second_words = selection_rows[1].instances[0].renderLightHandle;
+  Expect(empty_backend.RefreshPass(empty, {selection_rows[1]}, 7, 9, 7, 9,
+                                   {0, 1}) &&
+             empty.batches.size() == 1 &&
+             empty.instanceSelection == std::vector<uint8_t>({0, 1}) &&
+             empty.meshRevision == 7 && empty.cullRevision == 9,
+         "readiness loss updates actual Cross selection at unchanged mesh and "
+         "cull revisions");
+  ProbeCrossGpuHandles(empty.batches[0], {second_words}, gles);
+  const auto selected_buffer = empty.batches[0].instanceVbo;
+  CrossGpuBackendDriverTestAccess::Fault selection_fault{1};
+  CrossGpuBackendDriverTestAccess::Arm(empty_backend, selection_fault);
+  Expect(empty_backend.RefreshPass(empty, {selection_rows[1]}, 7, 9, 7, 9,
+                                   {0, 1}) &&
+             selection_fault.calls == 0 &&
+             empty.batches[0].instanceVbo == selected_buffer,
+         "unchanged exact readiness selection reuses its GPU buffers");
+  Expect(!empty_backend.RefreshPass(empty, {selection_rows[0]}, 7, 9, 7, 9,
+                                    {1, 0}) &&
+             selection_fault.calls == 1 &&
+             empty.batches[0].instanceVbo == selected_buffer &&
+             empty.instanceSelection == std::vector<uint8_t>({0, 1}),
+         "failed Cross readiness replacement retains previous selection "
+         "identity atomically for retry");
+  CrossGpuBackendDriverTestAccess::Clear(empty_backend);
+  ProbeCrossGpuHandles(empty.batches[0], {second_words}, gles);
+  const auto first_words = selection_rows[0].instances[0].renderLightHandle;
+  Expect(empty_backend.RefreshPass(empty, {selection_rows[0]}, 7, 9, 7, 9,
+                                   {1, 0}) &&
+             empty.instanceSelection == std::vector<uint8_t>({1, 0}),
+         "Cross readiness recovers without inventing a geometry revision");
+  ProbeCrossGpuHandles(empty.batches[0], {first_words}, gles);
+  selection_rows.clear();
+  empty_backend.DestroyAll(empty);
+  Expect(expired(first_weak) && empty.instanceSelection.empty() &&
+             glGetError() == GL_NO_ERROR,
+         "Cross selection shutdown releases exact source ownership and mask");
 }
 #endif
 
