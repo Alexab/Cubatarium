@@ -586,6 +586,7 @@ void UChunkMeshCache::MarkAllDirty()
   GreedyOpaqueCutoutRefs.clear();
   GreedyTransparentRefs.clear();
   MeshRevisions.Clear();
+  CpuMeshRecovery.clear();
   ActiveMeshSourceRevision.clear();
   CaptureStore.BumpWorldEpoch();
   if (CaptureWorker)
@@ -846,21 +847,7 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
       ++it;
       continue;
     }
-    if (it->ticket.valid && it->ticket.slotIndex >= 0 && GpuPipeline)
-    {
-      GpuPipeline->GetAllocator().FreeSlotByIndex(it->ticket.slotIndex);
-    }
-    if (it->ticket.fence)
-    {
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-      glDeleteSync(it->ticket.fence);
-#endif
-      it->ticket.fence = nullptr;
-    }
-    if (GpuPipeline)
-    {
-      GpuPipeline->ReleaseReadbackSlot(it->ticket);
-    }
+    ReleasePendingGpuTicket(*it);
     GpuExtractInFlight.erase(it->coord);
     it = PendingGpuApplies.erase(it);
     TouchPendingGpuIndex();
@@ -4438,6 +4425,41 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
   }
 }
 
+void UChunkMeshCache::ReleasePendingGpuTicket(PendingGpuApply &pending)
+{
+  // valid describes usable compute output, not ownership of the staging slot.
+  // Counter/readback failures can invalidate output before the cache cancels
+  // it.
+  if (GpuPipeline && pending.ticket.slotIndex >= 0)
+    GpuPipeline->GetAllocator().FreeSlotByIndex(pending.ticket.slotIndex);
+  if (pending.ticket.fence)
+  {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    glDeleteSync(pending.ticket.fence);
+#endif
+  }
+  if (GpuPipeline)
+    GpuPipeline->ReleaseReadbackSlot(pending.ticket);
+  pending.ticket = {};
+}
+
+void UChunkMeshCache::RequeueFailedGpuMesh(glm::ivec3 coord)
+{
+  // Do not resubmit the same oversized section to the same bounded GPU slot.
+  // Retain any drawable predecessor while the ordinary worker budget admits
+  // a canonical CPU successor with freshly captured inputs.
+  if (CpuMeshRecovery.insert(coord).second)
+    CubatariumLogInfo("GpuMeshRecovery", "event=cpu_fallback coord=(" +
+                                             std::to_string(coord.x) + "," +
+                                             std::to_string(coord.y) + "," +
+                                             std::to_string(coord.z) + ")");
+  CaptureStore.Invalidate(coord);
+  if (HasDrawableGreedyMesh(coord))
+    Dirty.MarkDirty(coord);
+  else
+    Dirty.MarkDirtyPriority(coord);
+}
+
 void UChunkMeshCache::EnsureGpuPipeline()
 {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
@@ -4470,6 +4492,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
   GetRenderDemandStore().RemoveGeometry(chunkCoord);
+  CpuMeshRecovery.erase(chunkCoord);
   PendingStaleLightRemeshes_.erase(chunkCoord);
   PendingMeshDependencyInvalidations_.erase(chunkCoord);
   if (GpuPipeline)
@@ -4482,6 +4505,7 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
     if (it->coord == chunkCoord)
     {
       ActiveMeshSourceRevision.erase(chunkCoord);
+      ReleasePendingGpuTicket(*it);
       it = PendingGpuApplies.erase(it);
       TouchPendingGpuIndex();
     }
@@ -5551,7 +5575,8 @@ int UChunkMeshCache::RetryPendingCaptures(UBlockWorld &world,
             std::chrono::high_resolution_clock::now() - snap_t0)
             .count();
     const uint64_t submitted_revision = snapshot.sourceRevision;
-    if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+    const bool force_cpu = CpuMeshRecovery.count(snapshot.coord) != 0;
+    if (!AsyncBuilder->Enqueue(std::move(snapshot), registry, force_cpu))
     {
       continue; // Keep Dirty and PendingCaptureReady for retry.
     }
@@ -6646,33 +6671,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       UJobStageTrace::NoteTerminal(pending.stageTrace, JobStage::Cancelled,
                                    reason);
     }
-    if (pending.ticket.valid && pending.ticket.slotIndex >= 0)
-    {
-      pipeline->GetAllocator().FreeSlotByIndex(pending.ticket.slotIndex);
-    }
-    if (pending.ticket.fence)
-    {
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-      glDeleteSync(pending.ticket.fence);
-#endif
-      pending.ticket.fence = nullptr;
-    }
-    pipeline->ReleaseReadbackSlot(pending.ticket);
-    pending.ticket = {};
+    ReleasePendingGpuTicket(pending);
     ActiveMeshSourceRevision.erase(pending.coord);
-  };
-
-  auto requeue_after_gpu_failure = [&](glm::ivec3 coord)
-  {
-    CaptureStore.Invalidate(coord);
-    if (HasDrawableGreedyMesh(coord))
-    {
-      Dirty.MarkDirty(coord);
-    }
-    else
-    {
-      Dirty.MarkDirtyPriority(coord);
-    }
   };
 
   // P1-a/b: holes → Priority; drawable+Light → no Dirty (MarkRelit owner);
@@ -6863,7 +6863,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
-      requeue_after_gpu_failure(failed_coord);
+      RequeueFailedGpuMesh(failed_coord);
       continue;
     }
     if (pending_ref.stageTrace.job_id != 0)
@@ -7028,7 +7028,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     {
       ++gpu_profile_quad_failed_n;
       fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
-      requeue_after_gpu_failure(pending.coord);
+      RequeueFailedGpuMesh(pending.coord);
       continue;
     }
     gpu_result.quadCount = quad_count;
@@ -7375,7 +7375,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       gpu_profile_kick_stop_reason = "gpu_kick_failed";
       pipeline->GetAllocator().FreeSlotByIndex(slot_idx);
       ActiveMeshSourceRevision.erase(pending.coord);
-      Dirty.MarkDirtyPriority(pending.coord);
+      RequeueFailedGpuMesh(pending.coord);
       UJobStageTrace::NoteTerminal(pending.stageTrace, JobStage::Cancelled,
                                    JobTerminalReason::GpuPipelineFailed);
       continue;
@@ -7519,7 +7519,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
       {
         fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
-        requeue_after_gpu_failure(pending.coord);
+        RequeueFailedGpuMesh(pending.coord);
         continue;
       }
       gpu_result.quadCount = quad_count;
@@ -10231,8 +10231,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             0.10, 8.0);
       }
       const uint64_t submitted_revision = snapshot.sourceRevision;
-      const MeshEnqueueResult enqueue_result =
-          AsyncBuilder->EnqueueDetailed(std::move(snapshot), registry);
+      const bool force_cpu = CpuMeshRecovery.count(snapshot.coord) != 0;
+      const MeshEnqueueResult enqueue_result = AsyncBuilder->EnqueueDetailed(
+          std::move(snapshot), registry, force_cpu);
       if (enqueue_result != MeshEnqueueResult::Accepted)
       {
         trace_visible_schedule(14, 0, static_cast<uint8_t>(enqueue_result));
@@ -11214,7 +11215,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               std::chrono::high_resolution_clock::now() - snap_t0)
               .count();
       const uint64_t submitted_revision = snapshot.sourceRevision;
-      if (!AsyncBuilder->Enqueue(std::move(snapshot), registry))
+      const bool force_cpu = CpuMeshRecovery.count(snapshot.coord) != 0;
+      if (!AsyncBuilder->Enqueue(std::move(snapshot), registry, force_cpu))
       {
         ++LastMeshDirtyScheduleSkipN;
         ++it;
@@ -11885,7 +11887,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const auto sync_catalog = registry.GetDefinitionsCatalogSnapshot();
     const ChunkMeshSnapshot sync_snap = ChunkMeshSnapshot::Capture(
         world, chunkCoord, sync_rev, CacheNeighborVisuallyDrawable, this);
-    const auto quads = MesherBackend
+    const auto quads = MesherBackend && !CpuMeshRecovery.count(chunkCoord)
                            ? MesherBackend->BuildChunkMesh(sync_snap, registry,
                                                            sync_catalog.get())
                            : UGreedyMesher::BuildChunkMesh(sync_snap, registry,

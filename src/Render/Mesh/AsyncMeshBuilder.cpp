@@ -90,15 +90,15 @@ int MaxSolidLocalYSnapshot(const ChunkMeshSnapshot &snapshot,
 } // namespace
 
 bool UAsyncMeshBuilder::Enqueue(ChunkMeshSnapshot snapshot,
-                                UBlockRegistry &registry)
+                                UBlockRegistry &registry, bool force_cpu)
 {
-  return EnqueueDetailed(std::move(snapshot), registry) ==
+  return EnqueueDetailed(std::move(snapshot), registry, force_cpu) ==
          MeshEnqueueResult::Accepted;
 }
 
 MeshEnqueueResult
 UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
-                                   UBlockRegistry &registry)
+                                   UBlockRegistry &registry, bool force_cpu)
 {
   const glm::ivec3 coord = snapshot.coord;
   // Audit R12: shared mesh/relight/gen concurrency envelope.
@@ -156,7 +156,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
 
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
-           catalogKeep = std::move(catalogKeep), jobId, submitEpoch,
+           catalogKeep = std::move(catalogKeep), jobId, submitEpoch, force_cpu,
            stage_trace,
            snapshot_credit = std::move(snapshot_credit),
            work_slot = std::move(work_slot)]() mutable
@@ -188,7 +188,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         auto *gpu_mesher = Mesher;
         // Q4: WorkerCompute GPU-extract eligibility from pinned catalog.
         const bool defer_gpu =
-            gpu_mesher &&
+            !force_cpu && gpu_mesher &&
             gpu_mesher->CanDeferGpuExtract(snapshot, *registryPtr, pinned);
         if (defer_gpu)
         {
@@ -205,9 +205,9 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
           // Q4: WorkerCompute uses pinned catalog for faces/liquid/movement/cross
           // and GPU-extract eligibility (above).
           const auto quads =
-              Mesher ? Mesher->BuildChunkMesh(snapshot, *registryPtr, pinned)
-                     : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr,
-                                                    pinned);
+              !force_cpu && Mesher
+                  ? Mesher->BuildChunkMesh(snapshot, *registryPtr, pinned)
+                  : UGreedyMesher::BuildChunkMesh(snapshot, *registryPtr, pinned);
           for (const GreedyQuad &q : quads)
           {
             GreedyMeshBatch &batch = byBlockId[q.Id];

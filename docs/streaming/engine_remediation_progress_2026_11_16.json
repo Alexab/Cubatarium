@@ -6166,6 +6166,16 @@
         "warmup_ms": 93296.2,
         "provenance": "Observation independently verifies EXE digest, source World_261 fingerprint and byte-exact config restoration. No all-visual, latency, Android app, GPU light solver or performance acceptance."
       }
+    },
+    "async_packed_failure_recovery": {
+      "status": "Implemented; actual GL4.3 regression and7restored Release tests PASS. Final app build/native pending.",
+      "defects": "Counter overflow sets ticket.valid=false; old fail_ticket used that flag to gate staging free, leaking capacity. Failure requeued same GPU-eligible geometry indefinitely. RemoveChunk erased pending tickets without fence/staging/readback cleanup.",
+      "history": "git blame:8cd712ee48 Aug1 guarded staging release byvalid;7af7c9074d Aug1 marked overflow ticket invalid; f1b28c0b5c Jul29 erased pending ownership on RemoveChunk;3c3e507930 Nov13 retained retry-only requeue path.",
+      "implementation": "One ReleasePendingGpuTicket releases owned staging independent of output validity, deletes fence, returns readback lease and resets ticket; shared by failure, outside-focus cancellation and RemoveChunk. All three async dispatch sites pass per-job force_cpu through Enqueue/EnqueueDetailed. Worker bypasses GPU backend entirely and builds canonical CPU geometry under unchanged admission/snapshot/result budgets and pinned catalog. Immediate rebuild honors same routing. Failed coordinates remain CPU-routed until eviction or full reset; this policy never creates readiness/light proof. Predecessor remains drawable while fresh CPU result is pending. First transition logs GpuMeshRecovery cpu_fallback.",
+      "baseline_red": "engine-packed-recovery-red-test.log: actual production mask/greedy dispatch overflow with2slot pool fails independent capacity assertion; no RED application build/launch.",
+      "validation": "engine-packed-recovery-eviction-seven-test.log and engine-packed-recovery-restored-seven-test.log:7/7 PASS. Dense16cube alternating two Cutouts has24576independently required faces; actual overflow terminates, returns both slots, bounded worker publishes98304vertices with zero GPU eligibility callbacks. Repeat overflow retains complete predecessor without advancing publication. Twelve actual Dispatched-ticket evictions exceed8PBO ring and recover2/2slots each time; eviction removes CPU routing.",
+      "negative_controls": "engine-packed-recovery-negative-controls.json: disabling CPU routing in all3dispatch sites produces eligibility=1 and fails complete recovery; omitting RemoveChunk cleanup fails real in-flight eviction resource assertion. Exact cache-source restoration followed by7/7PASS.",
+      "limits": "Native compatibility scene does not intentionally overflow; actual driver integration covers fault paths. General frame/CPU mesh memory bounds, field shader cutover, falling consumer latency, complete RGB/transparency and backend matrix remain open."
     }
   }
 }

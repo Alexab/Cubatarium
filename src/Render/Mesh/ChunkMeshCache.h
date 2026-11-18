@@ -1374,6 +1374,8 @@ private:
     UGpuMeshPipeline::GpuApplyTicket ticket{};
   };
   void EnsureGpuPipeline();
+  void ReleasePendingGpuTicket(PendingGpuApply &pending);
+  void RequeueFailedGpuMesh(glm::ivec3 coord);
   bool CommitGpuMeshResult(
       const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,
       uint64_t source_revision, GpuMeshProcessResult &&gpu_result,
@@ -1505,6 +1507,10 @@ private:
   uint64_t PendingGpuMutationEpoch{0};
   mutable uint64_t PendingGpuIndexEpoch{0};
   std::unordered_set<glm::ivec3, IVec3Hash> GpuExtractInFlight;
+  /// A failed section stays on the canonical CPU route until eviction/reset.
+  /// This is resource recovery policy, never evidence of presentation
+  /// readiness.
+  std::unordered_set<glm::ivec3, IVec3Hash> CpuMeshRecovery;
   double LastFlatRebuildMs{0.0};
   double LastGpuCullMs{0.0};
   double LastMeshSyncMs{0.0};

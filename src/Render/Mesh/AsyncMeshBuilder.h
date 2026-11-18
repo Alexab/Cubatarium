@@ -73,10 +73,14 @@ public:
   void SetMesher(IUChunkMesher *mesher) { Mesher = mesher; }
   IUChunkMesher *GetMesher() const { return Mesher; }
 
+  /// A failed bounded GPU attempt can require canonical CPU geometry. This
+  /// per-job choice bypasses both backend eligibility and backend extraction;
+  /// the same worker/admission/result credits and pinned catalog still apply.
   [[nodiscard]] bool Enqueue(ChunkMeshSnapshot snapshot,
-                             UBlockRegistry &registry);
-  [[nodiscard]] MeshEnqueueResult
-  EnqueueDetailed(ChunkMeshSnapshot snapshot, UBlockRegistry &registry);
+                             UBlockRegistry &registry, bool force_cpu = false);
+  [[nodiscard]] MeshEnqueueResult EnqueueDetailed(ChunkMeshSnapshot snapshot,
+                                                  UBlockRegistry &registry,
+                                                  bool force_cpu = false);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;

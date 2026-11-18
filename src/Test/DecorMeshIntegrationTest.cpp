@@ -13,6 +13,7 @@
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMesher.h"
+#include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
@@ -31,6 +32,44 @@ namespace cutum
 {
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  static void QueuePacked(UChunkMeshCache &cache, ChunkMeshSnapshot snapshot,
+                          UBlockRegistry &registry)
+  {
+    cache.EnsureAsyncBuilder();
+    if (!cache.GpuPipeline)
+    {
+      cache.GpuPipeline = std::make_unique<UGpuMeshPipeline>();
+      if (!cache.GpuPipeline->Init(2))
+        std::abort();
+    }
+    cache.GpuPipelineInitAttempted = true;
+    UChunkMeshCache::PendingGpuApply pending;
+    pending.coord = snapshot.coord;
+    pending.sourceRevision = snapshot.sourceRevision;
+    pending.snapshot = std::move(snapshot);
+    pending.inputCatalog = registry.GetDefinitionsCatalogSnapshot();
+    pending.queuedAt = pending.phaseSince = std::chrono::steady_clock::now();
+    cache.ActiveMeshSourceRevision[pending.coord] = pending.sourceRevision;
+    cache.GpuExtractInFlight.insert(pending.coord);
+    cache.PendingGpuApplies.push_back(std::move(pending));
+    cache.TouchPendingGpuIndex();
+  }
+  static void DrainPacked(UChunkMeshCache &cache, UBlockWorld &world,
+                          UBlockRegistry &registry)
+  {
+    MeshRebuildTickStats stats;
+    cache.ProcessPendingGpuMeshes(world, registry, 8, 1000, stats);
+  }
+  static uint32_t FreePackedSlots(UChunkMeshCache &cache)
+  {
+    return cache.GpuPipeline->GetAllocator().GetFreeSlotCount();
+  }
+  static bool HasCpuRecovery(UChunkMeshCache &cache, glm::ivec3 coord)
+  {
+    return cache.CpuMeshRecovery.count(coord) != 0;
+  }
+#endif
   static bool CommitPacked(UChunkMeshCache &cache, const UBlockWorld &world,
                            UBlockRegistry &registry,
                            const ChunkMeshSnapshot &snapshot)
@@ -303,10 +342,10 @@ CountGreedyVerticesForBlock(const cutum::UChunkMeshCache &cache,
   return count;
 }
 
-static const cutum::GreedyMeshBatch *FindGreedyBatchForBlock(
-    const cutum::UChunkMeshCache &cache,
-    const std::vector<cutum::GreedyBatchRef> &refs,
-    cutum::BlockId block_id)
+static const cutum::GreedyMeshBatch *
+FindGreedyBatchForBlock(const cutum::UChunkMeshCache &cache,
+                        const std::vector<cutum::GreedyBatchRef> &refs,
+                        cutum::BlockId block_id)
 {
   for (const cutum::GreedyBatchRef &ref : refs)
   {
@@ -414,8 +453,9 @@ static void TestCampfireStoneMesh(cutum::UBlockWorld &world,
          "campfire stone ring should produce opaque greedy vertices");
 }
 
-static void TestGreedyAlphaCutoutIsMaterialScoped(
-    cutum::UBlockWorld &world, cutum::UBlockRegistry &registry)
+static void
+TestGreedyAlphaCutoutIsMaterialScoped(cutum::UBlockWorld &world,
+                                      cutum::UBlockRegistry &registry)
 {
   using cutum::ShouldUseGreedyAlphaCutout;
   Expect(!ShouldUseGreedyAlphaCutout(false, true, false),
@@ -435,12 +475,10 @@ static void TestGreedyAlphaCutoutIsMaterialScoped(
   cutum::UChunkMeshCache cache;
   cache.SetRenderSettings(MakeFrustumMeshSettings());
   cache.SetRenderDistanceChunks(4);
-  RebuildAndCull(cache, world, registry,
-                 glm::vec3(32.5f, 13.5f, 36.0f));
+  RebuildAndCull(cache, world, registry, glm::vec3(32.5f, 13.5f, 36.0f));
 
   const auto &opaque_refs = cache.GetGreedyOpaqueCutoutRefs();
-  const auto *stone_batch =
-      FindGreedyBatchForBlock(cache, opaque_refs, kStone);
+  const auto *stone_batch = FindGreedyBatchForBlock(cache, opaque_refs, kStone);
   const auto *leaves_batch =
       FindGreedyBatchForBlock(cache, opaque_refs, kCutoutLeaves);
   Expect(stone_batch != nullptr && !stone_batch->AlphaCutout,
@@ -698,6 +736,35 @@ TestSecondPlaneGeometryParity(cutum::UBlockRegistry &registry,
 }
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+class DeferredTestMesher final : public cutum::IUChunkMesher
+{
+public:
+  const char *BackendName() const override { return "deferred-test"; }
+  std::vector<cutum::GreedyQuad>
+  BuildChunkMesh(const cutum::UBlockWorld &world, glm::ivec3 coord,
+                 cutum::UBlockRegistry &registry,
+                 const cutum::BlockDefinitionCatalog *catalog) override
+  {
+    return cutum::UGreedyMesher::BuildChunkMesh(world, coord, registry,
+                                                catalog);
+  }
+  std::vector<cutum::GreedyQuad>
+  BuildChunkMesh(const cutum::ChunkMeshSnapshot &snapshot,
+                 cutum::UBlockRegistry &registry,
+                 const cutum::BlockDefinitionCatalog *catalog) override
+  {
+    return cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
+  }
+  bool CanDeferGpuExtract(const cutum::ChunkMeshSnapshot &,
+                          cutum::UBlockRegistry &,
+                          const cutum::BlockDefinitionCatalog *) const override
+  {
+    ++eligibility_calls;
+    return true;
+  }
+  mutable int eligibility_calls{0};
+};
+
 static void
 TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
                         cutum::UBlockRegistry &registry,
@@ -728,6 +795,113 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
          "bounded GPU rejection");
   Expect(glGetError() == GL_NO_ERROR,
          "dense cutout rejection does not issue invalid GL operations");
+
+  RelightJobSpec spec;
+  spec.min_world_y = world.GetVerticalProfile().MinY;
+  spec.max_world_y = world.GetVerticalProfile().MaxY;
+  const auto light =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {coord})
+          .Compute(registry);
+  Expect(light.inputs_complete && light.chunks.size() == 1,
+         "dense packed recovery has independent physical light inputs");
+  world.GetChunkManager().GetChunk(coord)->ReplaceComputedLightVolume(
+      *light.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(light, catalog) == 1,
+         "dense recovery installs current physical proof");
+  DeferredTestMesher backend;
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = true;
+  settings.GpuPackedMeshing = true;
+  settings.FrustumCulling = false;
+  cache.SetRenderSettings(settings);
+  cache.SetMesherBackend(&backend);
+  cache.SetMeshRebuildFocus(coord, 4, 1);
+  const auto revision = cache.GetChunkMeshRevision(coord);
+  const auto *chunk = world.GetChunkManager().GetChunk(coord);
+  auto &demand = cache.GetRenderDemandStore();
+  demand.NoteDemand(coord, revision, chunk->GetLightFieldRevision(), 0, 1.0,
+                    cache.GetCaptureStore().WorldEpoch(),
+                    chunk->GetIncarnation());
+  demand.NoteLightCalculationSettled(
+      coord, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
+      chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  const auto current = ChunkMeshSnapshot::Capture(world, coord, revision);
+  Expect(current.certifiedPaddedLight,
+         "packed overflow input carries a certified physical volume");
+  ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, current, registry);
+  for (int i = 0; i < 8 && cache.GetPendingGpuAppliesCount(); ++i)
+  {
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    glFinish();
+  }
+  Expect(cache.GetPendingGpuAppliesCount() == 0 && cache.HasPendingDirty(),
+         "actual packed overflow terminates with a recovery obligation");
+  Expect(
+      ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2,
+      "failed actual GPU ticket releases its staging slot even when invalid");
+  Expect(cache.GetCaptureStore()
+             .CaptureAndStore(world, coord, cache.GetChunkMeshRevision(coord))
+             .has_value(),
+         "overflow recovery can recapture current authoritative inputs");
+  const auto retry =
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+  Expect(retry.Scheduled == 1 &&
+             cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+         "overflow retry is submitted to the actual bounded worker queue");
+  cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+  std::cout << "packed recovery drawable=" << cache.HasDrawableGreedyMesh(coord)
+            << " vertices=" << cache.GetGreedyVertexCount()
+            << " dirty=" << cache.HasPendingDirty()
+            << " pending=" << cache.GetPendingGpuAppliesCount()
+            << " eligibility=" << backend.eligibility_calls << '\n';
+  Expect(cache.HasDrawableGreedyMesh(coord) &&
+             cache.GetGreedyVertexCount() == CHUNK_VOLUME * 6u * 4u &&
+             !cache.HasPendingDirty() &&
+             cache.GetPendingGpuAppliesCount() == 0 &&
+             backend.eligibility_calls == 0,
+         "failed packed section recovers all faces on CPU without GPU retry");
+  const auto published = cache.GetPublishCount(coord);
+  ChunkMeshCaptureAdmissionTestAccess::QueuePacked(
+      cache,
+      ChunkMeshSnapshot::Capture(world, coord,
+                                 cache.GetChunkMeshRevision(coord)),
+      registry);
+  for (int i = 0; i < 8 && cache.GetPendingGpuAppliesCount(); ++i)
+  {
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    glFinish();
+  }
+  Expect(cache.GetPendingGpuAppliesCount() == 0 &&
+             cache.GetPublishCount(coord) == published &&
+             cache.GetGreedyVertexCount() == CHUNK_VOLUME * 6u * 4u &&
+             cache.HasDrawableGreedyMesh(coord) && cache.HasPendingDirty() &&
+             ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2,
+         "another actual packed overflow retains the complete drawable "
+         "predecessor");
+  cache.RemoveChunk(coord);
+  Expect(!ChunkMeshCaptureAdmissionTestAccess::HasCpuRecovery(cache, coord),
+         "eviction clears recovery routing instead of retaining coordinates");
+  for (int i = 0; i < UGpuMeshPipeline::kReadbackRing + 4; ++i)
+  {
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(
+        cache,
+        ChunkMeshSnapshot::Capture(world, coord,
+                                   cache.GetChunkMeshRevision(coord)),
+        registry);
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    Expect(cache.GetPendingGpuAppliesCount() == 1 &&
+               ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 1,
+           "eviction fixture holds a real dispatched staging/readback ticket");
+    cache.RemoveChunk(coord);
+    Expect(
+        cache.GetPendingGpuAppliesCount() == 0 &&
+            ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2,
+        "repeated in-flight eviction releases staging and bounded PBO leases");
+  }
+  glFinish();
+  Expect(glGetError() == GL_NO_ERROR,
+         "packed overflow and CPU recovery issue no invalid GL operations");
 }
 #endif
 
