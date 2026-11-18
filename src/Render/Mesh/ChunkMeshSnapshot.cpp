@@ -80,6 +80,27 @@ bool TryShellIndex(glm::ivec3 local, int &face, int &cell)
   return true;
 }
 
+// Fold only an axial second-plane coordinate onto the adjacent-plane index.
+// Edge/corner and more distant reads remain unsupported, never wrapped.
+bool TryOuterShellIndex(glm::ivec3 local, int &face, int &cell)
+{
+  bool outer = false;
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    if (local[axis] == -2)
+    {
+      local[axis] = -1;
+      outer = true;
+    }
+    else if (local[axis] == CHUNK_SIZE + 1)
+    {
+      local[axis] = CHUNK_SIZE;
+      outer = true;
+    }
+  }
+  return outer && TryShellIndex(local, face, cell);
+}
+
 int ShellFlatIndex(int face, int cell)
 {
   return face * ChunkMeshSnapshot::kShellFaceCells + cell;
@@ -507,6 +528,14 @@ ChunkMeshSnapshot::CaptureImpl(const UBlockWorld &world, glm::ivec3 chunkCoord,
             raw = world.GetBlock(worldPos);
           }
           snapshot.shellBlocks[static_cast<size_t>(flat)] = raw;
+          auto outer_local = local;
+          outer_local[axis] += sign;
+          snapshot.outerShellBlocks[static_cast<size_t>(flat)] =
+              neighbor_chunk
+                  ? neighbor_chunk->GetBlockLocal(
+                        UChunkManager::WorldToLocal(origin + outer_local))
+                  : world.GetBlock(origin + outer_local);
+
           snapshot.shellNeighborState[static_cast<size_t>(flat)] =
               static_cast<uint8_t>(
                   known_world_exterior
@@ -581,38 +610,34 @@ BlockId ChunkMeshSnapshot::GetBlock(glm::ivec3 worldPos) const
 {
   const glm::ivec3 local = worldPos - ChunkOrigin();
   if (InChunkLocal(local))
-  {
     return GetBlockLocal(local);
-  }
   int face = 0;
   int cell = 0;
-  if (TryShellIndex(local, face, cell))
+  bool outer = false;
+  if (!TryShellIndex(local, face, cell))
   {
-    // Overlay closing: treat missing published coverage as open air for hide.
-    if (boundaryOverlay.active &&
-        (boundaryOverlay.missingNeighborFaces &
-         static_cast<uint8_t>(1u << face)) != 0)
-    {
+    outer = TryOuterShellIndex(local, face, cell);
+    if (!outer)
       return BLOCK_AIR;
-    }
-    return shellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
   }
-  return BLOCK_AIR;
+  if (boundaryOverlay.active &&
+      (boundaryOverlay.missingNeighborFaces & static_cast<uint8_t>(1u << face)))
+    return BLOCK_AIR;
+  const auto index = static_cast<size_t>(ShellFlatIndex(face, cell));
+  return outer ? outerShellBlocks[index] : shellBlocks[index];
 }
 
 BlockId ChunkMeshSnapshot::GetBlockIgnoringOverlay(glm::ivec3 worldPos) const
 {
   const glm::ivec3 local = worldPos - ChunkOrigin();
   if (InChunkLocal(local))
-  {
     return GetBlockLocal(local);
-  }
   int face = 0;
   int cell = 0;
   if (TryShellIndex(local, face, cell))
-  {
     return shellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
-  }
+  if (TryOuterShellIndex(local, face, cell))
+    return outerShellBlocks[static_cast<size_t>(ShellFlatIndex(face, cell))];
   return BLOCK_AIR;
 }
 

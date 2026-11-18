@@ -15,6 +15,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
@@ -65,6 +66,7 @@ constexpr cutum::BlockId kStone = 8;
 constexpr cutum::BlockId kFire = 631;
 constexpr cutum::BlockId kTallGrass = 568;
 constexpr cutum::BlockId kCutoutLeaves = 633;
+constexpr cutum::BlockId kSolidGlass = 634;
 
 // Only a lifetime/publication test double. The GPU driver's separate tests
 // exercise actual allocation, uploads, shader reads and fences.
@@ -210,17 +212,24 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   cutout_leaves.Physics.Movement.Occupancy = 0.0f;
   cutout_leaves.Render.Style = cutum::BlockRenderStyle::Cutout;
 
+  cutum::BlockDefinition solid_glass;
+  solid_glass.Name = "solid_glass";
+  solid_glass.Physics = cutum::BlockPhysicsProfile::Solid();
+  solid_glass.Render.Transparent = true;
+
   std::unordered_map<cutum::BlockId, cutum::BlockDefinition> by_id;
   by_id[kStone] = stone;
   by_id[kFire] = fire;
   by_id[kTallGrass] = tall_grass;
   by_id[kCutoutLeaves] = cutout_leaves;
+  by_id[kSolidGlass] = solid_glass;
 
   std::unordered_map<std::string, cutum::BlockId> name_to_id;
   name_to_id["stone"] = kStone;
   name_to_id["fire"] = kFire;
   name_to_id["tall_grass"] = kTallGrass;
   name_to_id["cutout_leaves"] = kCutoutLeaves;
+  name_to_id["solid_glass"] = kSolidGlass;
 
   definitions->ReplaceAll(std::move(by_id), std::move(name_to_id));
   return definitions;
@@ -565,6 +574,90 @@ TestNoSurfaceGeometryProof(cutum::UBlockRegistry &registry,
   world.SetFluidState(interior,
                       FluidCellState::Source().WithKind(FluidKind::Water));
   Expect(!classify(), "fluid rejects a previously certified AIR-only section");
+}
+
+static void
+TestSecondPlaneGeometryParity(cutum::UBlockRegistry &registry,
+                              const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  int mismatches = 0;
+  for (int axis = 0; axis < 3; ++axis)
+    for (int sign : {-1, 1})
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      const glm::ivec3 coord(0, -3, 0);
+      const auto origin = coord * CHUNK_SIZE;
+      glm::ivec3 local(8), direction(0);
+      local[axis] = sign < 0 ? 0 : CHUNK_SIZE - 1;
+      direction[axis] = sign;
+      const auto pos = origin + local;
+      const auto beyond = pos + 2 * direction;
+      world.SetBlock(pos, kStone);
+      world.SetBlock(pos + direction, kSolidGlass);
+      world.SetBlock(beyond, kStone);
+      const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+      const auto face_count = [&](const std::vector<GreedyQuad> &quads)
+      {
+        return std::count_if(quads.begin(), quads.end(),
+                             [&](const GreedyQuad &q)
+                             {
+                               return q.Id == kStone && q.axis == axis &&
+                                      q.faceSign == sign &&
+                                      q.slice == local[axis];
+                             });
+      };
+      const auto live =
+          UGreedyMesher::BuildChunkMesh(world, coord, registry, catalog.get());
+      Expect(face_count(live) == 1,
+             "live mesher emits thin-wall face against backed solid glass");
+      const auto snapshot = ChunkMeshSnapshot::Capture(world, coord, 0);
+      const auto captured =
+          UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog.get());
+      if (face_count(captured) != face_count(live))
+      {
+        ++mismatches;
+        std::cerr << "second-plane face mismatch axis=" << axis
+                  << " sign=" << sign << " live=" << face_count(live)
+                  << " snapshot=" << face_count(captured) << '\n';
+        continue;
+      }
+      Expect(snapshot.GetBlock(beyond) == kStone &&
+                 snapshot.GetBlockIgnoringOverlay(beyond) == kStone,
+             "both snapshot geometry readers expose the captured second plane");
+      Expect(snapshot.InputsStillValid(world),
+             "unmodified second-plane snapshot is current");
+      auto overlay = snapshot;
+      BoundaryOverlaySetMissingFaces(
+          overlay.boundaryOverlay,
+          static_cast<uint8_t>(1u << (axis * 2 + (sign > 0 ? 1 : 0))));
+      Expect(overlay.GetBlock(beyond) == BLOCK_AIR &&
+                 overlay.GetBlockIgnoringOverlay(beyond) == kStone,
+             "second-plane geometry respects the same face overlay as its "
+             "adjacent plane");
+      auto edge = beyond;
+      edge[(axis + 1) % 3] = origin[(axis + 1) % 3] - 1;
+      Expect(
+          snapshot.GetBlockIgnoringOverlay(edge) == BLOCK_AIR &&
+              snapshot.GetBlockIgnoringOverlay(pos + 3 * direction) ==
+                  BLOCK_AIR,
+          "axial second-plane access never wraps edges or farther coordinates");
+      world.SetBlock(beyond, BLOCK_AIR);
+      Expect(snapshot.GetBlock(beyond) == kStone &&
+                 !snapshot.InputsStillValid(world),
+             "second-plane edit invalidates provenance without changing "
+             "retained bytes");
+      const auto opened = ChunkMeshSnapshot::Capture(world, coord, 1);
+      Expect(face_count(UGreedyMesher::BuildChunkMesh(world, coord, registry,
+                                                      catalog.get())) == 0 &&
+                 face_count(UGreedyMesher::BuildChunkMesh(opened, registry,
+                                                          catalog.get())) == 0,
+             "fresh live and snapshot meshes agree after second-plane opening");
+    }
+  Expect(mismatches == 0, "all six section seams preserve the live mesher "
+                          "second-plane face decision");
 }
 
 static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
@@ -1166,6 +1259,7 @@ int main(int argc, char **argv)
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestNoSurfaceGeometryProof(registry, definitions.get());
+  TestSecondPlaneGeometryParity(registry, definitions.get());
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
   TestFirstComputedLightPublication(registry, definitions.get());

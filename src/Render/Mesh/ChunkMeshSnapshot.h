@@ -29,8 +29,9 @@ enum class MeshApplyStaleInputReason : uint8_t
   Light = 4,
 };
 
-/// Read-only voxel view for background meshing (center chunk + one-block
-/// shell). Shell faces are dense arrays (6 * CHUNK_SIZE^2), not hash maps.
+/// Read-only voxel view for background meshing (center chunk, adjacent
+/// shell and axial second geometry planes). Shell faces are dense arrays (6 *
+/// CHUNK_SIZE^2), not hash maps.
 struct ChunkMeshSnapshot
 {
   static constexpr int kShellFaceCount = 6;
@@ -46,6 +47,10 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, CHUNK_VOLUME> fluid_packed{};
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
   std::array<BlockId, kShellCells> shellBlocks{};
+  /// Axial distance-2 geometry for NeighborHidesFace's transparent-solid
+  /// before/beyond rule. Same six whole-chunk content stamps cover both
+  /// planes. Fluid/load-state reads still use the adjacent plane.
+  std::array<BlockId, kShellCells> outerShellBlocks{};
   std::array<uint8_t, kShellCells> shellFluid{};
   /// Light-only radius-2 padded neighborhood; covers FaceLightPacked fallback.
   std::array<uint8_t, kLightHaloVolume> paddedLight{};
