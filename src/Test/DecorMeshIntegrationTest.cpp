@@ -975,6 +975,165 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   Expect(glGetError() == GL_NO_ERROR,
          "packed overflow and CPU recovery issue no invalid GL operations");
 }
+
+static void TestPackedLightArtifactOwnership(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 root(0);
+  world.SetBlock({4, 4, 4}, kStone);
+  DeferredTestMesher backend;
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = false;
+  settings.GpuPackedMeshing = true;
+  settings.FrustumCulling = false;
+  cache.SetRenderSettings(settings);
+  cache.SetMesherBackend(&backend);
+  cache.SetMeshRebuildFocus(root, 4, 1);
+  cache.MarkDirty(root);
+  SectionRenderLightBindings owner;
+  cache.SetPrepareRenderLightFn(
+      [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+          const SectionRenderLightSnapshot &light)
+      { return owner.PrepareForWorld(epoch, geometry, light); });
+  const auto settle = [&]()
+  {
+    RelightJobSpec spec;
+    spec.min_world_y = world.GetVerticalProfile().MinY;
+    spec.max_world_y = world.GetVerticalProfile().MaxY;
+    const auto field =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(field.inputs_complete && field.chunks.size() == 1,
+           "packed artifact fixture computes complete physical field");
+    world.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *field.chunks[0].padded_light, true, true);
+    Expect(world.RecordLightCalculation(
+               field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+           "packed artifact fixture records canonical physical proof");
+    auto &demand = cache.GetRenderDemandStore();
+    const auto *chunk = world.GetChunkManager().GetChunk(root);
+    demand.NoteDemand(
+        root, cache.GetChunkMeshRevision(root), chunk->GetLightFieldRevision(),
+        0, 1.0, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation());
+    demand.NoteLightCalculationSettled(
+        root, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
+        chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  };
+  const auto flatten = [&]()
+  { cache.UpdateVisibleInstances(Frustum{}, glm::mat4(1), glm::vec3(0)); };
+  const auto pack = [&]()
+  {
+    auto snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, std::move(snapshot),
+                                                     registry);
+    for (int n = 0; n < 8 && cache.GetPendingGpuAppliesCount(); ++n)
+    {
+      ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+      glFinish();
+    }
+    Expect(cache.GetPendingGpuAppliesCount() == 0,
+           "actual packed artifact pipeline completes");
+    flatten();
+  };
+  const auto packed_bytes = [&]()
+  {
+    const auto &allocator = cache.GetGpuMeshPipeline()->GetAllocator();
+    const auto *slot = allocator.GetSlot(root);
+    Expect(slot && slot->QuadCount == 6,
+           "actual packed artifact contains all six cube faces");
+    std::vector<uint8_t> bytes(slot->QuadCount * sizeof(PackedQuad));
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, allocator.GetQuadSsbo());
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER,
+                       slot->OffsetQuads * sizeof(PackedQuad),
+                       static_cast<GLsizeiptr>(bytes.size()), bytes.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    return bytes;
+  };
+  settle();
+  pack();
+  std::cerr << "packed artifact refs=" << cache.GetGpuPackedOpaqueRefs().size()
+            << " transparent=" << cache.GetGpuPackedTransparentRefs().size()
+            << " resident=" << cache.GetGpuMeshPipeline()->HasGpuMesh(root)
+            << " published_binding="
+            << bool(cache.GetPublishedRenderLightBinding(root))
+            << " dirty=" << cache.HasPendingDirty()
+            << " revision=" << cache.GetChunkMeshRevision(root) << '\n';
+  Expect(cache.GetGpuPackedOpaqueRefs().size() == 1,
+         "actual GPU cube publishes a packed draw reference");
+  auto original = cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding;
+  Expect(original && original == cache.GetPublishedRenderLightBinding(root),
+         "packed draw initially owns its exact physical source");
+  const auto original_words = original->ShaderWords();
+  const auto original_slot = cache.GetGpuPackedOpaqueRefs()[0].slotIndex;
+  const auto original_bytes = packed_bytes();
+  std::weak_ptr<SectionRenderLightBinding> weak_original = original;
+  world.SetBlock({4, 4, 4}, BLOCK_AIR);
+  world.SetBlock({5, 4, 4}, kStone);
+  for (int x = -16; x < 32; ++x)
+    for (int z = -16; z < 32; ++z)
+      world.SetBlock({x, 31, z}, kStone);
+  cache.MarkDirty(root);
+  cache.GetCaptureStore().Invalidate(root);
+  settle();
+  cache.RebuildChunkImmediate(world, registry, root);
+  flatten();
+  auto successor = cache.GetPublishedRenderLightBinding(root);
+  Expect(successor && successor != original &&
+             !successor->GeometryInputs().Matches(original->GeometryInputs()),
+         "dark CPU successor publishes distinct geometry and physical lease");
+  Expect(cache.GetGpuPackedOpaqueRefs().size() == 1 &&
+             cache.GetGpuPackedOpaqueRefs()[0].slotIndex == original_slot &&
+             packed_bytes() == original_bytes,
+         "CPU publication retains the actual complete previous packed slot");
+  Expect(cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding == original &&
+             original->ShaderWords() == original_words && original->IsLive(),
+         "retained packed draw keeps its own field rather than CPU successor "
+         "field");
+  original.reset();
+  Expect(!weak_original.expired(),
+         "live packed slot retains previous physical lease");
+  for (int x = -16; x < 32; ++x)
+    for (int z = -16; z < 32; ++z)
+      world.SetBlock({x, 31, z}, BLOCK_AIR);
+  cache.MarkDirty(root);
+  cache.GetCaptureStore().Invalidate(root);
+  settle();
+  cache.RebuildChunkImmediate(world, registry, root);
+  flatten();
+  Expect(
+      cache.GetGpuPackedOpaqueRefs().empty() &&
+          !cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+          weak_original.expired(),
+      "visible lit CPU replacement retires packed slot and its source lease");
+  pack();
+  Expect(cache.GetGpuPackedOpaqueRefs().size() == 1 &&
+             cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding ==
+                 cache.GetPublishedRenderLightBinding(root),
+         "later actual packed publication binds its own successor field");
+  auto final_binding = cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding;
+  std::weak_ptr<SectionRenderLightBinding> weak_final = final_binding;
+  final_binding.reset();
+  world.SetBlock({5, 4, 4}, BLOCK_AIR);
+  cache.MarkDirty(root);
+  cache.GetCaptureStore().Invalidate(root);
+  pack();
+  Expect(cache.GetGpuPackedOpaqueRefs().empty() &&
+             !cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+             weak_final.expired() &&
+             ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2,
+         "actual zero-quad packed successor releases slot and physical field "
+         "lease");
+  Expect(glGetError() == GL_NO_ERROR,
+         "packed artifact ownership fixture has no GL errors");
+}
 #endif
 
 using FaceCells = std::set<std::tuple<int, int, int, int, int>>;
@@ -1218,7 +1377,10 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
          "GPU eligible material faces match canonical live mesher");
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   if (gpu && !gles)
+  {
     TestDenseCutoutFallback(state, registry, definitions);
+    TestPackedLightArtifactOwnership(registry, definitions);
+  }
 #endif
 }
 

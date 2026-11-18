@@ -1311,6 +1311,9 @@ private:
     bool GpuResident{false};
     int GpuSlotIndex{-1};
     uint32_t GpuQuadCount{0};
+    // Own the field belonging to the live packed slot independently of newer
+    // CPU/Cross publications retained alongside it during replacement.
+    std::shared_ptr<SectionRenderLightBinding> GpuRenderLightBinding;
     bool GpuTransparent{false};
     bool GpuHasDarkFace{false};
     bool GpuHasLitDrawableFace{false};

@@ -7042,7 +7042,31 @@
           "source_world": true
         },
         "limits": "Native proves compatibility and first Cross field-draw activation, not per-instance runtime shader RGB. Actual production shader GL/GLES framebuffer field values and fallback proved separately by driver tests. Native floor source checks are CPU271/packed0, so no native packed field acceptance. No controlled performance A/B or universal readiness claim."
+      },
+      "performance_analysis": {
+        "schema": "cross-native-performance-observation.v1",
+        "analyzer_exit": 1,
+        "pass": false,
+        "source": "perf-analysis.json",
+        "steady_periods": 69,
+        "wall_ms_med": 99.2996,
+        "wall_ms_fly_med": 124.935,
+        "world_streaming_phase_ms": 86.5886,
+        "readiness_debt_rate": 0.6811594202898551,
+        "visual_holes_pressure_proxy_rate": 0.2318840579710145,
+        "post_stop_visual_holes_rate": 0.0,
+        "post_stop_readiness_debt_rate": 0.0,
+        "all_stop_gates_pass": true,
+        "limits": "Diagnostic trace-enabled single run, no controlled A/B or production-mode benchmark. Missing legacy telemetry yields false gates and must not be interpreted as proven defects. Ring debt/visual_holes are coverage pressure proxies, not pixel evidence; configured first-world-paint census and named references passed separately. Measured frame times themselves exceed thresholds."
       }
+    },
+    "packed_artifact_light_ownership": {
+      "status": "Implemented; actualGL4.3compute/SSBO ownership regressionPASS; original lookup negative controlRED; byte-exact restore and5Release testsPASS. Required application build/native pending. Full originalgoal remains active.",
+      "implementation": "ChunkGreedyMesh now retains GpuRenderLightBinding independently of the latest CPU/Cross RenderLightBinding. Packed refs use the lease belonging to the actually live packed slot. Successful packed publication installs its own lease; no-slot/zero-quad/stale residency and CPU retirement clear packed ownership. CPU keep-old-packed publication preserves that slot and its own field while CPU/Cross successor may own a different geometry/field pair.",
+      "validation": "engine-packed-light-ownership-fixture-tests.log PASS actualGL4.3 compute: real6quad cube, compare liveSSBO bytes before/after a canonical dark CPU successor under large roof. New CPU geometry/lease differs; retained packed slot index and bytes remain identical and packed ref carries original live handle. Later lit CPU replacement frees slot and previous weaklease expires. Later real packed successor gets its own lease. Actual zero-quad GPU result retires slot/lease and both bounded slots free. Restored5testsGREEN in engine-packed-light-ownership-restored-tests.log.",
+      "negative_control": "engine-packed-light-ownership-negative-control.json: restore pref binding lookup from chunk-current publication; test fails retained packed draw source assertion. Byte-exact source restore/rebuild and5GREEN; no RED application build or launch.",
+      "fixture_correction": "Initial positive test used a cache with no initial geometry revision and failed before a packed ref. Added normal initial MarkDirty before demand/settlement/capture; actual GPU publication and entire ownership sequence now pass. No weakened production gate or injected successful GPU result.",
+      "limits": "Packed physical shader still uses baked light; this establishes artifact-specific resource ownership before field shader activation. Actual new ownership regression is desktopGL4.3, not GLES packed-compute parity. Low-level CommitGpuMeshResult success precondition still needs explicit boundary validation before packed cutover. FullRGB/transparency/performance/persistence/backend matrix open."
     }
   },
   "execution_status_review_2026_11_18": {

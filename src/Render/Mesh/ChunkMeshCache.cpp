@@ -904,6 +904,7 @@ void UChunkMeshCache::ClearStaleGpuResidentFlags(glm::ivec3 chunk_coord)
   it->second.GpuResident = false;
   it->second.GpuSlotIndex = -1;
   it->second.GpuQuadCount = 0;
+  it->second.GpuRenderLightBinding.reset();
   it->second.GpuHasDarkFace = false;
   it->second.GpuHasLitDrawableFace = false;
   it->second.GpuBlockRanges.clear();
@@ -4711,7 +4712,7 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
         GpuPackedChunkRef pref;
         pref.chunkCoord = entry.first;
         pref.slotIndex = entry.second.GpuSlotIndex;
-        pref.renderLightBinding = entry.second.RenderLightBinding;
+        pref.renderLightBinding = entry.second.GpuRenderLightBinding;
         pref.blockRanges = entry.second.GpuBlockRanges;
         if (entry.second.GpuTransparent)
         {
@@ -6128,6 +6129,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       }
     }
   }
+  chunkMesh.GpuRenderLightBinding =
+      gpu_result.quadCount ? prepared_light : nullptr;
   chunkMesh.RenderLightBinding = std::move(prepared_light);
   ClearPriorLitHoldAge(coord);
   chunkMesh.ProvisionalLightPreview = gpu_result.provisionalLightPreview;
@@ -8646,6 +8649,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       chunkMesh.GpuResident = true;
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
+      chunkMesh.GpuRenderLightBinding.reset();
     }
     ClearSatisfiedScreenRayRepairPin(result.coord);
     return;
@@ -8671,6 +8675,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       chunkMesh.GpuResident = false;
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
+      chunkMesh.GpuRenderLightBinding.reset();
       chunkMesh.GpuHasDarkFace = false;
       chunkMesh.GpuHasLitDrawableFace = false;
       chunkMesh.GpuBlockRanges.clear();
@@ -8686,6 +8691,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.GpuResident = false;
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
+    chunkMesh.GpuRenderLightBinding.reset();
     chunkMesh.GpuHasDarkFace = false;
     chunkMesh.GpuHasLitDrawableFace = false;
     chunkMesh.GpuBlockRanges.clear();
@@ -8699,6 +8705,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     chunkMesh.GpuResident = true;
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
+    chunkMesh.GpuRenderLightBinding.reset();
   }
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::PublicationBookkeeping);
   NoteGeometryDirty(result.coord);
@@ -12314,6 +12321,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         chunkMesh.GpuResident = true;
         chunkMesh.GpuSlotIndex = -1;
         chunkMesh.GpuQuadCount = 0;
+        chunkMesh.GpuRenderLightBinding.reset();
       }
       return;
     }
@@ -12332,6 +12340,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     chunkMesh.GpuResident = false;
     chunkMesh.GpuSlotIndex = -1;
     chunkMesh.GpuQuadCount = 0;
+    chunkMesh.GpuRenderLightBinding.reset();
     chunkMesh.GpuHasDarkFace = false;
     chunkMesh.GpuHasLitDrawableFace = false;
     chunkMesh.GpuBlockRanges.clear();
@@ -12344,6 +12353,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       chunkMesh.GpuResident = true;
       chunkMesh.GpuSlotIndex = -1;
       chunkMesh.GpuQuadCount = 0;
+      chunkMesh.GpuRenderLightBinding.reset();
     }
     const auto oldIt = GreedyVertexCountByChunk.find(chunkCoord);
     if (oldIt != GreedyVertexCountByChunk.end())
