@@ -6219,7 +6219,7 @@
       "other_required_work": "Complete normal renderer physical-field shader cutover and source-epoch authority, capacity fallback, typed section publication/NoDraw diagnostics, persisted content certificates, GPU solver/backend parity, RGB/transparency and cold/warm/edit/eviction/memory/performance matrix remain required by original plan."
     },
     "saturated_skylight_frontier": {
-      "status": "Implemented; independent reference,13restored Release unit/driver tests and7synchronous-light variants PASS. Exact app build/native pending.",
+      "status": "Implemented and verified:13Release unit/driver tests,7synchronous-light variants, exact application build and all named native scoped references PASS. Full RGB and end-to-end falling deadlines remain open.",
       "root_cause": "A27tile fully sunlit AIR computation queued110592max-level seeds, visited663552neighbors and changed0cells. Saturated interiors cannot raise their already maximum neighbors; only interfaces with non-saturated compute tiles can initiate useful transport.",
       "implementation": "Classify exact full tile sky15 once after direct column seeding. Build signed-axis boundary mask for adjacent non-saturated compute tiles; seed only these planes from saturated tiles. All seeds retained in other tiles; block light unchanged. No halo/world extent or input/read-set/certificate contract change. Per-channel candidate/queued/pop/neighbor/update counters and saturated-tile count are observation only. Async worker_done receipts expose sky/block work alongside compute_ms.",
       "independent_reference": "section_skylight_frontier_test: four authored geometry cases including allAIR, roof with lateral entry, cave/hole plus water curtain, deterministic mixed shadow/water. Direct column skylight plus15Jacobi iterations over48cube, comparing every8000padded cell and zero block channel. Existing unknown/clipped-profile/source removal tests also retained.",
@@ -6323,7 +6323,66 @@
         "engine-sky-frontier-restored-tests.log",
         "engine-sky-frontier-synchronous-seven-test.log"
       ],
-      "limits": "Local Compute timing is not a native delivery-latency or overall FPS claim. Prior930.58ms/1.329s falling-consumer counterexample and0.64s capped forecast remain open; native work receipts and physics/latency-aware bounded forecasting still required."
+      "limits": "Local Compute timing is not a native delivery-latency or overall FPS claim. Prior930.58ms/1.329s falling-consumer counterexample and0.64s capped forecast remain open; native work receipts and physics/latency-aware bounded forecasting still required.",
+      "release_build": "engine-sky-frontier-release-build.log: required Cubatarium Release target/parallel8 exits0; static executable verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-sky-frontier-visible-items-native",
+        "observation": "sky-frontier-native-regression-observation.json",
+        "source_commit": "df39d15af632ed97f2845a6d7c5132ece48b44e6",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "ingame_frames": 2238,
+        "chunks": 22,
+        "outside_initial_samples": 1312,
+        "relocations_after_start": 0,
+        "inspection_pngs": "30/30",
+        "camera_ready": "2238/2238",
+        "first_person_ready": "2238/2238",
+        "creature_ready": "1558/1558",
+        "saved_item_draws": 494,
+        "saved_item_primitives": 1482,
+        "opaque_depth_checks": 429,
+        "packed_floor_light_checks": 196,
+        "warmup": [
+          {
+            "reason": "live_blockers",
+            "elapsed_ms": 35054.4,
+            "visibility_debt": 0,
+            "underfeet_ready": true,
+            "forced_with_debt": false
+          }
+        ],
+        "native_work": {
+          "schema": "native-sky-frontier-work-observation.v1",
+          "distinct_worker_jobs": 2076,
+          "jobs_with_work_counters": 2076,
+          "jobs_with_reduced_seeds": 1637,
+          "complete_input_jobs": 1442,
+          "totals": {
+            "sky_seed_candidates": 310034093,
+            "sky_seeds": 51521059,
+            "sky_neighbor_visits": 318532734,
+            "sky_saturated_tiles": 64395,
+            "block_seeds": 0,
+            "block_neighbor_visits": 0
+          },
+          "compute_ms": {
+            "median": 14.84985,
+            "max": 90.2611,
+            "p95": 39.9496
+          },
+          "scope": "Observed native per-job work and wall-time, deduplicated by jobid within this one world run. No controlled native A/B speedup, delivery-deadline, GPU solver or full RGB acceptance.",
+          "complete_input_compute_ms": {
+            "jobs": 1442,
+            "median": 18.291249999999998,
+            "max": 90.2611,
+            "p95": 43.8844
+          }
+        },
+        "provenance": "EXE digest/current source World_261/byte-exact config restore independently checked. Native counters demonstrate reduced seeding in1637of2076jobs; compute median14.85ms/p9539.95ms/max90.26ms describe this observed job mix only.634jobs had incomplete inputs; no readiness claim for those results. Prior930.58ms failing-job counterexample has different work/context and is not erased or treated as a controlled comparison."
+      }
     }
   }
 }
