@@ -7389,15 +7389,24 @@
         "exe_shader_config_world_hash_checks": "all true; runtime shader files match source exactly",
         "embedded_version": "FAILstaled8f9c9c despite generateddff4cb3; actual new SectionLightSurface packed draw receipt observed. Environment gitsha does not independently prove embedded-source provenance.",
         "runtime": "app0,wrapper2,overallUNTESTED;1688frames267.066sec19chunks1226outside0teleport",
-        "references": "opaque_depth736checks/0faults;floor_draw_source296checks/0faults;camera1688ready15/0;firstperson,creature388samples,AIRservicePASS;37PNGs and26/26inspection pending exact report review",
-        "limits": "No full RGB/fog/transparency acceptance or inference that originalwet287fault counterexample repaired."
+        "references": "opaque_depth736checks/0faults;floor_draw_source296checks/0faults (all witnessed packed GPU, baked SSBO source reference, not shader RGB);camera1688ready15/0;firstperson,creature388samples,AIRservicePASS;37PNGs and26/26inspection",
+        "limits": "No full RGB/fog/transparency acceptance or inference that originalwet287fault counterexample repaired.",
+        "performance": "FAIL: fly frame median113.8175ms, overall89.0198ms, scene22.15705ms, streamphase66.0311ms; pressure proxy0.1111 and readiness debt0.6032. Afterstop readiness debt0/meshmissing0 but visible_black_stalled_max1. Missing legacy metrics also make some gates false. No controlledA/B, no causal attribution to sampler. See surface-native-performance-observation.json."
       }
     },
     "embedded_version_build_order": {
-      "status": "Reproduced and build graph fix implemented; positive Release verification pending.",
+      "status": "Fixed and committed95674d643. Required Release buildPASS/static6systemDLL; binary string and generated-header/current committed source agree; generated project references prove all four version consumers ordered after version target.",
       "evidence": "Native screenshotinspection0015 and actualbinEXE ASCIIversion ared8f9c9c while generated/Version.h isdff4cb3. Version consumersCore/WorldLifecycleFacade/MainMenu/InGameHud are object-library sources. cubatarium_version dependency only on final executable can run after object-library dependency scans/compilation.",
       "fix": "Every desktop CubatariumObjects target depends explicitly on cubatarium_version before any object compile. Header remains copy_if_different, avoiding rebuilds when version unchanged.",
-      "acceptance": "Required Release build; embedded EXE version exactly matches current generated header/current committed source and contains no stale predecessor string; inspect generated MSBuild project ordering."
+      "acceptance": "Required Release build; embedded EXE version exactly matches current generated header/current committed source and contains no stale predecessor string; inspect generated MSBuild project ordering.",
+      "verification": {
+        "artifact": "build/desktop-msvc/engine-version-object-order-verification.json",
+        "built_source_commit": "95674d6433ddfa1281bff23579d6d14e748f0515",
+        "version": "0.0.4.1-codex-engine-streaming-remediation-95674d6",
+        "exe_versions": "only95674d6, stale predecessor absent",
+        "scope": "Build-only dependency fix; no new native flight attributed to rebuilt binary."
+      },
+      "historical_provenance_limit": "Earlier native route git_sha is an injected requested checkout label; it is not independent evidence of embedded source identity. Preserve results tied to their measured EXE hashes and actual runtime receipts, without pretending stale HUD proves old entire binary or requested gitsha proves all embedded source. Old original287fault geometry counterexample remains valid as observed behavior. Future harness should record/validate embedded build identity in addition to requested checkout."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7419,7 +7428,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "resource infrastructure verified, default renderer integration pending",
+      "S5": "Resource infrastructure, Cross runtime and packed per-fragment physical surface sampling verified in scoped driver/native checks. CPU/direct/MDI physical-field integration and geometry/light invalidation separation pending; no fullS5acceptance.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
