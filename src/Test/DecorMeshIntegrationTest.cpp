@@ -2089,7 +2089,8 @@ static void ProbeCrossPhysicalShader(
     cutum::SectionRenderLightBindings &owner,
     const std::shared_ptr<cutum::SectionRenderLightBinding> &binding,
     size_t index, glm::ivec3 cell, std::array<uint32_t, 4> expected, bool gles,
-    bool override_handle = false, bool invalid_handle = false)
+    bool override_handle = false, bool invalid_handle = false,
+    bool physical_light = true)
 {
   using namespace cutum;
   std::ifstream file(std::string(CUBATARIUM_SOURCE_DIR) +
@@ -2162,7 +2163,8 @@ static void ProbeCrossPhysicalShader(
   glUniformMatrix4fv(glGetUniformLocation(program, "mvp_matrix"), 1, GL_FALSE,
                      &matrix[0][0]);
   glUniform1i(glGetUniformLocation(program, "uDecorShape"), 0);
-  glUniform1i(glGetUniformLocation(program, "uUseSectionLight"), 1);
+  glUniform1i(glGetUniformLocation(program, "uUseSectionLight"),
+              physical_light);
   glUniform1i(glGetUniformLocation(program, "uOverrideSectionLightHandle"),
               override_handle || invalid_handle);
   auto words = owner.PrepareDraw(binding);
@@ -2672,6 +2674,8 @@ TestCrossCanonicalDark(cutum::UBlockRegistry &registry,
          "canonical dark Cross geometry publishes");
   ProbeCrossPhysicalShader(backend, pass.batches[0], owner, binding, 0,
                            {4, 4, 4}, {0, 0, 1, 1}, gles);
+  ProbeCrossPhysicalShader(backend, pass.batches[0], owner, binding, 0,
+                           {4, 4, 4}, {15, 15, 1, 1}, gles, true, true, false);
   backend.DestroyAll(pass);
 }
 #endif

@@ -6739,13 +6739,15 @@ void UGeometryEngine::DrawCrossInstancedBatches(
       WorldInstance->GetLightingPipeline().GetMode() == LightingMode::Full;
   crossInstancedShader->SetBool("uUseSectionLight", physical_light);
   crossInstancedShader->SetBool("uOverrideSectionLightHandle", physical_light);
+  // Sampler types must use distinct units even when the physical branch is
+  // disabled by Flat policy; GL validates active sampler aliases at draw.
+  crossInstancedShader->SetInt("uSectionLightAtlas", 7);
+  crossInstancedShader->SetInt("uSectionLightBindings", 8);
   bool physical_bound = false;
   if (physical_light && SectionLightOwner)
   {
     SectionLightOwner->CollectRetired();
     physical_bound = SectionLightOwner->Bind(7, 8);
-    crossInstancedShader->SetInt("uSectionLightAtlas", 7);
-    crossInstancedShader->SetInt("uSectionLightBindings", 8);
     const auto incarnation = SectionLightOwner->ShaderIncarnation();
     glUniform2uiv(crossInstancedShader->GetUniformLocation(
                       "uSectionLightTableIncarnation"),
