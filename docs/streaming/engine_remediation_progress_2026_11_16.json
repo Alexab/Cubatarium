@@ -6739,12 +6739,67 @@
       }
     },
     "scene_light_refresh_before_paint": {
-      "status": "Implemented; actual canonical solver/provenance/budget test PASS and two negative controls RED with exact restore. Required Release application build/native sprint pending.",
+      "status": "Implemented and verified: actual canonical solver/provenance/budget test PASS, two RED controls with exact restore, required Release app/static6DLLcheck PASS. Native sprint all named scoped references PASS with real foreground repair receipt; genericRGBUNTESTED and full original goal still open.",
       "implementation": "Main-thread SceneLightRefresh repairs only existing recorded sky/block fields that lost current-input proof. Uses same pinned-catalog physical snapshot/solver, requires complete current input context and matching padded interior before installation/recording. Camera preparation runs before paint; existing creature/item/first-person requests share the same per-world/per-streaming-frame budget. At most2attempts,4mssoft accumulated budget, no repeated attempt for same section. One solve is not preemptible and may exceed4ms. Missing/unloaded/unknown fields remain streaming/prefetch debt, never guessed AIR or marked ready.",
       "publication": "Successful repair records canonical provenance and settlement. Changed fields queue normal mesh dependency invalidation; changed resident sections receive priority legacy remesh. AIR repair allocates no geometry. Background jobs remain subject to current input checks; geometry-only captures do not stale merely because foreground light was updated.",
       "validation": "engine-paint-light-refresh-restored-test.log PASS relight_result_install_test. Real late roof arrival invalidates prior physical AIR field, foreground solve yields analytic sky14shadow/15neighbor. Same-field consumers reuse it, two-attempt hard bound and same-frame credit retention checked, new frame services remaining section, soft time cutoff tested. Unknown roof context preserves old bytes/revision and cannot fabricate readiness; duplicate rejected section, no-receipt section and zero epoch covered.",
       "negative_controls": "engine-paint-light-refresh-negative-controls.json: allowing unknown context fails preserved-byte/revision check; replenishing same-frame credit fails bounded-work check. Header restored byte-exact, target rebuilt and test GREEN. No RED application build/launch.",
-      "limits": "This is a bounded correctness fallback for stale fields, not universal missing-field delivery, a hard4msdeadline or final performance acceptance. Normal separate GPU field shaders, persistent certificates, unified lifecycle and full visual/backend matrix remain open."
+      "limits": "This is a bounded correctness fallback for stale fields, not universal missing-field delivery, a hard4msdeadline or final performance acceptance. Normal separate GPU field shaders, persistent certificates, unified lifecycle and full visual/backend matrix remain open.",
+      "release_build": "engine-paint-light-refresh-release-build.log: required Cubatarium Release command exits0; static dependency verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-paint-light-refresh-sprint-native",
+        "observation": "scene-light-refresh-sprint-observation.json",
+        "source_commit": "b3d57a5866b1439216eea5c3390f99bdac9c6012",
+        "app_exit": 0,
+        "observed_shell_exit": 1,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "runtime": {
+          "ingame_frames": 2908,
+          "wall_elapsed_sec": 143.207,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 1919,
+          "diagnostic_relocations_after_start": 0
+        },
+        "camera_ready": "2908/2908",
+        "first_person_ready": "2908/2908",
+        "creature_ready": "478/478",
+        "falling_actor": {
+          "schema": "engine-falling-creature-reference.v1",
+          "status": "PASS",
+          "reason": "identity_joined_falling_creature_fields",
+          "identity": 4,
+          "samples": 9,
+          "frames": 9,
+          "sections": 2,
+          "vertical_span": 13,
+          "independent_frames": 9,
+          "missing_identity_rows": 0,
+          "skipped": 71,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "declared saved actor identity, measured downward speed, multiple sections and canonical sky15 field at actual draw samples; no GPU issue, RGB or universal delivery guarantee"
+        },
+        "saved_item_draws": 850,
+        "saved_item_primitives": 2550,
+        "opaque_depth_checks": 1254,
+        "packed_floor_light_checks": 460,
+        "inspection_pngs": "30/30",
+        "refresh_receipts": [
+          {
+            "frame_epoch": 1220,
+            "coord": "(-9,-3,3)",
+            "status": 4,
+            "changed": 0,
+            "attempts": 1,
+            "elapsed_ms": 12.4366
+          }
+        ],
+        "camera_input_failure_rows": 0,
+        "provenance": "EXE/source World_261/config restoration independently checked alltrue. Actual foreground repair atframe1220section(-9,-3,3)before paint, statusRefreshed, unchanged physical bytes, one attempt12.4366ms. One successful run does not establish universal delivery or full visual/performance acceptance. Earlier232and11frame failures retained."
+      },
+      "performance_limit": "Observed one foreground attempt12.4366ms exceeds soft4mslimit. Budget correctly cannot preempt a solve; this bounds subsequent work only. Full cost distribution, hard latency control and lower-end/GLES performance remain open. Do not describe fallback as a guaranteed4ms operation."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -6769,6 +6824,6 @@
       "S5": "resource infrastructure verified, default renderer integration pending",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
-    "latest_native_counterexample": "934d2d220sprint:11camera/first-person unready frames(3+8), all caused by actual upper geometry identity/content change,0observed false absentKnownAir-toUnknown transitions. Earlier62c35c69d232frameand57923959720frame failures retained. Current-input refresh/publication is the next S2/S4priority."
+    "latest_native_counterexample": "Historical latestFAIL remains934d2d220sprint11unready frames after real roof changes. Successor b3d57a586sprint has2908/2908camera/first-person ready with an actual12.4366msforeground repair; all named scoped references PASS, RGBUNTESTED. No universal/matrix closure or deletion of prior failures."
   }
 }
