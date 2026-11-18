@@ -968,6 +968,10 @@ if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio")
     foreach(_group IN LISTS CUBATARIUM_OBJECT_GROUPS)
         set(_object_target "CubatariumObjects_${_group}")
         add_library(${_object_target} OBJECT ${CUBATARIUM_OBJECT_SOURCES_${_group}})
+        # The executable's dependency only orders its own sources/link. These
+        # object libraries also include Version.h and must see the refreshed
+        # header before their compiler dependency scan, including MSBuild's.
+        add_dependencies(${_object_target} cubatarium_version)
         target_link_libraries(${_object_target} PRIVATE CubatariumCompileConfig)
         set_property(TARGET ${_object_target} PROPERTY
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

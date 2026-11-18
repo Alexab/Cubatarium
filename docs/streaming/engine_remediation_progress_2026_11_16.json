@@ -7377,12 +7377,27 @@
       "next": "Keep original287fault counterexample open. Complete default surface physical-field shader/handle transport across CPU/direct/MDI/packed paths, then remove light from geometry dependencies. Extend independent cave canonical-dark and RGB/transparency acceptance rather than treating observational ready counts as oracle."
     },
     "surface_physical_field_consumption": {
-      "status": "Shared production fragment sampler and packed runtime consumption implemented.6Release testsPASS after5negative controls/9expected driver failures and exact source restoration. Required Release app build/native pending. FullS5 remains incomplete.",
+      "status": "Committeddff4cb336;5REDcontrols/9expected driver failures, exact restore and6ReleaseGREEN. Required app buildPASS/static6systemDLL. Native route/references scopedPASS, genericRGBUNTESTED. Embedded version stamp stale due independent build-order defect; source-version audit recorded separately. FullS5 remains incomplete.",
       "implementation": "Common sectionLightSurfaceFetch resolves half-centered face plane and per-fragment tangent cells for all6cube directions; fetches exact canonical outside-cell sky/block including valid0/0, without borrowing neighboring light. Invalid resource discards rather than borrowing baked values. Production desktop/GLES greedy fragment shader exposes physical surface mode; Flat/baked mode remains explicit. Physical desktop mode does not apply legacy preview floor/fade. GLES world-position varying promoted to highp across all linked producer shaders. File-loaded integer samplers default to distinct7/8units even when physical branch disabled.",
       "runtime": "Packed renderer enables physical mode inFull, retains artifact-specificGpuRenderLightBinding, refreshes only geometry-compatible current fields, retains predecessor field if replacement unavailable, and submits all artifact ranges before staging another ordered fallback. First actual packed draw has SectionLightSurface receipt. CPU/direct/MDI runtime sampling still pending; no removal of light merge keys/dependencies until all consumers covered.",
       "validation": "TestSurfacePhysicalField uses production vertex AND fragment programs onactualGL3.3/GLES3.1 plus actual packed SSBO vertex pulling onGL4.3. Real CPU calculation/proof and GPU atlas; white RGBA8target independently checked over16pixels on merged quads,6directions, open-sky15/block0, diagonal emitter14-Manhattan with same geometry/handle, roofed canonical0/0 despite baked15/15, invalid handle discard, explicitFlat fallback, onepage/oneslot ordered fallback. Near and negative~32kcoordinates tested.",
       "controls": "swap_surface_channels,constant_merged_surface_cell,borrow_for_canonical_surface_zero,substitute_invalid_surface_handle each fail desktop+GLES exact pixel assertion; wrong_packed_surface_face fails GL4.3 actual packed draw. Artifact engine-surface-field-negative-controls.json;6/6GREEN inengine-surface-field-restored-tests.log. Initial coding errors channel reversal and incorrect test-catalog emission15 assumption were detected beforeappbuild and corrected; test fireemission14.",
-      "limits": "Scoped GPU raw-light output does not certify RGB/fog/material appearance or full-world streaming. Original287fault intermittent native failure remains open. CPU/direct/MDI transport, field-only lifecycle, persistence/GPU parity, visual/performance matrix remain required."
+      "limits": "Scoped GPU raw-light output does not certify RGB/fog/material appearance or full-world streaming. Original287fault intermittent native failure remains open. CPU/direct/MDI transport, field-only lifecycle, persistence/GPU parity, visual/performance matrix remain required.",
+      "native_observation": {
+        "artifact": "build/desktop-msvc/engine-surface-field-native/surface-physical-field-native-observation.json",
+        "requested_source": "dff4cb336",
+        "exe_shader_config_world_hash_checks": "all true; runtime shader files match source exactly",
+        "embedded_version": "FAILstaled8f9c9c despite generateddff4cb3; actual new SectionLightSurface packed draw receipt observed. Environment gitsha does not independently prove embedded-source provenance.",
+        "runtime": "app0,wrapper2,overallUNTESTED;1688frames267.066sec19chunks1226outside0teleport",
+        "references": "opaque_depth736checks/0faults;floor_draw_source296checks/0faults;camera1688ready15/0;firstperson,creature388samples,AIRservicePASS;37PNGs and26/26inspection pending exact report review",
+        "limits": "No full RGB/fog/transparency acceptance or inference that originalwet287fault counterexample repaired."
+      }
+    },
+    "embedded_version_build_order": {
+      "status": "Reproduced and build graph fix implemented; positive Release verification pending.",
+      "evidence": "Native screenshotinspection0015 and actualbinEXE ASCIIversion ared8f9c9c while generated/Version.h isdff4cb3. Version consumersCore/WorldLifecycleFacade/MainMenu/InGameHud are object-library sources. cubatarium_version dependency only on final executable can run after object-library dependency scans/compilation.",
+      "fix": "Every desktop CubatariumObjects target depends explicitly on cubatarium_version before any object compile. Header remains copy_if_different, avoiding rebuilds when version unchanged.",
+      "acceptance": "Required Release build; embedded EXE version exactly matches current generated header/current committed source and contains no stale predecessor string; inspect generated MSBuild project ordering."
     }
   },
   "execution_status_review_2026_11_18": {
