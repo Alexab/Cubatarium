@@ -5862,7 +5862,7 @@
       "next": "Connect typed geometry+physical snapshots to prepared GPU binding leases before destructive mesh commit. Retain leases with actual CPU/MDI/packed/cross/transparent artifacts through final draw. Feed shared interface to all world shaders/backends, including generation/epoch metadata; only then remove baked lighting dependency."
     },
     "gpu_section_render_light_resource_publication": {
-      "status": "Production cache/store interfaces implemented; headless+realGL physical publication/field-only replacement/error recoveryPASS;4initial mutation controls+deferred-release mutation detected;prior-error actualRED fixed;exact sources restored and final3GREEN. Greedy pool driverPASS; exact Release and native verification pending. Normal world shader cutover incomplete.",
+      "status": "Implemented/proven production cache+physical GPU owner interfaces;3profiled tests+greedy GPU poolPASS;6negative controls detected, exact sources restored;Release/static6DLL PASS; frozen native scoped references allPASS. Normal world shader/default cutover and broad matrix still incomplete.",
       "typed_owner": "GL-free SectionRenderLightBinding lease retains exact geometry+physical snapshot and logical source epoch. SectionRenderLightBindings gates GPU table Prepare/Refresh by source epoch, world geometry identity and typed immutable physical proof. RAII entries release final atlas/table reference on owning GL thread; Reset deactivates weak state before deleting GL resources, so retained stale leases become invalid/zero shader words and can outlive context-owner cleanup safely. Independent cache capture epochs use independent stores.",
       "cache_transaction": "Optional SetPrepareRenderLightFn executes before destructive geometry replacement for packed CommitGpuMeshResult, async CPU ApplyMeshResult and synchronous RebuildChunk. Require normalized actual7source stamps, compatible physical snapshot, non-preview, live prepared lease and exact epoch/field identity. Failure retains predecessor geometry/resources and queues retry. Packed failure frees only completed staging slot. Prepared token retained by ChunkGreedyMesh, CPU GreedyMeshBatch, packed draw refs and greedy GPU pass batches; last GL submission precedes final release/fence. Callback is not yet bound by normal GeometryEngine. Cross vegetation instance handles and retained per-material GPU batch resource vectors are still pending; do not infer all-draw coverage from greedy and packed lease propagation.",
       "retry_correction": "Synchronous dirty drains snapshot bounded candidate coordinates and erase each ticket BEFORE invoking builder; immediate and nearest-first sync paths likewise erase before building. A rejected builder can requeue the same coordinate without subsequent erase deleting it; do not retain lazy unified-queue iterator across callbacks. Negative sync budgets clamp0. This also preserves existing non-resource builder retry requests.",
@@ -5871,7 +5871,7 @@
       "world_lifetime_evidence": "Wrong source epoch and geometry rejected; independent sync cache has its own capture epoch after RebuildAll. BeginWorld with reused logical epoch invalidates retained old binding/Refresh and yields different shader handle incarnation. Zero logical epoch remains valid.",
       "test_development": "Initial test build exposed GLFW-before-GLEW include order, then an unqualified CHUNK_SIZE in probe; fixed before passing builds. Initial unchanged-geometry remesh was legitimately elided; fixture now actually edits a block/recalculates proof before fault injection. Whole-cache dirty assertions replaced with target-coordinate scope because independent neighbor obligations are outside this test. Original failed logs retained; no failed/RED app launch.",
       "limits": "Normal world renderer still uses baked light; no full shader/backend cutover, typed NoSurface, GPU resource capacity fallback, field-only world scheduling, GLES parity, full visual/RGB/transparency or performance acceptance claimed. Cross-instance per-section metadata/resource lifetime and MDI metadata still need integration. Before default GPU mode, bind owner at engine lifecycle, carry authoritative capture-world epoch (not observational traces), feed all world draw consumers and verify reset/eviction/failure behavior.",
-      "next": "Finish RED/restoredGREEN, exact Release app link, then frozen strict native no-teleport route regression. Continue actual GeometryEngine/backend/shader cutover; only after all paths consume GPU field remove light from merge/job keys.",
+      "next": "Before normal cutover: authoritative source capture-world epoch propagation, typed geometry NoSurface/current section readiness and bounded atlas/binding capacity coverage; then GeometryEngine lifecycle binding and every CPU/MDI/packed/cross/transparent/GLES world shader consumer. Full RGB/transparency, persistent content proofs, edit/eviction/high-speed/RD8/backend/performance matrix remain open. Do not remove baked lighting/job keys before all draw paths consume physical field resources.",
       "negative_controls": [
         "world-epoch-red: remove source epoch gate from real Prepare; driver wrong-epoch authority assertionFAIL",
         "physical-bytes-red: upload all-zero volume instead of certified field; actual shader all8000cell comparisonFAIL (headless alone insufficient)",
@@ -5883,7 +5883,62 @@
       "restoration": "Four initial variants restored exact cache/store bytes in finally and rebuiltGREEN. Deferred-release mutation likewise restored exact bytes and rebuilt; final all-three-restored-test.log verifies3/3 tests. Intermediate script final test invocation selected only driver (not3); explicit corrected CTest regex then ran3/3, authoritative all-three-restored log. No app built/launched from RED sources.",
       "error_transaction_correction": "SectionLightBindingTable::Upload rejects pending caller GL error before writing live metadata; otherwise post-write glGetError could misreport success as failure and expose successor despite rollback. Actual raw driver reproductionRED thenGREEN tests Replace and Release preserve predecessor. Physical store reserves bounded retirement handles to full table capacity, so final Entry destructor can defer failed invalidation without allocation; CollectRetired retries at most64 handles before nonblocking atlas fence collection. One-slot driver proves loss of final CPU owner, retained bounded capacity before collection, then reuse after retry/fence.",
       "final_tests": "engine-render-light-publication-final-restored-green-build.log + engine-render-light-publication-all-three-restored-test.logPASS: decor_mesh_integration_test, section_render_light_bindings_driver_test, section_light_atlas_driver_test. Field-only and earlier world-scope logs retained. Driver AMD Radeon(TM) Graphics GL3.3.",
-      "greedy_pool_regression": "engine-render-light-publication-greedy-pool-build.log/test.logPASS: existing real GL greedy_vertex_pool_driver_test after resource lease propagation in GreedyGpuBatch/UploadBatch/DestroyBatchBuffers; existing OOM/group-retention/range/material checks. Not a dedicated real-token GPU pass lifetime test."
+      "greedy_pool_regression": "engine-render-light-publication-greedy-pool-build.log/test.logPASS: existing real GL greedy_vertex_pool_driver_test after resource lease propagation in GreedyGpuBatch/UploadBatch/DestroyBatchBuffers; existing OOM/group-retention/range/material checks. Not a dedicated real-token GPU pass lifetime test.",
+      "release": "engine-render-light-publication-release-build.log: exact required Release Cubatarium --parallel8 command terminal0, static verification PASS6systemDLL; sourceffae71207. After all RED restoration/green unit checks, no mutated app build.",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-render-light-resource-publication-visible-items-native",
+        "source": "ffae7120706e333ab5e0b70462d7775ee35f55eb",
+        "runtime_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED generic visual missing reference; no scoped FAIL",
+        "route": "PASS22chunks946outside-initial samples;0relocations;botcomplete30/30verifiedposes",
+        "startup": {
+          "columns": 81,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "focus": [
+            1,
+            -4,
+            3
+          ],
+          "known_air_sections": 1372,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 4,
+          "ready": true,
+          "render_distance_chunks": 4,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1944,
+          "surface_sections": 572,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "camera_fp": "PASS1483/1483ready each",
+        "creature": "PASS415/415ready182epochs;0faults",
+        "world_items": "PASS230draws690primitives;authoredIDs53/177draws;0faults",
+        "floor": "PASS272opaque-depthchecks;98draw-source-lightchecks packed GPU;0faults",
+        "producer": "PASSAIRproducer receipts; rawCPUscene counts in regression-observation.json",
+        "disk": {
+          "completed": 203,
+          "distinct": 203,
+          "repeated": 0
+        },
+        "queue_maxima": {
+          "sample_visits": 8,
+          "sample_fresh": 4,
+          "sample_fair": 8,
+          "sample_examined": 12,
+          "sample_captures": 1
+        },
+        "provenance": "EXE/Python harness/fixtures and worktree stayed frozen until terminal. No compilers/tests during native run; idle MSBuild reuse nodes are not active compilation. Native path remains baked shading because normal GeometryEngine resource callback/shaders not yet enabled. No world-GPU-light shader/color/performance acceptance inferred."
+      }
     }
   }
 }
