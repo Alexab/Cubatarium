@@ -6912,12 +6912,57 @@
       }
     },
     "no_draw_physical_resource_admission": {
-      "status": "Implemented;5Release testsPASS, two controls RED with byte-exact restore. Required application build/native regression pending. This is a resource-admission prerequisite, not default field shader activation.",
+      "status": "Implemented:5Release testsPASS, two controls RED with byte-exact restore, required Release application build/static6DLLcheckPASS. RD8 stationary native startupPASS; full originalS0..S6goal remains active.",
       "implementation": "Private SectionNoSurfaceProof may admit a verified empty artifact without allocating physical GPU light. Source epoch remains nonzero/current and exact7geometry stamps must match. Empty output alone is insufficient. Packed and actual async CPU first-publication gates now recognize current NoDraw evidence independently of light settlement; normal visible first publication still requires current physical light or explicit legacy preview policy. Synchronous Cross instances are collected from the same pinned snapshot/catalog as faces and admitted before resource publication instead of read from live chunk afterwards.",
       "validation": "engine-no-draw-resource-tests.log and engine-no-draw-resource-restored-tests.log:5/5PASS. ResidentAIR and fully hidden solid obtain real private proofs, publish synchronously without physical callback/binding/snapshot, and do not fabricate light completion/settlement. Active point-consumer lease remains required. Actual async hidden-solid worker result publishes with no GPU light allocation. Low-level packed zero-quad admission receives an empty result and independently validates actual CPU NoSurface geometry; no actual GPU empty-mesh computation is claimed by that case. Missing/stale epoch, wrong geometry stamps, invalidated proof, visible cube/sprite/cutout/fluid without computed light and unknown neighbors are rejected.",
       "negative_controls": "engine-no-draw-resource-negative-controls.json: bypass private proof accepts empty-looking data and fails authority check; restoring mandatory physical light at packed first-publication gate reproduces NoDraw block. Byte-exact source restore, target rebuild and5testsGREEN. No RED application build or launch.",
       "discovery": "New packed test initially failed before reaching resource allocation: earlier packed and async first-publication guards required light completion even for independently verified NoDraw. Moved classification before these guards and preserved epoch/stamp checks. A fresh packed-cache fixture separates epoch-rejection from publication tests.",
-      "remaining": "Normal GeometryEngine physical owner installation, default Cross field shader and ordered range fallback, other CPU/MDI/packed shader paths, legacy NoDraw blocker-list/lifecycle convergence and full acceptance matrix remain open. Low-level packed commit currently assumes upstream checked result.success; audit that boundary before default packed field consumption."
+      "remaining": "Normal GeometryEngine physical owner installation, default Cross field shader and ordered range fallback, other CPU/MDI/packed shader paths, legacy NoDraw blocker-list/lifecycle convergence and full acceptance matrix remain open. Low-level packed commit currently assumes upstream checked result.success; audit that boundary before default packed field consumption.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-no-draw-resource-rd8-native",
+        "observation": "no-draw-resource-rd8-observation.json",
+        "source_commit": "1364aee56f9b845faf612c05c481cc39c31fc6df",
+        "app_exit": 0,
+        "observed_wrapper_exit": 0,
+        "status": "PASS within startup-only scope",
+        "first_paint": {
+          "certified_no_surface_sections": 1298,
+          "columns": 289,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 289,
+          "expected_sections": 6936,
+          "focus": [
+            1,
+            -4,
+            3
+          ],
+          "known_air_sections": 4598,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 8,
+          "ready": true,
+          "render_distance_chunks": 8,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 6936,
+          "surface_sections": 2338,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "enter_gate_elapsed_ms": 572910.4954,
+        "wall_elapsed_sec": 634.5,
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true
+        },
+        "limits": "Stationary startup only. No frontier, pixel, transparency or physical-light oracle. About573s gate is a performance concern; no controlled A/B comparison."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
