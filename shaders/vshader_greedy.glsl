@@ -8,7 +8,7 @@ layout (location = 4) in float aBlockLight;
 layout (location = 5) in float aWetness;
 layout (location = 6) in float aLightPreview;
 
-out vec3 vWorldPos;
+out highp vec3 vWorldPos;
 flat out vec3 vInstanceCell;
 out vec2 vUV;
 flat out int vFaceIndex;

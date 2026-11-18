@@ -7487,6 +7487,30 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
   }
   packedGreedyShader->SetFloat("uLightPreviewOverride", 0.0f);
   packedGreedyShader->SetFloat("uLightPreviewFade", 0.0f);
+  const bool physical_light =
+      WorldInstance &&
+      WorldInstance->GetLightingPipeline().GetMode() == LightingMode::Full;
+  packedGreedyShader->SetBool("uUseSurfaceSectionLight", physical_light);
+  if (physical_light)
+  {
+    if (!SectionLightOwner)
+    {
+      packedGreedyShader->Unuse();
+      glActiveTexture(GL_TEXTURE0);
+      return 0;
+    }
+    SectionLightOwner->CollectRetired();
+    if (!SectionLightOwner->Bind(7, 8))
+    {
+      packedGreedyShader->Unuse();
+      glActiveTexture(GL_TEXTURE0);
+      return 0;
+    }
+    const auto incarnation = SectionLightOwner->ShaderIncarnation();
+    glUniform2uiv(
+        packedGreedyShader->GetUniformLocation("uSectionLightTableIncarnation"),
+        1, incarnation.data());
+  }
   glActiveTexture(GL_TEXTURE0);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                    pipeline->GetAllocator().GetQuadSsbo());
@@ -7545,6 +7569,29 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
               ? WorldInstance->GetCurrentUserCamera()->GetRenderPosition()
               : glm::vec3(0.0f),
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
+    }
+    if (physical_light)
+    {
+      const auto &binding = chunk.renderLightBinding;
+      if (!binding || !binding->IsLive())
+        continue;
+      const auto current =
+          WorldInstance->GetBlockWorld().CaptureRenderLightSnapshot(
+              binding->GeometryInputs().coord);
+      // A retained predecessor keeps its own compatible field when geometry
+      // has changed or a replacement field cannot be uploaded yet.
+      if (current && current->MatchesGeometry(binding->GeometryInputs()))
+        (void)SectionLightOwner->Refresh(binding, binding->WorldEpoch(),
+                                         *current);
+      const auto words = SectionLightOwner->PrepareDraw(binding);
+      if (!words)
+        continue;
+      glUniform4uiv(
+          packedGreedyShader->GetUniformLocation("uSurfaceSectionLightHandle"),
+          1, words->data());
+      // Ordered fallback is transient. Submit all this artifact's ranges
+      // before preparing a different chunk's physical field.
+      glActiveTexture(GL_TEXTURE0);
     }
     ++packed_draw_chunks;
     const glm::ivec3 origin = chunk.chunkCoord * CHUNK_SIZE;
@@ -7620,6 +7667,12 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
         glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0,
                         &drawn_quad_buffer);
       glDrawArrays(GL_TRIANGLES, first, count);
+      if (physical_light && ++PackedPhysicalDrawCount_ == 1)
+        CubatariumLogInfo("SectionLightSurface",
+                          "first_physical_packed_draw coord=(" +
+                              std::to_string(chunk.chunkCoord.x) + "," +
+                              std::to_string(chunk.chunkCoord.y) + "," +
+                              std::to_string(chunk.chunkCoord.z) + ")");
       if (trace && drawn_quad_buffer > 0)
         trace->drawn_ranges.push_back(
             {static_cast<uint32_t>(drawn_quad_buffer),

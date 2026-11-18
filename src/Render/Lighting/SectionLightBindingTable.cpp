@@ -369,6 +369,27 @@ bool sectionLightFetch(highp uvec4 handle, highp ivec3 cell,
                    ivec3(a.zw, b.x) + local, 0).r;
     return true;
 }
+
+// The meshes use half-centered voxel faces. Resolve the two tangent axes per
+// fragment, so a merged quad can span cells with different physical light.
+// Resolve the face plane to its nearest grid boundary before choosing the
+// outside cell; this avoids a tiny directional epsilon disappearing at large
+// signed coordinates or flickering across an interpolated plane.
+bool sectionLightSurfaceFetch(highp uvec4 handle, highp vec3 worldPos,
+                              highp int face, out highp uint packedLight)
+{
+    packedLight = 0u;
+    if (face < 0 || face > 5 || any(isnan(worldPos)) ||
+        any(isinf(worldPos)) ||
+        any(lessThan(worldPos, vec3(-2147483000.0))) ||
+        any(greaterThan(worldPos, vec3(2147483000.0)))) return false;
+    highp ivec3 cell = ivec3(floor(worldPos + vec3(0.5)));
+    highp int axis = (face == 0 || face == 2) ? 2 :
+                      ((face == 1 || face == 3) ? 0 : 1);
+    highp int boundary = int(floor(worldPos[axis] + 1.0));
+    cell[axis] = boundary - ((face == 2 || face == 3 || face == 5) ? 1 : 0);
+    return sectionLightFetch(handle, cell, packedLight);
+}
 )glsl";
 }
 } // namespace cutum

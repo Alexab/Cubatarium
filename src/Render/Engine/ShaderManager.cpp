@@ -31,7 +31,13 @@ bool InitializeFileUniformDefaults(GLuint program, const std::string &path)
   const auto scalar = [&](const char *name, float value)
   { glUniform1f(glGetUniformLocation(program, name), value); };
   if (greedy)
+  {
     scalar("uFluidAlpha", 1.f);
+    // Active integer samplers require distinct units even while physical
+    // surface sampling is disabled (Flat and the Cross vertex-light path).
+    glUniform1i(glGetUniformLocation(program, "uSectionLightAtlas"), 7);
+    glUniform1i(glGetUniformLocation(program, "uSectionLightBindings"), 8);
+  }
   else
   {
     glUniform4f(glGetUniformLocation(program, "uTint"), 1, 1, 1, 1);

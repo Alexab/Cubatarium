@@ -1,6 +1,6 @@
 #version 300 es
 precision mediump float;
-in vec3 vWorldPos;
+in highp vec3 vWorldPos;
 flat in vec3 vInstanceCell;
 in vec2 vUV;
 flat in int vFaceIndex;
@@ -9,6 +9,10 @@ in float vBlockLight;
 in float vWetness;
 
 out vec4 FragColor;
+
+/* CUBATARIUM_SECTION_LIGHT_INTERFACE */
+uniform bool uUseSurfaceSectionLight;
+uniform highp uvec4 uSurfaceSectionLightHandle;
 
 uniform sampler2D texture0;
 uniform int uAnimFrame;
@@ -519,6 +523,13 @@ void main()
     }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);
+    if (uUseSurfaceSectionLight) {
+        highp uint physicalLight;
+        if (!sectionLightSurfaceFetch(uSurfaceSectionLightHandle, vWorldPos,
+                                      vFaceIndex, physicalLight)) discard;
+        sky01 = float(physicalLight & 15u) / 15.0;
+        block01 = float((physicalLight >> 4u) & 15u) / 15.0;
+    }
     float nightAmbient = uEnvMinAmbient * (0.25 + 0.5 * uEnvNightFactor);
     float blockAmbientFloor = clamp(uEnvMinAmbient * 0.15, 0.02, 0.5);
     float skyLit = mix(nightAmbient, 1.0, sky01 * uEnvDayFactor * uEnvSkyLightScale);

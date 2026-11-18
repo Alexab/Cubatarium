@@ -5,7 +5,7 @@ layout(std430, binding = 0) readonly buffer QuadBuf { uvec2 quads[]; };
 uniform mat4 mvp_matrix;
 uniform ivec3 chunkOrigin;
 
-out vec3 vWorldPos;
+out highp vec3 vWorldPos;
 flat out vec3 vInstanceCell;
 flat out int vFaceIndex;
 out float vSkyLight;

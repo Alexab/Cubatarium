@@ -3060,6 +3060,259 @@ static void TestCrossLightArtifactTransport(
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
 static void
+TestSurfacePhysicalField(cutum::UBlockRegistry &registry,
+                         const cutum::UBlockDefinitionStorage *definitions,
+                         bool gles, bool packed, bool distant = false)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 root =
+      distant ? glm::ivec3(-2049, -1, -2050) : glm::ivec3(-1);
+  const glm::ivec3 origin = root * 16, center = origin + glm::ivec3(8);
+  const glm::ivec3 emitter = origin + glm::ivec3(16, 8, 16);
+  world.SetBlock(origin + glm::ivec3(8, 1, 8), kTallGrass);
+  RelightJobSpec spec;
+  spec.min_world_y = world.GetVerticalProfile().MinY;
+  spec.max_world_y = world.GetVerticalProfile().MaxY;
+  const auto calculate = [&]()
+  {
+    const auto result =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(result.inputs_complete && result.chunks.size() == 1,
+           "surface fixture computes complete physical field");
+    world.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *result.chunks[0].padded_light, true, true);
+    Expect(world.RecordLightCalculation(
+               result, registry.GetDefinitionsCatalogSnapshot()) == 1,
+           "surface fixture records real calculation proof");
+    return *world.CaptureRenderLightSnapshot(root);
+  };
+  auto field = calculate();
+  SectionRenderLightBindings owner;
+  Expect(owner.BeginWorld(19, field.GeometryInputs().world_geometry_identity),
+         "surface physical GPU owner initializes");
+  auto binding = owner.Prepare(19, field.GeometryInputs(), field);
+  auto *draw_owner = &owner;
+  Expect(binding && owner.IsResident(binding), "surface field is resident");
+  const std::string directory = std::string(CUBATARIUM_SOURCE_DIR) +
+                                (gles ? "/shaders/gles/" : "/shaders/");
+  UShaderProgram program;
+  Expect(
+      program.CreateFromFiles(directory + (packed ? "vshader_packed_greedy.glsl"
+                                                  : "vshader_greedy.glsl"),
+                              directory + "fshader_greedy.glsl"),
+      "production surface vertex/fragment pair links");
+  GLuint vao = 0, vbo = 0, texture = 0, color = 0, fbo = 0, quads = 0;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  glGenBuffers(1, &vbo);
+  glGenTextures(1, &texture);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  const std::array<uint8_t, 4> white{255, 255, 255, 255};
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               white.data());
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glGenTextures(1, &color);
+  glBindTexture(GL_TEXTURE_2D, color);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 16, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+               nullptr);
+  glGenFramebuffers(1, &fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         color, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "surface reference framebuffer is complete");
+  if (packed)
+    glGenBuffers(1, &quads);
+  glViewport(0, 0, 16, 1);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_BLEND);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_CULL_FACE);
+  program.Use();
+  program.SetInt("texture0", 0);
+  // The actual production fragment shader emits the canonical two channels
+  // through its normal light-debug output; no test replacement fragment code.
+  program.SetFloat("uEnvLightDebugMode", 1);
+  program.SetFloat("uLightPreviewOverride", 1);
+  program.SetFloat("uLightPreviewFade", 1);
+  program.SetFloat("uFluidAlpha", 1);
+  const auto draw = [&](int face, int phase, bool physical, bool invalid)
+  {
+    const int normal = face == 0 || face == 2   ? 2
+                       : face == 1 || face == 3 ? 0
+                                                : 1;
+    const int u = (normal + 1) % 3;
+    const int v = (normal + 2) % 3;
+    const bool negative = face == 2 || face == 3 || face == 5;
+    glm::vec3 pos(center);
+    pos[normal] += negative ? .5f : -.5f;
+    glm::mat4 matrix(0.f);
+    matrix[u][0] = 2.f / 16;
+    matrix[v][1] = 2.f;
+    matrix[3][0] = -(float(origin[u]) + 7.5f) * 2.f / 16;
+    matrix[3][1] = -float(center[v]) * 2.f;
+    matrix[3][3] = 1.f;
+    program.SetMat4("mvp_matrix", matrix);
+    if (packed)
+    {
+      glm::ivec3 local(8);
+      local[u] = 0;
+      local[normal] = negative ? 9 : 7;
+      const uint32_t words[] = {uint32_t(local.x) | (uint32_t(local.y) << 5) |
+                                    (uint32_t(local.z) << 10) | (16u << 15) |
+                                    (1u << 20) | (uint32_t(face) << 25),
+                                (15u << 10) | (15u << 14)};
+      glBindBuffer(GL_SHADER_STORAGE_BUFFER, quads);
+      glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(words), words,
+                   GL_DYNAMIC_DRAW);
+      glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, quads);
+      program.SetIVec3("chunkOrigin", origin);
+    }
+    else
+    {
+      const int corners[] = {0, 1, 2, 0, 2, 3};
+      std::array<GreedyMeshVertex, 6> vertices{};
+      for (int n = 0; n < 6; ++n)
+      {
+        auto p = pos;
+        p[u] = float(origin[u]) +
+               (corners[n] == 1 || corners[n] == 2 ? 15.5f : -.5f);
+        p[v] += corners[n] >= 2 ? .5f : -.5f;
+        auto &vertex = vertices[n];
+        vertex.px = p.x;
+        vertex.py = p.y;
+        vertex.pz = p.z;
+        vertex.faceIndex = float(face);
+        vertex.skyLight = vertex.blockLight =
+            1; // deliberately wrong baked data
+        vertex.lightPreview = 1;
+      }
+      glBindBuffer(GL_ARRAY_BUFFER, vbo);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices.data(),
+                   GL_DYNAMIC_DRAW);
+      const auto attrib = [](GLuint index, GLint size, size_t offset)
+      {
+        glVertexAttribPointer(index, size, GL_FLOAT, GL_FALSE,
+                              sizeof(GreedyMeshVertex),
+                              reinterpret_cast<void *>(offset));
+        glEnableVertexAttribArray(index);
+      };
+      attrib(0, 3, 0);
+      attrib(1, 1, offsetof(GreedyMeshVertex, faceIndex));
+      attrib(2, 2, offsetof(GreedyMeshVertex, u));
+      attrib(3, 1, offsetof(GreedyMeshVertex, skyLight));
+      attrib(4, 1, offsetof(GreedyMeshVertex, blockLight));
+      attrib(5, 1, offsetof(GreedyMeshVertex, wetness));
+      if (!gles)
+        attrib(6, 1, offsetof(GreedyMeshVertex, lightPreview));
+    }
+    auto handle = draw_owner->PrepareDraw(binding);
+    Expect(handle && draw_owner->Bind(7, 8),
+           "surface exact field prepares for draw");
+    if (invalid)
+      *handle = {};
+    glUniform4uiv(program.GetUniformLocation("uSurfaceSectionLightHandle"), 1,
+                  handle->data());
+    const auto incarnation = draw_owner->ShaderIncarnation();
+    glUniform2uiv(program.GetUniformLocation("uSectionLightTableIncarnation"),
+                  1, incarnation.data());
+    program.SetBool("uUseSurfaceSectionLight", physical);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    const float clear[] = {0, 0, 0, 0};
+    glClearBufferfv(GL_COLOR, 0, clear);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    std::array<uint8_t, 64> actual{};
+    glReadPixels(0, 0, 16, 1, GL_RGBA, GL_UNSIGNED_BYTE, actual.data());
+    for (int x = 0; x < 16; ++x)
+    {
+      glm::ivec3 cell(center);
+      cell[u] = origin[u] + x;
+      const int distance = std::abs(cell.x - emitter.x) +
+                           std::abs(cell.y - emitter.y) +
+                           std::abs(cell.z - emitter.z);
+      const int sky = phase == 2 ? 0 : 15;
+      // The test catalog's fire emits14; AIR attenuates by1 per axial step.
+      const int block = phase == 1 ? std::max(0, 14 - distance) : 0;
+      const std::array<uint8_t, 4> expected =
+          physical && invalid ? std::array<uint8_t, 4>{0, 0, 0, 0}
+          : physical ? std::array<uint8_t, 4>{uint8_t(sky * 17),
+                                              uint8_t(block * 17), 0, 255}
+                     : std::array<uint8_t, 4>{255, 255, 0, 255};
+      const std::array<uint8_t, 4> value{actual[x * 4], actual[x * 4 + 1],
+                                         actual[x * 4 + 2], actual[x * 4 + 3]};
+      if (value != expected)
+        std::cerr << "surface packed=" << packed << " phase=" << phase
+                  << " face=" << face << " cell=" << cell.x << ',' << cell.y
+                  << ',' << cell.z << " actual=" << int(value[0]) << ','
+                  << int(value[1]) << ',' << int(value[3])
+                  << " expected=" << int(expected[0]) << ',' << int(expected[1])
+                  << ',' << int(expected[3]) << '\n';
+      Expect(value == expected,
+             "production surface fragment matches independent per-cell light");
+    }
+    Expect(glGetError() == GL_NO_ERROR,
+           "surface physical draw has no GL errors");
+  };
+  for (int phase = 0; phase < 3; ++phase)
+  {
+    if (phase == 1)
+    {
+      const auto previous_words = binding->ShaderWords();
+      world.SetBlock(emitter,
+                     kFire); // diagonal source, outside seven geometry inputs
+      field = calculate();
+      Expect(field.MatchesGeometry(binding->GeometryInputs()) &&
+                 owner.Refresh(binding, 19, field) &&
+                 binding->ShaderWords() == previous_words,
+             "surface field changes without geometry or handle replacement");
+    }
+    else if (phase == 2)
+    {
+      world.SetBlock(emitter, BLOCK_AIR);
+      for (int x = origin.x - 16; x < origin.x + 32; ++x)
+        for (int z = origin.z - 16; z < origin.z + 32; ++z)
+          world.SetBlock({x, 15, z}, kStone);
+      field = calculate();
+      binding = owner.Prepare(19, field.GeometryInputs(), field);
+      Expect(binding != nullptr,
+             "canonical dark surface owns actual zero field");
+    }
+    for (int face = 0; face < 6; ++face)
+      draw(face, phase, true, false);
+  }
+  draw(4, 2, true, true);
+  draw(4, 2, false,
+       true); // Flat/baked mode never reads invalid physical handle.
+  SectionRenderLightBindings fallback;
+  Expect(fallback.BeginWorld(19, field.GeometryInputs().world_geometry_identity,
+                             1, SectionLightVolume::CellCount, 1, true),
+         "surface minimal-capacity owner initializes");
+  binding = fallback.Prepare(19, field.GeometryInputs(), field);
+  Expect(binding && !fallback.IsResident(binding),
+         "surface minimal-capacity field uses ordered fallback");
+  draw_owner = &fallback;
+  for (int face = 0; face < 6; ++face)
+    draw(face, 2, true, false);
+  program.Unuse();
+  glBindVertexArray(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  if (quads)
+    glDeleteBuffers(1, &quads);
+  glDeleteBuffers(1, &vbo);
+  glDeleteVertexArrays(1, &vao);
+  glDeleteFramebuffers(1, &fbo);
+  glDeleteTextures(1, &color);
+  glDeleteTextures(1, &texture);
+}
+
+static void
 TestCrossCanonicalDark(cutum::UBlockRegistry &registry,
                        const cutum::UBlockDefinitionStorage *definitions,
                        bool gles)
@@ -3309,6 +3562,11 @@ int main(int argc, char **argv)
     TestShaderProgramFailureAtomicity(gles_context);
     TestProductionGreedyPrograms(gles_context,
                                  visibility_driver && !gles_visibility_driver);
+    TestSurfacePhysicalField(registry, definitions.get(), gles_context, false);
+    TestSurfacePhysicalField(registry, definitions.get(), gles_context, false,
+                             true);
+    if (visibility_driver && !gles_visibility_driver)
+      TestSurfacePhysicalField(registry, definitions.get(), false, true);
     if (visibility_driver)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);

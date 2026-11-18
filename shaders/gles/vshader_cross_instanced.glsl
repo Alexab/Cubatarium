@@ -14,7 +14,7 @@ uniform bool uOverrideSectionLightHandle;
 uniform highp uvec4 uSectionLightHandle;
 flat out float vSectionLightValid;
 
-out vec3 vWorldPos;
+out highp vec3 vWorldPos;
 flat out vec3 vInstanceCell;
 out vec2 vUV;
 flat out int vFaceIndex;

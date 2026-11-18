@@ -367,6 +367,7 @@ private:
   std::shared_ptr<SectionRenderLightBindings> SectionLightOwner;
   bool PhysicalLightPublicationBound_{false};
   uint64_t CrossPhysicalDrawCount_{0};
+  uint64_t PackedPhysicalDrawCount_{0};
   std::vector<GreedyBatchRef> CachedTransparentSortedRefs;
   uint64_t CachedTransparentSortRevision{0};
   uint64_t CachedTransparentMeshRevision{0};

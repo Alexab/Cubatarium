@@ -1,6 +1,6 @@
 #version 330 core
 
-in vec3 vWorldPos;
+in highp vec3 vWorldPos;
 flat in vec3 vInstanceCell;
 in vec2 vUV;
 flat in int vFaceIndex;
@@ -10,6 +10,10 @@ in float vWetness;
 flat in float vLightPreview;
 
 out vec4 FragColor;
+
+/* CUBATARIUM_SECTION_LIGHT_INTERFACE */
+uniform bool uUseSurfaceSectionLight;
+uniform highp uvec4 uSurfaceSectionLightHandle;
 
 uniform sampler2D texture0;
 uniform int uAnimFrame;
@@ -530,6 +534,13 @@ void main()
     }
     float sky01 = clamp(vSkyLight, 0.0, 1.0);
     float block01 = clamp(vBlockLight, 0.0, 1.0);
+    if (uUseSurfaceSectionLight) {
+        highp uint physicalLight;
+        if (!sectionLightSurfaceFetch(uSurfaceSectionLightHandle, vWorldPos,
+                                      vFaceIndex, physicalLight)) discard;
+        sky01 = float(physicalLight & 15u) / 15.0;
+        block01 = float((physicalLight >> 4u) & 15u) / 15.0;
+    }
     float daySky = clamp(uEnvDayFactor * uEnvSkyLightScale, 0.0, 1.0);
     float nightSky = clamp(uEnvNightFactor * (1.0 - daySky), 0.0, 1.0);
     float dayAmbient = uEnvMinAmbient * (0.42 + 0.38 * daySky);
@@ -550,10 +561,10 @@ void main()
     float previewFloor = (vFaceIndex == 4)
         ? mix(0.42, 0.80, daySky)
         : 0.42;
-    if ((vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
+    if (!uUseSurfaceSectionLight && (vLightPreview > 0.5 || uLightPreviewOverride > 0.5) &&
         uEnvLightDebugMode <= 0.5) {
         lit = max(lit, previewFloor);
-    } else if (uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
+    } else if (!uUseSurfaceSectionLight && uLightPreviewFade > 0.001 && uEnvLightDebugMode <= 0.5) {
         // The chunk just left the ambient preview: ease from the preview level
         // to the real light instead of snapping (visible light blink).
         // Ease only the dark-floor part: bright meshes were never raised by the
