@@ -7061,12 +7061,148 @@
       }
     },
     "packed_artifact_light_ownership": {
-      "status": "Implemented; actualGL4.3compute/SSBO ownership regressionPASS; original lookup negative controlRED; byte-exact restore and5Release testsPASS. Required application build/native pending. Full originalgoal remains active.",
+      "status": "Implemented; actualGL4.3compute/SSBO resource-ownership regressionPASS, original binding-lookup controlRED, exact restore/5Release testsGREEN. Required app Release build/static6DLLcheckPASS. Native19chunk route: all named scoped referencesPASS, genericRGBUNTESTED, independent performance analyzerFAIL. Full originalgoal active.",
       "implementation": "ChunkGreedyMesh now retains GpuRenderLightBinding independently of the latest CPU/Cross RenderLightBinding. Packed refs use the lease belonging to the actually live packed slot. Successful packed publication installs its own lease; no-slot/zero-quad/stale residency and CPU retirement clear packed ownership. CPU keep-old-packed publication preserves that slot and its own field while CPU/Cross successor may own a different geometry/field pair.",
       "validation": "engine-packed-light-ownership-fixture-tests.log PASS actualGL4.3 compute: real6quad cube, compare liveSSBO bytes before/after a canonical dark CPU successor under large roof. New CPU geometry/lease differs; retained packed slot index and bytes remain identical and packed ref carries original live handle. Later lit CPU replacement frees slot and previous weaklease expires. Later real packed successor gets its own lease. Actual zero-quad GPU result retires slot/lease and both bounded slots free. Restored5testsGREEN in engine-packed-light-ownership-restored-tests.log.",
       "negative_control": "engine-packed-light-ownership-negative-control.json: restore pref binding lookup from chunk-current publication; test fails retained packed draw source assertion. Byte-exact source restore/rebuild and5GREEN; no RED application build or launch.",
       "fixture_correction": "Initial positive test used a cache with no initial geometry revision and failed before a packed ref. Added normal initial MarkDirty before demand/settlement/capture; actual GPU publication and entire ownership sequence now pass. No weakened production gate or injected successful GPU result.",
-      "limits": "Packed physical shader still uses baked light; this establishes artifact-specific resource ownership before field shader activation. Actual new ownership regression is desktopGL4.3, not GLES packed-compute parity. Low-level CommitGpuMeshResult success precondition still needs explicit boundary validation before packed cutover. FullRGB/transparency/performance/persistence/backend matrix open."
+      "limits": "Packed physical shader still uses baked light; this establishes artifact-specific resource ownership before field shader activation. Actual new ownership regression is desktopGL4.3, not GLES packed-compute parity. Low-level CommitGpuMeshResult success precondition still needs explicit boundary validation before packed cutover. FullRGB/transparency/performance/persistence/backend matrix open.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-packed-light-ownership-native",
+        "observation": "packed-light-artifact-native-observation.json",
+        "source_commit": "dbaa6bf3d58f57f10454e6cec9598146257bcd48",
+        "observed_wrapper_exit": 1,
+        "app_exit": 0,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "runtime": {
+          "ingame_frames": 1566,
+          "wall_elapsed_sec": 347.609,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 1121,
+          "diagnostic_relocations_after_start": 0
+        },
+        "startup": {
+          "certified_no_surface_sections": 91,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -4,
+            3
+          ],
+          "known_air_sections": 871,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 305,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 26,
+          "queued": 26,
+          "verified": 26
+        },
+        "camera": {
+          "schema": "engine-camera-light-reference.v1",
+          "status": "PASS",
+          "reason": "camera_canonical_field_at_paint",
+          "samples": 1566,
+          "ready_samples": 1566,
+          "air_samples": 1490,
+          "frame_epochs": 1566,
+          "distinct_air_sections": 20,
+          "expected_game_frames": 1566,
+          "observed_paint_frames": 1566,
+          "unsupported_mode_samples": 0,
+          "skipped_unscoped": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "observed canonical camera CPU field readiness/sky15/block0 at world paints; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+        },
+        "first_person": {
+          "schema": "engine-scene-light-reference.v1",
+          "status": "PASS",
+          "reason": "first_person_item_canonical_field_at_paint",
+          "ready_frames": 1566,
+          "paint_frames": 1566,
+          "distinct_air_sections": 20,
+          "skipped_unscoped": 0,
+          "unsupported_mode_samples": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "CPU field supplied to first-person item; no creature/world-item, shader RGB, GPU page, smoothing, latency or full-screen acceptance"
+        },
+        "creatures": {
+          "schema": "engine-creature-light-reference.v1",
+          "status": "PASS",
+          "reason": "creature_canonical_field_in_clear_columns",
+          "samples": 354,
+          "ready_samples": 354,
+          "frame_epochs": 180,
+          "distinct_sections": 6,
+          "boundary_block_unconstrained_samples": 211,
+          "unjoined_samples": 0,
+          "unsupported_mode_samples": 0,
+          "skipped_unscoped": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "creature CPU sample readiness/direct sky15 in authored columns; block0 only in padded interior; no actor identity, GPU primitive issue, shader RGB, smoothing, latency or full-screen acceptance"
+        },
+        "opaque_depth_checks": 710,
+        "floor_draw_source_checks": {
+          "cpu": 0,
+          "packed_gpu": 274
+        },
+        "camera_input_failure_rows": 0,
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true
+        },
+        "performance_analysis": {
+          "analyzer_exit": 1,
+          "pass": false,
+          "steady_periods": 77,
+          "metrics": {
+            "wall_ms_med": 105.534,
+            "wall_ms_fly_med": 142.22050000000002,
+            "world_streaming_phase_ms": 85.8039,
+            "scene_ms": 26.1975,
+            "mesh_emerge_ms": 40.5641,
+            "readiness_debt_rate": 0.7272727272727273,
+            "visual_holes_rate": 0.2727272727272727,
+            "post_stop_readiness_debt_rate": 0.0,
+            "post_stop_visual_holes_rate": 0.0
+          },
+          "all_stop_gates_pass": true,
+          "limits": "Single diagnostic trace-enabled run. No controlled A/B. Pressure proxies do not prove pixel holes; missing legacy telemetry gates are not demonstrated defects. Numeric frame times independently exceed performance thresholds."
+        },
+        "limits": "Native compatibility and actual packed draw-buffer light source coverage, not physical packed-field shader activation. Retained artifact resource pairing is proved by actualGLcompute/SSBObytes/leases driver regression. GenericRGB/transparency, universal readiness, performance and backend matrix remain open."
+      }
+    },
+    "shader_failure_handling_audit": {
+      "status": "Confirmed source audit; implementation/tests pending.",
+      "evidence": "ShaderManager.cpp CompileShader returns shaderID!=0 after logging compile status; LinkProgram returns programID!=0 after logging link status. CreateFromStrings overwrites prior programID before link success and retains uniformLocations cache. InitShaders unconditionally requests desktop430 packed shader; no GLES packed vertex asset exists, while actual packed cache pipeline is desktop-only.",
+      "next": "Validate actual compile/link statuses, publish replacements atomically and clear uniform cache only on successful replacement; driver regressions for malformed/incompatible shaders and production GL3.3/GLES greedy/Cross sources. Gate optional packed shader by supported backend so unavailable optional shader does not prevent CPU/GLES startup. No whole-application GL3.3/GLES acceptance inferred from existing resource/vertex driver tests."
     }
   },
   "execution_status_review_2026_11_18": {
