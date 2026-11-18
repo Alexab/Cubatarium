@@ -5496,12 +5496,126 @@
       }
     },
     "collision_query_height_audit": {
-      "status": "Implemented;actual new tests RED before fix;final3/3GREEN;Release/native pending",
+      "status": "Implemented;RED then final3/3GREEN;Release/staticPASS;native scopedPASS;overallUNTESTED",
       "source": "src/World/Physics/CollisionReadiness.cpp IsCollisionRingReady normalizes every query tocy0. Used by creature readiness, every item swept voxel and survival. A low resident section is rejected withoutcy0; a missing queried section may be accepted when unrelatedcy0 exists.",
       "required": "Use queried section and explicit knownAIR evidence, never inferred empty/light-ready. No geometry allocation. Exact negativeY tests, unknown reject, AIR lease/evidence withdrawal and eviction required.",
       "runtime": "CollisionReadiness uses exact query sectionY with HasChunk OR explicit known absentAIR. Reads no light; does not allocate geometry or light. Full-body/sweep callers remain responsible for every queried section; header documents point-query scope. Existing radius semantics unchanged.",
       "tests": "engine-collision-height-red-test.log fails negative-height query uses its resident section, noty0 with original runtime. Corrected runtime rebuilt and final3/3PASS in engine-collision-height-final-green-test.log: collision_readiness_gate,chunk_streamer_committed_column,movement_chunk_boundary. Cases cover resident negativeY, unknown neighboring sections, unrelatedcy0 rejection, provenAIR, evidence withdrawal, eviction and no phantom geometry.",
-      "acceptance_next": "Release native open-sky-items repeated with strict physical item/camera/FP reference. Physical motion may change after correct readiness: no pose/field tolerance relaxation. GPU atlas/binding/publication remains pending."
+      "acceptance_next": "Keep actor latency open. GPU atlas storage driver foundation follows; production field binding table/compatible geometry publication and all shader/backend consumers remain required.",
+      "native": {
+        "source": "2d66a948e",
+        "artifacts": "build/desktop-msvc/engine-collision-height-visible-items-native",
+        "app_exit": 0,
+        "runner_exit_code": 1,
+        "verdict": "UNTESTED",
+        "component_status": {
+          "runtime": "PASS",
+          "route": "PASS",
+          "startup": "PASS",
+          "visual": "UNTESTED",
+          "inspection": "PASS",
+          "fixture": "PASS",
+          "fixture_opaque_depth": "PASS",
+          "fixture_floor_draw_source_light": "PASS",
+          "fixture_air_light_service": "PASS",
+          "fixture_camera_field_light": "PASS",
+          "fixture_first_person_field_light": "PASS",
+          "fixture_world_item_draw_light": "PASS"
+        },
+        "frames": 1507,
+        "route_chunks": 22,
+        "outside_initial_samples": 967,
+        "inspection": {
+          "verified": 30,
+          "requested": 30,
+          "reason": "inspection_views_joined_to_png"
+        },
+        "world_item_reference": {
+          "schema": "engine-world-item-reference.v1",
+          "status": "PASS",
+          "reason": "saved_world_item_field_and_primitive_issue",
+          "checked_draws": 243,
+          "frame_epochs": 243,
+          "issued_primitives": 729,
+          "instance_frame_counts": {
+            "117625122491269153": 55,
+            "117625122491269154": 188
+          },
+          "skipped_other_instance_or_world": 64,
+          "unjoined_draws": 0,
+          "unsupported_mode_draws": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "declared saved loose-item identity, canonical CPU field and actual nonempty primitive draw issue; no raster visibility, shader RGB/uniform readback, transparency, smoothing or performance acceptance"
+        },
+        "disk_requests": 203,
+        "distinct_disk_columns": 203,
+        "columns_requested_more_than_once": 0,
+        "scene_samples": [
+          {
+            "consumer": "fp_item",
+            "ready": 1,
+            "samples": 1507
+          },
+          {
+            "consumer": "creature",
+            "ready": 0,
+            "samples": 4
+          },
+          {
+            "consumer": "item",
+            "ready": 1,
+            "samples": 307
+          },
+          {
+            "consumer": "creature",
+            "ready": 1,
+            "samples": 633
+          }
+        ],
+        "unready_creature_samples": [
+          "I20261118 05:38:28.758919 42356 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=37 consumer=creature cell=(-3,-36,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0",
+          "I20261118 05:38:28.826974 42356 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=38 consumer=creature cell=(-3,-40,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0",
+          "I20261118 05:38:28.904855 42356 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=39 consumer=creature cell=(-3,-43,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0",
+          "I20261118 05:38:28.972511 42356 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=40 consumer=creature cell=(-3,-47,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0"
+        ],
+        "scope": "No regression in scoped field/draw/depth/startup/route checks after actual-height collision readiness. Four missing creature field samples remain; generic visual remains UNTESTED. GPU atlas not in this immutable EXE."
+      }
+    },
+    "gpu_section_light_atlas_storage": {
+      "status": "Implemented and real-driverPASS;twoREDcontrols detected;Release app link pending;not yet connected to world draws",
+      "files": [
+        "src/Render/Lighting/SectionLightAtlas.h",
+        "src/Render/Lighting/SectionLightAtlas.cpp",
+        "src/Test/SectionLightAtlasDriverTest.cpp"
+      ],
+      "representation": "GL3.3/GLES3-compatible R8UI3D texture tiles, each20cubed including radius2 padding; no SSBO/compute dependency. Query actual GL_MAX_3D_TEXTURE_SIZE; choose bounded full-cube layout under memory/page caps. Default32MiB and4096page ceiling; minimum256device width yields240wide texture1728pages13,824,000bytes. No array-layer assumption.",
+      "ownership": "Opaque worldEpoch/fieldIncarnation/fieldRevision keys; immutable shared pages and explicit references. Explicit valid bit permits slot0/generation0/revision0/worldEpoch0. Generation checked live handles and independent atlas incarnation protect retirement/recreation ABA. Last reference retires behind GLfence, nonblocking collection only; failed fences/waits and exhausted generations quarantine. Full capacity returns no page without evicting live or retired readers. Upload preserves caller texture/PBO/stride/skip/alignment state. Storage grants no physical or geometry compatibility authority.",
+      "driver": {
+        "build": "engine-section-light-atlas-driver-build.log",
+        "final_build": "engine-section-light-atlas-final-green-build.log",
+        "test": "engine-section-light-atlas-final-green-test.log",
+        "device": [
+          "63: GPU: AMD Radeon(TM) Graphics GL: 3.3.0 Core Profile Context 23.19.14.07.240801"
+        ],
+        "status": "PASS",
+        "oracle": "GL3.3 integer fragment shader texelFetch reads all8000cells per page into independent R32UI FBO and compares each exact packed byte to asymmetric CPU xyz sky/block pattern. Eight live pages including cross-world identity; shared no-reupload, contradictory owner reject, full capacity, refcounts, explicit retirement, fence completion, reuse generations, reset incarnation, zero-byte volume and hostile device/memory limits checked. Deliberately nondefault PBO/unpack state restored.",
+        "negative_controls": [
+          "engine-section-light-atlas-packing-red-test.log: reverse uploaded volume bytes; exact shader sample mismatch detected",
+          "engine-section-light-atlas-retirement-red-test.log: make retired page free before collection; expected retired-page rejection fails"
+        ],
+        "restoration": "Original source restored byte-for-byte in finally. Only driver target compiled under negative controls; app never built from mutated source. Restored final driver build/testPASS."
+      },
+      "remaining": [
+        "Typed world-field render snapshot from current certified padding and input domain, with geometry compatibility proof",
+        "GPU binding table and handle attributes/uniforms for CPU/MDI/packed/cross/decor/transparent/GLES; bind atlas at actual world draws",
+        "Atomic geometry/field publication and predecessor retention; safe page/handle lifetime across all passes and cache resets",
+        "Constant-page sharing, capability fallback/capacity stress and delayed-fence fault fixture as needed by production integration",
+        "Remove baked-light merge keys/stamps and light-only geometry rebuild only after all world consumers use field bindings",
+        "Independent RGB/framebuffer/seam/transparency/physical transport/backend/RD8/edit/eviction/performance matrix; persist content certificates"
+      ],
+      "scope": "Actual GPU storage/sampler/lifetime foundation only. Normal terrain still shades with baked mesh light; no world-render cutover or light-only zero-remesh acceptance yet."
     }
   }
 }

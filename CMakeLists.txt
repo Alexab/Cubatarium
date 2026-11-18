@@ -383,6 +383,7 @@ set(SOURCES
     src/Render/Engine/GreedyGpuPublication.cpp
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyVertexPoolLifetime.cpp
+    src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -3335,6 +3336,19 @@ cubatarium_add_test(NAME inputs_still_valid_visual_test
         src/Test/InputsStillValidVisualTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  add_executable(section_light_atlas_driver_test
+    src/Render/Lighting/SectionLightAtlas.cpp
+    src/Test/SectionLightAtlasDriverTest.cpp)
+  target_include_directories(section_light_atlas_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(section_light_atlas_driver_test PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glfw)
+  add_test(NAME section_light_atlas_driver_test
+    COMMAND $<TARGET_FILE:section_light_atlas_driver_test>)
+  set_tests_properties(section_light_atlas_driver_test PROPERTIES
+    LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 30)
+  if(WIN32)
+    target_compile_definitions(section_light_atlas_driver_test PRIVATE GLEW_STATIC)
+  endif()
   add_executable(greedy_vertex_pool_production_test
     src/Test/GreedyVertexPoolProductionTest.cpp
     src/Test/GreedyVertexPoolDriverTest.cpp

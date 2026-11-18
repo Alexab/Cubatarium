@@ -266,6 +266,11 @@
             ],
             "cutover_gate": "Do not remove light from geometry merge/capture paths until all world consumers use certified padded resources. No independent light/framebuffer acceptance is granted by this design."
           }
+        },
+        "gpu_atlas_storage_foundation": {
+          "implementation": "SectionLightAtlas production R8UI3D bounded immutable page storage with device-limit layout, generation/atlas incarnation/refcount/fence retirement. Real GL3.3 fragment-sampler FBO byte oracle and packing/early-reuse RED controls passed.",
+          "evidence_ref": "engine_remediation_progress_2026_11_16.json continuous_world_input_closure.gpu_section_light_atlas_storage",
+          "remaining": "Not connected to normal world draws. Typed compatible field snapshot, binding table/all shader backends, atomic pair publication and lifetime/fallback integration precede baked-light removal and full acceptance. Full S5 remains incomplete."
         }
       }
     },
