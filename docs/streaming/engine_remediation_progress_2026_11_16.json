@@ -6615,6 +6615,16 @@
         ],
         "provenance": "EXE digest/current source World_261/byte-exact configuration restoration independently verified. Native confirms normal producer/publication compatibility; optional field preparation callback is exercised by real driver integration, not falsely claimed enabled in GeometryEngine."
       }
+    },
+    "ordered_physical_light_capacity_fallback": {
+      "status": "Implemented opt-in physical resource fallback; six Release tests PASS, including actual GL3.3 and GLES contexts. Normal GeometryEngine cutover still pending.",
+      "implementation": "Reserve one atlas page and one metadata slot inside configured limits. Ordered staging invalidates previous shader generation before overwriting shared texels. Certified immutable CPU fields survive page/table exhaustion. Deferred metadata retains stable geometry handle; immediate PrepareDraw stages a transient handle or promotes back to a resident page after fences complete. No geometry-buffer rewrite or invented calculation proof.",
+      "validation": "engine-ordered-light-six-tests.log:6/6PASS. GPU queued upload/draw alternation checks eight distinct complete8000cell fields without intermediate readback/fence wait. Old handles rejected, permanent page unchanged, one-page/one-slot budget works. Physical-proof integration uses seven actual installed fields, diagonal light-only successor, saturated refresh, stable handle and post-retirement promotion, metadata-exhausted CPU leases, wrong epoch and reset rejection.",
+      "gles_scope": "section_light_atlas_gles_driver_test runs storage/sampler/lifetime and queued fallback on a real ES context with GLSL ES300. High-level world physical-proof integration remains desktop GL3.3, not claimed GLES.",
+      "negative_controls": "engine-ordered-light-negative-controls.json: omit ordered upload fails queued8000cell verification; reject CPU-backed fallback fails minimal-budget physical resource scenario. Sources byte-exact restored, rebuilt and five tests GREEN before GLES test addition; final six tests GREEN. Initial orchestrator expected a later assertion, corrected to actual earlier queued-cell failure. No RED application build or launch.",
+      "initial_test_correction": "The new physical fixture initially computed but did not install its outputs before RecordLightCalculation. Corrected fixture to install actual padded outputs through ChunkManager before proving them; production proof gate unchanged.",
+      "remaining": "Default-enabled renderer integration, explicit NoDraw admission, artifact-specific stable handle/lease transport across CPU/MDI/packed/Cross/transparent paths, normal field shaders and removal of light-only geometry invalidation remain required. This opt-in infrastructure alone is not final streaming/visual acceptance.",
+      "native_regression": "Pending required Release application rebuild and isolated no-teleport flight; native will establish compatibility only until renderer cutover."
     }
   },
   "execution_status_review_2026_11_18": {

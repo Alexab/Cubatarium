@@ -11,6 +11,7 @@ namespace
 {
 using Atlas = cutum::SectionLightAtlas;
 using Volume = cutum::SectionLightVolume;
+bool GlesContext = false;
 
 void Expect(bool condition, const char *message)
 {
@@ -20,6 +21,17 @@ void Expect(bool condition, const char *message)
 
 GLuint Compile(GLenum type, const char *source)
 {
+  std::string adapted(source);
+  if (GlesContext)
+  {
+    const std::string desktop_version = "#version 330 core\n";
+    Expect(adapted.compare(0, desktop_version.size(), desktop_version) == 0,
+           "driver shader declares expected source language");
+    adapted.replace(0, desktop_version.size(),
+                    "#version 300 es\nprecision highp float;\n"
+                    "precision highp int;\nprecision highp usampler3D;\n");
+    source = adapted.c_str();
+  }
   const auto shader = glCreateShader(type);
   glShaderSource(shader, 1, &source, nullptr);
   glCompileShader(shader);
@@ -47,6 +59,178 @@ std::shared_ptr<const Volume> Pattern(unsigned seed)
             static_cast<uint8_t>(sky | (block << 4));
       }
   return result;
+}
+
+void RunOrderedBindings()
+{
+  using Table = cutum::SectionLightBindingTable;
+  Table table;
+  Expect(table.Initialize(2, 8u * Volume::CellCount, 8, true),
+         "reserve ordered metadata and page inside bounded storage");
+  auto resident_data = Pattern(97);
+  const glm::ivec3 resident_origin(-64, -48, 16);
+  const auto resident =
+      table.Create({7, 41, 0}, resident_data, resident_origin);
+  Expect(resident && !table.Create({7, 42, 0}, Pattern(98), {}),
+         "resident metadata exhaustion leaves ordered reservation available");
+  Expect(table.GetAtlas().GetLayout().bytes == 8u * Volume::CellCount &&
+             table.GetAtlas().GetStatistics().ordered_pages == 1,
+         "fallback reserves no extra atlas bytes or pages beyond configured "
+         "capacity");
+  const auto vertex =
+      Compile(GL_VERTEX_SHADER,
+              "#version 330 core\n"
+              "void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);"
+              "gl_Position=vec4(p*2.0-1.0,0,1);}");
+  const std::string source =
+      std::string("#version 330 core\n") + Table::ShaderInterface() +
+      "uniform uvec4 handle; uniform ivec3 probeOrigin; uniform int column;"
+      "layout(location=0) out uint result;"
+      "void main(){ivec2 p=ivec2(gl_FragCoord.xy)-ivec2(column*20,0);uint "
+      "value;"
+      "bool ok=sectionLightFetch(handle,probeOrigin+"
+      "ivec3(p.x-2,p.y%20-2,p.y/20-2),value);result=ok?value:256u;}";
+  const auto fragment = Compile(GL_FRAGMENT_SHADER, source.c_str());
+  const auto program = glCreateProgram();
+  glAttachShader(program, vertex);
+  glAttachShader(program, fragment);
+  glLinkProgram(program);
+  GLint linked = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &linked);
+  Expect(linked != 0,
+         "ordered draw sampler compiles production binding interface");
+  GLuint vao = 0, target = 0, framebuffer = 0;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  glGenTextures(1, &target);
+  glBindTexture(GL_TEXTURE_2D, target);
+  constexpr int count = 8, width = count * 20;
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, width, 400, 0, GL_RED_INTEGER,
+               GL_UNSIGNED_INT, nullptr);
+  glGenFramebuffers(1, &framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         target, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "ordered draw integer target complete");
+  glDisable(GL_BLEND);
+  glDisable(GL_DEPTH_TEST);
+  glDisable(GL_SCISSOR_TEST);
+  glDisable(GL_CULL_FACE);
+  glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  glPixelStorei(GL_PACK_ALIGNMENT, 4);
+  glUseProgram(program);
+  glUniform1i(glGetUniformLocation(program, "uSectionLightAtlas"), 7);
+  glUniform1i(glGetUniformLocation(program, "uSectionLightBindings"), 8);
+  const auto bind = [&](Table &storage)
+  {
+    Expect(storage.Bind(7, 8), "ordered draw textures bind");
+    const auto incarnation = storage.ShaderIncarnation();
+    glUniform2uiv(
+        glGetUniformLocation(program, "uSectionLightTableIncarnation"), 1,
+        incarnation.data());
+  };
+  const auto draw = [&](Table::Handle handle, glm::ivec3 origin, int column)
+  {
+    const auto words = handle.ShaderWords();
+    glUniform4uiv(glGetUniformLocation(program, "handle"), 1, words.data());
+    glUniform3i(glGetUniformLocation(program, "probeOrigin"), origin.x,
+                origin.y, origin.z);
+    glUniform1i(glGetUniformLocation(program, "column"), column);
+    glViewport(column * 20, 0, 20, 400);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+  };
+  bind(table);
+  std::array<Table::Handle, count> handles;
+  std::array<std::shared_ptr<const Volume>, count> volumes;
+  std::array<glm::ivec3, count> origins;
+  for (int n = 0; n < count; ++n)
+  {
+    volumes[n] = Pattern(11 + n);
+    origins[n] = {-32 * n, -48 + 16 * n, 16 * (n - 2)};
+    const auto next = table.StageForOrderedDraw({7, uint64_t(100 + n), 0},
+                                                volumes[n], origins[n]);
+    Expect(next && table.IsLive(*next),
+           "full resident table still stages exact field");
+    if (n)
+      Expect(!table.IsLive(handles[n - 1]),
+             "next ordered stage invalidates old CPU ticket");
+    handles[n] = *next;
+    draw(*next, origins[n], n);
+    // Deliberately no readback, fence wait or glFinish between reuse and draw.
+  }
+  std::vector<uint32_t> pixels(width * 400);
+  glReadPixels(0, 0, width, 400, GL_RED_INTEGER, GL_UNSIGNED_INT,
+               pixels.data());
+  for (int n = 0; n < count; ++n)
+    for (int z = 0; z < 20; ++z)
+      for (int y = 0; y < 20; ++y)
+        for (int x = 0; x < 20; ++x)
+          Expect(pixels[(y + 20 * z) * width + n * 20 + x] ==
+                     volumes[n]->cells[x + 20 * (y + 20 * z)],
+                 "all queued draws retain their own8000field cells across "
+                 "ordered reuse");
+  const auto check = [&](Table::Handle handle, glm::ivec3 origin,
+                         std::shared_ptr<const Volume> expected)
+  {
+    draw(handle, origin, 0);
+    std::vector<uint32_t> result(20 * 400);
+    glReadPixels(0, 0, 20, 400, GL_RED_INTEGER, GL_UNSIGNED_INT, result.data());
+    for (int z = 0; z < 20; ++z)
+      for (int y = 0; y < 20; ++y)
+        for (int x = 0; x < 20; ++x)
+          Expect(result[(y + 20 * z) * 20 + x] ==
+                     (expected ? expected->cells[x + 20 * (y + 20 * z)] : 256u),
+                 "ordered/resident/stale shader lookup matches complete "
+                 "independent field");
+  };
+  check(handles[0], origins[0], {});
+  check(*resident, resident_origin, resident_data);
+  glBindBuffer(GL_TEXTURE_2D, 0); // Caller error must be rejected before reuse.
+  Expect(!table.StageForOrderedDraw({7, 1000, 0}, Pattern(99), {}) &&
+             table.IsLive(handles.back()),
+         "caller GL error leaves previous ordered resource unchanged");
+  check(handles.back(), origins.back(), volumes.back());
+  Expect(!table.StageForOrderedDraw({7, 107, 0}, Pattern(99), origins.back()),
+         "same physical owner cannot silently change immutable field contents");
+  Expect(!table.IsLive(handles.back()),
+         "failed reuse after invalidation is not shader-ready");
+  check(handles.back(), origins.back(), {});
+  const auto recovered =
+      table.StageForOrderedDraw({7, 1000, 0}, Pattern(99), {});
+  Expect(recovered && !table.Release(*recovered) &&
+             !table.Replace(*recovered, {}, Pattern(1), {}),
+         "normal release/replace cannot steal reserved ordered storage");
+  check(*recovered, {}, Pattern(99));
+  check(*resident, resident_origin, resident_data);
+  Expect(table.GetAtlas().GetStatistics().live == 1 &&
+             table.GetAtlas().GetStatistics().ordered_uploads == count + 1,
+         "resident ownership and exact bounded fallback uploads are preserved");
+  Table tiny;
+  Expect(tiny.Initialize(1, Volume::CellCount, 1, true) &&
+             !tiny.Create({1, 1, 0}, Pattern(1), {}),
+         "one page/one metadata slot supports ordered-only device budget");
+  bind(tiny);
+  const auto tiny_draw = tiny.StageForOrderedDraw({1, 1, 0}, Pattern(2), {});
+  Expect(tiny_draw.has_value(),
+         "minimum bounded budget can draw a correct field");
+  check(*tiny_draw, {}, Pattern(2));
+  tiny.Reset();
+  Expect(!tiny.IsLive(*tiny_draw) &&
+             !tiny.StageForOrderedDraw({1, 1, 0}, Pattern(2), {}),
+         "reset invalidates ordered tickets and storage");
+  Expect(glGetError() == GL_NO_ERROR,
+         "ordered fallback driver has no GL errors");
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindVertexArray(0);
+  glUseProgram(0);
+  glDeleteFramebuffers(1, &framebuffer);
+  glDeleteTextures(1, &target);
+  glDeleteVertexArrays(1, &vao);
+  glDeleteProgram(program);
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
 }
 
 void RunBindings()
@@ -477,14 +661,18 @@ void Run()
 }
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
+  GlesContext = argc == 2 && std::string(argv[1]) == "--gles";
   if (!glfwInit())
     return 77;
   glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+  glfwWindowHint(GLFW_CLIENT_API,
+                 GlesContext ? GLFW_OPENGL_ES_API : GLFW_OPENGL_API);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, GlesContext ? 0 : 3);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GlesContext ? GLFW_OPENGL_ANY_PROFILE
+                                                  : GLFW_OPENGL_CORE_PROFILE);
   auto *window =
       glfwCreateWindow(32, 32, "Section light atlas test", nullptr, nullptr);
   if (!window)
@@ -510,6 +698,7 @@ int main()
   {
     Run();
     RunBindings();
+    RunOrderedBindings();
   }
   catch (const std::exception &error)
   {

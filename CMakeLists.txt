@@ -3378,6 +3378,10 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     COMMAND $<TARGET_FILE:section_light_atlas_driver_test>)
   set_tests_properties(section_light_atlas_driver_test PROPERTIES
     LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 30)
+  add_test(NAME section_light_atlas_gles_driver_test
+    COMMAND $<TARGET_FILE:section_light_atlas_driver_test> --gles)
+  set_tests_properties(section_light_atlas_gles_driver_test PROPERTIES
+    LABELS "gpu;integration;gles" SKIP_RETURN_CODE 77 TIMEOUT 30)
   if(WIN32)
     target_compile_definitions(section_light_atlas_driver_test PRIVATE GLEW_STATIC)
   endif()

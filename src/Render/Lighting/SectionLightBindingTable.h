@@ -29,7 +29,8 @@ public:
 
   bool Initialize(uint32_t binding_limit = 4096,
                   size_t atlas_bytes = 32u * 1024u * 1024u,
-                  uint32_t page_limit = 4096);
+                  uint32_t page_limit = 4096,
+                  bool reserve_ordered_draw = false);
   /// Reset and destruction require the owning GL context, after last draw.
   void Reset();
   std::optional<Handle> Create(SectionLightAtlas::Owner owner,
@@ -43,6 +44,17 @@ public:
                glm::ivec3 section_origin);
   bool Release(Handle handle);
   bool IsLive(Handle handle) const;
+  bool HasResidentPage(Handle handle) const;
+  /// Stable metadata without a resident page. The shader rejects this entry;
+  /// its owner must stage the certified CPU field for each ordered fallback.
+  std::optional<Handle> CreateDeferred();
+  bool Defer(Handle handle);
+  /// Draw immediately before any later stage. A reserved metadata entry and
+  /// atlas page are reused in GL command order, independently of resident load.
+  std::optional<Handle>
+  StageForOrderedDraw(SectionLightAtlas::Owner owner,
+                      std::shared_ptr<const SectionLightVolume> data,
+                      glm::ivec3 section_origin);
   void CollectRetired() { Atlas.CollectRetired(); }
   bool Bind(unsigned atlas_unit, unsigned table_unit) const;
   std::array<uint32_t, 2> ShaderIncarnation() const;
@@ -68,5 +80,6 @@ private:
   uint64_t Incarnation{0};
   std::vector<Slot> Slots;
   std::vector<uint32_t> Free;
+  uint32_t OrderedIndex{std::numeric_limits<uint32_t>::max()};
 };
 } // namespace cutum

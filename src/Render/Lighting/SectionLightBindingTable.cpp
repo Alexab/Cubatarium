@@ -71,7 +71,8 @@ SectionLightBindingTable::~SectionLightBindingTable() { Reset(); }
 
 bool SectionLightBindingTable::Initialize(uint32_t binding_limit,
                                           size_t atlas_bytes,
-                                          uint32_t page_limit)
+                                          uint32_t page_limit,
+                                          bool reserve_ordered_draw)
 {
   if (Texture || !binding_limit || binding_limit > 1024u * 1024u)
     return false;
@@ -89,7 +90,8 @@ bool SectionLightBindingTable::Initialize(uint32_t binding_limit,
   const int height = static_cast<int>((capacity + per_row - 1) / per_row);
   const size_t texels = size_t(per_row) * height * 2;
   // Hostile caller limits must not cause an unbounded CPU/driver allocation.
-  if (texels > 2u * 1024u * 1024u || !Atlas.Initialize(atlas_bytes, page_limit))
+  if (texels > 2u * 1024u * 1024u ||
+      !Atlas.Initialize(atlas_bytes, page_limit, reserve_ordered_draw))
     return false;
   bool allocated = false;
   {
@@ -118,9 +120,12 @@ bool SectionLightBindingTable::Initialize(uint32_t binding_limit,
   }
   BindingsPerRow = static_cast<int>(per_row);
   Slots.resize(static_cast<size_t>(capacity));
+  OrderedIndex = reserve_ordered_draw ? Capacity() - 1
+                                      : std::numeric_limits<uint32_t>::max();
   Free.reserve(Slots.size());
   for (uint32_t n = Capacity(); n > 0; --n)
-    Free.push_back(n - 1);
+    if (n - 1 != OrderedIndex)
+      Free.push_back(n - 1);
   return true;
 }
 
@@ -135,6 +140,7 @@ void SectionLightBindingTable::Reset()
   Free.clear();
   BindingsPerRow = TextureUnits = 0;
   Incarnation = 0;
+  OrderedIndex = std::numeric_limits<uint32_t>::max();
 }
 
 bool SectionLightBindingTable::Upload(uint32_t index, uint32_t generation,
@@ -194,11 +200,44 @@ bool SectionLightBindingTable::IsLive(Handle handle) const
          Slots[handle.index].generation == handle.generation;
 }
 
+bool SectionLightBindingTable::HasResidentPage(Handle handle) const
+{
+  return IsLive(handle) && Atlas.IsLive(Slots[handle.index].page);
+}
+
+std::optional<SectionLightBindingTable::Handle>
+SectionLightBindingTable::CreateDeferred()
+{
+  if (!Texture || OrderedIndex >= Slots.size() || Free.empty())
+    return std::nullopt;
+  const auto index = Free.back();
+  auto &slot = Slots[index];
+  if (!Upload(index, slot.generation, nullptr, {}))
+    return std::nullopt;
+  Free.pop_back();
+  slot.live = true;
+  slot.page = {};
+  return Handle{index, slot.generation, Incarnation, true};
+}
+
+bool SectionLightBindingTable::Defer(Handle handle)
+{
+  if (OrderedIndex >= Slots.size() || !IsLive(handle) ||
+      handle.index == OrderedIndex ||
+      !Upload(handle.index, handle.generation, nullptr, {}))
+    return false;
+  auto &slot = Slots[handle.index];
+  if (slot.page.valid)
+    Atlas.Release(slot.page);
+  slot.page = {};
+  return true;
+}
+
 bool SectionLightBindingTable::Replace(
     Handle handle, SectionLightAtlas::Owner owner,
     std::shared_ptr<const SectionLightVolume> data, glm::ivec3 section_origin)
 {
-  if (!IsLive(handle))
+  if (!IsLive(handle) || handle.index == OrderedIndex)
     return false;
   const auto page = Atlas.Acquire(owner, std::move(data));
   if (!page)
@@ -211,16 +250,19 @@ bool SectionLightBindingTable::Replace(
   }
   const auto previous = slot.page;
   slot.page = *page;
-  Atlas.Release(previous);
+  if (previous.valid)
+    Atlas.Release(previous);
   return true;
 }
 
 bool SectionLightBindingTable::Release(Handle handle)
 {
-  if (!IsLive(handle) || !Upload(handle.index, handle.generation, nullptr, {}))
+  if (!IsLive(handle) || handle.index == OrderedIndex ||
+      !Upload(handle.index, handle.generation, nullptr, {}))
     return false;
   auto &slot = Slots[handle.index];
-  Atlas.Release(slot.page);
+  if (slot.page.valid)
+    Atlas.Release(slot.page);
   slot.live = false;
   slot.page = {};
   // Generation exhaustion quarantines this index until reset.
@@ -230,6 +272,33 @@ bool SectionLightBindingTable::Release(Handle handle)
     Free.push_back(handle.index);
   }
   return true;
+}
+
+std::optional<SectionLightBindingTable::Handle>
+SectionLightBindingTable::StageForOrderedDraw(
+    SectionLightAtlas::Owner owner,
+    std::shared_ptr<const SectionLightVolume> data, glm::ivec3 section_origin)
+{
+  if (!Texture || !data || OrderedIndex >= Slots.size() ||
+      glGetError() != GL_NO_ERROR)
+    return std::nullopt;
+  auto &slot = Slots[OrderedIndex];
+  if (slot.generation == std::numeric_limits<uint32_t>::max())
+    return std::nullopt;
+  const auto generation = slot.generation + 1;
+  // Invalidate before overwriting shared texels. If a later upload fails,
+  // neither the old handle nor an uncommitted successor may sample new bytes.
+  if (!Upload(OrderedIndex, generation, nullptr, {}))
+    return std::nullopt;
+  slot.live = false;
+  slot.generation = generation;
+  slot.page = {};
+  const auto page = Atlas.StageForOrderedDraw(owner, std::move(data));
+  if (!page || !Upload(OrderedIndex, generation, &*page, section_origin))
+    return std::nullopt;
+  slot.page = *page;
+  slot.live = true;
+  return Handle{OrderedIndex, generation, Incarnation, true};
 }
 
 bool SectionLightBindingTable::Bind(unsigned atlas_unit,

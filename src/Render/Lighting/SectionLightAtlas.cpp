@@ -84,7 +84,8 @@ size_t SectionLightAtlas::OwnerHash::operator()(const Owner &owner) const
 
 SectionLightAtlas::~SectionLightAtlas() { Reset(); }
 
-bool SectionLightAtlas::Initialize(size_t byte_budget, uint32_t page_limit)
+bool SectionLightAtlas::Initialize(size_t byte_budget, uint32_t page_limit,
+                                   bool reserve_ordered_page)
 {
   if (Texture)
     return false;
@@ -120,9 +121,14 @@ bool SectionLightAtlas::Initialize(size_t byte_budget, uint32_t page_limit)
   AtlasLayout = layout;
   Incarnation = NextAtlasIncarnation.fetch_add(1, std::memory_order_relaxed);
   Slots.resize(layout.capacity);
+  OrderedIndex = reserve_ordered_page ? layout.capacity - 1
+                                      : std::numeric_limits<uint32_t>::max();
+  if (reserve_ordered_page)
+    Slots[OrderedIndex].state = State::Ordered;
   Free.reserve(layout.capacity);
   for (uint32_t n = layout.capacity; n > 0; --n)
-    Free.push_back(n - 1);
+    if (n - 1 != OrderedIndex)
+      Free.push_back(n - 1);
   return true;
 }
 
@@ -138,6 +144,8 @@ void SectionLightAtlas::Reset()
   AtlasLayout = {};
   Incarnation = 0;
   Uploads = UploadedBytes = 0;
+  OrderedUploads = 0;
+  OrderedIndex = std::numeric_limits<uint32_t>::max();
   Slots.clear();
   Free.clear();
   Owners.clear();
@@ -197,8 +205,34 @@ SectionLightAtlas::Acquire(Owner owner,
 bool SectionLightAtlas::IsLive(Page page) const
 {
   return page.valid && Texture && page.atlas_incarnation == Incarnation &&
-         page.slot < Slots.size() && Slots[page.slot].state == State::Live &&
+         page.slot < Slots.size() &&
+         (Slots[page.slot].state == State::Live ||
+          (Slots[page.slot].state == State::Ordered &&
+           Slots[page.slot].volume)) &&
          Slots[page.slot].generation == page.generation;
+}
+
+std::optional<SectionLightAtlas::Page> SectionLightAtlas::StageForOrderedDraw(
+    Owner owner, std::shared_ptr<const SectionLightVolume> volume)
+{
+  if (!Texture || !volume || OrderedIndex >= Slots.size() ||
+      glGetError() != GL_NO_ERROR)
+    return std::nullopt;
+  auto &slot = Slots[OrderedIndex];
+  if (slot.generation == std::numeric_limits<uint32_t>::max() ||
+      (slot.volume && slot.owner == owner && slot.volume != volume &&
+       slot.volume->cells != volume->cells))
+    return std::nullopt;
+  ++slot.generation;
+  slot.volume.reset();
+  if (!Upload(OrderedIndex, *volume))
+    return std::nullopt;
+  slot.owner = owner;
+  slot.volume = std::move(volume);
+  ++Uploads;
+  ++OrderedUploads;
+  UploadedBytes += SectionLightVolume::CellCount;
+  return Page{Incarnation, OrderedIndex, slot.generation, true};
 }
 
 std::optional<glm::ivec3> SectionLightAtlas::Origin(Page page) const
@@ -208,7 +242,7 @@ std::optional<glm::ivec3> SectionLightAtlas::Origin(Page page) const
 
 bool SectionLightAtlas::Release(Page page)
 {
-  if (!IsLive(page))
+  if (!IsLive(page) || page.slot == OrderedIndex)
     return false;
   auto &slot = Slots[page.slot];
   if (--slot.references)
@@ -262,6 +296,8 @@ SectionLightAtlas::Statistics SectionLightAtlas::GetStatistics() const
   Statistics result;
   result.uploads = Uploads;
   result.uploaded_bytes = UploadedBytes;
+  result.ordered_uploads = OrderedUploads;
+  result.ordered_pages = OrderedIndex < Slots.size() ? 1 : 0;
   for (const auto &slot : Slots)
   {
     result.live += slot.state == State::Live;

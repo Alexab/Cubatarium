@@ -225,7 +225,10 @@ static void ProbeCertifiedBinding(
   glUniform1i(glGetUniformLocation(program, "uSectionLightAtlas"), 7);
   glUniform1i(glGetUniformLocation(program, "uSectionLightBindings"), 8);
   const auto incarnation = store.ShaderIncarnation();
-  const auto words = binding->ShaderWords();
+  const auto prepared_draw = store.PrepareDraw(binding);
+  Expect(prepared_draw.has_value(),
+         "physical source prepares a resident or ordered draw");
+  const auto words = *prepared_draw;
   const auto origin = binding->GeometryInputs().coord * cutum::CHUNK_SIZE;
   glUniform2uiv(glGetUniformLocation(program, "uSectionLightTableIncarnation"),
                 1, incarnation.data());
@@ -1775,6 +1778,116 @@ static void TestFirstComputedLightPublication(
   }
 }
 
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void
+TestOrderedFieldBindings(cutum::UBlockRegistry &registry,
+                         const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock({4, 4, 4}, kStone);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  std::vector<glm::ivec3> targets;
+  for (int x = 0; x < 7; ++x)
+    targets.push_back({x, 0, 0});
+  RelightJobSpec spec;
+  spec.min_world_y = 0;
+  spec.max_world_y = 15;
+  spec.include_known_air_outputs = true;
+  const auto initial =
+      UChunkRelightSnapshot::CaptureSections(world, spec, targets)
+          .Compute(registry);
+  Expect(initial.inputs_complete && initial.chunks.size() == targets.size(),
+         "ordered resource fixture computes all requested physical fields");
+  for (const auto &output : initial.chunks)
+  {
+    Expect(bool(output.padded_light), "computed field retains its padded volume");
+    world.GetChunkManager().ReplaceComputedSectionLightVolume(
+        output.coord, *output.padded_light, true, true);
+  }
+  Expect(world.RecordLightCalculation(initial, catalog) == targets.size(),
+         "ordered resource fixture has seven actual certified physical fields");
+  const auto root = world.CaptureRenderLightSnapshot({0, 0, 0});
+  Expect(bool(root), "root physical field is available");
+  constexpr uint64_t epoch = 17;
+  SectionRenderLightBindings owner;
+  Expect(!owner.BeginWorld(0, root->GeometryInputs().world_geometry_identity),
+         "zero source epoch cannot initialize physical resource authority");
+  Expect(owner.BeginWorld(epoch, root->GeometryInputs().world_geometry_identity,
+                          8, 8u * SectionLightVolume::CellCount, 8, true),
+         "bounded physical owner reserves ordered fallback inside eight pages");
+  std::vector<std::shared_ptr<SectionRenderLightBinding>> bindings;
+  for (auto coord : targets)
+  {
+    const auto field = world.CaptureRenderLightSnapshot(coord);
+    Expect(bool(field), "each requested physical field is computed");
+    auto binding = owner.Prepare(epoch, field->GeometryInputs(), *field);
+    Expect(binding && binding->IsLive() && owner.IsResident(binding),
+           "all seven permanent page/table slots are genuinely occupied");
+    bindings.push_back(std::move(binding));
+  }
+  const auto original_words = bindings[0]->ShaderWords();
+  world.SetBlock({16, 8, 16}, kFire);
+  const auto changed =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {{0, 0, 0}})
+          .Compute(registry);
+  Expect(changed.inputs_complete && changed.chunks.size() == 1 &&
+             bool(changed.chunks[0].padded_light),
+         "diagonal emitter computes a complete successor field");
+  world.GetChunkManager().ReplaceComputedSectionLightVolume(
+      changed.chunks[0].coord, *changed.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(changed, catalog) == 1,
+         "diagonal emitter installs new physical light without root geometry "
+         "edit");
+  const auto updated = world.CaptureRenderLightSnapshot({0, 0, 0});
+  Expect(
+      updated && updated->MatchesGeometry(bindings[0]->GeometryInputs()) &&
+          updated->FieldRevision() != root->FieldRevision(),
+      "field-only successor is compatible and has changed physical revision");
+  Expect(owner.Refresh(bindings[0], epoch, *updated) && bindings[0]->IsLive() &&
+             !owner.IsResident(bindings[0]) &&
+             bindings[0]->ShaderWords() == original_words,
+         "full atlas field refresh defers sampling without changing geometry "
+         "handles");
+  ProbeCertifiedBinding(owner, bindings[0]);
+  for (size_t n = 1; n < bindings.size(); ++n)
+    ProbeCertifiedBinding(owner, bindings[n]);
+  owner.CollectRetired();
+  Expect(
+      owner.PrepareDraw(bindings[0]).has_value() &&
+          owner.IsResident(bindings[0]) &&
+          bindings[0]->ShaderWords() == original_words,
+      "retired page recovery promotes field without geometry handle rewrite");
+  ProbeCertifiedBinding(owner, bindings[0]);
+  SectionRenderLightBindings minimum;
+  Expect(minimum.BeginWorld(epoch,
+                            root->GeometryInputs().world_geometry_identity, 1,
+                            SectionLightVolume::CellCount, 1, true),
+         "single-page physical owner initializes ordered-only budget");
+  auto deferred = minimum.Prepare(epoch, updated->GeometryInputs(), *updated);
+  Expect(deferred && deferred->IsLive() && !minimum.IsResident(deferred) &&
+             deferred->ShaderWords() == std::array<uint32_t, 4>{},
+         "metadata/page exhaustion retains certified source for explicit "
+         "ordered draw");
+  ProbeCertifiedBinding(minimum, deferred);
+  auto other = minimum.Prepare(epoch, bindings[1]->GeometryInputs(),
+                               bindings[1]->LightSnapshot());
+  Expect(other && other->IsLive(),
+         "second geometry artifact needs no additional GPU slot");
+  ProbeCertifiedBinding(minimum, other);
+  ProbeCertifiedBinding(minimum, deferred);
+  Expect(!minimum.Prepare(epoch + 1, updated->GeometryInputs(), *updated) &&
+             !minimum.Refresh(deferred, epoch + 1, *updated),
+         "capacity fallback cannot bypass source epoch proof");
+  minimum.Reset();
+  Expect(!deferred->IsLive() && !other->IsLive() &&
+             !minimum.PrepareDraw(deferred),
+         "world reset invalidates CPU-backed fallback leases too");
+}
+#endif
+
 static void TestWorldDemandIsolation()
 {
   using namespace cutum;
@@ -1858,7 +1971,10 @@ int main(int argc, char **argv)
       TestMaterialVisibilityParity(registry, definitions.get(), true,
                                    gles_visibility_driver);
     else
+    {
       TestFirstComputedLightPublication(registry, definitions.get(), true);
+      TestOrderedFieldBindings(registry, definitions.get());
+    }
     Expect(glGetError() == GL_NO_ERROR,
            "certified binding integration has no GL errors");
     glfwDestroyWindow(window);

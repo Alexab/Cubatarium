@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -56,6 +57,8 @@ public:
   {
     uint32_t live{0}, retired{0}, quarantined{0};
     uint64_t uploads{0}, uploaded_bytes{0};
+    uint64_t ordered_uploads{0};
+    uint32_t ordered_pages{0};
   };
 
   SectionLightAtlas() = default;
@@ -66,10 +69,17 @@ public:
   /// All operations run on the owning render context/thread. Reset must run
   /// before that context is destroyed. No synchronous fence wait is used.
   bool Initialize(size_t byte_budget = 32u * 1024u * 1024u,
-                  uint32_t page_limit = 4096);
+                  uint32_t page_limit = 4096,
+                  bool reserve_ordered_page = false);
   void Reset();
   std::optional<Page> Acquire(Owner owner,
                               std::shared_ptr<const SectionLightVolume> volume);
+  /// One reserved page inside the configured budget. Submit its draw before
+  /// the next call: uploads/draws share the owning GL command stream. Reuse
+  /// invalidates previous CPU tickets; this is not a long-lived resident page.
+  std::optional<Page>
+  StageForOrderedDraw(Owner owner,
+                      std::shared_ptr<const SectionLightVolume> volume);
   /// One reference per successful Acquire. The final Release must follow the
   /// last GL submission which consumes the page, including all render passes.
   bool Release(Page page);
@@ -86,7 +96,8 @@ private:
     Free,
     Live,
     Retired,
-    Quarantined
+    Quarantined,
+    Ordered
   };
   struct Slot
   {
@@ -107,6 +118,8 @@ private:
   Layout AtlasLayout;
   uint64_t Incarnation{0};
   uint64_t Uploads{0}, UploadedBytes{0};
+  uint64_t OrderedUploads{0};
+  uint32_t OrderedIndex{std::numeric_limits<uint32_t>::max()};
   std::vector<Slot> Slots;
   std::vector<uint32_t> Free;
   std::unordered_map<Owner, uint32_t, OwnerHash> Owners;
