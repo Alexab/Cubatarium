@@ -5584,7 +5584,7 @@
       }
     },
     "gpu_section_light_atlas_storage": {
-      "status": "Implemented and real-driverPASS;twoREDcontrols detected;Release app link pending;not yet connected to world draws",
+      "status": "Implemented;real GL3.3driverPASS;twoREDcontrols detected;Release app/static linkPASS;world draw integration pending",
       "files": [
         "src/Render/Lighting/SectionLightAtlas.h",
         "src/Render/Lighting/SectionLightAtlas.cpp",
@@ -5615,7 +5615,15 @@
         "Remove baked-light merge keys/stamps and light-only geometry rebuild only after all world consumers use field bindings",
         "Independent RGB/framebuffer/seam/transparency/physical transport/backend/RD8/edit/eviction/performance matrix; persist content certificates"
       ],
-      "scope": "Actual GPU storage/sampler/lifetime foundation only. Normal terrain still shades with baked mesh light; no world-render cutover or light-only zero-remesh acceptance yet."
+      "scope": "Actual GPU storage/sampler/lifetime foundation only. Normal terrain still shades with baked mesh light; no world-render cutover or light-only zero-remesh acceptance yet.",
+      "release": {
+        "source": "dab86fcae",
+        "build": "engine-section-light-atlas-release-build.log",
+        "command": "cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8",
+        "result": "PASS;new SectionLightAtlas.cpp compiled into render_lighting object group; Windows static dependency check6systemDLLsPASS",
+        "exe_sha256": "28b3a143dfdfc268a4928523c552305ca4612ade725e5e906851779fce33ff92",
+        "scope": "Atlas currently not instantiated by normal world renderer; driver test exercises real allocation/sampling/lifetime. Last strict native2d66a948e precedes atlas addition and remains evidence for unchanged normal rendering paths, not GPU world-field cutover. GLES build/native still unverified."
+      }
     }
   }
 }
