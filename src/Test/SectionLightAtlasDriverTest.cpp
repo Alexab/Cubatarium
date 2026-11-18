@@ -191,6 +191,18 @@ void RunBindings()
   probe(table, *first, origin, successor.get());
   probe(table, *second, origin, initial.get());
   probe(table, *third, origin, initial.get());
+  // Owner1 is already live, so Acquire shares it without a GL upload. An
+  // unrelated prior error must not turn a successful table write into a
+  // reported failure after it has already changed a published binding.
+  glBindBuffer(GL_TEXTURE_2D,
+               0); // Deliberate GL_INVALID_ENUM, no state change.
+  Expect(!table.Replace(*second, {0, 7, 1}, successor, origin),
+         "pending GL error rejects replacement without changing live entry");
+  probe(table, *second, origin, initial.get());
+  glBindBuffer(GL_TEXTURE_2D, 0);
+  Expect(!table.Release(*second) && table.IsLive(*second),
+         "failed release keeps a valid retryable binding");
+  probe(table, *second, origin, initial.get());
   Expect(table.Replace(*first, {0, 7, 1}, successor, origin) &&
              table.GetAtlas().GetStatistics().uploads == 2,
          "same field does not upload or retire another reader");

@@ -22,6 +22,7 @@ class UChunkMeshCache;
 
 struct GreedyGpuBatch
 {
+  std::shared_ptr<SectionRenderLightBinding> renderLightBinding;
   BlockId blockId{BLOCK_AIR};
   glm::ivec3 chunkCoord{0};
   /// Matches GreedyBatchRef.batchIndex for sort-order lookup without reupload.

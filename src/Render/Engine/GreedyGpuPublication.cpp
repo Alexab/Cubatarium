@@ -65,6 +65,7 @@ bool PassMeshMatchesDemand(const UChunkRenderDemandStore &demand,
 } // namespace
 void UGreedyGpuBackend::DestroyBatchBuffers(GreedyGpuBatch &batch)
 {
+  batch.renderLightBinding.reset();
   if (batch.pooled)
   {
     // vbo/ebo are aliases of the shared pool buffers, not per-batch objects.
@@ -145,6 +146,7 @@ void UGreedyGpuBackend::UploadBatch(GreedyGpuBatch &gpu,
 
   gpu.blockId = batch.blockId;
   gpu.AlphaCutout = batch.AlphaCutout;
+  gpu.renderLightBinding = batch.renderLightBinding;
   gpu.pooled = false;
   gpu.vboByteOffset = 0;
   gpu.eboByteOffset = 0;

@@ -522,8 +522,8 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
     {
       continue;
     }
-    RebuildChunk(world, registry, candidate.coord);
     Dirty.Erase(candidate.coord);
+    RebuildChunk(world, registry, candidate.coord);
     ActiveMeshSourceRevision.erase(candidate.coord);
     GreedyBatchesDirty = true;
     ++rebuilt;
@@ -3045,6 +3045,34 @@ bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
          GetMeshPublishRevs(chunk_coord).geom_rev;
 }
 
+bool UChunkMeshCache::TryPrepareRenderLight(
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
+    const SectionGeometryRenderInputs &geometry,
+    const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
+    std::shared_ptr<SectionRenderLightBinding> &prepared)
+{
+  prepared.reset();
+  if (!PrepareRenderLight)
+    return true;
+  if (provisional || !stamps || !geometry.valid || !light ||
+      !light->MatchesGeometry(geometry))
+    return false;
+  std::array<ChunkInputStamp, 7> source;
+  std::copy_n(stamps->begin(), source.size(), source.begin());
+  const auto expected = SectionGeometryRenderInputs::FromStamps(
+      source[0].coord, geometry.world_geometry_identity, geometry.profile,
+      geometry.catalog, source);
+  if (!geometry.Matches(expected))
+    return false;
+  auto candidate =
+      PrepareRenderLight(CaptureStore.WorldEpoch(), geometry, *light);
+  if (!candidate ||
+      !candidate->Matches(CaptureStore.WorldEpoch(), geometry, *light))
+    return false;
+  prepared = std::move(candidate);
+  return true;
+}
+
 void UChunkMeshCache::RecordPublishedGeomStamps(
     ChunkGreedyMesh &mesh,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
@@ -4668,6 +4696,7 @@ void UChunkMeshCache::RebuildFlatGreedyBatches(const Frustum *frustum,
         GpuPackedChunkRef pref;
         pref.chunkCoord = entry.first;
         pref.slotIndex = entry.second.GpuSlotIndex;
+        pref.renderLightBinding = entry.second.RenderLightBinding;
         pref.blockRanges = entry.second.GpuBlockRanges;
         if (entry.second.GpuTransparent)
         {
@@ -6027,6 +6056,18 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       CubatariumLogInfo("LitToDark", message.str());
     }
   }
+  std::shared_ptr<SectionRenderLightBinding> prepared_light;
+  if (!TryPrepareRenderLight(source_stamps, source_geometry, source_light,
+                             gpu_result.provisionalLightPreview,
+                             prepared_light))
+  {
+    if (GpuPipeline && gpu_result.slotIndex >= 0)
+      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+    MarkDirtyPriority(coord);
+    note_terminal(JobTerminalReason::PublicationRejected,
+                  static_cast<uint8_t>(InstallResult::RejectedRetryable));
+    return false;
+  }
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
   int resident_slot_index =
       gpu_result.quadCount > 0 ? gpu_result.slotIndex : -1;
@@ -6056,6 +6097,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       }
     }
   }
+  chunkMesh.RenderLightBinding = std::move(prepared_light);
   ClearPriorLitHoldAge(coord);
   chunkMesh.ProvisionalLightPreview = gpu_result.provisionalLightPreview;
   chunkMesh.GpuResident = true;
@@ -8288,6 +8330,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       return;
     }
   }
+  std::shared_ptr<SectionRenderLightBinding> prepared_light;
+  if (!TryPrepareRenderLight(result.InputStampsValid ? &result.InputStamps
+                                                     : nullptr,
+                             result.GeometryInputs, result.RenderLight,
+                             result.ProvisionalLightPreview, prepared_light))
+  {
+    MarkDirtyPriority(result.coord);
+    note_terminal(JobTerminalReason::PublicationRejected);
+    return;
+  }
   const auto oldIt = GreedyVertexCountByChunk.find(result.coord);
   if (oldIt != GreedyVertexCountByChunk.end())
   {
@@ -8375,6 +8427,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   GreedyVertexCountTotal += new_vertex_count;
   // Write-first: CPU drawable before FreeChunk
   // (ShouldPublishCpuBatchesBeforeFreeGpu).
+  for (auto &batch : result.batches)
+    batch.renderLightBinding = prepared_light;
+  chunkMesh.RenderLightBinding = std::move(prepared_light);
   chunkMesh.batches = std::move(result.batches);
   chunkMesh.CpuHasDarkFace = new_cpu_has_dark_face;
   chunkMesh.CpuHasLitDrawableFace = new_cpu_has_lit_drawable_face;
@@ -11597,12 +11652,19 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   }
 
   int rebuilt = 0;
-  const int sync_budget = std::max(max_drain_per_frame, max_schedule_per_frame);
-  for (auto it = Dirty.begin(); it != Dirty.end() && rebuilt < sync_budget;)
+  const int sync_budget =
+      std::max(0, std::max(max_drain_per_frame, max_schedule_per_frame));
+  // Drain a bounded snapshot before invoking builders. A rejected publication
+  // may enqueue this same coordinate again; erasing afterwards would lose its
+  // retry, and retaining a unified-queue iterator across callbacks is unsafe.
+  std::vector<glm::ivec3> sync_candidates;
+  for (auto it = Dirty.begin();
+       it != Dirty.end() && sync_candidates.size() < size_t(sync_budget); ++it)
+    sync_candidates.push_back(*it);
+  for (const auto &coord : sync_candidates)
   {
-    const glm::ivec3 coord = *it;
+    Dirty.Erase(coord);
     RebuildChunk(world, registry, coord);
-    it = Dirty.RemoveAt(it);
     ClearSatisfiedScreenRayRepairPin(coord);
     ++rebuilt;
     ++stats.SyncRebuilt;
@@ -11753,8 +11815,8 @@ void UChunkMeshCache::RebuildChunkImmediate(const UBlockWorld &world,
   // overwrite this Immediate mesh. Same revision invalidate as
   // MarkDirtyPriority.
   InvalidateInFlightMeshBuild(chunkCoord);
-  RebuildChunk(world, registry, chunkCoord);
   Dirty.Erase(chunkCoord);
+  RebuildChunk(world, registry, chunkCoord);
   InvalidateVisibleList();
   LastMeshImmediateMs += std::chrono::duration<double, std::milli>(
                              std::chrono::high_resolution_clock::now() - t0)
@@ -12066,6 +12128,21 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         ++PubAcceptFirstPublishN;
       }
     }
+    const auto sync_geometry_inputs =
+        sync_catalog == registry.GetDefinitionsCatalogSnapshot()
+            ? sync_snap.GeometryRenderInputs(sync_catalog)
+            : SectionGeometryRenderInputs{};
+    std::shared_ptr<SectionRenderLightBinding> prepared_light;
+    if (!TryPrepareRenderLight(
+            sync_snap.inputStampsValid ? &sync_snap.inputStamps : nullptr,
+            sync_geometry_inputs, sync_snap.renderLight, false, prepared_light))
+    {
+      MarkDirtyPriority(chunkCoord);
+      return;
+    }
+    for (auto &batch : new_batches)
+      batch.renderLightBinding = prepared_light;
+    chunkMesh.RenderLightBinding = std::move(prepared_light);
     chunkMesh.batches = std::move(new_batches);
     chunkMesh.CpuHasDarkFace = new_cpu_has_dark_face;
     chunkMesh.CpuHasLitDrawableFace = new_cpu_has_lit_drawable_face;

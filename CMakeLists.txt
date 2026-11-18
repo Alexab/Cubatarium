@@ -385,6 +385,7 @@ set(SOURCES
     src/Render/Engine/GreedyVertexPoolLifetime.cpp
     src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Lighting/SectionLightBindingTable.cpp
+    src/Render/Lighting/SectionRenderLightBindings.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -2391,6 +2392,9 @@ cubatarium_add_test(NAME fluid_placement_liquid_decor_test
 
 cubatarium_add_test(NAME decor_mesh_integration_test
     SOURCES
+        src/Render/Lighting/SectionLightAtlas.cpp
+        src/Render/Lighting/SectionLightBindingTable.cpp
+        src/Render/Lighting/SectionRenderLightBindings.cpp
         ${PHYSICS_MATERIAL_UNIT_SOURCES}
         src/World/Lighting/LightUtil.cpp
         src/World/Lighting/ChunkRelightSnapshot.cpp
@@ -2430,6 +2434,14 @@ cubatarium_add_test(NAME decor_mesh_integration_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog OpenGL::GL GLEW::GLEW)
 if(WIN32)
     target_link_libraries(decor_mesh_integration_test dbghelp)
+endif()
+if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  target_link_libraries(decor_mesh_integration_test glfw)
+  target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1)
+  add_test(NAME section_render_light_bindings_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --light-binding-driver)
+  set_tests_properties(section_render_light_bindings_driver_test PROPERTIES
+    LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 60)
 endif()
 
 cubatarium_add_test(NAME mesh_schedule_retry_test

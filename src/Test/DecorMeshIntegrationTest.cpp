@@ -2,6 +2,12 @@
 #include "Blocks/BlockRegistry.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "Render/Camera/Frustum.h"
+#include "Render/Lighting/SectionRenderLightBindings.h"
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+#include "Render/GlIncludes.h"
+#include "Render/Lighting/SectionLightBindingTable.h"
+#include <GLFW/glfw3.h>
+#endif
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
@@ -19,6 +25,21 @@ namespace cutum
 {
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static bool CommitPacked(UChunkMeshCache &cache, const UBlockWorld &world,
+                           UBlockRegistry &registry,
+                           const ChunkMeshSnapshot &snapshot)
+  {
+    GpuMeshProcessResult result;
+    result.quadCount = 1;
+    result.hasLitDrawableFace = true;
+    return cache.CommitGpuMeshResult(
+        world, registry, snapshot.coord,
+        cache.GetChunkMeshRevision(snapshot.coord), std::move(result), {},
+        false, snapshot.inputStamps[0].light, true, {}, false, {},
+        &snapshot.inputStamps,
+        snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
+        snapshot.renderLight);
+  }
   static void ReserveOneRepair(UChunkMeshCache &cache)
   {
     cache.CaptureRefreshBudgetLeft = 0;
@@ -45,6 +66,22 @@ constexpr cutum::BlockId kFire = 631;
 constexpr cutum::BlockId kTallGrass = 568;
 constexpr cutum::BlockId kCutoutLeaves = 633;
 
+// Only a lifetime/publication test double. The GPU driver's separate tests
+// exercise actual allocation, uploads, shader reads and fences.
+class TestRenderLightBinding final : public cutum::SectionRenderLightBinding
+{
+public:
+  TestRenderLightBinding(uint64_t epoch,
+                         const cutum::SectionGeometryRenderInputs &geometry,
+                         const cutum::SectionRenderLightSnapshot &light)
+      : SectionRenderLightBinding(epoch, geometry, light)
+  {
+  }
+  std::array<uint32_t, 4> ShaderWords() const override { return {7, 0, 1, 0}; }
+  bool IsLive() const override { return live; }
+  bool live{true};
+};
+
 static void Expect(bool cond, const char *message)
 {
   if (!cond)
@@ -53,6 +90,98 @@ static void Expect(bool cond, const char *message)
     std::exit(1);
   }
 }
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void ProbeCertifiedBinding(
+    cutum::SectionRenderLightBindings &store,
+    const std::shared_ptr<cutum::SectionRenderLightBinding> &binding)
+{
+  const auto compile = [](GLenum type, const std::string &source)
+  {
+    const auto shader = glCreateShader(type);
+    const char *text = source.c_str();
+    glShaderSource(shader, 1, &text, nullptr);
+    glCompileShader(shader);
+    GLint ok = 0;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+    if (!ok)
+    {
+      char log[2048]{};
+      glGetShaderInfoLog(shader, sizeof(log), nullptr, log);
+      std::cerr << log << '\n';
+    }
+    Expect(ok != 0, "certified binding readback shader compiles");
+    return shader;
+  };
+  const auto vertex =
+      compile(GL_VERTEX_SHADER,
+              "#version 330 core\n"
+              "void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);"
+              "gl_Position=vec4(p*2.0-1.0,0,1);}");
+  const auto fragment =
+      compile(GL_FRAGMENT_SHADER,
+              std::string("#version 330 core\n") +
+                  cutum::SectionLightBindingTable::ShaderInterface() +
+                  "uniform uvec4 handle; uniform ivec3 origin;"
+                  "layout(location=0) out uint value;"
+                  "void main(){ivec2 p=ivec2(gl_FragCoord.xy);uint packed;"
+                  "bool ok=sectionLightFetch(handle,origin+"
+                  "ivec3(p.x-2,p.y%20-2,p.y/20-2),packed);"
+                  "value=ok?packed:256u;}");
+  const auto program = glCreateProgram();
+  glAttachShader(program, vertex);
+  glAttachShader(program, fragment);
+  glLinkProgram(program);
+  GLint linked = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &linked);
+  Expect(linked != 0, "certified binding readback program links");
+  GLuint vao = 0, texture = 0, framebuffer = 0;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+  glGenTextures(1, &texture);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R32UI, 20, 400, 0, GL_RED_INTEGER,
+               GL_UNSIGNED_INT, nullptr);
+  glGenFramebuffers(1, &framebuffer);
+  glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         texture, 0);
+  Expect(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE,
+         "certified binding readback framebuffer complete");
+  Expect(store.Bind(7, 8), "certified field/table resources bind");
+  glUseProgram(program);
+  glUniform1i(glGetUniformLocation(program, "uSectionLightAtlas"), 7);
+  glUniform1i(glGetUniformLocation(program, "uSectionLightBindings"), 8);
+  const auto incarnation = store.ShaderIncarnation();
+  const auto words = binding->ShaderWords();
+  const auto origin = binding->GeometryInputs().coord * cutum::CHUNK_SIZE;
+  glUniform2uiv(glGetUniformLocation(program, "uSectionLightTableIncarnation"),
+                1, incarnation.data());
+  glUniform4uiv(glGetUniformLocation(program, "handle"), 1, words.data());
+  glUniform3i(glGetUniformLocation(program, "origin"), origin.x, origin.y,
+              origin.z);
+  glViewport(0, 0, 20, 400);
+  glDrawArrays(GL_TRIANGLES, 0, 3);
+  std::array<uint32_t, cutum::SectionLightVolume::CellCount> pixels{};
+  glReadPixels(0, 0, 20, 400, GL_RED_INTEGER, GL_UNSIGNED_INT, pixels.data());
+  const auto &expected = binding->LightSnapshot().Volume()->cells;
+  for (size_t n = 0; n < pixels.size(); ++n)
+    Expect(
+        pixels[n] == expected[n],
+        "published GPU binding reads every certified physical sky/block cell");
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glUseProgram(0);
+  glBindVertexArray(0);
+  glDeleteFramebuffers(1, &framebuffer);
+  glDeleteTextures(1, &texture);
+  glDeleteVertexArrays(1, &vao);
+  glDeleteProgram(program);
+  glDeleteShader(vertex);
+  glDeleteShader(fragment);
+  Expect(glGetError() == GL_NO_ERROR,
+         "certified GPU field readback has no GL errors");
+}
+#endif
 
 static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
 {
@@ -395,7 +524,8 @@ static void TestPublicationRefreshesDrawRefs(cutum::UBlockRegistry &registry)
 
 static void TestFirstComputedLightPublication(
     cutum::UBlockRegistry &registry,
-    const cutum::UBlockDefinitionStorage *definitions)
+    const cutum::UBlockDefinitionStorage *definitions,
+    bool use_gpu_bindings = false)
 {
   using namespace cutum;
   enum class ProofCase
@@ -463,7 +593,34 @@ static void TestFirstComputedLightPublication(
             "direct world face lighting uses same certified volume as capture");
     }
 
+    SectionRenderLightBindings gpu_bindings;
     UChunkMeshCache cache;
+    if (use_gpu_bindings && proof_case == ProofCase::Current)
+    {
+      const auto source = world.CaptureRenderLightSnapshot(root);
+      Expect(
+          source && gpu_bindings.BeginWorld(
+                        cache.GetCaptureStore().WorldEpoch(),
+                        source->GeometryInputs().world_geometry_identity, 16,
+                        8u * SectionLightVolume::CellCount, 8),
+          "actual certified GPU resource store initializes in current world");
+    }
+    bool reject_resource = false;
+    int prepare_calls = 0;
+    if (proof_case == ProofCase::Current)
+      cache.SetPrepareRenderLightFn(
+          [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+              const SectionRenderLightSnapshot &light)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            ++prepare_calls;
+            if (reject_resource)
+              return {};
+            if (use_gpu_bindings)
+              return gpu_bindings.Prepare(epoch, geometry, light);
+            return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                            light);
+          });
     auto settings = MakeFrustumMeshSettings();
     settings.AsyncMeshing = true;
     settings.FrustumCulling = false;
@@ -540,11 +697,29 @@ static void TestFirstComputedLightPublication(
                    physical_light->FieldRevision(),
            "actual asynchronous publication retains compatible "
            "geometry/catalog/profile provenance");
+    SectionRenderLightBindings sync_gpu_bindings;
     UChunkMeshCache sync_cache;
     auto sync_settings = settings;
     sync_settings.AsyncMeshing = false;
     sync_cache.SetRenderSettings(sync_settings);
     sync_cache.RebuildAll(world, registry);
+    if (use_gpu_bindings)
+      Expect(sync_gpu_bindings.BeginWorld(
+                 sync_cache.GetCaptureStore().WorldEpoch(),
+                 published_geometry->world_geometry_identity, 16,
+                 8u * SectionLightVolume::CellCount, 8),
+             "synchronous cache owns its independent capture epoch GPU scope");
+    sync_cache.SetPrepareRenderLightFn(
+        [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+            const SectionRenderLightSnapshot &light)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          if (use_gpu_bindings)
+            return sync_gpu_bindings.Prepare(epoch, geometry, light);
+          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                          light);
+        });
+    sync_cache.RebuildChunkImmediate(world, registry, root);
     const auto sync_geometry =
         sync_cache.GetPublishedGeometryRenderInputs(root);
     const auto sync_light = sync_cache.GetPublishedRenderLightSnapshot(root);
@@ -561,6 +736,227 @@ static void TestFirstComputedLightPublication(
     for (const auto &vertex : batch->vertices)
       Expect(vertex.lightPreview == 0.0f,
              "normal first publication does not retain encoded preview bits");
+    const auto binding = cache.GetPublishedRenderLightBinding(root);
+    Expect(binding &&
+               binding->Matches(epoch, *published_geometry, *published_light) &&
+               batch->renderLightBinding == binding,
+           "actual async publication and drawable batch own compatible "
+           "resource lease");
+    const auto published_count = cache.GetPublishCount(root);
+    const auto previous_vertices = cache.GetGreedyVertexCount();
+    // Create real unsatisfied geometry debt. A remesh of identical already
+    // published inputs may legitimately be elided by the scheduler.
+    world.SetBlock({6, 4, 4}, kStone);
+    const auto replacement_result =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(replacement_result.inputs_complete &&
+               replacement_result.chunks.size() == 1,
+           "resource rejection fixture has fresh calculated physical inputs");
+    chunk->ReplaceComputedLightVolume(
+        *replacement_result.chunks[0].padded_light, true, true);
+    Expect(world.RecordLightCalculation(replacement_result, catalog) == 1,
+           "geometry edit installs fresh canonical calculation proof");
+    cache.MarkDirtyPriority(root);
+    demand.NoteDemand(root, cache.GetChunkMeshRevision(root),
+                      chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+                      chunk->GetIncarnation());
+    demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
+                                       chunk->GetLightFieldRevision(),
+                                       chunk->GetContentRevision());
+    reject_resource = true;
+    const auto snapshot = ChunkMeshSnapshot::Capture(
+        world, root, cache.GetChunkMeshRevision(root));
+    const int before_packed_prepare = prepare_calls;
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::CommitPacked(
+               cache, world, registry, snapshot) &&
+               cache.GetPublishCount(root) == published_count &&
+               cache.GetPublishedRenderLightBinding(root) == binding &&
+               cache.GetGreedyVertexCount() == previous_vertices,
+           "packed commit cannot retire predecessor when resource preparation "
+           "fails");
+    Expect(prepare_calls == before_packed_prepare + 1,
+           "packed failure reaches actual resource preparation callback");
+    cache.MarkDirtyPriority(root);
+    cache.GetCaptureStore().Invalidate(root);
+    Expect(cache.GetCaptureStore()
+               .CaptureAndStore(world, root, cache.GetChunkMeshRevision(root))
+               .has_value(),
+           "resource-rejected async candidate recaptures current geometry");
+    const auto retry_schedule =
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    if (retry_schedule.Scheduled != 1)
+      std::cerr << "resource retry scheduled=" << retry_schedule.Scheduled
+                << " dirty=" << cache.GetDirtyCount()
+                << " pending_capture=" << cache.HasPendingCaptureWork(root)
+                << " snapshot_skips="
+                << cache.GetLastMeshDirtyScheduleSkipSnapshotN()
+                << " other_skips=" << cache.GetLastMeshDirtyScheduleSkipOtherN()
+                << '\n';
+    Expect(retry_schedule.Scheduled == 1 &&
+               cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "actual async resource-rejection job finishes");
+    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    Expect(cache.GetPublishCount(root) == published_count &&
+               cache.GetPublishedRenderLightBinding(root) == binding &&
+               cache.HasPendingDirty(),
+           "async resource failure retains predecessor and retry obligation");
+    reject_resource = false;
+
+    const auto sync_binding = sync_cache.GetPublishedRenderLightBinding(root);
+    const auto sync_count = sync_cache.GetPublishCount(root);
+    Expect(bool(sync_binding), "synchronous candidate owns prepared resource");
+    sync_cache.SetPrepareRenderLightFn(
+        [](uint64_t, const SectionGeometryRenderInputs &,
+           const SectionRenderLightSnapshot &)
+            -> std::shared_ptr<SectionRenderLightBinding> { return {}; });
+    sync_cache.RebuildChunkImmediate(world, registry, root);
+    Expect(sync_cache.GetPublishCount(root) == sync_count &&
+               sync_cache.GetPublishedRenderLightBinding(root) ==
+                   sync_binding &&
+               sync_cache.IsChunkMeshDirty(root),
+           "immediate resource failure retains predecessor and retry ticket");
+    sync_cache.RebuildDirtyChunksWithStats(world, registry, 100, 0, false, 0);
+    Expect(sync_cache.GetPublishCount(root) == sync_count &&
+               sync_cache.IsChunkMeshDirty(root),
+           "bounded synchronous drain cannot erase the rejected retry ticket");
+    for (const bool dead : {false, true})
+    {
+      sync_cache.SetPrepareRenderLightFn(
+          [dead](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+                 const SectionRenderLightSnapshot &light)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            auto invalid = std::make_shared<TestRenderLightBinding>(
+                dead ? epoch : epoch + 1, geometry, light);
+            invalid->live = !dead;
+            return invalid;
+          });
+      sync_cache.RebuildChunkImmediate(world, registry, root);
+      Expect(
+          sync_cache.GetPublishCount(root) == sync_count &&
+              sync_cache.GetPublishedRenderLightBinding(root) == sync_binding &&
+              sync_cache.IsChunkMeshDirty(root),
+          "wrong-epoch or dead prepared resource cannot replace predecessor");
+    }
+    sync_cache.SetPrepareRenderLightFn(
+        [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+            const SectionRenderLightSnapshot &light)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          if (use_gpu_bindings)
+            return sync_gpu_bindings.Prepare(epoch, geometry, light);
+          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                          light);
+        });
+    sync_cache.RebuildDirtyChunksWithStats(world, registry, 100, 0, false, 0);
+    Expect(
+        sync_cache.GetPublishCount(root) > sync_count &&
+            !sync_cache.IsChunkMeshDirty(root),
+        "resource recovery publishes a synchronous successor and drains retry");
+    if (use_gpu_bindings)
+    {
+      const auto words = binding->ShaderWords();
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+      ProbeCertifiedBinding(gpu_bindings, binding);
+#endif
+      Expect(gpu_bindings.Bind(7, 8) &&
+                 gpu_bindings.Refresh(binding, epoch, *physical_light) &&
+                 binding->ShaderWords() == words,
+             "physical field refresh preserves actual GPU binding identity");
+      const auto current_binding =
+          sync_cache.GetPublishedRenderLightBinding(root);
+      const auto current_words = current_binding->ShaderWords();
+      const auto current_geometry = current_binding->GeometryInputs();
+      const auto before_field_only_count = sync_cache.GetPublishCount(root);
+      const auto before_field_only_vertices = sync_cache.GetGreedyVertexCount();
+      const auto sync_epoch = sync_cache.GetCaptureStore().WorldEpoch();
+      for (const bool emitter_present : {true, false})
+      {
+        // Diagonal input changes physical transport but none of the seven
+        // geometry face stamps used by this already published artifact.
+        world.SetBlock({16, 8, 16}, emitter_present ? kFire : BLOCK_AIR);
+        const auto changed =
+            UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                .Compute(registry);
+        Expect(changed.inputs_complete && changed.chunks.size() == 1,
+               "diagonal emitter has complete independent physical inputs");
+        chunk->ReplaceComputedLightVolume(*changed.chunks[0].padded_light, true,
+                                          true);
+        Expect(world.RecordLightCalculation(changed, catalog) == 1,
+               "diagonal emitter installs current physical calculation proof");
+        const auto new_light = world.CaptureRenderLightSnapshot(root);
+        Expect(new_light && new_light->MatchesGeometry(current_geometry) &&
+                   UnpackBlock(
+                       new_light->Volume()
+                           ->cells[SectionLightVolume::Index(15, 8, 15)]) ==
+                       (emitter_present ? 12 : 0),
+               "diagonal emitter changes physical block light without geometry "
+               "change");
+        Expect(
+            sync_gpu_bindings.Refresh(current_binding, sync_epoch,
+                                      *new_light) &&
+                current_binding->ShaderWords() == current_words &&
+                sync_cache.GetPublishCount(root) == before_field_only_count &&
+                sync_cache.GetGreedyVertexCount() == before_field_only_vertices,
+            "certified light-only GPU replacement preserves binding and CPU "
+            "geometry artifact");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+        ProbeCertifiedBinding(sync_gpu_bindings, current_binding);
+#endif
+      }
+      {
+        SectionRenderLightBindings retirement_store;
+        Expect(retirement_store.BeginWorld(
+                   sync_epoch, current_geometry.world_geometry_identity, 1,
+                   SectionLightVolume::CellCount, 1),
+               "one-slot physical resource retirement fixture initializes");
+        auto final_owner = retirement_store.Prepare(
+            sync_epoch, current_geometry, current_binding->LightSnapshot());
+        Expect(bool(final_owner), "one-slot physical resource acquired");
+        const std::weak_ptr<SectionRenderLightBinding> destroyed = final_owner;
+        glBindBuffer(GL_TEXTURE_2D, 0); // Deliberate caller GL_INVALID_ENUM.
+        final_owner.reset();
+        Expect(destroyed.expired() &&
+                   !retirement_store.Prepare(sync_epoch, current_geometry,
+                                             current_binding->LightSnapshot()),
+               "failed final invalidation remains owned until explicit "
+               "collection");
+        retirement_store.CollectRetired();
+        glFinish();
+        retirement_store.CollectRetired();
+        const auto reused = retirement_store.Prepare(
+            sync_epoch, current_geometry, current_binding->LightSnapshot());
+        Expect(reused && reused->IsLive(),
+               "final lease release retries after GL error without leaking "
+               "bounded capacity");
+      }
+      auto wrong_geometry = *published_geometry;
+      ++wrong_geometry.stamps[0].content;
+      Expect(
+          !gpu_bindings.Prepare(epoch + 1, *published_geometry,
+                                *physical_light) &&
+              !gpu_bindings.Prepare(epoch, wrong_geometry, *physical_light) &&
+              !gpu_bindings.Refresh(binding, epoch + 1, *physical_light),
+          "wrong logical world epoch and geometry cannot acquire physical GPU "
+          "authority");
+      Expect(gpu_bindings.BeginWorld(
+                 epoch, published_geometry->world_geometry_identity, 16,
+                 8u * SectionLightVolume::CellCount, 8) &&
+                 !binding->IsLive() &&
+                 binding->ShaderWords() == std::array<uint32_t, 4>{} &&
+                 !gpu_bindings.Refresh(binding, epoch, *physical_light),
+             "world reset invalidates retained leases even with reused logical "
+             "epoch");
+      const auto replacement =
+          gpu_bindings.Prepare(epoch, *published_geometry, *physical_light);
+      Expect(replacement && replacement->IsLive() &&
+                 replacement->ShaderWords() != words,
+             "new world binding cannot alias a retained predecessor handle");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+      ProbeCertifiedBinding(gpu_bindings, replacement);
+#endif
+    }
     cache.MarkDirty(root);
     cache.GetCaptureStore().Invalidate(root);
     cache.SetIsLightRepairRemeshFn([](glm::ivec3) { return false; });
@@ -605,7 +1001,7 @@ static void TestWorldDemandIsolation()
 
 } // namespace
 
-int main()
+int main(int argc, char **argv)
 {
   const std::shared_ptr<cutum::UBlockDefinitionStorage> definitions =
       MakeDefinitions();
@@ -614,6 +1010,46 @@ int main()
   cutum::UBlockWorld world;
   world.SetFluidDefinitions(definitions.get());
 
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  if (argc == 2 && std::string(argv[1]) == "--light-binding-driver")
+  {
+    if (!glfwInit())
+      return 77;
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    auto *window = glfwCreateWindow(32, 32, "Certified render light test",
+                                    nullptr, nullptr);
+    if (!window)
+    {
+      glfwTerminate();
+      return 77;
+    }
+    glfwMakeContextCurrent(window);
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK)
+    {
+      glfwDestroyWindow(window);
+      glfwTerminate();
+      return 77;
+    }
+    while (glGetError() != GL_NO_ERROR)
+    {
+    }
+    std::cout << "GPU: " << glGetString(GL_RENDERER)
+              << " GL: " << glGetString(GL_VERSION) << '\n';
+    TestFirstComputedLightPublication(registry, definitions.get(), true);
+    Expect(glGetError() == GL_NO_ERROR,
+           "certified binding integration has no GL errors");
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    std::cout << "section_render_light_bindings_driver_test: PASS "
+                 "(physical proof/publication/resource lifetime; no world "
+                 "shader acceptance)\n";
+    return 0;
+  }
+#endif
   TestCrossGrassVisibleWithFrustum(world, registry);
   TestCampfireStoneMesh(world, registry);
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);

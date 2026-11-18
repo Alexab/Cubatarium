@@ -5,10 +5,12 @@
 #include "World/Math/BlockTypes.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <memory>
 #include <vector>
 
 namespace cutum
 {
+class SectionRenderLightBinding;
 
 struct GreedyBatchRef
 {
@@ -25,6 +27,7 @@ struct GreedyMeshBatch
   bool AlphaCutout{false};
   std::vector<GreedyMeshVertex> vertices;
   std::vector<uint32_t> indices;
+  std::shared_ptr<SectionRenderLightBinding> renderLightBinding;
 };
 
 } // namespace cutum

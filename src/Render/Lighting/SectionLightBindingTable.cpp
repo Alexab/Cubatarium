@@ -141,6 +141,10 @@ bool SectionLightBindingTable::Upload(uint32_t index, uint32_t generation,
                                       const SectionLightAtlas::Page *page,
                                       glm::ivec3 origin)
 {
+  // A prior caller error must not be mistaken for failure AFTER a successful
+  // update of a live entry. Reject before mutating the published GPU table.
+  if (glGetError() != GL_NO_ERROR)
+    return false;
   std::array<uint32_t, 8> words{generation, 0};
   if (page)
   {

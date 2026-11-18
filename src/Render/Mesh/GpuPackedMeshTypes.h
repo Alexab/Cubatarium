@@ -3,10 +3,12 @@
 #include "World/Math/BlockTypes.h"
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <memory>
 #include <vector>
 
 namespace cutum
 {
+class SectionRenderLightBinding;
 
 struct GpuBlockDrawRange
 {
@@ -22,6 +24,7 @@ struct GpuPackedChunkRef
   glm::ivec3 chunkCoord{0};
   int slotIndex{-1};
   std::vector<GpuBlockDrawRange> blockRanges;
+  std::shared_ptr<SectionRenderLightBinding> renderLightBinding;
 };
 
 struct GpuMeshProcessResult

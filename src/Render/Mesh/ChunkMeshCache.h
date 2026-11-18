@@ -2,6 +2,7 @@
 #define CHUNKMESHCACHE_H
 #include "App/Settings/RenderSettings.h"
 #include "Render/Camera/CullInputKey.h"
+#include "Render/Lighting/SectionRenderLightBinding.h"
 #include "Render/Mesh/AsyncMeshBuilder.h"
 #include "Render/Mesh/BoundaryOverlay.h"
 #include "Render/Mesh/ChunkDirtySet.h"
@@ -1082,6 +1083,22 @@ public:
   {
     OnPackedRepresentationSwitch = std::move(fn);
   }
+  using PrepareRenderLightFn =
+      std::function<std::shared_ptr<SectionRenderLightBinding>(
+          uint64_t, const SectionGeometryRenderInputs &,
+          const SectionRenderLightSnapshot &)>;
+  /// When installed, every publication must prepare a compatible live GPU
+  /// lease before overwriting geometry or retiring a packed predecessor.
+  void SetPrepareRenderLightFn(PrepareRenderLightFn fn)
+  {
+    PrepareRenderLight = std::move(fn);
+  }
+  std::shared_ptr<SectionRenderLightBinding>
+  GetPublishedRenderLightBinding(glm::ivec3 coord) const
+  {
+    const auto it = GreedyCache.find(coord);
+    return it == GreedyCache.end() ? nullptr : it->second.RenderLightBinding;
+  }
   /// When true, skip outside-focus dirty trickle (near holes / pending light).
   void SetStarveOutsideFocusMesh(bool starve)
   {
@@ -1316,6 +1333,7 @@ private:
     bool PublishedGeomStampsValid{false};
     SectionGeometryRenderInputs RenderGeometryInputs;
     std::optional<SectionRenderLightSnapshot> RenderLight;
+    std::shared_ptr<SectionRenderLightBinding> RenderLightBinding;
     uint32_t PublishCount{0};
     /// Center content revision baked into the live GPU packed slot (0 unknown).
     uint64_t GpuBoundContentRev{0};
@@ -1325,6 +1343,11 @@ private:
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
       SectionGeometryRenderInputs geometry_inputs = {},
       std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
+  bool TryPrepareRenderLight(
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
+      const SectionGeometryRenderInputs &geometry,
+      const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
+      std::shared_ptr<SectionRenderLightBinding> &prepared);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t
@@ -1743,6 +1766,7 @@ private:
   mutable std::function<void(glm::ivec3, uint8_t)> OnFaceDebtMask;
   mutable std::function<void(glm::ivec3)> OnGpuPipelineProgress;
   std::function<void(glm::ivec3)> OnPackedRepresentationSwitch;
+  PrepareRenderLightFn PrepareRenderLight;
   // Per-streaming-update-frame memo: HasMissing/FindNearest are called many
   // times during one movement/update cycle.
   mutable uint64_t HoleQueryEpoch{0};
