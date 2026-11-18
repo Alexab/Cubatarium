@@ -1344,6 +1344,7 @@ private:
       SectionGeometryRenderInputs geometry_inputs = {},
       std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
   bool TryPrepareRenderLight(
+      uint64_t source_world_epoch,
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
       const SectionGeometryRenderInputs &geometry,
       const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
@@ -1387,7 +1388,8 @@ private:
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount>
           *source_stamps = nullptr,
       SectionGeometryRenderInputs source_geometry = {},
-      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
+      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt,
+      uint64_t source_world_epoch = 0);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);

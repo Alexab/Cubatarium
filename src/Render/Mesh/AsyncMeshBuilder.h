@@ -38,6 +38,7 @@ struct MeshBuildResult
   std::vector<GreedyMeshBatch> batches;
   std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
   uint64_t sourceRevision{0};
+  uint64_t sourceWorldEpoch{0};
   uint64_t jobId{0};
   uint64_t submitEpoch{0};
   JobStageSpan stageTrace{};

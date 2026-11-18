@@ -32,6 +32,27 @@ namespace cutum
 {
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static ChunkMeshSnapshot CaptureOwned(UChunkMeshCache &cache,
+                                        const UBlockWorld &world,
+                                        glm::ivec3 coord)
+  {
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    auto snapshot = ChunkMeshSnapshot::Capture(
+        world, coord, cache.GetChunkMeshRevision(coord));
+    snapshot.sourceWorldEpoch = epoch;
+    return snapshot;
+  }
+  static bool PrepareOnly(UChunkMeshCache &cache,
+                          const ChunkMeshSnapshot &snapshot,
+                          UBlockRegistry &registry)
+  {
+    std::shared_ptr<SectionRenderLightBinding> prepared;
+    return cache.TryPrepareRenderLight(
+        snapshot.sourceWorldEpoch,
+        snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
+        snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
+        snapshot.renderLight, snapshot.provisionalLightPreview, prepared);
+  }
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   static void QueuePacked(UChunkMeshCache &cache, ChunkMeshSnapshot snapshot,
                           UBlockRegistry &registry)
@@ -83,7 +104,7 @@ struct ChunkMeshCaptureAdmissionTestAccess
         false, snapshot.inputStamps[0].light, true, {}, false, {},
         &snapshot.inputStamps,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight);
+        snapshot.renderLight, snapshot.sourceWorldEpoch);
   }
   static void ReserveOneRepair(UChunkMeshCache &cache)
   {
@@ -826,7 +847,8 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   demand.NoteLightCalculationSettled(
       coord, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
       chunk->GetLightFieldRevision(), chunk->GetContentRevision());
-  const auto current = ChunkMeshSnapshot::Capture(world, coord, revision);
+  const auto current =
+      ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, coord);
   Expect(current.certifiedPaddedLight,
          "packed overflow input carries a certified physical volume");
   ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, current, registry);
@@ -864,8 +886,7 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   const auto published = cache.GetPublishCount(coord);
   ChunkMeshCaptureAdmissionTestAccess::QueuePacked(
       cache,
-      ChunkMeshSnapshot::Capture(world, coord,
-                                 cache.GetChunkMeshRevision(coord)),
+      ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, coord),
       registry);
   for (int i = 0; i < 8 && cache.GetPendingGpuAppliesCount(); ++i)
   {
@@ -886,8 +907,7 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   {
     ChunkMeshCaptureAdmissionTestAccess::QueuePacked(
         cache,
-        ChunkMeshSnapshot::Capture(world, coord,
-                                   cache.GetChunkMeshRevision(coord)),
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, coord),
         registry);
     ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
     Expect(cache.GetPendingGpuAppliesCount() == 1 &&
@@ -1287,6 +1307,89 @@ static void TestFirstComputedLightPublication(
             "direct world face lighting uses same certified volume as capture");
     }
 
+    if (proof_case == ProofCase::Current && !use_gpu_bindings)
+    {
+      UChunkMeshCache epoch_cache;
+      int prepare_calls = 0;
+      epoch_cache.SetPrepareRenderLightFn(
+          [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+              const SectionRenderLightSnapshot &light)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            ++prepare_calls;
+            return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                            light);
+          });
+      auto input = ChunkMeshSnapshot::Capture(world, root, 0);
+      input.sourceWorldEpoch = epoch_cache.GetCaptureStore().WorldEpoch();
+      epoch_cache.GetCaptureStore().BumpWorldEpoch();
+      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(epoch_cache,
+                                                               input, registry),
+             "old captured epoch cannot borrow current epoch for GPU light "
+             "preparation");
+      Expect(prepare_calls == 0,
+             "stale source epoch is rejected before any resource callback");
+      auto current = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+          epoch_cache, world, root);
+      auto missing = current;
+      missing.sourceWorldEpoch = 0;
+      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                 epoch_cache, missing, registry),
+             "unowned raw capture cannot acquire current render epoch");
+      auto future = current;
+      ++future.sourceWorldEpoch;
+      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                 epoch_cache, future, registry) &&
+                 prepare_calls == 0,
+             "future source epoch cannot allocate renderer resources");
+      Expect(ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                 epoch_cache, current, registry),
+             "current capture owner epoch can prepare a compatible binding");
+      Expect(
+          !epoch_cache.GetCaptureStore().TryCommit(
+              root, 0, epoch_cache.GetCaptureStore().WorldEpoch(), input,
+              nullptr),
+          "capture store cannot relabel old owned snapshot with current epoch");
+      auto stored =
+          epoch_cache.GetCaptureStore().CaptureAndStore(world, root, 0);
+      Expect(
+          stored && stored->sourceWorldEpoch ==
+                        epoch_cache.GetCaptureStore().WorldEpoch(),
+          "capture store returns its captured owner epoch in snapshot value");
+      epoch_cache.SetPrepareRenderLightFn(
+          [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+              const SectionRenderLightSnapshot &light)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            epoch_cache.GetCaptureStore().BumpWorldEpoch();
+            return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                            light);
+          });
+      Expect(
+          !ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(epoch_cache,
+                                                            current, registry),
+          "resource callback epoch transition cannot publish an old candidate");
+      auto worker_input = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+          epoch_cache, world, root);
+      UAsyncMeshBuilder builder(1);
+      Expect(builder.Enqueue(worker_input, registry) &&
+                 builder.WaitIdleFor(std::chrono::seconds(5)),
+             "actual worker accepts owned geometry snapshot");
+      auto completed = builder.DrainCompleted(1);
+      Expect(completed.size() == 1 &&
+                 completed[0].sourceWorldEpoch ==
+                     worker_input.sourceWorldEpoch &&
+                 completed[0].sourceWorldEpoch != completed[0].submitEpoch,
+             "actual worker carries capture epoch independently of submission "
+             "epoch");
+      epoch_cache.SetPrepareRenderLightFn({});
+      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                 epoch_cache, input, registry) &&
+                 ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                     epoch_cache, worker_input, registry),
+             "capture epoch authority also applies without an optional GPU "
+             "callback");
+    }
     SectionRenderLightBindings gpu_bindings;
     UChunkMeshCache cache;
     if (use_gpu_bindings && proof_case == ProofCase::Current)
@@ -1459,8 +1562,8 @@ static void TestFirstComputedLightPublication(
                                        chunk->GetLightFieldRevision(),
                                        chunk->GetContentRevision());
     reject_resource = true;
-    const auto snapshot = ChunkMeshSnapshot::Capture(
-        world, root, cache.GetChunkMeshRevision(root));
+    const auto snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
     const int before_packed_prepare = prepare_calls;
     Expect(!ChunkMeshCaptureAdmissionTestAccess::CommitPacked(
                cache, world, registry, snapshot) &&

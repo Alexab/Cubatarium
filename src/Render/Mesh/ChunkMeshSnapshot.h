@@ -43,6 +43,9 @@ struct ChunkMeshSnapshot
       kLightHaloSize * kLightHaloSize * kLightHaloSize;
 
   glm::ivec3 coord{0};
+  /// Capture-owner epoch, independent of worker submission and trace epochs.
+  /// Raw world captures have no mesh-cache epoch until an owner stamps them.
+  uint64_t sourceWorldEpoch{0};
   std::array<BlockId, CHUNK_VOLUME> blocks{};
   std::array<uint8_t, CHUNK_VOLUME> fluid_packed{};
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};

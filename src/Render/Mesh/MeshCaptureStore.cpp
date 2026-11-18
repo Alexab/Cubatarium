@@ -99,7 +99,9 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
                                   const DependencyStamp *captured_deps,
                                   std::unique_ptr<UPipelineCreditGuard> credit)
 {
-  if (world_epoch == 0 || world_epoch != WorldEpoch_)
+  if (world_epoch == 0 || world_epoch != WorldEpoch_ ||
+      (snapshot.sourceWorldEpoch != 0 &&
+       snapshot.sourceWorldEpoch != world_epoch))
   {
     return false;
   }
@@ -113,6 +115,7 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
     ++CapacityEvictions_;
   }
   Entry entry;
+  snapshot.sourceWorldEpoch = world_epoch;
   entry.worldEpoch = world_epoch;
   entry.sourceRevision = source_revision;
   if (captured_deps != nullptr)
@@ -146,11 +149,13 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
   }
   auto credit = std::make_unique<UPipelineCreditGuard>(
       PipelineCreditKind::Snapshot, kEstimatedChunkSnapshotBytes, true);
+  const uint64_t capture_epoch = WorldEpoch_;
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
-  Commit(coord, source_revision, WorldEpoch_, std::move(snap),
-         std::move(credit));
-  return Store_[coord].data;
+  if (!TryCommit(coord, source_revision, capture_epoch, std::move(snap),
+                 nullptr, std::move(credit)))
+    return std::nullopt;
+  return Store_.at(coord).data;
 }
 
 std::optional<ChunkMeshSnapshot>
@@ -271,7 +276,9 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
   {
     credit = std::move(store_it->second.credit);
   }
-  Commit(coord, source_revision, WorldEpoch_, snap, std::move(credit));
+  if (!TryCommit(coord, source_revision, snap.sourceWorldEpoch, snap, nullptr,
+                 std::move(credit)))
+    return std::nullopt;
   ++LastStoreHitN_;
   return snap;
 }
