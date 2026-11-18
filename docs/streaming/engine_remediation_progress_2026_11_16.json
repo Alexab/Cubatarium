@@ -5805,7 +5805,7 @@
       }
     },
     "light_sample_fresh_pending_service": {
-      "status": "Implemented;expanded queue testsPASS;fresh and fair negative controls detected;restoredGREEN;Release/native pending",
+      "status": "Implemented; fresh/fair RED controls detected and restoredGREEN; exact Release/static6DLL PASS; native scoped references all PASS including mandatory creature0faults; full visual UNTESTED",
       "runtime": "Optional needs_work predicate in DrainLightSampleDemands enables fresh/pending lane. Newly leased and still-uncomputed fields share half of existing visit budget; remaining slots continue ordinary revalidation, spare capacity borrowed. Pending retries persist across busy/inflight/backpressure until current canonical proof exists or lease expires. Completed work leaves fresh lane. Budget1 alternates preference. At most8visited active/expired requests and32metadata entries for runtime budget8; foreground snapshot cap1 and9data/backpressure guards unchanged. Queue flags confer no physical proof.",
       "lifetime": "Stable list nodes indexed by lease ID allow O(1)fair ticket rotation when fresh lane serves same field. Copy constructor/assignment rebuild iterator index; fresh generations reject stale/canceled tickets. No record/iterator dereferenced across work/producer callbacks. Requeue before producer call, expiry cleanup, same-coordinate lease ABA and callbackclear/replacement retained; new callback-created leases wait for next drain. Legacy4argument calls retain existing behavior.",
       "tests": "engine-light-sample-priority-expanded-green-test.log and saturation-green-test.logPASS; source restored then engine-light-sample-priority-restored-green-build.log/test.logPASS. Tests cover64ready backlog, immediate hot request, pending retries, completion departure, saturated64pending arrivals with all64old leases revisited, exact8/32bounds, queue copy/assignment, throwing callback, expiry, clear/replacement, budget1dedup and no manufactured settled light. All existing lease/fairness/ABA/frame0 tests stillPASS.",
@@ -5815,7 +5815,34 @@
       ],
       "restoration": "Temporary source restored byte-for-byte in finally; only chunk_render_demand_test builtRED, never app. Final rebuiltGREEN after both mutations.",
       "telemetry": "RelightAudit job_submit adds sample_ys for exact target admission; RequiredWorldInputs reports sample_visits/fresh/fair/examined/captures. These are producer service statistics, not field correctness or performance acceptance.",
-      "next": "Exact Release build then same strict no-teleport visible-items route with mandatory creature reference. Preserve c20FAIL3 and earlier4pending negatives. Require zero pending scoped creature samples rather than loosening criterion. GPU table/shader/atomic GPU resource cutover and broad matrix remain pending."
+      "next": "GPU binding table/shaders and atomic GPU geometry+field resource publication; preserve this positive and previous scoped negatives. Full section authority/NoSurface/content certificates/backend+edit+eviction+RD8+RGB/performance remain open.",
+      "release": "engine-light-sample-priority-release-build.log: exact Release command, static verification PASS6systemDLL; source3e98f1c96. Original build process observed to terminal before native; no compiler/test during measurement.",
+      "native": {
+        "artifacts": "build/desktop-msvc/engine-light-sample-priority-visible-items-native",
+        "source": "3e98f1c96",
+        "runtime_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED missing generic visual reference; no scoped FAIL",
+        "creature": "PASS629/629ready341epochs8sections0faults; prior c20FAIL3 and old3cFAIL4 retained",
+        "camera_first_person": "PASS1451/1451ready each,23AIRsections",
+        "world_item": "PASS214draws642primitives; both authored identities59/155draws;0faults",
+        "route": "PASS22chunks894outside-initial samples; strict no relocation;30/30inspectionposes",
+        "startup": "PASS1944/1944sections including1372knownAIR,0debt first paint",
+        "floor": "PASS321opaque-depthchecks;119packedGPUfloor-lightdrawchecks,0faults",
+        "queue_maxima": {
+          "sample_visits": 8,
+          "sample_examined": 12,
+          "sample_captures": 1,
+          "sample_fresh": 4,
+          "sample_fair": 8
+        },
+        "disk": {
+          "completed": 203,
+          "distinct_columns": 203,
+          "repeated": 0
+        },
+        "limits": "One functional route with CPU canonical sample references; not performance, actor raster/RGB, transparency, full-screen or backend parity acceptance. New uncompiled GPU table sources were edited during the run; EXE3e98 and Python harness/fixtures stayed unchanged."
+      }
     }
   }
 }
