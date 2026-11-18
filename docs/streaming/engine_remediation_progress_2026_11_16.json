@@ -7348,7 +7348,7 @@
       }
     },
     "capture_proof_only_completion": {
-      "status": "Production fix implemented. Initial unmodified-cache RED and incremental-shell-only negative control both fail exact regression assertions. Exact source bytes restored;6Release testsPASS. Required Release app build/native pending.",
+      "status": "Implemented and committed d8f9c9cfb. Both RED controls reproduced, exact source restore and6Release testsGREEN. Required Release app buildPASS/static6systemDLL. Native wet sprint completed with scoped opaque-depthPASS; full original goal remains active.",
       "defect": "Real physical calculation installed and subsequently recorded can establish render proof without changing byte revisions/incarnation. InputsStillValid remains true for old provisional capture; cache retained it indefinitely.",
       "fix": "TryGet and RefreshIncrementalShell invalidate captures lacking render proof when current completed physical snapshot becomes available. Eviction releases normal credit; fresh capture retains current original source epoch/revision and exact geometry. No fabricated proof, no admission bypass, no changed field values. Unfinished captures remain reusable until actual proof completion; completed captures retain normal hits. Flat constant captures do not trigger physical recapture.",
       "regression": "Real roofed dark CPU field, delayed RecordLightCalculation, identical input stamps, direct cache lookup and incremental-shell path; verifies recapture real proof and source identity. Initial unmodified implementation FAIL: cached provisional snapshot cannot survive proof-only light completion.",
@@ -7358,7 +7358,23 @@
         "shell_red": "engine-proof-only-shell-red-test.log",
         "restore": "engine-proof-only-cache-negative-control.json",
         "green": "engine-proof-only-cache-restored-tests.log;6/6PASS"
-      }
+      },
+      "native_observation": {
+        "artifact": "build/desktop-msvc/engine-proof-only-cache-wet-native-2/proof-only-cache-native-observation.json",
+        "source": "d8f9c9cfb",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "opaque_depth": "PASS0faults/10510checks/87epochs",
+        "startup": "PASS configured ring1176sections",
+        "inspection": "PASS24/24",
+        "route": "19chunks,1351outside initial samples,0relocations",
+        "camera": "1781/1781ready sky0/block0 observations; no formal cave-light oracle",
+        "provenance": "EXE/config restoration/source world independently verified",
+        "target": "4provisional rejects then completed light revision0to1, prepared/CPUcommitted1batch; still not native proof-only completion evidence",
+        "setup_failure": "Initial parent pre-created artifact directory and runner rejected before app launch; receipt retained engine-proof-only-cache-wet-native. Corrected separate -2run only after terminal setup failure."
+      },
+      "next": "Keep original287fault counterexample open. Complete default surface physical-field shader/handle transport across CPU/direct/MDI/packed paths, then remove light from geometry dependencies. Extend independent cave canonical-dark and RGB/transparency acceptance rather than treating observational ready counts as oracle."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7383,6 +7399,6 @@
       "S5": "resource infrastructure verified, default renderer integration pending",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
-    "latest_native_counterexample": "d65538f35wet sprint:287analytic opaque-depth faults/11912checks across7expected surface sections despite1576/1576camera-ready0/0. SameEXE trace repeat0/8628does not close originalFAIL. Shader publication tests6PASS and4REDcontrols restoredGREEN; native startup/route pass. Core moving-world geometry coverage and performance remain incomplete."
+    "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
   }
 }
