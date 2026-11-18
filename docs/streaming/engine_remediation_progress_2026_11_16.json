@@ -7,7 +7,7 @@
     "local_streaming_mesh_underwater_defects": "in_progress: signed bands, lossless population events, same-size mesh reconciliation and eye-local fluid intervals fixed; native surface frontier routes verified; cave matrix and remaining invalidations pending",
     "correct_light_solver_and_persistence": "Partial: independent geometry-derived CPU fields, read-set/material/epoch validation, AIR ownership, dense8000cell references, optimized saturated sky and producer-aware motion coverage verified. Persisted content certificates and actual GPU solver/backend parity remain.",
     "single_section_lifecycle_and_publication": "Partial: configured-ring census, private NoSurface authority, captured source epochs and NoDraw physical-resource admission verified. LatestRD8startup-onlyPASS572.9s, no light/publication debt. Unified lifecycle/legacy diagnostic ownership and startup performance remain open.",
-    "independent_light_resource_and_performance": "Default Full-mode publication owner and Cross physical field shader/range fallback implemented; GL3.3/GLES driver proofs and3negative controls pass. Application/native verification pending. Cube/CPU/MDI/packed shader cutover and light-driven geometry removal remain open.",
+    "independent_light_resource_and_performance": "Default Full-mode publication owner and Cross physical field shader/range fallback implemented and driver-tested GL3.3/GLES3.2; native activation/frontier all named referencesPASS. Cube/CPU/MDI/packed shader cutover, removal of light-driven geometry work, RGB and performance/memory acceptance remain open.",
     "full_smoke_and_regression_matrix": "Partial: frontier/dry/wet cave and analytic depth, physical camera/viewmodel/creature/item and camera-independent50blocks/sec falling actor references available. Generic RGB/transparency, full seed/save/backend/edit/eviction/memory/performance matrix pending."
   },
   "native_baseline": {
@@ -6965,20 +6965,84 @@
       }
     },
     "cross_readiness_selection": {
-      "status": "Implemented;5Release testsPASS and restored5PASS. Actual GL3.3/GLES3.2 negative control RED. Application build/native pending with next renderer integration.",
+      "status": "Implemented;5Release testsPASS and restored5PASS. ActualGL3.3/GLES3.2negative controlRED. Included in finalCrossfield Release app build and successful scoped native route; genericRGBUNTESTED.",
       "implementation": "Exact ordered keep/drop mask participates in Cross GPU cache identity independently of mesh/cull revisions. Mask allocation/publication and rollback are atomic with buffers/leases. A failed refresh retains predecessor storage for retry but GeometryEngine does not draw an obsolete readiness selection. No probabilistic fingerprint.",
       "validation": "engine-cross-selection-tests.log and engine-cross-selection-restored-tests.log:5/5PASS. GL/GLES framebuffer words verify readiness loss and recovery at fixed mesh7/cull9, unchanged selection has no transfer, failed replacement retains previous selection and source words, shutdown releases leases/mask.",
       "negative_control": "engine-cross-selection-negative-control.json: ignore exact mask in same-revision shortcut; both GL/GLES fail readiness-loss publication assertion; byte-exact source restore and5GREEN. No RED app build/launch.",
       "limits": "One byte retained per source instance plus staging mask. Full memory/performance matrix and default field consumption remain open."
     },
     "cross_physical_field_consumption": {
-      "status": "Implemented; required application Release build/native pending.5Release testsGREEN including actualGL3.3/GLES3.2production vertex shaders;3negative controlsRED with byte-exact source restore and5restoredGREEN. Full originalS0..S6goal remains active.",
+      "status": "Default Full publication owner and Cross physical field consumption implemented.5Release testsPASS plus3GL/GLESnegative controlsRED/exactrestore/5GREEN; Flat follow-up5PASS;67Python harness testsPASS. Required final Release app build/static6DLLsPASS. Native Cross route all named referencesPASS, genericRGBUNTESTED. Full originalS0..S6goal remains active.",
       "implementation": "GeometryEngine installs weak-owner physical resource callback after GL probe for Full mode, before first packed publication; lazy PrepareForWorld retains compatible owners and resets on captured epoch/world identity transition. Flat clears callback/resources and retains its intentional baked policy. Cross shaders load shared table interface through explicit marker expansion in ShaderManager. Per-artifact ranges validate/refresh canonical current compatible fields, prepare resident or transient ordered handles, and draw immediately. Range helper rebases every instance attribute including integer handle, then restores0base forGL3.3/GLES3.",
       "validation": "engine-cross-field-tests.log:5PASS; engine-cross-field-dark-tests.log:2PASS; engine-cross-field-restored-tests.log:5PASS. Real cache flatten carries5plants through filter to4; actualproduction shader+integer framebuffer reads sky15/block0, then15/12 after diagonal source change with identicalVBO bytes/name and mesh/cull revisions. Minimal1page/1slotowner forces actual ordered fallback override. Invalid handle emits validity0; roof with every path beyond15cell indirect reach yields valid0/0 despite deliberately wrong baked1/1. GL/GLES DrawRange nonzero first instance and attribute restoration verified.",
       "negative_controls": "engine-cross-field-negative-controls.json: swap physical channels, force range base0 and borrow baked sky for certified packed0 each fail actual framebuffer assertion on bothGL/GLES. Byte-exact restore; no RED app build/launch.",
       "native_fixture": "New open-sky-cross variant reuses plane direct-sky/depth references and adds saved non-solid/non-emitting tall grass in every route column. Exact runtime catalog payload hash recorded. tools/test_engine_smoke_cross_fixture.py passes floor completeness, unique saved cells and route-wide plant coverage. First physical Cross draw emits SectionLightCross receipt; receipt alone is activation evidence, not independent RGB acceptance.",
       "remaining": "CPU/cube/MDI/packed physical shaders, artifact-specific retained packed binding, default all-path geometry/light invalidation separation, independent RGB/transparency and full matrix remain. Cross light changes still trigger legacy mesh work until all paths can consume fields. Actual native compatibility/activation, performance and memory not yet accepted.",
-      "flat_compatibility": "Review before native launch found sampler type alias risk in disabled physical branch: GL still validates active sampler units. Assign physical atlas/table to distinct7/8units in bothFull/Flat. ActualGL/GLES production shaders under Flat preserve deliberately baked15/15 despite invalid physical handle and canonical0/0. engine-cross-field-flat-tests.log:5/5PASS. First app build passed/static6DLLs before this follow-up; final app rebuild pending."
+      "flat_compatibility": "Review before native launch found sampler type alias risk in disabled physical branch: GL still validates active sampler units. Assign physical atlas/table to distinct7/8units in bothFull/Flat. ActualGL/GLES production shaders under Flat preserve deliberately baked15/15 despite invalid physical handle and canonical0/0. engine-cross-field-flat-tests.log:5/5PASS. First app build passed/static6DLLs before this follow-up; final app rebuild pending. Final exact required Release rebuild exited0/static6DLLsPASS; native source7b1a02fa2 includes the follow-up.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-cross-field-native",
+        "observation": "cross-physical-field-native-observation.json",
+        "source_commit": "7b1a02fa21c7b6ede1042d9d3356f13ac6affdbe",
+        "app_exit": 0,
+        "observed_wrapper_exit": 1,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "runtime": {
+          "ingame_frames": 1576,
+          "wall_elapsed_sec": 286.958,
+          "chunks_traveled_cheb": 19,
+          "outside_initial_resident_samples": 1121,
+          "diagnostic_relocations_after_start": 0
+        },
+        "startup": {
+          "certified_no_surface_sections": 91,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -4,
+            3
+          ],
+          "known_air_sections": 871,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 305,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "inspection": "26/26",
+        "camera_ready": "1576/1576",
+        "first_person_ready": "1576/1576",
+        "creature_ready": "351/351",
+        "opaque_depth_checks": 643,
+        "floor_draw_source_checks": {
+          "cpu": 271,
+          "packed_gpu": 0
+        },
+        "cross_activation": [
+          "I20261118 22:18:53.332755 23044 Log.cpp:601] [SectionLightCross] first_physical_draw coord=(1,-4,3) count=16 revision=1"
+        ],
+        "camera_input_failure_rows": 0,
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true
+        },
+        "limits": "Native proves compatibility and first Cross field-draw activation, not per-instance runtime shader RGB. Actual production shader GL/GLES framebuffer field values and fallback proved separately by driver tests. Native floor source checks are CPU271/packed0, so no native packed field acceptance. No controlled performance A/B or universal readiness claim."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
