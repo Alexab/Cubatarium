@@ -22,6 +22,7 @@ float AdvanceAnimPhase(float phase, float horizontalSpeed, float walkCycleHz,
 
 void SettleFrozenLocomotionFacts(CreatureLocomotionFacts &facts)
 {
+  facts.actualVelocity = {};
   const bool airborne = facts.state == LocomotionState::Fly ||
                         facts.state == LocomotionState::Hover ||
                         facts.state == LocomotionState::Glide;
@@ -80,6 +81,7 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
   out.archetype = archetype;
   out.bodyYaw = bodyYaw;
   out.bodyPitch = bodyPitch;
+  out.actualVelocity = {};
   if (!input.locomotion)
   {
     return;
@@ -92,6 +94,14 @@ void FillTerrestrialRawFacts(CreatureLocomotionFacts &out,
   if (input.dt > 1e-6f)
   {
     const glm::vec3 delta = input.bodyOriginAfter - input.bodyOriginBefore;
+    if (std::isfinite(input.dt) && std::isfinite(delta.x) &&
+        std::isfinite(delta.y) && std::isfinite(delta.z))
+    {
+      const auto measured = delta / input.dt;
+      if (std::isfinite(measured.x) && std::isfinite(measured.y) &&
+          std::isfinite(measured.z))
+        out.actualVelocity = measured;
+    }
     // XZ only, aerials included: vertical bob is not travel. A hovering
     // wasp with a blocked horizontal wish derived Fly from the 3D speed and
     // "stood in Fly" forever (its anim never returned to Hover).

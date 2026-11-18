@@ -1165,6 +1165,7 @@ cubatarium_add_test(NAME locomotion_state_derive_test
     SOURCES
         src/Creatures/Locomotion/LocomotionStateDerive.cpp
         src/Creatures/Locomotion/CreatureLocomotionFacts.cpp
+        src/World/Math/GridMath.cpp
         src/Test/LocomotionStateDeriveTest.cpp
     LIBRARIES glm::glm)
 

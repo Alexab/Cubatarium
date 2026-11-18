@@ -1,5 +1,8 @@
 #include "Creatures/Locomotion/LocomotionStateDerive.h"
+#include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
+#include "World/Lighting/LightSampleApproach.h"
+#include <limits>
 
 #include <cstdlib>
 #include <iostream>
@@ -22,6 +25,49 @@ int main()
   using cutum::FinalizeLocomotionFacts;
   using cutum::LocomotionArchetype;
   using cutum::LocomotionState;
+
+  cutum::UCreatureLocomotionController controller;
+  CreatureLocomotionRawInput measured;
+  measured.locomotion = &controller;
+  measured.bodyOriginBefore = {-3, -5, 39};
+  measured.bodyOriginAfter = {-3, -9, 39};
+  measured.dt = .1f;
+  CreatureLocomotionFacts falling;
+  cutum::FillTerrestrialRawFacts(
+      falling, measured, LocomotionArchetype::TerrestrialQuadruped, 0, 0);
+  Expect(glm::distance(falling.actualVelocity, glm::vec3(0, -40, 0)) < .0001f &&
+             falling.horizontalSpeed == 0,
+         "NPC facts expose measured full fall velocity without changing "
+         "horizontal travel");
+  bool future_light_section = false;
+  cutum::VisitLightSampleApproach(
+      {-3, -9, 39}, falling.actualVelocity, {}, [&](glm::ivec3 c)
+      { future_light_section |= c == glm::ivec3(-1, -3, 2); });
+  Expect(
+      future_light_section,
+      "actual NPC fall facts prewarm the upcoming negative AIR light section");
+  measured.bodyOriginAfter = measured.bodyOriginBefore + glm::vec3(.3f, 0, .4f);
+  cutum::FillTerrestrialRawFacts(
+      falling, measured, LocomotionArchetype::TerrestrialQuadruped, 0, 0);
+  Expect(glm::distance(falling.actualVelocity, glm::vec3(3, 0, 4)) < .0001f,
+         "NPC facts retain measured horizontal velocity components");
+  for (float dt : {0.f, -1.f, .0000001f, std::numeric_limits<float>::infinity(),
+                   std::numeric_limits<float>::quiet_NaN()})
+  {
+    measured.dt = dt;
+    falling.actualVelocity = {1, 2, 3};
+    cutum::FillTerrestrialRawFacts(
+        falling, measured, LocomotionArchetype::TerrestrialQuadruped, 0, 0);
+    Expect(falling.actualVelocity == glm::vec3(0),
+           "invalid/tiny time cannot leave a stale or nonfinite measured "
+           "velocity");
+  }
+  measured.dt = .1f;
+  measured.bodyOriginAfter.x = std::numeric_limits<float>::quiet_NaN();
+  cutum::FillTerrestrialRawFacts(
+      falling, measured, LocomotionArchetype::TerrestrialQuadruped, 0, 0);
+  Expect(falling.actualVelocity == glm::vec3(0),
+         "nonfinite position deltas cannot become streaming motion facts");
 
   CreatureLocomotionCapabilities caps;
   caps.walkSpeed = 4.0f;
@@ -97,10 +143,12 @@ int main()
   frozen.state = LocomotionState::Walk;
   frozen.horizontalSpeed = 2.1f;
   frozen.verticalSpeed = -0.5f;
+  frozen.actualVelocity = {1, -50, 3};
   frozen.animPhase = 3.0f;
   SettleFrozenLocomotionFacts(frozen);
-  Expect(frozen.state == LocomotionState::Idle && frozen.horizontalSpeed == 0.0f &&
-             frozen.verticalSpeed == 0.0f,
+  Expect(frozen.state == LocomotionState::Idle &&
+             frozen.horizontalSpeed == 0.0f && frozen.verticalSpeed == 0.0f &&
+             frozen.actualVelocity == glm::vec3(0),
          "frozen walker idles at zero speed");
   Expect(frozen.animPhase == 3.0f, "freeze keeps the anim phase");
   frozen.state = LocomotionState::Fly;

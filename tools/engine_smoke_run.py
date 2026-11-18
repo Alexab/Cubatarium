@@ -488,6 +488,17 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif scene_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+            from engine_creature_light_reference import evaluate as evaluate_creature_light
+            creature_light = evaluate_creature_light(
+                scene, sorted((artifacts / "logs").glob("*.log.INFO.*")),
+                expected_frames=report.get("ingame_frames"))
+            verdict["components"]["fixture_creature_field_light"] = creature_light
+            (artifacts / "fixture-creature-light-reference.json").write_text(
+                json.dumps(creature_light, indent=2)+"\n", encoding="utf-8")
+            if creature_light["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif creature_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         if scene is not None and scene.get("visible_world_items") and not startup_only:
             from engine_world_item_reference import evaluate as evaluate_world_items
             world_items = evaluate_world_items(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")))
