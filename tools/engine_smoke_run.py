@@ -334,11 +334,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
-            if fixture_scene == "open-sky-items":
+            if fixture_scene == "open-sky-falling-creature":
+                from engine_smoke_fixtures import prepare_falling_creature_plane
+                scene = prepare_falling_creature_plane(fixture, minimum_chunks)
+            elif fixture_scene == "open-sky-items":
                 from engine_smoke_fixtures import prepare_visible_items_plane
                 scene = prepare_visible_items_plane(fixture, minimum_chunks)
             elif fixture_scene == "open-sky-plane":
@@ -405,6 +408,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             for point in bot_route["waypoints"]:
                 point["inspection_targets"] = [[point["position"][0] + 2,
                     scene["plane_bounds"]["floor"] - start[1], point["position"][2]]]
+        if scene and scene.get("falling_creature") and not startup_only:
+            actor = scene["falling_creature"]["initial_body_origin"]
+            start = scene["starting_eye"]
+            # Inspect the falling actor's column with ordinary look input.
+            # It lies outside the camera's own3x3 sample neighborhood.
+            bot_route["waypoints"][0]["inspection_targets"] = [[
+                actor[0] - start[0], scene["plane_bounds"]["floor"] - start[1],
+                actor[2] - start[2]]]
         if startup_only:
             bot_route["purpose"] = "startup_observation"
             bot_route["waypoints"] = []
@@ -553,6 +564,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif world_items["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("falling_creature") and not startup_only:
+            from engine_falling_creature_reference import evaluate as evaluate_falling_creature
+            falling = evaluate_falling_creature(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            verdict["components"]["fixture_falling_creature_light"] = falling
+            (artifacts / "fixture-falling-creature-reference.json").write_text(
+                json.dumps(falling, indent=2) + "\n", encoding="utf-8")
+            if falling["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif falling["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         if capture_encode_delay_ms:
             pressure = capture_backpressure_evidence(artifacts, inspection)
             verdict["components"]["capture_backpressure"] = pressure
@@ -589,7 +610,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-items", "open-sky-falling-creature"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

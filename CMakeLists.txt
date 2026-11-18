@@ -3354,6 +3354,12 @@ cubatarium_add_test(NAME chunk_input_stamp_test
         src/World/Math/FluidCellState.cpp
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME light_sample_prediction_test
+    SOURCES
+        src/Test/LightSamplePredictionTest.cpp
+        src/World/Math/GridMath.cpp
+    LIBRARIES glm::glm)
+
 cubatarium_add_test(NAME inputs_still_valid_visual_test
     SOURCES
         ${PHYSICS_BLOCKWORLD_TEST_SOURCES}

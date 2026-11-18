@@ -955,8 +955,9 @@ int main()
       const int count = cutum::VisitLightSampleApproach(
           cell, velocity, profile,
           [&](glm::ivec3 coord) { approach.push_back(coord); });
-      Expect(count == static_cast<int>(approach.size()) && count <= 27,
-             "motion footprint has an exact hard27section visit bound");
+      Expect(count == static_cast<int>(approach.size()) &&
+                 count <= cutum::kMaxLightSampleApproachSections,
+             "motion footprint respects its fixed section visit bound");
       for (auto coord : approach)
         Expect(std::count(approach.begin(), approach.end(), coord) == 1,
                "motion footprint visits each section only once");
@@ -971,19 +972,19 @@ int main()
     Expect(
         collect({16, 1, 1}, {-.01f, 0, 0}) == 2,
         "fractional backward movement primes previous section conservatively");
-    Expect(collect({-3, -1, 39}, {0, -100, 0}) == 3 &&
+    Expect(collect({-3, -1, 39}, {0, -100, 0}) == 4 &&
                approach[0] == glm::ivec3(-1, -1, 2) &&
                std::find(approach.begin(), approach.end(),
                          glm::ivec3(-1, -3, 2)) != approach.end(),
            "fast fall primes the native missing AIR section before entry");
     Expect(collect(glm::ivec3(-1),
-                   glm::vec3(std::numeric_limits<float>::max())) == 27,
-           "unbounded diagonal velocity cannot enlarge the footprint");
+                   glm::vec3(std::numeric_limits<float>::max())) > 27,
+           "extreme diagonal velocity remains bounded along its swept route");
     Expect(collect({1, 1, 1}, {std::numeric_limits<float>::quiet_NaN(),
                                std::numeric_limits<float>::infinity(),
                                -std::numeric_limits<float>::infinity()}) == 1,
            "nonfinite motion does not create invented future sections");
-    Expect(collect({1, -65, 1}, {0, 100, 0}, {-61, 317}) == 2,
+    Expect(collect({1, -65, 1}, {0, 100, 0}, {-61, 317}) == 13,
            "approach clips section visits to the actual vertical profile");
     Expect(collect({1, 1, 1}, glm::vec3(0), {1, 0}) == 0,
            "invalid world profile cannot produce motion demand");

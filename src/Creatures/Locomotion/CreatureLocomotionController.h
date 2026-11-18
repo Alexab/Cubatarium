@@ -23,6 +23,7 @@ float &CreatureMoveSpeedScaleOverride();
 class UCreatureLocomotionController
 {
 public:
+  static constexpr float TerminalFallSpeed = 50.0f;
   void Reset();
   void SetCapabilities(const CreatureLocomotionCapabilities &caps);
   void SetCollisionProfile(const glm::vec3 &sizeBlocks, float eyeHeight);

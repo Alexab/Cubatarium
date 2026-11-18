@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Lighting/LightSampleDeliveryBudget.h"
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -40,6 +41,9 @@ public:
   /// Diagnostic watchdog input: age of the oldest in-flight submission
   /// (steady ms), 0 when nothing is in flight.
   double GetOldestInFlightAgeMs() const;
+  /// Main thread only. Includes recent complete-input deliveries and current
+  /// in-flight/completed age; this is a bounded forecast, not readiness.
+  double GetLightSampleHorizonSeconds() const;
   std::size_t GetQueuedJobCount() const { return Pool.GetPendingJobCount(); }
   std::size_t GetRunningJobCount() const { return Pool.GetActiveJobCount(); }
   int GetWorkerCount() const { return WorkerCount; }
@@ -91,6 +95,7 @@ private:
   mutable std::mutex InFlightMutex;
   /// job_id -> steady ms at submit (value doubles as the watchdog age source).
   std::unordered_map<uint64_t, int64_t> InFlight;
+  LightSampleDeliveryBudget SampleDeliveryBudget;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};

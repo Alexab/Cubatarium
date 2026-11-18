@@ -605,7 +605,7 @@ void UCreatureLocomotionController::UpdateLocomotion(const UWorld *world,
     // Terminal fall velocity: an unbounded accumulator reached -158 blocks/s
     // for a creature stuck in terrain, and a long fall tunnelled through
     // the per-step sweep.
-    VerticalVelocity = std::max(VerticalVelocity, -50.0f);
+    VerticalVelocity = std::max(VerticalVelocity, -TerminalFallSpeed);
     const glm::vec3 verticalDelta(0.0f, VerticalVelocity * dt, 0.0f);
     const glm::vec3 resolved =
         world->ResolveMovement(eyePos, verticalDelta, cap, skipCreatureId);

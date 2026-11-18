@@ -18,6 +18,7 @@
 #include "Creatures/Core/CreatureBounds.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Locomotion/CreatureLocomotionController.h"
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Player/Player.h"
 #include "Creatures/Player/PlayerCapsule.h"
@@ -1497,7 +1498,8 @@ const IULightingPipeline &UWorld::GetLightingPipeline() const
 }
 
 SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
-                                                 SceneLightConsumer consumer)
+                                                 SceneLightConsumer consumer,
+                                                 uint64_t consumer_identity)
 {
   const auto policy = GetLightingPipeline().GetMode() == LightingMode::Flat
                           ? SceneLightPolicy::Flat
@@ -1522,6 +1524,11 @@ SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
   const auto sample = BlockWorld.SampleSceneLight(cell, policy);
   if (UJobStageTrace::VisualBlackTraceEnabled() && MeshService)
   {
+    const auto *actor = consumer == SceneLightConsumer::Creature
+                            ? GetCreature(consumer_identity)
+                            : nullptr;
+    const auto velocity =
+        actor ? actor->GetLocomotionFacts().actualVelocity : glm::vec3(0);
     const auto coord = UChunkManager::WorldToChunk(cell);
     const auto packed = sample.packed.value_or(0);
     CubatariumLogInfo(
@@ -1534,10 +1541,14 @@ SceneLightSample UWorld::RequestSceneLightSample(glm::ivec3 cell,
             (consumer == SceneLightConsumer::FirstPersonItem ? "fp_item"
              : consumer == SceneLightConsumer::Creature      ? "creature"
                                                              : "item") +
-            " cell=(" + std::to_string(cell.x) + "," + std::to_string(cell.y) +
-            "," + std::to_string(cell.z) + ") coord=(" +
-            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
-            std::to_string(coord.z) + ") physical=" +
+            " consumer_identity=" + std::to_string(consumer_identity) +
+            " velocity=(" + std::to_string(velocity.x) + "," +
+            std::to_string(velocity.y) + "," + std::to_string(velocity.z) +
+            ")" + " cell=(" + std::to_string(cell.x) + "," +
+            std::to_string(cell.y) + "," + std::to_string(cell.z) +
+            ") coord=(" + std::to_string(coord.x) + "," +
+            std::to_string(coord.y) + "," + std::to_string(coord.z) +
+            ") physical=" +
             std::to_string(policy == SceneLightPolicy::Physical ? 1 : 0) +
             " resident=" +
             std::to_string(BlockWorld.GetChunkManager().HasChunk(coord) ? 1
@@ -11852,6 +11863,10 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
   streamer.SetRequiredDataDomain(focus, domain.data);
   const uint64_t sample_epoch =
       MeshService ? MeshService->GetCache().GetCaptureStore().WorldEpoch() : 0;
+  const double sample_horizon =
+      AsyncRelight ? AsyncRelight->GetLightSampleHorizonSeconds()
+                   : LightSampleApproachOptions{}.horizon_seconds;
+  int forecast_visits = 0, forecast_clipped = 0;
   if (MeshService && RequiresLightingLitGate() &&
       BlockWorld.GetVerticalProfile().SliceBounds(focus.y, CHUNK_SIZE))
   {
@@ -11873,12 +11888,15 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
     // Register potential object samples before the enter/presentation gate.
     // A first draw must not be the first time an AIR field becomes required.
     // The approach ring also covers objects entering view on camera turns.
-    const auto request_object = [&](glm::vec3 position, glm::vec3 velocity)
+    const auto request_object = [&](glm::vec3 position, glm::vec3 velocity,
+                                    LightSampleApproachOptions options)
     {
       auto cell = WorldPosToBlock(position);
       if (BlockRegistry->BlocksMovement(BlockWorld.GetBlock(cell)))
         ++cell.y;
-      VisitLightSampleApproach(
+      options.horizon_seconds = sample_horizon;
+      bool clipped = false;
+      forecast_visits += VisitLightSampleApproach(
           cell, velocity, BlockWorld.GetVerticalProfile(),
           [&](glm::ivec3 coord)
           {
@@ -11886,20 +11904,34 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
                          std::abs(coord.z - focus.z)) <= domain.approach)
               GetRenderDemandStore().RequestLightSample(coord, sample_epoch,
                                                         StreamingFrameEpoch, 8);
-          });
+          },
+          options, &clipped);
+      forecast_clipped += clipped;
     };
     ForEachCreature(
         [&](const UCreature &creature)
         {
           const auto size = creature.GetBounds().currentSizeBlocks;
-          const auto velocity = creature.GetLocomotionFacts().actualVelocity;
+          const auto &facts = creature.GetLocomotionFacts();
+          const auto velocity = facts.actualVelocity;
+          LightSampleApproachOptions options;
+          if (facts.mode == CreatureMovementMode::Walking && !facts.onGround &&
+              !facts.inFluid)
+            options.terminal_fall_speed =
+                UCreatureLocomotionController::TerminalFallSpeed;
           request_object(creature.GetBodyOrigin() +
                              glm::vec3(0, size.y * .5f, 0),
-                         velocity);
+                         velocity, options);
           if (creature.GetId() == GetControlledCreatureId())
-            request_object(creature.GetEyePosition(), velocity);
+            request_object(creature.GetEyePosition(), velocity, options);
         });
-    UWorldItemSystem::Instance().ForEachRenderItemMotion(request_object);
+    UWorldItemSystem::Instance().ForEachRenderItemMotion(
+        [&](glm::vec3 position, glm::vec3 velocity, float gravity)
+        {
+          LightSampleApproachOptions options;
+          options.gravity = gravity;
+          request_object(position, velocity, options);
+        });
   }
   BlockWorld.GetChunkManager().RetireAbsentSectionLightFields(
       256,
@@ -11995,6 +12027,9 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
             " sample_fair=" + std::to_string(sample_stats.fair_active) +
             " sample_examined=" + std::to_string(sample_stats.examined) +
             " sample_captures=" + std::to_string(sample_captures) +
+            " forecast_horizon_s=" + std::to_string(sample_horizon) +
+            " forecast_visits=" + std::to_string(forecast_visits) +
+            " forecast_clipped=" + std::to_string(forecast_clipped) +
             " epoch=" + std::to_string(StreamingFrameEpoch));
 }
 

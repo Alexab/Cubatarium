@@ -167,7 +167,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
+                           capture_started.time_since_epoch())
+                           .count();
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -300,6 +301,16 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
         }
         continue;
       }
+      const auto submitted = InFlight.find(result.job_id);
+      if (submitted != InFlight.end() && result.inputs_complete &&
+          !result.chunks.empty())
+      {
+        const double now_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+        SampleDeliveryBudget.Observe(now_ms, now_ms - submitted->second);
+      }
       InFlight.erase(result.job_id);
       accepted.push_back(std::move(result));
     }
@@ -315,6 +326,14 @@ bool UAsyncRelightBuilder::HasPendingWork() const
   }
   std::lock_guard<std::mutex> lock(InFlightMutex);
   return !InFlight.empty();
+}
+
+double UAsyncRelightBuilder::GetLightSampleHorizonSeconds() const
+{
+  const double now_ms = std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now().time_since_epoch())
+                            .count();
+  return SampleDeliveryBudget.HorizonSeconds(now_ms, GetOldestInFlightAgeMs());
 }
 
 int UAsyncRelightBuilder::GetInFlightCount() const
@@ -355,6 +374,7 @@ bool UAsyncRelightBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
 
 void UAsyncRelightBuilder::CancelPending()
 {
+  SampleDeliveryBudget.Reset();
   Epoch.fetch_add(1, std::memory_order_acq_rel);
   Pool.CancelPendingJobs();
   {

@@ -1000,7 +1000,8 @@ void UWorldItemSystem::Step(UWorld &world, float dt)
     else if (i.flying || !i.creatureId)
     {
       const auto half = i.physical.size * .5f;
-      const auto delta = i.velocity * dt + glm::vec3(0, -10.f * dt * dt, 0);
+      const auto delta =
+          i.velocity * dt + glm::vec3(0, .5f * Gravity * dt * dt, 0);
       uint64_t excluded = i.age < .25f ? i.throwerId : 0;
       if (auto *owner = world.GetCreature(i.throwerId);
           owner && glm::dot(i.position - owner->GetCollisionVolume().center,
@@ -1011,7 +1012,7 @@ void UWorldItemSystem::Step(UWorld &world, float dt)
       if (!hit.ready)
         continue;
       i.position += delta * std::max(0.f, hit.time - .001f);
-      i.velocity.y -= 20.f * dt;
+      i.velocity.y += Gravity * dt;
       if (hit.found)
       {
         float normalSpeed = std::max(0.f, -glm::dot(i.velocity, hit.normal));
@@ -1270,12 +1271,13 @@ void UWorldItemSystem::CoalesceDormant(UWorld &world)
   Dormant = std::move(compact);
 }
 void UWorldItemSystem::ForEachRenderItemMotion(
-    const std::function<void(glm::vec3, glm::vec3)> &visit) const
+    const std::function<void(glm::vec3, glm::vec3, float)> &visit) const
 {
   for (const auto *list : {&Items, &Dormant})
     for (const auto &item : *list)
       if (!item.creatureId)
-        visit(item.position, item.velocity);
+        visit(item.position, item.velocity,
+              item.flying && !item.carrierId ? Gravity : 0);
 }
 
 void UWorldItemSystem::Draw(UWorld &world, CreatureDrawQueue &queue,

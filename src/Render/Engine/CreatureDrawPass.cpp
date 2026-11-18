@@ -1028,8 +1028,8 @@ glm::vec2 UCreatureDrawPass::SampleCreatureLight(UWorld &world,
       { return registry.BlocksMovement(blocks.GetBlock(c)); });
   // Renew every drawn frame, including while a physical field is pending.
   // Certification is memoized against exact world inputs by UBlockWorld.
-  const auto sample =
-      world.RequestSceneLightSample(cell, SceneLightConsumer::Creature);
+  const auto sample = world.RequestSceneLightSample(
+      cell, SceneLightConsumer::Creature, creature.GetId());
   state.Cell = cell;
   if (sample.IsReady())
   {

@@ -138,6 +138,31 @@ def prepare_open_sky_plane(fixture: Path, minimum_chunks: int) -> dict:
     return scene
 
 
+def prepare_falling_creature_plane(fixture: Path, minimum_chunks: int) -> dict:
+    """An existing saved actor starts above the plane; gravity moves it normally."""
+    path = fixture / "creatures.json"
+    if path.is_symlink():
+        raise ValueError("fixture creature symlinks are forbidden")
+    scene = prepare_visible_items_plane(fixture, minimum_chunks)
+    creatures = json.loads(path.read_text(encoding="utf-8"))
+    users = json.loads((fixture / "users.json").read_text(encoding="utf-8"))
+    player = users["Username"].get("player_creature_id")
+    actor = next((row for row in creatures.get("creatures", [])
+                  if row.get("type") == "tortoise" and row.get("id") != player), None)
+    if actor is None or type(actor.get("id")) is not int or actor["id"] <= 0:
+        raise ValueError("falling fixture requires an ordinary saved tortoise")
+    actor["body_origin"] = [scene["starting_eye"][0] - 25, 63.5,
+                            scene["starting_eye"][2]]
+    actor["movement_mode"] = "walking"
+    path.write_text(json.dumps(creatures, indent=2) + "\n", encoding="utf-8")
+    scene["falling_creature"] = dict(schema="engine-falling-creature-fixture.v1",
+        identity=actor["id"], type=actor["type"], initial_body_origin=actor["body_origin"],
+        minimum_fall_speed=30, minimum_samples=3, minimum_sections=2,
+        minimum_vertical_span=8, min_probe_y=scene["plane_bounds"]["floor"] + 4,
+        max_probe_y=scene["expected_max_eye_y"])
+    return scene
+
+
 def prepare_visible_items_plane(fixture: Path, minimum_chunks: int) -> dict:
     """Two ordinary saved loose bodies, prepared only in the disposable clone."""
     import copy

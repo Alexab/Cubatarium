@@ -32,6 +32,7 @@ struct WorldItem
 class UWorldItemSystem
 {
 public:
+  static constexpr float Gravity = -20.0f;
   static UWorldItemSystem &Instance();
   int Spawn(const glm::vec3 &position, const std::string &itemId, int count,
             bool isBlock, InventoryDomain domain = InventoryDomain::Survival);
@@ -69,7 +70,7 @@ public:
   /// Potential loose-item draw consumers, including sleeping saved bodies.
   /// Read-only: callers must not mutate item storage from this callback.
   void ForEachRenderItemMotion(
-      const std::function<void(glm::vec3, glm::vec3)> &visit) const;
+      const std::function<void(glm::vec3, glm::vec3, float)> &visit) const;
   std::vector<WorldItem> GetItems() const
   {
     auto rows = Items;
