@@ -9427,6 +9427,14 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
   spec.light_sample_output_sections = std::move(sample_outputs);
   if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
+    std::string sample_ys = "[";
+    for (const auto &target : spec.light_sample_output_sections)
+    {
+      if (sample_ys.size() > 1)
+        sample_ys += ",";
+      sample_ys += std::to_string(target.y);
+    }
+    sample_ys += "]";
     CubatariumLogInfo(
         "RelightAudit",
         "job_submit job=" + std::to_string(spec.job_id) + " column=(" +
@@ -9441,7 +9449,8 @@ void UWorld::EnqueueAsyncTerrainColumnRelight(
             " samples_requested=" +
             std::to_string(spec.light_sample_output_sections.size()) +
             " resident_samples_requested=" +
-            std::to_string(resident_sample_outputs));
+            std::to_string(resident_sample_outputs) +
+            " sample_ys=" + sample_ys);
   }
   AccumulateRelightEnqueueTimings(
       PhysicsTelemetryData,
@@ -11873,8 +11882,9 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
   const int requested = streamer.EnsureDataColumns(
       RequiredDataColumns(focus, domain.data), std::max(0, data_budget));
   int sample_captures = 0;
+  UChunkRenderDemandStore::LightSampleDrainStats sample_stats;
   if (MeshService)
-    GetRenderDemandStore().DrainLightSampleDemands(
+    sample_stats = GetRenderDemandStore().DrainLightSampleDemands(
         sample_epoch, StreamingFrameEpoch, 8,
         [&](glm::ivec3 coord)
         {
@@ -11908,6 +11918,12 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
                 coord.y * CHUNK_SIZE, coord.y * CHUNK_SIZE + CHUNK_SIZE - 1,
                 true, true, true, true, "light_sample_consumer");
           }
+        },
+        [&](glm::ivec3 coord)
+        {
+          return RequiresLightingLitGate() &&
+                 !BlockWorld.HasCompleteLightSamplingCalculation(
+                     coord, BlockRegistry->GetDefinitionsCatalogSnapshot());
         });
   int noted = 0;
   if (RequiresLightingLitGate())
@@ -11929,7 +11945,7 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
             ++noted;
           }
         });
-  if ((requested || noted) &&
+  if ((requested || noted || sample_stats.fresh_active || sample_captures) &&
       IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
     CubatariumLogInfo(
         "RequiredWorldInputs",
@@ -11939,6 +11955,11 @@ void UWorld::MaintainRequiredWorldInputs(int data_budget,
             " data=" + std::to_string(domain.data) +
             " requested=" + std::to_string(requested) +
             " light_noted=" + std::to_string(noted) +
+            " sample_visits=" + std::to_string(sample_stats.visited) +
+            " sample_fresh=" + std::to_string(sample_stats.fresh_active) +
+            " sample_fair=" + std::to_string(sample_stats.fair_active) +
+            " sample_examined=" + std::to_string(sample_stats.examined) +
+            " sample_captures=" + std::to_string(sample_captures) +
             " epoch=" + std::to_string(StreamingFrameEpoch));
 }
 

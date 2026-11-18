@@ -5746,7 +5746,7 @@
       }
     },
     "npc_measured_motion_light_prefetch": {
-      "status": "Implemented;runtime regressionRED before fix;3rebuilt C++suitesPASS;64Python testsPASS;native oracle retroFAIL4 detected;Release/native next",
+      "status": "Measured-velocity fix implemented;unit3PASS andPython64PASS;Release/staticPASS;new mandatory nativeFAIL3 retained;admission follow-up in progress",
       "source_gap": "World prewarm reads CreatureLocomotionFacts.actualVelocity. Only SetHumanMotionFacts assigned it; FillTerrestrialRawFacts for NPC computed horizontalSpeed and controller verticalSpeed but left actualVelocity0. Predictive light demand therefore behaved as stationary despite a fast fall. 3c039fd3f native(-1,-3,2) missing frames48..51; prior column jobs1024/1039 completed before these draws but had not targeted this new section.",
       "fix": "FillTerrestrialRawFacts now stores finite full measured body displacement/dt, preserving existing XZ animation speed and controller vertical-speed semantics. Tiny/invalid dt, nonfinite deltas, absent controller and frozen facts cannot retain stale streaming velocity. No motor, gravity, body position or intent changes.",
       "regression": "locomotion_state_derive_test uses real FillTerrestrialRawFacts and VisitLightSampleApproach: body(-3,-5,39)->(-3,-9,39) over.1s must produce(0,-40,0) and request missing(-1,-3,2). Horizontal components, invalid/tiny dt, nonfinite positions and frozen clearing covered. Original runtime fails exact measured-fall assertion in engine-creature-measured-velocity-red-test.log.",
@@ -5754,7 +5754,68 @@
       "automatic_oracle": "New engine_creature_light_reference.py mandatory for open-sky continuous smoke. Each scoped creature CPU sample must join actual world-paint epoch and have current computed field/nonzero resource identity and direct sky15 in authored clear columns. Boundary blocklight range only because external emitters could contribute; independent block0 enforced only padded interior. No actor identity, GPU issue, RGB, smoothing or latency acceptance claimed. Sparse/unjoined/Flat coverage cannotPASS.",
       "oracle_negative": "3c039fd3f retained native now evaluated in separate fixture-creature-light-reference-retrospective-red.json:FAIL4/702samples,698ready,9sections,unjoined0; original smoke-verdict.json left unchanged.",
       "python": "engine-creature-light-reference-python-test.log:64PASS. New tests reject pending/transient/false identity/wrong sky/malformed coords, unsupported/no coverage/unjoined paints; legitimate boundary emitter accepted without weakening sky reference.",
-      "next": "Same immutable Release no-teleport open-sky-items native, new creature oracle mandatory and unchanged camera/FP/item/depth/floor checks. Target zero missing creature fields; do not relax reference."
+      "next": "Fresh/pending priority with ordinary fairness, keeping8visits/1capture. No increase in prediction cube, no light oracle relaxation.",
+      "native": {
+        "source": "c20dcef92",
+        "artifacts": "build/desktop-msvc/engine-creature-measured-velocity-visible-items-native",
+        "app_exit": 0,
+        "verdict": "FAIL",
+        "route_chunks": 22,
+        "inspections": {
+          "verified": 30,
+          "requested": 30,
+          "reason": "inspection_views_joined_to_png"
+        },
+        "creature_reference": {
+          "schema": "engine-creature-light-reference.v1",
+          "status": "FAIL",
+          "reason": "creature_canonical_field_in_clear_columns",
+          "samples": 547,
+          "ready_samples": 544,
+          "frame_epochs": 299,
+          "distinct_sections": 7,
+          "boundary_block_unconstrained_samples": 354,
+          "unjoined_samples": 0,
+          "unsupported_mode_samples": 0,
+          "skipped_unscoped": 0,
+          "faults": 3,
+          "examples": [
+            "creature_without_current_computed_field",
+            "creature_without_current_computed_field",
+            "creature_without_current_computed_field"
+          ],
+          "missing_coverage": [],
+          "scope": "creature CPU sample readiness/direct sky15 in authored columns; block0 only in padded interior; no actor identity, GPU primitive issue, shader RGB, smoothing, latency or full-screen acceptance"
+        },
+        "other_components": {
+          "runtime": "PASS",
+          "route": "PASS",
+          "startup": "PASS",
+          "visual": "UNTESTED",
+          "inspection": "PASS",
+          "fixture": "PASS",
+          "fixture_opaque_depth": "PASS",
+          "fixture_floor_draw_source_light": "PASS",
+          "fixture_air_light_service": "PASS",
+          "fixture_camera_field_light": "PASS",
+          "fixture_first_person_field_light": "PASS",
+          "fixture_world_item_draw_light": "PASS"
+        },
+        "finding": "Full vector now primes additional future sections, but3missing(-1,-3,2) samples remain frames38..40. Foreground column job1098 initially writes3AIR outputs;1105 writes2; later boundary job1118 captures another leasedAIR after first bad draw. New section can arrive while column job is already frozen/inflight, then ordinary round-robin revisit misses its consumer deadline. Exact originalFAIL preserved."
+      }
+    },
+    "light_sample_fresh_pending_service": {
+      "status": "Implemented;expanded queue testsPASS;fresh and fair negative controls detected;restoredGREEN;Release/native pending",
+      "runtime": "Optional needs_work predicate in DrainLightSampleDemands enables fresh/pending lane. Newly leased and still-uncomputed fields share half of existing visit budget; remaining slots continue ordinary revalidation, spare capacity borrowed. Pending retries persist across busy/inflight/backpressure until current canonical proof exists or lease expires. Completed work leaves fresh lane. Budget1 alternates preference. At most8visited active/expired requests and32metadata entries for runtime budget8; foreground snapshot cap1 and9data/backpressure guards unchanged. Queue flags confer no physical proof.",
+      "lifetime": "Stable list nodes indexed by lease ID allow O(1)fair ticket rotation when fresh lane serves same field. Copy constructor/assignment rebuild iterator index; fresh generations reject stale/canceled tickets. No record/iterator dereferenced across work/producer callbacks. Requeue before producer call, expiry cleanup, same-coordinate lease ABA and callbackclear/replacement retained; new callback-created leases wait for next drain. Legacy4argument calls retain existing behavior.",
+      "tests": "engine-light-sample-priority-expanded-green-test.log and saturation-green-test.logPASS; source restored then engine-light-sample-priority-restored-green-build.log/test.logPASS. Tests cover64ready backlog, immediate hot request, pending retries, completion departure, saturated64pending arrivals with all64old leases revisited, exact8/32bounds, queue copy/assignment, throwing callback, expiry, clear/replacement, budget1dedup and no manufactured settled light. All existing lease/fairness/ABA/frame0 tests stillPASS.",
+      "negative_controls": [
+        "engine-light-sample-priority-fresh-red-test.log: ignore work predicate/use ordinary loop; immediate hot-target test fails",
+        "engine-light-sample-priority-fair-red-test.log: spend all visits in fresh lane; saturated ordinary revalidation test fails"
+      ],
+      "restoration": "Temporary source restored byte-for-byte in finally; only chunk_render_demand_test builtRED, never app. Final rebuiltGREEN after both mutations.",
+      "telemetry": "RelightAudit job_submit adds sample_ys for exact target admission; RequiredWorldInputs reports sample_visits/fresh/fair/examined/captures. These are producer service statistics, not field correctness or performance acceptance.",
+      "next": "Exact Release build then same strict no-teleport visible-items route with mandatory creature reference. Preserve c20FAIL3 and earlier4pending negatives. Require zero pending scoped creature samples rather than loosening criterion. GPU table/shader/atomic GPU resource cutover and broad matrix remain pending."
     }
   }
 }

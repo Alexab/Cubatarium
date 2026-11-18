@@ -271,6 +271,11 @@ void UChunkRenderDemandStore::RequestLightSample(glm::ivec3 coord,
   {
     lease.id = NextLightSampleLeaseId_++;
     LightSampleQueue_.push_back({coord, lease.id});
+    if (FreshLightService_)
+    {
+      lease.fresh_queued = true;
+      FreshLightSamples_.push_back({coord, lease.id, ++lease.fresh_generation});
+    }
   }
   const auto maximum = std::numeric_limits<uint64_t>::max();
   const uint64_t through =
@@ -291,8 +296,19 @@ bool UChunkRenderDemandStore::HasLightSampleDemand(glm::ivec3 coord,
 UChunkRenderDemandStore::LightSampleDrainStats
 UChunkRenderDemandStore::DrainLightSampleDemands(
     uint64_t world_epoch, uint64_t frame, size_t visit_budget,
-    const std::function<void(glm::ivec3)> &visit)
+    const std::function<void(glm::ivec3)> &visit,
+    const std::function<bool(glm::ivec3)> &needs_work)
 {
+  if (needs_work)
+    return DrainPrioritizedLightSamples(world_epoch, frame, visit_budget, visit,
+                                        needs_work);
+  if (FreshLightService_)
+  {
+    FreshLightSamples_.clear();
+    FreshLightService_ = false;
+    for (auto &entry : Records_)
+      entry.second.light_sample_lease.fresh_queued = false;
+  }
   LightSampleDrainStats stats;
   const size_t count = std::min(visit_budget, LightSampleQueue_.size());
   for (size_t i = 0; i < count && !LightSampleQueue_.empty(); ++i)
@@ -300,6 +316,7 @@ UChunkRenderDemandStore::DrainLightSampleDemands(
     const auto entry = LightSampleQueue_.front();
     LightSampleQueue_.pop_front();
     ++stats.visited;
+    ++stats.examined;
     auto *record = Find(entry.coord);
     if (!record || record->light_sample_lease.id != entry.lease_id)
     {
@@ -324,6 +341,139 @@ UChunkRenderDemandStore::DrainLightSampleDemands(
     ++stats.active;
     visit(entry.coord);
   }
+  return stats;
+}
+
+UChunkRenderDemandStore::LightSampleDrainStats
+UChunkRenderDemandStore::DrainPrioritizedLightSamples(
+    uint64_t world_epoch, uint64_t frame, size_t visit_budget,
+    const std::function<void(glm::ivec3)> &visit,
+    const std::function<bool(glm::ivec3)> &needs_work)
+{
+  LightSampleDrainStats stats;
+  if (!visit_budget)
+    return stats;
+  if (!FreshLightService_)
+  {
+    FreshLightService_ = true;
+    for (const auto &entry : LightSampleQueue_.rows)
+      if (auto *record = Find(entry.coord);
+          record && record->light_sample_lease.id == entry.lease_id)
+      {
+        record->light_sample_lease.fresh_queued = true;
+        FreshLightSamples_.push_back(
+            {entry.coord, entry.lease_id,
+             ++record->light_sample_lease.fresh_generation});
+      }
+  }
+  const uint64_t lease_limit = NextLightSampleLeaseId_;
+  const size_t maximum = std::numeric_limits<size_t>::max();
+  const size_t examine_budget =
+      visit_budget > maximum / 4 ? maximum : visit_budget * 4;
+  std::vector<uint64_t> seen;
+  const auto run_lane = [&](bool fresh, size_t quota, size_t examine_limit)
+  {
+    const size_t available =
+        fresh ? FreshLightSamples_.size() : LightSampleQueue_.size();
+    size_t used = 0;
+    for (size_t n = 0;
+         n < available && used < quota && stats.visited < visit_budget &&
+         stats.examined < examine_limit;
+         ++n)
+    {
+      if (fresh ? FreshLightSamples_.empty() : LightSampleQueue_.empty())
+        break;
+      const auto entry =
+          fresh ? FreshLightSamples_.front() : LightSampleQueue_.front();
+      // A callback's replacement/new leases belong to the next drain.
+      if (entry.lease_id >= lease_limit)
+        break;
+      if (fresh)
+        FreshLightSamples_.pop_front();
+      ++stats.examined;
+      auto *record = Find(entry.coord);
+      if (!record || record->light_sample_lease.id != entry.lease_id)
+      {
+        LightSampleQueue_.Erase(entry.lease_id);
+        ++stats.stale;
+        continue;
+      }
+      if (fresh && (!record->light_sample_lease.fresh_queued ||
+                    record->light_sample_lease.fresh_generation !=
+                        entry.fresh_generation))
+      {
+        ++stats.stale;
+        continue;
+      }
+      if (!HasLightSampleDemand(entry.coord, world_epoch, frame))
+      {
+        LightSampleQueue_.Erase(entry.lease_id);
+        record->light_sample_lease = {};
+        ++stats.visited;
+        ++stats.expired;
+        ++used;
+        if (record->incarnation == 0 && record->desired_geom_rev == 0 &&
+            record->desired_light_rev == 0 &&
+            record->desired_coverage_gen == 0 && record->face_debt_mask == 0 &&
+            !record->has_active_attempt &&
+            !record->retained_awaiting_successor &&
+            !record->open_sky_repair_pending)
+          Remove(entry.coord);
+        continue;
+      }
+      if (!LightSampleQueue_.MoveBack(entry.lease_id))
+      {
+        ++stats.stale;
+        continue;
+      }
+      if (std::find(seen.begin(), seen.end(), entry.lease_id) != seen.end())
+      {
+        if (fresh)
+          FreshLightSamples_.push_back(entry);
+        continue;
+      }
+      seen.push_back(entry.lease_id);
+      if (fresh)
+        record->light_sample_lease.fresh_queued = false;
+      ++stats.visited;
+      ++used;
+      // No record/iterator survives either external callback. Ordinary work
+      // is already requeued; pending work is primed before the producer call.
+      const bool pending = needs_work(entry.coord);
+      record = Find(entry.coord);
+      if (!record || record->light_sample_lease.id != entry.lease_id ||
+          !HasLightSampleDemand(entry.coord, world_epoch, frame))
+        continue;
+      if (pending && !record->light_sample_lease.fresh_queued)
+      {
+        record->light_sample_lease.fresh_queued = true;
+        FreshLightSamples_.push_back(
+            {entry.coord, entry.lease_id,
+             ++record->light_sample_lease.fresh_generation});
+      }
+      else if (!pending)
+        record->light_sample_lease.fresh_queued = false;
+      ++stats.active;
+      if (fresh)
+        ++stats.fresh_active;
+      else
+        ++stats.fair_active;
+      visit(entry.coord);
+    }
+  };
+  size_t fresh_quota = visit_budget / 2 + visit_budget % 2;
+  if (visit_budget == 1)
+  {
+    fresh_quota = PreferFreshLightSample_ ? 1 : 0;
+    PreferFreshLightSample_ = !PreferFreshLightSample_;
+  }
+  // Keep half the bookkeeping allowance for ordinary fairness even if fresh
+  // tickets contain stale generations from canceled/replaced producers.
+  const size_t fresh_examine =
+      visit_budget > maximum / 2 ? maximum : visit_budget * 2;
+  run_lane(true, fresh_quota, fresh_examine);
+  run_lane(false, visit_budget - stats.visited, examine_budget);
+  run_lane(true, visit_budget - stats.visited, examine_budget);
   return stats;
 }
 
@@ -1399,6 +1549,9 @@ void UChunkRenderDemandStore::Clear()
 {
   Records_.clear();
   LightSampleQueue_.clear();
+  FreshLightSamples_.clear();
+  FreshLightService_ = false;
+  PreferFreshLightSample_ = true;
   CachedUnsatisfiedBreakdown_ = {};
   ReconcileCursorValid_ = false;
 }

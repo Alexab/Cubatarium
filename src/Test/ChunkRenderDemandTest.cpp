@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
+#include <stdexcept>
 
 namespace
 {
@@ -813,6 +814,138 @@ int main()
            "a callback clearing the store must not invalidate drain traversal");
   }
 
+  {
+    cutum::UChunkRenderDemandStore priority;
+    for (int x = 0; x < 64; ++x)
+      priority.RequestLightSample({x, -3, 0}, 7, 0, 1000);
+    const glm::ivec3 hot(-1, -3, 2);
+    bool pending = true;
+    int hot_calls = 0;
+    std::vector<int> ordinary;
+    const auto visit = [&](glm::ivec3 c)
+    {
+      if (c == hot)
+        ++hot_calls;
+      else
+        ordinary.push_back(c.x);
+    };
+    const auto work = [&](glm::ivec3 c) { return c == hot && pending; };
+    for (int n = 0; n < 32; ++n)
+      priority.DrainLightSampleDemands(7, 0, 8, visit, work);
+    ordinary.clear();
+    for (uint64_t frame = 20; frame < 26; ++frame)
+    {
+      priority.RequestLightSample(hot, 7, frame, 8);
+      const auto scan =
+          priority.DrainLightSampleDemands(7, frame, 8, visit, work);
+      Expect(hot_calls == int(frame - 19) && scan.visited <= 8 &&
+                 scan.examined <= 32 && scan.fresh_active >= 1 &&
+                 scan.fair_active >= 1,
+             "new and still-pending field retries bypass ready backlog within "
+             "unchanged visit budget");
+    }
+    auto copied = priority;
+    int copied_hot = 0;
+    copied.DrainLightSampleDemands(
+        7, 25, 8, [&](glm::ivec3 c) { copied_hot += c == hot; }, work);
+    Expect(copied_hot == 1 && priority.HasLightSampleDemand(hot, 7, 25),
+           "copied producer queues rebuild their own stable iterator indices");
+    pending = false;
+    priority.RequestLightSample(hot, 7, 26, 8);
+    priority.DrainLightSampleDemands(7, 26, 8, visit, work);
+    Expect(hot_calls == 7,
+           "completed field gets a final producer revalidation");
+    const auto before = hot_calls;
+    priority.DrainLightSampleDemands(7, 27, 8, visit, work);
+    Expect(hot_calls == before, "completed field leaves the fresh lane instead "
+                                "of consuming every foreground slot");
+    ordinary.clear();
+    for (int x = 0; x < 64; ++x)
+      priority.RequestLightSample({1000 + x, -3, 0}, 7, 30, 100);
+    for (int frame = 30; frame < 80; ++frame)
+    {
+      const glm::ivec3 arriving(1000 + frame, -3, 0);
+      priority.RequestLightSample(arriving, 7, frame, 100);
+      const auto scan = priority.DrainLightSampleDemands(
+          7, frame, 8, visit, [](glm::ivec3 c) { return c.x >= 1000; });
+      Expect(scan.visited <= 8 && scan.examined <= 32,
+             "continuous fresh arrivals keep producer and bookkeeping budgets "
+             "bounded");
+    }
+    for (int x = 0; x < 64; ++x)
+      Expect(std::find(ordinary.begin(), ordinary.end(), x) != ordinary.end(),
+             "continuous pending arrivals cannot starve ordinary lease "
+             "revalidation");
+    cutum::UChunkRenderDemandStore mutation;
+    mutation.RequestLightSample(hot, 9, 0, 100);
+    const auto old_id = mutation.Find(hot)->light_sample_lease.id;
+    const auto scan = mutation.DrainLightSampleDemands(
+        9, 0, 8,
+        [&](glm::ivec3 c)
+        {
+          mutation.Clear();
+          mutation.RequestLightSample(c, 9, 0, 100);
+        },
+        [](glm::ivec3) { return true; });
+    Expect(scan.visited == 1 && mutation.HasLightSampleDemand(hot, 9, 0) &&
+               mutation.Find(hot)->light_sample_lease.id != old_id,
+           "clear/replacement during fresh callback cannot visit or erase the "
+           "new lease in the old drain");
+    auto one = mutation;
+    int calls = 0;
+    for (int frame = 0; frame < 8; ++frame)
+    {
+      const auto single = one.DrainLightSampleDemands(
+          9, frame, 1, [&](glm::ivec3) { ++calls; },
+          [](glm::ivec3) { return true; });
+      Expect(single.visited == 1 && single.examined <= 4,
+             "one-slot pending retries retain their fresh ticket after lane "
+             "deduplication");
+    }
+    Expect(calls == 8,
+           "one-slot pending field is never dropped by fairness rotation");
+    cutum::UChunkRenderDemandStore assigned;
+    assigned = one;
+    int assigned_calls = 0;
+    assigned.DrainLightSampleDemands(
+        9, 8, 1, [&](glm::ivec3) { ++assigned_calls; },
+        [](glm::ivec3) { return true; });
+    Expect(assigned_calls == 1 && one.HasLightSampleDemand(hot, 9, 8),
+           "copy assignment also rebuilds independent queue cursor ownership");
+    cutum::UChunkRenderDemandStore exceptional;
+    exceptional.RequestLightSample(hot, 11, 0, 100);
+    bool threw = false;
+    try
+    {
+      exceptional.DrainLightSampleDemands(
+          11, 0, 8,
+          [](glm::ivec3) { throw std::runtime_error("producer unavailable"); },
+          [](glm::ivec3) { return true; });
+    }
+    catch (const std::runtime_error &)
+    {
+      threw = true;
+    }
+    int after_throw = 0;
+    exceptional.DrainLightSampleDemands(
+        11, 1, 1, [&](glm::ivec3) { ++after_throw; },
+        [](glm::ivec3) { return true; });
+    Expect(threw && after_throw == 1,
+           "throwing producer retains both fair ownership and pending retry");
+    cutum::UChunkRenderDemandStore expired;
+    expired.RequestLightSample(hot, 12, 0, 0);
+    int expired_calls = 0;
+    const auto expiration = expired.DrainLightSampleDemands(
+        12, 1, 8, [&](glm::ivec3) { ++expired_calls; },
+        [](glm::ivec3) { return true; });
+    Expect(expiration.expired == 1 && !expired.Find(hot) &&
+               expired_calls == 0 && expired.GetLightSampleQueueSize() == 0,
+           "expired pending lease releases queue nodes without granting "
+           "calculation authority");
+    Expect(!priority.Find(hot) || !priority.Find(hot)->has_settled_light,
+           "queue service and completion hints never manufacture physical "
+           "light proof");
+  }
   {
     std::vector<glm::ivec3> approach;
     const auto collect = [&](glm::ivec3 cell, glm::vec3 velocity,

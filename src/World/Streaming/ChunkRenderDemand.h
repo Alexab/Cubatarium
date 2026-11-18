@@ -8,6 +8,8 @@
 #include <deque>
 #include <functional>
 #include <glm/glm.hpp>
+#include <iterator>
+#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -82,6 +84,8 @@ struct ChunkRenderDemandRecord
   {
     uint64_t id{0};
     uint64_t through_frame{0};
+    bool fresh_queued{false};
+    uint64_t fresh_generation{0};
   };
   glm::ivec3 coord{};
   uint64_t world_epoch{0};
@@ -185,12 +189,16 @@ public:
   struct LightSampleDrainStats
   {
     size_t visited{0}, active{0}, expired{0}, stale{0};
+    size_t examined{0}, fresh_active{0}, fair_active{0};
   };
-  /// Fair bounded producer visitation; callbacks may update this store.
-  LightSampleDrainStats
-  DrainLightSampleDemands(uint64_t world_epoch, uint64_t frame,
-                          size_t visit_budget,
-                          const std::function<void(glm::ivec3)> &visit);
+  /// Optional work predicate enables fresh/pending and ordinary fairness lanes.
+  /// No lane certifies light readiness. At most visit_budget live/expired
+  /// requests and 4*visit_budget bookkeeping entries are examined per drain
+  /// after one-time lane initialization; callbacks may update this store.
+  LightSampleDrainStats DrainLightSampleDemands(
+      uint64_t world_epoch, uint64_t frame, size_t visit_budget,
+      const std::function<void(glm::ivec3)> &visit,
+      const std::function<bool(glm::ivec3)> &needs_work = {});
   size_t GetLightSampleQueueSize() const { return LightSampleQueue_.size(); }
 
   /// Raise or coalesce desire. AlreadySatisfied when published meets desired.
@@ -427,8 +435,73 @@ private:
   {
     glm::ivec3 coord;
     uint64_t lease_id;
+    uint64_t fresh_generation{0};
   };
-  std::deque<LightSampleQueueEntry> LightSampleQueue_;
+  // Stable nodes let fresh work move its ordinary fairness ticket in O(1).
+  // Rebuild iterator indices on copy rather than aliasing another store.
+  struct LightSampleQueue
+  {
+    using Rows = std::list<LightSampleQueueEntry>;
+    Rows rows;
+    std::unordered_map<uint64_t, Rows::iterator> positions;
+    LightSampleQueue() = default;
+    LightSampleQueue(const LightSampleQueue &other)
+    {
+      for (const auto &entry : other.rows)
+        push_back(entry);
+    }
+    LightSampleQueue(LightSampleQueue &&) noexcept = default;
+    LightSampleQueue &operator=(LightSampleQueue &&) noexcept = default;
+    LightSampleQueue &operator=(const LightSampleQueue &other)
+    {
+      if (this != &other)
+      {
+        LightSampleQueue copy(other);
+        rows.swap(copy.rows);
+        positions.swap(copy.positions);
+      }
+      return *this;
+    }
+    bool empty() const { return rows.empty(); }
+    size_t size() const { return rows.size(); }
+    const LightSampleQueueEntry &front() const { return rows.front(); }
+    bool MoveBack(uint64_t id)
+    {
+      const auto it = positions.find(id);
+      if (it == positions.end())
+        return false;
+      rows.splice(rows.end(), rows, it->second);
+      return true;
+    }
+    void push_back(LightSampleQueueEntry entry)
+    {
+      if (MoveBack(entry.lease_id))
+        return;
+      rows.push_back(entry);
+      positions.emplace(entry.lease_id, std::prev(rows.end()));
+    }
+    void Erase(uint64_t id)
+    {
+      const auto it = positions.find(id);
+      if (it == positions.end())
+        return;
+      rows.erase(it->second);
+      positions.erase(it);
+    }
+    void pop_front() { Erase(rows.front().lease_id); }
+    void clear()
+    {
+      positions.clear();
+      rows.clear();
+    }
+  };
+  LightSampleQueue LightSampleQueue_;
+  std::deque<LightSampleQueueEntry> FreshLightSamples_;
+  bool FreshLightService_{false}, PreferFreshLightSample_{true};
+  LightSampleDrainStats DrainPrioritizedLightSamples(
+      uint64_t world_epoch, uint64_t frame, size_t visit_budget,
+      const std::function<void(glm::ivec3)> &visit,
+      const std::function<bool(glm::ivec3)> &needs_work);
   uint64_t NextLightSampleLeaseId_{1};
   uint64_t NextAttemptId_{1};
   glm::ivec3 ReconcileCursorCoord_{0};
