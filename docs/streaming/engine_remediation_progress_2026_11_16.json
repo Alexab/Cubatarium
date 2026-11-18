@@ -7327,12 +7327,38 @@
       }
     },
     "wet_publication_failure_diagnostics": {
-      "status": "Implemented diagnostics, not a repair.6Release testsPASS and71Python harness testsPASS. Required Release app build and targeted native pending. Original287fault wet counterexample remains open.",
+      "status": "Implemented diagnostics, not a repair.6Release testsPASS and71Python harness testsPASS. Required Release app buildPASS and native diagnostic flight complete. Original287fault wet counterexample remains open.",
       "evidence": "fixture-depth-reference-attributed.json re-evaluates original d655 wet perf with unchanged independent status/check/fault/frame/skip counters:FAIL287/11912 in7sections. Every287fault has engine voxel hit matching analytic expected surface, published geometry0 and queued work;285report matching settled light revisions. Owner flags1 in everyfault; maximum recorded dirty age139scheduler ticks. Not a texture, lack-of-voxel-data or framebuffer-only command mismatch in these samples. Reported light settlement is not a fresh full render-resource proof.",
       "implementation": "CUBA_TRACE_CHUNK now persists selected section schedule outcomes, capture enqueue metadata and resource-admission rejection reasons to INFO logs before bounded diagnostic rings overwrite early-flight history. Resource gates keep their original decisions. Watch reports queue/owner metadata by default; optional CUBA_TRACE_CHUNK_LIGHT_PROOF enables extra world proof queries explicitly, because they may warm lazy caches. Unknown mask255/-1 fields mean not measured in ordinary watch. CPU commit diagnostic now reports moved-to chunkMesh.batches instead of already moved-from result.batches.",
       "tooling": "engine_fixture_reference adds diagnostic fault_attribution grouped by analytic solid-side sections, including matching voxel metadata, unpublished queued geometry, reported settlement and maximum dirty age. Engine flags never determine the depth verdict. Source/file hashes and original unmodified reference report retained for retrospective analysis.",
       "validation": "engine-publication-target-diagnostics-tests.log:6PASS. engine-publication-attribution-harness-tests.log:71PASS including4new tests: engine ready/unpublished flags cannot mask or invent depth failure; signed floor/ceiling attribution; unavailable/malformed/mismatched optional metadata does not change reference. No new unit test merely mirrors logging.",
-      "next": "Run same wet sprint with target(-5,-3,3), proof rereads explicitly disabled. Separate scheduler starvation/capture deferral from provisional/missing/mismatched physical snapshot or GPU owner rejection. Fix causal transition and add focused regression before claiming native repair."
+      "next": "Fix independently reproduced proof-only capture-cache staleness, then repeat native wet sprint; original287fault failure remains open until causal coverage and regressions are sufficient.",
+      "native_observation": {
+        "artifact": "build/desktop-msvc/engine-wet-publication-diagnostics-native/wet-publication-diagnostics-observation.json",
+        "source": "d7c330e60",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "opaque_depth": "PASS0/8930faults77epochs",
+        "camera_observations": "1806/1806ready sky0/block0; observational only",
+        "route": "19chunks,1334outside initial samples,0relocations",
+        "provenance": "EXE/config-restoration/source-world all independently verified",
+        "target_decisions": "8provisional_light rejections,1prepared;9accepted scheduling outcomes,8budget deferrals",
+        "interpretation": "Preview capture reused until observed byte light revision changed0to1. This passing diagnostic repeat is neither a repair nor proof of same-byte completion as original counterexample cause."
+      }
+    },
+    "capture_proof_only_completion": {
+      "status": "Production fix implemented. Initial unmodified-cache RED and incremental-shell-only negative control both fail exact regression assertions. Exact source bytes restored;6Release testsPASS. Required Release app build/native pending.",
+      "defect": "Real physical calculation installed and subsequently recorded can establish render proof without changing byte revisions/incarnation. InputsStillValid remains true for old provisional capture; cache retained it indefinitely.",
+      "fix": "TryGet and RefreshIncrementalShell invalidate captures lacking render proof when current completed physical snapshot becomes available. Eviction releases normal credit; fresh capture retains current original source epoch/revision and exact geometry. No fabricated proof, no admission bypass, no changed field values. Unfinished captures remain reusable until actual proof completion; completed captures retain normal hits. Flat constant captures do not trigger physical recapture.",
+      "regression": "Real roofed dark CPU field, delayed RecordLightCalculation, identical input stamps, direct cache lookup and incremental-shell path; verifies recapture real proof and source identity. Initial unmodified implementation FAIL: cached provisional snapshot cannot survive proof-only light completion.",
+      "scope_limit": "Deterministic cache defect established independently. Original native287fault cause and complete engine acceptance remain open.",
+      "validation": {
+        "initial_red": "engine-proof-only-cache-red-test.log",
+        "shell_red": "engine-proof-only-shell-red-test.log",
+        "restore": "engine-proof-only-cache-negative-control.json",
+        "green": "engine-proof-only-cache-restored-tests.log;6/6PASS"
+      }
     }
   },
   "execution_status_review_2026_11_18": {

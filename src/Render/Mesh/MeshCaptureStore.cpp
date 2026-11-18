@@ -9,6 +9,20 @@
 namespace cutum
 {
 
+namespace
+{
+bool CompletedLightRequiresRecapture(const UBlockWorld &world,
+                                     const ChunkMeshSnapshot &snapshot)
+{
+  // Calculation completion can establish proof without changing field bytes.
+  // Raw input stamps cannot detect this transition. Recapture through normal
+  // admission instead of attaching a new proof to an older immutable capture.
+  return !snapshot.renderLight &&
+         (snapshot.provisionalLightPreview || snapshot.certifiedPaddedLight) &&
+         world.CaptureRenderLightSnapshot(snapshot.coord).has_value();
+}
+} // namespace
+
 void UMeshCaptureStore::Invalidate(glm::ivec3 coord) { Store_.erase(coord); }
 
 void UMeshCaptureStore::InvalidateAll() { Store_.clear(); }
@@ -45,7 +59,8 @@ UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord,
     return std::nullopt;
   }
   if (!it->second.data.InputsStillValid(world, NeighborDrawableFn_,
-                                        NeighborDrawableCtx_))
+                                        NeighborDrawableCtx_) ||
+      CompletedLightRequiresRecapture(world, it->second.data))
   {
     Store_.erase(it);
     ++StaleEntryEvictions_;
@@ -185,7 +200,8 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
       (it->second.sourceRevision != source_revision ||
        it->second.worldEpoch != WorldEpoch_ ||
        !it->second.data.InputsStillValid(world, NeighborDrawableFn_,
-                                         NeighborDrawableCtx_)))
+                                         NeighborDrawableCtx_) ||
+       CompletedLightRequiresRecapture(world, it->second.data)))
   {
     Store_.erase(it);
     ++StaleEntryEvictions_;

@@ -1823,6 +1823,81 @@ static void TestNoDrawPhysicalResourceAdmission(
          "unknown neighbors cannot certify absent surfaces");
 }
 
+static void TestCachedPreviewAfterProofOnlyCompletion(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetLightingConfigurationIdentity(
+      static_cast<uint64_t>(LightingMode::Full));
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 root(0);
+  world.SetBlock({4, 4, 4}, kStone);
+  for (int x = -16; x < 32; ++x)
+    for (int z = -16; z < 32; ++z)
+      world.SetBlock({x, 31, z}, kStone);
+  RelightJobSpec spec;
+  spec.min_world_y = world.GetVerticalProfile().MinY;
+  spec.max_world_y = world.GetVerticalProfile().MaxY;
+  const auto field = UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                         .Compute(registry);
+  Expect(field.inputs_complete && field.chunks.size() == 1 &&
+             field.chunks[0].padded_light,
+         "proof-only cache fixture computes a real complete physical field");
+  world.GetChunkManager().ReplaceComputedSectionLightVolume(
+      root, *field.chunks[0].padded_light, true, true);
+  Expect(!world.CaptureRenderLightSnapshot(root),
+         "installed light bytes alone do not establish render proof");
+  UMeshCaptureStore store;
+  UMeshCaptureStore shell_store;
+  Expect(shell_store.CaptureAndStore(world, root, 7).has_value(),
+         "incremental shell fixture retains an unverified capture");
+  const auto before = store.CaptureAndStore(world, root, 7);
+  Expect(before && !before->certifiedPaddedLight && !before->renderLight &&
+             before->provisionalLightPreview,
+         "real unverified zero field is cached as provisional");
+  Expect(store.TryGet(world, root, 7).has_value(),
+         "unfinished proof does not force repeated capture");
+  const auto stamp_before = world.CaptureInputStamp(root, true, true);
+  Expect(
+      world.RecordLightCalculation(
+          field, registry.GetDefinitionsCatalogSnapshot()) == 1 &&
+          world.CaptureRenderLightSnapshot(root),
+      "recording completed calculation makes physical render proof available");
+  const auto stamp_after = world.CaptureInputStamp(root, true, true);
+  Expect(stamp_before.light == stamp_after.light &&
+             stamp_before.lightIncarnation == stamp_after.lightIncarnation &&
+             before->InputsStillValid(world),
+         "proof-only completion leaves raw field stamps and captured inputs "
+         "unchanged");
+  const auto hit = store.TryGet(world, root, 7);
+  Expect(
+      !hit || (hit->certifiedPaddedLight && hit->renderLight &&
+               !hit->provisionalLightPreview),
+      "cached provisional snapshot cannot survive proof-only light completion");
+  const auto refreshed = hit ? hit : store.CaptureAndStore(world, root, 7);
+  Expect(refreshed && refreshed->certifiedPaddedLight &&
+             refreshed->renderLight && !refreshed->provisionalLightPreview &&
+             refreshed->sourceRevision == 7 &&
+             refreshed->sourceWorldEpoch == store.WorldEpoch() &&
+             refreshed->renderLight->MatchesGeometry(
+                 refreshed->GeometryRenderInputs(
+                     registry.GetDefinitionsCatalogSnapshot())),
+         "recapture preserves source epoch and geometry with the real "
+         "completed field");
+  const auto shell = shell_store.RefreshIncrementalShell(world, root, 7, 1);
+  Expect(shell && shell->renderLight && shell->certifiedPaddedLight &&
+             !shell->provisionalLightPreview &&
+             shell->sourceWorldEpoch == shell_store.WorldEpoch(),
+         "incremental shell refresh also replaces proof-only stale preview");
+  const auto evictions = store.StaleEntryEvictions();
+  Expect(store.TryGet(world, root, 7).has_value() &&
+             store.StaleEntryEvictions() == evictions,
+         "completed immutable capture remains reusable");
+}
+
 static void TestFirstComputedLightPublication(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions,
@@ -3246,6 +3321,7 @@ int main(int argc, char **argv)
     else
     {
       TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
+      TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
       TestFirstComputedLightPublication(registry, definitions.get(), true);
       TestOrderedFieldBindings(registry, definitions.get());
       TestCrossLightArtifactTransport(registry, definitions.get(), true);
@@ -3278,6 +3354,7 @@ int main(int argc, char **argv)
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
+  TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestFirstComputedLightPublication(registry, definitions.get());
   TestCrossLightArtifactTransport(registry, definitions.get());
   TestWorldDemandIsolation();
