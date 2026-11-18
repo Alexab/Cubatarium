@@ -5941,7 +5941,7 @@
       }
     },
     "geometry_only_no_surface_authority": {
-      "status": "Implemented production geometry-only proof and readiness/draw integration; expanded integration and GPU driver tests PASS3; unknown-material negative control detected and exact source bytes restored. Exact Release application build/static6DLL PASS; native verification pending.",
+      "status": "Production proof/unit/driver/Release checks PASS; frozen RD8 startup-only PASS; frozen RD4 moving native FAIL3 creature physical samples and4 missing inspection PNGs. Full goal remains incomplete.",
       "proof": "SectionNoSurfaceProof is privately constructed by UGreedyMesher from exact current center+six-face inputs, world geometry identity, full vertical profile and pinned catalog. CaptureGeometryRenderInputs separates geometry provenance from physical calculation. Private geometry-only snapshot capture omits light bytes/halo/physical snapshot and diagonal-light stamps. All seven inputs must be known. Snapshot and current inputs are compared before sealing evidence; light bytes are never absence evidence.",
       "supported_subset": "Conservative all-AIR or wholly occluded known opaque UCube geometry without active fluid. Uses real mesher NeighborHidesFace after opaque-cube guards. Excludes unknown catalog IDs, Cross, Cutout, Fluid and transparent/permeable shapes; this keeps the read set within the certified seven geometry inputs, excluding the radius-2 transparent-neighbor branch. Unrepresentable section/shell coordinates reject.",
       "production": "World caches both positive sealed proof and negative classifications against exact geometry inputs; bounded16384entries across flights/resets, cache clearing only removes evidence. Required presentation and column coverage accept NoDraw readiness without physical field only if no active light-sample lease. Point consumers still require complete physical calculation. NoSurface never stamps calculation settlement or completes a consumer lease. Publication repair skips current certified NoDraw sections. Renderer readiness suppresses predecessor geometry before frame memo; existing CPU/packed opaque+transparent filters use this gate.",
@@ -5950,7 +5950,64 @@
       "negative_control": "engine-no-surface-material-guard-red-build.log succeeds; removing catalog-definition guard causes actual integration assertion FAIL in engine-no-surface-material-guard-red-test.log. Exact original GreedyMesher.cpp bytes restored; restored-green build/test PASS and subsequent three-test run PASS. Prior control removing only center opaque guard did not fail, because neighbor opacity/actual face guards independently reject that fixture; retained under engine-no-surface-redundant-center-guard-control-{build,test}.log and not counted as a detected mutation. Initial control-script CRLF assertion aborted before mutation; no RED application build.",
       "remaining": "Native RD8 startup and moving scoped references; validate performance and broader material/eviction matrix. This is NoDraw authority, not default GPU shading cutover, full section-state migration, persistent content certificates, actual GPU solver parity or full visual oracle acceptance.",
       "release": "engine-no-surface-release-build.log terminal0: cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8; verify-windows-exe static6systemDLL PASS.",
-      "followup_geometry_audit": "NeighborHidesFace transparent-solid branch reads axial beyond_pos at distance2, while current snapshot GetBlock returns AIR outside its one-cell face shell. The live-world reader can therefore differ from background snapshot reader at section seams. Add real axial second-plane geometry capture and independent live-vs-snapshot mesher regression, with appropriate source stamps; retain conservative NoSurface exclusion until fixed. Seven full face-neighbor chunk stamps already cover these axial cells; this is missing sampled geometry bytes, not a demand for diagonal geometry dependencies."
+      "followup_geometry_audit": "NeighborHidesFace transparent-solid branch reads axial beyond_pos at distance2, while current snapshot GetBlock returns AIR outside its one-cell face shell. The live-world reader can therefore differ from background snapshot reader at section seams. Add real axial second-plane geometry capture and independent live-vs-snapshot mesher regression, with appropriate source stamps; retain conservative NoSurface exclusion until fixed. Seven full face-neighbor chunk stamps already cover these axial cells; this is missing sampled geometry bytes, not a demand for diagonal geometry dependencies.",
+      "native_startup": {
+        "source_commit": "28d644df2",
+        "artifacts": "build/desktop-msvc/engine-no-surface-rd8-startup-native",
+        "status": "PASS startup-only scope",
+        "app_exit": 0,
+        "wrapper_exit": 0,
+        "warmup_ms": 405798,
+        "wall_seconds": 445.465,
+        "first_paint": {
+          "sections": 6936,
+          "columns": 289,
+          "known_air": 4556,
+          "resident": 2380,
+          "certified_no_surface": 1333,
+          "missing_data": 0,
+          "unknown": 0,
+          "light_debt": 0,
+          "publication_debt": 0
+        },
+        "stationary_samples": 7,
+        "drift": 0,
+        "relocations": 0,
+        "limitations": "No pixel/physical-light/route acceptance. Legacy flight runner1 expects motion; startup-only classifier explicitly excludes that unrequested scope. Startup405.8sec remains a performance defect; previous RD8 timeout remains retained, no claim of controlled A/B speedup."
+      },
+      "native_moving": {
+        "source_commit": "28d644df2",
+        "artifacts": "build/desktop-msvc/engine-no-surface-visible-items-native",
+        "status": "FAIL",
+        "app_exit": 0,
+        "wrapper_exit": 1,
+        "frames": 1232,
+        "chunks": 22,
+        "outside_initial_samples": 770,
+        "relocations": 0,
+        "captures_requested": 30,
+        "captures_verified": 26,
+        "camera_ready": "1232/1232",
+        "first_person_ready": "1232/1232",
+        "creature_ready": "580/583",
+        "creature_faults": 3,
+        "item_draws": 108,
+        "item_primitives": 324,
+        "item_faults": 0,
+        "depth_checks": 270,
+        "depth_faults": 0,
+        "packed_source_checks": 123,
+        "packed_source_faults": 0,
+        "first_paint_no_surface": 249,
+        "first_paint_total": 1944,
+        "first_paint_debts": 0,
+        "full_visual": "UNTESTED generic RGB reference absent"
+      },
+      "new_failures_analysis": {
+        "png": "All30 requests were queued to PBO, but completed inspection_0008,0010,0012,0014 were dropped by PollCompleted when bounded PNG worker queue was full. Queued is not saved. Retain completed payloads in bounded PBO slots and apply capture backpressure to bot without advancing/corrupting pose; do not increase queue to hide fault. Add stalled-capture controller regression and stressed native acceptance.",
+        "creature": "Frames35,36,37 actual falling creature samples(-3,-37/-42/-47,39), section(-1,-3,2), Missing field. Existing motion prefetch requested sample_ys[-3,-2,-1] by job1152 submitted11:03:36.406 at frame31; consumer arrives11:03:37.202; pending3sections reconcile11:03:37.735 at frame38. Measured producer latency exceeds effective lead. Fresh/pending fairness is insufficient for zero-latency falling consumers. Fix prediction/service deadlines against actual solver latency and known physics, with bounded budgets; never fake readiness or suppress oracle.",
+        "diagnostic": "RequiredPresentationWitness blocker list still applies legacy publication predicate and may include certified NoDraw sections even though census correctly excludes them. Align blocker attribution with typed readiness and explicit sample debt."
+      }
     }
   }
 }
