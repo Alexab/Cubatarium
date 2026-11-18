@@ -6073,21 +6073,59 @@
         "followup_build_identity": "HUD still displays configure-time529a0c1 despite later C++/harness commits. Use frozen route.git_sha+EXE digest and source manifest as authority; make embedded build identity current in a later diagnostic/build change."
       },
       "next_sequence": [
-        "Reproduce/fix axial second-plane snapshot geometry omission with actual live-vs-snapshot six-face regression.",
         "Fix current NoSurface blocker attribution to exclude certified NoDraw publication debt while retaining physical-sample debt.",
         "Instrument/shorten physical solve deadlines and improve falling-consumer prewarm using real physics/latency; retained job1152 took1.329sec total,0.9306sec compute, so one-second/two-section forecast is insufficient for terminal50blocks/sec. Solver already has tile-neighbor and dense material caches; do not redo those. Consider mathematically exact saturated-sky tile boundary seeding to avoid queuing every max15 interior cell, with independent all8000-cell references and negative controls.",
         "Continue complete original plan: authoritative capture epochs, ordinary owner/shader cutover across every draw/backend, bounded resource capacity/fallback, durable content certificates, actual GPU physical solver parity, RGB/transparency and cold/warm/eviction/RD/performance matrix."
       ]
     },
     "axial_second_plane_geometry_capture": {
-      "status": "Real production reader discrepancy RED6; fixed axial capture/readers; extended integration+physical binding driver+existing opaque GPU extract/parity GREEN4. Exact Release application build/native pending.",
+      "status": "Completed axial CPU snapshot capture/reader repair: actual RED6, extended GREEN4, exact Release/static6DLL PASS and frozen9c1e679b5 native scoped references allPASS. Generic full visual UNT. Separate GPU complex material visibility, NoDraw state/attribution and physical latency remain open.",
       "reproduction": "New solid_glass test material is transparent UCube with real movement occupancy1. Center section at(0,-3,0) contains thin stone at each boundary, AIR behind it, adjacent solid glass and opaque stone one cell beyond glass. Live UGreedyMesher emits the face; old snapshot mesher emits0 for all6directions. engine-second-plane-geometry-red-build.log succeeds and red-test.log fails with6specific live1/snapshot0 lines. No RED application build.",
       "cause": "NeighborHidesFace reads before_pos and beyond_pos two cells along face normal in transparent-solid rule. ChunkMeshSnapshot captured one plane and returned AIR for real axial distance2 data. Whole neighbor content stamps already cover the missing cells: data copying/read extent, not missing diagonal geometry stamp.",
       "fix": "Add outerShellBlocks (6*16*16 BlockIds) captured from same six already-looked-up neighbor chunks; no extra per-cell world hash for resident neighbors. Both GetBlock and GetBlockIgnoringOverlay resolve exactly axial distance2, preserve same face overlay, reject edges/corners/farther reads. Original adjacent shell/fluid/load-state representation and geometry7/light27 provenance stay intact. Private geometry-only NoSurface capture also captures real second planes; sealed proof remains conservative opaque-cube subset. No persisted world layout changes.",
       "tests": "All6directions live expectedface1 equals snapshot; captured second-plane bytes read by both APIs; edit beyond glass invalidates exact source stamps while retained snapshot stays immutable; fresh live/snapshot both hide expected face after opening beyond cell. Extended tests overlay masks second plane but raw reader retains data; edges/corners/farther positions return AIR rather than wrapping. Initial GREEN2 engine-second-plane-geometry-green-test.log includes actual physical binding GPU driver.",
       "additional_backend_audit": "Existing gpu_extract_mesher_parity_test covers opaque stone terrain only. GPU occupancy/compute emit currently uses0AIR/1opaque/2unknown/3transparent and n!=self, which differs from full NeighborHidesFace for transparent-solid thin walls, transparent-vs-opaque, cutout pairs and some fluid neighbors. This is a separate material-visibility parity defect inferred from code; add real expanded reference+driver tests and fix shared CPU/GPU contract, not merely claim this CPU snapshot repair fixes every backend. Active-fluid opaque-permeable cells also need explicit eligibility audit because GPU opaque extraction does not emit waterlogged fluid shells.",
-      "remaining": "Final unit targets, exact Release application build, frozen native scope checks; unified backend material visibility, NoSurface blocker attribution and physical sample deadline remain open.",
-      "final_unit": "engine-second-plane-geometry-final-unit-build.log terminal0 builds decor_mesh_integration_test, gpu_greedy_face_extract_test and gpu_extract_mesher_parity_test against current snapshot layout; engine-second-plane-geometry-final-four-test.log PASS4 also includes section_render_light_bindings_driver_test. Existing opaque GPU parity test is not broad material or real GPU compute-shader parity acceptance."
+      "remaining": "Full GPU/CPU material visibility contract and actual shader tests; full NoDraw publication/state and blocker attribution; physical solve latency/deadline closure; full original S0..S6 plan remains active.",
+      "final_unit": "engine-second-plane-geometry-final-unit-build.log terminal0 builds decor_mesh_integration_test, gpu_greedy_face_extract_test and gpu_extract_mesher_parity_test against current snapshot layout; engine-second-plane-geometry-final-four-test.log PASS4 also includes section_render_light_bindings_driver_test. Existing opaque GPU parity test is not broad material or real GPU compute-shader parity acceptance.",
+      "release": "engine-second-plane-geometry-release-build.log terminal0: exact required cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8; static6systemDLL PASS. Code committed before app build; frozen code/harness/EXE/fixtures through native terminal.",
+      "native": {
+        "source_commit": "9c1e679b5ab411bdeeddb76b1b3538242e15868e",
+        "artifacts": "build/desktop-msvc/engine-second-plane-geometry-visible-items-native",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED missing generic full RGB reference; all scoped components PASS",
+        "frames": 1478,
+        "wall_seconds": 293.307,
+        "chunks": 22,
+        "outside_initial_samples": 951,
+        "relocations": 0,
+        "png_verified": 30,
+        "camera_ready": "1478/1478",
+        "fp_ready": "1478/1478",
+        "creature_ready": "844/844",
+        "item_draws": 219,
+        "item_primitives": 657,
+        "depth_checks": 275,
+        "packed_source_checks": 81,
+        "reference_faults": 0,
+        "warmup": [
+          {
+            "reason": "live_blockers",
+            "elapsed_ms": 105806.0,
+            "visibility_debt": 0,
+            "underfeet_ready": true,
+            "forced_with_debt": false
+          }
+        ],
+        "first_paint": {
+          "sections": 1944,
+          "known_air": 1372,
+          "resident": 572,
+          "no_surface": 249,
+          "data_light_publication_debt": 0
+        },
+        "provenance": "Observation JSON verifies current EXE digest, unchanged source World_261 fingerprint and byte-exact runtime config restore. Ordinary GPU-packed floor route is a compatibility regression; six thin-wall materials proven by actual CPU readers in integration tests, not an unrun native glass oracle. Later all-ready scene run does not negate retained earlier3Missing falling-creature samples."
+      }
     }
   }
 }
