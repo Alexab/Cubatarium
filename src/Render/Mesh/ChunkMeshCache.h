@@ -566,6 +566,20 @@ public:
                ? it->second.PublishedGeomStamps[0].content
                : 0;
   }
+  std::optional<SectionGeometryRenderInputs>
+  GetPublishedGeometryRenderInputs(glm::ivec3 coord) const
+  {
+    const auto it = GreedyCache.find(coord);
+    if (it == GreedyCache.end() || !it->second.RenderGeometryInputs.valid)
+      return std::nullopt;
+    return it->second.RenderGeometryInputs;
+  }
+  std::optional<SectionRenderLightSnapshot>
+  GetPublishedRenderLightSnapshot(glm::ivec3 coord) const
+  {
+    const auto it = GreedyCache.find(coord);
+    return it == GreedyCache.end() ? std::nullopt : it->second.RenderLight;
+  }
   uint32_t GetPublishCount(glm::ivec3 chunk_coord) const
   {
     const auto it = GreedyCache.find(chunk_coord);
@@ -1300,13 +1314,17 @@ private:
     /// any lost invalidation (level-triggered check, not event-triggered).
     std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
     bool PublishedGeomStampsValid{false};
+    SectionGeometryRenderInputs RenderGeometryInputs;
+    std::optional<SectionRenderLightSnapshot> RenderLight;
     uint32_t PublishCount{0};
     /// Center content revision baked into the live GPU packed slot (0 unknown).
     uint64_t GpuBoundContentRev{0};
   };
   static void RecordPublishedGeomStamps(
       ChunkGreedyMesh &mesh,
-      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps);
+      const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
+      SectionGeometryRenderInputs geometry_inputs = {},
+      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t
@@ -1342,7 +1360,9 @@ private:
       BoundaryOverlayState boundary_overlay = {},
       bool accepted_geom_stale = false, JobStageSpan stage_trace = {},
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount>
-          *source_stamps = nullptr);
+          *source_stamps = nullptr,
+      SectionGeometryRenderInputs source_geometry = {},
+      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);

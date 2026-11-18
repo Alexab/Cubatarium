@@ -517,6 +517,9 @@ static void TestFirstComputedLightPublication(
     {
       Expect(cache.HasProvisionalLightPreview(root),
              "computed-looking bytes without a proof remain explicit preview");
+      Expect(!cache.GetPublishedRenderLightSnapshot(root),
+             "preview publication cannot invent a certified physical field "
+             "snapshot");
       continue;
     }
     Expect(!cache.HasProvisionalLightPreview(root) && !cache.HasPendingDirty(),
@@ -524,6 +527,32 @@ static void TestFirstComputedLightPublication(
            "bootstrap");
     Expect(cache.GetMeshedLightRevision(root) == chunk->GetLightFieldRevision(),
            "first publication carries the computed field revision");
+    const auto published_geometry =
+        cache.GetPublishedGeometryRenderInputs(root);
+    const auto physical_light = world.CaptureRenderLightSnapshot(root);
+    const auto published_light = cache.GetPublishedRenderLightSnapshot(root);
+    Expect(published_geometry && physical_light && published_light &&
+               physical_light->MatchesGeometry(*published_geometry) &&
+               published_light->MatchesGeometry(*published_geometry) &&
+               published_light->FieldIncarnation() ==
+                   physical_light->FieldIncarnation() &&
+               published_light->FieldRevision() ==
+                   physical_light->FieldRevision(),
+           "actual asynchronous publication retains compatible "
+           "geometry/catalog/profile provenance");
+    UChunkMeshCache sync_cache;
+    auto sync_settings = settings;
+    sync_settings.AsyncMeshing = false;
+    sync_cache.SetRenderSettings(sync_settings);
+    sync_cache.RebuildAll(world, registry);
+    const auto sync_geometry =
+        sync_cache.GetPublishedGeometryRenderInputs(root);
+    const auto sync_light = sync_cache.GetPublishedRenderLightSnapshot(root);
+    Expect(
+        sync_geometry && sync_light &&
+            physical_light->MatchesGeometry(*sync_geometry) &&
+            sync_light->MatchesGeometry(*sync_geometry),
+        "actual synchronous publication retains compatible source provenance");
     cache.UpdateVisibleInstances(Frustum{}, glm::mat4(1.0f), {4, 4, 8});
     const auto *batch = FindGreedyBatchForBlock(
         cache, cache.GetGreedyOpaqueCutoutRefs(), kStone);

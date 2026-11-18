@@ -179,6 +179,8 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         result.CertifiedPaddedLight = snapshot.certifiedPaddedLight;
         result.InputStampsValid = snapshot.inputStampsValid;
         result.InputCatalog = catalogKeep;
+        result.GeometryInputs = snapshot.GeometryRenderInputs(catalogKeep);
+        result.RenderLight = snapshot.renderLight;
         result.BoundaryOverlay = snapshot.boundaryOverlay;
         result.ProvisionalLightPreview = snapshot.provisionalLightPreview;
         const BlockDefinitionCatalog *pinned = catalogKeep.get();

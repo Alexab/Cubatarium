@@ -4,12 +4,14 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Lighting/SectionRenderLightSnapshot.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -58,8 +60,13 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, kShellCells> shellNeighborState{};
   uint64_t sourceRevision{0};
   std::array<ChunkInputStamp, kChunkMeshInputStampCount> inputStamps{};
+  std::shared_ptr<const uint64_t> worldGeometryIdentity;
+  WorldVerticalProfile geometryProfile;
+  SectionGeometryRenderInputs GeometryRenderInputs(
+      std::shared_ptr<const BlockDefinitionCatalog> catalog) const;
   bool inputStampsValid{false};
   bool certifiedPaddedLight{false};
+  std::optional<SectionRenderLightSnapshot> renderLight;
   /// S4: versioned neighbor-missing overlay (not part of stamp equality).
   BoundaryOverlayState boundaryOverlay{};
   /// Temporary visibility for a first mesh captured while this slice's light

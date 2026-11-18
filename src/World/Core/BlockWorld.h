@@ -5,6 +5,7 @@
 #include "Render/Mesh/MeshCaptureToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/SceneLightSample.h"
+#include "World/Lighting/SectionRenderLightSnapshot.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/WorldVerticalProfile.h"
@@ -129,6 +130,11 @@ public:
   /// Capture only against this world's currently installed material catalog.
   std::shared_ptr<const SectionLightVolume>
   GetCurrentLightSamplingVolume(glm::ivec3 coord) const;
+
+  /// Full current physical proof and immutable GPU-upload bytes, paired with
+  /// geometry-only provenance from the same main-thread observation.
+  std::optional<SectionRenderLightSnapshot>
+  CaptureRenderLightSnapshot(glm::ivec3 coord) const;
 
   /// Read the canonical field independently of geometry residency. The caller
   /// must select Flat explicitly; runtime configuration identities are opaque.

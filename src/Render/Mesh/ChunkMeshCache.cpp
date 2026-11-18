@@ -3047,8 +3047,24 @@ bool UChunkMeshCache::ShouldBumpChunkMeshRevisionOnDirty(
 
 void UChunkMeshCache::RecordPublishedGeomStamps(
     ChunkGreedyMesh &mesh,
-    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps)
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
+    SectionGeometryRenderInputs geometry_inputs,
+    std::optional<SectionRenderLightSnapshot> source_light)
 {
+  mesh.RenderGeometryInputs = {};
+  mesh.RenderLight.reset();
+  if (stamps && geometry_inputs.valid)
+  {
+    std::array<ChunkInputStamp, 7> source;
+    std::copy_n(stamps->begin(), source.size(), source.begin());
+    const auto expected = SectionGeometryRenderInputs::FromStamps(
+        source[0].coord, geometry_inputs.world_geometry_identity,
+        geometry_inputs.profile, geometry_inputs.catalog, source);
+    if (geometry_inputs.Matches(expected))
+      mesh.RenderGeometryInputs = std::move(geometry_inputs);
+  }
+  if (source_light && source_light->MatchesGeometry(mesh.RenderGeometryInputs))
+    mesh.RenderLight = std::move(source_light);
   ++mesh.PublishCount;
   if (!stamps)
   {
@@ -5645,7 +5661,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     bool accepted_input_stale, uint64_t source_light_revision,
     bool has_source_light_revision, BoundaryOverlayState boundary_overlay,
     bool accepted_geom_stale, JobStageSpan job_trace,
-    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *source_stamps)
+    const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *source_stamps,
+    SectionGeometryRenderInputs source_geometry,
+    std::optional<SectionRenderLightSnapshot> source_light)
 {
   (void)registry;
   (void)source_revision;
@@ -6072,7 +6090,9 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
-    RecordPublishedGeomStamps(chunkMesh, source_stamps);
+    RecordPublishedGeomStamps(chunkMesh, source_stamps,
+                              std::move(source_geometry),
+                              std::move(source_light));
     chunkMesh.GpuBoundContentRev =
         source_stamps ? (*source_stamps)[0].content : 0;
   }
@@ -6840,7 +6860,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
           pending.accepted_geom_stale, pending.stageTrace,
           pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
-                                            : nullptr);
+                                            : nullptr,
+          pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
+          pending.snapshot.renderLight);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -6985,7 +7007,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
         pending.accepted_geom_stale, pending.stageTrace,
         pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
-                                          : nullptr);
+                                          : nullptr,
+        pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
+        pending.snapshot.renderLight);
     if (gpu_process_profile_sample)
     {
       gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -7474,7 +7498,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.inputStampsValid, pending.snapshot.boundaryOverlay,
           pending.accepted_geom_stale, pending.stageTrace,
           pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
-                                            : nullptr);
+                                            : nullptr,
+          pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
+          pending.snapshot.renderLight);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -8409,7 +8435,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       }
     }
     RecordPublishedGeomStamps(
-        chunkMesh, result.InputStampsValid ? &result.InputStamps : nullptr);
+        chunkMesh, result.InputStampsValid ? &result.InputStamps : nullptr,
+        std::move(result.GeometryInputs), std::move(result.RenderLight));
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
@@ -11793,11 +11820,14 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     const uint64_t sync_rev =
         static_cast<uint64_t>(chunk->GetContentRevision()) ^
         (static_cast<uint64_t>(chunk->GetLightFieldRevision()) << 1);
+    const auto sync_catalog = registry.GetDefinitionsCatalogSnapshot();
     const ChunkMeshSnapshot sync_snap = ChunkMeshSnapshot::Capture(
         world, chunkCoord, sync_rev, CacheNeighborVisuallyDrawable, this);
     const auto quads = MesherBackend
-                           ? MesherBackend->BuildChunkMesh(sync_snap, registry)
-                           : UGreedyMesher::BuildChunkMesh(sync_snap, registry);
+                           ? MesherBackend->BuildChunkMesh(sync_snap, registry,
+                                                           sync_catalog.get())
+                           : UGreedyMesher::BuildChunkMesh(sync_snap, registry,
+                                                           sync_catalog.get());
     for (const GreedyQuad &q : quads)
     {
       GreedyMeshBatch &batch = byBlockId[q.Id];
@@ -12049,9 +12079,13 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       }
       chunkMesh.PublishRevs.geom_rev = sync_rev;
       chunkMesh.PublishRevs.light_rev = chunk->GetLightFieldRevision();
-      RecordPublishedGeomStamps(chunkMesh, sync_snap.inputStampsValid
-                                               ? &sync_snap.inputStamps
-                                               : nullptr);
+      RecordPublishedGeomStamps(
+          chunkMesh,
+          sync_snap.inputStampsValid ? &sync_snap.inputStamps : nullptr,
+          sync_catalog == registry.GetDefinitionsCatalogSnapshot()
+              ? sync_snap.GeometryRenderInputs(sync_catalog)
+              : SectionGeometryRenderInputs{},
+          sync_snap.renderLight);
       chunkMesh.PublishRevs.material_stamp =
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;

@@ -5624,6 +5624,19 @@
         "exe_sha256": "28b3a143dfdfc268a4928523c552305ca4612ade725e5e906851779fce33ff92",
         "scope": "Atlas currently not instantiated by normal world renderer; driver test exercises real allocation/sampling/lifetime. Last strict native2d66a948e precedes atlas addition and remains evidence for unchanged normal rendering paths, not GPU world-field cutover. GLES build/native still unverified."
       }
+    },
+    "gpu_section_render_light_provenance": {
+      "status": "Implemented;5rebuilt CPU/capture/actual publication suitesPASS;twoREDcontrols detected;Release/native pending",
+      "world_snapshot": "CaptureRenderLightSnapshot pins installed catalog, requires both current computed channels and padded physical proof, retains immutable20cubedbytes and exact canonical field identity/revision. Private construction prevents raw zero bytes, transient/unknown data or Flat intent from manufacturing physical snapshot. Geometry-only provenance includes manager identity, all7known center/face inputs, full vertical profile and catalog.",
+      "geometry_publication": "ChunkMeshSnapshot retains exact source manager/profile and immutable certified light snapshot, normalized7known geometry stamps, and pinned catalog through capture cache. Async mesh result carries both geometry and light. All3packed GPU commit paths transfer the source snapshot/catalog/profile. Synchronous meshing pins its catalog and records it only if unchanged through publication. RecordPublishedGeomStamps cross-checks source geometry metadata against actual installed input stamps; only matching geometry/light snapshot is retained. GetPublishedGeometryRenderInputs and GetPublishedRenderLightSnapshot return frozen source data. Explicit preview never acquires physical snapshot. No current world light/catalog/profile is stamped over old mesh.",
+      "compatibility": "Exact world identity, source catalog pointer/profile and geometry input content/incarnation/absence. Canonical face ordering; duplicate/missing/unknown/untracked domains reject. Lighting revisions/field identity do not become geometry validity. Catalog matching remains conservative; semantic geometry-vs-emission split is required before emission-only zero-remesh acceptance.",
+      "tests": "engine-render-light-restored-green-build.log/test.log:5/5PASS after restoration: actual decor mesh integration,relight install,calculation certificate,padded geometry reference,capture cache. Actual async and sync publication match canonical field identity/revision and captured geometry/catalog/profile. Uncertified preview retains no physical snapshot. Diagonal nonzero block13->0 field change outside7-section geometry domain remains compatible; retained nonzero bytes immutable. Existing independent padded8000cell references stillPASS.",
+      "pending": "Release/native current change verification next. Actual GPU binding table, publication resource preparation/retention callbacks, CPU/MDI/packed/cross/decor/transparent/GLES shader sampling, full field-vs-geometry domain cutover and matrix remain required. Normal terrain still shades baked mesh light. Logical world epoch remains required in binding store in addition to manager identity; catalog matching conservative until semantic geometry/emission split.",
+      "negative_controls": [
+        "engine-render-light-proof-red-test.log: bypass calculation proof using raw padded bytes; geometry admission fresh-snapshot assertion fails",
+        "engine-render-light-handoff-red-test.log: drop RenderLight snapshot during actual async result handoff; publication-source compatibility assertion fails"
+      ],
+      "restoration": "Each temporary mutation restored byte-for-byte in finally. Only unit targets builtRED. After both controls all3targets rebuilt and5suitesPASS. App never builtRED."
     }
   }
 }

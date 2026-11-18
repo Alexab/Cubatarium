@@ -1088,8 +1088,73 @@ void TestKnownAirLightResourceCalculation()
   Expect(sample.field_incarnation == field->GetIncarnation() &&
              sample.field_revision == field->GetRevision(),
          "point sample identifies exact canonical resource and revision");
+  const auto render = world.CaptureRenderLightSnapshot(target);
+  Expect(render &&
+             render->Volume() == world.GetCurrentLightSamplingVolume(target) &&
+             render->FieldIncarnation() == field->GetIncarnation() &&
+             render->FieldRevision() == field->GetRevision() &&
+             render->MatchesGeometry(render->GeometryInputs()),
+         "render snapshot retains exact certified padded AIR field and "
+         "provenance");
+  const auto geometry = render->GeometryInputs();
+  for (size_t n = 0; n < geometry.stamps.size(); ++n)
+  {
+    auto changed = geometry;
+    ++changed.stamps[n].content;
+    Expect(!render->MatchesGeometry(changed),
+           "every geometry content input participates in light compatibility");
+    changed = geometry;
+    ++changed.stamps[n].incarnation;
+    Expect(!render->MatchesGeometry(changed),
+           "every geometry incarnation prevents stale or ABA light binding");
+    changed = geometry;
+    changed.stamps[n].missingEvidence = MissingChunkEvidence::Unknown;
+    Expect(!render->MatchesGeometry(changed),
+           "absence knowledge participates in light binding compatibility");
+    changed = geometry;
+    changed.stamps[n].light += 100;
+    changed.stamps[n].lightIncarnation += 200;
+    Expect(render->MatchesGeometry(changed),
+           "geometry provenance does not depend on baked light revisions");
+  }
+  auto wrong_world = geometry;
+  wrong_world.world_geometry_identity = std::make_shared<const uint64_t>(0);
+  Expect(!render->MatchesGeometry(wrong_world),
+         "equal stamps cannot cross worlds");
+  auto wrong_catalog = geometry;
+  wrong_catalog.catalog = std::make_shared<BlockDefinitionCatalog>(*catalog);
+  Expect(
+      !render->MatchesGeometry(wrong_catalog),
+      "catalog provenance is exact until geometry policy revisions are split");
+  for (auto member :
+       {&WorldVerticalProfile::MinY, &WorldVerticalProfile::MaxY,
+        &WorldVerticalProfile::SeaLevelY, &WorldVerticalProfile::BedrockTopY,
+        &WorldVerticalProfile::DatumY})
+  {
+    auto wrong_profile = geometry;
+    ++(wrong_profile.profile.*member);
+    Expect(!render->MatchesGeometry(wrong_profile),
+           "all captured vertical profile inputs participate in compatibility");
+  }
+  auto duplicate = geometry.stamps;
+  duplicate[1] = duplicate[2];
+  Expect(!SectionGeometryRenderInputs::FromStamps(
+              target, geometry.world_geometry_identity, geometry.profile,
+              catalog, duplicate)
+              .valid,
+         "duplicate faces cannot supply a complete geometry input domain");
+  auto permuted = geometry.stamps;
+  std::swap(permuted[1], permuted[6]);
+  Expect(render->MatchesGeometry(SectionGeometryRenderInputs::FromStamps(
+             target, geometry.world_geometry_identity, geometry.profile,
+             catalog, permuted)),
+         "geometry input domains normalize face ordering");
   const auto field_identity = field->GetIncarnation();
   manager.EnsureChunk(target);
+  Expect(!world.CaptureRenderLightSnapshot(target) &&
+             render->MatchesGeometry(geometry),
+         "geometry admission rejects fresh snapshot while retained predecessor "
+         "stays immutable");
   Expect(manager.GetSectionLightField(target)->GetIncarnation() ==
                  field_identity &&
              !world.HasCompleteLightSamplingCalculation(target, catalog),
@@ -1106,6 +1171,10 @@ void TestKnownAirLightResourceCalculation()
              world.HasCompleteLightSamplingCalculation(target, catalog),
          "new resident geometry receipt restores authority without a duplicate "
          "field");
+  const auto resident_render = world.CaptureRenderLightSnapshot(target);
+  Expect(resident_render &&
+             !resident_render->MatchesGeometry(render->GeometryInputs()),
+         "new resident certificate cannot bind retained absent geometry");
   world.SetBlock({15, -40, 8}, BLOCK_AIR);
   Expect(
       !world.HasCompleteLightSamplingCalculation(target, catalog),
@@ -1120,6 +1189,15 @@ void TestKnownAirLightResourceCalculation()
   Expect(dark.state == SceneLightState::Computed && dark.IsReady() &&
              UnpackBlock(*dark.packed) == 0,
          "computed zero channel remains ready after source removal");
+  const auto dark_render = world.CaptureRenderLightSnapshot(target);
+  Expect(
+      dark_render &&
+          UnpackBlock(dark_render->Volume()
+                          ->cells[SectionLightVolume::Index(0, 8, 8)]) == 0 &&
+          UnpackBlock(
+              render->Volume()->cells[SectionLightVolume::Index(0, 8, 8)]) ==
+              14,
+      "new zero channel field cannot mutate retained nonzero GPU upload bytes");
   UBlockWorld unknown;
   const auto missing_sample = unknown.SampleSceneLight({16, -40, 8});
   Expect(missing_sample.state == SceneLightState::Missing &&
@@ -1135,6 +1213,7 @@ void TestKnownAirLightResourceCalculation()
   Expect(flat.state == SceneLightState::FlatConstant && flat.IsReady() &&
              *flat.packed == PackLight(15, 0) && flat.field_incarnation == 0 &&
              !unknown.GetCurrentLightSamplingVolume(target) &&
+             !unknown.CaptureRenderLightSnapshot(target) &&
              unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
          "explicit Flat constant allocates no field or physical receipt");
   unknown.SetVerticalProfile({-61, 317});
@@ -1157,6 +1236,39 @@ void TestKnownAirLightResourceCalculation()
   Expect(missing.chunks.empty() &&
              unknown.GetChunkManager().GetSectionLightFieldCount() == 0,
          "unknown absence cannot become an AIR calculation target or field");
+  UBlockWorld diagonal;
+  diagonal.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  diagonal.SetFluidDefinitions(definitions.get());
+  const glm::ivec3 diagonal_target(1, -3, 1);
+  diagonal.GetChunkManager().EnsureChunk(diagonal_target);
+  diagonal.SetBlock({15, -40, 15}, 50);
+  const auto solve_diagonal = [&]()
+  {
+    auto calculated = UChunkRelightSnapshot::CaptureSections(diagonal, spec,
+                                                             {diagonal_target})
+                          .Compute(registry);
+    Expect(
+        calculated.chunks.size() == 1 &&
+            InstallComputedLight(diagonal, calculated.chunks[0], true, true) &&
+            diagonal.RecordLightCalculation(calculated, catalog) == 1,
+        "diagonal field installs with full physical provenance");
+    return diagonal.CaptureRenderLightSnapshot(diagonal_target);
+  };
+  const auto diagonal_lit = solve_diagonal();
+  diagonal.SetBlock({15, -40, 15}, BLOCK_AIR);
+  Expect(!diagonal.CaptureRenderLightSnapshot(diagonal_target),
+         "changed calculation input cannot supply a fresh render snapshot");
+  const auto diagonal_dark = solve_diagonal();
+  Expect(diagonal_lit && diagonal_dark &&
+             diagonal_lit->MatchesGeometry(diagonal_dark->GeometryInputs()) &&
+             diagonal_lit->FieldRevision() != diagonal_dark->FieldRevision() &&
+             UnpackBlock(diagonal_lit->Volume()
+                             ->cells[SectionLightVolume::Index(0, 8, 0)]) ==
+                 13 &&
+             UnpackBlock(diagonal_dark->Volume()
+                             ->cells[SectionLightVolume::Index(0, 8, 0)]) == 0,
+         "light-only change outside geometry domain permits a new field on "
+         "unchanged geometry");
   UBlockWorld column;
   column.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
   column.SetFluidDefinitions(definitions.get());

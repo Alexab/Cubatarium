@@ -52,6 +52,8 @@ struct MeshBuildResult
   bool InputStampsValid{false};
   bool CertifiedPaddedLight{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
+  SectionGeometryRenderInputs GeometryInputs;
+  std::optional<SectionRenderLightSnapshot> RenderLight;
   /// W1: sticky overlay from capture — ApplyMeshResult must stamp CPU path too
   /// (CommitGpu already got it via pending.snapshot).
   BoundaryOverlayState BoundaryOverlay{};

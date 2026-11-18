@@ -1,5 +1,6 @@
-#include "Render/Mesh/MeshCaptureStore.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Core/Jobs/PipelineAdmission.h"
+#include "Render/Mesh/MeshCaptureStore.h"
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Core/BlockWorld.h"
 #include <iostream>
@@ -98,6 +99,45 @@ int main()
   if (admission.SnapshotPendingBytes() != 0)
   {
     std::cerr << "FAIL: rejected capture must not leave pending snapshot bytes\n";
+    return 1;
+  }
+
+  cutum::UBlockWorld physical;
+  physical.SetVerticalProfile({-61, 317, 57, -61, 9});
+  physical.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  physical.GetChunkManager().EnsureChunk(coord);
+  const auto catalog = std::make_shared<cutum::BlockDefinitionCatalog>();
+  const auto captured = store.CaptureAndStore(physical, coord, rev);
+  if (!captured || !captured->GeometryRenderInputs(catalog).valid ||
+      captured->geometryProfile.MinY != -61 ||
+      captured->worldGeometryIdentity !=
+          physical.GetChunkManager().GetGeometryInputRevisionIdentity())
+  {
+    std::cerr
+        << "FAIL: actual capture must preserve geometry render provenance\n";
+    return 1;
+  }
+  const auto retained = captured->GeometryRenderInputs(catalog);
+  const auto hit = store.TryGet(physical, coord, rev);
+  if (!hit || !hit->GeometryRenderInputs(catalog).Matches(retained))
+  {
+    std::cerr
+        << "FAIL: capture cache hit must retain exact geometry provenance\n";
+    return 1;
+  }
+  auto legacy = *captured;
+  legacy.worldGeometryIdentity.reset();
+  if (legacy.GeometryRenderInputs(catalog).valid)
+  {
+    std::cerr << "FAIL: legacy missing world identity cannot claim a physical "
+                 "binding\n";
+    return 1;
+  }
+  physical.SetVerticalProfile({-64, 319});
+  if (captured->GeometryRenderInputs(catalog).profile.MinY != -61)
+  {
+    std::cerr << "FAIL: retained capture must not stamp current profile over "
+                 "old geometry\n";
     return 1;
   }
 

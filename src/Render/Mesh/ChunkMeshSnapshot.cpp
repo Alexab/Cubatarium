@@ -8,6 +8,7 @@
 #include "World/Lighting/LightUtil.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/GridMath.h"
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -15,6 +16,18 @@
 
 namespace cutum
 {
+
+SectionGeometryRenderInputs ChunkMeshSnapshot::GeometryRenderInputs(
+    std::shared_ptr<const BlockDefinitionCatalog> catalog) const
+{
+  if (!inputStampsValid)
+    return {};
+  std::array<ChunkInputStamp, 7> geometry;
+  std::copy_n(inputStamps.begin(), geometry.size(), geometry.begin());
+  return SectionGeometryRenderInputs::FromStamps(coord, worldGeometryIdentity,
+                                                 geometryProfile,
+                                                 std::move(catalog), geometry);
+}
 
 namespace
 {
@@ -295,6 +308,9 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
 
   ChunkMeshSnapshot snapshot;
   snapshot.coord = chunkCoord;
+  snapshot.worldGeometryIdentity =
+      world.GetChunkManager().GetGeometryInputRevisionIdentity();
+  snapshot.geometryProfile = world.GetVerticalProfile();
   snapshot.sourceRevision = sourceRevision;
   const UChunk *chunk = world.GetChunkManager().GetChunk(chunkCoord);
   snapshot.inputStamps[0] = ChunkInputStamp::Capture(chunkCoord, chunk);
@@ -393,7 +409,11 @@ ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
       }
     }
   }
-  if (const auto volume = world.GetCurrentLightSamplingVolume(chunkCoord))
+  snapshot.renderLight = world.CaptureRenderLightSnapshot(chunkCoord);
+  const auto captured_volume =
+      snapshot.renderLight ? snapshot.renderLight->Volume()
+                           : world.GetCurrentLightSamplingVolume(chunkCoord);
+  if (const auto &volume = captured_volume)
   {
     static_assert(SectionLightVolume::Width == kLightHaloSize);
     for (int z = -kLightHaloRadius; z < CHUNK_SIZE + kLightHaloRadius; ++z)
