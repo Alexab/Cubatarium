@@ -6128,7 +6128,7 @@
       }
     },
     "material_face_visibility_contract": {
-      "status": "Corrected shared material contract verified by seven Release tests, including actual Desktop GL4.3/GLES3.2 and dense direct-emitter overflow fallback. Application Release/native verification pending.",
+      "status": "Implemented corrected CPU/GPU material contract. Release7/7 tests and application build PASS; native scoped references PASS, full RGB remains UNTESTED. Async packed failure recovery is next independent defect.",
       "baseline_red": "engine-material-visibility-red-build/test.log:768 combinations of4source materials,8neighbors,4backing patterns and6directions; actual AMD OpenGL4.3 production mask differs from live CPU in438cases, old extraction CPU reference426. These are real-driver failures, not shader-text assertions. Never built application from RED.",
       "independent_oracles": "Before refactoring live CPU, captured deterministic aggregate10230175130368584557 from all original face cells. Shared-rule refactor matched it on CPU/Desktop GL/GLES, then a separate physical requirement added every opaque face behind a transparent solid irrespective of backing geometry. Derived corrected oracle6223292245338193327 before changing shared rules. engine-material-visibility-physical-red-test.log proves90bad cases on CPU, real GL4.3 and real OpenGL ES3.2, despite cross-backend agreement. Fix targets intended visibility rather than merely matching old bugs.",
       "history": "a094f6709c June21 async greedy builder copied before/beyond transparent-solid heuristic;92eb51ed22 July1 IU reader refactor retained it. af776f82d9 July27 GPU mask and1c3e75cae0 July29 n!=self two-class transparency diverged from full CPU semantics. e353bd3a9 July27 Android mask used empty-neighbor-only rule. a484ef4acb July3 fluid rollback added fluid exceptions; f1c65bcdb7 September13 catalog pinning and3c3e507930 November13 movement queries retained legacy glass heuristic. These histories explain why multiple render paths appeared fixed independently while diverging.",
@@ -6141,7 +6141,31 @@
         "negative_controls": "engine-material-visibility-negative-controls.json plus coordinate-red/shared-rule-red logs:coordinate permutation causes512/768 real GPU differences; identical wrong Cutout rule in CPU/GLSL gives mutual agreement but independently frozen oracle rejects both. Unit targets only; headers restored byte-exact before GREEN builds.",
         "buffer_ordering": "Added GL_BUFFER_UPDATE_BARRIER_BIT where shader outputs are subsequently read/mapped/copied by buffer commands. Khronos OpenGL-Refpages glMemoryBarrier.xml documents this domain. Actual driver tests pass; no claim that hardware reproduced a stale-cache failure without it."
       },
-      "remaining_scope": "No full native RGB/transparency or Android application parity claim. Separate asynchronous packed pipeline overflow currently returns Failed and cache requeues; bounded CPU recovery needs an independent end-to-end regression, unlike verified synchronous direct-emitter fallback."
+      "remaining_scope": "No full native RGB/transparency or Android application parity claim. Separate asynchronous packed pipeline overflow currently returns Failed and cache requeues; bounded CPU recovery needs an independent end-to-end regression, unlike verified synchronous direct-emitter fallback.",
+      "release_build": "engine-material-visibility-release-build.log: exact required Cubatarium Release target/parallel8 exits0, static executable verification PASS with6system DLLs.",
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-material-visibility-visible-items-native",
+        "observation": "material-visibility-regression-observation.json",
+        "source_commit": "0364d5c7137c279b7d0a7c51e3c56410ae712b3e",
+        "app_exit": 0,
+        "wrapper_exit": 2,
+        "overall": "UNTESTED",
+        "all_named_scoped_references": "PASS",
+        "ingame_frames": 1443,
+        "chunks": 22,
+        "outside_initial_samples": 973,
+        "relocations_after_start": 0,
+        "inspection_pngs": "30/30",
+        "camera_ready": "1443/1443",
+        "first_person_ready": "1443/1443",
+        "creature_ready": "311/311",
+        "saved_item_draws": 227,
+        "saved_item_primitives": 681,
+        "opaque_depth_checks": 352,
+        "packed_floor_light_checks": 137,
+        "warmup_ms": 93296.2,
+        "provenance": "Observation independently verifies EXE digest, source World_261 fingerprint and byte-exact config restoration. No all-visual, latency, Android app, GPU light solver or performance acceptance."
+      }
     }
   }
 }
