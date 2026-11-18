@@ -5431,13 +5431,77 @@
       }
     },
     "negative_height_direct_column_load": {
-      "status": "Implemented;actual streamer RED then final3/3GREEN;Release/native pending",
+      "status": "Implemented;actual streamer RED then final3/3GREEN;Release/staticPASS;visible-item nativePASS scoped;overallUNTESTED",
       "cause": "EnsureChunkLoaded near/collision path guarded cached full-column completion by existing section at columnKey.y=0. Complete below-zero terrain therefore entered OnLoadChunk each frame despite positive column completion. Prefetch callback fix alone retained1473 disk requests across203columns and10unready endpoint draws.",
       "runtime": "Early completion return now uses IsTerrainChunkCompleteCached without y0-section residency. Existing pending owner handling, full-column authority, partial/evicted reload, mesh seam notification and world-format behavior retained. Column-key comment corrected.",
       "regression": "New chunk_streamer_committed_column_test links actual ChunkStreamer, terrain utilities, registry, runtime tuning and collision readiness. 32EnsureCollisionChunks calls over9completed negative-floor columns must issue zero disk/async requests and no phantom sky geometry. Known floor edit preserved without reload; removed section and independent never-completed partial column must request reload. Registered unit;streaming CTest.",
       "red": "engine-low-column-direct-red-build.log successful unmodified runtime build; engine-low-column-direct-red-test.log fails repeated collision checks must not reload complete low columns. App not built from a temporary mutation.",
       "green": "engine-low-column-direct-final-green-build.log and engine-low-column-direct-final-green-test.log:3/3PASS. Earlier green attempt failed a test assumption that digging a known floor required reload; corrected test to preserve player edits and use independent never-completed partial input for missing-data rejection. Runtime not changed to reload edited worlds.",
-      "next": "Build Release exact required command; repeat same open-sky-items native, preserve both priorFAIL runs, no oracle relaxation. Independent GPU-field atlas/binding/publication cutover and full matrix remain required."
+      "next": "Independent GPU atlas/binding table/shader and atomic geometry/light publication cutover remains required. Also correct point collision data queries which still require cy0 in CollisionReadiness.cpp, then full references/matrix including RD8.",
+      "native": {
+        "source": "a251831bf",
+        "artifacts": "build/desktop-msvc/engine-low-column-direct-visible-items-native",
+        "app_exit": 0,
+        "runner_exit_code": 1,
+        "verdict": "UNTESTED",
+        "component_status": {
+          "runtime": "PASS",
+          "route": "PASS",
+          "startup": "PASS",
+          "visual": "UNTESTED",
+          "inspection": "PASS",
+          "fixture": "PASS",
+          "fixture_opaque_depth": "PASS",
+          "fixture_floor_draw_source_light": "PASS",
+          "fixture_air_light_service": "PASS",
+          "fixture_camera_field_light": "PASS",
+          "fixture_first_person_field_light": "PASS",
+          "fixture_world_item_draw_light": "PASS"
+        },
+        "frames": 1461,
+        "route_chunks": 22,
+        "outside_initial_samples": 920,
+        "inspections": {
+          "verified": 30,
+          "requested": 30,
+          "reason": "inspection_views_joined_to_png"
+        },
+        "world_item_reference": {
+          "schema": "engine-world-item-reference.v1",
+          "status": "PASS",
+          "reason": "saved_world_item_field_and_primitive_issue",
+          "checked_draws": 216,
+          "frame_epochs": 216,
+          "issued_primitives": 648,
+          "instance_frame_counts": {
+            "117625122491269153": 55,
+            "117625122491269154": 161
+          },
+          "skipped_other_instance_or_world": 0,
+          "unjoined_draws": 0,
+          "unsupported_mode_draws": 0,
+          "faults": 0,
+          "examples": [],
+          "missing_coverage": [],
+          "scope": "declared saved loose-item identity, canonical CPU field and actual nonempty primitive draw issue; no raster visibility, shader RGB/uniform readback, transparency, smoothing or performance acceptance"
+        },
+        "disk_requests": 203,
+        "distinct_disk_columns": 203,
+        "columns_requested_more_than_once": 0,
+        "unready_creature_samples": [
+          "I20261118 05:25:54.826668 28216 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=36 consumer=creature cell=(-3,-41,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0",
+          "I20261118 05:25:54.941162 28216 Log.cpp:601] [SceneLightSample] world_epoch=4 frame_epoch=37 consumer=creature cell=(-3,-46,39) coord=(-1,-3,2) physical=1 resident=0 state=0 ready=0 sky=0 block_light=0 field_incarnation=0 field_revision=0"
+        ],
+        "scope": "Physical item CPU field readiness plus actual primitive issue; zero redundant disk reads in this one-way fixture. Original fa610FAIL9 and c131FAIL10 preserved. Generic full visual not accepted, actor two missing field samples remain. No performance or eviction matrix acceptance."
+      }
+    },
+    "collision_query_height_audit": {
+      "status": "Implemented;actual new tests RED before fix;final3/3GREEN;Release/native pending",
+      "source": "src/World/Physics/CollisionReadiness.cpp IsCollisionRingReady normalizes every query tocy0. Used by creature readiness, every item swept voxel and survival. A low resident section is rejected withoutcy0; a missing queried section may be accepted when unrelatedcy0 exists.",
+      "required": "Use queried section and explicit knownAIR evidence, never inferred empty/light-ready. No geometry allocation. Exact negativeY tests, unknown reject, AIR lease/evidence withdrawal and eviction required.",
+      "runtime": "CollisionReadiness uses exact query sectionY with HasChunk OR explicit known absentAIR. Reads no light; does not allocate geometry or light. Full-body/sweep callers remain responsible for every queried section; header documents point-query scope. Existing radius semantics unchanged.",
+      "tests": "engine-collision-height-red-test.log fails negative-height query uses its resident section, noty0 with original runtime. Corrected runtime rebuilt and final3/3PASS in engine-collision-height-final-green-test.log: collision_readiness_gate,chunk_streamer_committed_column,movement_chunk_boundary. Cases cover resident negativeY, unknown neighboring sections, unrelatedcy0 rejection, provenAIR, evidence withdrawal, eviction and no phantom geometry.",
+      "acceptance_next": "Release native open-sky-items repeated with strict physical item/camera/FP reference. Physical motion may change after correct readiness: no pose/field tolerance relaxation. GPU atlas/binding/publication remains pending."
     }
   }
 }

@@ -64,6 +64,43 @@ int main()
   Expect(cutum::IsCollisionRingReady(world, glm::ivec3(8, 4, 8), 2),
          "radius 2 should be ready when full ring exists");
 
+  cutum::UBlockWorld below_datum;
+  const glm::ivec3 cave_point(-323, -60, 51);
+  const auto cave_section = cutum::UChunkManager::WorldToChunk(cave_point);
+  below_datum.GetChunkManager().EnsureChunk(cave_section);
+  Expect(!below_datum.GetChunkManager().HasChunk(
+             {cave_section.x, 0, cave_section.z}) &&
+             cutum::IsCollisionRingReady(below_datum, cave_point, 0),
+         "negative-height query uses its resident section, not y=0");
+  Expect(!cutum::IsCollisionRingReady(below_datum, cave_point, 1),
+         "unknown horizontal collision neighbors still block readiness");
+  below_datum.GetChunkManager().EnsureChunk(
+      {cave_section.x + 1, 0, cave_section.z});
+  Expect(!cutum::IsCollisionRingReady(below_datum,
+                                      cave_point + glm::ivec3(16, 0, 0), 0),
+         "resident y=0 cannot certify missing geometry at the query height");
+  below_datum.SetKnownAirColumnFloorQuery(
+      [&](glm::ivec3 column) -> std::optional<int>
+      {
+        if (column.x == cave_section.x && column.z == cave_section.z)
+          return -3;
+        return std::nullopt;
+      });
+  const glm::ivec3 air_point(cave_point.x, -40, cave_point.z);
+  const auto before = below_datum.GetChunkManager().GetResidentChunkCount();
+  Expect(cutum::IsCollisionRingReady(below_datum, air_point, 0),
+         "proven geometry-absent AIR permits point collision queries");
+  Expect(!cutum::IsCollisionRingReady(below_datum, air_point, 1),
+         "one proven AIR column does not certify unknown neighbors");
+  below_datum.SetKnownAirColumnFloorQuery({});
+  Expect(!cutum::IsCollisionRingReady(below_datum, air_point, 0),
+         "withdrawn AIR evidence is observed without stale readiness cache");
+  Expect(below_datum.GetChunkManager().GetResidentChunkCount() == before,
+         "collision readiness never creates geometry or light resources");
+  below_datum.GetChunkManager().RemoveChunk(cave_section);
+  Expect(!cutum::IsCollisionRingReady(below_datum, cave_point, 0),
+         "evicted negative-height geometry becomes unready");
+
   std::cout << "collision_readiness_gate_test: OK" << std::endl;
   return 0;
 }

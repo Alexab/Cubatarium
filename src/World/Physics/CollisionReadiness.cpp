@@ -13,8 +13,10 @@ bool IsCollisionRingReady(const UBlockWorld &world, glm::ivec3 feet_block_pos,
   {
     for (int dz = -radius_chunks; dz <= radius_chunks; ++dz)
     {
-      const glm::ivec3 coord(feet_chunk.x + dx, 0, feet_chunk.z + dz);
-      if (!world.GetChunkManager().HasChunk(coord))
+      const glm::ivec3 coord(feet_chunk.x + dx, feet_chunk.y,
+                             feet_chunk.z + dz);
+      if (!world.GetChunkManager().HasChunk(coord) &&
+          !world.IsKnownAbsentAirChunk(coord))
       {
         return false;
       }
