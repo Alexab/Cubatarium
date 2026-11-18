@@ -6620,11 +6620,37 @@
       "status": "Implemented opt-in physical resource fallback; six Release tests PASS, including actual GL3.3 and GLES contexts. Normal GeometryEngine cutover still pending.",
       "implementation": "Reserve one atlas page and one metadata slot inside configured limits. Ordered staging invalidates previous shader generation before overwriting shared texels. Certified immutable CPU fields survive page/table exhaustion. Deferred metadata retains stable geometry handle; immediate PrepareDraw stages a transient handle or promotes back to a resident page after fences complete. No geometry-buffer rewrite or invented calculation proof.",
       "validation": "engine-ordered-light-six-tests.log:6/6PASS. GPU queued upload/draw alternation checks eight distinct complete8000cell fields without intermediate readback/fence wait. Old handles rejected, permanent page unchanged, one-page/one-slot budget works. Physical-proof integration uses seven actual installed fields, diagonal light-only successor, saturated refresh, stable handle and post-retirement promotion, metadata-exhausted CPU leases, wrong epoch and reset rejection.",
-      "gles_scope": "section_light_atlas_gles_driver_test runs storage/sampler/lifetime and queued fallback on a real ES context with GLSL ES300. High-level world physical-proof integration remains desktop GL3.3, not claimed GLES.",
+      "gles_scope": "section_light_atlas_gles_driver_test runs all storage/sampler/lifetime and queued fallback cases on real AMD OpenGL ES3.2 context using GLSL ES300. High-level world physical-proof integration remains desktop GL3.3, not claimed GLES.",
       "negative_controls": "engine-ordered-light-negative-controls.json: omit ordered upload fails queued8000cell verification; reject CPU-backed fallback fails minimal-budget physical resource scenario. Sources byte-exact restored, rebuilt and five tests GREEN before GLES test addition; final six tests GREEN. Initial orchestrator expected a later assertion, corrected to actual earlier queued-cell failure. No RED application build or launch.",
       "initial_test_correction": "The new physical fixture initially computed but did not install its outputs before RecordLightCalculation. Corrected fixture to install actual padded outputs through ChunkManager before proving them; production proof gate unchanged.",
       "remaining": "Default-enabled renderer integration, explicit NoDraw admission, artifact-specific stable handle/lease transport across CPU/MDI/packed/Cross/transparent paths, normal field shaders and removal of light-only geometry invalidation remain required. This opt-in infrastructure alone is not final streaming/visual acceptance.",
-      "native_regression": "Pending required Release application rebuild and isolated no-teleport flight; native will establish compatibility only until renderer cutover."
+      "native_regression": {
+        "artifacts": "build/desktop-msvc/engine-ordered-light-falling-native",
+        "observation": "ordered-light-native-observation.json",
+        "source_commit": "579239597e49e958b2b18337068b39826395d39b",
+        "app_exit": 0,
+        "wrapper_exit": 1,
+        "overall": "FAIL",
+        "ingame_frames": 2953,
+        "chunks": 19,
+        "outside_initial_samples": 2104,
+        "relocations_after_start": 0,
+        "inspection_pngs": "30/30",
+        "camera_ready": "2933/2953",
+        "first_person_ready": "2933/2953",
+        "creature_ready": "539/539",
+        "falling_actor_independent_frames": 11,
+        "falling_actor_sections": 2,
+        "falling_actor_vertical_span": 16,
+        "saved_item_draws": 1006,
+        "saved_item_primitives": 3018,
+        "opaque_depth_checks": 1465,
+        "packed_floor_light_checks": 489,
+        "failure": "camera and first-person field unready for20frames1045..1064 in section(-9,-3,3). Same field incarnation6498was ready sky15 atframe1044, then ready0at1045before new job1025was submitted. Therefore not merely failure to prefetch a newly entered section. Subsequent job1025has incomplete inputs(5unknown), installs3outputs and yields0completeAIR fields. Generic RGB remains UNTESTED.",
+        "causal_limits": "FluidSealMutation logs6changed chunks/3relight columns at16:59:56.137845between last ready sample16:59:56.104692and first unready16:59:56.151653. This is temporal correlation, not proof that those mutations invalidate the retained dependency stamps. Need exact stale/unknown input coordinates and old field proof context before selecting a fix. Do not bypass current-input checks or claim prior all-ready flights guarantee motion readiness.",
+        "provenance": "EXE digest/source World_261 fingerprint/config byte-exact restoration independently checked alltrue. Target timeline preserved in camera-field-failure-target-receipts.txt. No test weakening, no retry reclassification of FAIL; opt-in GPU fallback is not invoked by normal renderer."
+      },
+      "release_build": "engine-ordered-light-release-build.log: required Cubatarium Release target/parallel8 exits0; static executable verification PASS with6system DLLs."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -6648,6 +6674,7 @@
       "S4": "partial lifecycle and publication ownership",
       "S5": "resource infrastructure verified, default renderer integration pending",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
-    }
+    },
+    "latest_native_counterexample": "579239597native:20camera/first-person unready frames in a previously ready AIR field, inc6498. S2motion acceptance remains incomplete; exact stale dependency must be diagnosed before closing."
   }
 }
