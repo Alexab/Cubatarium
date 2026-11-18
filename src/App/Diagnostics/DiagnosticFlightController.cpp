@@ -169,6 +169,8 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   }
   if (State_ == DiagnosticFlightState::Inspect)
   {
+    if (!o.captureReady)
+      return command;
     float target_yaw =
         InspectYaw_ + 90.0f * static_cast<float>(InspectPose_ / 3);
     float target_pitch = -45.0f + 45.0f * static_cast<float>(InspectPose_ % 3);

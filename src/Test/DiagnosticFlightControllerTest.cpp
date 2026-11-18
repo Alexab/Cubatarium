@@ -144,6 +144,59 @@ int main()
   }
   {
     DiagnosticFlightController bot;
+    bot.SetRoute({{{0, 2, 0}, true}}, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 12, -45, 0, false};
+    bot.Tick(o, Clear);
+    o.captureReady = false;
+    for (int i = 0; i < 400; ++i)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, Clear);
+      Expect(!action.capture && !action.forward && !action.up && !action.down &&
+                 action.yaw == o.yaw && action.pitch == o.pitch,
+             "full capture pipeline must hold pose without issuing IDs or "
+             "movement");
+    }
+    Expect(bot.InspectionCaptureCount() == 0 && bot.VisitedWaypoints() == 0,
+           "encoder backpressure must not complete an unrecorded inspection");
+    o.captureReady = true;
+    bool blocked_after_capture = false;
+    for (int i = 0; i < 1400 && bot.State() != DiagnosticFlightState::Complete;
+         ++i)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, Clear);
+      o.yaw = action.yaw;
+      o.pitch = action.pitch;
+      if (action.capture && !blocked_after_capture)
+      {
+        Expect(action.captureId == 0, "first admitted capture retains ID zero");
+        const auto count = bot.InspectionCaptureCount();
+        const auto yaw = o.yaw;
+        const auto pitch = o.pitch;
+        o.captureReady = false;
+        for (int stalled = 0; stalled < 100; ++stalled)
+        {
+          o.time += .05;
+          const auto held = bot.Tick(o, Clear);
+          Expect(
+              !held.capture && held.yaw == yaw && held.pitch == pitch &&
+                  bot.InspectionCaptureCount() == count,
+              "pending capture must not be duplicated or lose its stable pose");
+        }
+        o.captureReady = true;
+        blocked_after_capture = true;
+      }
+    }
+    Expect(blocked_after_capture &&
+               bot.State() == DiagnosticFlightState::Complete &&
+               bot.InspectionCaptureCount() == 12,
+           "inspection resumes after capacity recovery and captures every view "
+           "once");
+  }
+
+  {
+    DiagnosticFlightController bot;
     bot.SetRoute({{{0, 0, 0}, true, {{2, -7.5f, 0}}}}, true);
     DiagnosticFlightObservation o{{22, -36, 51}, 180, 0, 0, false};
     bool targeted_capture = false;

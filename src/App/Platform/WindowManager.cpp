@@ -146,6 +146,12 @@ public:
                        [](const PboSlot &slot) { return slot.Busy; });
   }
 
+  bool CanQueueCapture() const
+  {
+    return std::any_of(PboSlots.begin(), PboSlots.end(),
+                       [](const PboSlot &slot) { return !slot.Busy; });
+  }
+
   void PollCompleted()
   {
     for (PboSlot &slot : PboSlots)
@@ -169,41 +175,47 @@ public:
         continue;
       }
 
-      GLint previous_pack_buffer = 0;
-      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
-      glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
-      const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
-                                static_cast<size_t>(slot.Payload.Height) * 4u;
-      const auto *mapped = static_cast<const unsigned char *>(glMapBufferRange(
-          GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
-          GL_MAP_READ_BIT));
-      bool copied = false;
-      if (mapped)
+      if (slot.Payload.Pixels.empty())
       {
-        slot.Payload.Pixels.assign(mapped, mapped + byte_count);
-        copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
-      }
-      glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                   static_cast<GLuint>(previous_pack_buffer));
+        GLint previous_pack_buffer = 0;
+        glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
+        const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
+                                  static_cast<size_t>(slot.Payload.Height) * 4u;
+        const auto *mapped =
+            static_cast<const unsigned char *>(glMapBufferRange(
+                GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
+                GL_MAP_READ_BIT));
+        bool copied = false;
+        if (mapped)
+        {
+          slot.Payload.Pixels.assign(mapped, mapped + byte_count);
+          copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+        }
+        glBindBuffer(GL_PIXEL_PACK_BUFFER,
+                     static_cast<GLuint>(previous_pack_buffer));
 
-      if (!copied)
-      {
-        CubatariumLogInfo("FlightCapture",
-                          "GPU readback map failed index=" +
-                              std::to_string(slot.Payload.Index));
+        if (!copied)
+        {
+          CubatariumLogInfo("FlightCapture",
+                            "GPU readback map failed index=" +
+                                std::to_string(slot.Payload.Index));
+          ReleaseSlot(slot);
+          continue;
+        }
+      }
+      // A completed diagnostic frame remains owned by its bounded PBO slot
+      // while the encoder is full. QueueImage does not move on rejection.
+      // Releasing the slot first used to silently drop already-accepted PNGs.
+      if (QueueImage(std::move(slot.Payload), false))
         ReleaseSlot(slot);
-        continue;
-      }
-
-      Frame frame = std::move(slot.Payload);
-      const uint32_t frame_index = frame.Index;
-      ReleaseSlot(slot);
-      if (!QueueImage(std::move(frame), false))
+      else
       {
-        CubatariumLogInfo(
-            "FlightCapture",
-            "PNG worker queue full; dropped completed frame index=" +
-                std::to_string(frame_index));
+        ++EncoderBackpressureCount;
+        if ((EncoderBackpressureCount & (EncoderBackpressureCount - 1)) == 0)
+          CubatariumLogInfo("FlightCapture",
+                            "encoder_backpressure retained=" +
+                                std::to_string(EncoderBackpressureCount));
       }
     }
   }
@@ -349,6 +361,7 @@ private:
 
   static constexpr size_t KPboSlotCount = 3;
   static constexpr size_t KMaxQueuedImages = 4;
+  size_t EncoderBackpressureCount{0};
 
   bool EnsurePboBuffers()
   {
@@ -422,22 +435,27 @@ private:
         ReleaseSlot(slot);
         continue;
       }
-      GLint previous_pack_buffer = 0;
-      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
-      glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
-      const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
-                                static_cast<size_t>(slot.Payload.Height) * 4u;
-      const auto *mapped = static_cast<const unsigned char *>(glMapBufferRange(
-          GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
-          GL_MAP_READ_BIT));
-      bool copied = false;
-      if (mapped)
+      bool copied = !slot.Payload.Pixels.empty();
+      if (!copied)
       {
-        slot.Payload.Pixels.assign(mapped, mapped + byte_count);
-        copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+        GLint previous_pack_buffer = 0;
+        glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
+        glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
+        const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
+                                  static_cast<size_t>(slot.Payload.Height) * 4u;
+        const auto *mapped =
+            static_cast<const unsigned char *>(glMapBufferRange(
+                GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
+                GL_MAP_READ_BIT));
+
+        if (mapped)
+        {
+          slot.Payload.Pixels.assign(mapped, mapped + byte_count);
+          copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+        }
+        glBindBuffer(GL_PIXEL_PACK_BUFFER,
+                     static_cast<GLuint>(previous_pack_buffer));
       }
-      glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                   static_cast<GLuint>(previous_pack_buffer));
       if (copied)
       {
         Frame frame = std::move(slot.Payload);
@@ -476,6 +494,15 @@ private:
       }
       QueueSpaceAvailable.notify_one();
 
+      // Diagnostic-only saturation control. This delays the encoder worker,
+      // never the render thread, to exercise bounded capture backpressure.
+      static const auto encoder_delay =
+          std::chrono::milliseconds(static_cast<int>(
+              std::clamp(ReadFlightCaptureEnvFloat(
+                             "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS", 0.0f),
+                         0.0f, 10000.0f)));
+      if (encoder_delay.count() > 0)
+        std::this_thread::sleep_for(encoder_delay);
       bool saved = false;
       try
       {
@@ -1530,6 +1557,16 @@ void UWindowManager::TickBudgetedAutosave()
     AutosaveInProgress = false;
     LastAutosaveTime = std::chrono::steady_clock::now();
   }
+}
+
+bool UWindowManager::IsDiagnosticCaptureReady()
+{
+  // Pump zero-wait readbacks before the bot chooses its next stable pose.
+  // This also gives diagnostic captures precedence over periodic captures.
+  if (FlightCapture)
+    FlightCapture->PollCompleted();
+  return !PendingDiagnosticCapture &&
+         (!FlightCapture || FlightCapture->CanQueueCapture());
 }
 
 void UWindowManager::Render()

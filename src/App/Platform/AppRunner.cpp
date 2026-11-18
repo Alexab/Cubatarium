@@ -2915,7 +2915,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     camera->GetPitch(),
                     ingame_sec,
                     world->HasGroundSupport(camera->GetPosition(), capsule),
-                    camera->IsOnGround()};
+                    camera->IsOnGround(),
+                    window.IsDiagnosticCaptureReady()};
                 const auto action = diagnostic_bot.Tick(observation, probe);
                 // SetMode(Walking) resets vertical velocity. Repeating it on
                 // every takeoff tick would cancel the normal jump impulse.
@@ -2962,6 +2963,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << (ContainsFluidAtHeight(fluid_column, pos.y) ? "true"
                                                                      : "false")
                       << ",\"eye_fluid_id\":" << fluid_column.fluidId
+                      << ",\"capture_ready\":" << observation.captureReady
                       << ",\"capture_request\":" << action.capture
                       << ",\"capture_id\":" << action.captureId
                       << ",\"plan_expansions\":"

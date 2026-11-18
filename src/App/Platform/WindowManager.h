@@ -40,6 +40,8 @@ public:
   /// Synthetic held keys for headless autopilot (OR'd with real keyboard).
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  /// Main render thread: nonblocking readback pump and bounded admission.
+  bool IsDiagnosticCaptureReady();
   /// Queue a pose capture for the next rendered frame.
   bool RequestDiagnosticCapture(unsigned id)
   {

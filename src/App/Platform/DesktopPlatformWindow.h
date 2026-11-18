@@ -16,6 +16,10 @@ public:
   void SetStopPredicate(std::function<bool()> predicate);
   void SetAutopilotKey(KeyCode key, bool held);
   void ClearAutopilotKeys();
+  bool IsDiagnosticCaptureReady()
+  {
+    return WindowManager.IsDiagnosticCaptureReady();
+  }
   bool RequestDiagnosticCapture(unsigned id)
   {
     return WindowManager.RequestDiagnosticCapture(id);

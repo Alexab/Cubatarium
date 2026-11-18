@@ -44,6 +44,9 @@ struct DiagnosticFlightObservation
   // Motor feedback is distinct from geometric support during startup/mode
   // changes.
   bool walkingReady{false};
+  /// False while the bounded framebuffer/encoder pipeline cannot accept a
+  /// stable view. The bot must retain the pose and capture ID until admitted.
+  bool captureReady{true};
 };
 
 struct DiagnosticFlightCommand
