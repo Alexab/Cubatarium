@@ -384,6 +384,7 @@ set(SOURCES
     src/Render/Engine/GreedyVertexPool.cpp
     src/Render/Engine/GreedyVertexPoolLifetime.cpp
     src/Render/Lighting/SectionLightAtlas.cpp
+    src/Render/Lighting/SectionLightBindingTable.cpp
     src/Render/Engine/CrossGpuBackend.cpp
     src/Render/Backend/RenderBackendFactory.cpp
     src/Render/Backend/RenderBackendSelect.cpp
@@ -3339,6 +3340,7 @@ cubatarium_add_test(NAME inputs_still_valid_visual_test
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(section_light_atlas_driver_test
     src/Render/Lighting/SectionLightAtlas.cpp
+    src/Render/Lighting/SectionLightBindingTable.cpp
     src/Test/SectionLightAtlasDriverTest.cpp)
   target_include_directories(section_light_atlas_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(section_light_atlas_driver_test PRIVATE

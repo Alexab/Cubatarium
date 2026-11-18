@@ -5843,6 +5843,23 @@
         },
         "limits": "One functional route with CPU canonical sample references; not performance, actor raster/RGB, transparency, full-screen or backend parity acceptance. New uncompiled GPU table sources were edited during the run; EXE3e98 and Python harness/fixtures stayed unchanged."
       }
+    },
+    "gpu_section_light_binding_table": {
+      "status": "GPU binding storage+shared shader interface implemented and real desktop GL3.3 readbackPASS; restored after3RED controls; ordinary world shader/publication integration still pending",
+      "runtime": "SectionLightBindingTable owns an immutable atlas reference per live binding. Two RGBA32UI texels record generation, explicitvalid,3Dtileorigin and exact signed section origin. Stable uvec4 handle carries slot/generation/64bit tableincarnation. Up to128bindings per row, bounded declared capacity and at most32MiB metadata; query actual device bounds. No page/binding capacity implicitly evicts a live reader.",
+      "replacement": "Acquire/upload successor before changing table. Failed capacity/contradictory owner/missing volume retains old handle+page. Ordered table update precedes release of old atlas reference; existing atlas GLfence guards previous draws. Release invalidates GPU entry before generation-safe index reuse; resetincarnation protects same slot/generation ABA. GLcontext-thread owned; Reset before context destruction.",
+      "shader": "Common ShaderInterface GL3.3/GLES3 syntax with highp integer usampler2D/3D, texelFetch and explicit success boolean. Rejects invalid/out-of-range/stale generation/stale 64bit incarnation, outside20cube halo, and oppositeINT-limit wrap. Exact unsigned differences retain individual cells past float integer precision. No physical calculation authority inferred from table/upload/zero bytes.",
+      "tests": "section_light_atlas_driver_test expanded. engine-section-light-binding-expanded-green and restored-green build/test logsPASS on AMD Radeon(TM) Graphics GL3.3. All8000cells per probe through same shared shader source, asymmetric sky/block, negative origins, exact large +/-INT coordinates, crossINTwrap, all rows incl129bindings, shared atlasrefcounts, stable replacement, failedreplacementretention, stalegeneration, invaliddefault/outofbounds/wrong64bitincarnation, resetABA, one-page pressure and retirement fence. Caller active unit/2Dtexture/PBO/unpack strides/skips/alignment preserved.",
+      "initial_failure": "engine-section-light-binding-green-test.logFAILcell19 from an initial float-delta bounds guard at large coordinates; replaced by exact unsigned/sign checks; coordinate-green/expanded/restored testsPASS. Not a production world regression because module not yet used by renderer.",
+      "negative_controls": [
+        "generation-red: shader ignores slot generation; actual stale-handle sample fails",
+        "incarnation-red: shader ignores table incarnation; wrong high32bit epoch sample fails",
+        "wrap-red: shader ignores mathematical sign of unsigned difference; oppositeINT-limit false adjacent cell fails"
+      ],
+      "restoration": "Exact original source bytes restored in finally; only section_light_atlas_driver_test built from mutations, never app. Fresh rebuild/testGREEN after all3 controls.",
+      "release": "Exact Release app build pending; CMake includes new module in app render-lighting sources.",
+      "limits": "Storage and executable shader interface proof only. Not instantiated in normal world renderer; no world field+geometry GPU atomic publication or all-backend cutover acceptance yet. No removal of light merge keys/job stamps, no GLES/native parity/performance claim. Existing typed SectionRenderLightSnapshot validation must gate future production Create/Replace calls.",
+      "next": "Connect typed geometry+physical snapshots to prepared GPU binding leases before destructive mesh commit. Retain leases with actual CPU/MDI/packed/cross/transparent artifacts through final draw. Feed shared interface to all world shaders/backends, including generation/epoch metadata; only then remove baked lighting dependency."
     }
   }
 }
