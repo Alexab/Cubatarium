@@ -10,7 +10,6 @@
 #include <array>
 #include <glm/glm.hpp>
 #include <memory>
-#include <queue>
 #include <vector>
 
 namespace cutum
@@ -31,9 +30,6 @@ public:
   void Shutdown();
   bool IsReady() const { return Ready; }
 
-  /// Queue a snapshot for GPU meshing on the next frame.
-  void EnqueueSnapshot(ChunkMeshSnapshot snapshot, uint64_t source_revision);
-
   /// Process one snapshot synchronously (main thread, GL context required).
   bool ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
                        UBlockRegistry &registry,
@@ -42,14 +38,28 @@ public:
   /// Kick upload+compute into ring PBO; counters polled async (Dispatched).
   /// Rects live in per-slot RectsHoldSsbo so up to kReadbackRing Dispatched
   /// can coexist without serializing Kick on shared EmitState.RectsSsbo.
+  class ReadbackSlotKey
+  {
+  public:
+    int Index() const { return Index_; }
+    uint64_t Generation() const { return Generation_; }
+
+  private:
+    friend class UGpuMeshPipeline;
+    int Index_{-1};
+    uint64_t Generation_{0};
+    std::shared_ptr<const uint8_t> Storage_;
+  };
   struct GpuApplyTicket
   {
     int slotIndex{-1};
+    GpuStagingSlotKey slotKey;
     glm::ivec3 coord{0};
     uint32_t quadCount{0};
     uint32_t slotOffsetQuads{0};
     GLsync fence{nullptr};
     int pboIndex{-1};
+    ReadbackSlotKey readbackKey;
     bool valid{false};
     /// True after greedy dispatch until counters mapped + packed emit done.
     bool awaitingCounters{false};
@@ -112,10 +122,9 @@ public:
 
   /// Free ring PBO held by ticket (CancelOutside / fail paths).
   void ReleaseReadbackSlot(GpuApplyTicket &ticket);
+  bool MatchesReadbackStorage(const GpuApplyTicket &ticket) const;
+  bool OwnsReadbackSlot(const GpuApplyTicket &ticket) const;
   bool HasFreeReadbackSlot() const;
-
-  /// Process queued snapshots: upload → compute → write to SSBO slots.
-  int ProcessQueue(UBlockRegistry &registry, int budget);
 
   void FreeChunk(glm::ivec3 chunk_coord);
 
@@ -124,15 +133,7 @@ public:
   UGpuMeshSlotAllocator &GetAllocator() { return Allocator; }
   const UGpuMeshSlotAllocator &GetAllocator() const { return Allocator; }
 
-  int GetPendingCount() const { return static_cast<int>(PendingQueue.size()); }
-
 private:
-  struct PendingChunk
-  {
-    ChunkMeshSnapshot Snapshot;
-    uint64_t SourceRevision;
-  };
-
   bool RunComputePasses(const ChunkMeshSnapshot &snapshot,
                         UBlockRegistry &registry, glm::ivec3 coord,
                         int slot_idx, uint32_t &out_quad_count,
@@ -151,7 +152,8 @@ private:
   void ShutdownGpuSort();
   void EnsureReadbackPbo();
   void DestroyReadbackPbo();
-  int AcquireReadbackSlot();
+  int AcquireReadbackSlot(GpuApplyTicket &ticket);
+  friend struct GpuMeshPipelineReadbackTestAccess;
   bool ReadCountersViaPbo(int pbo_index, std::array<uint32_t, 4> &out_counters);
   bool CopyQuadsToPbo(int pbo_index, uint32_t slot_offset, uint32_t quad_count,
                       GLsync *out_fence);
@@ -162,7 +164,6 @@ private:
   bool Ready{false};
   GpuGreedyEmitState EmitState;
   UGpuMeshSlotAllocator Allocator;
-  std::queue<PendingChunk> PendingQueue;
 
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   GLuint SortHistProgram{0};
@@ -176,6 +177,8 @@ private:
   /// safe to read. Null entries use the map/unmap fallback.
   void *ReadbackMapped[kReadbackRing]{};
   bool ReadbackInUse[kReadbackRing]{};
+  std::array<uint64_t, kReadbackRing> ReadbackGenerations_{};
+  std::shared_ptr<const uint8_t> ReadbackStorageIdentity_;
   /// Per-slot greedy rect hold — frees EmitState.RectsSsbo for next Kick.
   GLuint RectsHoldSsbo[kReadbackRing]{};
   static constexpr GLintptr kReadbackCountersBytes = 16;

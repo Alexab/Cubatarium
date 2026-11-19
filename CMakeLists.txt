@@ -2468,6 +2468,10 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --light-binding-driver)
   set_tests_properties(section_render_light_bindings_driver_test PROPERTIES
     LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 60)
+  add_test(NAME gpu_geometry_light_lifecycle_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --gpu-geometry-light-lifecycle-driver)
+  set_tests_properties(gpu_geometry_light_lifecycle_driver_test PROPERTIES
+    LABELS "gpu;integration;streaming" SKIP_RETURN_CODE 77 TIMEOUT 90)
   add_test(NAME cross_light_bindings_gles_driver_test
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --cross-light-gles-driver)
   set_tests_properties(cross_light_bindings_gles_driver_test PROPERTIES

@@ -7474,6 +7474,30 @@
         "provenance": "EXE/config restoration/source-world/all runtime shaders/source commit independently true at terminal wrapper.",
         "limits": "One clean32block opaque-depth flight does not prove original sporadic defect closed. RGB/transparencyUNTESTED. Legacy performanceFAIL:fly104.108ms,total95.9157ms,stream70.0855ms,scene26.12445ms medians under diagnostics; post-stop mesh-missing proxy max1 and stalled-visual proxy max1 remain, no controlled A/B."
       }
+    },
+    "packed_gpu_geometry_awaiting_physical_field": {
+      "status": "Implemented and Release driver tests GREEN; required app build and full dry19chunk native flight pending. Full S4/S5 not complete.",
+      "implementation": "Completed packed GPU geometry retains its actual staging allocation and result-memory credit in the same bounded32-result/32MiB-accounted queue as CPU geometry. Four round-robin checks per call. Pairing requires original source epoch/revision and exact current geometry/catalog/profile certificates plus calculated settled physical field. Same captured stamps and same packed SSBO payload; no new compute dispatch while awaiting field.",
+      "ownership": "Private-issued index/generation/allocator-token key protects staging allocation reuse and allocator replacement. Independent index/generation/storage-token key protects readback PBO reuse and pipeline storage replacement. Cancellation releases only actual owned resources; geometry storage reset still releases an independently current PBO. Ownership rechecked after render-light preparation callback. Successful delayed GPU publication contributes to finish/progress accounting.",
+      "cleanup": "Removed unused EnqueueSnapshot/ProcessQueue FIFO after full src call-site search showed only declarations/definitions. It discarded returned staging allocations; no claim that unused API caused native faults. Trace now includes slot index/allocation generation and awaiting_light_gpu.",
+      "red": "engine-packed-awaiting-field-red-test.log: actual computed packed result lost staging ownership before field readiness.",
+      "lifecycle_tests": "Actual GL compute/readback and unchanged6-packed-quad SSBO byte checks across11 scenarios: normal delayed publication, eviction, voxel edit, world epoch, cancellation, numeric slot reuse, allocator reset, same-coordinate world chunk incarnation, allocator reset inside prepare callback, actual one-entry render-light metadata capacity exhaustion/recovery, completed roofed zero-light proof. Additional staging/readback ownership and obsolete-ticket storage replacement tests use real GL storage.",
+      "negative_controls": {
+        "artifact": "build/desktop-msvc/engine-packed-owner-negative-controls.json",
+        "expected_failures": 5,
+        "controls": [
+          "slot_generation",
+          "slot_allocator_identity",
+          "readback_generation",
+          "readback_storage_identity",
+          "slot_identity_after_prepare"
+        ],
+        "exact_source_restore": true,
+        "restored_build_exit": 0,
+        "restored_test_exit": 0
+      },
+      "validation": "Affected Release test targets rebuilt after final trace/FIFO cleanup. engine-packed-awaiting-field-twelve-tests.log:12/12PASS19.97seconds, includes actual GL/GLES material/field paths, packed lifecycle, CPU integration, pool production, publication, demand and job admission.",
+      "limits": "No app/native flight of this implementation yet. Sync mesh still uses legacy recompute/retry. Light remains in geometry merge/capture/dependency identities; full light-only zero-remesh and semantic catalog split pending. Full native RGB/transparency/performance acceptance and original sporadic first-publication fault closure remain open.32MiB retained byte cap not independently saturated."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7495,7 +7519,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "All main physical-field consumers implemented; bounded completed CPU geometry now awaits actual field without resubmission,15lifecycle/capacity controls and11Release checksGREEN, full wet19chunk native0/13630scoped depth faults. Packed-GPU/sync awaiting lifecycle, light-free merge/capture/dependency keys and complete acceptance remain.",
+      "S5": "All main physical-field consumers and bounded CPU/GPU completed-geometry awaiting-field paths implemented. GPU12Release testsGREEN plus5negative ownership controls; GPU app/native pending. Previous CPU full wet19chunk native0/13630scoped depth faults. Sync awaiting lifecycle, light-free geometry keys and complete acceptance remain.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."

@@ -1415,7 +1415,10 @@ private:
           *source_stamps = nullptr,
       SectionGeometryRenderInputs source_geometry = {},
       std::optional<SectionRenderLightSnapshot> source_light = std::nullopt,
-      uint64_t source_world_epoch = 0);
+      uint64_t source_world_epoch = 0,
+      std::unique_ptr<UPipelineCreditGuard> result_credit = nullptr,
+      const std::array<uint64_t, kChunkMeshNeighborStampCount>
+          *source_light_signatures = nullptr);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);
@@ -1426,9 +1429,10 @@ private:
   bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
                                  const UBlockRegistry &registry,
                                  const MeshBuildResult &result) const;
-  bool RetainGeometryAwaitingLight(const UBlockWorld &world,
-                                   const UBlockRegistry &registry,
-                                   MeshBuildResult &&result);
+  bool RetainGeometryAwaitingLight(
+      const UBlockWorld &world, const UBlockRegistry &registry,
+      MeshBuildResult &&result,
+      std::optional<GpuMeshProcessResult> gpu = std::nullopt);
   int DrainGeometryAwaitingLight(const UBlockWorld &world,
                                  UBlockRegistry &registry, int max_count);
   void DropGeometryAwaitingLight(glm::ivec3 coord);
@@ -1526,8 +1530,10 @@ private:
   {
     MeshBuildResult result;
     size_t bytes{0};
+    std::optional<GpuMeshProcessResult> gpu;
   };
-  // Completed CPU geometry retains its result credit until paired or retired.
+  // Completed geometry retains its result credit and GPU staging key, if any,
+  // until paired or retired.
   // Both limits are independent of the number of loaded world sections.
   static constexpr size_t kAwaitingLightMaxCount = 32;
   static constexpr size_t kAwaitingLightMaxBytes = 32u * 1024u * 1024u;

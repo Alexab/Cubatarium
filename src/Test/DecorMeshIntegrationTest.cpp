@@ -38,6 +38,19 @@
 namespace cutum
 {
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+struct GpuMeshPipelineReadbackTestAccess
+{
+  static UGpuMeshPipeline::GpuApplyTicket Acquire(UGpuMeshPipeline &pipeline)
+  {
+    UGpuMeshPipeline::GpuApplyTicket ticket;
+    pipeline.AcquireReadbackSlot(ticket);
+    return ticket;
+  }
+  static void ResetStorage(UGpuMeshPipeline &pipeline)
+  {
+    pipeline.DestroyReadbackPbo();
+  }
+};
 struct MdiVertexPoolStoreDriverTestAccess
 {
   static void Rebuild(UMdiVertexPoolStore &store, GreedyGpuPassCache &cache)
@@ -152,6 +165,22 @@ struct ChunkMeshCaptureAdmissionTestAccess
   static uint32_t FreePackedSlots(UChunkMeshCache &cache)
   {
     return cache.GpuPipeline->GetAllocator().GetFreeSlotCount();
+  }
+  static UGpuMeshPipeline::GpuApplyTicket &KickOnly(UChunkMeshCache &cache,
+                                                    UBlockRegistry &registry)
+  {
+    auto &pending = cache.PendingGpuApplies.front();
+    const int slot =
+        cache.GpuPipeline->GetAllocator().AllocateStagingSlot(false);
+    if (slot < 0 || !cache.GpuPipeline->KickComputePasses(
+                        pending.snapshot, registry, pending.coord, slot,
+                        pending.ticket, pending.inputCatalog.get()))
+      std::abort();
+    pending.phase = pending.ticket.awaitingCounters
+                        ? UChunkMeshCache::PendingGpuApply::Phase::Dispatched
+                        : UChunkMeshCache::PendingGpuApply::Phase::Kicked;
+    cache.TouchPendingGpuIndex();
+    return pending.ticket;
   }
   static bool HasCpuRecovery(UChunkMeshCache &cache, glm::ivec3 coord)
   {
@@ -2270,6 +2299,412 @@ static void TestGeometryLightQueueCapacity(
          "cancellation releases every retained result and capacity charge");
 }
 
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void TestGpuStagingSlotOwnership()
+{
+  using namespace cutum;
+  UGpuMeshSlotAllocator allocator;
+  Expect(allocator.Init(2),
+         "staging ownership fixture initializes actual GL storage");
+  const auto first =
+      allocator.CaptureStagingSlotKey(allocator.AllocateStagingSlot(false));
+  Expect(first.IsValid() && allocator.OwnsStagingSlot(first),
+         "allocated staging slot receives an exact ownership key");
+  Expect(allocator.ReleaseStagingSlot(first),
+         "staging key releases its own allocation");
+  allocator.FreeSlotByIndex(first.Index());
+  Expect(allocator.GetFreeSlotCount() == 2 &&
+             !allocator.ReleaseStagingSlot(first),
+         "repeated staging release cannot duplicate free-list entries");
+  const auto second =
+      allocator.CaptureStagingSlotKey(allocator.AllocateStagingSlot(false));
+  Expect(second.Index() == first.Index() &&
+             second.Generation() != first.Generation() &&
+             !allocator.ReleaseStagingSlot(first) &&
+             allocator.OwnsStagingSlot(second),
+         "old staging generation cannot free a reused numeric index");
+  allocator.BindCommittedSlot({0, 0, 0}, second.Index());
+  Expect(!allocator.ReleaseStagingSlot(second) &&
+             allocator.HasSlot({0, 0, 0}) &&
+             !allocator.CaptureStagingSlotKey(second.Index()).IsValid(),
+         "staging cleanup cannot retire a committed live image");
+  allocator.Shutdown();
+  Expect(!allocator.ReleaseStagingSlot(second) &&
+             allocator.GetSlotByIndex(0) == nullptr,
+         "shutdown invalidates keys without indexing released storage");
+  UGpuMeshSlotAllocator replacement;
+  Expect(replacement.Init(2),
+         "replacement allocator initializes actual GL storage");
+  const auto fresh =
+      replacement.CaptureStagingSlotKey(replacement.AllocateStagingSlot(false));
+  Expect(fresh.Index() == first.Index() &&
+             fresh.Generation() == first.Generation() &&
+             !replacement.ReleaseStagingSlot(first) &&
+             replacement.OwnsStagingSlot(fresh),
+         "allocator replacement cannot alias a retained index and generation");
+  replacement.Shutdown();
+}
+
+static void TestGpuReadbackOwnership()
+{
+  using namespace cutum;
+  UGpuMeshPipeline pipeline;
+  Expect(pipeline.Init(2),
+         "readback fixture initializes actual pipeline storage");
+  auto first = GpuMeshPipelineReadbackTestAccess::Acquire(pipeline);
+  auto stale = first;
+  auto old_storage = first;
+  Expect(pipeline.OwnsReadbackSlot(first),
+         "actual readback reservation owns its key");
+  pipeline.ReleaseReadbackSlot(first);
+  auto current = GpuMeshPipelineReadbackTestAccess::Acquire(pipeline);
+  Expect(current.pboIndex == stale.pboIndex &&
+             current.readbackKey.Generation() != stale.readbackKey.Generation(),
+         "readback numeric index reuse advances its own generation");
+  pipeline.ReleaseReadbackSlot(stale);
+  Expect(pipeline.OwnsReadbackSlot(current),
+         "old readback release preserves reused PBO");
+  Expect(
+      pipeline.GetAllocator().Init(2) && pipeline.OwnsReadbackSlot(current),
+      "geometry storage reset does not revoke an independent readback owner");
+  pipeline.ReleaseReadbackSlot(current);
+  GpuMeshPipelineReadbackTestAccess::ResetStorage(pipeline);
+  auto fresh = GpuMeshPipelineReadbackTestAccess::Acquire(pipeline);
+  Expect(fresh.pboIndex == old_storage.pboIndex &&
+             fresh.readbackKey.Generation() ==
+                 old_storage.readbackKey.Generation(),
+         "actual readback replacement exercises equal numeric index and "
+         "generation");
+  pipeline.ReleaseReadbackSlot(old_storage);
+  Expect(pipeline.OwnsReadbackSlot(fresh),
+         "old readback storage cannot release replacement storage");
+  pipeline.ReleaseReadbackSlot(fresh);
+  std::array<UGpuMeshPipeline::GpuApplyTicket, UGpuMeshPipeline::kReadbackRing>
+      tickets;
+  for (auto &ticket : tickets)
+  {
+    ticket = GpuMeshPipelineReadbackTestAccess::Acquire(pipeline);
+    Expect(pipeline.OwnsReadbackSlot(ticket),
+           "all bounded PBO slots remain reservable");
+  }
+  Expect(!pipeline.HasFreeReadbackSlot(),
+         "actual readback pool observes its hard capacity");
+  for (auto &ticket : tickets)
+    pipeline.ReleaseReadbackSlot(ticket);
+  pipeline.Shutdown();
+}
+
+static void TestGpuTicketStorageReplacement(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock({4, 4, 4}, kStone);
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = true;
+  cache.SetRenderSettings(settings);
+  cache.MarkDirtyPriority({0, 0, 0});
+  const auto snapshot = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+      cache, world, {0, 0, 0});
+  ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, snapshot, registry);
+  auto &ticket = ChunkMeshCaptureAdmissionTestAccess::KickOnly(cache, registry);
+  glFinish();
+  auto old_ticket = ticket;
+  auto *pipeline = cache.GetGpuMeshPipeline();
+  auto &allocator = pipeline->GetAllocator();
+  Expect(allocator.Init(2),
+         "active compute ticket sees replacement geometry storage");
+  const auto replacement =
+      allocator.CaptureStagingSlotKey(allocator.AllocateStagingSlot(false));
+  std::vector<uint8_t> sentinel(UGpuMeshSlotAllocator::kBytesPerSlot, 0x5a);
+  auto observed = sentinel;
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, allocator.GetQuadSsbo());
+  glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sentinel.size(),
+                  sentinel.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  uint32_t ignored = 0;
+  const auto status =
+      ticket.awaitingCounters
+          ? pipeline->TryCompleteCountersAndEmit(ticket, registry, 0)
+          : pipeline->TryFinishComputePasses(ticket, registry, ignored, nullptr,
+                                             nullptr, nullptr, 0);
+  Expect(
+      status == UGpuMeshPipeline::GpuFinishStatus::Failed,
+      "obsolete ticket cannot poll or emit into replacement geometry storage");
+  ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+  glFinish();
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, allocator.GetQuadSsbo());
+  glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, observed.size(),
+                     observed.data());
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+  Expect(sentinel == observed && allocator.OwnsStagingSlot(replacement) &&
+             !cache.HasLiveGpuDraw({0, 0, 0}) &&
+             !pipeline->OwnsReadbackSlot(old_ticket),
+         "stale compute cleanup preserves replacement bytes and releases its "
+         "original PBO");
+  std::array<UGpuMeshPipeline::GpuApplyTicket, UGpuMeshPipeline::kReadbackRing>
+      tickets;
+  for (auto &fresh : tickets)
+  {
+    fresh = GpuMeshPipelineReadbackTestAccess::Acquire(*pipeline);
+    Expect(pipeline->OwnsReadbackSlot(fresh),
+           "stale compute cleanup leaves every PBO reusable");
+  }
+  pipeline->ReleaseReadbackSlot(old_ticket);
+  Expect(pipeline->OwnsReadbackSlot(tickets[0]),
+         "repeated stale cleanup cannot release fresh readback");
+  for (auto &fresh : tickets)
+    pipeline->ReleaseReadbackSlot(fresh);
+  allocator.ReleaseStagingSlot(replacement);
+}
+
+static void TestPackedGeometryWaitsForPhysicalLight(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0);
+  for (int lifecycle = 0; lifecycle < 11; ++lifecycle)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({4, 4, 4}, kStone);
+    if (lifecycle == 10)
+      for (int x = -16; x < 32; ++x)
+        for (int z = -16; z < 32; ++z)
+          world.SetBlock({x, 31, z}, kStone);
+    if (lifecycle == 9)
+      world.SetBlock({68, 4, 4}, kStone);
+    auto *chunk = world.GetChunkManager().GetChunk(root);
+    RelightJobSpec spec;
+    spec.min_world_y = world.GetVerticalProfile().MinY;
+    spec.max_world_y = world.GetVerticalProfile().MaxY;
+    if (lifecycle == 10)
+    {
+      const auto unverified =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+              .Compute(registry);
+      Expect(unverified.inputs_complete && unverified.chunks.size() == 1,
+             "zero-field packed fixture computes complete physical inputs");
+      chunk->ReplaceComputedLightVolume(*unverified.chunks[0].padded_light,
+                                        true, true);
+    }
+    const auto captured_light_revision = chunk->GetLightFieldRevision();
+    SectionRenderLightBindings resources;
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    const auto geometry = world.CaptureGeometryRenderInputs(
+        root, registry.GetDefinitionsCatalogSnapshot());
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    Expect(resources.BeginWorld(epoch, geometry.world_geometry_identity,
+                                lifecycle == 9 ? 1 : 4,
+                                4u * SectionLightVolume::CellCount, 4),
+           "packed waiting fixture initializes actual physical resources");
+    bool reset_during_prepare = false;
+    GpuStagingSlotKey replacement_key;
+    cache.SetPrepareRenderLightFn(
+        [&](uint64_t source_epoch, const SectionGeometryRenderInputs &source,
+            const SectionRenderLightSnapshot &light)
+        {
+          auto binding = resources.Prepare(source_epoch, source, light);
+          if (reset_during_prepare)
+          {
+            auto &slots = cache.GetGpuMeshPipeline()->GetAllocator();
+            Expect(slots.Init(2), "callback replaces actual packed storage");
+            replacement_key =
+                slots.CaptureStagingSlotKey(slots.AllocateStagingSlot(false));
+          }
+          return binding;
+        });
+    cache.MarkDirtyPriority(root);
+    auto &demand = cache.GetRenderDemandStore();
+    const auto revision = cache.GetChunkMeshRevision(root);
+    demand.NoteDemand(root, revision, chunk->GetLightFieldRevision(), 0, 1.0,
+                      epoch, chunk->GetIncarnation());
+    const auto snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    Expect(!snapshot.renderLight && snapshot.provisionalLightPreview,
+           "packed source geometry precedes physical calculation proof");
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, snapshot, registry);
+    for (int tick = 0; tick < 8 && cache.GetPendingGpuAppliesCount(); ++tick)
+    {
+      ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+      glFinish();
+    }
+    if (cache.GetGeometryAwaitingLightCount() != 1)
+      std::cerr << "packed waiting lifecycle=" << lifecycle << '\n';
+    Expect(cache.GetLastGpuKickN() == 1 &&
+               cache.GetGeometryAwaitingLightCount() == 1 &&
+               cache.HasInflightMeshBuild(root) &&
+               !cache.HasDrawableGreedyMesh(root) &&
+               ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 1,
+           "completed packed geometry retains staging ownership while awaiting "
+           "light");
+    auto &allocator = cache.GetGpuMeshPipeline()->GetAllocator();
+    const auto generation = allocator.GetSlotByIndex(0)->generation;
+    std::array<PackedQuad, 6> before{}, after{};
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, allocator.GetQuadSsbo());
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(before),
+                       before.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    switch (lifecycle)
+    {
+    case 1:
+      cache.RemoveChunk(root);
+      break;
+    case 2:
+      world.SetBlock({5, 4, 4}, kStone);
+      cache.MarkDirtyPriority(root);
+      break;
+    case 3:
+      cache.GetCaptureStore().BumpWorldEpoch();
+      break;
+    case 4:
+      cache.CancelAsyncMeshWork();
+      break;
+    case 5:
+      allocator.FreeSlotByIndex(0);
+      replacement_key =
+          allocator.CaptureStagingSlotKey(allocator.AllocateStagingSlot(false));
+      break;
+    case 6:
+      Expect(allocator.Init(2),
+             "waiting geometry sees actual allocator reinitialization");
+      replacement_key =
+          allocator.CaptureStagingSlotKey(allocator.AllocateStagingSlot(false));
+      break;
+    case 7:
+      world.GetChunkManager().RemoveChunk(root);
+      world.SetBlock({4, 4, 4}, kStone);
+      chunk = world.GetChunkManager().GetChunk(root);
+      break;
+    case 8:
+      reset_during_prepare = true;
+      break;
+    default:
+      break;
+    }
+    const auto field =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(field.inputs_complete && field.chunks.size() == 1,
+           "packed waiting fixture computes current physical output");
+    chunk->ReplaceComputedLightVolume(*field.chunks[0].padded_light, true,
+                                      true);
+    Expect(world.RecordLightCalculation(
+               field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+           "packed waiting fixture installs actual physical proof");
+    demand.NoteDemand(root, revision, chunk->GetLightFieldRevision(), 0, 2.0,
+                      epoch, chunk->GetIncarnation());
+    demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
+                                       chunk->GetLightFieldRevision(),
+                                       chunk->GetContentRevision());
+    std::shared_ptr<SectionRenderLightBinding> blocker;
+    if (lifecycle == 9)
+    {
+      const glm::ivec3 other(4, 0, 0);
+      const auto other_field =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {other})
+              .Compute(registry);
+      auto *other_chunk = world.GetChunkManager().GetChunk(other);
+      Expect(other_field.inputs_complete && other_field.chunks.size() == 1,
+             "metadata pressure fixture computes independent real field");
+      other_chunk->ReplaceComputedLightVolume(
+          *other_field.chunks[0].padded_light, true, true);
+      Expect(world.RecordLightCalculation(
+                 other_field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+             "metadata pressure fixture installs independent physical proof");
+      const auto other_snapshot = world.CaptureRenderLightSnapshot(other);
+      Expect(bool(other_snapshot), "metadata pressure has a certified source");
+      blocker = resources.Prepare(epoch, other_snapshot->GeometryInputs(),
+                                  *other_snapshot);
+      Expect(bool(blocker),
+             "actual metadata capacity is held by another geometry artifact");
+    }
+    if (lifecycle == 0)
+      cache.DrainPendingGpuMeshes(world, registry, 8, 1000);
+    else
+      cache.DrainAsyncMeshResults(world, registry, 8);
+    if (lifecycle >= 1 && lifecycle <= 8)
+    {
+      if (cache.GetPublishCount(root) != 0)
+        std::cerr << "packed unexpected publication lifecycle=" << lifecycle
+                  << '\n';
+      Expect(
+          cache.GetPublishCount(root) == 0 &&
+              cache.GetGeometryAwaitingLightCount() == 0 &&
+              !cache.HasLiveGpuDraw(root),
+          "cancelled edited superseded or reset GPU geometry cannot publish");
+      Expect(replacement_key.IsValid()
+                 ? allocator.OwnsStagingSlot(replacement_key) &&
+                       allocator.GetFreeSlotCount() == 1
+                 : allocator.GetFreeSlotCount() == 2,
+             "old GPU cleanup releases its own staging slot and preserves a "
+             "replacement");
+      if (replacement_key.IsValid())
+        allocator.ReleaseStagingSlot(replacement_key);
+      continue;
+    }
+    if (lifecycle == 9)
+    {
+      Expect(cache.GetPublishCount(root) == 0 &&
+                 cache.GetGeometryAwaitingLightCount() == 1 &&
+                 cache.GetLastGpuKickN() == 1 &&
+                 allocator.GetFreeSlotCount() == 1,
+             "real metadata exhaustion retains completed packed geometry "
+             "without a retry build");
+      blocker.reset();
+      resources.CollectRetired();
+      glFinish();
+      resources.CollectRetired();
+      cache.DrainAsyncMeshResults(world, registry, 8);
+    }
+    const auto *published = allocator.GetSlot(root);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, allocator.GetQuadSsbo());
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, sizeof(after),
+                       after.data());
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    Expect(published && published->generation == generation &&
+               published->QuadCount == 6 && cache.HasLiveGpuDraw(root) &&
+               cache.GetPublishCount(root) == 1 &&
+               cache.GetLastGpuKickN() == 1 && cache.GetLastGpuFinishN() == 1 &&
+               cache.GetGeometryAwaitingLightCount() == 0 &&
+               std::memcmp(before.data(), after.data(), sizeof(before)) == 0,
+           "physical completion publishes original packed slot without compute "
+           "resubmission");
+    const auto binding = cache.GetPublishedRenderLightBinding(root);
+    Expect(binding && binding->IsLive(),
+           "late packed publication owns an actual GPU field");
+    ProbeCertifiedBinding(resources, binding);
+    if (lifecycle == 10)
+      Expect(chunk->GetLightFieldRevision() == captured_light_revision &&
+                 std::all_of(field.chunks[0].padded_light->cells.begin(),
+                             field.chunks[0].padded_light->cells.end(),
+                             [](uint8_t cell) { return cell == 0; }),
+             "completed zero field admits retained packed geometry without a "
+             "data revision bump");
+    for (int tick = 0; tick < 4; ++tick)
+    {
+      const auto stats =
+          cache.RebuildDirtyChunksWithStats(world, registry, 8, 1, false, 0);
+      Expect(stats.Scheduled == 0 && stats.SyncRebuilt == 0 &&
+                 cache.GetPublishCount(root) == 1 && !cache.HasPendingDirty(),
+             "late packed physical pairing converges without historical light "
+             "remesh");
+    }
+  }
+}
+#endif
+
 static void TestFirstComputedLightPublication(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions,
@@ -4211,7 +4646,10 @@ int main(int argc, char **argv)
   const bool visibility_driver =
       gles_visibility_driver ||
       (argc == 2 && std::string(argv[1]) == "--face-visibility-driver");
-  if (visibility_driver || gles_cross_driver ||
+  const bool packed_lifecycle_driver =
+      argc == 2 &&
+      std::string(argv[1]) == "--gpu-geometry-light-lifecycle-driver";
+  if (visibility_driver || gles_cross_driver || packed_lifecycle_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
     if (!glfwInit())
@@ -4220,7 +4658,10 @@ int main(int argc, char **argv)
     glfwWindowHint(GLFW_CLIENT_API,
                    gles_context ? GLFW_OPENGL_ES_API : GLFW_OPENGL_API);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,
-                   visibility_driver && !gles_visibility_driver ? 4 : 3);
+                   (visibility_driver && !gles_visibility_driver) ||
+                           packed_lifecycle_driver
+                       ? 4
+                       : 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gles_context ? 1 : 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, gles_context
                                             ? GLFW_OPENGL_ANY_PROFILE
@@ -4243,7 +4684,7 @@ int main(int argc, char **argv)
     while (glGetError() != GL_NO_ERROR)
     {
     }
-    if (visibility_driver &&
+    if ((visibility_driver || packed_lifecycle_driver) &&
         (!glDispatchCompute || !glMemoryBarrier || !glBindBufferBase))
     {
       glfwDestroyWindow(window);
@@ -4252,6 +4693,18 @@ int main(int argc, char **argv)
     }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
+    if (packed_lifecycle_driver)
+    {
+      TestGpuStagingSlotOwnership();
+      TestGpuReadbackOwnership();
+      TestGpuTicketStorageReplacement(registry, definitions.get());
+      TestPackedGeometryWaitsForPhysicalLight(registry, definitions.get());
+      Expect(glGetError() == GL_NO_ERROR, "packed lifecycle has no GL errors");
+      glfwDestroyWindow(window);
+      glfwTerminate();
+      std::cout << "gpu_geometry_light_lifecycle_driver_test: PASS\n";
+      return 0;
+    }
     TestShaderProgramFailureAtomicity(gles_context);
     TestProductionGreedyPrograms(gles_context,
                                  visibility_driver && !gles_visibility_driver);

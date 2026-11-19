@@ -4549,9 +4549,10 @@ void UChunkMeshCache::ReleasePendingGpuTicket(PendingGpuApply &pending)
   // valid describes usable compute output, not ownership of the staging slot.
   // Counter/readback failures can invalidate output before the cache cancels
   // it.
-  if (GpuPipeline && pending.ticket.slotIndex >= 0)
-    GpuPipeline->GetAllocator().FreeSlotByIndex(pending.ticket.slotIndex);
-  if (pending.ticket.fence)
+  if (GpuPipeline)
+    GpuPipeline->GetAllocator().ReleaseStagingSlot(pending.ticket.slotKey);
+  if (GpuPipeline && GpuPipeline->MatchesReadbackStorage(pending.ticket) &&
+      pending.ticket.fence)
   {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
     glDeleteSync(pending.ticket.fence);
@@ -5843,7 +5844,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *source_stamps,
     SectionGeometryRenderInputs source_geometry,
     std::optional<SectionRenderLightSnapshot> source_light,
-    uint64_t source_world_epoch)
+    uint64_t source_world_epoch,
+    std::unique_ptr<UPipelineCreditGuard> result_credit,
+    const std::array<uint64_t, kChunkMeshNeighborStampCount>
+        *source_light_signatures)
 {
   (void)registry;
   (void)source_revision;
@@ -5867,6 +5871,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
               << " acceptedStale=" << accepted_input_stale
               << " acceptedGeomStale=" << accepted_geom_stale
               << " quads=" << gpu_result.quadCount
+              << " slot=" << gpu_result.slotKey.Index()
+              << " allocation=" << gpu_result.slotKey.Generation()
               << " darkFace=" << gpu_result.hasFullyDarkFace
               << " litFace=" << gpu_result.hasLitDrawableFace
               << " preview=" << gpu_result.provisionalLightPreview;
@@ -5898,11 +5904,26 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
     UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
   };
+  const auto slot_key = gpu_result.slotKey;
+  const auto release_candidate = [&]()
+  {
+    if (GpuPipeline)
+      GpuPipeline->GetAllocator().ReleaseStagingSlot(slot_key);
+  };
+  if (GpuPipeline && (gpu_result.slotIndex >= 0 || gpu_result.quadCount > 0) &&
+      (slot_key.Index() != gpu_result.slotIndex ||
+       !GpuPipeline->GetAllocator().OwnsStagingSlot(slot_key)))
+  {
+    note_terminal(JobTerminalReason::GpuPipelineFailed);
+    RequeueDirtyPriority(coord,
+                         MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    return false;
+  }
   if (!world.GetChunkManager().HasChunk(coord))
   {
     if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      release_candidate();
     }
     note_terminal(JobTerminalReason::ChunkNotResident);
     return false;
@@ -5930,6 +5951,57 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       source_chunk && slice_demand &&
       slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
       slice_demand->incarnation == current_incarnation;
+  MeshBuildResult physical_geometry;
+  physical_geometry.coord = coord;
+  physical_geometry.sourceRevision = source_revision;
+  physical_geometry.sourceWorldEpoch = source_world_epoch;
+  physical_geometry.jobId = job_trace.job_id;
+  physical_geometry.stageTrace = job_trace;
+  physical_geometry.InputStampsValid = source_stamps != nullptr;
+  if (source_stamps)
+    physical_geometry.InputStamps = *source_stamps;
+  if (source_light_signatures)
+    physical_geometry.InputLightHaloSignatures = *source_light_signatures;
+  physical_geometry.InputCatalog = source_geometry.catalog;
+  physical_geometry.GeometryInputs = source_geometry;
+  physical_geometry.BoundaryOverlay = boundary_overlay;
+  const bool independent_physical_geometry =
+      source_revision == MeshRevisions.Current(coord) &&
+      IsCurrentPhysicalGeometry(world, registry, physical_geometry);
+  const auto retain_candidate = [&]()
+  {
+    physical_geometry.crossCenters = std::move(cross_centers);
+    physical_geometry.RenderLight = source_light;
+    physical_geometry.ProvisionalLightPreview =
+        gpu_result.provisionalLightPreview;
+    physical_geometry.ResultCredit = std::move(result_credit);
+    return RetainGeometryAwaitingLight(
+        world, registry, std::move(physical_geometry), std::move(gpu_result));
+  };
+  if (independent_physical_geometry &&
+      (gpu_result.quadCount > 0 || HasCrossInstances(cross_centers)))
+  {
+    const auto current = world.CaptureRenderLightSnapshot(coord);
+    if (!current || !current->MatchesGeometry(source_geometry) ||
+        !LightSettlementMatchesCurrentCalculation(
+            slice_demand, source_chunk, CaptureStore.WorldEpoch(), world,
+            source_geometry.catalog))
+    {
+      if (!retain_candidate())
+      {
+        release_candidate();
+        MarkDirtyPriority(coord);
+        note_terminal(JobTerminalReason::PublicationRejected);
+      }
+      return false;
+    }
+    source_light = current;
+    source_light_revision = source_chunk->GetLightFieldRevision();
+    has_source_light_revision = true;
+    gpu_result.provisionalLightPreview = false;
+    accepted_input_stale = false;
+    accepted_geom_stale = false;
+  }
   // SoftDefer is column-wide; an exact slice can be settled while another Y
   // slice still owns PendingLight. Permit this dark candidate only when all
   // publication revisions and the explicit per-slice settlement agree.
@@ -5958,7 +6030,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     // Never let stale-accept policy promote a formerly current capture after
     // its inputs changed in flight. Keep the exact work obligation instead.
     if (GpuPipeline && gpu_result.slotIndex >= 0)
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      release_candidate();
     if (kChunkDemandShadow())
       GetRenderDemandStore().NoteInstallResult(
           coord, InstallResult::RejectedRetryable, 0, 0,
@@ -5976,7 +6048,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      release_candidate();
     }
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
                                                true, prior_lit_age))
@@ -6015,7 +6087,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     {
       if (GpuPipeline && gpu_result.slotIndex >= 0)
       {
-        GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+        release_candidate();
       }
       // Sysreset v3 D4: light-accepted drawable Retain — no Dirty, no FaceDebt.
       ++MeshApplyStaleAcceptedRefreshCount;
@@ -6087,7 +6159,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     // ProcessSnapshot used to overwrite in-place (opaque collapse 213543).
     if (GpuPipeline && gpu_result.slotIndex >= 0)
     {
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      release_candidate();
     }
     if (ShouldRetainPriorLitOverUnlitCandidate(had_lit_mesh, had_live_lit_gpu,
                                                true, prior_lit_age))
@@ -6168,7 +6240,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
                                  PubRejectSourceMismatchN, PubRejectOtherN);
       if (GpuPipeline && gpu_result.slotIndex >= 0)
       {
-        GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+        release_candidate();
       }
       if (kChunkDemandShadow())
       {
@@ -6222,11 +6294,21 @@ bool UChunkMeshCache::CommitGpuMeshResult(
                              prepared_light,
                              no_surface ? &*no_surface : nullptr))
   {
+    if (independent_physical_geometry && retain_candidate())
+      return false;
     if (GpuPipeline && gpu_result.slotIndex >= 0)
-      GpuPipeline->GetAllocator().FreeSlotByIndex(gpu_result.slotIndex);
+      release_candidate();
     MarkDirtyPriority(coord);
     note_terminal(JobTerminalReason::PublicationRejected,
                   static_cast<uint8_t>(InstallResult::RejectedRetryable));
+    return false;
+  }
+  if (GpuPipeline && gpu_result.slotIndex >= 0 &&
+      !GpuPipeline->GetAllocator().OwnsStagingSlot(slot_key))
+  {
+    note_terminal(JobTerminalReason::GpuPipelineFailed);
+    RequeueDirtyPriority(coord,
+                         MeshRevisionBumpReason::PriorityWorldCoreRepair);
     return false;
   }
   ChunkGreedyMesh &chunkMesh = GreedyCache[coord];
@@ -6243,7 +6325,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
       GpuPipeline->FreeChunk(coord);
       if (gpu_result.slotIndex >= 0)
       {
-        alloc.FreeSlotByIndex(gpu_result.slotIndex);
+        release_candidate();
       }
       ++GpuZeroQuadSlotReleaseCount_;
     }
@@ -6295,6 +6377,12 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   {
     chunkMesh.PublishRevs.geom_rev = source_revision;
     chunkMesh.PublishRevs.light_rev = chunkMesh.MeshedLightRevision;
+    chunkMesh.MeshedLightHaloSignaturesValid =
+        source_stamps && source_light_signatures;
+    chunkMesh.MeshedLightHaloSignatures =
+        source_light_signatures
+            ? *source_light_signatures
+            : std::array<uint64_t, kChunkMeshNeighborStampCount>{};
     RecordPublishedGeomStamps(chunkMesh, source_stamps,
                               std::move(source_geometry),
                               std::move(source_light));
@@ -6425,8 +6513,17 @@ int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
                                            UBlockRegistry &registry,
                                            int max_count, double budget_ms)
 {
+  const auto start = std::chrono::steady_clock::now();
+  const int ready = DrainGeometryAwaitingLight(world, registry, max_count);
+  const double elapsed = std::chrono::duration<double, std::milli>(
+                             std::chrono::steady_clock::now() - start)
+                             .count();
+  if (ready >= max_count || (budget_ms > 0.0 && elapsed >= budget_ms))
+    return ready;
   MeshRebuildTickStats stats{};
-  return ProcessPendingGpuMeshes(world, registry, max_count, budget_ms, stats);
+  return ready + ProcessPendingGpuMeshes(
+                     world, registry, max_count - ready,
+                     budget_ms > 0.0 ? budget_ms - elapsed : budget_ms, stats);
 }
 
 int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
@@ -6513,26 +6610,6 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     return 0;
   }
   LastGpuKickDeferReason_.clear();
-  const auto retain_published_light_halo =
-      [this](const PendingGpuApply &pending)
-  {
-    const auto mesh = GreedyCache.find(pending.coord);
-    if (mesh == GreedyCache.end())
-    {
-      return;
-    }
-    mesh->second.MeshedLightHaloSignaturesValid =
-        pending.snapshot.inputStampsValid;
-    if (pending.snapshot.inputStampsValid)
-    {
-      mesh->second.MeshedLightHaloSignatures =
-          pending.snapshot.lightHaloSignatures;
-    }
-    else
-    {
-      mesh->second.MeshedLightHaloSignatures = {};
-    }
-  };
 
   using GpuProfileClock = std::chrono::steady_clock;
   static std::ofstream gpu_process_profile_file;
@@ -6811,7 +6888,11 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                    reason);
     }
     ReleasePendingGpuTicket(pending);
-    ActiveMeshSourceRevision.erase(pending.coord);
+    const auto active = ActiveMeshSourceRevision.find(pending.coord);
+    if (pending.snapshot.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+        active != ActiveMeshSourceRevision.end() &&
+        active->second == pending.sourceRevision)
+      ActiveMeshSourceRevision.erase(active);
   };
 
   // P1-a/b: holes → Priority; drawable+Light → no Dirty (MarkRelit owner);
@@ -6833,14 +6914,47 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto revision_ok = [&](PendingGpuApply &pending, bool &out_drop) -> bool
   {
     out_drop = false;
+    if (pending.snapshot.sourceWorldEpoch != CaptureStore.WorldEpoch())
+    {
+      fail_ticket(pending, JobTerminalReason::SubmissionEpochChanged);
+      out_drop = true;
+      return false;
+    }
+    if (pending.phase != PendingGpuApply::Phase::Queued &&
+        !GpuPipeline->GetAllocator().OwnsStagingSlot(pending.ticket.slotKey))
+    {
+      fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);
+      RequeueDirtyPriority(pending.coord,
+                           MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      out_drop = true;
+      return false;
+    }
     const bool catalog_ok =
         pending.inputCatalog == registry.GetDefinitionsCatalogSnapshot();
+    MeshBuildResult geometry;
+    geometry.coord = pending.coord;
+    geometry.sourceWorldEpoch = pending.snapshot.sourceWorldEpoch;
+    geometry.InputStampsValid = pending.snapshot.inputStampsValid;
+    geometry.InputStamps = pending.snapshot.inputStamps;
+    geometry.InputCatalog = pending.inputCatalog;
+    geometry.GeometryInputs =
+        pending.snapshot.GeometryRenderInputs(pending.inputCatalog);
+    geometry.BoundaryOverlay = pending.snapshot.boundaryOverlay;
+    const bool physical_geometry_current =
+        IsCurrentPhysicalGeometry(world, registry, geometry);
     const MeshApplyStaleInputReason stale_reason =
-        ChunkMeshSnapshot::ClassifyStaleInput(
-            pending.snapshot.inputStampsValid, catalog_ok,
-            pending.snapshot.inputStamps, world,
-            pending.snapshot.lightHaloSignatures,
-            pending.snapshot.certifiedPaddedLight);
+        physical_geometry_current
+            ? MeshApplyStaleInputReason::Ok
+            : ChunkMeshSnapshot::ClassifyStaleInput(
+                  pending.snapshot.inputStampsValid, catalog_ok,
+                  pending.snapshot.inputStamps, world,
+                  pending.snapshot.lightHaloSignatures,
+                  pending.snapshot.certifiedPaddedLight);
+    if (physical_geometry_current)
+    {
+      pending.accepted_input_stale = false;
+      pending.accepted_geom_stale = false;
+    }
     // P1-b2/P2: light-only always commit; geom+drawable commit (avoid remesh
     // unfinished blink mid-cruise). Holes (!drawable) still fail+Priority.
     const bool accept_input_stale =
@@ -7018,6 +7132,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       GpuMeshProcessResult gpu_result;
       gpu_result.success = true;
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
+      gpu_result.slotKey = pending_ref.ticket.slotKey;
       gpu_result.quadCount = 0;
       gpu_result.transparent = pending_ref.transparent;
       gpu_result.provisionalLightPreview =
@@ -7043,7 +7158,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
                                             : nullptr,
           pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
-          pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch);
+          pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
+          std::move(pending.resultCredit),
+          &pending.snapshot.lightHaloSignatures);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -7052,7 +7169,6 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
-        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
@@ -7118,6 +7234,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     GpuMeshProcessResult gpu_result;
     gpu_result.success = true;
     gpu_result.slotIndex = pending_ref.ticket.slotIndex;
+    gpu_result.slotKey = pending_ref.ticket.slotKey;
     uint32_t quad_count = 0;
     const auto quad_finish_profile_t0 = gpu_process_profile_sample
                                             ? GpuProfileClock::now()
@@ -7190,7 +7307,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
         pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
                                           : nullptr,
         pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
-        pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch);
+        pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
+        std::move(pending.resultCredit), &pending.snapshot.lightHaloSignatures);
     if (gpu_process_profile_sample)
     {
       gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -7199,7 +7317,6 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (committed)
     {
-      retain_published_light_halo(pending);
       NoteGpuPipelineProgress(pending.coord);
       ++processed;
       ++finished;
@@ -7606,6 +7723,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       GpuMeshProcessResult gpu_result;
       gpu_result.success = true;
       gpu_result.slotIndex = pending_ref.ticket.slotIndex;
+      gpu_result.slotKey = pending_ref.ticket.slotKey;
       uint32_t quad_count = 0;
       const auto quad_finish_profile_t0 = gpu_process_profile_sample
                                               ? GpuProfileClock::now()
@@ -7681,7 +7799,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.inputStampsValid ? &pending.snapshot.inputStamps
                                             : nullptr,
           pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
-          pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch);
+          pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
+          std::move(pending.resultCredit),
+          &pending.snapshot.lightHaloSignatures);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -7690,7 +7810,6 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (committed)
       {
-        retain_published_light_halo(pending);
         NoteGpuPipelineProgress(pending.coord);
         ++processed;
         ++finished;
@@ -7865,7 +7984,6 @@ bool UChunkMeshCache::IsCurrentPhysicalGeometry(
   return PrepareRenderLight && Render.Lighting == LightingMode::Full &&
          world.GetLightingConfigurationIdentity() !=
              static_cast<uint64_t>(LightingMode::Flat) &&
-         !result.GpuExtractPending && !result.PendingSnapshot &&
          result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
          result.InputStampsValid && result.GeometryInputs.valid &&
          (!result.BoundaryOverlay.active ||
@@ -7886,6 +8004,8 @@ void UChunkMeshCache::DropGeometryAwaitingLight(glm::ivec3 coord)
     UJobStageTrace::NoteTerminal(found->second.result.stageTrace,
                                  JobStage::Cancelled,
                                  JobTerminalReason::JobIdentityReplaced);
+  if (GpuPipeline && found->second.gpu)
+    GpuPipeline->GetAllocator().ReleaseStagingSlot(found->second.gpu->slotKey);
   GeometryAwaitingLightBytes_ -= found->second.bytes;
   GeometryAwaitingLight_.erase(found);
   const auto queued = std::find(GeometryAwaitingLightQueue_.begin(),
@@ -7897,9 +8017,13 @@ void UChunkMeshCache::DropGeometryAwaitingLight(glm::ivec3 coord)
 void UChunkMeshCache::ClearGeometryAwaitingLight(JobTerminalReason reason)
 {
   for (const auto &entry : GeometryAwaitingLight_)
+  {
     if (entry.second.result.jobId)
       UJobStageTrace::NoteTerminal(entry.second.result.stageTrace,
                                    JobStage::Cancelled, reason);
+    if (GpuPipeline && entry.second.gpu)
+      GpuPipeline->GetAllocator().ReleaseStagingSlot(entry.second.gpu->slotKey);
+  }
   GeometryAwaitingLight_.clear();
   GeometryAwaitingLightQueue_.clear();
   GeometryAwaitingLightBytes_ = 0;
@@ -7907,14 +8031,18 @@ void UChunkMeshCache::ClearGeometryAwaitingLight(JobTerminalReason reason)
 
 bool UChunkMeshCache::RetainGeometryAwaitingLight(
     const UBlockWorld &world, const UBlockRegistry &registry,
-    MeshBuildResult &&result)
+    MeshBuildResult &&result, std::optional<GpuMeshProcessResult> gpu)
 {
-  if (!IsCurrentPhysicalGeometry(world, registry, result) ||
+  if (result.GpuExtractPending || result.PendingSnapshot ||
+      !IsCurrentPhysicalGeometry(world, registry, result) ||
       result.sourceRevision != MeshRevisions.Current(result.coord) ||
-      (!HasCrossInstances(result.crossCenters) &&
+      (!gpu && !HasCrossInstances(result.crossCenters) &&
        std::none_of(
            result.batches.begin(), result.batches.end(), [](const auto &batch)
            { return !batch.vertices.empty() && !batch.indices.empty(); })))
+    return false;
+  if (gpu && (!GpuPipeline || gpu->slotIndex != gpu->slotKey.Index() ||
+              !GpuPipeline->GetAllocator().OwnsStagingSlot(gpu->slotKey)))
     return false;
   const auto active = ActiveMeshSourceRevision.find(result.coord);
   if (active != ActiveMeshSourceRevision.end() &&
@@ -7937,6 +8065,9 @@ bool UChunkMeshCache::RetainGeometryAwaitingLight(
   for (const auto &cross : result.crossCenters)
     if (!add(cross.second.capacity(), sizeof(CrossInstanceGpu)))
       return false;
+  if (gpu && (!add(gpu->blockRanges.capacity(), sizeof(GpuBlockDrawRange)) ||
+              !add(1, UGpuMeshSlotAllocator::kBytesPerSlot)))
+    return false;
   if (GeometryAwaitingLight_.count(result.coord) ||
       GeometryAwaitingLight_.size() >= kAwaitingLightMaxCount ||
       bytes > kAwaitingLightMaxBytes - GeometryAwaitingLightBytes_)
@@ -7948,7 +8079,7 @@ bool UChunkMeshCache::RetainGeometryAwaitingLight(
   if (result.jobId)
     NoteMeshJobStage(result.stageTrace, JobStage::AwaitingLight);
   GeometryAwaitingLight_.emplace(
-      coord, GeometryAwaitingLight{std::move(result), bytes});
+      coord, GeometryAwaitingLight{std::move(result), bytes, std::move(gpu)});
   GeometryAwaitingLightQueue_.push_back(coord);
   GeometryAwaitingLightBytes_ += bytes;
   LastApplyWasRetainedPrior_ = true;
@@ -7976,7 +8107,11 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
         IsCurrentPhysicalGeometry(world, registry, result);
     const bool revision_current =
         result.sourceRevision == MeshRevisions.Current(coord);
-    if (!owned || !revision_current || !geometry_current)
+    const bool slot_current =
+        !found->second.gpu ||
+        (GpuPipeline && GpuPipeline->GetAllocator().OwnsStagingSlot(
+                            found->second.gpu->slotKey));
+    if (!owned || !revision_current || !geometry_current || !slot_current)
     {
       const bool needs_new_geometry_revision =
           owned && revision_current &&
@@ -7985,8 +8120,11 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
       if (result.jobId)
         UJobStageTrace::NoteTerminal(result.stageTrace, JobStage::Retired,
                                      JobTerminalReason::StaleGeometryInput);
-      if (owned)
+      if (owned && result.sourceWorldEpoch == CaptureStore.WorldEpoch())
         ActiveMeshSourceRevision.erase(active);
+      if (GpuPipeline && found->second.gpu)
+        GpuPipeline->GetAllocator().ReleaseStagingSlot(
+            found->second.gpu->slotKey);
       GeometryAwaitingLightBytes_ -= found->second.bytes;
       GeometryAwaitingLight_.erase(found);
       if (world.GetChunkManager().HasChunk(coord))
@@ -8015,10 +8153,29 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
     result.ProvisionalLightPreview = false;
     result.IndependentPhysicalField = true;
     MeshBuildResult ready = std::move(result);
+    auto gpu = std::move(found->second.gpu);
     GeometryAwaitingLightBytes_ -= found->second.bytes;
     GeometryAwaitingLight_.erase(found);
     const auto before = GetPublishCount(coord);
-    ApplyMeshResult(world, registry, std::move(ready));
+    if (gpu)
+    {
+      ActiveMeshSourceRevision.erase(coord);
+      gpu->provisionalLightPreview = false;
+      const bool committed = CommitGpuMeshResult(
+          world, registry, coord, ready.sourceRevision, std::move(*gpu),
+          std::move(ready.crossCenters), false, chunk->GetLightFieldRevision(),
+          true, ready.BoundaryOverlay, false, ready.stageTrace,
+          &ready.InputStamps, ready.GeometryInputs, ready.RenderLight,
+          ready.sourceWorldEpoch, std::move(ready.ResultCredit),
+          &ready.InputLightHaloSignatures);
+      if (committed)
+      {
+        ++LastGpuFinishN;
+        NoteGpuPipelineProgress(coord);
+      }
+    }
+    else
+      ApplyMeshResult(world, registry, std::move(ready));
     published += GetPublishCount(coord) != before;
   }
   return published;
@@ -8060,7 +8217,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
-      result.IndependentPhysicalField &&
+      (result.IndependentPhysicalField || result.GpuExtractPending) &&
               IsCurrentPhysicalGeometry(world, registry, result)
           ? MeshApplyStaleInputReason::Ok
           : ChunkMeshSnapshot::ClassifyStaleInput(
@@ -9126,6 +9283,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     int32_t index = -1, size = 0;
     const auto queue = GetDirtyQueueTrace(*target, index, size);
+    const auto awaiting = GeometryAwaitingLight_.find(*target);
     std::ostringstream message;
     message << "watch coord=(" << target->x << "," << target->y << ","
             << target->z << ") frame_epoch=" << MeshFocusFrameEpoch
@@ -9140,6 +9298,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             << " inflight=" << HasInflightMeshBuild(*target)
             << " capture_pending=" << PendingCaptureSet_.count(*target)
             << " awaiting_light=" << GeometryAwaitingLight_.count(*target)
+            << " awaiting_light_gpu="
+            << (awaiting != GeometryAwaitingLight_.end() &&
+                awaiting->second.gpu.has_value())
             << " async_completed=" << GetMeshCompletedSize();
     CubatariumLogInfo("ChunkPublication", message.str());
   }

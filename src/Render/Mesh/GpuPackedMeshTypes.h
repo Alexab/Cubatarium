@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Render/Mesh/GpuStagingSlotKey.h"
 #include "World/Math/BlockTypes.h"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -31,6 +32,7 @@ struct GpuMeshProcessResult
 {
   bool success{false};
   int slotIndex{-1};
+  GpuStagingSlotKey slotKey;
   uint32_t quadCount{0};
   bool transparent{false};
   /// At least one non-bottom face quad has zero sky and block light.

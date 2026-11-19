@@ -12,6 +12,8 @@ bool UGpuMeshSlotAllocator::Init(uint32_t max_slots)
   (void)max_slots;
   return false;
 #else
+  Shutdown();
+  AllocationIdentity_ = std::make_shared<const uint8_t>(0);
   MaxSlots = max_slots;
   StagingAllocationFailureCount_ = 0;
   Slots.resize(max_slots);
@@ -56,6 +58,11 @@ void UGpuMeshSlotAllocator::Shutdown()
   Slots.clear();
   FreeList.clear();
   ChunkToSlot.clear();
+  MaxSlots = 0;
+  OpaqueCommands.clear();
+  TransparentCommands.clear();
+  AllocationIdentity_.reset();
+  FenceCompletedGeneration_ = 0;
 }
 
 int UGpuMeshSlotAllocator::AllocateSlot(glm::ivec3 chunk_coord,
@@ -80,6 +87,7 @@ int UGpuMeshSlotAllocator::AllocateSlot(glm::ivec3 chunk_coord,
   slot.Transparent = transparent;
   slot.generation = NextSlotGeneration();
   slot.still_live_draw = true;
+  slot.allocated = true;
   ChunkToSlot[chunk_coord] = slot_idx;
   return slot_idx;
 }
@@ -100,7 +108,45 @@ int UGpuMeshSlotAllocator::AllocateStagingSlot(bool transparent)
   slot.Transparent = transparent;
   slot.generation = NextSlotGeneration();
   slot.still_live_draw = false;
+  slot.allocated = true;
   return slot_idx;
+}
+
+GpuStagingSlotKey
+UGpuMeshSlotAllocator::CaptureStagingSlotKey(int slot_index) const
+{
+  GpuStagingSlotKey key;
+  const auto *slot = GetSlotByIndex(slot_index);
+  if (slot && slot->allocated && !slot->still_live_draw && AllocationIdentity_)
+  {
+    key.Index_ = slot_index;
+    key.Generation_ = slot->generation;
+    key.AllocatorIdentity_ = AllocationIdentity_;
+  }
+  return key;
+}
+
+bool UGpuMeshSlotAllocator::OwnsStagingSlot(const GpuStagingSlotKey &key) const
+{
+  if (!MatchesStagingStorage(key))
+    return false;
+  const auto *slot = GetSlotByIndex(key.Index_);
+  return slot && slot->allocated && !slot->still_live_draw &&
+         slot->generation == key.Generation_;
+}
+
+bool UGpuMeshSlotAllocator::MatchesStagingStorage(
+    const GpuStagingSlotKey &key) const
+{
+  return key.IsValid() && key.AllocatorIdentity_ == AllocationIdentity_;
+}
+
+bool UGpuMeshSlotAllocator::ReleaseStagingSlot(const GpuStagingSlotKey &key)
+{
+  if (!OwnsStagingSlot(key))
+    return false;
+  FreeSlotByIndex(key.Index_);
+  return true;
 }
 
 void UGpuMeshSlotAllocator::BindCommittedSlot(glm::ivec3 chunk_coord,
@@ -110,6 +156,8 @@ void UGpuMeshSlotAllocator::BindCommittedSlot(glm::ivec3 chunk_coord,
   {
     return;
   }
+  if (!Slots[static_cast<size_t>(slot_index)].allocated)
+    return;
   auto it = ChunkToSlot.find(chunk_coord);
   if (it != ChunkToSlot.end())
   {
@@ -138,10 +186,7 @@ void UGpuMeshSlotAllocator::FreeSlot(glm::ivec3 chunk_coord)
   {
     return;
   }
-  const int slot_idx = it->second;
-  Slots[static_cast<size_t>(slot_idx)].QuadCount = 0;
-  FreeList.push_back(slot_idx);
-  ChunkToSlot.erase(it);
+  FreeSlotByIndex(it->second);
 }
 
 void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
@@ -150,6 +195,8 @@ void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
   {
     return;
   }
+  if (!Slots[static_cast<size_t>(slot_index)].allocated)
+    return;
   // If this index is the live binding for its chunk, drop the map entry.
   for (auto it = ChunkToSlot.begin(); it != ChunkToSlot.end(); ++it)
   {
@@ -161,6 +208,7 @@ void UGpuMeshSlotAllocator::FreeSlotByIndex(int slot_index)
   }
   Slots[static_cast<size_t>(slot_index)].QuadCount = 0;
   Slots[static_cast<size_t>(slot_index)].still_live_draw = false;
+  Slots[static_cast<size_t>(slot_index)].allocated = false;
   FreeList.push_back(slot_index);
 }
 

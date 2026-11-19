@@ -412,19 +412,9 @@ void UGpuMeshPipeline::ShutdownGpuSort()
 void UGpuMeshPipeline::Shutdown()
 {
   Allocator.Shutdown();
-  while (!PendingQueue.empty())
-  {
-    PendingQueue.pop();
-  }
   ShutdownGpuSort();
   DestroyReadbackPbo();
   Ready = false;
-}
-
-void UGpuMeshPipeline::EnqueueSnapshot(ChunkMeshSnapshot snapshot,
-                                       uint64_t source_revision)
-{
-  PendingQueue.push({std::move(snapshot), source_revision});
 }
 
 void UGpuMeshPipeline::EnsureReadbackPbo()
@@ -435,6 +425,7 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
   {
     return;
   }
+  ReadbackStorageIdentity_ = std::make_shared<const uint8_t>(0);
   const GLsizeiptr bytes =
       kReadbackQuadsOffset +
       static_cast<GLsizeiptr>(UGpuMeshSlotAllocator::kMaxQuadsPerSlot *
@@ -491,6 +482,8 @@ void UGpuMeshPipeline::EnsureReadbackPbo()
 
 void UGpuMeshPipeline::DestroyReadbackPbo()
 {
+  ReadbackStorageIdentity_.reset();
+  ReadbackGenerations_.fill(0);
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
 #else
   for (int i = 0; i < kReadbackRing; ++i)
@@ -517,9 +510,10 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
 #endif
 }
 
-int UGpuMeshPipeline::AcquireReadbackSlot()
+int UGpuMeshPipeline::AcquireReadbackSlot(GpuApplyTicket &ticket)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
+  (void)ticket;
   return -1;
 #else
   EnsureReadbackPbo();
@@ -528,6 +522,10 @@ int UGpuMeshPipeline::AcquireReadbackSlot()
     if (!ReadbackInUse[i])
     {
       ReadbackInUse[i] = true;
+      ticket.pboIndex = i;
+      ticket.readbackKey.Index_ = i;
+      ticket.readbackKey.Generation_ = ++ReadbackGenerations_[i];
+      ticket.readbackKey.Storage_ = ReadbackStorageIdentity_;
       return i;
     }
   }
@@ -535,12 +533,28 @@ int UGpuMeshPipeline::AcquireReadbackSlot()
 #endif
 }
 
+bool UGpuMeshPipeline::MatchesReadbackStorage(
+    const GpuApplyTicket &ticket) const
+{
+  return ticket.readbackKey.Storage_ &&
+         ticket.readbackKey.Storage_ == ReadbackStorageIdentity_;
+}
+
+bool UGpuMeshPipeline::OwnsReadbackSlot(const GpuApplyTicket &ticket) const
+{
+  const int index = ticket.pboIndex;
+  return MatchesReadbackStorage(ticket) && index >= 0 &&
+         index < kReadbackRing && ticket.readbackKey.Index_ == index &&
+         ReadbackInUse[index] &&
+         ReadbackGenerations_[index] == ticket.readbackKey.Generation_;
+}
+
 void UGpuMeshPipeline::ReleaseReadbackSlot(GpuApplyTicket &ticket)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   ticket.pboIndex = -1;
 #else
-  if (ticket.pboIndex >= 0 && ticket.pboIndex < kReadbackRing)
+  if (OwnsReadbackSlot(ticket))
   {
     ReadbackInUse[ticket.pboIndex] = false;
   }
@@ -705,6 +719,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
                                          ComputeKickProfile *profile)
 {
   out_ticket = {};
+  out_ticket.slotKey = Allocator.CaptureStagingSlotKey(slot_idx);
   out_ticket.provisionalLightPreview = snapshot.provisionalLightPreview;
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)snapshot;
@@ -769,7 +784,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
 
   const auto readback_slot_start = profile ? ProfileClock::now()
                                            : ProfileClock::time_point{};
-  const int pbo_index = AcquireReadbackSlot();
+  const int pbo_index = AcquireReadbackSlot(out_ticket);
   if (profile)
   {
     profile->readback_slot_ms +=
@@ -1058,6 +1073,9 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryCompleteCountersAndEmit(
   (void)profile;
   return GpuFinishStatus::Failed;
 #else
+  if ((ticket.pboIndex >= 0 && !OwnsReadbackSlot(ticket)) ||
+      !Allocator.OwnsStagingSlot(ticket.slotKey))
+    return GpuFinishStatus::Failed;
   if (!ticket.valid || !ticket.awaitingCounters)
   {
     return ticket.valid ? GpuFinishStatus::Ready : GpuFinishStatus::Failed;
@@ -1242,6 +1260,9 @@ UGpuMeshPipeline::GpuFinishStatus UGpuMeshPipeline::TryFinishComputePasses(
   (void)timeout_ns;
   return GpuFinishStatus::Failed;
 #else
+  if ((ticket.pboIndex >= 0 && !OwnsReadbackSlot(ticket)) ||
+      !Allocator.OwnsStagingSlot(ticket.slotKey))
+    return GpuFinishStatus::Failed;
   if (!ticket.valid)
   {
     return GpuFinishStatus::Failed;
@@ -1495,37 +1516,11 @@ bool UGpuMeshPipeline::ProcessSnapshot(const ChunkMeshSnapshot &snapshot,
 
   out_result.success = true;
   out_result.slotIndex = slot_idx;
+  out_result.slotKey = Allocator.CaptureStagingSlotKey(slot_idx);
   out_result.quadCount = quad_count;
   out_result.transparent = has_transparent;
   out_result.provisionalLightPreview = snapshot.provisionalLightPreview;
   return true;
-#endif
-}
-
-int UGpuMeshPipeline::ProcessQueue(UBlockRegistry &registry, int budget)
-{
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-  (void)registry;
-  (void)budget;
-  return 0;
-#else
-  if (!Ready || PendingQueue.empty())
-  {
-    return 0;
-  }
-
-  int processed = 0;
-  while (!PendingQueue.empty() && processed < budget)
-  {
-    PendingChunk pending = std::move(PendingQueue.front());
-    PendingQueue.pop();
-    GpuMeshProcessResult result;
-    if (ProcessSnapshot(pending.Snapshot, registry, result))
-    {
-      ++processed;
-    }
-  }
-  return processed;
 #endif
 }
 

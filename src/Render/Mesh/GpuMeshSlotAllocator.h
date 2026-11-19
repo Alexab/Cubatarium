@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/GpuStagingSlotKey.h"
 #include "Render/Mesh/PackedQuad.h"
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -20,6 +21,7 @@ struct GpuMeshSlot
   /// A27 S3: generation for deferred retirement / fence ownership.
   uint64_t generation{0};
   bool still_live_draw{false};
+  bool allocated{false};
 };
 
 /// DrawElementsIndirectCommand for glMultiDrawElementsIndirect.
@@ -55,6 +57,10 @@ public:
   /// Allocate a free slot without binding it to a chunk (staging for apply).
   /// Bound only via BindCommittedSlot after a successful commit.
   int AllocateStagingSlot(bool transparent);
+  GpuStagingSlotKey CaptureStagingSlotKey(int slot_index) const;
+  bool MatchesStagingStorage(const GpuStagingSlotKey &key) const;
+  bool OwnsStagingSlot(const GpuStagingSlotKey &key) const;
+  bool ReleaseStagingSlot(const GpuStagingSlotKey &key);
 
   /// Publish a staging slot as the live mesh for coord (frees prior live slot).
   void BindCommittedSlot(glm::ivec3 chunk_coord, int slot_index);
@@ -133,6 +139,7 @@ private:
   uint64_t NextGeneration_{1};
   uint64_t FenceCompletedGeneration_{0};
   uint64_t StagingAllocationFailureCount_{0};
+  std::shared_ptr<const uint8_t> AllocationIdentity_;
 };
 
 } // namespace cutum
