@@ -4,6 +4,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include "World/Lighting/PersistedSectionLightTypes.h"
 #include <atomic>
 #include <cstdint>
 #include <limits>
@@ -72,6 +73,15 @@ public:
                          const std::string &worldFolder,
                          UBlockRegistry &registry, int maxWorldY,
                          int minWorldY = 0);
+  static std::string ColumnLightFilePath(const std::string &worldFolder,
+                                         glm::ivec3 column);
+  std::shared_ptr<const PersistedColumnLight>
+  CaptureColumnLight(glm::ivec3 column, const UBlockWorld &world,
+                     UBlockRegistry &registry) const;
+  bool WriteColumnLight(const std::string &worldFolder, glm::ivec3 column,
+                        const PersistedColumnLight &receipts) const;
+  std::shared_ptr<const PersistedColumnLight>
+  ReadColumnLight(const std::string &worldFolder, glm::ivec3 column) const;
   int LoadTerrainColumn(glm::ivec3 groundCoord, UBlockWorld &world,
                         const std::string &worldFolder,
                         UBlockRegistry &registry, int maxWorldY,

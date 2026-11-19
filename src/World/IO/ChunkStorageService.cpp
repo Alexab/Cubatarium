@@ -1,7 +1,9 @@
 #include "World/IO/ChunkStorageService.h"
+#include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Lighting/PersistedSectionLight.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <filesystem>
@@ -533,11 +535,150 @@ bool UChunkStorageService::RemoveTerrainColumnFromDisk(
       }
     }
   }
+  std::error_code light_error;
+  std::filesystem::remove(ColumnLightFilePath(worldFolder, groundCoord),
+                          light_error);
+  if (light_error)
+  {
+    success = false;
+    if (first_error.empty())
+      first_error = light_error.message();
+  }
   if (outError && !success)
   {
     *outError = std::move(first_error);
   }
   return success;
+}
+
+std::string
+UChunkStorageService::ColumnLightFilePath(const std::string &worldFolder,
+                                          glm::ivec3 column)
+{
+  return worldFolder + "/light/" + std::to_string(column.x) + "_" +
+         std::to_string(column.z) + ".json";
+}
+
+std::shared_ptr<const PersistedColumnLight>
+UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
+                                         const UBlockWorld &world,
+                                         UBlockRegistry &registry) const
+{
+  auto receipts = std::make_shared<PersistedColumnLight>();
+  const auto &profile = world.GetVerticalProfile();
+  if (!profile.IsValid())
+    return receipts;
+  const int64_t low = profile.MinChunkY(CHUNK_SIZE);
+  const int64_t high = profile.MaxChunkY(CHUNK_SIZE);
+  if (high - low + 1 > PersistedSectionLight::MaxDependencies)
+    return receipts;
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  size_t bytes = 0;
+  for (int64_t cy = low; cy <= high; ++cy)
+  {
+    auto receipt =
+        CaptureSectionLight(world, {column.x, int(cy), column.z}, catalog);
+    if (!receipt)
+      continue;
+    const size_t size = PersistedLightBytes(*receipt);
+    if (receipts->size() >= kMaxColumnLightSections ||
+        size > kMaxColumnLightBytes - bytes)
+      break;
+    bytes += size;
+    receipts->push_back(
+        std::make_shared<const PersistedSectionLight>(std::move(*receipt)));
+  }
+  return receipts;
+}
+
+bool UChunkStorageService::WriteColumnLight(
+    const std::string &worldFolder, glm::ivec3 column,
+    const PersistedColumnLight &receipts) const
+{
+  if (receipts.size() > kMaxColumnLightSections)
+    return false;
+  json fields = json::array();
+  size_t bytes = 0;
+  int64_t previous = std::numeric_limits<int>::min() - int64_t{1};
+  for (const auto &receipt : receipts)
+  {
+    if (!receipt || receipt->coord.x != column.x ||
+        receipt->coord.z != column.z || receipt->coord.y <= previous ||
+        PersistedLightBytes(*receipt) > kMaxColumnLightBytes - bytes)
+      return false;
+    previous = receipt->coord.y;
+    bytes += PersistedLightBytes(*receipt);
+    fields.push_back(EncodeSectionLight(*receipt));
+  }
+  const auto text = json{{"format_version", 1},
+                         {"column", {column.x, column.z}},
+                         {"fields", std::move(fields)}}
+                        .dump();
+  if (text.size() > kMaxColumnLightBytes)
+    return false;
+  try
+  {
+    return WriteBytesAtomically(ColumnLightFilePath(worldFolder, column),
+                                std::vector<uint8_t>(text.begin(), text.end()));
+  }
+  catch (const std::filesystem::filesystem_error &)
+  {
+    return false;
+  }
+}
+
+std::shared_ptr<const PersistedColumnLight>
+UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
+                                      glm::ivec3 column) const
+{
+  try
+  {
+    // Bound the actual read too: a file can grow after a size probe.
+    std::ifstream file(ColumnLightFilePath(worldFolder, column),
+                       std::ios::binary);
+    if (!file)
+      return {};
+    std::string text;
+    char buffer[4096];
+    while (file.read(buffer, sizeof(buffer)) || file.gcount())
+    {
+      if (size_t(file.gcount()) > kMaxColumnLightBytes - text.size())
+        return {};
+      text.append(buffer, size_t(file.gcount()));
+    }
+    if (!file.eof())
+      return {};
+    const auto data = json::parse(text);
+    int version = 0, x = 0, z = 0;
+    if (!persisted_light_detail::Integer(data.at("format_version"), version) ||
+        version != 1 || !data.at("column").is_array() ||
+        data.at("column").size() != 2 ||
+        !persisted_light_detail::Integer(data.at("column")[0], x) ||
+        !persisted_light_detail::Integer(data.at("column")[1], z) ||
+        x != column.x || z != column.z || !data.at("fields").is_array() ||
+        data.at("fields").size() > kMaxColumnLightSections)
+      return {};
+    auto receipts = std::make_shared<PersistedColumnLight>();
+    size_t bytes = 0;
+    int64_t previous = std::numeric_limits<int>::min() - int64_t{1};
+    for (const auto &row : data.at("fields"))
+    {
+      auto receipt = DecodeSectionLight(row);
+      if (!receipt || receipt->coord.x != x || receipt->coord.z != z ||
+          receipt->coord.y <= previous ||
+          PersistedLightBytes(*receipt) > kMaxColumnLightBytes - bytes)
+        return {};
+      previous = receipt->coord.y;
+      bytes += PersistedLightBytes(*receipt);
+      receipts->push_back(
+          std::make_shared<const PersistedSectionLight>(std::move(*receipt)));
+    }
+    return receipts;
+  }
+  catch (const json::exception &)
+  {
+    return {};
+  }
 }
 
 void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
@@ -550,6 +691,8 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   {
     groundCoord.y = 0;
   }
+  const auto light = CaptureColumnLight(groundCoord, world, registry);
+  WriteColumnLight(worldFolder, groundCoord, *light);
   const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
   const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
@@ -624,6 +767,12 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   }
   MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY,
                                          highestToLoad, minWorldY);
+  if (const auto receipts = ReadColumnLight(worldFolder, groundCoord))
+    for (const auto &receipt : *receipts)
+      if (!world.HasCompleteLightSamplingCalculation(
+              receipt->coord, registry.GetDefinitionsCatalogSnapshot()))
+        RestoreSectionLight(world, *receipt,
+                            registry.GetDefinitionsCatalogSnapshot());
   return total > 0 ? total : 1;
 }
 

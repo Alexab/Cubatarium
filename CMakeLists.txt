@@ -1110,6 +1110,10 @@ cubatarium_add_test(NAME chunk_streamer_committed_column_test
 
 cubatarium_add_test(NAME negative_height_storage_test
     SOURCES
+        src/Core/Jobs/JobThreadPool.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/World/IO/AsyncChunkIO.cpp
         src/World/Chunks/Chunk.cpp
         src/World/Chunks/ChunkManager.cpp
         src/World/Chunks/ChunkBuffer.cpp
@@ -1131,7 +1135,7 @@ cubatarium_add_test(NAME negative_height_storage_test
         src/World/Math/GridMath.cpp
         src/Test/NegativeHeightStorageTest.cpp
     DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
-    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json Threads::Threads)
 
 cubatarium_add_test(NAME world_mesh_service_test
     SOURCES

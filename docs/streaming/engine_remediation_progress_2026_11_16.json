@@ -10428,5 +10428,113 @@
       "Integrate typed receipts into normal asynchronous terrain save/load with optional backward-compatible metadata, bounded IO/memory and pending restore ownership; keep missing/corrupt/stale metadata on the real relight path.",
       "Add real save/evict/reload and deferred/mutated dependency regressions before Release native return/reload scenarios. Continue other S0..S6 requirements without restarting the audit."
     ]
+  },
+  "persisted_section_light_column_IO_2026_11_19": {
+    "status": "ordinary_column_IO_and_bounded_restore_wired_focused_tests_verified_desktop_native_pending_full_S0_S6_active",
+    "source_base_commit": "271544732b749eadec0565c8ad55adc875d3e6a4",
+    "implementation": {
+      "storage": "Optional world/light/X_Z.json per-column collection; existing binary/JSON terrain formats unchanged. Ordinary sync column save snapshots all current calculated fields across the configured profile, including independent AIR fields above highest saved terrain. Sync load opportunistically restores current compatible fields after geometry load; missing inputs remain on real relight path.",
+      "async": "WorldPersistence captures immutable per-column field receipts before pending-save evidence gates and legacy AIR materialization, then background worker encodes/writes optional metadata. One ordinary column slice worker reads/decode receipts under the same demand/token/cancellation as terrain. Absent terrain worker can still return optional metadata. Metadata completions do not enter the terrain disk index.",
+      "ownership": "Pending SectionLightRestoreQueue bounded256 tickets/16MiB; fair visit budget2, coordinate replacement, exact load-generation check, current complete runtime calculation takes precedence, InputsUnavailable retains the same owner without clearing normal relight debt. Matching actual installation notifies existing per-slice settlement through UWorld. Column cancel/world-path switch/IO abort retire pending receipts.",
+      "bounds": "Collection256 fields and8MiB file/retained snapshot limits; actual streaming read bounded even if file grows. Missing/corrupt/malformed/oversized/wrong-column metadata does not grant readiness. Full column purge removes optional metadata.",
+      "legacy": "Global column signature/coordinate flag alone no longer authorizes trusted disk branch; current physical column coverage is additionally required.",
+      "types": "Separate lightweight persisted data types permit immutable handles in AsyncChunkLoadResult without copying full padded arrays through completion ranking."
+    },
+    "regressions": {
+      "file": "src/Test/NegativeHeightStorageTest.cpp",
+      "coverage": [
+        "Actual ordinary sync terrain save and cold reopen retain AIR receipts above highest terrain slice, full8000 bytes and fresh identities without geometry allocation.",
+        "Real UAsyncChunkIO worker writes metadata separately, completes absent-terrain read with exact load owner, joins decoded binary terrain+receipts, and does not complete pre-cancelled metadata load.",
+        "Unknown dependencies retain owner; one-visit fairness lets an independent ready field pass; late authoritative geometry restores AIR bytes and releases owner.",
+        "Changed source rejects cache without readiness signal, stale load token cancels even when content is restorable; replacement/cancel/clear retire ownership.",
+        "Current complete physical field wins over obsolete disk payload; count256 and16MiB refusal do not lose earlier owners.",
+        "Malformed optional file fallback, valid replacement, over8MiB otherwise-valid JSON plus trailing whitespace rejected before parsing, full purge removes metadata."
+      ],
+      "initial_tests": "build/desktop-msvc/persisted-light-async-io-v2-test-20261119.log"
+    },
+    "controls": [
+      {
+        "name": "load-owner",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "stale load generation cannot restore or signal a field",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-load-owner-test.log"
+      },
+      {
+        "name": "count-bound",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "receipt queue refuses capacity overflow without losing existing owners",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-count-bound-test.log"
+      },
+      {
+        "name": "byte-bound",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "receipt queue refuses an oversized payload before retaining it",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-byte-bound-test.log"
+      },
+      {
+        "name": "current-field",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "current physical calculation supersedes disk cache without overwriting its field",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-current-field-test.log"
+      },
+      {
+        "name": "absent-terrain-load",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "absent terrain fast path still delivers optional receipts under its exact load owner",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-absent-terrain-load-test.log"
+      },
+      {
+        "name": "file-read-bound",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "column receipt file reads are bounded before JSON parsing",
+        "log": "build/desktop-msvc/persisted-light-io-20261119-file-read-bound-test.log"
+      },
+      {
+        "name": "ordinary-save",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "actual binary slice load carries decoded terrain and column receipts together",
+        "log": "build/desktop-msvc/persisted-light-io-v2-20261119-ordinary-save-test.log"
+      }
+    ],
+    "source_sha256": {
+      "CMakeLists.txt": "ba611b9a383a032dec268d186f91a9a448a177b883183e1943265e7747e3f432",
+      "src/Test/NegativeHeightStorageTest.cpp": "f7d0bbe892c1242697ccd747e8baeac8fd95aa8b3a66b0f79cfb51e4ef672dc3",
+      "src/World/IO/AsyncChunkIO.cpp": "a5c4c475cf03083cba0938c66294431b17095fbd94dd58ad377bd76dab5e2886",
+      "src/World/IO/AsyncChunkIO.h": "decd10abcece24cbe521e1971367b5234ccb06096be2eda6a214e19d1a168faf",
+      "src/World/IO/ChunkStorageService.cpp": "f7aadae3cb36ceef1dae3ec45d8fea6fd4d2a60792086214b1f024e22d220205",
+      "src/World/IO/ChunkStorageService.h": "64330427ae4696de53dfd596ed76568e46f93b1c6798f27830c977b85a29b11f",
+      "src/World/Lighting/PersistedSectionLight.h": "a211c6161de5734c35edd23c52f20ab2da2ddcfbafe6e6ec0552ed533b639d74",
+      "src/World/Lighting/PersistedSectionLightTypes.h": "9f619eb750bb0d1cbd3f44d45603e7f7e05292b6701ec34579cd89aa533230ae",
+      "src/World/Lighting/SectionLightRestoreQueue.h": "b6cec1eb508e62b8c96ec1c009b14967439c55f86f7b9014d45af9fc1ba2a365",
+      "src/World/Persistence/WorldPersistence.cpp": "421cc4a5e9317abe35c57027c58c439b397c41a66c61d752ece76bcd035c5a75",
+      "src/World/Persistence/WorldPersistence.h": "664b120faafc2997e9828b6d69f41056a48a451fb8ec7d48e82591afb7fb6def"
+    },
+    "restored_matrix": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 8.75,
+      "log": "build/desktop-msvc/persisted-light-io-v2-20261119-restored-thirty-two-tests.log"
+    },
+    "harness_note": "First run matched6controls; ordinary-save removal failed earlier than the initially selected assertion, at joined binary+receipt load. V2 reran that control with the exact earlier assertion, restored identical source bytes, and passed32tests. Both raw receipts retained; no implementation change was made to get the control green.",
+    "limits": [
+      "Desktop compilation/native verification are next; no gameplay reload or cache-hit acceptance is claimed by focused tests.",
+      "AIR fields above the geometry top in terrain-backed columns are saved/loaded by this path. Fully geometry-free procedural columns can save metadata, but automatic metadata discovery during procedural-only AIR column generation remains an open lifecycle/provider integration point.",
+      "Legacy AIR materialization still occurs during async terrain save after the immutable light snapshot; removing that geometry-residency coupling is a separate full-lifecycle requirement.",
+      "Per-result/per-column/pending-restore bounds do not prove whole-process completion-queue capacity or frame-time/memory acceptance. Full native performance remains unaccepted.",
+      "WorldPersistence glue including global-column trust/current coverage is compiled next; unit workers and restore owner regression do not establish whole-UWorld integration acceptance.",
+      "Full S0..S6, semantic geometry/optics identity, persisted cache edge cases and world compatibility, true GPU/backend parity, independent nonzero RGB/wet/transparency references and seed/radius/return/edit/save/eviction/performance/memory matrix remain active."
+    ],
+    "next": [
+      "Build required Release Cubatarium from committed source and run wet native regression without changing diagnostics/route.",
+      "Use retained isolated world and cold reload/return to inspect real metadata writes/restores/ownership, then add missing procedural AIR discovery and performance/lifecycle bounds without weakening readiness."
+    ]
   }
 }

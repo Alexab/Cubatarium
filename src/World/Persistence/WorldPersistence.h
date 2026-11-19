@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/Lighting/SectionLightRestoreQueue.h"
 #include <atomic>
 #include <chrono>
 #include <deque>
@@ -350,6 +351,7 @@ private:
   bool LastDeferredFarAgeServiceWorldKeyValid{false};
   /// Columns whose disk lightmap is trusted (lighting_complete).
   std::unordered_set<glm::ivec2, IVec2Hash> LightCompleteColumns;
+  SectionLightRestoreQueue PendingSectionLightRestores;
   bool LightCompleteDirty{false};
   bool LightCompleteLoaded{false};
   UWorld *WorldContext{nullptr};

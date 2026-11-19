@@ -230,7 +230,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 const std::string &worldFolder,
                                 ChunkGenerationToken token,
                                 std::shared_ptr<std::atomic<bool>> cancellation,
-                                uint64_t demandId)
+                                uint64_t demandId, bool includeColumnLight)
 {
   const auto is_cancelled = [&]()
   {
@@ -252,7 +252,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                : 0.0;
   const auto submitted_at = trace_io ? std::chrono::steady_clock::now()
                                      : std::chrono::steady_clock::time_point{};
-  if (format == ChunkDiskFormat::Absent)
+  if (format == ChunkDiskFormat::Absent && !includeColumnLight)
   {
     AsyncChunkLoadResult result;
     result.coord = coord;
@@ -273,9 +273,9 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
       storage.ChunkFilePath(worldFolder, coord, format);
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
   LoadPool.Enqueue(
-      [this, coord, filePath, token, format, submitted_at,
-       format_detect_ms, trace_io, cancellation, demandId, &registry,
-       worker_storage_settings]()
+      [this, coord, filePath, token, format, submitted_at, format_detect_ms,
+       trace_io, cancellation, demandId, &registry, worker_storage_settings,
+       includeColumnLight, worldFolder]()
       {
         const auto is_cancelled = [&]()
         {
@@ -295,8 +295,19 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         result.submittedAt = submitted_at;
         result.formatDetectMs = format_detect_ms;
         if (trace_io)
-        {
           result.workerStartedAt = std::chrono::steady_clock::now();
+        if (includeColumnLight)
+        {
+          UChunkStorageService worker_storage(worker_storage_settings);
+          result.columnLight =
+              worker_storage.ReadColumnLight(worldFolder, coord);
+        }
+        if (is_cancelled())
+          return;
+        if (format == ChunkDiskFormat::Absent)
+        {
+          PushCompletedLoad(std::move(result));
+          return;
         }
         const auto open_started = result.workerStartedAt;
         std::ifstream file(filePath, std::ios::binary);
@@ -381,6 +392,40 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         {
           NoteLoadCancellation();
         }
+      });
+}
+
+void UAsyncChunkIO::RequestSaveColumnLight(
+    glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
+    UChunkStorageService &storage, const std::string &worldFolder)
+{
+  const auto settings = storage.GetSettings();
+  column.y = 0;
+  EnqueueBackgroundIo(
+      [this, column, receipts = std::move(receipts), settings, worldFolder]()
+      {
+        AsyncChunkSaveRequest done;
+        done.coord = done.groundCoord = column;
+        done.worldFolder = worldFolder;
+        done.filePath =
+            UChunkStorageService::ColumnLightFilePath(worldFolder, column);
+        // Metadata never enters the terrain disk index or changes known-AIR
+        // evidence.
+        done.cleanupOnly = true;
+        done.cleanupOperation = "column_light_receipts";
+        try
+        {
+          UChunkStorageService worker_storage(settings);
+          done.success = receipts && worker_storage.WriteColumnLight(
+                                         worldFolder, column, *receipts);
+          if (!done.success)
+            done.error = "column_light_write_failed";
+        }
+        catch (const std::exception &error)
+        {
+          done.error = error.what();
+        }
+        CompletedSaves.Push(std::move(done));
       });
 }
 

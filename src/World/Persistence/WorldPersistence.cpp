@@ -243,6 +243,7 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
   }
 
   WorldFolderPath = path;
+  PendingSectionLightRestores.Clear();
   LightCompleteColumns.clear();
   LightCompleteSignature.clear();
   LightCompleteDirty = false;
@@ -322,7 +323,10 @@ bool UWorldPersistence::IsColumnLightComplete(glm::ivec2 ground_xz) const
 {
   const auto &signature = CurrentLightCacheSignature();
   return !signature.empty() && signature == LightCompleteSignature &&
-         LightCompleteColumns.count(ground_xz) != 0;
+         LightCompleteColumns.count(ground_xz) != 0 && WorldContext &&
+         WorldContext->HasCurrentColumnLightCoverage(
+             ground_xz, WorldContext->ProceduralTemplate.MinHeight,
+             WorldContext->ProceduralTemplate.MaxHeight);
 }
 
 const std::string &UWorldPersistence::CurrentLightCacheSignature() const
@@ -4835,6 +4839,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
               ? world.Streaming->GetChunkGenTokens().Current(ground).sequence
               : load.token.sequence;
       const bool token_valid = load.token.IsValidFor(ground, current_sequence);
+      if (token_valid && load.columnLight && !result_cancelled)
+        for (const auto &receipt : *load.columnLight)
+          PendingSectionLightRestores.Offer(receipt, load.token.sequence);
 
       const auto world_apply_started = std::chrono::steady_clock::now();
       bool chunk_input_changed = false;
@@ -4980,7 +4987,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       std::string details;
       if (save.cleanupOnly)
       {
-        outcome = save.success ? "stale_cleanup_done" : "stale_cleanup_failed";
+        outcome = save.cleanupOperation == "column_light_receipts"
+                      ? (save.success ? "light_receipts_written"
+                                      : "light_receipts_failed")
+                      : (save.success ? "stale_cleanup_done"
+                                      : "stale_cleanup_failed");
         details = "operation=" + save.cleanupOperation +
                   " slices=" + std::to_string(save.cleanupSliceCount) +
                   " duration_ms=" + std::to_string(save.cleanupMs);
@@ -5009,6 +5020,27 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - save_drain_started)
             .count();
+  }
+  if (world.BlockRegistry && world.Streaming)
+  {
+    const auto stats = PendingSectionLightRestores.Drain(
+        world.BlockWorld, world.BlockRegistry->GetDefinitionsCatalogSnapshot(),
+        [&](glm::ivec3 coord, uint64_t owner)
+        {
+          return world.Streaming->GetChunkGenTokens()
+                     .Current({coord.x, 0, coord.z})
+                     .sequence == owner;
+        },
+        [&](glm::ivec3 coord)
+        { world.NoteChunkSliceLightCalculationSettled(coord); });
+    if (stats.restored || stats.rejected || stats.cancelled)
+      CubatariumLogInfo(
+          "PersistedLight",
+          "restored=" + std::to_string(stats.restored) +
+              " rejected=" + std::to_string(stats.rejected) +
+              " cancelled=" + std::to_string(stats.cancelled) + " pending=" +
+              std::to_string(PendingSectionLightRestores.Size()) + " bytes=" +
+              std::to_string(PendingSectionLightRestores.RetainedBytes()));
   }
   const auto light_flags_save_started = std::chrono::steady_clock::now();
   SaveColumnLightFlagsIfDirty(&metrics.light_flags_snapshot_ms,
@@ -5154,6 +5186,7 @@ void UWorldPersistence::AbortAsyncChunkIo()
 bool UWorldPersistence::AbortAsyncChunkIoFor(
     const std::chrono::milliseconds timeout)
 {
+  PendingSectionLightRestores.Clear();
   const auto abort_started = std::chrono::steady_clock::now();
   bool cancelled_loads = false;
   for (const auto &entry : PendingAsyncColumnLoadSlices)
@@ -5304,7 +5337,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
     AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
                               *ChunkStorage, *world.BlockRegistry,
                               WorldFolderPath, token, state.cancellation,
-                              state.demand_id);
+                              state.demand_id, cy == cy_order.front());
   }
 }
 
@@ -5379,8 +5412,16 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                           ? highest_on_disk
                           : std::max(highest_on_disk, highest_to_save);
   }
+  // Capture before legacy AIR materialization and pending-save absence gates,
+  // including field-only columns which have no terrain slice to serialize.
+  const auto light_receipts = ChunkStorage->CaptureColumnLight(
+      ground_coord, world.BlockWorld, *world.BlockRegistry);
   if (highest_to_save == kNoTerrainChunkSlice)
   {
+    ChunkStorage->MarkColumnSavePending(ground_coord);
+    PendingAsyncColumnSaveSlices[ground_coord] = 1;
+    AsyncChunkIo->RequestSaveColumnLight(ground_coord, light_receipts,
+                                         *ChunkStorage, WorldFolderPath);
     LogWorldColumnSave("skip_empty", ground_coord,
                        "world_folder=" + WorldFolderPath);
     return;
@@ -5407,12 +5448,14 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   const auto pending_started = std::chrono::steady_clock::now();
   ChunkStorage->MarkColumnSavePending(ground_coord);
   PendingAsyncColumnSaveSlices[ground_coord] =
-      save_count + cleanup_operation_count;
+      save_count + cleanup_operation_count + 1;
   const double pending_setup_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - pending_started)
           .count();
   const auto enqueue_started = std::chrono::steady_clock::now();
+  AsyncChunkIo->RequestSaveColumnLight(ground_coord, light_receipts,
+                                       *ChunkStorage, WorldFolderPath);
   for (int cy = min_cy; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
@@ -5461,6 +5504,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
 
 void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
 {
+  PendingSectionLightRestores.CancelColumn(ground_coord);
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;

@@ -2,6 +2,7 @@
 
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/LightCacheCertificate.h"
+#include "World/Lighting/PersistedSectionLightTypes.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include <limits>
 #include <map>
@@ -9,25 +10,6 @@
 
 namespace cutum
 {
-// Disk receipts describe content, never runtime incarnation/revision numbers.
-// Legacy raw light and the global column signature cannot construct one.
-struct PersistedSectionLight
-{
-  static constexpr size_t MaxDependencies = 65536;
-  struct Input
-  {
-    glm::ivec3 coord{0};
-    uint64_t content{0};
-  };
-  glm::ivec3 coord{0};
-  WorldVerticalProfile profile;
-  uint64_t configuration{0};
-  std::string signature;
-  std::vector<Input> inputs;
-  SectionLightVolume volume;
-  uint64_t checksum{0};
-};
-
 namespace persisted_light_detail
 {
 inline uint64_t HashBytes(std::string_view bytes)

@@ -6,6 +6,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/ReadyDataAdmission.h"
+#include "World/Lighting/PersistedSectionLightTypes.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -37,6 +38,7 @@ struct AsyncChunkLoadResult
   // ring entries. Queue ranking, requeue, and ring growth should move a small
   // handle rather than copying a full UChunkBuffer.
   std::unique_ptr<UChunkBuffer> decodedBuffer;
+  std::shared_ptr<const PersistedColumnLight> columnLight;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
   std::chrono::steady_clock::time_point submittedAt{};
@@ -117,10 +119,13 @@ public:
   }
 
   void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
-                   UBlockRegistry &registry,
-                   const std::string &worldFolder, ChunkGenerationToken token,
+                   UBlockRegistry &registry, const std::string &worldFolder,
+                   ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation,
-                   uint64_t demandId);
+                   uint64_t demandId, bool includeColumnLight = false);
+  void RequestSaveColumnLight(
+      glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
+      UChunkStorageService &storage, const std::string &worldFolder);
   void RequestDiskIndexWarmup(UChunkStorageService &storage,
                               const std::string &worldFolder);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
