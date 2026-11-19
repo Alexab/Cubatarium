@@ -2,6 +2,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/ChunkResidencyTrace.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include <algorithm>
@@ -215,6 +216,12 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     {
       continue;
     }
+    const auto target = UChunkManager::WorldToChunk(entry.first);
+    if (TraceChunkResidencyEnabled(target) &&
+        !world.GetChunkManager().HasChunk(target))
+      TraceChunkResidency(HasWorldGenOwnerChunk ? "worldgen_buffer_missing"
+                                                : "buffer_missing",
+                          target, WorldGenOwnerChunk, entry.second);
     world.SetBlock(entry.first, entry.second);
     const auto fluid_it = FluidPacked.find(entry.first);
     if (fluid_it != FluidPacked.end() && fluid_it->second != 0)

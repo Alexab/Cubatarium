@@ -12140,5 +12140,20 @@
   "static_exe_verifier": "PASS,6systemDLLs",
   "tests": "33Release tests green for retired-candidate guard at1d9419d56; original RED retained. Record-snapshot ownership fix is desktop-compiled; no additional native rerun of d1815b878 claimed.",
   "next": "Trace exact origin/owner of recreated post-eviction geometry slice; native full-column purge and30receipt loss remain reproducible. Preserve full S0..S6 and all open acceptance requirements."
+},
+"targeted_chunk_creation_provenance_2026_11_19": {
+  "status": "diagnostics_regressions_green_native_source_attribution_pending_full_S0_S6_active",
+  "instrumentation": "Opt-in CUBA_CHUNK_RESIDENCY_TRACE=x,z records selected column geometry creation/removal with incarnation, setter reason, buffer owner and incoming block ID. C stderr route runner log; no ready/cache/provider gate changes. Default disabled.",
+  "regression": {
+    "schema": "chunk-residency-trace-regression.v1",
+    "matrix_count": 33,
+    "green": true,
+    "log": "build\\desktop-msvc\\chunk-residency-trace-20261119-matrix-tests.log",
+    "build_log": "build\\desktop-msvc\\chunk-residency-trace-20261119-matrix-build.log",
+    "scope": "diagnostic instrumentation compiles and existing33 tests pass. No new behavior or causal test acceptance claimed.",
+    "supersedes_copied_summary": "chunk-residency-trace-20261119-regression-assessment.json (copied runner summary had stale regression labels)"
+  },
+  "next": "Build committed desktop Release then rerun existing motor route with selected6,6. Attribute actual recreated slice before modifying cross-boundary generation/physics behavior.",
+  "scope": "All full S0..S6 obligations remain active, including unresolved30receipt disk purge, memory/performance, backend parity, independent nonzeroRGB/wet/transparency, semantic identities and lifecycle/provider/cancellation."
 }
 }
