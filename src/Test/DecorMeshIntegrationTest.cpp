@@ -2218,6 +2218,25 @@ static void TestFirstComputedLightPublication(
                batch->renderLightBinding == binding,
            "actual async publication and drawable batch own compatible "
            "resource lease");
+    if (use_gpu_bindings)
+    {
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+      UGreedyGpuBackend backend;
+      GreedyGpuPassCache gpu_pass;
+      backend.RefreshPassRefs(gpu_pass, cache, cache.GetGreedyOpaqueCutoutRefs(),
+                              cache.GetMeshRevision(), cache.GetCullRevision(), 1);
+      size_t root_batches = 0;
+      for (const auto &gpu_batch : gpu_pass.batches)
+        if (gpu_batch.chunkCoord == root)
+        {
+          ++root_batches;
+          Expect(gpu_batch.renderLightBinding == binding,
+                 "actual GPU publication carries source CPU artifact light lease");
+        }
+      Expect(root_batches > 0, "actual GPU publication retains first root mesh");
+      backend.DestroyPass(gpu_pass);
+#endif
+    }
     const auto published_count = cache.GetPublishCount(root);
     const auto previous_vertices = cache.GetGreedyVertexCount();
     // Create real unsatisfied geometry debt. A remesh of identical already

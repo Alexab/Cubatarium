@@ -5862,7 +5862,8 @@ namespace
 {
 void TraceSurfaceDrawState(const std::shared_ptr<UShaderProgram> &shader,
                           const GreedyGpuPassCache &cache, size_t row,
-                          uint64_t frame, unsigned path)
+                          uint64_t frame, unsigned path,
+                          const UChunkMeshCache *source)
 {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
   static unsigned writes = 0;
@@ -5899,6 +5900,15 @@ void TraceSurfaceDrawState(const std::shared_ptr<UShaderProgram> &shader,
   const auto words = batch.renderLightBinding ? batch.renderLightBinding->ShaderWords()
                                              : SectionLightDrawTable::Words{};
   out << " lease=" << bool(batch.renderLightBinding);
+  if (source)
+  {
+    const GreedyBatchRef ref{batch.chunkCoord, batch.batchIndex, batch.blockId};
+    const auto *cpu = source->TryGetGreedyBatch(ref);
+    out << " cpu_batch=" << bool(cpu)
+        << " cpu_lease=" << (cpu && bool(cpu->renderLightBinding))
+        << " section_lease=" << bool(source->GetPublishedRenderLightBinding(batch.chunkCoord))
+        << " published_geom=" << source->GetChunkMeshRevision(batch.chunkCoord);
+  }
   for (auto word : words) out << " expected_word=" << word;
   std::array<GLuint, 4> incarnation{};
   const auto inc_at = shader->GetUniformLocation("uSectionLightTableIncarnation");
@@ -6332,7 +6342,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       if (physical_light && !table_light && !prepare_direct_surface_light(head))
       {
         TraceSurfaceDrawState(greedyShader, cache, i,
-            WorldInstance->GetStreamingFrameEpoch(), 4);
+            WorldInstance->GetStreamingFrameEpoch(), 4,
+            &WorldInstance->GetMeshService().GetCache());
         i = j;
         continue;
       }
@@ -6389,7 +6400,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           [&] {
             for (size_t n = i; n < j; ++n)
               TraceSurfaceDrawState(greedyShader, cache, n,
-                  WorldInstance ? WorldInstance->GetStreamingFrameEpoch() : 0, 0);
+                  WorldInstance ? WorldInstance->GetStreamingFrameEpoch() : 0, 0,
+                  WorldInstance ? &WorldInstance->GetMeshService().GetCache() : nullptr);
             return store.SubmitIndirectCommandsGpuRange(cache, i, j);
           }();
       if (has_draw_witness_batch)
