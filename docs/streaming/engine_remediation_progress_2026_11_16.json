@@ -10111,5 +10111,230 @@
       "Build required Release desktop from committed source; repeat unchanged wet motor route targeting (-14,2,-1), preserving all provenance.",
       "Inspect terminal readiness and exact target publication/owner trace in addition to opaque depth. Continue remaining broad obligations."
     ]
+  },
+  "new_host_empty_fluid_publication_native_2026_11_19": {
+    "status": "scoped_empty_fluid_publication_and_stop_readiness_verified_full_S0_S6_active",
+    "source_commit": "d79c8f026c5a94731f8f89b976534e7254621857",
+    "checkout_commit": "d79c8f026c5a94731f8f89b976534e7254621857",
+    "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-d79c8f0",
+    "exe_sha256": "714139cf57a52ef113818cc70b28e81a47134b354dbff1f45a5e82ff01215756",
+    "native": {
+      "path": "build/desktop-msvc/engine-empty-fluid-publication-wet-20261119-native",
+      "trace_target": [
+        -14,
+        2,
+        -1
+      ],
+      "desktop_build_log": "build/desktop-msvc/empty-fluid-publication-desktop-build-20261119.log",
+      "desktop_build_exit": 0,
+      "static_verifier": "PASS,6 system DLLs",
+      "parent_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 4220
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "fixture": {
+        "status": "PASS",
+        "reason": "negative_wet_cave_observed",
+        "samples": 236
+      },
+      "depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 16509,
+        "faults": 0,
+        "frame_epochs": 125,
+        "skipped_unscoped_or_occluded": 315,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference",
+        "samples": 16824,
+        "captures": 129,
+        "attributed_samples": 0,
+        "faults": 0
+      },
+      "movement": {
+        "exit_code": 0,
+        "chunks_traveled_cheb": 19,
+        "teleport_cruise": false,
+        "diagnostic_relocations_after_start": 0,
+        "wall_elapsed_sec": 204.789
+      }
+    },
+    "target": {
+      "trace_counts": {
+        "capture": 3,
+        "mark_dirty_priority": 2,
+        "cpu_commit": 1
+      },
+      "unowned_geometry_debt_retries": 0,
+      "key_rows": [
+        "I20261119 21:03:37.215472  7696 Log.cpp:601] [ChunkPublication] resource coord=(-14,2,-1) frame_epoch=2549 decision=prepared source_epoch=4 current_epoch=4 geometry_valid=1 unknown_mask=0 physical_snapshot=1 provisional=0 field_geometry_match=1 catalog_match=1",
+        "I20261119 21:03:37.215480  7696 Log.cpp:601] [ChunkTrace] cpu_commit coord=(-14,2,-1) sourceRev=1 stampsValid=1 stampContent=8192 stampLight=0 nowLight=1 stampIncarnation=3649 nowContent=8192 nowIncarnation=3649 batches=0",
+        "I20261119 21:04:07.799053  7696 Log.cpp:601] [ChunkPublication] field_refresh coord=(-14,2,-1) source_epoch=4 geometry_publication=1 geometry_revision=1 field_incarnation=7366 field_revision=1",
+        "I20261119 21:04:09.346708  7696 Log.cpp:601] [ChunkPublication] field_refresh coord=(-14,2,-1) source_epoch=4 geometry_publication=1 geometry_revision=1 field_incarnation=7366 field_revision=1"
+      ],
+      "finding": "One CPU empty publication/sourceRev1 pairs actual field1 with original captured light0. Later field_refresh retains geometry_publication1/geometry_revision1. Native block575 is fully enclosed liquid; no private opaque/AIR NoSurface proof was expanded."
+    },
+    "stop_readiness": {
+      "post_stop_readiness_debt_max": 0.0,
+      "post_stop_mesh_missing_max": 0.0,
+      "last_period": {
+        "frame_epoch": 5871,
+        "focus_visual_terrain_incomplete_n": 0,
+        "focus_visual_pending_light_n": 0,
+        "focus_visual_sticky_remesh_n": 0,
+        "focus_visual_stale_dark_n": 0,
+        "focus_visual_missing_mesh_n": 0,
+        "focus_visual_gpu_in_flight_n": 0,
+        "focus_visual_not_loaded_n": 0,
+        "focus_visual_not_ready_state_n": 0,
+        "focus_visual_face_debt_n": 0,
+        "focus_visual_ready_n": 81,
+        "unfinished_visual": 0,
+        "chunk_not_ready": 0
+      },
+      "gates_stop": {
+        "post_stop_pending_med_le_15": true,
+        "post_stop_black_sticky_zero": true,
+        "post_stop_visible_black_no_ticket_zero": true,
+        "post_stop_visible_black_stalled_zero": true,
+        "post_stop_missing_zero": true,
+        "post_stop_visual_holes_zero": true,
+        "post_stop_effective_holes_zero": true,
+        "post_stop_pending_falling": true,
+        "post_stop_relight_active": true,
+        "post_stop_pending_not_plateau_8s": true,
+        "post_stop_healthy_fps_not_unfinished": true,
+        "post_stop_not_ready_falling": true,
+        "post_stop_focus_dirty_falling": true
+      },
+      "comparison": "Prior selected trace on c6b had desired geometry72/publication0,585 captures,1569 priority marks,stop readiness debtmax6. Previous different-target run had residual2. This run settles81/81 focus columns and all stop gates without changing radius/metric semantics."
+    },
+    "performance": {
+      "status": "FAIL",
+      "metrics": {
+        "wall_ms_med": 20.599899999999998,
+        "wall_ms_fly_med": 22.487000000000002,
+        "dirty_med": 142.5,
+        "post_stop_readiness_debt_max": 0.0,
+        "post_stop_mesh_missing_max": 0.0,
+        "post_stop_focus_dirty_med": 12.0
+      },
+      "failed_gates": [
+        "stream_pressure_red_rate_le_0_30",
+        "post_load_ring_not_ready_eq_0",
+        "mesh_async_floor_when_dirty",
+        "miss_stuck_max_run_sec_le_4",
+        "opaque_idle_churn_max_le_120",
+        "emerge_spike_frac_le_0_05",
+        "cruise_schedule_ok_med_ge_2",
+        "mesh_schedule_retry_after_capture_gt_0",
+        "witness_latch_diet_share_ge_0_70",
+        "effective_holes_blink_rate_le_0_05",
+        "policy_headers_have_budget",
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5"
+      ],
+      "resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 202,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 34.9,
+          "p95": 55.9,
+          "max": 66.0
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 12.74375,
+          "p95": 52.04375,
+          "max": 54.34375
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 4.375000000000002,
+          "p95": 25.40625,
+          "max": 39.081250000000004
+        },
+        "app_rss_mb_max": 712.98046875,
+        "system_available_memory_mb_min": 19503.81640625,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "limits": [
+      "Parent exit0 proves five provenance checks; wrapper2/overallUNTESTED preserves absence of independent RGB reference.",
+      "0/16509 is scoped near opaque depth only, not nonzero sky/block shader output, wet transparency/composition, full-screen, seed/radius/return/edit/save/eviction/backend or performance/memory acceptance.",
+      "Same-host diagnostic wall med20.5999ms is an observation, not controlled timing attribution. General gates remainFAIL despite all stop gatesPASS.",
+      "Runtime identity proofs and actual light settlement are unchanged; persisted dependency certificates and semantic geometry/optics identities remain incomplete."
+    ],
+    "next": [
+      "Continue full S0..S6: canonical section lifecycle/provider/cancellation and persisted dependency certificates, semantic geometry/optics catalog identity, actual CPU/GPU/backend parity.",
+      "Complete independent nonzero RGB/wet/transparency references and motor-based return/edit/save/eviction plus seed/radius/backend/performance/memory matrix. Do not restart the audit or treat this native result as whole-engine completion."
+    ]
   }
 }
