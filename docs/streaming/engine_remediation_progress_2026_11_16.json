@@ -7476,7 +7476,7 @@
       }
     },
     "packed_gpu_geometry_awaiting_physical_field": {
-      "status": "Implemented and Release driver tests GREEN; required app build and full dry19chunk native flight pending. Full S4/S5 not complete.",
+      "status": "Implemented;12Release testsGREEN and5negative controls with exact source restoration. Required Release app built; full dry19chunk native0/12838scoped opaque-depth faults. OverallUNTESTED; full S4/S5 incomplete.",
       "implementation": "Completed packed GPU geometry retains its actual staging allocation and result-memory credit in the same bounded32-result/32MiB-accounted queue as CPU geometry. Four round-robin checks per call. Pairing requires original source epoch/revision and exact current geometry/catalog/profile certificates plus calculated settled physical field. Same captured stamps and same packed SSBO payload; no new compute dispatch while awaiting field.",
       "ownership": "Private-issued index/generation/allocator-token key protects staging allocation reuse and allocator replacement. Independent index/generation/storage-token key protects readback PBO reuse and pipeline storage replacement. Cancellation releases only actual owned resources; geometry storage reset still releases an independently current PBO. Ownership rechecked after render-light preparation callback. Successful delayed GPU publication contributes to finish/progress accounting.",
       "cleanup": "Removed unused EnqueueSnapshot/ProcessQueue FIFO after full src call-site search showed only declarations/definitions. It discarded returned staging allocations; no claim that unused API caused native faults. Trace now includes slot index/allocation generation and awaiting_light_gpu.",
@@ -7497,7 +7497,71 @@
         "restored_test_exit": 0
       },
       "validation": "Affected Release test targets rebuilt after final trace/FIFO cleanup. engine-packed-awaiting-field-twelve-tests.log:12/12PASS19.97seconds, includes actual GL/GLES material/field paths, packed lifecycle, CPU integration, pool production, publication, demand and job admission.",
-      "limits": "No app/native flight of this implementation yet. Sync mesh still uses legacy recompute/retry. Light remains in geometry merge/capture/dependency identities; full light-only zero-remesh and semantic catalog split pending. Full native RGB/transparency/performance acceptance and original sporadic first-publication fault closure remain open.32MiB retained byte cap not independently saturated."
+      "limits": "One scoped32block opaque-depth run cannot close original sporadic first-publication class. FullRGB/transparencyUNTESTED. Performance fails. Post-stop mesh-missing/stalled proxies remain1. Sync awaiting and light-free geometry keys remain open.32MiB byte cap not independently saturated. Full lifecycle/persistence/backend matrix pending.",
+      "native_followup": {
+        "source_commit": "6473b2ade30ce30e3026fcc8d720cee6056241d7",
+        "overall": "UNTESTED",
+        "opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 12838,
+          "faults": 0,
+          "frame_epochs": 102,
+          "skipped_unscoped_or_occluded": 306,
+          "examples": [],
+          "fault_attribution": {
+            "schema": "engine-depth-fault-attribution.v1",
+            "section_count": 0,
+            "sections": [],
+            "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+          },
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 1157
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "ingame_frames": 1521,
+        "active_elapsed_sec": 253.804,
+        "relocations": 0,
+        "camera_observation": {
+          "samples": 1521,
+          "ready_zero_zero": 1521,
+          "scope": "Observed canonical samples only; no independent dry RGB/light oracle."
+        },
+        "target_causal_observation": "Source3 packed geometry at(-5,-3,3),2quads,slot143/allocation17186 waits19observed frames265..283 and pairs with ready field atframe284. Same source revision/slot/generation published; no new source3 build while waiting. Captured source light0, delayed field revision1. Earlier source1/2 candidates retried before complete geometry dependencies; do not claim all redundant work eliminated.",
+        "performance": {
+          "legacy_pass": false,
+          "metrics": {
+            "wall_ms_med": 102.492,
+            "wall_ms_fly_med": 111.18950000000001,
+            "world_streaming_phase_ms": 77.36245,
+            "scene_ms": 26.3057,
+            "post_stop_readiness_debt_max": 0.0,
+            "post_stop_mesh_missing_max": 1.0,
+            "post_stop_visible_black_stalled_max": 1.0
+          },
+          "scope": "Intrusive diagnostics/capture enabled; no controlled performance A/B."
+        },
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "limits": "One scoped32block opaque-depth run cannot close original sporadic first-publication class. FullRGB/transparencyUNTESTED. Performance fails. Post-stop mesh-missing/stalled proxies remain1. Sync awaiting and light-free geometry keys remain open.",
+        "artifact": "build/desktop-msvc/engine-packed-awaiting-field-dry-native/packed-geometry-awaiting-field-observation.json"
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7519,7 +7583,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "All main physical-field consumers and bounded CPU/GPU completed-geometry awaiting-field paths implemented. GPU12Release testsGREEN plus5negative ownership controls; GPU app/native pending. Previous CPU full wet19chunk native0/13630scoped depth faults. Sync awaiting lifecycle, light-free geometry keys and complete acceptance remain.",
+      "S5": "All main physical-field consumers and bounded CPU/GPU completed-geometry awaiting-field paths implemented.12Release testsGREEN and5GPUownership negative controls. CPUwet native0/13630 and packedGPUdry native0/12838scoped depth faults, each19chunk0relocations24inspectionviews. Same GPUslot/generation observed waiting then publishing with ready field. FullRGB/transparencyUNTESTED; performanceFAIL. Sync awaiting, light-free geometry keys and complete acceptance remain.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
