@@ -12228,6 +12228,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           max_schedule_per_frame <= 1 && HasDrawableGreedyMesh(*it) &&
           !Dirty.IsPriorityRemesh(*it))
       {
+        // Admission pressure does not fulfill a physical geometry edit.
+        // Keep its queue owner and age until a remesh slot is available.
+        if (CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+        {
+          ++it;
+          continue;
+        }
         // ColdWall S0c: remesh starve under miss — erase Dirty (not leave-in).
         it = Dirty.RemoveAt(it);
         continue;
@@ -12241,6 +12248,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
              (IsLightRepairRemesh && IsLightRepairRemesh(*it))) ||
             ChunkHasFullyDarkFace(*it) || ChunkHasStaleDarkFaces(*it, world)))
       {
+        if (CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+        {
+          ++it;
+          continue;
+        }
         if (!skip_defer_lit_ring(*it))
         {
           DeferRemeshCoord(*it);
@@ -12254,7 +12266,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // ColdPL-2A: defer over-cap remesh (not leave-in revisit churn).
         if (!Dirty.IsFirstMesh(*it))
         {
-          if (Dirty.IsPriorityRemesh(*it))
+          if (Dirty.IsPriorityRemesh(*it) || CaptureStore.LightInputsPolicy() ==
+                                                 MeshLightInputs::PhysicalField)
           {
             ++it;
             continue;

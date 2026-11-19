@@ -9052,5 +9052,271 @@
       "Investigate selected queued-first-geometry deadline and repeated transient field jobs from exact source/trace; add causal regressions before changing admission/proofs.",
       "Close combined missing-neighbor ordinary-edit admission and continue the full canonical lifecycle/catalog/persistence/reference/matrix plan."
     ]
+  },
+  "physical_edit_admission_retention_2026_11_19": {
+    "verified_at_utc": "2026-11-19T16:58:09.014788+00:00",
+    "goal": "active; full S0..S6 unchanged",
+    "native_repeat_before_edit": {
+      "artifacts": "build/desktop-msvc/engine-new-host-physical-legacy-gate-wet-repeat-20261119-native",
+      "source_commit": "b86474968899abbdd641037ca5c5e8ada62b84ca",
+      "checkout_commit": "3ea70b73643115adb154582fe2c40dc9e6343a7e",
+      "parent_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 2306
+      },
+      "relocations": 0,
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 15562,
+        "faults": 0,
+        "frame_epochs": 119,
+        "skipped_unscoped_or_occluded": 302,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "rgb": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference",
+        "samples": 15864,
+        "captures": 123,
+        "attributed_samples": 0,
+        "faults": 0
+      },
+      "performance_debt_pass": false,
+      "runtime_resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 213,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 33.4,
+          "p95": 57.7,
+          "max": 62.5
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 12.1375,
+          "p95": 53.575,
+          "max": 55.69375
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 2.481250000000003,
+          "p95": 25.681250000000002,
+          "max": 28.9125
+        },
+        "app_rss_mb_max": 705.9375,
+        "system_available_memory_mb_min": 19672.375,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      },
+      "selected_section": {
+        "coord": [
+          -5,
+          -3,
+          3
+        ],
+        "events": {
+          "watch": 652,
+          "enqueue": 1,
+          "schedule": 1,
+          "field_completion_hint": 1,
+          "resource": 1
+        },
+        "queue_only_samples": 611,
+        "longest_queue_only_run": {
+          "first_frame_epoch": 0,
+          "last_frame_epoch": 560,
+          "samples": 561,
+          "revision": 1
+        },
+        "maximum_observed_queue_age": 610,
+        "timeline": [
+          {
+            "event": "enqueue",
+            "coord": "(-5,-3,3)",
+            "frame_epoch": "560",
+            "source_revision": "1",
+            "source_epoch": "4",
+            "certified_padded": "0",
+            "physical_snapshot": "0",
+            "provisional": "0",
+            "unknown_mask": "0"
+          },
+          {
+            "event": "schedule",
+            "coord": "(-5,-3,3)",
+            "frame_epoch": "560",
+            "outcome": "15",
+            "detail": "0",
+            "enqueue_reject": "0",
+            "revision": "1",
+            "first_mesh": "0",
+            "queue_age": "610"
+          },
+          {
+            "event": "field_completion_hint",
+            "coord": "(-5,-3,3)",
+            "frame_epoch": "600",
+            "source_revision": "1"
+          },
+          {
+            "event": "resource",
+            "coord": "(-5,-3,3)",
+            "frame_epoch": "601",
+            "decision": "prepared",
+            "source_epoch": "4",
+            "current_epoch": "4",
+            "geometry_valid": "1",
+            "unknown_mask": "0",
+            "physical_snapshot": "1",
+            "provisional": "0",
+            "field_geometry_match": "1",
+            "catalog_match": "1"
+          }
+        ]
+      },
+      "queue_age_interpretation": {
+        "resource_prepared_frame": 601,
+        "nearby_focus_samples": [
+          {
+            "frame": 592,
+            "focus_x": 0,
+            "distance": 5
+          },
+          {
+            "frame": 630,
+            "focus_x": -1,
+            "distance": 4
+          },
+          {
+            "frame": 675,
+            "focus_x": -2,
+            "distance": 3
+          }
+        ],
+        "limit": "R3 required-ring entry is sampled, not an exact first-visible-pixel deadline. Much of queue age was outside required ring; age alone does not prove a deadline defect. Sampled depth remains0/15562; original failures and full deadline/reference work retained."
+      }
+    },
+    "admission_repair": {
+      "problem": "Ordinary physical geometry edits could lose their Dirty owner under missing-neighbor/one-slot pressure or transfer into a bounded lossy deferred ring when the remesh lane/quota rejected them. Old compatible geometry does not fulfill an edited geometry requirement.",
+      "implementation": "Keep physical Dirty entry and enqueue age on single-slot miss, light-repair-only admission and remesh quota denial. Existing schedule, capture, pipeline, time budgets and field/resource publication proof unchanged. Baked legacy policy preserved.",
+      "regression": "Sync/async x ordinary/reserved x neighbor pressure open/closed x legacy gate open/closed. Refreshable actual-certified fixture pair settles the unrelated policy-transition retry before editing. Missing-neighbor and zero-quota denial preserve executable debt/age without a build; after pressure removal exactly one replacement geometry is retained awaiting its actual new field while old binding remains published.",
+      "red": "build/desktop-msvc/physical-edit-neighbor-admission-red2-test-20261119.log",
+      "negative_controls": {
+        "schema": "physical-edit-admission-controls.v1",
+        "source_sha256": {
+          "src/Render/Mesh/ChunkMeshCache.cpp": "8d64932ad4d0da30bff72f0c1b1c06766d9f34a85362f660bd84953774a0377a",
+          "src/Render/Mesh/ChunkMeshCache.h": "19d611f88f5722a2e548074cab992ce41344faf0e027247a567c885d9c73371e",
+          "src/Test/DecorMeshIntegrationTest.cpp": "7f3a20d08aaf4ea0098f33181c89b36e9c1b0cd4e5fa7e521eeb36fd6d69036b"
+        },
+        "head": "3ea70b73643115adb154582fe2c40dc9e6343a7e",
+        "controls": [
+          {
+            "name": "single-slot-miss",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "missing-neighbor zero quota retains physical geometry work",
+            "log": "build/desktop-msvc/physical-edit-admission-20261119-v2-single-slot-miss-test.log"
+          },
+          {
+            "name": "miss-repair-lane",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "missing-neighbor admission retains physical geometry work",
+            "log": "build/desktop-msvc/physical-edit-admission-20261119-v2-miss-repair-lane-test.log"
+          },
+          {
+            "name": "zero-remesh-quota",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "zero remesh quota retains the aged physical edit without executing it",
+            "log": "build/desktop-msvc/physical-edit-admission-20261119-v2-zero-remesh-quota-test.log"
+          }
+        ],
+        "exact_source_restore": true,
+        "restored_build_exit": 0,
+        "restored_test_exit": 0,
+        "restored_green": true,
+        "matrix_log": "build/desktop-msvc/physical-edit-admission-20261119-v2-restored-sixteen-tests.log"
+      },
+      "restored_matrix": {
+        "passed": 16,
+        "total": 16,
+        "skipped": 0,
+        "seconds": 7.36,
+        "log": "build/desktop-msvc/physical-edit-admission-20261119-v2-restored-sixteen-tests.log"
+      },
+      "coverage_correction": "Initial single-slot control stayedGREEN because the fixture still used the alternate repair lane. Added explicit zero-quota while neighbor miss persists; now each of three removal controls fails the intended assertion. Initial control receipt retained.",
+      "native_for_this_repair": "NOT RUN; baseline repeat above predates these source changes."
+    },
+    "remaining": [
+      "Build app Release from committed restored source and rerun unchanged wet native with CPU/RSS before claiming runtime impact of the edit admission repair.",
+      "Continue full lifecycle/ownership/cancellation, semantic catalog identities, persisted content certificates, independent RGB/nonzero-light/wet/transparency and complete backend/seed/radius/edit/return/eviction/performance/memory acceptance.",
+      "Investigate actual required-domain publication/field deadlines, fair progress and bounded maintenance; do not optimize outside-ring queue age as if it were a proven visible failure."
+    ]
   }
 }
