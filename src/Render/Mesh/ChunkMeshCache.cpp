@@ -3225,21 +3225,58 @@ bool UChunkMeshCache::QueuePublishedLightRefresh(
   // A real geometry change or a newer executable owner failed admission above.
   Dirty.Erase(coord);
   RemeshAfterApply.erase(coord);
+  const auto *chunk = world.GetChunkManager().GetChunk(coord);
+  const auto epoch = CaptureStore.WorldEpoch();
+  auto &demand = GetRenderDemandStore();
+  demand.NoteDemand(coord, mesh.PublishRevs.geom_rev,
+                    chunk->GetLightFieldRevision(), 0, 0.0, epoch,
+                    chunk->GetIncarnation());
   const auto pending = PublishedLightRefreshPending_.find(coord);
   if (pending != PublishedLightRefreshPending_.end() &&
       pending->second.world_epoch == CaptureStore.WorldEpoch() &&
       pending->second.publication_count == mesh.PublishCount)
     return true;
+  // A repair hint is not new executable work. Enter warmup repeatedly asks
+  // about already-current sections; creating an owner here would keep the
+  // required-presentation barrier closed indefinitely after actual readiness.
+  const auto light = world.CaptureRenderLightSnapshot(coord);
+  const auto same_data = [&](const SectionRenderLightSnapshot &snapshot)
+  {
+    return light && snapshot.FieldIncarnation() == light->FieldIncarnation() &&
+           snapshot.FieldRevision() == light->FieldRevision() &&
+           snapshot.Volume() && light->Volume() &&
+           (snapshot.Volume() == light->Volume() ||
+            snapshot.Volume()->cells == light->Volume()->cells);
+  };
+  const auto current_binding = [&](const auto &binding)
+  {
+    return binding && light &&
+           binding->Matches(epoch, mesh.RenderGeometryInputs, *light) &&
+           same_data(binding->LightSnapshot());
+  };
+  if (light && light->MatchesGeometry(mesh.RenderGeometryInputs) &&
+      world.HasCompleteLightSamplingCalculation(coord, catalog) &&
+      mesh.MeshedLightRevision == chunk->GetLightFieldRevision() &&
+      mesh.PublishRevs.light_rev == chunk->GetLightFieldRevision() &&
+      same_data(*mesh.RenderLight) &&
+      current_binding(mesh.RenderLightBinding) &&
+      (!(mesh.GpuResident && mesh.GpuQuadCount > 0) ||
+       current_binding(mesh.GpuRenderLightBinding)))
+  {
+    PendingStaleLightRemeshes_.erase(coord);
+    demand.NoteLightCalculationSettled(coord, epoch, chunk->GetIncarnation(),
+                                       chunk->GetLightFieldRevision(),
+                                       chunk->GetContentRevision());
+    demand.NotePublishedRevs(coord, mesh.PublishRevs.geom_rev,
+                             mesh.PublishRevs.light_rev);
+    return true;
+  }
   DropPublishedLightRefresh(coord);
   const PublishedLightRefreshTicket ticket{
       CaptureStore.WorldEpoch(), mesh.PublishCount,
       ++NextPublishedLightRefreshTicket_, true};
   PublishedLightRefreshPending_.emplace(coord, ticket);
   PublishedLightRefreshQueue_.push_back(coord);
-  const auto *chunk = world.GetChunkManager().GetChunk(coord);
-  GetRenderDemandStore().NoteDemand(
-      coord, mesh.PublishRevs.geom_rev, chunk->GetLightFieldRevision(), 0, 0.0,
-      ticket.world_epoch, chunk->GetIncarnation());
   return true;
 }
 

@@ -7655,7 +7655,7 @@
       }
     },
     "published_geometry_physical_field_refresh": {
-      "status": "Implemented bounded scheduling and in-place physical field refresh for compatible already-published CPU/packed/cross resource leases.12Release testsGREEN and3negative controls. Required Release app and wet frontier native pending. Full geometry/light identity separation remains incomplete.",
+      "status": "Published field refresh implemented and unit/driver checksGREEN, but first full wet native exposed a new startup no-op-owner regression and timed out600seconds before first paint. Causal no-op RED reproduced; admission repair passes12Release checks. Required repaired app/native pending. Full S5 remains incomplete.",
       "red": "engine-world-cache-light-only-red-test.log: real computed diagonal emitter change sent through cache dirty notification and scheduler caused a new mesh build/publication. Previous test called resource.Refresh directly and did not exercise world/cache scheduling.",
       "implementation": "Actual resource lease optionally supports in-place RefreshLight. Existing GL owner and virtual cache path share the same storage/epoch/geometry/volume/fence validation. Cache admits at most one lightweight field ticket per resident published geometry artifact, with epoch/publication counter and monotonic request identity. Four round-robin checks per call; no mesh payload, capture, worker credit or staging slot. Typed relight installation and compatible dirty hints route to this queue before bumping geometry revision. Ready field updates existing binding/cache light metadata/demand only; geometry revision/publication count, SSBO slot/generation/payload and shader handle remain unchanged. Incompatible geometry/cancel/dead resources follow existing recovery, never graft current-coordinate light onto different retained geometry.",
       "ownership": "Map entry remains authoritative during backend callback. Cancellation/eviction invalidates a local stack owner; cancel-and-readmit same publication requires exact request sequence. Geometry/catalog/epoch and latest physical field are rechecked after backend work. Eviction, world identity, modes, prepare callback removal and cancel variants are covered. KeepDirty/radius/policy cancellation preserves field debt separately from geometry. Compatible legacy Dirty/RemeshAfterApply hints are replaced only after exact geometry and source revision validation.",
@@ -7678,7 +7678,27 @@
         "restored_green": true,
         "checker_followup": "Original upload-control checker expected a later generic readback message, but mutation failed earlier in independent production-fragment light comparison. Original failed checker receipt/logs preserved; isolated repeat with correct earlier oracle assertion expectedFAIL, exact source restoration andGREEN."
       },
-      "limits": "No native of this implementation yet. Initial/inflight snapshots and CPU/GPU greedy merge/capture/dependency identities still read baked light. Whole-catalog identity still couples optical-only changes to geometry. Full native RGB/transparency/backend/persistence/memory/performance acceptance and original sporadic first-publication fault closure remain open."
+      "limits": "No native of this implementation yet. Initial/inflight snapshots and CPU/GPU greedy merge/capture/dependency identities still read baked light. Whole-catalog identity still couples optical-only changes to geometry. Full native RGB/transparency/backend/persistence/memory/performance acceptance and original sporadic first-publication fault closure remain open.",
+      "native_counterexample": {
+        "source_commit": "2e5f5000187d2c1d6bb0557ceabdf5eeed49944c",
+        "artifact": "build/desktop-msvc/engine-published-field-refresh-wet-native/published-field-startup-counterexample.json",
+        "result": "overallFAIL wrapper1 native timeout124 at600seconds; no native report, no first-world-paint, route/visualUNTESTED. Source world/config/executable/shaders/commit provenance all independently verified true.",
+        "barrier": {
+          "expected_sections": 1176,
+          "missing_data_columns": 0,
+          "unknown_sections": 0,
+          "light_unready_sections": 0,
+          "publication_unready_sections": 143,
+          "ready": false
+        },
+        "witness": "32/32sampled publication blockers report inflight with no tracked geometry source, CPU builder/completed/capture/GPU executor absent. Samples already have drawable/current geometry, settled light and published light equal actual field revision. New no-op field owner can keep required presentation blocked."
+      },
+      "noop_admission_followup": {
+        "red": "engine-published-field-noop-red-test.log: four repair hints on an actual current physical publication create a new work owner; FAIL reproduced independently of native timeout.",
+        "implementation": "Before admitting a new field ticket, prove actual current calculation, compatible exact geometry, matching cache light revision, matching live CPU/packed bindings and identical immutable field identity/data. Satisfied hints update demand/settlement without creating an executor. Existing real pending requests retain their original owner/sequence. No darkness or timeout shortcut.",
+        "validation": "engine-published-field-noop-twelve-tests.log12/12PASS24.32seconds including36sync/async field cases, proof-only completion, cancellation/readmission, fairness, real CPU/packed GPU field bytes and existing references. Required repaired Release app/full wet native pending.",
+        "negative_control_scope": "Three prior controls were run against2e5f50001before this admission follow-up; protected post-refresh/request/upload logic unchanged. Their original exact-restoration receipts retained. New no-op defect has its own actual RED before admission repair and fresh12GREEN after."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7707,7 +7727,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "pending commit: published field refresh",
+    "latest_source_commit": "2e5f5000187d2c1d6bb0557ceabdf5eeed49944c",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -7721,6 +7741,6 @@
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. Clean scoped native geometry checks do not prove full original defect closure or whole-plan completion."
+    "completion": "Not established. First native of published-field refresh timed out in startup; no-op admission repair12GREEN awaits repaired Release app/native. Full original scope unchanged."
   }
 }

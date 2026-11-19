@@ -2104,6 +2104,15 @@ static void TestPublishedLightRefreshLifecycle(
       Expect(binding && published == 1 && mesher.builds == 1,
              "field-refresh fixture starts with one actual published geometry "
              "artifact");
+      for (int hint = 0; hint < 4; ++hint)
+        cache.MarkDirtyPriority(
+            root, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      Expect(!cache.HasInflightMeshBuild(root) && !cache.HasPendingDirty() &&
+                 cache.GetPublishedLightRefreshPendingCount() == 0 &&
+                 cache.GetPublishedLightRefreshCount() == 0 &&
+                 mesher.builds == 1 && cache.GetPublishCount(root) == published,
+             "current physical publication does not acquire a new work owner "
+             "for repair hints");
       world.SetBlock(lifecycle == 17 ? glm::ivec3(18, 8, 18)
                                      : glm::ivec3(16, 8, 16),
                      lifecycle == 17 ? kStone : kFire);
