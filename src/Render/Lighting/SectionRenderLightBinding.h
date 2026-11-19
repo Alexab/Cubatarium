@@ -15,6 +15,13 @@ public:
   virtual ~SectionRenderLightBinding() = default;
   virtual std::array<uint32_t, 4> ShaderWords() const = 0;
   virtual bool IsLive() const = 0;
+  /// Optional in-place field update. Geometry and shader identity stay owned
+  /// by this lease; unsupported backends continue normal publication.
+  virtual bool SupportsLightRefresh() const { return false; }
+  virtual bool RefreshLight(uint64_t, const SectionRenderLightSnapshot &)
+  {
+    return false;
+  }
   uint64_t WorldEpoch() const { return Epoch; }
   const SectionGeometryRenderInputs &GeometryInputs() const { return Geometry; }
   const SectionRenderLightSnapshot &LightSnapshot() const { return Light; }

@@ -577,6 +577,9 @@ void UChunkMeshCache::InvalidateVisibleList()
 }
 void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 {
+  if (settings.GreedyMeshing != Render.GreedyMeshing ||
+      settings.Lighting != Render.Lighting)
+    ClearPublishedLightRefresh(true);
   if ((settings.AsyncMeshing != Render.AsyncMeshing ||
        settings.GreedyMeshing != Render.GreedyMeshing ||
        settings.Lighting != Render.Lighting) &&
@@ -607,6 +610,7 @@ void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 }
 void UChunkMeshCache::MarkAllDirty()
 {
+  ClearPublishedLightRefresh(false);
   ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
   Cache.clear();
@@ -667,7 +671,7 @@ void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 
 bool UChunkMeshCache::HasPendingAsyncMeshWork() const
 {
-  if (!GeometryAwaitingLight_.empty())
+  if (!GeometryAwaitingLight_.empty() || !PublishedLightRefreshPending_.empty())
     return true;
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
@@ -679,6 +683,10 @@ bool UChunkMeshCache::HasPendingAsyncMeshWork() const
 bool UChunkMeshCache::HasAsyncInflightInHorizontalRadius(
     glm::ivec3 center_ground_chunk, int radius_chunks) const
 {
+  for (const auto &[coord, ticket] : PublishedLightRefreshPending_)
+    if (std::max(std::abs(coord.x - center_ground_chunk.x),
+                 std::abs(coord.z - center_ground_chunk.z)) <= radius_chunks)
+      return true;
   for (const auto &entry : GeometryAwaitingLight_)
     if (std::max(std::abs(entry.first.x - center_ground_chunk.x),
                  std::abs(entry.first.z - center_ground_chunk.z)) <=
@@ -746,6 +754,7 @@ bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
 
 void UChunkMeshCache::CancelAsyncMeshWork()
 {
+  ClearPublishedLightRefresh(false);
   ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
   ActiveMeshSourceRevision.clear();
@@ -765,6 +774,17 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
 void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
     glm::ivec3 focus_ground_chunk, int keep_horiz_lease)
 {
+  std::vector<glm::ivec3> field_cancelled;
+  for (const auto &[coord, ticket] : PublishedLightRefreshPending_)
+    if (keep_horiz_lease < 0 ||
+        std::max(std::abs(coord.x - focus_ground_chunk.x),
+                 std::abs(coord.z - focus_ground_chunk.z)) > keep_horiz_lease)
+      field_cancelled.push_back(coord);
+  for (const auto &coord : field_cancelled)
+  {
+    DropPublishedLightRefresh(coord);
+    PendingStaleLightRemeshes_.insert(coord);
+  }
   // Dirty is removed at schedule time — re-queue Active coords before drop so
   // "KeepDirty" is real (otherwise cancel orphans remesh debt).
   // Underfeet lease: keep Active tracking for horiz≤keep (no MarkDirty storm).
@@ -874,8 +894,19 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
       outside.push_back(coord);
     }
   }
+  for (const auto &[coord, ticket] : PublishedLightRefreshPending_)
+  {
+    const int horiz = std::max(std::abs(coord.x - focus_ground_chunk.x),
+                               std::abs(coord.z - focus_ground_chunk.z));
+    if (horiz > keep_horiz_lease && horiz > radius_chunks &&
+        !keep_stale_light_debt(coord, horiz, "physical_field"))
+      outside.push_back(coord);
+  }
   for (const glm::ivec3 &coord : outside)
   {
+    if (PublishedLightRefreshPending_.count(coord))
+      PendingStaleLightRemeshes_.insert(coord);
+    DropPublishedLightRefresh(coord);
     DropGeometryAwaitingLight(coord);
     // Drop Active tracking only. Do not MarkDirty — that re-fed the remesh
     // storm while standing. InFlight stays until Drain; result applies or
@@ -1974,8 +2005,9 @@ int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
 
 bool UChunkMeshCache::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
 {
-  return ActiveMeshSourceRevision.find(chunk_coord) !=
-         ActiveMeshSourceRevision.end();
+  return PublishedLightRefreshPending_.count(chunk_coord) ||
+         ActiveMeshSourceRevision.find(chunk_coord) !=
+             ActiveMeshSourceRevision.end();
 }
 
 uint64_t
@@ -2476,6 +2508,7 @@ void UChunkMeshCache::InvalidateMeshCapture(glm::ivec3 chunk_coord)
 
 void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
 {
+  DropPublishedLightRefresh(chunk_coord);
   DropGeometryAwaitingLight(chunk_coord);
   ActiveMeshSourceRevision.erase(chunk_coord);
   RemeshAfterApply.erase(chunk_coord);
@@ -3146,6 +3179,254 @@ bool UChunkMeshCache::TryPrepareRenderLight(
   return true;
 }
 
+bool UChunkMeshCache::CanRefreshPublishedLight(
+    const UBlockWorld &world, glm::ivec3 coord,
+    const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const
+{
+  const auto found = GreedyCache.find(coord);
+  if (!PrepareRenderLight || !Render.GreedyMeshing ||
+      Render.Lighting != LightingMode::Full ||
+      world.GetLightingConfigurationIdentity() ==
+          static_cast<uint64_t>(LightingMode::Flat) ||
+      found == GreedyCache.end())
+    return false;
+  const auto &mesh = found->second;
+  if (!mesh.RenderGeometryInputs.valid || !mesh.RenderLight ||
+      mesh.RenderGeometryInputs.catalog != catalog ||
+      MeshRevisions.Current(coord) != mesh.PublishRevs.geom_rev ||
+      ActiveMeshSourceRevision.count(coord) || IsPendingGpuApply(coord) ||
+      (mesh.BoundaryOverlay.active &&
+       mesh.BoundaryOverlay.missingNeighborFaces != 0) ||
+      !mesh.RenderGeometryInputs.Matches(
+          world.CaptureGeometryRenderInputs(coord, catalog)))
+    return false;
+  const auto compatible = [&](const auto &binding)
+  {
+    return binding && binding->SupportsLightRefresh() && binding->IsLive() &&
+           binding->WorldEpoch() == CaptureStore.WorldEpoch() &&
+           binding->GeometryInputs().Matches(mesh.RenderGeometryInputs);
+  };
+  return compatible(mesh.RenderLightBinding) &&
+         (!(mesh.GpuResident && mesh.GpuQuadCount > 0) ||
+          compatible(mesh.GpuRenderLightBinding));
+}
+
+bool UChunkMeshCache::QueuePublishedLightRefresh(
+    const UBlockWorld &world, glm::ivec3 coord,
+    const std::shared_ptr<const BlockDefinitionCatalog> &catalog)
+{
+  if (!CanRefreshPublishedLight(world, coord, catalog))
+  {
+    DropPublishedLightRefresh(coord);
+    return false;
+  }
+  const auto &mesh = GreedyCache.at(coord);
+  // Exact current geometry supersedes repair hints in these legacy queues.
+  // A real geometry change or a newer executable owner failed admission above.
+  Dirty.Erase(coord);
+  RemeshAfterApply.erase(coord);
+  const auto pending = PublishedLightRefreshPending_.find(coord);
+  if (pending != PublishedLightRefreshPending_.end() &&
+      pending->second.world_epoch == CaptureStore.WorldEpoch() &&
+      pending->second.publication_count == mesh.PublishCount)
+    return true;
+  DropPublishedLightRefresh(coord);
+  const PublishedLightRefreshTicket ticket{
+      CaptureStore.WorldEpoch(), mesh.PublishCount,
+      ++NextPublishedLightRefreshTicket_, true};
+  PublishedLightRefreshPending_.emplace(coord, ticket);
+  PublishedLightRefreshQueue_.push_back(coord);
+  const auto *chunk = world.GetChunkManager().GetChunk(coord);
+  GetRenderDemandStore().NoteDemand(
+      coord, mesh.PublishRevs.geom_rev, chunk->GetLightFieldRevision(), 0, 0.0,
+      ticket.world_epoch, chunk->GetIncarnation());
+  return true;
+}
+
+bool UChunkMeshCache::RequestPublishedLightRefresh(
+    const UBlockWorld &world, const UBlockRegistry &registry, glm::ivec3 coord)
+{
+  return QueuePublishedLightRefresh(world, coord,
+                                    registry.GetDefinitionsCatalogSnapshot());
+}
+
+bool UChunkMeshCache::QueuePublishedLightHint(glm::ivec3 coord)
+{
+  const auto found = GreedyCache.find(coord);
+  return RepairGuardWorld && found != GreedyCache.end() &&
+         QueuePublishedLightRefresh(*RepairGuardWorld, coord,
+                                    found->second.RenderGeometryInputs.catalog);
+}
+
+void UChunkMeshCache::DropPublishedLightRefresh(glm::ivec3 coord)
+{
+  if (!PublishedLightRefreshPending_.erase(coord))
+    return;
+  const auto found = std::find(PublishedLightRefreshQueue_.begin(),
+                               PublishedLightRefreshQueue_.end(), coord);
+  if (found != PublishedLightRefreshQueue_.end())
+    PublishedLightRefreshQueue_.erase(found);
+}
+
+void UChunkMeshCache::ClearPublishedLightRefresh(bool keep_debt)
+{
+  if (keep_debt)
+    for (const auto &[coord, ticket] : PublishedLightRefreshPending_)
+      PendingStaleLightRemeshes_.insert(coord);
+  PublishedLightRefreshPending_.clear();
+  PublishedLightRefreshQueue_.clear();
+}
+
+int UChunkMeshCache::DrainPublishedLightRefresh(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int max_count)
+{
+  const size_t count =
+      std::min(PublishedLightRefreshQueue_.size(),
+               static_cast<size_t>(std::clamp(max_count, 0, 4)));
+  int refreshed = 0;
+  for (size_t n = 0; n < count && !PublishedLightRefreshQueue_.empty(); ++n)
+  {
+    const glm::ivec3 coord = PublishedLightRefreshQueue_.front();
+    PublishedLightRefreshQueue_.pop_front();
+    const auto ticket = PublishedLightRefreshPending_.at(coord);
+    PublishedLightRefreshPending_.at(coord).queued = false;
+    const auto restore = [&]()
+    {
+      const auto pending = PublishedLightRefreshPending_.find(coord);
+      if (pending != PublishedLightRefreshPending_.end() &&
+          pending->second.sequence == ticket.sequence &&
+          !pending->second.queued)
+      {
+        pending->second.queued = true;
+        PublishedLightRefreshQueue_.push_back(coord);
+      }
+    };
+    const auto retry_geometry = [&]()
+    {
+      DropPublishedLightRefresh(coord);
+      if (world.GetChunkManager().HasChunk(coord) && !Dirty.Contains(coord) &&
+          !HasInflightMeshBuild(coord) && !IsPendingGpuApply(coord))
+      {
+        InvalidateInFlightMeshBuild(coord);
+        Dirty.MarkDirtyPriority(coord);
+        InvalidateVisibleList();
+      }
+    };
+    const auto found = GreedyCache.find(coord);
+    if (found == GreedyCache.end())
+    {
+      DropPublishedLightRefresh(coord);
+      continue;
+    }
+    if (found->second.PublishCount != ticket.publication_count)
+    {
+      DropPublishedLightRefresh(coord);
+      continue;
+    }
+    const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+    if (ticket.world_epoch != CaptureStore.WorldEpoch() ||
+        !CanRefreshPublishedLight(world, coord, catalog))
+    {
+      retry_geometry();
+      continue;
+    }
+    const auto light = world.CaptureRenderLightSnapshot(coord);
+    if (!light || !light->MatchesGeometry(found->second.RenderGeometryInputs) ||
+        !world.HasCompleteLightSamplingCalculation(coord, catalog))
+    {
+      restore();
+      continue;
+    }
+    const auto geometry = found->second.RenderGeometryInputs;
+    const std::array<std::shared_ptr<SectionRenderLightBinding>, 2> bindings{
+        found->second.RenderLightBinding,
+        found->second.GpuResident && found->second.GpuQuadCount > 0
+            ? found->second.GpuRenderLightBinding
+            : nullptr};
+    bool success = true;
+    for (size_t i = 0; i < bindings.size(); ++i)
+    {
+      if (!bindings[i] || (i && bindings[i] == bindings[0]))
+        continue;
+      const auto words = bindings[i]->ShaderWords();
+      if (!bindings[i]->RefreshLight(ticket.world_epoch, *light) ||
+          !bindings[i]->Matches(ticket.world_epoch, geometry, *light) ||
+          bindings[i]->ShaderWords() != words)
+      {
+        success = false;
+        break;
+      }
+    }
+    // A backend callback can cancel, replace storage, or edit the world.
+    // Re-find the artifact and prove its source before changing cache metadata.
+    const auto current = GreedyCache.find(coord);
+    const auto pending = PublishedLightRefreshPending_.find(coord);
+    if (pending == PublishedLightRefreshPending_.end() ||
+        pending->second.sequence != ticket.sequence)
+      continue;
+    if (current == GreedyCache.end() ||
+        current->second.PublishCount != ticket.publication_count)
+    {
+      DropPublishedLightRefresh(coord);
+      continue;
+    }
+    if (ticket.world_epoch != CaptureStore.WorldEpoch() ||
+        !CanRefreshPublishedLight(world, coord,
+                                  registry.GetDefinitionsCatalogSnapshot()))
+    {
+      retry_geometry();
+      continue;
+    }
+    const auto latest = world.CaptureRenderLightSnapshot(coord);
+    if (!success || !latest ||
+        latest->FieldIncarnation() != light->FieldIncarnation() ||
+        latest->FieldRevision() != light->FieldRevision())
+    {
+      restore();
+      continue;
+    }
+    auto &mesh = current->second;
+    const auto *chunk = world.GetChunkManager().GetChunk(coord);
+    const bool changed =
+        mesh.MeshedLightRevision != chunk->GetLightFieldRevision() ||
+        mesh.RenderLight->FieldIncarnation() != light->FieldIncarnation() ||
+        mesh.RenderLight->FieldRevision() != light->FieldRevision();
+    mesh.RenderLight = *light;
+    mesh.MeshedLightRevision = chunk->GetLightFieldRevision();
+    mesh.PublishRevs.light_rev = mesh.MeshedLightRevision;
+    mesh.ProvisionalLightPreview = false;
+    DropPublishedLightRefresh(coord);
+    PendingStaleLightRemeshes_.erase(coord);
+    auto &demand = GetRenderDemandStore();
+    demand.NoteDemand(coord, mesh.PublishRevs.geom_rev,
+                      chunk->GetLightFieldRevision(), 0, 0.0,
+                      ticket.world_epoch, chunk->GetIncarnation());
+    demand.NoteLightCalculationSettled(
+        coord, ticket.world_epoch, chunk->GetIncarnation(),
+        chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+    demand.NotePublishedRevs(coord, mesh.PublishRevs.geom_rev,
+                             mesh.PublishRevs.light_rev);
+    ++PublishedLightRefreshCount_;
+    ++refreshed;
+    if (const auto &target = PublicationTraceChunk();
+        target && *target == coord)
+    {
+      std::ostringstream message;
+      message << "field_refresh coord=(" << coord.x << "," << coord.y << ","
+              << coord.z << ") source_epoch=" << ticket.world_epoch
+              << " geometry_publication=" << ticket.publication_count
+              << " geometry_revision=" << mesh.PublishRevs.geom_rev
+              << " field_incarnation=" << light->FieldIncarnation()
+              << " field_revision=" << light->FieldRevision();
+      CubatariumLogInfo("ChunkPublication", message.str());
+    }
+    if (changed && OnLitDrawableCommitted)
+      OnLitDrawableCommitted(coord);
+  }
+  return refreshed;
+}
+
 void UChunkMeshCache::RecordPublishedGeomStamps(
     ChunkGreedyMesh &mesh,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
@@ -3303,6 +3584,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
   // before pairing; real edits retire it there, while repeated repair hints
   // cannot turn the same result back into a worker job.
   if (GeometryAwaitingLight_.count(chunkCoord))
+    return;
+  if (QueuePublishedLightHint(chunkCoord))
     return;
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
@@ -3520,6 +3803,8 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
   // Revalidate actual input identities in the bounded queue instead of
   // invalidating that owner on an untyped dirty/repair notification.
   if (GeometryAwaitingLight_.count(chunkCoord))
+    return;
+  if (QueuePublishedLightHint(chunkCoord))
     return;
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
@@ -4409,6 +4694,8 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
       PendingStaleLightRemeshes_.erase(coord);
       continue;
     }
+    if (RequestPublishedLightRefresh(world, registry, coord))
+      continue;
 
     const ChunkRenderDemandRecord *demand = GetRenderDemandStore().Find(coord);
     if (!demand)
@@ -4608,6 +4895,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  DropPublishedLightRefresh(chunkCoord);
   DropGeometryAwaitingLight(chunkCoord);
   GetRenderDemandStore().RemoveGeometry(chunkCoord);
   CpuMeshRecovery.erase(chunkCoord);
@@ -4670,6 +4958,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    DropPublishedLightRefresh(slice);
     DropGeometryAwaitingLight(slice);
     GetRenderDemandStore().RemoveGeometry(slice);
     PendingStaleLightRemeshes_.erase(slice);
@@ -6511,6 +6800,7 @@ int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
                                            int max_count, double budget_ms)
 {
   const auto start = std::chrono::steady_clock::now();
+  (void)DrainPublishedLightRefresh(world, registry, max_count);
   const int ready = DrainGeometryAwaitingLight(world, registry, max_count);
   const double elapsed = std::chrono::duration<double, std::milli>(
                              std::chrono::steady_clock::now() - start)
@@ -6532,6 +6822,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
   // Emerge coordinator zeros telem once before the first Consume.
   LastGpuKickDeferReason_.clear();
   int done = 0;
+  (void)DrainPublishedLightRefresh(world, registry, max_drain);
   MeshRebuildTickStats stats{};
   done += DrainGeometryAwaitingLight(world, registry, max_drain);
   if (AsyncBuilder)
@@ -9301,6 +9592,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             << " inflight=" << HasInflightMeshBuild(*target)
             << " capture_pending=" << PendingCaptureSet_.count(*target)
             << " awaiting_light=" << GeometryAwaitingLight_.count(*target)
+            << " light_refresh=" << PublishedLightRefreshPending_.count(*target)
             << " awaiting_light_gpu="
             << (awaiting != GeometryAwaitingLight_.end() &&
                 awaiting->second.gpu.has_value())
@@ -9490,6 +9782,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
               ") source=" + std::to_string(retired_source));
   }
   DrainMeshDependencyInvalidations(world, max_schedule_per_frame);
+  (void)DrainPublishedLightRefresh(world, registry, max_drain_per_frame);
   DrainStaleLightRemeshDebt(world, registry, max_schedule_per_frame);
   AgeFmDirtyGpuWatchFrames();
   // FmDirtyToGpuFinishMatchN_ cleared after emerge telemetry latch (Consume*).
@@ -12215,7 +12508,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (IsRemeshAfterApplyPending(selected_coord) ? 1u << 2 : 0u) |
             (gpu_apply ? 1u << 3 : 0u) | (gpu_queued ? 1u << 4 : 0u) |
             (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u) |
-            (IsGeometryAwaitingLight(selected_coord) ? 1u << 12 : 0u);
+            (IsGeometryAwaitingLight(selected_coord) ? 1u << 12 : 0u) |
+            (IsPublishedLightRefreshPending(selected_coord) ? 1u << 13 : 0u);
         trace.flags = soft_defer ? 1u : 0u;
         if (const ChunkRenderDemandRecord *demand =
                 GetRenderDemandStore().Find(selected_coord))

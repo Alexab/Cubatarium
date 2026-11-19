@@ -4,6 +4,10 @@
 
 namespace cutum
 {
+namespace
+{
+std::optional<glm::ivec3> SectionOrigin(glm::ivec3 coord);
+}
 struct SectionRenderLightBindings::State
 {
   SectionLightBindingTable table;
@@ -49,6 +53,41 @@ struct SectionRenderLightBindings::Entry final : SectionRenderLightBinding
   void UpdateSnapshot(const SectionRenderLightSnapshot &light)
   {
     SetCompatibleLight(light);
+  }
+  bool SupportsLightRefresh() const override { return true; }
+  bool RefreshLight(uint64_t source_world_epoch,
+                    const SectionRenderLightSnapshot &light) override
+  {
+    const auto owner = state.lock();
+    if (!owner || !owner->active || source_world_epoch != owner->epoch ||
+        source_world_epoch != WorldEpoch() || !IsLive() ||
+        !light.MatchesGeometry(GeometryInputs()) || !light.Volume())
+      return false;
+    const auto &previous = LightSnapshot();
+    if (previous.FieldIncarnation() == light.FieldIncarnation() &&
+        previous.FieldRevision() == light.FieldRevision())
+    {
+      if (previous.Volume() != light.Volume() &&
+          previous.Volume()->cells != light.Volume()->cells)
+        return false;
+      UpdateSnapshot(light);
+      return true;
+    }
+    const auto origin = SectionOrigin(GeometryInputs().coord);
+    if (!origin || glGetError() != GL_NO_ERROR)
+      return false;
+    if (!handle.valid ||
+        !owner->table.Replace(handle,
+                              {source_world_epoch, light.FieldIncarnation(),
+                               light.FieldRevision()},
+                              light.Volume(), *origin))
+    {
+      if (!owner->ordered_fallback ||
+          (handle.valid && !owner->table.Defer(handle)))
+        return false;
+    }
+    UpdateSnapshot(light);
+    return true;
   }
 };
 
@@ -168,35 +207,8 @@ bool SectionRenderLightBindings::Refresh(
     uint64_t source_world_epoch, const SectionRenderLightSnapshot &light)
 {
   const auto entry = std::dynamic_pointer_cast<Entry>(binding);
-  if (!entry || !Current || entry->state.lock() != Current ||
-      source_world_epoch != Current->epoch || !entry->IsLive() ||
-      !light.MatchesGeometry(entry->GeometryInputs()) || !light.Volume())
-    return false;
-  const auto &previous = entry->LightSnapshot();
-  if (previous.FieldIncarnation() == light.FieldIncarnation() &&
-      previous.FieldRevision() == light.FieldRevision())
-  {
-    if (previous.Volume() != light.Volume() &&
-        previous.Volume()->cells != light.Volume()->cells)
-      return false;
-    entry->UpdateSnapshot(light);
-    return true;
-  }
-  const auto origin = SectionOrigin(entry->GeometryInputs().coord);
-  if (!origin || glGetError() != GL_NO_ERROR)
-    return false;
-  if (!entry->handle.valid ||
-      !Current->table.Replace(
-          entry->handle,
-          {source_world_epoch, light.FieldIncarnation(), light.FieldRevision()},
-          light.Volume(), *origin))
-  {
-    if (!Current->ordered_fallback ||
-        (entry->handle.valid && !Current->table.Defer(entry->handle)))
-      return false;
-  }
-  entry->UpdateSnapshot(light);
-  return true;
+  return entry && Current && entry->state.lock() == Current &&
+         entry->RefreshLight(source_world_epoch, light);
 }
 
 bool SectionRenderLightBindings::IsResident(

@@ -541,6 +541,21 @@ public:
   /// invalidation event was dropped (stale meshes = see-through holes).
   void ReconcilePublishedMeshInputs(const UBlockWorld &world, int max_checks);
   uint64_t GetReconcileRedirtyCount() const { return ReconcileRedirtyN; }
+  bool RequestPublishedLightRefresh(const UBlockWorld &world,
+                                    const UBlockRegistry &registry,
+                                    glm::ivec3 coord);
+  size_t GetPublishedLightRefreshPendingCount() const
+  {
+    return PublishedLightRefreshPending_.size();
+  }
+  uint64_t GetPublishedLightRefreshCount() const
+  {
+    return PublishedLightRefreshCount_;
+  }
+  bool IsPublishedLightRefreshPending(glm::ivec3 coord) const
+  {
+    return PublishedLightRefreshPending_.count(coord) != 0;
+  }
   /// World used by the redundant-repair guard (set once by UWorld).
   void SetRepairGuardWorld(const UBlockWorld *world)
   {
@@ -1106,6 +1121,7 @@ public:
   {
     if (!fn)
     {
+      ClearPublishedLightRefresh(true);
       for (const auto &entry : GeometryAwaitingLight_)
       {
         ActiveMeshSourceRevision.erase(entry.first);
@@ -1375,6 +1391,17 @@ private:
       const std::optional<SectionRenderLightSnapshot> &light, bool provisional,
       std::shared_ptr<SectionRenderLightBinding> &prepared,
       const SectionNoSurfaceProof *no_surface = nullptr);
+  bool CanRefreshPublishedLight(
+      const UBlockWorld &world, glm::ivec3 coord,
+      const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const;
+  bool QueuePublishedLightRefresh(
+      const UBlockWorld &world, glm::ivec3 coord,
+      const std::shared_ptr<const BlockDefinitionCatalog> &catalog);
+  bool QueuePublishedLightHint(glm::ivec3 coord);
+  void DropPublishedLightRefresh(glm::ivec3 coord);
+  void ClearPublishedLightRefresh(bool keep_debt);
+  int DrainPublishedLightRefresh(const UBlockWorld &world,
+                                 UBlockRegistry &registry, int max_count);
   struct PendingGpuApply
   {
     enum class Phase : uint8_t
@@ -1794,6 +1821,20 @@ private:
   /// Stale-light remesh requests survive Dirty admission until the replacement
   /// mesh publishes the current light-field revision.
   std::unordered_set<glm::ivec3, IVec3Hash> PendingStaleLightRemeshes_;
+  struct PublishedLightRefreshTicket
+  {
+    uint64_t world_epoch{0};
+    uint32_t publication_count{0};
+    uint64_t sequence{0};
+    bool queued{true};
+  };
+  /// At most one lightweight ticket per resident published geometry artifact.
+  /// No voxel captures, mesh payloads, or staging allocations are retained.
+  std::unordered_map<glm::ivec3, PublishedLightRefreshTicket, IVec3Hash>
+      PublishedLightRefreshPending_;
+  std::deque<glm::ivec3> PublishedLightRefreshQueue_;
+  uint64_t PublishedLightRefreshCount_{0};
+  uint64_t NextPublishedLightRefreshTicket_{0};
   int MeshDependencyQueuedSinceDrain_{0};
   int LastMeshDependencyQueuedN_{0};
   int LastMeshDependencyAppliedN_{0};

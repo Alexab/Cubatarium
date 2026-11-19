@@ -7653,6 +7653,32 @@
         "limits": "One32block opaque-depth scenario does not close original sporadic fault class. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free merge/capture/dependency identities, full lifecycle and backend/persistence acceptance remain.",
         "artifact": "build/desktop-msvc/engine-sync-awaiting-field-dry-native/synchronous-geometry-awaiting-field-observation.json"
       }
+    },
+    "published_geometry_physical_field_refresh": {
+      "status": "Implemented bounded scheduling and in-place physical field refresh for compatible already-published CPU/packed/cross resource leases.12Release testsGREEN and3negative controls. Required Release app and wet frontier native pending. Full geometry/light identity separation remains incomplete.",
+      "red": "engine-world-cache-light-only-red-test.log: real computed diagonal emitter change sent through cache dirty notification and scheduler caused a new mesh build/publication. Previous test called resource.Refresh directly and did not exercise world/cache scheduling.",
+      "implementation": "Actual resource lease optionally supports in-place RefreshLight. Existing GL owner and virtual cache path share the same storage/epoch/geometry/volume/fence validation. Cache admits at most one lightweight field ticket per resident published geometry artifact, with epoch/publication counter and monotonic request identity. Four round-robin checks per call; no mesh payload, capture, worker credit or staging slot. Typed relight installation and compatible dirty hints route to this queue before bumping geometry revision. Ready field updates existing binding/cache light metadata/demand only; geometry revision/publication count, SSBO slot/generation/payload and shader handle remain unchanged. Incompatible geometry/cancel/dead resources follow existing recovery, never graft current-coordinate light onto different retained geometry.",
+      "ownership": "Map entry remains authoritative during backend callback. Cancellation/eviction invalidates a local stack owner; cancel-and-readmit same publication requires exact request sequence. Geometry/catalog/epoch and latest physical field are rechecked after backend work. Eviction, world identity, modes, prepare callback removal and cancel variants are covered. KeepDirty/radius/policy cancellation preserves field debt separately from geometry. Compatible legacy Dirty/RemeshAfterApply hints are replaced only after exact geometry and source revision validation.",
+      "validation": {
+        "artifact": "build/desktop-msvc/engine-published-field-fairness-twelve-tests.log",
+        "result": "12/12PASS23.28seconds",
+        "lifecycle": "18cases each sync/async: actual computed field unready/ready, eviction/column eviction, epoch, edit, world chunk reload, cancellation/KeepDirty/radius, callback removal, mode, unavailable resource/recovery, callback cancellation/edit/eviction/dead lease, cancelled stack vs replacement request, proof-only completion with unchanged bytes/revision. Real geometry edits subsequently rebuild and publish.",
+        "fairness": "Nine actual published sections, repeated duplicate hints; one ready field behind eight unready peers completes within three bounded rounds without geometry work. Multi-entry callback cancellation and column eviction release all corresponding tickets.",
+        "actual_gpu": "Diagonal emitter on/off passes through CPU world/cache and scheduler with same actual GL binding and no new CPU build/publication;8000-cell GPU readback matches computed field. Actual packed GPU cube uses emitter-lit faces; field update preserves same slot/generation, six-quad SSBO bytes and publication, with real resource byte probe. Existing independent per-cell production fragment references remain GREEN."
+      },
+      "negative_controls": {
+        "artifact": "build/desktop-msvc/engine-published-field-negative-controls.json",
+        "expected_failures": 3,
+        "guards": [
+          "request_sequence",
+          "post_refresh_geometry",
+          "gpu_field_upload"
+        ],
+        "exact_current_source_restore": true,
+        "restored_green": true,
+        "checker_followup": "Original upload-control checker expected a later generic readback message, but mutation failed earlier in independent production-fragment light comparison. Original failed checker receipt/logs preserved; isolated repeat with correct earlier oracle assertion expectedFAIL, exact source restoration andGREEN."
+      },
+      "limits": "No native of this implementation yet. Initial/inflight snapshots and CPU/GPU greedy merge/capture/dependency identities still read baked light. Whole-catalog identity still couples optical-only changes to geometry. Full native RGB/transparency/backend/persistence/memory/performance acceptance and original sporadic first-publication fault closure remain open."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7681,7 +7707,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "d40902be6249717c7e25066fef006be484c08f43",
+    "latest_source_commit": "pending commit: published field refresh",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -7690,7 +7716,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Remove light from actual geometry merge/capture/dependency identity and scheduler invalidations; prove light-only update with zero remeshing through actual world/cache.",
+      "Published compatible geometry now receives field-only refresh with real world/cache and GPU tests; native pending. Still remove baked light from initial/inflight geometry merge/capture/dependency identity and scheduler inputs.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

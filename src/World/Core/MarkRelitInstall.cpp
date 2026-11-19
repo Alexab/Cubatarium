@@ -137,6 +137,9 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
     int dirty_admitted_n = 0;
     auto admit_dirty = [&](const glm::ivec3 &coord, bool priority)
     {
+      if (HasBlockRegistry() && mesh->GetCache().RequestPublishedLightRefresh(
+                                    BlockWorld, GetBlockRegistry(), coord))
+        return;
       // A validated no-delta calculation is not new geometry. Re-admitting a
       // current zero-quad publication as a missing image perpetually advances
       // its mesh revision and prevents enter warmup from ever settling.

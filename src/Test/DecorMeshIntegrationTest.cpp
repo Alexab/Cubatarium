@@ -247,7 +247,22 @@ public:
   }
   std::array<uint32_t, 4> ShaderWords() const override { return {7, 0, 1, 0}; }
   bool IsLive() const override { return live; }
+  bool SupportsLightRefresh() const override { return refreshable; }
+  bool RefreshLight(uint64_t epoch,
+                    const cutum::SectionRenderLightSnapshot &light) override
+  {
+    if (!refreshable || reject_refresh || !live || epoch != WorldEpoch() ||
+        !light.MatchesGeometry(GeometryInputs()))
+      return false;
+    SetCompatibleLight(light);
+    if (on_refresh)
+      on_refresh();
+    return live;
+  }
   bool live{true};
+  bool refreshable{false};
+  bool reject_refresh{false};
+  std::function<void()> on_refresh;
 };
 
 static void Expect(bool cond, const char *message)
@@ -1228,7 +1243,7 @@ static void TestPackedLightArtifactOwnership(
   world.SetFluidDefinitions(definitions);
   world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
   const glm::ivec3 root(0);
-  world.SetBlock({4, 4, 4}, kStone);
+  world.SetBlock({14, 4, 14}, kStone);
   DeferredTestMesher backend;
   UChunkMeshCache cache;
   auto settings = MakeFrustumMeshSettings();
@@ -1317,9 +1332,42 @@ static void TestPackedLightArtifactOwnership(
   const auto original_words = original->ShaderWords();
   const auto original_slot = cache.GetGpuPackedOpaqueRefs()[0].slotIndex;
   const auto original_bytes = packed_bytes();
+  const auto original_allocation =
+      cache.GetGpuMeshPipeline()->GetAllocator().GetSlot(root)->generation;
+  const auto original_publication = cache.GetPublishCount(root);
+  cache.SetRepairGuardWorld(&world);
+  for (bool emitter_present : {true, false})
+  {
+    world.SetBlock({16, 4, 16}, emitter_present ? kFire : BLOCK_AIR);
+    settle();
+    cache.MarkDirtyPriority(root,
+                            MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    cache.DrainPendingGpuMeshes(world, registry, 8, -1);
+    flatten();
+    const auto current = world.CaptureRenderLightSnapshot(root);
+    Expect(
+        current &&
+            original->Matches(cache.GetCaptureStore().WorldEpoch(),
+                              original->GeometryInputs(), *current) &&
+            original->ShaderWords() == original_words &&
+            cache.GetPublishedRenderLightBinding(root) == original &&
+            cache.GetPublishCount(root) == original_publication &&
+            cache.GetGpuPackedOpaqueRefs().size() == 1 &&
+            cache.GetGpuPackedOpaqueRefs()[0].slotIndex == original_slot &&
+            cache.GetGpuMeshPipeline()
+                    ->GetAllocator()
+                    .GetSlot(root)
+                    ->generation == original_allocation &&
+            packed_bytes() == original_bytes &&
+            cache.GetMeshedLightRevision(root) ==
+                world.GetChunkManager().GetChunk(root)->GetLightFieldRevision(),
+        "actual packed world/cache light update preserves SSBO bytes "
+        "allocation and publication");
+    ProbeCertifiedBinding(owner, original);
+  }
   std::weak_ptr<SectionRenderLightBinding> weak_original = original;
-  world.SetBlock({4, 4, 4}, BLOCK_AIR);
-  world.SetBlock({5, 4, 4}, kStone);
+  world.SetBlock({14, 4, 14}, BLOCK_AIR);
+  world.SetBlock({13, 4, 14}, kStone);
   for (int x = -16; x < 32; ++x)
     for (int z = -16; z < 32; ++z)
       world.SetBlock({x, 31, z}, kStone);
@@ -1364,7 +1412,7 @@ static void TestPackedLightArtifactOwnership(
   auto final_binding = cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding;
   std::weak_ptr<SectionRenderLightBinding> weak_final = final_binding;
   final_binding.reset();
-  world.SetBlock({5, 4, 4}, BLOCK_AIR);
+  world.SetBlock({13, 4, 14}, BLOCK_AIR);
   cache.MarkDirty(root);
   cache.GetCaptureStore().Invalidate(root);
   pack();
@@ -1968,6 +2016,360 @@ public:
     return cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
   }
 };
+
+static void TestPublishedLightRefreshLifecycle(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0);
+  for (bool asynchronous : {false, true})
+    for (int lifecycle = 0; lifecycle < 18; ++lifecycle)
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(
+          static_cast<uint64_t>(LightingMode::Full));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      world.SetBlock({14, 8, 14}, kStone);
+      CountingPhysicalMesher mesher;
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = asynchronous;
+      settings.FrustumCulling = false;
+      cache.SetRenderSettings(settings);
+      cache.SetMesherBackend(&mesher);
+      cache.SetMeshRebuildFocus(root, 4, 1);
+      cache.SetRepairGuardWorld(&world);
+      cache.SetPrepareRenderLightFn(
+          [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+             const SectionRenderLightSnapshot &light)
+              -> std::shared_ptr<SectionRenderLightBinding>
+          {
+            auto binding = std::make_shared<TestRenderLightBinding>(
+                epoch, geometry, light);
+            binding->refreshable = true;
+            return binding;
+          });
+      const auto calculate = [&]()
+      {
+        RelightJobSpec spec;
+        spec.min_world_y = world.GetVerticalProfile().MinY;
+        spec.max_world_y = world.GetVerticalProfile().MaxY;
+        const auto field =
+            UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                .Compute(registry);
+        Expect(field.inputs_complete && field.chunks.size() == 1,
+               "field-refresh fixture computes actual complete physical "
+               "transport");
+        world.GetChunkManager().ReplaceComputedSectionLightVolume(
+            root, *field.chunks[0].padded_light, true, true);
+        Expect(world.RecordLightCalculation(
+                   field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+               "field-refresh fixture installs actual calculation certificate");
+      };
+      const auto build = [&]()
+      {
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        auto &demand = cache.GetRenderDemandStore();
+        const auto epoch = cache.GetCaptureStore().WorldEpoch();
+        const auto revision = cache.GetChunkMeshRevision(root);
+        demand.NoteDemand(root, revision, chunk->GetLightFieldRevision(), 0,
+                          1.0, epoch, chunk->GetIncarnation());
+        demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
+                                           chunk->GetLightFieldRevision(),
+                                           chunk->GetContentRevision());
+        if (asynchronous)
+          Expect(cache.GetCaptureStore()
+                     .CaptureAndStore(world, root, revision)
+                     .has_value(),
+                 "field-refresh fixture captures actual async geometry");
+        const auto tick =
+            cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(asynchronous
+                   ? tick.Scheduled == 1 &&
+                         cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5))
+                   : tick.SyncRebuilt == 1,
+               "field-refresh fixture builds actual geometry");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      };
+      calculate();
+      cache.MarkDirtyPriority(root);
+      build();
+      auto binding = std::dynamic_pointer_cast<TestRenderLightBinding>(
+          cache.GetPublishedRenderLightBinding(root));
+      const auto published = cache.GetPublishCount(root);
+      const auto geometry_revision = cache.GetChunkMeshRevision(root);
+      const auto old_light = cache.GetMeshedLightRevision(root);
+      Expect(binding && published == 1 && mesher.builds == 1,
+             "field-refresh fixture starts with one actual published geometry "
+             "artifact");
+      world.SetBlock(lifecycle == 17 ? glm::ivec3(18, 8, 18)
+                                     : glm::ivec3(16, 8, 16),
+                     lifecycle == 17 ? kStone : kFire);
+      cache.MarkDirtyPriority(
+          root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+      cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+      Expect(cache.IsPublishedLightRefreshPending(root) &&
+                 cache.HasPendingDirty() && !cache.IsChunkMeshDirty(root) &&
+                 mesher.builds == 1 &&
+                 cache.GetMeshedLightRevision(root) == old_light,
+             "unready field update owns work without capturing or rebuilding "
+             "geometry");
+      calculate();
+      if (lifecycle == 17)
+        Expect(
+            world.GetChunkManager().GetChunk(root)->GetLightFieldRevision() ==
+                old_light,
+            "proof-only refresh establishes calculation without changing field "
+            "bytes or revision");
+      switch (lifecycle)
+      {
+      case 1:
+        cache.RemoveChunk(root);
+        break;
+      case 2:
+        cache.RemoveColumn(root, 0, 0);
+        break;
+      case 3:
+        cache.GetCaptureStore().BumpWorldEpoch();
+        break;
+      case 4:
+        world.SetBlock({13, 8, 14}, kStone);
+        cache.MarkDirtyPriority(root);
+        break;
+      case 5:
+        world.GetChunkManager().RemoveChunk(root);
+        world.SetBlock({14, 8, 14}, kStone);
+        break;
+      case 6:
+        cache.CancelAsyncMeshWork();
+        break;
+      case 7:
+        cache.CancelAsyncInFlightKeepDirty();
+        break;
+      case 8:
+        cache.CancelInFlightOutsideHorizontalRadius({100, 0, 100}, 1);
+        break;
+      case 9:
+        cache.SetPrepareRenderLightFn({});
+        break;
+      case 10:
+        settings.Lighting = LightingMode::Flat;
+        cache.SetRenderSettings(settings);
+        break;
+      case 11:
+        binding->reject_refresh = true;
+        for (int tick = 0; tick < 8; ++tick)
+        {
+          cache.MarkDirtyPriority(
+              root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+          cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+          Expect(cache.GetPublishedLightRefreshPendingCount() == 1 &&
+                     cache.GetMeshedLightRevision(root) == old_light &&
+                     mesher.builds == 1 &&
+                     cache.GetPublishCount(root) == published &&
+                     !cache.IsChunkMeshDirty(root),
+                 "unavailable field resource retains one fair retry without "
+                 "remeshing");
+        }
+        binding->reject_refresh = false;
+        break;
+      case 12:
+        binding->on_refresh = [&]() { cache.CancelAsyncMeshWork(); };
+        break;
+      case 13:
+        binding->on_refresh = [&]() { world.SetBlock({13, 8, 14}, kStone); };
+        break;
+      case 14:
+        binding->on_refresh = [&]()
+        {
+          cache.RemoveChunk(root);
+          world.GetChunkManager().RemoveChunk(root);
+          world.SetBlock({14, 8, 14}, kStone);
+        };
+        break;
+      case 15:
+        binding->on_refresh = [&]() { binding->live = false; };
+        break;
+      case 16:
+        binding->on_refresh = [&]()
+        {
+          cache.CancelAsyncMeshWork();
+          Expect(cache.RequestPublishedLightRefresh(world, registry, root),
+                 "cancelled field callback can admit a new request for the "
+                 "same publication");
+        };
+        break;
+      default:
+        break;
+      }
+      cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+      if (lifecycle == 16)
+      {
+        Expect(
+            cache.GetPublishedLightRefreshPendingCount() == 1 &&
+                cache.GetPublishedLightRefreshCount() == 0 &&
+                cache.GetMeshedLightRevision(root) == old_light,
+            "cancelled stack owner cannot consume a replacement field request");
+        binding->on_refresh = {};
+        cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+      }
+      const bool updated = lifecycle == 0 || lifecycle == 11 ||
+                           lifecycle == 16 || lifecycle == 17;
+      if (cache.GetPublishedLightRefreshCount() != uint64_t(updated))
+        std::cerr << "field-refresh lifecycle=" << lifecycle
+                  << " async=" << asynchronous << '\n';
+      Expect(cache.GetPublishedLightRefreshPendingCount() == 0 &&
+                 cache.GetPublishedLightRefreshCount() == uint64_t(updated) &&
+                 mesher.builds == 1,
+             "field-refresh cancellation source identity and callback "
+             "lifecycle are respected");
+      if (lifecycle == 1 || lifecycle == 2 || lifecycle == 14)
+      {
+        Expect(cache.GetGreedyCacheSize() == 0 &&
+                   cache.GetPublishCount(root) == 0,
+               "eviction cannot republish a cancelled physical field");
+        continue;
+      }
+      Expect(cache.GetPublishCount(root) == published,
+             "field refresh never changes the geometry publication count");
+      if (updated)
+      {
+        const auto current = world.CaptureRenderLightSnapshot(root);
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        Expect(
+            current && binding == cache.GetPublishedRenderLightBinding(root) &&
+                binding->Matches(cache.GetCaptureStore().WorldEpoch(),
+                                 binding->GeometryInputs(), *current) &&
+                cache.GetMeshedLightRevision(root) ==
+                    chunk->GetLightFieldRevision() &&
+                cache.GetChunkMeshRevision(root) == geometry_revision &&
+                cache.GetRenderDemandStore().Find(root)->published_light_rev ==
+                    chunk->GetLightFieldRevision(),
+            "field refresh updates compatible resource and demand while "
+            "preserving geometry identity");
+      }
+      else
+        Expect(cache.GetMeshedLightRevision(root) == old_light,
+               "cancelled or superseded field work cannot advance published "
+               "light metadata");
+      if (lifecycle == 4 || lifecycle == 5 || lifecycle == 13)
+      {
+        binding->on_refresh = {};
+        Expect(cache.IsChunkMeshDirty(root),
+               "actual geometry edit keeps a rebuild obligation");
+        calculate();
+        build();
+        Expect(mesher.builds == 2 &&
+                   cache.GetPublishCount(root) == published + 1,
+               "actual changed geometry rebuilds and publishes after field "
+               "work retires");
+      }
+    }
+}
+
+static void TestPublishedLightRefreshFairness(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (bool cancel_batch : {false, true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    CountingPhysicalMesher mesher;
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = false;
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetRepairGuardWorld(&world);
+    cache.SetPrepareRenderLightFn(
+        [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+           const SectionRenderLightSnapshot &light)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          auto binding =
+              std::make_shared<TestRenderLightBinding>(epoch, geometry, light);
+          binding->refreshable = true;
+          return binding;
+        });
+    const auto calculate = [&](glm::ivec3 coord)
+    {
+      RelightJobSpec spec;
+      spec.min_world_y = world.GetVerticalProfile().MinY;
+      spec.max_world_y = world.GetVerticalProfile().MaxY;
+      const auto field =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {coord})
+              .Compute(registry);
+      Expect(field.inputs_complete && field.chunks.size() == 1,
+             "field fairness fixture computes actual complete field");
+      world.GetChunkManager().ReplaceComputedSectionLightVolume(
+          coord, *field.chunks[0].padded_light, true, true);
+      Expect(world.RecordLightCalculation(
+                 field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+             "field fairness fixture installs actual calculation proof");
+    };
+    std::array<glm::ivec3, 9> coords;
+    for (size_t n = 0; n < coords.size(); ++n)
+    {
+      coords[n] = {static_cast<int>(n) * 4, 0, 0};
+      world.SetBlock(coords[n] * CHUNK_SIZE + glm::ivec3(14, 8, 14), kStone);
+      calculate(coords[n]);
+      cache.MarkDirtyPriority(coords[n]);
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+      Expect(cache.GetPublishCount(coords[n]) == 1,
+             "field fairness fixture publishes actual synchronous geometry");
+    }
+    for (const auto coord : coords)
+    {
+      world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(16, 8, 16), kFire);
+      for (int duplicate = 0; duplicate < 8; ++duplicate)
+        cache.MarkDirtyPriority(
+            coord, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    }
+    Expect(cache.GetPublishedLightRefreshPendingCount() == coords.size() &&
+               cache.GetPublishedLightRefreshPendingCount() <=
+                   cache.GetGreedyCacheSize() &&
+               mesher.builds == coords.size(),
+           "field queue deduplicates requests and stays bounded by resident "
+           "published artifacts");
+    const auto target = coords.back();
+    const auto before = cache.GetMeshedLightRevision(target);
+    calculate(target);
+    auto binding = std::dynamic_pointer_cast<TestRenderLightBinding>(
+        cache.GetPublishedRenderLightBinding(target));
+    if (cancel_batch)
+      binding->on_refresh = [&]() { cache.CancelAsyncMeshWork(); };
+    for (int round = 0; round < 3; ++round)
+      cache.ConsumeGpuApplyBacklog(world, registry, 4, 0, 0);
+    Expect(mesher.builds == coords.size() && cache.GetPublishCount(target) == 1,
+           "field queue pressure never schedules geometry work");
+    if (cancel_batch)
+      Expect(cache.GetPublishedLightRefreshPendingCount() == 0 &&
+                 cache.GetPublishedLightRefreshCount() == 0 &&
+                 cache.GetMeshedLightRevision(target) == before,
+             "callback cancellation clears a multi-entry batch without "
+             "consuming cancelled work");
+    else
+    {
+      Expect(cache.GetPublishedLightRefreshCount() == 1 &&
+                 cache.GetPublishedLightRefreshPendingCount() ==
+                     coords.size() - 1 &&
+                 cache.GetMeshedLightRevision(target) > before,
+             "ready field behind eight unready peers publishes within three "
+             "bounded rounds");
+      for (size_t n = 0; n + 1 < coords.size(); ++n)
+        cache.RemoveColumn(coords[n], 0, 0);
+      Expect(cache.GetPublishedLightRefreshPendingCount() == 0 &&
+                 cache.GetGreedyCacheSize() == 1,
+             "column eviction releases every corresponding field queue ticket");
+    }
+  }
+}
 
 static void TestGeometryWaitsForPhysicalLight(
     cutum::UBlockRegistry &registry,
@@ -2974,10 +3376,12 @@ static void TestFirstComputedLightPublication(
            "actual asynchronous publication retains compatible "
            "geometry/catalog/profile provenance");
     SectionRenderLightBindings sync_gpu_bindings;
+    CountingPhysicalMesher sync_mesher;
     UChunkMeshCache sync_cache;
     auto sync_settings = settings;
     sync_settings.AsyncMeshing = false;
     sync_cache.SetRenderSettings(sync_settings);
+    sync_cache.SetMesherBackend(&sync_mesher);
     sync_cache.RebuildAll(world, registry);
     if (use_gpu_bindings)
       Expect(sync_gpu_bindings.BeginWorld(
@@ -3226,7 +3630,9 @@ static void TestFirstComputedLightPublication(
       const auto current_geometry = current_binding->GeometryInputs();
       const auto before_field_only_count = sync_cache.GetPublishCount(root);
       const auto before_field_only_vertices = sync_cache.GetGreedyVertexCount();
+      const auto before_field_only_builds = sync_mesher.builds.load();
       const auto sync_epoch = sync_cache.GetCaptureStore().WorldEpoch();
+      sync_cache.SetRepairGuardWorld(&world);
       for (const bool emitter_present : {true, false})
       {
         // Diagonal input changes physical transport but none of the seven
@@ -3249,14 +3655,30 @@ static void TestFirstComputedLightPublication(
                        (emitter_present ? 12 : 0),
                "diagonal emitter changes physical block light without geometry "
                "change");
+        auto &sync_demand = sync_cache.GetRenderDemandStore();
+        sync_demand.NoteDemand(root, sync_cache.GetChunkMeshRevision(root),
+                               chunk->GetLightFieldRevision(), 0, 3.0,
+                               sync_epoch, chunk->GetIncarnation());
+        sync_demand.NoteLightCalculationSettled(
+            root, sync_epoch, chunk->GetIncarnation(),
+            chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        sync_cache.MarkDirtyPriority(
+            root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+        sync_cache.RebuildDirtyChunksWithStats(world, registry, 100, 100, false,
+                                               0);
         Expect(
-            sync_gpu_bindings.Refresh(current_binding, sync_epoch,
-                                      *new_light) &&
+            sync_cache.GetPublishedRenderLightBinding(root) ==
+                    current_binding &&
+                current_binding->Matches(sync_epoch, current_geometry,
+                                         *new_light) &&
                 current_binding->ShaderWords() == current_words &&
                 sync_cache.GetPublishCount(root) == before_field_only_count &&
+                sync_mesher.builds == before_field_only_builds &&
+                sync_cache.GetMeshedLightRevision(root) ==
+                    chunk->GetLightFieldRevision() &&
                 sync_cache.GetGreedyVertexCount() == before_field_only_vertices,
-            "certified light-only GPU replacement preserves binding and CPU "
-            "geometry artifact");
+            "world/cache light-only update preserves binding and geometry "
+            "without remeshing");
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
         ProbeCertifiedBinding(sync_gpu_bindings, current_binding);
 #endif
@@ -4746,6 +5168,8 @@ int main(int argc, char **argv)
     {
       TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
       TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
+      TestPublishedLightRefreshLifecycle(registry, definitions.get());
+      TestPublishedLightRefreshFairness(registry, definitions.get());
       TestGeometryWaitsForPhysicalLight(registry, definitions.get(), true);
       TestGeometryWaitsForPhysicalLight(registry, definitions.get(), true,
                                         true);
@@ -4782,6 +5206,8 @@ int main(int argc, char **argv)
   TestPublicationRefreshesDrawRefs(registry);
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
+  TestPublishedLightRefreshLifecycle(registry, definitions.get());
+  TestPublishedLightRefreshFairness(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get(), false, true);
   TestGeometryLightQueueCapacity(registry, definitions.get());
