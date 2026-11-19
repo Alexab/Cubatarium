@@ -8763,5 +8763,23 @@
       "Combined missing-neighbor/ordinary edit admission, repeated transient field jobs and queued-firstmesh deadlines require further investigation after native evidence.",
       "Semantic geometry/optics catalogs, persisted content certificates, lifecycle/backend parity, independent nonzero RGB/wet/transparency references and complete native/performance/memory matrix remain in scope."
     ]
+  },
+  "new_host_static_verifier_repair_2026_11_19": {
+    "initial_build": "build/desktop-msvc/new-host-physical-legacy-gate-app-build-20261119.log",
+    "initial_result": "C++ compilation and linking succeeded; required app build failed in final static-DLL verifier. Single dumpbin candidate was unrolled to a PowerShell string and [0] returned C.",
+    "repair": "Wrap dumpbin candidate pipeline in @() so singleton and multiple toolset discovery preserve full paths.",
+    "direct_verification": {
+      "log": "build/desktop-msvc/new-host-static-exe-verification-20261119.log",
+      "exit": 0,
+      "dlls": [
+        "opengl32.dll",
+        "dbghelp.dll",
+        "kernel32.dll",
+        "user32.dll",
+        "gdi32.dll",
+        "shell32.dll"
+      ]
+    },
+    "remaining": "Repeat mandatory Release application build to terminal success before native. No native started from failed build."
   }
 }

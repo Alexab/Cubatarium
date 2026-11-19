@@ -19,10 +19,10 @@ function Find-Dumpbin {
     if (Test-Path $vswhere) {
         $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null
         if ($vsPath) {
-            $candidates = Get-ChildItem (Join-Path $vsPath "VC\Tools\MSVC") -Directory -ErrorAction SilentlyContinue |
+            $candidates = @(Get-ChildItem (Join-Path $vsPath "VC\Tools\MSVC") -Directory -ErrorAction SilentlyContinue |
                 Sort-Object Name -Descending |
                 ForEach-Object { Join-Path $_.FullName "bin\Hostx64\x64\dumpbin.exe" } |
-                Where-Object { Test-Path $_ }
+                Where-Object { Test-Path $_ })
             if ($candidates) { return $candidates[0] }
         }
     }
