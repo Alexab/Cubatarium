@@ -1020,6 +1020,12 @@ cubatarium_add_test(NAME diagnostic_flight_controller_test
 add_test(NAME diagnostic_flight_controller_test COMMAND $<TARGET_FILE:diagnostic_flight_controller_test>)
 set_tests_properties(diagnostic_flight_controller_test PROPERTIES LABELS "unit;streaming")
 
+cubatarium_add_test(NAME diagnostic_world_actions_test
+    SOURCES src/Test/DiagnosticWorldActionsTest.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME diagnostic_world_actions_test COMMAND $<TARGET_FILE:diagnostic_world_actions_test>)
+set_tests_properties(diagnostic_world_actions_test PROPERTIES LABELS "unit;streaming")
+
 cubatarium_add_test(NAME chunk_load_priority_test
     SOURCES
         src/World/Chunks/ChunkLoadPriority.cpp

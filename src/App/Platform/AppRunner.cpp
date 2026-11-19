@@ -1,5 +1,6 @@
 #include "App/Platform/AppRunner.h"
 #include "App/Diagnostics/DiagnosticFlightController.h"
+#include "App/Diagnostics/DiagnosticWorldActions.h"
 #include "App/Platform/CreatureQaCapture.h"
 #include "App/Platform/FlightSimHarness.h"
 #include "App/Platform/SampleProfiler.h"
@@ -1648,6 +1649,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     return 1;
   }
   DiagnosticFlightController diagnostic_bot;
+  std::vector<DiagnosticWorldAction> world_actions;
   bool startup_observation = false;
   if (!options.DiagnosticRoutePath.empty())
   {
@@ -1663,6 +1665,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     {
       std::ifstream input(options.DiagnosticRoutePath);
       const auto route = nlohmann::json::parse(input);
+      world_actions = ParseDiagnosticWorldActions(route, options.WorldName);
       if (route.value("schema", "") != "diagnostic-flight-route.v1" ||
           !route.at("waypoints").is_array() ||
           (route.at("waypoints").empty() &&
@@ -1888,6 +1891,74 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    bool world_actions_started = false;
+    bool world_actions_failed = false;
+    nlohmann::json world_action_observations = nlohmann::json::array();
+    const auto observe_world_actions = [&](bool initial, glm::vec3 eye)
+    {
+      if (world_actions.empty())
+        return;
+      if (initial)
+        world_actions_started = true;
+      for (const auto &action : world_actions)
+      {
+        auto &blocks = world->GetBlockWorld();
+        const auto coord = UChunkManager::WorldToChunk(action.cell);
+        const auto *chunk = blocks.GetChunkManager().GetChunk(coord);
+        const auto resolve = [&](const std::string &name)
+        {
+          return name == "air"
+                     ? BLOCK_AIR
+                     : world->GetBlockRegistry().GetIdByTypeName(name);
+        };
+        const auto expected = resolve(action.expected);
+        const auto target =
+            action.replacement ? resolve(*action.replacement) : expected;
+        const bool known =
+            (action.expected == "air" || expected != BLOCK_AIR) &&
+            (!action.replacement || *action.replacement == "air" ||
+             target != BLOCK_AIR);
+        const auto before = blocks.GetBlock(action.cell);
+        const float reach =
+            glm::length(glm::vec3(action.cell) + glm::vec3(0.5f) - eye);
+        bool success = chunk && known &&
+                       before == (initial ? expected : target) &&
+                       world->GetWorldName() == options.WorldName;
+        bool api_called = false;
+        bool api_success = false;
+        if (initial && action.replacement)
+        {
+          success = success && expected != target && reach <= 6.0f &&
+                    world->GetWorldName() == options.WorldName;
+          if (success)
+          {
+            api_called = true;
+            api_success =
+                world->ReplaceBlockAt(action.cell, *action.replacement);
+            success = api_success && blocks.GetBlock(action.cell) == target;
+          }
+        }
+        world_actions_failed = world_actions_failed || !success;
+        world_action_observations.push_back(
+            {{"phase", initial ? "initial" : "final"},
+             {"cell", {action.cell.x, action.cell.y, action.cell.z}},
+             {"section", {coord.x, coord.y, coord.z}},
+             {"expected_id", expected},
+             {"target_id", target},
+             {"before_id", before},
+             {"after_id", blocks.GetBlock(action.cell)},
+             {"resident", chunk != nullptr},
+             {"incarnation", chunk ? chunk->GetIncarnation() : 0},
+             {"reach_blocks", reach},
+             {"api_called", api_called},
+             {"api_success", api_success},
+             {"success", success},
+             {"steady_tick_ms",
+              std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch())
+                  .count()}});
+      }
+    };
     const auto trace_residency_snapshot = [&](const char *phase)
     {
       const auto column = ChunkResidencyTraceColumn();
@@ -3010,6 +3081,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 TraceChunkResidencyRuntimeOwner(
                     &world->GetBlockWorld().GetChunkManager(), focus_chunk);
                 trace_residency_snapshot("runtime_initial");
+                observe_world_actions(true, camera->GetPosition());
                 if (route_line_tracking_enabled)
                 {
                   route_line_origin = camera->GetPosition();
@@ -3042,13 +3114,19 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     window.Run();
     window.ClearAutopilotKeys();
 
+    if (!world_actions.empty())
+      observe_world_actions(false, glm::vec3(0.0f));
+
     // Flush perf + write report BEFORE shutdown joins so hang still leaves
     // artifacts for the harness (flight-sim exit hang is a known risk).
     UFramePerfMonitor::Shutdown();
 
     const std::string perf_path = UFramePerfMonitor::GetLastSessionPath();
     const std::string world_name = core->GetAppSettings().DefaultWorld;
-    int exit_code = 0;
+    int exit_code = !world_actions.empty() &&
+                            (!world_actions_started || world_actions_failed)
+                        ? 1
+                        : 0;
     if (!options.DiagnosticRoutePath.empty() &&
         diagnostic_bot.State() != DiagnosticFlightState::Complete)
     {
@@ -3116,6 +3194,23 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         options.ReportPath.empty()
             ? (GetExecutableDirectory() / "flight_sim_report.json")
             : std::filesystem::path(options.ReportPath);
+    if (!world_actions.empty())
+    {
+      std::filesystem::create_directories(report_path.parent_path());
+      std::ofstream actions_report(report_path.parent_path() /
+                                   "world-actions.json");
+      actions_report << nlohmann::json(
+                            {{"schema", "engine-world-actions-observation.v1"},
+                             {"world", world->GetWorldName()},
+                             {"api", "UWorld::ReplaceBlockAt"},
+                             {"started", world_actions_started},
+                             {"failed", world_actions_failed},
+                             {"observations", world_action_observations}})
+                            .dump(2)
+                     << '\n';
+      if (!actions_report)
+        exit_code = 1;
+    }
     {
       std::error_code ec;
       std::filesystem::create_directories(report_path.parent_path(), ec);

@@ -344,9 +344,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         process_timeout: float | None = None,
         render_distance: int | None = None, sprint: bool = False,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
-        synchronous_meshing: bool = False, round_trip: bool = False) -> dict:
+        synchronous_meshing: bool = False, round_trip: bool = False,
+        world_actions: dict | None = None) -> dict:
     if not isinstance(round_trip, bool) or (round_trip and startup_only):
         raise ValueError("round trip requires a moving scenario")
+    if world_actions is not None:
+        from engine_world_actions import validate_plan
+        validate_plan(world_actions, round_trip=round_trip)
     if (isinstance(capture_encode_delay_ms, bool) or
             not isinstance(capture_encode_delay_ms, int) or
             not 0 <= capture_encode_delay_ms <= 10000):
@@ -472,6 +476,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             import copy
             bot_route["purpose"] = "round_trip"
             bot_route["waypoints"].append(copy.deepcopy(bot_route["waypoints"][0]))
+        if world_actions is not None:
+            bot_route["isolated_world"] = fixture.name
+            bot_route["world_actions"] = world_actions
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -645,6 +652,17 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif pressure["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if world_actions is not None:
+            from engine_world_actions import evaluate as evaluate_world_actions
+            actions = evaluate_world_actions(artifacts, fixture, world_actions,
+                                            returned if round_trip else None)
+            verdict["components"]["world_actions"] = actions
+            (artifacts / "world-actions-evidence.json").write_text(
+                json.dumps(actions, indent=2) + "\n", encoding="utf-8")
+            if actions["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif actions["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         verdict["runner_exit_code"] = child.returncode
         verdict["inspection_evidence"] = inspection
         if not report_path.exists():
@@ -672,6 +690,8 @@ def main() -> int:
                         help="motor return with initial-cohort eviction/fresh disk reload evidence")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
+    parser.add_argument("--world-actions", type=Path,
+                        help="explicit bounded edit/probe plan for the isolated world copy")
     parser.add_argument("--synchronous-meshing", action="store_true",
                         help="disable async meshing in isolated config and verify native runtime mode")
     parser.add_argument("--stop-seconds", type=float, default=20)
@@ -704,7 +724,8 @@ def main() -> int:
                   startup_only=args.startup_only,
                   synchronous_meshing=args.synchronous_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
-                  round_trip=args.round_trip)
+                  round_trip=args.round_trip,
+                  world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 
