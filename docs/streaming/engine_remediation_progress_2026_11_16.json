@@ -7655,7 +7655,7 @@
       }
     },
     "published_geometry_physical_field_refresh": {
-      "status": "Published field refresh implemented and unit/driver checksGREEN, but first full wet native exposed a new startup no-op-owner regression and timed out600seconds before first paint. Causal no-op RED reproduced; admission repair passes12Release checks. Required repaired app/native pending. Full S5 remains incomplete.",
+      "status": "Bounded published-field refresh and no-op admission repair implemented.12Release checksGREEN, three earlier negative controls and causal no-opRED preserved. Required repaired Release app built; full wet19chunk native startup1176ready,0/13146scoped opaque-depth faults24views0relocations. OverallUNTESTED/performanceFAIL. Full S5 incomplete.",
       "red": "engine-world-cache-light-only-red-test.log: real computed diagonal emitter change sent through cache dirty notification and scheduler caused a new mesh build/publication. Previous test called resource.Refresh directly and did not exercise world/cache scheduling.",
       "implementation": "Actual resource lease optionally supports in-place RefreshLight. Existing GL owner and virtual cache path share the same storage/epoch/geometry/volume/fence validation. Cache admits at most one lightweight field ticket per resident published geometry artifact, with epoch/publication counter and monotonic request identity. Four round-robin checks per call; no mesh payload, capture, worker credit or staging slot. Typed relight installation and compatible dirty hints route to this queue before bumping geometry revision. Ready field updates existing binding/cache light metadata/demand only; geometry revision/publication count, SSBO slot/generation/payload and shader handle remain unchanged. Incompatible geometry/cancel/dead resources follow existing recovery, never graft current-coordinate light onto different retained geometry.",
       "ownership": "Map entry remains authoritative during backend callback. Cancellation/eviction invalidates a local stack owner; cancel-and-readmit same publication requires exact request sequence. Geometry/catalog/epoch and latest physical field are rechecked after backend work. Eviction, world identity, modes, prepare callback removal and cancel variants are covered. KeepDirty/radius/policy cancellation preserves field debt separately from geometry. Compatible legacy Dirty/RemeshAfterApply hints are replaced only after exact geometry and source revision validation.",
@@ -7678,7 +7678,7 @@
         "restored_green": true,
         "checker_followup": "Original upload-control checker expected a later generic readback message, but mutation failed earlier in independent production-fragment light comparison. Original failed checker receipt/logs preserved; isolated repeat with correct earlier oracle assertion expectedFAIL, exact source restoration andGREEN."
       },
-      "limits": "No native of this implementation yet. Initial/inflight snapshots and CPU/GPU greedy merge/capture/dependency identities still read baked light. Whole-catalog identity still couples optical-only changes to geometry. Full native RGB/transparency/backend/persistence/memory/performance acceptance and original sporadic first-publication fault closure remain open.",
+      "limits": "One scoped32block opaque-depth pass does not close original sporadic first-publication class. FullRGB/transparencyUNTESTED; performanceFAIL. Initial/inflight light-free geometry identity, semantic optics/catalog split, persistence/backend/lifecycle acceptance remain.",
       "native_counterexample": {
         "source_commit": "2e5f5000187d2c1d6bb0557ceabdf5eeed49944c",
         "artifact": "build/desktop-msvc/engine-published-field-refresh-wet-native/published-field-startup-counterexample.json",
@@ -7697,7 +7697,134 @@
         "red": "engine-published-field-noop-red-test.log: four repair hints on an actual current physical publication create a new work owner; FAIL reproduced independently of native timeout.",
         "implementation": "Before admitting a new field ticket, prove actual current calculation, compatible exact geometry, matching cache light revision, matching live CPU/packed bindings and identical immutable field identity/data. Satisfied hints update demand/settlement without creating an executor. Existing real pending requests retain their original owner/sequence. No darkness or timeout shortcut.",
         "validation": "engine-published-field-noop-twelve-tests.log12/12PASS24.32seconds including36sync/async field cases, proof-only completion, cancellation/readmission, fairness, real CPU/packed GPU field bytes and existing references. Required repaired Release app/full wet native pending.",
-        "negative_control_scope": "Three prior controls were run against2e5f50001before this admission follow-up; protected post-refresh/request/upload logic unchanged. Their original exact-restoration receipts retained. New no-op defect has its own actual RED before admission repair and fresh12GREEN after."
+        "negative_control_scope": "Three prior controls were run against2e5f50001before this admission follow-up; protected post-refresh/request/upload logic unchanged. Their original exact-restoration receipts retained. New no-op defect has its own actual RED before admission repair and fresh12GREEN after.",
+        "native": "Repaired Release app/full wet19chunk run passed startup census and scoped depth; see native_repaired_followup. Earlier600second startupFAIL remains preserved."
+      },
+      "native_repaired_followup": {
+        "source_commit": "25cfad6ecb1939e9dbcfcfb09fdf37cc8f07ca3a",
+        "overall": "UNTESTED",
+        "opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 13146,
+          "faults": 0,
+          "frame_epochs": 104,
+          "skipped_unscoped_or_occluded": 318,
+          "examples": [],
+          "fault_attribution": {
+            "schema": "engine-depth-fault-attribution.v1",
+            "section_count": 0,
+            "sections": [],
+            "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+          },
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 1146
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 256,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 724,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 452,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "ingame_frames": 1524,
+        "active_elapsed_sec": 330.736,
+        "relocations": 0,
+        "camera_observation": {
+          "samples": 1524,
+          "ready_zero_zero": 1524,
+          "scope": "Observed canonical samples only; no independent wet RGB/light reference."
+        },
+        "target_geometry_commits": [
+          "I20261119 10:21:49.412975 43980 Log.cpp:601] [ChunkTrace] cpu_commit coord=(-2,3,0) sourceRev=8 stampsValid=1 stampContent=6107 stampLight=1 nowLight=3 stampIncarnation=233 nowContent=6107 nowIncarnation=233 batches=5"
+        ],
+        "awaiting_frame_epochs": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "target_scope": "Target previously appeared as a settled/current publication blocked by a field work owner in the timed-out run. Repaired startup census has no blockers; selected target commits CPU geometry once after23awaiting observations and has no observed field_refresh event. Native verifies startup/consumption/depth, not an in-place data delta at this selected target. Separate world/cache GPU driver tests prove actual field delta without remeshing.",
+        "performance": {
+          "legacy_pass": false,
+          "metrics": {
+            "wall_ms_med": 128.157,
+            "wall_ms_fly_med": 140.14249999999998,
+            "world_streaming_phase_ms": 102.613,
+            "scene_ms": 34.854,
+            "post_stop_readiness_debt_max": 0.0,
+            "post_stop_mesh_missing_max": 1.0,
+            "post_stop_visible_black_stalled_max": 4.0
+          },
+          "scope": "Intrusive diagnostics/captures enabled; no controlled performance A/B. Nonzero post-stop proxies are not direct pixel evidence."
+        },
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "limits": "One scoped32block opaque-depth pass does not close original sporadic first-publication class. FullRGB/transparencyUNTESTED; performanceFAIL. Initial/inflight light-free geometry identity, semantic optics/catalog split, persistence/backend/lifecycle acceptance remain.",
+        "artifact": "build/desktop-msvc/engine-published-field-noop-wet-native/published-field-noop-observation.json"
       }
     }
   },
@@ -7727,7 +7854,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "2e5f5000187d2c1d6bb0557ceabdf5eeed49944c",
+    "latest_source_commit": "25cfad6ecb1939e9dbcfcfb09fdf37cc8f07ca3a",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -7736,11 +7863,11 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Published compatible geometry now receives field-only refresh with real world/cache and GPU tests; native pending. Still remove baked light from initial/inflight geometry merge/capture/dependency identity and scheduler inputs.",
+      "Published compatible geometry receives field-only refresh with world/cache CPU/packed GPU tests. Initial native exposed no-op owner starvation; causalRED/admission fix12GREEN and repaired full wet startup1176ready0/13146depth. Still remove baked light from initial/inflight merge/capture/dependency identity and scheduling.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. First native of published-field refresh timed out in startup; no-op admission repair12GREEN awaits repaired Release app/native. Full original scope unchanged."
+    "completion": "Not established. Published field refresh and no-op startup regression repaired in scoped tests/native. Full initial/inflight geometry/light identity separation, complete visual/performance matrix and original sporadic fault closure remain open."
   }
 }
