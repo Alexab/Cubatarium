@@ -565,17 +565,69 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
                                          UBlockRegistry &registry) const
 {
   auto receipts = std::make_shared<PersistedColumnLight>();
+  ColumnLightCaptureStats stats;
+  const auto finish = [&]() -> std::shared_ptr<const PersistedColumnLight>
+  {
+    if (ObserveLightCapture)
+      ObserveLightCapture(column, stats);
+    return receipts;
+  };
   const auto &profile = world.GetVerticalProfile();
   if (!profile.IsValid())
-    return receipts;
+    return finish();
   const int64_t low = profile.MinChunkY(CHUNK_SIZE);
   const int64_t high = profile.MaxChunkY(CHUNK_SIZE);
   if (high - low + 1 > PersistedSectionLight::MaxDependencies)
-    return receipts;
+    return finish();
   const auto catalog = registry.GetDefinitionsCatalogSnapshot();
   size_t bytes = 0;
   for (int64_t cy = low; cy <= high; ++cy)
   {
+    const glm::ivec3 coord(column.x, int(cy), column.z);
+    if (ObserveLightCapture)
+      if (const auto field =
+              world.GetChunkManager().GetSectionLightField(coord))
+      {
+        ++stats.fields;
+        stats.padded +=
+            field->GetPaddedData() && field->GetPaddedDomains() == 3;
+        stats.current +=
+            world.HasCompleteLightSamplingCalculation(coord, catalog);
+        const auto context =
+            world.GetRecordedLightInputContext(coord, LightDomain::Sky);
+        if (context && context->input_catalog)
+        {
+          stats.retained_current += world.HasCompleteLightSamplingCalculation(
+              coord, context->input_catalog);
+          stats.equivalent_catalog +=
+              context->input_catalog != catalog && catalog &&
+              LightCacheCatalogsEquivalent(*context->input_catalog, *catalog);
+          const ChunkInputStamp *stale = nullptr;
+          const auto validation = ValidateRelightInputs(
+              *context, world, context->input_catalog, true, &stale);
+          stats.stale_inputs += validation != RelightInputValidation::Current;
+          if (!stats.has_stale_sample &&
+              validation != RelightInputValidation::Current)
+          {
+            stats.stale_reason = static_cast<int>(validation);
+            if (stale)
+            {
+              const auto now =
+                  world.CaptureInputStamp(stale->coord, false, true);
+              stats.has_stale_sample = true;
+              stats.stale_coord = stale->coord;
+              stats.absent_before = static_cast<int>(stale->missingEvidence);
+              stats.absent_now = static_cast<int>(now.missingEvidence);
+              stats.incarnation_before = stale->incarnation;
+              stats.incarnation_now = now.incarnation;
+              stats.content_before = stale->content;
+              stats.content_now = now.content;
+            }
+          }
+        }
+        else
+          ++stats.no_context;
+      }
     auto receipt =
         CaptureSectionLight(world, {column.x, int(cy), column.z}, catalog);
     if (!receipt)
@@ -585,10 +637,12 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
         size > kMaxColumnLightBytes - bytes)
       break;
     bytes += size;
+    ++stats.exported;
+    stats.bytes = bytes;
     receipts->push_back(
         std::make_shared<const PersistedSectionLight>(std::move(*receipt)));
   }
-  return receipts;
+  return finish();
 }
 
 bool UChunkStorageService::WriteColumnLight(

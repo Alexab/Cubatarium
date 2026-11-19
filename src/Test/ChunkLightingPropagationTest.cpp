@@ -301,6 +301,26 @@ static void TestPersistedSectionLight()
                 13,
         "persisted receipt retains nonzero transport across the section "
         "border");
+    const auto refreshed_catalog =
+        std::make_shared<const BlockDefinitionCatalog>(*catalog);
+    const auto after_refresh =
+        CaptureSectionLight(original, root, refreshed_catalog);
+    Expect(after_refresh &&
+               after_refresh->volume.cells == receipt->volume.cells &&
+               after_refresh->signature == receipt->signature &&
+               !original.HasCompleteLightSamplingCalculation(root,
+                                                             refreshed_catalog),
+           "equivalent catalog refresh exports proven content without granting "
+           "runtime pointer compatibility");
+    auto changed_export_catalog =
+        std::make_shared<BlockDefinitionCatalog>(*catalog);
+    changed_export_catalog->ById.at(50).Lighting.Emission = 12;
+    Expect(!CaptureSectionLight(original, root, changed_export_catalog),
+           "changed emission cannot export an old catalog calculation");
+    changed_export_catalog = std::make_shared<BlockDefinitionCatalog>(*catalog);
+    changed_export_catalog->ById.at(8).Physics.Movement.Occupancy = 0;
+    Expect(!CaptureSectionLight(original, root, changed_export_catalog),
+           "changed transmission cannot export an old catalog calculation");
     const auto encoded = EncodeSectionLight(*receipt);
     const auto decoded =
         DecodeSectionLight(nlohmann::json::parse(encoded.dump()));
@@ -409,6 +429,10 @@ static void TestPersistedSectionLight()
     malformed.erase("padded_light");
     Expect(!DecodeSectionLight(malformed),
            "legacy interior bytes are not a padded-field certificate");
+    original.SetBlock(source, BLOCK_AIR);
+    Expect(
+        !CaptureSectionLight(original, root, refreshed_catalog),
+        "catalog-equivalent export still rejects changed geometry read sets");
   }
 }
 

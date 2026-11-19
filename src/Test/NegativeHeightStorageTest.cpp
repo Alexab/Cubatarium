@@ -79,6 +79,29 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   Expect(snapshot->size() == 2 && !original.GetChunkManager().HasChunk(root),
          "column snapshot includes field-only AIR above terrain without "
          "geometry allocation");
+  definitions->ReplaceAll(catalog->ById, {{"stone", 8}, {"torch", 50}});
+  registry.Reload();
+  const auto refreshed_catalog = registry.GetDefinitionsCatalogSnapshot();
+  ColumnLightCaptureStats capture_stats;
+  storage.ObserveLightCapture =
+      [&](glm::ivec3 observed, const ColumnLightCaptureStats &stats)
+  {
+    Expect(observed == column,
+           "export observer retains actual column identity");
+    capture_stats = stats;
+  };
+  const auto refreshed_snapshot =
+      storage.CaptureColumnLight(column, original, registry);
+  Expect(refreshed_catalog != catalog && refreshed_snapshot->size() == 2 &&
+             capture_stats.current == 0 &&
+             capture_stats.retained_current == 2 &&
+             capture_stats.equivalent_catalog == 2 &&
+             capture_stats.exported == 2 &&
+             (*refreshed_snapshot)[0]->volume.cells ==
+                 (*snapshot)[0]->volume.cells,
+         "real registry refresh exports current retained proofs and diagnoses "
+         "catalog-only refusal");
+  storage.ObserveLightCapture = {};
   const auto evidence_before = storage.GetKnownAirEvidenceRevision();
   Expect(storage.WriteColumnLight(folder, column, *snapshot) &&
              storage.GetKnownAirEvidenceRevision() == evidence_before &&

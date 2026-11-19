@@ -7,6 +7,7 @@
 #include "World/Lighting/PersistedSectionLightTypes.h"
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -23,10 +24,25 @@ class UBlockRegistry;
 class UBlockWorld;
 class UChunk;
 
+struct ColumnLightCaptureStats
+{
+  size_t fields{0}, padded{0}, current{0}, retained_current{0},
+      equivalent_catalog{0}, stale_inputs{0}, no_context{0}, exported{0},
+      bytes{0};
+  bool has_stale_sample{false};
+  glm::ivec3 stale_coord{0};
+  int stale_reason{0}, absent_before{0}, absent_now{0};
+  uint64_t incarnation_before{0}, incarnation_now{0}, content_before{0},
+      content_now{0};
+};
+
 class UChunkStorageService
 {
 public:
   explicit UChunkStorageService(ChunkStorageSettings settings = {});
+  /// Optional main-thread capture diagnostics, independent of acceptance.
+  std::function<void(glm::ivec3, const ColumnLightCaptureStats &)>
+      ObserveLightCapture;
 
   void SetSettings(const ChunkStorageSettings &settings);
   const ChunkStorageSettings &GetSettings() const { return Settings; }

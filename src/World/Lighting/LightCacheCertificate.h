@@ -23,6 +23,32 @@ namespace cutum
 // v4 removed the successful section-seed bypass of full-height sky.
 inline constexpr uint32_t kLightSolverCacheVersion = 6;
 
+// Exact comparison of the material contract encoded by the cache signature.
+// Used only to export an already-proven calculation after a catalog refresh;
+// it does not replace runtime catalog identity or certify any input read set.
+inline bool LightCacheCatalogsEquivalent(const BlockDefinitionCatalog &a,
+                                         const BlockDefinitionCatalog &b)
+{
+  if (a.ById.size() != b.ById.size())
+    return false;
+  for (const auto &[id, old] : a.ById)
+  {
+    const auto found = b.ById.find(id);
+    if (found == b.ById.end())
+      return false;
+    const auto &now = found->second;
+    if (old.Name != now.Name || old.Physics.IsLiquid != now.Physics.IsLiquid ||
+        (old.Physics.Movement.Occupancy >= 1.0f) !=
+            (now.Physics.Movement.Occupancy >= 1.0f) ||
+        old.Render.Transparent != now.Render.Transparent ||
+        old.Render.Style != now.Render.Style ||
+        std::clamp(old.Lighting.Emission, 0, 15) !=
+            std::clamp(now.Lighting.Emission, 0, 15))
+      return false;
+  }
+  return true;
+}
+
 inline std::string
 MakeLightCacheSignature(const WorldVerticalProfile &profile,
                         const BlockDefinitionCatalog &catalog,

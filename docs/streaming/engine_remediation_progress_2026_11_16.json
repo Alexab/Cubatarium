@@ -10746,5 +10746,78 @@
       "Correct export admission only with proven content/solver/profile/material equivalence and still-current field/read sets. Add native capture diagnostics if needed; preserve stale/unknown rejection.",
       "Repeat Release native save, require nonempty receipts, then cold reload/return with actual restore telemetry and full provenance."
     ]
+  },
+  "persisted_light_catalog_refresh_export_2026_11_19": {
+    "status": "catalog_refresh_export_defect_corrected_and_causally_verified_native_refusal_diagnosis_pending_full_S0_S6_active",
+    "source_base_commit": "2105d3d70e54d8caaad4d6ec75abfc876677f4ab",
+    "finding": "A semantically identical but newly allocated catalog makes the current pointer-based runtime proof query false. That must not prevent exporting an otherwise complete/current calculation through its original immutable material context. Initial focused regression reproduced failure before correction. This alone is not proven to explain previous native all-empty files: cooperative quit-save explicitly skips registry reload; other save paths refresh it.",
+    "implementation": {
+      "comparison": "Exact comparison of all material contract fields encoded by light-cache signature, ID set and names; no hash-only equality, no bypass for changed emission/liquid/transmission/style.",
+      "export": "If current catalog pointer cannot validate installed field, require exact old/current cache-material equivalence, then validate complete padded sky+block against original proof catalog and full current runtime read set before and after content hashing. Emit current semantic signature and unchanged certified bytes. Runtime proof/query catalog identity is never rewritten.",
+      "diagnostics": "Optional storage capture observer enabled in production by CUBA_SURFACE_LIGHT_DIAGNOSTICS. Reports fields/padded/current/retained-current/equivalent-catalog/stale-input/no-context/exported/bytes, plus first failed dependency validation reason and before/now absence/incarnation/content. Diagnostics are independent of acceptance and also cover ordinary sync/quit column saves without adding logger dependencies to storage unit targets."
+    },
+    "regressions": {
+      "core": "src/Test/ChunkLightingPropagationTest.cpp: equivalent copied catalog exports same8000bytes/signature while HasCompleteSampling(new catalog) staysfalse; changed emission or transmission and changed geometry still refuse export.",
+      "actual_registry": "src/Test/NegativeHeightStorageTest.cpp: real definitions ReplaceAll+registry.Reload changes pointer; observer sees current0, retained_current2, equivalent_catalog2, exported2 and original AIR padded bytes survive ordinary IO.",
+      "initial_red": "build/desktop-msvc/persisted-light-catalog-export-red-test-20261119.log"
+    },
+    "controls": [
+      {
+        "name": "retained-catalog",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "equivalent catalog refresh exports proven content without granting runtime pointer compatibility",
+        "log": "build/desktop-msvc/persisted-light-catalog-export-v2-20261119-retained-catalog-test.log"
+      },
+      {
+        "name": "emission-equivalence",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "changed emission cannot export an old catalog calculation",
+        "log": "build/desktop-msvc/persisted-light-catalog-export-v2-20261119-emission-equivalence-test.log"
+      },
+      {
+        "name": "transmission-equivalence",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "changed transmission cannot export an old catalog calculation",
+        "log": "build/desktop-msvc/persisted-light-catalog-export-v2-20261119-transmission-equivalence-test.log"
+      },
+      {
+        "name": "retained-proof-validity",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "stale runtime calculations cannot issue new persisted receipts",
+        "log": "build/desktop-msvc/persisted-light-catalog-export-v3-20261119-retained-proof-validity-test.log"
+      }
+    ],
+    "controls_exact_restore": true,
+    "tested_final_sha256": {
+      "src/Test/ChunkLightingPropagationTest.cpp": "e594bee17d6aaffc01cdd969e6db10449ac002286f2b6af95396217c1a385c5e",
+      "src/Test/NegativeHeightStorageTest.cpp": "a999afe99a69487bf1f0a9314945eb1ca9d7d5a40b0c2b6daf40d6c8c43defbd",
+      "src/World/IO/ChunkStorageService.cpp": "4ffa43624b86b8e835cb7e0bec59a1880e24e1cc5c5d1fa00350bfc17c9a738c",
+      "src/World/IO/ChunkStorageService.h": "420d96fa6481715cc4c78f5271071ea312f3e934c0c180b386f7a9617bf91e79",
+      "src/World/Lighting/LightCacheCertificate.h": "deb28ceb6e4e536ab09c06dd213a8e97955ba0b5f9603f02b2e457ef2628c49a",
+      "src/World/Lighting/PersistedSectionLight.h": "80a6741f8054c3aeaaeacd090754ca6b749e8827627d1e172719fa34f303010d",
+      "src/World/Persistence/WorldPersistence.cpp": "d9ddf464de47c3cdd808371693f50417d46995a792dc8b4934456531d963a7e3"
+    },
+    "restored_matrix": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 10.63,
+      "log": "build/desktop-msvc/persisted-light-catalog-export-diagnostics-thirty-two-tests-20261119.log"
+    },
+    "harness_note": "V1 preflight refused multi-line match on CRLF before mutations; V2 normalized mutation text and restored exact original bytes. V2 matched3controls and retained-proof removal failed at an earlier existing stale-runtime assertion. V3 independently reran that fourth control against the exact earlier assertion. Diagnostic first-dependency sample was added afterward; the four predicate/test files match the control receipt hashes, and the final32-test matrix passed after the diagnostic-only changes.",
+    "limits": [
+      "No new native export/cache reuse PASS yet. Previous native247emptyfiles remains an unresolved integration failure until actual source refusal diagnostics and nonempty receipt/reload evidence are inspected.",
+      "This intentionally preserves strict runtime catalog identity; semantic geometry/optics identities across all job/publication paths remain open S5 work.",
+      "Optional cache export cannot certify stale/unknown geometry, complete an independent light lease, or reuse raw legacy bytes.",
+      "Full S0..S6 remains active, including native save/reload/return/eviction, procedural AIR cache discovery, memory/frame budgets, true GPU/backend parity and independent nonzero RGB/wet/transparency references."
+    ],
+    "next": [
+      "Build required committed Release desktop and run isolated startup-only wet scenario to observe capture refusal during normal quit, preserving all source/config/EXE/shader provenance.",
+      "Use actual refusal evidence to correct snapshot/proof lifetime; then require nonempty real exports and positive compatible cold restores, followed by full motor regression/return and remaining S0..S6 matrix."
+    ]
   }
 }

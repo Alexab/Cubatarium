@@ -224,6 +224,37 @@ UWorldPersistence::UWorldPersistence(UWorld *world_context)
     : WorldContext(world_context)
 {
   ChunkStorage = std::make_unique<UChunkStorageService>();
+  if (IsEnvironmentFlagEnabled("CUBA_SURFACE_LIGHT_DIAGNOSTICS"))
+    ChunkStorage->ObserveLightCapture =
+        [](glm::ivec3 column, const ColumnLightCaptureStats &stats)
+    {
+      CubatariumLogInfo(
+          "PersistedLightCapture",
+          "column=(" + std::to_string(column.x) + "," +
+              std::to_string(column.z) +
+              ") fields=" + std::to_string(stats.fields) +
+              " padded=" + std::to_string(stats.padded) +
+              " current=" + std::to_string(stats.current) +
+              " retained_current=" + std::to_string(stats.retained_current) +
+              " equivalent_catalog=" +
+              std::to_string(stats.equivalent_catalog) +
+              " stale_inputs=" + std::to_string(stats.stale_inputs) +
+              " no_context=" + std::to_string(stats.no_context) +
+              " exported=" + std::to_string(stats.exported) +
+              " bytes=" + std::to_string(stats.bytes) +
+              " stale_sample=" + std::to_string(stats.has_stale_sample) +
+              " stale_reason=" + std::to_string(stats.stale_reason) +
+              " stale_coord=(" + std::to_string(stats.stale_coord.x) + "," +
+              std::to_string(stats.stale_coord.y) + "," +
+              std::to_string(stats.stale_coord.z) +
+              ") absent_before=" + std::to_string(stats.absent_before) +
+              " absent_now=" + std::to_string(stats.absent_now) +
+              " incarnation_before=" +
+              std::to_string(stats.incarnation_before) +
+              " incarnation_now=" + std::to_string(stats.incarnation_now) +
+              " content_before=" + std::to_string(stats.content_before) +
+              " content_now=" + std::to_string(stats.content_now));
+    };
 }
 
 void UWorldPersistence::SetWorldFolderPath(const std::string &path)

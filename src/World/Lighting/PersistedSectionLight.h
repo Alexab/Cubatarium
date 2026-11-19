@@ -224,8 +224,23 @@ inline std::optional<PersistedSectionLight> CaptureSectionLight(
     const std::shared_ptr<const BlockDefinitionCatalog> &catalog)
 {
   using namespace persisted_light_detail;
-  if (!catalog || !world.HasCompleteLightSamplingCalculation(coord, catalog))
+  if (!catalog)
     return std::nullopt;
+  auto proof_catalog = catalog;
+  if (!world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
+  {
+    const auto recorded =
+        world.GetRecordedLightInputContext(coord, LightDomain::Sky);
+    if (!recorded || !recorded->input_catalog ||
+        !LightCacheCatalogsEquivalent(*recorded->input_catalog, *catalog))
+      return std::nullopt;
+    proof_catalog = recorded->input_catalog;
+    // Save refreshes the registry after quiescing. Equal optical/cache
+    // semantics permit a disk receipt, but the original proof must still be
+    // complete/current against its own immutable catalog and read set.
+    if (!world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
+      return std::nullopt;
+  }
   const auto field = world.GetChunkManager().GetSectionLightField(coord);
   const auto volume = field->GetPaddedData();
   PersistedSectionLight receipt;
@@ -261,7 +276,7 @@ inline std::optional<PersistedSectionLight> CaptureSectionLight(
   // Never certify new content against an earlier output or proof context.
   if (world.GetChunkManager().GetSectionLightField(coord) != field ||
       field->GetPaddedData() != volume ||
-      !world.HasCompleteLightSamplingCalculation(coord, catalog))
+      !world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
     return std::nullopt;
   receipt.volume = *volume;
   receipt.checksum = Checksum(receipt);
