@@ -10,6 +10,7 @@
 #include "Game/ModePolicy.h"
 #include "Render/Camera/CameraBasisLogic.h"
 #include "Render/GlIncludes.h"
+#include "World/Chunks/ChunkResidencyTrace.h"
 #include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include <fstream>
@@ -3278,6 +3279,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     // persisted even though normal logging destructors will not run.
     FinishSampleProfiler();
     UMeshAuditDiagnostics::FinishFlickerTrace();
+    FlushChunkResidencyTrace();
     CubatariumFlushLogs();
 
     std::cout << "flight-sim: done exit=" << exit_code

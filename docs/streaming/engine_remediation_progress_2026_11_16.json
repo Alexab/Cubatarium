@@ -12586,5 +12586,33 @@
     "Native overallUNTESTED: independent nonzero RGB/wet/transparency reference absent. Near opaque depth/route/startup results do not prove physical-light/whole-screen/backend parity.",
     "Prior performanceFAIL remains; no native performance acceptance is claimed for diagnostic runs. Full lifecycle/provider/cancellation, semantic identities, procedural AIR cache discovery, backend parity and memory/performance matrix remain open."
   ]
+},
+"bounded_buffered_residency_trace_2026_11_19": {
+  "status": "buffered_transport35tests_and2negative_controls_green_native_reproduction_pending_full_S0_S6_active",
+  "change": "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED=1 retains at most4096 immutable selected-column events, reserving unique slots atomically and publishing each slot with release/acquire. No per-event FILE IO. Export closes admission atomically, skips unpublished slots safely without worker joins, reports reserved/published/dropped/unpublished/complete. Overflow or racing incomplete publication cannot prove absence. Flight-sim explicitly exports after fastshutdown before std::_Exit; normal exit registers atexit after buffer construction. Immediate mode retained for comparison.",
+  "tests": {
+    "schema": "buffered-residency-regression.v1",
+    "header_sha256": "196dbf990a33b1a5bc9b7a1d942a3170d71b82e97227c8a9544f2a8db8a5fb62",
+    "controls": [
+      {
+        "name": "premature-file-io",
+        "expected_failure": true,
+        "log": "build\\desktop-msvc\\buffered-residency-20261119-premature-file-io-test.log"
+      },
+      {
+        "name": "lost-admitted-event",
+        "expected_failure": true,
+        "log": "build\\desktop-msvc\\buffered-residency-20261119-lost-admitted-event-test.log"
+      }
+    ],
+    "exact_source_restore": true,
+    "matrix_build_exit": 0,
+    "matrix_green": true,
+    "matrix_log": "build\\desktop-msvc\\buffered-residency-20261119-matrix-test.log",
+    "test_count": 35
+  },
+  "test_scope": "Four concurrent producers; all admitted event values/sequences retained exactly once; other columns excluded; no file until flush; bounded overflow explicitly incomplete; repeated flush and late records cannot append/rewrite evidence. Tests cover joined writers; racing-unpublished branch is guarded by atomic publication and reported, not claimed dynamically forced.",
+  "next": "Build committed desktop Release and repeat original -14,2,-1 trace-point motor scenario with selected6,6 deferred export; require summary complete1 before interpreting absence. Previous full-column purge/30receipt loss remains open.",
+  "scope": "Full original S0..S6 remains active; diagnostics never grant readiness or replace provider/cancellation/semantic identities, independent RGB/wet/transparency/backend and complete motor/edit/save/evict/reload/performance/memory verification."
 }
 }

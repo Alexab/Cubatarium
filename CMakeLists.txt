@@ -1085,6 +1085,13 @@ cubatarium_add_test(NAME terrain_column_util_test
     DEFINITIONS CUTUM_PHYSICS_LIGHT_REGISTRY
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME chunk_residency_trace_test
+    SOURCES src/Test/ChunkResidencyTraceTest.cpp
+    LIBRARIES glm::glm Threads::Threads)
+add_test(NAME chunk_residency_trace_overflow_test
+    COMMAND $<TARGET_FILE:chunk_residency_trace_test> overflow)
+set_tests_properties(chunk_residency_trace_overflow_test PROPERTIES LABELS "unit")
+
 cubatarium_add_test(NAME chunk_streamer_committed_column_test
     SOURCES
         src/World/Chunks/Chunk.cpp
