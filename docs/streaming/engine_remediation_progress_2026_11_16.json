@@ -7911,7 +7911,7 @@
       "scope": "Diagnostic only; missing owner fields remain unknown, gaps/revisions/active ownership break runs, resource preparation is not publication. It neither modifies depth verdict nor accepts ready flags in place of pixels."
     },
     "screen_ray_first_publication_service": {
-      "status": "Implemented; actual queued-worker regressionRED thenGREEN,13Release testsPASS24.53seconds, service-disabled negative control expectedFAIL and exact restoration/GREEN. Required Release app/native pending; no claim of closure for448fault native.",
+      "status": "Deterministic ray-prioritized FirstMesh service repaired/tested,13ReleaseGREEN24.53seconds; service-disabled negative control expectedFAIL with exact restoration/GREEN. Required Release app built. Native stillFAIL21/13924over8sections; original class remains open.",
       "counterexample": "d78238d0dwet native448/8312opaque-depth faults. Selected(-5,-3,3) had78faults360..410 and135consecutive beginning-of-tick queue-only observations313..447. World ray promotion required an existing drawable and could not prioritize these first-publication holes.",
       "implementation": [
         "WorldStreaming promotes ray-confirmed current geometry debt even before first drawable; a newly admitted exact slice also gets the hint.",
@@ -7929,7 +7929,61 @@
         "restored_green": true,
         "scope": "Deterministic existing queued FirstMesh service and actual CPU physical publication; not full native acceptance or all capture-retry admission paths."
       },
-      "limits": "Native confirmation pending. Initial capture/merge light dependencies, complete lifecycle/admission, full RGB/transparency, backend/persistence/performance and originalS0..S6acceptance remain open."
+      "limits": "No claim that one narrower failing run proves a statistical reduction or closes the original class. FullRGB/transparencyUNTESTED, performanceFAIL; fullS0..S6scope remains active.",
+      "native": {
+        "source_commit": "a2474e2cc318b6356bb78b43a597bfa2a84008c4",
+        "artifact": "build/desktop-msvc/engine-ray-first-publication-wet-native/ray-first-publication-observation.json",
+        "result": "FAIL",
+        "app_exit": 0,
+        "wrapper_exit": 1,
+        "route_chunks": 19,
+        "outside_initial_samples": 1041,
+        "relocations": 0,
+        "inspection_verified": 24,
+        "inspection_requested": 24,
+        "startup_sections": 1176,
+        "startup_unready_light": 0,
+        "startup_unready_publication": 0,
+        "opaque_depth_faults": 21,
+        "opaque_depth_checked": 13924,
+        "depth_epochs": 109,
+        "affected_sections": 8,
+        "selected_section_fault_attribution_present": false,
+        "selected_longest_queue_only_run": {
+          "first_frame_epoch": 283,
+          "last_frame_epoch": 319,
+          "samples": 37,
+          "revision": 2
+        },
+        "selected_enqueue_count": 11,
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "performance": {
+          "status": "FAIL",
+          "metrics": {
+            "wall_ms_med": 139.3755,
+            "wall_ms_fly_med": 152.53750000000002,
+            "world_streaming_phase_ms": 104.681,
+            "scene_ms": 35.386250000000004,
+            "post_stop_readiness_debt_max": 0.0,
+            "post_stop_mesh_missing_max": 1.0,
+            "post_stop_visible_black_stalled_max": 1.0
+          },
+          "scope": "Intrusive diagnostics/captures; no controlled A/B, no performance acceptance."
+        },
+        "observations": [
+          "Full native FAIL21/13924opaque-depth faults over109epochs and8sections. All sampled fault voxels match independent reference and have no published geometry; owner counts={'1': 14, '2': 7}.",
+          "Selected(-5,-3,3) absent from depth fault attribution. It has59beginning-of-tick queue-only observations, longest consecutive run37at283..319, vs prior135at313..447. Current field resource prepared324 vs prior448; different-run frame counts are not a controlled latency/performance comparison.",
+          "Selected target was enqueued11times,9with unknown geometry input mask2 before its negative-X neighbor was known, then known/uncertified319 and certified323. Priority does not remove initial capture/geometry availability waste.",
+          "Residual(-4,-3,3) ray witness195has drawable0, published_geom0, existing priorityRemesh queue2 and visible_geometry_promoted1. FirstMesh service currently only covers queue1; a solid exact witness in queue2 can still miss the FirstMesh reservation.",
+          "Some remaining fault sections have a live CPU builder instead of queue-only ownership. Complete whole-pipeline latency/readiness scheduling remains necessary."
+        ]
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7958,7 +8012,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "d78238d0da91c05fbaea8829c3ea1c0d45e12553",
+    "latest_source_commit": "a2474e2cc318b6356bb78b43a597bfa2a84008c4",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -7967,30 +8021,38 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Ray-confirmed first-publication queue priority gap repaired in deterministic actual-worker regression:13ReleaseGREEN, service-disabled negative control exact restoration/GREEN. Full native pending; original448/8312counterexample retained. Still remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity.",
+      "Latest ray FirstMesh service regression/control13GREEN, native stillFAIL21/13924. Exact solid ray witness can be classified priorityRemesh despite no drawable and miss the FM reservation; normalize that existing owner without revision/age loss and cover it deterministically. Unknown-geometry capture churn and actual worker latency remain; finish initial capture/CPU/GPU merge/light dependency separation.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. Latest native explicitly contradicts complete first-publication correctness. Full originalS0..S6scope stays active; no replacement of the failed run by earlier clean repetitions.",
+    "completion": "Not established. a2474e2ccwet native21/13924faults remainsFAIL; d782448/8312andall prior failures are preserved. FullS0..S6scope unchanged, including capture/geometry/light separation and visual/backend/persistence/performance acceptance.",
     "latest_native_counterexample": {
-      "source_commit": "d78238d0da91c05fbaea8829c3ea1c0d45e12553",
-      "build_log": "build/desktop-msvc/engine-inflight-certified-light-release-build.log",
+      "source_commit": "a2474e2cc318b6356bb78b43a597bfa2a84008c4",
+      "artifact": "build/desktop-msvc/engine-ray-first-publication-wet-native/ray-first-publication-observation.json",
       "result": "FAIL",
       "app_exit": 0,
       "wrapper_exit": 1,
       "route_chunks": 19,
-      "outside_initial_samples": 1048,
+      "outside_initial_samples": 1041,
       "relocations": 0,
-      "inspection_views_verified": 24,
-      "inspection_views_requested": 24,
+      "inspection_verified": 24,
+      "inspection_requested": 24,
       "startup_sections": 1176,
-      "startup_light_unready": 0,
-      "startup_publication_unready": 0,
-      "opaque_depth_faults": 448,
-      "opaque_depth_checked": 8312,
-      "frame_epochs": 73,
-      "affected_sections": 9,
+      "startup_unready_light": 0,
+      "startup_unready_publication": 0,
+      "opaque_depth_faults": 21,
+      "opaque_depth_checked": 13924,
+      "depth_epochs": 109,
+      "affected_sections": 8,
+      "selected_section_fault_attribution_present": false,
+      "selected_longest_queue_only_run": {
+        "first_frame_epoch": 283,
+        "last_frame_epoch": 319,
+        "samples": 37,
+        "revision": 2
+      },
+      "selected_enqueue_count": 11,
       "provenance": {
         "exe": true,
         "config_restored": true,
@@ -7998,22 +8060,25 @@
         "runtime_shader_assets": true,
         "source_commit": true
       },
-      "selected_section_queue_only_samples": 201,
-      "selected_section_longest_queue_only_run": {
-        "first_frame_epoch": 313,
-        "last_frame_epoch": 447,
-        "samples": 135,
-        "revision": 2
+      "performance": {
+        "status": "FAIL",
+        "metrics": {
+          "wall_ms_med": 139.3755,
+          "wall_ms_fly_med": 152.53750000000002,
+          "world_streaming_phase_ms": 104.681,
+          "scene_ms": 35.386250000000004,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_mesh_missing_max": 1.0,
+          "post_stop_visible_black_stalled_max": 1.0
+        },
+        "scope": "Intrusive diagnostics/captures; no controlled A/B, no performance acceptance."
       },
-      "selected_section_depth_faults": 78,
-      "artifact": "build/desktop-msvc/engine-inflight-certified-light-wet-native/certified-inflight-native-counterexample.json",
-      "limits": "Full RGB/transparency untested. One failed flight cannot quantify regression rate. No performance comparison or complete S4/S5 acceptance.",
-      "diagnosis": [
-        "Selected section has 78 independently matched-reference depth faults at frames360..410; every sample has published geometry0, queued work and owner flag1.",
-        "Selected watch has135 consecutive beginning-of-tick queue-only samples at313..447 with source revision2; this does not imply absence of work later within those ticks.",
-        "Known seven geometry inputs at enqueue304 did not lead to a resource-prepared event until448. Logs do not establish the precise rejection path for enqueue304.",
-        "Screen ray repair observes the same hole at390/405/420/435 but only requests the column FirstMesh ticket; that ticket is rejected while the concrete slice remains queued.",
-        "WorldStreaming promote_visible_geometry_debt explicitly requires an existing drawable, so these first-publication holes cannot inherit current remesh ray priority. This is a demonstrated priority coverage gap, not yet a proven sole cause of448faults."
+      "observations": [
+        "Full native FAIL21/13924opaque-depth faults over109epochs and8sections. All sampled fault voxels match independent reference and have no published geometry; owner counts={'1': 14, '2': 7}.",
+        "Selected(-5,-3,3) absent from depth fault attribution. It has59beginning-of-tick queue-only observations, longest consecutive run37at283..319, vs prior135at313..447. Current field resource prepared324 vs prior448; different-run frame counts are not a controlled latency/performance comparison.",
+        "Selected target was enqueued11times,9with unknown geometry input mask2 before its negative-X neighbor was known, then known/uncertified319 and certified323. Priority does not remove initial capture/geometry availability waste.",
+        "Residual(-4,-3,3) ray witness195has drawable0, published_geom0, existing priorityRemesh queue2 and visible_geometry_promoted1. FirstMesh service currently only covers queue1; a solid exact witness in queue2 can still miss the FirstMesh reservation.",
+        "Some remaining fault sections have a live CPU builder instead of queue-only ownership. Complete whole-pipeline latency/readiness scheduling remains necessary."
       ]
     }
   }
