@@ -9741,5 +9741,199 @@
       "Verify repeated NoSurface publication and required-domain readiness in native after queue-entry followup. Do not treat lower dirty/quad counts as independent image proof.",
       "Complete full S0..S6: lifecycle/source/cancellation/provider, semantic geometry/optics catalogs, persisted certificates, true GPU/backend parity, independent nonzero RGB/wet/transparency and full seed/radius/edit/return/eviction/performance/memory matrix."
     ]
+  },
+  "no_surface_queue_entry_native_2026_11_19": {
+    "schema": "no-surface-repair-native-assessment.v1",
+    "verified_at_utc": "2026-11-19T17:40:58.254884+00:00",
+    "goal": "active; full S0..S6 incomplete",
+    "source_commit": "c6b3ebfb8bb59c3b06a86f79aee9e7061131548f",
+    "checkout_commit": "c6b3ebfb8bb59c3b06a86f79aee9e7061131548f",
+    "required_release_app_build": {
+      "exit": 0,
+      "log": "build/desktop-msvc/no-surface-all-hints-app-build-20261119.log"
+    },
+    "artifacts": "build/desktop-msvc/engine-no-surface-all-hints-wet-20261119-native",
+    "parent_exit": 0,
+    "wrapper_exit": 2,
+    "overall": "UNTESTED",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 256,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 724,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 452,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "route": {
+      "status": "PASS",
+      "reason": "frontier_route_covered",
+      "displacement_chunks": 19,
+      "outside_initial_resident_samples": 3647
+    },
+    "inspection": {
+      "status": "PASS",
+      "reason": "inspection_capture_coverage",
+      "requested": 24,
+      "queued": 24,
+      "verified": 24
+    },
+    "relocations": 0,
+    "depth": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 14776,
+      "faults": 0,
+      "frame_epochs": 114,
+      "skipped_unscoped_or_occluded": 288,
+      "examples": [],
+      "fault_attribution": {
+        "schema": "engine-depth-fault-attribution.v1",
+        "section_count": 0,
+        "sections": [],
+        "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+      },
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "rgb": {
+      "status": "UNTESTED",
+      "reason": "missing_visual_reference",
+      "samples": 15064,
+      "captures": 118,
+      "attributed_samples": 0,
+      "faults": 0
+    },
+    "selected_no_surface": {
+      "coord": [
+        -16,
+        -3,
+        5
+      ],
+      "prior_commits": 136,
+      "intermediate_commits": 7,
+      "current_commits": 1,
+      "commits": [
+        "I20261119 20:37:51.672878 14260 Log.cpp:601] [ChunkTrace] gpu_commit coord=(-16,-3,5) sourceRev=1 srcLight=0 hasSrcLight=1 nowLight=1 acceptedStale=0 acceptedGeomStale=0 quads=0 slot=123 allocation=87572 darkFace=0 litFace=0 preview=0"
+      ],
+      "prepublication_or_owned_repair_requests": {
+        "29": 1,
+        "5": 3
+      },
+      "finding": "This selected native section published one zero-quad artifact/sourceRev1 and did not churn it through the remaining route/stop. Deterministic queue-entry and stale-geometry/catalog/epoch controls independently validate the proof-based repair behavior."
+    },
+    "performance_debt": {
+      "status": "FAIL",
+      "legacy_pass": false,
+      "metrics": {
+        "wall_ms_med": 23.0743,
+        "wall_ms_fly_med": 25.14065,
+        "dirty_med": 128.0,
+        "stop_mesh_dirty_tick_med": 4.9097,
+        "post_stop_readiness_debt_max": 2.0,
+        "post_stop_mesh_missing_max": 0.0,
+        "post_stop_focus_dirty_med": 0.0
+      },
+      "failed_gates": [
+        "stream_pressure_red_rate_le_0_30",
+        "wall_ms_med_le_25",
+        "post_load_ring_not_ready_eq_0",
+        "miss_stuck_max_run_sec_le_4",
+        "opaque_idle_churn_max_le_120",
+        "emerge_spike_frac_le_0_05",
+        "cruise_schedule_ok_med_ge_2",
+        "mesh_schedule_retry_after_capture_gt_0",
+        "witness_latch_diet_share_ge_0_70",
+        "effective_holes_blink_rate_le_0_05",
+        "policy_headers_have_budget",
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5"
+      ],
+      "stop_gates": {
+        "post_stop_pending_med_le_15": true,
+        "post_stop_black_sticky_zero": true,
+        "post_stop_visible_black_no_ticket_zero": true,
+        "post_stop_visible_black_stalled_zero": true,
+        "post_stop_missing_zero": false,
+        "post_stop_visual_holes_zero": true,
+        "post_stop_effective_holes_zero": false,
+        "post_stop_pending_falling": false,
+        "post_stop_relight_active": true,
+        "post_stop_pending_not_plateau_8s": true,
+        "post_stop_healthy_fps_not_unfinished": false,
+        "post_stop_not_ready_falling": true,
+        "post_stop_focus_dirty_falling": true
+      },
+      "runtime_resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 202,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 36.0,
+          "p95": 56.5,
+          "max": 61.0
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 12.74375,
+          "p95": 52.84375,
+          "max": 55.99375
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 2.8000000000000043,
+          "p95": 25.6875,
+          "max": 37.45625
+        },
+        "app_rss_mb_max": 719.53515625,
+        "system_available_memory_mb_min": 19506.34765625,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "limits": [
+      "One native source/route/selected-section observation plus causal regressions; not whole-engine lifetime/geometry/light acceptance.",
+      "Parent0 proves all5provenance only. Wrapper2/UNTESTED preserves missing independent RGB reference.0/14776 is near opaque depth only, no nonzero-light/transparent/full-screen oracle.",
+      "Same-host diagnostic runs showed median wall time reduction, but no controlled diagnostics-off performance benchmark or full memory/capacity acceptance is claimed. Remaining readiness debt2 and failed gates remain authoritative.",
+      "Do not treat retirement of exact NoSurface geometry as completion of independent point-light calculations or persisted field certificates. Their leases and proof gates remain."
+    ],
+    "next": [
+      "Trace the remaining stop-phase readiness/data/light debt to authoritative section inputs and owners. Mesh coverage is now clear in this scoped run; do not weaken readiness or legacy metrics to declare convergence.",
+      "Continue canonical lifecycle/provider/cancellation, semantic geometry/optics catalog identities, persisted certificates and actual GPU/backend parity.",
+      "Implement independent nonzero RGB/wet/transparency references and complete seed/radius/return/edit/save/eviction/backend/performance/memory matrix."
+    ]
   }
 }
