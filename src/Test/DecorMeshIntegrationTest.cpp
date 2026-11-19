@@ -2273,6 +2273,19 @@ static void TestFirstComputedLightPublication(
                  legacy_pass.batches[0].renderLightBinding == binding,
              "retained GPU cohorts admit source light outside current visibility refs");
       backend.DestroyPass(legacy_pass);
+      backend.RefreshPass(legacy_pass, {legacy}, cache.GetMeshRevision(),
+                          cache.GetCullRevision(), 1);
+      // Batch indices belong to a source publication, not to the coordinate.
+      // The old opaque material occupied index1 in an older material table;
+      // its replacement is the current source cohort's actual index0.
+      legacy_pass.batches[0].batchIndex = 1;
+      backend.RefreshPassRefs(legacy_pass, cache, {}, cache.GetMeshRevision(),
+                              cache.GetCullRevision(), 1);
+      Expect(legacy_pass.batches.size() == 1 &&
+                 legacy_pass.batches[0].batchIndex == 0 &&
+                 legacy_pass.batches[0].renderLightBinding == binding,
+             "field admission reloads current cohort after material indices change");
+      backend.DestroyPass(legacy_pass);
 #endif
     }
     const auto published_count = cache.GetPublishCount(root);

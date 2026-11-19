@@ -186,8 +186,16 @@ void UGreedyGpuBackend::RefreshPassRefs(
   for (const auto &ref : refs)
   {
     const GreedyMeshBatch *batch = meshCache.TryGetGreedyBatch(ref);
-    if (!batch)
+    const bool wrong_pass = batch && cache.passId != GreedyGpuPassId::Unknown &&
+        batch->Transparent != (cache.passId == GreedyGpuPassId::Transparent);
+    const bool stale_material = batch && ref.blockId != BLOCK_AIR &&
+                                ref.blockId != batch->blockId;
+    if (!batch || wrong_pass || stale_material)
+    {
+      if (!meshCache.HasLiveGpuDraw(ref.chunkCoord))
+        dirty.insert(ref.chunkCoord);
       continue;
+    }
     inputs.push_back({ref, batch});
     seen_keys.insert({ref.chunkCoord, ref.batchIndex});
   }
@@ -201,20 +209,19 @@ void UGreedyGpuBackend::RefreshPassRefs(
   // may replace a cohort; a retained CPU shadow of a live packed slot cannot.
   for (const auto &prior : cache.batches)
   {
-    const GreedyBatchRef ref{prior.chunkCoord, prior.batchIndex, prior.blockId};
-    const auto *batch = meshCache.TryGetGreedyBatch(ref);
-    if (!batch || !batch->renderLightBinding ||
-        batch->renderLightBinding == prior.renderLightBinding ||
-        meshCache.HasLiveGpuDraw(ref.chunkCoord))
+    const auto binding = meshCache.GetPublishedRenderLightBinding(prior.chunkCoord);
+    if (!binding || binding == prior.renderLightBinding ||
+        meshCache.HasLiveGpuDraw(prior.chunkCoord))
       continue;
-    const auto geometry = meshCache.GetPublishedGeometryRenderInputs(ref.chunkCoord);
+    const auto geometry = meshCache.GetPublishedGeometryRenderInputs(prior.chunkCoord);
     if (!geometry ||
-        !batch->renderLightBinding->GeometryInputs().Matches(*geometry) ||
-        batch->renderLightBinding->WorldEpoch() != meshCache.GetCaptureStore().WorldEpoch())
+        !binding->GeometryInputs().Matches(*geometry) ||
+        binding->WorldEpoch() != meshCache.GetCaptureStore().WorldEpoch())
       continue;
-    dirty.insert(ref.chunkCoord);
-    if (seen_keys.insert({ref.chunkCoord, ref.batchIndex}).second)
-      inputs.push_back({ref, batch});
+    // An old batchIndex may now name another material or render pass. The
+    // resource delta invalidates the cohort, not that obsolete child index;
+    // dirty expansion below loads only the current pass's actual source refs.
+    dirty.insert(prior.chunkCoord);
   }
   // Dirty expand: Append only resident GreedyCache keys ∩ dirty (not discovery).
   std::unordered_set<glm::ivec3, IVec3Hash> dirty_union = dirty;
