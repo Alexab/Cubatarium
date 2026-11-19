@@ -373,7 +373,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(synchronous_meshing_payload(config_path.read_bytes()))
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
@@ -389,10 +389,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             elif fixture_scene == "open-sky-plane":
                 from engine_smoke_fixtures import prepare_open_sky_plane
                 scene = prepare_open_sky_plane(fixture, minimum_chunks)
-            elif fixture_scene in ("dry-lit-negative-cave", "dry-rgb-negative-cave"):
+            elif fixture_scene in ("dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border"):
                 from engine_smoke_fixtures import prepare_lit_negative_cave
-                scene = prepare_lit_negative_cave(fixture, minimum_chunks)
-                if fixture_scene == "dry-rgb-negative-cave":
+                scene = prepare_lit_negative_cave(fixture, minimum_chunks, air_border=fixture_scene=="dry-rgb-air-border")
+                if fixture_scene in ("dry-rgb-negative-cave", "dry-rgb-air-border"):
                     from engine_rgb_reference import prepare as prepare_rgb
                     scene = prepare_rgb(scene, fixture)
             else:
@@ -599,6 +599,17 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif air_service["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("air_border_fixture") and not startup_only:
+            from engine_camera_light_reference import evaluate as evaluate_camera_light
+            camera_light = evaluate_camera_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")),
+                                                 expected_frames=report.get("ingame_frames"))
+            verdict["components"]["fixture_camera_field_light"] = camera_light
+            (artifacts / "fixture-camera-light-reference.json").write_text(
+                json.dumps(camera_light, indent=2)+"\n", encoding="utf-8")
+            if camera_light["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif camera_light["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         if scene is not None and scene.get("name") == "open-sky-plane" and not startup_only:
             from engine_camera_light_reference import evaluate as evaluate_camera_light
             camera_light = evaluate_camera_light(scene, sorted((artifacts / "logs").glob("*.log.INFO.*")),
@@ -721,7 +732,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

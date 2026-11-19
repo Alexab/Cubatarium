@@ -1,6 +1,8 @@
 """Validate canonical camera-field observations at actual world paints.
 
 The open plane has unobstructed sky and no emitter within the scoped footprint.
+The roofed AIR-border scene has opaque floor emitters one cell below a whole
+absent geometry section; its direct unobstructed transport is15-Manhattan.
 Missing/transient fields after first paint fail even when their raw bytes look
 bright. This is a CPU-resource readiness/value oracle, not a shader/RGB oracle.
 """
@@ -13,16 +15,29 @@ from pathlib import Path
 
 
 def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = None) -> dict:
-    if scene.get("name") != "open-sky-plane":
+    positive_air = scene.get("air_border_fixture",{}).get("schema") == "engine-positive-air-border-fixture.v1"
+    if scene.get("name") != "open-sky-plane" and not positive_air:
         return dict(status="UNTESTED", reason="unsupported_camera_light_scene")
     try:
-        bounds = scene["plane_bounds"]
+        bounds = scene["cave_bounds"] if positive_air else scene["plane_bounds"]
         lo, hi = scene["chunk_x_bounds"]
         if (any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v)
                 for v in (bounds["floor"], bounds["z_low"], bounds["z_high"])) or
                 not all(isinstance(v, int) and not isinstance(v, bool) for v in (lo, hi)) or
                 lo >= hi or bounds["z_high"] - bounds["z_low"] <= 32):
             raise ValueError("invalid reference domain")
+        if positive_air:
+            light=scene["lighting_fixture"]
+            floor_y=round(bounds["floor"]-.5)
+            border=scene["air_border_fixture"]
+            if (scene.get("expected_eye_in_fluid") is not False or floor_y!=-49 or
+                    border.get("source_section_y")!=-4 or border.get("target_section_y")!=-3 or
+                    bounds["z_low"]>47.5 or bounds["z_high"]<63.5 or bounds["ceiling"]<-32.5 or
+                    light.get("schema")!="engine-positive-blocklight-fixture.v1" or light.get("emission")!=15 or
+                    light.get("material_id")!=376 or not light.get("emitters") or
+                    any(not isinstance(e,list) or len(e)!=3 or any(type(v) is not int for v in e) or e[1]!=floor_y
+                        for e in light["emitters"])):
+                raise ValueError("invalid AIR/source boundary contract")
     except (KeyError, TypeError, ValueError):
         return dict(status="FAIL", reason="invalid_camera_light_fixture")
     marker_epoch = None
@@ -33,6 +48,7 @@ def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = Non
     air_sections = set()
     seen = set()
     examples = []
+    levels=set()
 
     def fault(reason):
         nonlocal faults
@@ -63,10 +79,11 @@ def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = Non
         if epoch != marker_epoch:
             skipped += 1
             return
-        bounds = scene["plane_bounds"]
+        bounds = scene["cave_bounds"] if positive_air else scene["plane_bounds"]
         lo, hi = scene["chunk_x_bounds"]
+        z_margin=0 if positive_air else 16
         if not (lo*16+16 <= cell[0] < (hi+1)*16-16 and
-                bounds["z_low"]+16 <= cell[2] < bounds["z_high"]-16 and
+                bounds["z_low"]+z_margin <= cell[2] < bounds["z_high"]-z_margin and
                 cell[1] > round(bounds["floor"]-.5)):
             skipped += 1
             return
@@ -79,11 +96,17 @@ def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = Non
             return
         samples += 1
         epochs.add(frame)
+        expected_sky=0 if positive_air else 15
+        expected_block=max(0,max(15-sum(abs(a-b) for a,b in zip(cell,e))
+                              for e in scene["lighting_fixture"]["emitters"])) if positive_air else 0
+        levels.add(expected_block)
         if not ready:
             fault(f"unready_camera_field:{coord}:{frame}")
         elif identity == 0:
             fault(f"invalid_ready_field_binding:{coord}:{frame}")
-        elif sky != 15 or block != 0:
+        elif positive_air and (resident or coord[1]!=-3 or coord[2]!=3):
+            fault(f"air_target_has_geometry_or_wrong_band:{coord}:{frame}")
+        elif sky != expected_sky or block != expected_block:
             fault(f"camera_light_mismatch:{coord}:{frame}:sky{sky}:block{block}")
         else:
             ready_samples += 1
@@ -121,6 +144,7 @@ def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = Non
                     samples=ready_samples >= 25,
                     frame_epochs=len(epochs) >= 3, absent_geometry_sections=len(air_sections) >= 8,
                     physical_mode=unsupported == 0,
+                    **({"positive_levels":len(levels)>=3 and min(levels)>0} if positive_air else {}),
                     paint_frame_coverage=(isinstance(expected_frames, int) and
                         not isinstance(expected_frames, bool) and expected_frames > 0 and
                         len(seen) == len(epochs) == expected_frames and skipped == 0))
@@ -133,5 +157,7 @@ def evaluate(scene: dict, logs: list[Path], *, expected_frames: int | None = Non
                 unsupported_mode_samples=unsupported, skipped_unscoped=skipped,
                 faults=faults, examples=examples,
                 missing_coverage=[k for k, valid in coverage.items() if not valid],
-                scope="observed canonical camera CPU field readiness/sky15/block0 at world paints; "
+                expected_block_levels=sorted(levels),
+                scope=("roofed AIR section, sky0 and independent emitter Manhattan blocklight at every paint; " if positive_air else
+                       "observed canonical camera CPU field readiness/sky15/block0 at world paints; ")+
                       "no creature/item, GPU page, shader RGB, latency or full-screen acceptance")

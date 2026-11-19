@@ -7,13 +7,15 @@ from pathlib import Path
 
 
 def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool = False,
-                          wide: bool = False) -> dict:
+                          wide: bool = False, air_border: bool = False) -> dict:
     """Saved starting position is prepared before load; no runtime relocation."""
     fixture = fixture.resolve()
     if fixture.parent.name != "worlds" or not fixture.name.startswith("EngineSmoke_"):
         raise ValueError("scene preparation requires an isolated EngineSmoke_ world")
     if not 1 <= minimum_chunks <= 64:
         raise ValueError("cave fixture coverage must be 1..64 chunks")
+    if air_border and (not wide or flooded):
+        raise ValueError("AIR border requires a wide dry cave")
     chunks = fixture / "chunks"
     if chunks.is_symlink() or not chunks.is_dir():
         raise ValueError("fixture chunks must be a real directory")
@@ -28,6 +30,8 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
         raise ValueError("fixture requires the flight runner's Username save")
     distance = minimum_chunks * 16 + 48
     floor_y, ceiling_y = (-61, -16) if wide else (-44, -30)
+    if air_border:
+        floor_y = -49
     cave_z_low, cave_z_high = (35, 67) if wide else (45, 57)
     start = [22.0, floor_y + 0.5 + 1.62, 51.0]
     min_cx = math.floor((start[0] - distance - 32) / 16)
@@ -269,7 +273,7 @@ def prepare_visible_items_plane(fixture: Path, minimum_chunks: int) -> dict:
     return scene
 
 
-def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
+def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int, *, air_border: bool = False) -> dict:
     """Positive blocklight scene. Runtime catalog/draw acceptance is separate."""
     import hashlib
     metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
@@ -284,7 +288,12 @@ def prepare_lit_negative_cave(fixture: Path, minimum_chunks: int) -> dict:
             material.get("render", {}).get("style", "cube") != "cube" or
             "physics" in material):
         raise ValueError("lit fixture glowstone definition is incompatible with the reference scene")
-    scene = prepare_negative_cave(fixture, minimum_chunks)
+    scene = prepare_negative_cave(fixture, minimum_chunks, wide=air_border, air_border=air_border)
+    if air_border:
+        scene.update(name="dry-negative-cave",variant="air-border",route_rise=6,
+            air_border_fixture=dict(schema="engine-positive-air-border-fixture.v1",
+                source_section_y=-4,target_section_y=-3,
+                scope="opaque emitter Y=-49; entire target Y=-48..-33,Z=48..63 is AIR, without geometry"))
     floor = round(scene["cave_bounds"]["floor"] - 0.5)
     emitters = []
     for cx in range(scene["chunk_x_bounds"][0], scene["chunk_x_bounds"][1] + 1):
