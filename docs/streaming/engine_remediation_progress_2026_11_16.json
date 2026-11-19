@@ -8078,7 +8078,7 @@
       }
     },
     "completed_field_services_retained_geometry": {
-      "status": "Implemented/tested: actual retained-tail field-completion regressionRED thenGREEN,13Release checksPASS29.83seconds after2negative controls and exact source restoration.31Python analyzer/runner/depth testsGREEN. Required Release app/native pending.",
+      "status": "Implemented/tested:13Release checksPASS29.83seconds after2negative controls and exact restoration;31PythonGREEN. Required Release app built. Full wet nativeFAILdeadline600/exit124under measured hostCPU contention; no final report/framebuffer trace, route/depth/RGBUNTESTED. Hook/resource-preparation runtime observed; full native acceptance not established.",
       "native_basis": "6b369f738wet FAIL15/14860. Selected(-4,-3,3) geometry retained228..270. Actual light install/settlement log12:25:37.194 precedes watch26912:25:37.267; missing-depth faults269precede resource preparation27012:25:37.584. Existing round-robin pairing can delay an installed field behind unready retained results.",
       "implementation": [
         "World NoteChunkSliceLightCalculationSettled signals NotifyGeometryLightReady only after its existing actual calculation/provenance check and settlement acknowledgement.",
@@ -8096,7 +8096,65 @@
         "regression": "33actual CPU jobs saturate32retained owners; eviction admits34th build. Existing unhinted-ready tail still publishes through ordinary fairness. Completion hint without field proof publishes nothing and preserves result bytes/count. Real computed field at retained tail publishes in next bounded drain without another build. Repeated unready hints under one-check calls cannot starve an ordinary ready tail within64calls; all credits released on cancellation and no detached owner after completion hint.",
         "python": "5depth-attribution tests (including extended stage masks preserving depth faults),5publication analyzer tests,21smoke-runner testsPASS."
       },
-      "limits": "Required app/full wet native pending. Does not remove initial unknown-geometry capture churn or light-dependent merge/capture identity. FullS4/S5/S6, independentRGB/transparency, backend/persistence and performance acceptance remain open."
+      "limits": "No complete native acceptance. Prior15/14860depth failures remain open. Current high-contention timeout does not prove a code performance regression or its absence; no clean repeat yet. Initial unknown-geometry capture/light merge identities, complete lifecycle, RGB/transparency, backend/persistence and performance acceptance remain.",
+      "native": {
+        "source_commit": "ae7657bcf5fa7af07bfcd7757aa93da33dfc530b",
+        "artifact": "build/desktop-msvc/engine-field-completion-hint-wet-native/field-completion-hint-timeout-observation.json",
+        "result": "FAIL",
+        "wrapper_exit": 1,
+        "process_exit": 124,
+        "process_timeout_s": 600,
+        "native_report_exists": false,
+        "startup": "PASS1176sections; no data/light/publication blockers",
+        "route": "UNTESTEDmissing_route_evidence",
+        "opaque_depth": "UNTESTEDmissing_framebuffer_trace",
+        "visual": "UNTESTEDmissing_visual_reference",
+        "runtime_resources": {
+          "schema": "flight-runtime-resources.v1",
+          "available": true,
+          "disabled_by_user": false,
+          "sample_interval_sec": 1.0,
+          "sample_count": 264,
+          "logical_cpu_count": 8,
+          "host_cpu_percent_summary": {
+            "median": 100.0,
+            "p95": 100.0,
+            "max": 100.0
+          },
+          "app_cpu_machine_percent_summary": {
+            "median": 13.9,
+            "p95": 24.925,
+            "max": 42.9375
+          },
+          "other_cpu_machine_percent_estimate_summary": {
+            "median": 83.5875,
+            "p95": 98.7,
+            "max": 100.0
+          },
+          "app_rss_mb_max": 738.9609375,
+          "system_available_memory_mb_min": 11206.0703125,
+          "timed_out": true,
+          "audio_disabled_for_test": true
+        },
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "selected_field_completion_and_preparation_trace": [
+          "I20261119 13:22:50.121465 38100 Log.cpp:601] [ChunkPublication] field_completion_hint coord=(-4,-3,3) frame_epoch=228 source_revision=3",
+          "I20261119 13:22:50.419547 38100 Log.cpp:601] [ChunkPublication] resource coord=(-4,-3,3) frame_epoch=229 decision=prepared source_epoch=4 current_epoch=4 geometry_valid=1 unknown_mask=0 physical_snapshot=1 provisional=0 field_geometry_match=1 catalog_match=1"
+        ],
+        "analysis": [
+          "Native killed at600second deadline (exit124); no final native report or retained framebuffer trace. OverallFAIL, route/depth/RGBUNTESTED. It is not a zero-fault run.",
+          "Actual first-world-paint required-ring witness1176sectionsPASS with no data/light/publication blockers; this does not imply pixel/light acceptance.",
+          "Runtime field completion hook and subsequent validated physical resource preparation occurred for selected geometry. Event uses cached mesh focus frame epoch (228), preparation229; use timestamps when interpreting cross-phase events, not a claimed exact render-frame latency.",
+          "Measured hostCPU median100percent, other-CPU estimate median83.5875percent, appCPU median13.9percent; available memory minimum11206MiB. This run cannot establish code-induced performance change or successful full route/visual acceptance.",
+          "Preserve prior completed6b369f738wet15/14860depth counterexample. Do not replace it with this untested visual run or rerun immediately while contention remains."
+        ]
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8125,7 +8183,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "6b369f73817cf7d74ef6999f002f93f606ffdc65",
+    "latest_source_commit": "ae7657bcf5fa7af07bfcd7757aa93da33dfc530b",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -8134,56 +8192,50 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Installed-field completion now hints existing retained geometry with2hint/2FIFO checks per persistent cycle, at-most4existing checks, no readiness bypass. Actual worker/field regression and2negative controls13ReleaseGREEN,31PythonGREEN; required app/native pending. Still remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity and close first-publication latency.",
+      "Completed-field notification and bounded2hint/2FIFO cycle verified by actual retained-result regression,2negative controls13ReleaseGREEN,31PythonGREEN. App built; runtime hook observed but native timed out600under host100percent/other83.6percentCPU, route/depthUNTESTED. Preserve15/14860last completed depth counterexample. Continue initial capture/CPU/GPU light-independent geometry identity and eligibility/latency closure; repeat full native when host contention permits meaningful coverage.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. Latest6b369f738wet native15/14860remainsFAIL; earlier21/13924and448/8312preserved. FullS0..S6scope unchanged; retain independent RGB/transparency, backend/persistence and performance acceptance.",
+    "completion": "Not established. Latestae7657bcfapp/runtime timeoutFAIL with no framebuffer acceptance; last completed6b369f738depth15/14860FAIL preserved. FullS0..S6scope unchanged.",
     "latest_native_counterexample": {
-      "source_commit": "6b369f73817cf7d74ef6999f002f93f606ffdc65",
-      "artifact": "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
+      "source_commit": "ae7657bcf5fa7af07bfcd7757aa93da33dfc530b",
+      "artifact": "build/desktop-msvc/engine-field-completion-hint-wet-native/field-completion-hint-timeout-observation.json",
       "result": "FAIL",
-      "app_exit": 0,
       "wrapper_exit": 1,
-      "route_chunks": 19,
-      "outside_initial_samples": 934,
-      "relocations": 0,
-      "inspection_verified": 24,
-      "inspection_requested": 24,
-      "startup_sections": 1176,
-      "startup_light_unready": 0,
-      "startup_publication_unready": 0,
-      "opaque_depth_faults": 15,
-      "opaque_depth_checked": 14860,
-      "depth_epochs": 115,
-      "affected_sections": 7,
-      "fault_owner_masks": {
-        "2": 8,
-        "1": 7
-      },
-      "selected_fault_boundary_watch": [
-        {
-          "frame_epoch": 269,
-          "revision": 4,
-          "queue_kind": 0,
-          "inflight": 1,
-          "capture_pending": 0,
-          "awaiting_light": 1,
-          "light_refresh": 0
-        }
-      ],
-      "selected_retained_geometry_watch_count": 43,
-      "selected_retained_geometry_frame_range": [
-        228,
-        270
-      ],
-      "analysis": {
-        "result": "StillFAIL15/14860opaque-depth checks across115epochs and7sections; all sampled fault voxels match independent reference and have no publication.",
-        "selected_classification": "Target(-4,-3,3) now scheduled throughFirstMesh, source4captured227with7known geometry inputs, no new target enqueue until current-field resource preparation270.",
-        "selected_field_pairing": "43beginning-of-tick observations228..270retain computed geometry awaiting a compatible field pairing. Fault boundary269has queue0,inflight1,awaiting_light1,capture_pending0,light_refresh0 and no conflicting same-frame watch. Exact field availability/settlement/resource checks at each drain were not logged; do not infer which condition held for all43frames.",
-        "owner_masks": "Mask2comes from cache.HasInflightMeshBuild and denotes aggregate active source, including retained geometry and field refresh. It does not establish an executing CPU builder. Selected2fault samples269overlap retained-geometry watch; other mask2sections lack this selected detailed trace.",
-        "remaining": "Seven mask1and eight mask2fault samples still require first-publication/whole-pipeline latency closure. Initial capture still builds with unknown geometry and includes light-dependent validity/merge inputs. FullS0..S6scope unchanged."
+      "process_exit": 124,
+      "process_timeout_s": 600,
+      "native_report_exists": false,
+      "startup": "PASS1176sections; no data/light/publication blockers",
+      "route": "UNTESTEDmissing_route_evidence",
+      "opaque_depth": "UNTESTEDmissing_framebuffer_trace",
+      "visual": "UNTESTEDmissing_visual_reference",
+      "runtime_resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 264,
+        "logical_cpu_count": 8,
+        "host_cpu_percent_summary": {
+          "median": 100.0,
+          "p95": 100.0,
+          "max": 100.0
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 13.9,
+          "p95": 24.925,
+          "max": 42.9375
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 83.5875,
+          "p95": 98.7,
+          "max": 100.0
+        },
+        "app_rss_mb_max": 738.9609375,
+        "system_available_memory_mb_min": 11206.0703125,
+        "timed_out": true,
+        "audio_disabled_for_test": true
       },
       "provenance": {
         "exe": true,
@@ -8192,19 +8244,24 @@
         "runtime_shader_assets": true,
         "source_commit": true
       },
-      "performance": {
-        "status": "FAIL",
-        "metrics": {
-          "wall_ms_med": 154.9265,
-          "wall_ms_fly_med": 156.538,
-          "world_streaming_phase_ms": 107.141,
-          "scene_ms": 40.7219,
-          "post_stop_readiness_debt_max": 0.0,
-          "post_stop_mesh_missing_max": 1.0,
-          "post_stop_visible_black_stalled_max": 2.0
-        },
-        "scope": "Intrusive diagnostics/captures; no controlled performance A/B."
-      }
+      "selected_field_completion_and_preparation_trace": [
+        "I20261119 13:22:50.121465 38100 Log.cpp:601] [ChunkPublication] field_completion_hint coord=(-4,-3,3) frame_epoch=228 source_revision=3",
+        "I20261119 13:22:50.419547 38100 Log.cpp:601] [ChunkPublication] resource coord=(-4,-3,3) frame_epoch=229 decision=prepared source_epoch=4 current_epoch=4 geometry_valid=1 unknown_mask=0 physical_snapshot=1 provisional=0 field_geometry_match=1 catalog_match=1"
+      ],
+      "analysis": [
+        "Native killed at600second deadline (exit124); no final native report or retained framebuffer trace. OverallFAIL, route/depth/RGBUNTESTED. It is not a zero-fault run.",
+        "Actual first-world-paint required-ring witness1176sectionsPASS with no data/light/publication blockers; this does not imply pixel/light acceptance.",
+        "Runtime field completion hook and subsequent validated physical resource preparation occurred for selected geometry. Event uses cached mesh focus frame epoch (228), preparation229; use timestamps when interpreting cross-phase events, not a claimed exact render-frame latency.",
+        "Measured hostCPU median100percent, other-CPU estimate median83.5875percent, appCPU median13.9percent; available memory minimum11206MiB. This run cannot establish code-induced performance change or successful full route/visual acceptance.",
+        "Preserve prior completed6b369f738wet15/14860depth counterexample. Do not replace it with this untested visual run or rerun immediately while contention remains."
+      ]
+    },
+    "last_completed_depth_counterexample": {
+      "source_commit": "6b369f738",
+      "artifact": "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
+      "faults": 15,
+      "checked": 14860,
+      "status": "FAIL"
     }
   }
 }
