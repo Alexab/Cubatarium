@@ -191,6 +191,22 @@ void UGreedyGpuBackend::RefreshPassRefs(
     inputs.push_back({ref, batch});
     seen_keys.insert({ref.chunkCoord, ref.batchIndex});
   }
+  // Physical resource admission can change while geometry stays byte-identical
+  // and its dirty ticket has already been consumed. Reusing an untyped GPU
+  // predecessor would silently omit the new source lease. Republish the entire
+  // current CPU cohort atomically; never graft a coordinate's latest field onto
+  // potentially different retained GPU geometry.
+  std::unordered_map<SeenKey, const GreedyGpuBatch *, SeenKeyHash> resident;
+  resident.reserve(cache.batches.size());
+  for (const auto &batch : cache.batches)
+    resident.emplace(SeenKey{batch.chunkCoord, batch.batchIndex}, &batch);
+  for (const auto &input : inputs)
+  {
+    const auto prior = resident.find({input.ref.chunkCoord, input.ref.batchIndex});
+    if (prior != resident.end() && input.batch->renderLightBinding &&
+        prior->second->renderLightBinding != input.batch->renderLightBinding)
+      dirty.insert(input.ref.chunkCoord);
+  }
   // Dirty expand: Append only resident GreedyCache keys ∩ dirty (not discovery).
   std::unordered_set<glm::ivec3, IVec3Hash> dirty_union = dirty;
   dirty_union.insert(cache.PendingGeometryDirty.begin(),

@@ -2235,6 +2235,33 @@ static void TestFirstComputedLightPublication(
         }
       Expect(root_batches > 0, "actual GPU publication retains first root mesh");
       backend.DestroyPass(gpu_pass);
+      // A drawable uploaded before physical-resource admission was enabled
+      // has identical geometry but no lease. A later metadata-only source
+      // publication must not reuse that untyped predecessor indefinitely.
+      GreedyMeshBatch legacy = *batch;
+      legacy.renderLightBinding.reset();
+      GreedyGpuPassCache legacy_pass;
+      backend.RefreshPass(legacy_pass, {legacy}, cache.GetMeshRevision(),
+                          cache.GetCullRevision(), 1);
+      Expect(legacy_pass.batches.size() == 1 &&
+                 !legacy_pass.batches[0].renderLightBinding,
+             "legacy GPU fixture has real unchanged geometry without field lease");
+      std::unordered_set<glm::ivec3, IVec3Hash> drained;
+      cache.ConsumeGeometryDirtyChunks(drained);
+      cache.BeginGpuPassDirtyFrame();
+      const auto cpu_publications = cache.GetPublishCount(root);
+      std::vector<GreedyBatchRef> root_refs;
+      for (const auto &ref : cache.GetGreedyOpaqueCutoutRefs())
+        if (ref.chunkCoord == root)
+          root_refs.push_back(ref);
+      backend.RefreshPassRefs(legacy_pass, cache, root_refs,
+                              cache.GetMeshRevision(), cache.GetCullRevision(), 1);
+      Expect(legacy_pass.batches.size() == 1 &&
+                 legacy_pass.batches[0].renderLightBinding == binding,
+             "GPU reuse cannot omit newly admitted source artifact light lease");
+      Expect(cache.GetPublishCount(root) == cpu_publications,
+             "field admission repair does not run another CPU geometry publication");
+      backend.DestroyPass(legacy_pass);
 #endif
     }
     const auto published_count = cache.GetPublishCount(root);
