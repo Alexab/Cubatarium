@@ -12131,5 +12131,14 @@
     "Fix recreation/owner lifetime and then repeat full native save/evict/return/cold-load matrix; absent-cursor guard alone must not close the durability issue."
   ],
   "scope": "All original S0..S6 remains active; performanceFAIL, independent RGB/wet/transparencyUNTESTED, backend parity, procedural AIR discovery, semantic identities, lifecycle/provider/cancellation and full memory/performance matrix are not closed."
+},
+"unload_record_snapshot_release_verification_2026_11_19": {
+  "status": "release_build_verified_full_S0_S6_active",
+  "source_commit": "d1815b878",
+  "desktop_release_exit": 0,
+  "desktop_log": "build/desktop-msvc/unload-record-snapshot-desktop-build-20261119.log",
+  "static_exe_verifier": "PASS,6systemDLLs",
+  "tests": "33Release tests green for retired-candidate guard at1d9419d56; original RED retained. Record-snapshot ownership fix is desktop-compiled; no additional native rerun of d1815b878 claimed.",
+  "next": "Trace exact origin/owner of recreated post-eviction geometry slice; native full-column purge and30receipt loss remain reproducible. Preserve full S0..S6 and all open acceptance requirements."
 }
 }
