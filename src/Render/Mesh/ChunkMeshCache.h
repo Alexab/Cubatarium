@@ -677,7 +677,7 @@ public:
   {
     return SoftDeferHeld.count(chunk_coord) > 0;
   }
-  /// SoftDefer policy still owns publication for this coord (callback).
+  /// Raw legacy column-light callback, retained for diagnostics.
   bool IsDeferMeshUntilLit(glm::ivec3 chunk_coord) const
   {
     return DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
@@ -998,8 +998,9 @@ public:
     MeshForwardBiasK = bias_k;
     MeshForwardXz = forward_xz;
   }
-  /// When true for a chunk coord, SyncRebuildVisibleMissing skips rebuild
-  /// (await light).
+  /// Legacy baked-light mesh gate. Physical geometry proceeds independently;
+  /// its publication requires the actual current field through
+  /// PrepareRenderLight.
   void SetDeferMeshUntilLitFn(std::function<bool(glm::ivec3)> fn)
   {
     DeferMeshUntilLit = std::move(fn);
@@ -1464,6 +1465,7 @@ private:
                                     uint64_t world_epoch, uint64_t generation,
                                     MeshLightInputs policy) const;
   void ConfigureCapturePolicy(const UBlockWorld &world);
+  bool ShouldDeferBakedMeshUntilLit(glm::ivec3 coord) const;
   bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
                                  const UBlockRegistry &registry,
                                  const MeshBuildResult &result) const;

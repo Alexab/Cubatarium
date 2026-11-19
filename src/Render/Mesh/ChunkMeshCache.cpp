@@ -406,6 +406,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
                                                UBlockRegistry &registry,
                                                int max_sync, double max_ms)
 {
+  ConfigureCapturePolicy(world);
   if (!MeshFocusValid || max_sync <= 0 || !Render.GreedyMeshing)
   {
     return 0;
@@ -458,7 +459,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
         {
           return;
         }
-        if (DeferMeshUntilLit && DeferMeshUntilLit(coord))
+        if (ShouldDeferBakedMeshUntilLit(coord))
         {
           // Still enqueue Dirty so Pass1/async can fill once MayMesh opens —
           // silent skip left sticky holes when soft-defer was wrong/stale.
@@ -539,7 +540,7 @@ int UChunkMeshCache::SyncRebuildVisibleMissing(UBlockWorld &world,
     {
       continue;
     }
-    if (DeferMeshUntilLit && DeferMeshUntilLit(candidate.coord))
+    if (ShouldDeferBakedMeshUntilLit(candidate.coord))
     {
       continue;
     }
@@ -1247,7 +1248,7 @@ bool UChunkMeshCache::HasMeshSatisfyingColumnReady(glm::ivec3 chunk_coord) const
       return false;
     }
   }
-  const bool defer_active = DeferMeshUntilLit && DeferMeshUntilLit(chunk_coord);
+  const bool defer_active = ShouldDeferBakedMeshUntilLit(chunk_coord);
   const bool soft_held = SoftDeferHeld.count(chunk_coord) > 0;
   if (IsIntentionalOccludedEmptyReady(true, false, it->second.GpuResident,
                                       it->second.GpuQuadCount, soft_held,
@@ -3039,7 +3040,7 @@ void UChunkMeshCache::RequeueSoftDeferHeld()
       ++it;
       continue;
     }
-    const bool still_deferred = DeferMeshUntilLit && DeferMeshUntilLit(coord);
+    const bool still_deferred = ShouldDeferBakedMeshUntilLit(coord);
     int horiz = 999;
     bool in_focus = false;
     if (MeshFocusValid)
@@ -4796,8 +4797,8 @@ void UChunkMeshCache::DrainStaleLightRemeshDebt(UBlockWorld &world,
     // CommitGpuMeshResult rejects a dark candidate while this column-wide gate
     // is active. Retain the durable halo debt, but do not repeatedly build and
     // upload a candidate that cannot be published until relight opens the gate.
-    if (!ShouldAdmitVisualMeshRepairUnderLitGate(DeferMeshUntilLit &&
-                                                 DeferMeshUntilLit(coord)))
+    if (!ShouldAdmitVisualMeshRepairUnderLitGate(
+            ShouldDeferBakedMeshUntilLit(coord)))
     {
       continue;
     }
@@ -6306,7 +6307,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         world, coord, registry, registry.GetDefinitionsCatalogSnapshot());
   const bool verified_no_surface =
       no_surface && no_surface->Matches(source_geometry);
-  const bool defer_until_lit = DeferMeshUntilLit && DeferMeshUntilLit(coord);
+  const bool defer_until_lit = ShouldDeferBakedMeshUntilLit(coord);
   const bool had_mesh = HasDrawableGreedyMesh(coord);
   const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(coord);
   const bool had_live_lit_gpu =
@@ -8426,6 +8427,8 @@ void UChunkMeshCache::ConfigureCapturePolicy(const UBlockWorld &world)
   }
   for (const auto &coord : RemeshAfterApply)
     retry.insert(coord);
+  for (const auto &coord : SoftDeferHeld)
+    retry.insert(coord);
   if (AsyncBuilder)
     AsyncBuilder->CancelPending();
   if (CaptureWorker)
@@ -8438,6 +8441,8 @@ void UChunkMeshCache::ConfigureCapturePolicy(const UBlockWorld &world)
   RemeshAfterApply.clear();
   PendingCaptureSet_.clear();
   PendingCaptureReady_.clear();
+  SoftDeferHeld.clear();
+  SoftDeferHeldAge.clear();
   for (const auto &coord : retry)
     if (world.GetChunkManager().HasChunk(coord))
     {
@@ -8446,6 +8451,14 @@ void UChunkMeshCache::ConfigureCapturePolicy(const UBlockWorld &world)
       else
         Dirty.MarkDirtyPriority(coord);
     }
+}
+
+bool UChunkMeshCache::ShouldDeferBakedMeshUntilLit(glm::ivec3 coord) const
+{
+  // Physical geometry has no sampled-light inputs. Its separate publication
+  // owner still requires the current calculated field before any surface draw.
+  return CaptureStore.LightInputsPolicy() == MeshLightInputs::Baked &&
+         DeferMeshUntilLit && DeferMeshUntilLit(coord);
 }
 
 bool UChunkMeshCache::MeshCaptureOwnerStillCurrent(const UBlockWorld &world,
@@ -9203,8 +9216,7 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
 
   apply_profile.Enter(
       UMeshApplyProfileRecorder::Phase::CandidateClassification);
-  const bool defer_until_lit =
-      DeferMeshUntilLit && DeferMeshUntilLit(result.coord);
+  const bool defer_until_lit = ShouldDeferBakedMeshUntilLit(result.coord);
   // Empty SoftDefer placeholders must not count as had_lit (keep dark forever).
   const bool had_mesh = HasDrawableGreedyMesh(result.coord);
   const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(result.coord);
@@ -10207,6 +10219,13 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyPruneN;
         continue;
       }
+      // Physical dirty work owns geometry changes, independent of the legacy
+      // enter-light quiesce state. Unknown geometry is checked at capture.
+      if (CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+      {
+        ++it;
+        continue;
+      }
       // A renderer-rejected visible repair is an outstanding render
       // obligation. Enter/quiesce housekeeping may not transfer it to a
       // passive held state or erase it before a replacement is scheduled.
@@ -10237,7 +10256,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       const bool soft_empty = HasGreedyMesh(*it) && !HasDrawableGreedyMesh(*it);
       if (soft_empty)
       {
-        const bool soft_still = DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        const bool soft_still = ShouldDeferBakedMeshUntilLit(*it);
         if (soft_still)
         {
           HoldSoftDeferFirstMesh(*it);
@@ -10257,7 +10276,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       if (SoftDeferHeld.count(*it) > 0)
       {
-        const bool soft_still = DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        const bool soft_still = ShouldDeferBakedMeshUntilLit(*it);
         if (soft_still || !EnterLitQuiesce)
         {
           it = Dirty.RemoveAt(it);
@@ -10270,7 +10289,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       }
       // Pending-light park: SoftDeferHeld owns FirstMesh; keep Dirty only when
       // we will schedule FirstMesh this frame — or spawn undrawn (180247).
-      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      if (ShouldDeferBakedMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
         if (EnterLitQuiesceKeepSpawnUndrawnDirty(true, has_drawable, horiz) ||
@@ -10337,7 +10356,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         // SoftDefer remesh: drop. Era22 I-S1: under miss/focus !Drawable
         // FirstMesh keep Dirty for schedule (not RemoveAt / Held-park forever).
         // Outside !Drawable → SoftDeferHeld (requeue when MayMesh/focus).
-        if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+        if (ShouldDeferBakedMeshUntilLit(*it))
         {
           const bool has_drawable = HasDrawableGreedyMesh(*it);
           bool in_focus = false;
@@ -11099,7 +11118,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++LastMeshDirtyScheduleSkipOtherN;
         return Dirty.RemoveAt(it);
       }
-      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
+      if (CaptureStore.LightInputsPolicy() == MeshLightInputs::Baked &&
+          EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
           !Dirty.IsPriorityRemesh(*it))
       {
         // Era49: keep FullyDark remesh Dirty under enter quiesce.
@@ -11120,7 +11140,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       if (EnterLitQuiesce && SoftDeferHeld.count(*it) > 0 &&
           !ChunkHasFullyDarkFace(*it) && !Dirty.IsPriorityRemesh(*it))
       {
-        const bool soft_still = DeferMeshUntilLit && DeferMeshUntilLit(*it);
+        const bool soft_still = ShouldDeferBakedMeshUntilLit(*it);
         if (soft_still)
         {
           trace_visible_schedule(6, 0);
@@ -11205,7 +11225,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         return Dirty.RemoveAt(it);
       }
-      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      if (ShouldDeferBakedMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
         int horiz = 999;
@@ -12159,7 +12179,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         it = Dirty.RemoveAt(it);
         continue;
       }
-      if (EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
+      if (CaptureStore.LightInputsPolicy() == MeshLightInputs::Baked &&
+          EnterLitQuiesce && HasDrawableGreedyMesh(*it) &&
           !ChunkHasFullyDarkFace(*it) && !Dirty.IsPriorityRemesh(*it))
       {
         it = Dirty.RemoveAt(it);
@@ -12336,7 +12357,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         ++it;
         continue;
       }
-      if (DeferMeshUntilLit && DeferMeshUntilLit(*it))
+      if (ShouldDeferBakedMeshUntilLit(*it))
       {
         const bool has_drawable = HasDrawableGreedyMesh(*it);
         bool in_focus = false;
@@ -13233,8 +13254,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       ApplyMeshResult(world, registry, std::move(result));
       return;
     }
-    const bool defer_until_lit =
-        DeferMeshUntilLit && DeferMeshUntilLit(chunkCoord);
+    const bool defer_until_lit = ShouldDeferBakedMeshUntilLit(chunkCoord);
     // Match CommitGpuMeshResult: empty SoftDefer placeholders (HasGreedy,
     // !Drawable / GpuQuadCount=0) must NOT count as had_lit_mesh — otherwise
     // place Immediate rejects dark rebuild and forever keeps undrawn (184035).

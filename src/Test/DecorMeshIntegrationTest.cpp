@@ -2413,122 +2413,200 @@ static void TestUnknownGeometryDefersPhysicalBuild(
   using namespace cutum;
   const glm::ivec3 root(0), missing(1, 0, 0);
   for (const bool asynchronous : {false, true})
-  {
-    UBlockWorld world;
-    world.SetFluidDefinitions(definitions);
-    world.SetLightingConfigurationIdentity(
-        static_cast<uint64_t>(LightingMode::Full));
-    world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord)
-                                     { return coord != missing; });
-    world.SetBlock({15, 8, 8}, kStone);
-    CountingPhysicalMesher mesher;
-    UChunkMeshCache cache;
-    auto settings = MakeFrustumMeshSettings();
-    settings.AsyncMeshing = asynchronous;
-    settings.FrustumCulling = false;
-    cache.SetRenderSettings(settings);
-    cache.SetMesherBackend(&mesher);
-    cache.SetMeshRebuildFocus(root, 4, 1);
-    cache.SetPrepareRenderLightFn(
-        [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
-           const SectionRenderLightSnapshot &light)
+    for (const bool reserved_remesh : {false, true})
+      for (const bool legacy_light_deferred : {false, true})
+      {
+        UBlockWorld world;
+        world.SetFluidDefinitions(definitions);
+        world.SetLightingConfigurationIdentity(
+            static_cast<uint64_t>(LightingMode::Full));
+        world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord)
+                                         { return coord != missing; });
+        world.SetBlock({15, 8, 8}, kStone);
+        CountingPhysicalMesher mesher;
+        UChunkMeshCache cache;
+        auto settings = MakeFrustumMeshSettings();
+        settings.AsyncMeshing = asynchronous;
+        settings.FrustumCulling = false;
+        cache.SetRenderSettings(settings);
+        cache.SetMesherBackend(&mesher);
+        if (!legacy_light_deferred)
+          cache.SetMeshRebuildFocus(root, 4, 1);
+        cache.SetDeferMeshUntilLitFn([legacy_light_deferred](glm::ivec3)
+                                     { return legacy_light_deferred; });
+        cache.SetPrepareRenderLightFn(
+            [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+               const SectionRenderLightSnapshot &light)
+            {
+              return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                              light);
+            });
+        if (legacy_light_deferred)
         {
-          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
-                                                          light);
-        });
-    cache.MarkDirtyPriority(root);
-    const auto revision = cache.GetChunkMeshRevision(root);
-    for (int tick = 0; tick < 4; ++tick)
-      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
-    Expect(cache.GetCaptureStore().LightInputsPolicy() ==
-                   MeshLightInputs::PhysicalField &&
-               mesher.BuildsFor(root) == 0 && cache.IsChunkMeshDirty(root) &&
-               !cache.HasInflightMeshBuild(root) &&
-               cache.GetPublishCount(root) == 0 &&
-               cache.GetChunkMeshRevision(root) == revision,
-           "unknown physical geometry keeps one queued target without doomed "
-           "builds");
-    world.SetBlock({16, 8, 8}, kStone);
-    cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
-    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
-           "new resident geometry finishes actual worker");
-    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
-    Expect(mesher.BuildsFor(root) == 1 && cache.IsGeometryAwaitingLight(root) &&
-               cache.GetPublishCount(root) == 0 &&
-               cache.GetChunkMeshRevision(root) == revision,
-           "data completion builds original target once before light is "
-           "calculated");
-    Expect(cache.NeedsPhysicalFieldInputColumn({1, 0, 1}) &&
-               cache.NeedsPhysicalFieldInputColumn({-1, 0, -1}) &&
-               !cache.NeedsPhysicalFieldInputColumn({2, 0, 0}) &&
-               !cache.NeedsPhysicalFieldInputColumn({0, 1, 0}),
-           "current first-publication field owner prioritizes exactly its "
-           "horizontal data halo");
-    RelightJobSpec spec;
-    spec.min_world_y = world.GetVerticalProfile().MinY;
-    spec.max_world_y = world.GetVerticalProfile().MaxY;
-    const auto field =
-        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
-            .Compute(registry);
-    Expect(field.inputs_complete && field.chunks.size() == 1,
-           "resolved geometry supplies actual complete physical calculation");
-    world.GetChunkManager().ReplaceComputedSectionLightVolume(
-        root, *field.chunks[0].padded_light, true, true);
-    Expect(world.RecordLightCalculation(
-               field, registry.GetDefinitionsCatalogSnapshot()) == 1,
-           "resolved data installs actual private field proof");
-    const auto *chunk = world.GetChunkManager().GetChunk(root);
-    const auto epoch = cache.GetCaptureStore().WorldEpoch();
-    cache.GetRenderDemandStore().NoteDemand(
-        root, revision, chunk->GetLightFieldRevision(), 0, 1.0, epoch,
-        chunk->GetIncarnation());
-    cache.GetRenderDemandStore().NoteLightCalculationSettled(
-        root, epoch, chunk->GetIncarnation(), chunk->GetLightFieldRevision(),
-        chunk->GetContentRevision());
-    cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
-    Expect(mesher.BuildsFor(root) == 1 && cache.GetPublishCount(root) == 1 &&
-               cache.GetGreedyVertexCount() == 20 &&
-               cache.GetGeometryAwaitingLightCount() == 0 &&
-               cache.GetPublishedRenderLightBinding(root) &&
-               !cache.HasProvisionalLightPreview(root) &&
-               !cache.ChunkHasStaleDarkFaces(root, world) &&
-               cache.GetChunkMeshRevision(root) == revision,
-           "resident undrawn neighbor hides shared face and current field "
-           "publishes original geometry once");
-    Expect(
-        !cache.NeedsPhysicalFieldInputColumn({1, 0, 1}),
-        "published field consumer cannot leave a data priority owner behind");
-    const auto previous_binding = cache.GetPublishedRenderLightBinding(root);
-    const auto previous_generation =
-        cache.GetCaptureStore().CapturePolicyGeneration();
-    settings.Lighting = LightingMode::Flat;
-    cache.SetRenderSettings(settings);
-    cache.PrefetchMeshCapture(world, root, &registry);
-    Expect(
-        cache.GetCaptureStore().LightInputsPolicy() == MeshLightInputs::Baked &&
-            cache.GetCaptureStore().CapturePolicyGeneration() !=
-                previous_generation &&
-            cache.GetCaptureStore().WorldEpoch() == epoch &&
-            cache.IsChunkMeshDirty(root) && !cache.HasInflightMeshBuild(root) &&
-            cache.GetPublishedRenderLightBinding(root) == previous_binding &&
-            cache.GetPublishCount(root) == 1 &&
-            cache.GetChunkMeshRevision(root) == revision,
-        "physical to flat transition queues same target and preserves "
-        "predecessor ownership");
-    settings.Lighting = LightingMode::Full;
-    cache.SetRenderSettings(settings);
-    cache.PrefetchMeshCapture(world, root, &registry);
-    Expect(cache.GetCaptureStore().LightInputsPolicy() ==
-                   MeshLightInputs::PhysicalField &&
-               cache.GetCaptureStore().WorldEpoch() == epoch &&
-               cache.IsChunkMeshDirty(root) &&
-               !cache.HasInflightMeshBuild(root) &&
-               cache.GetPublishedRenderLightBinding(root) == previous_binding &&
-               mesher.BuildsFor(root) == 1 &&
-               cache.GetChunkMeshRevision(root) == revision,
-           "return to physical mode preserves original source and drawable "
-           "until replacement");
-  }
+          cache.SetOnSoftDeferHeldFn([](glm::ivec3) {});
+          cache.MarkDirtyPriority(root);
+          cache.HoldSoftDeferFirstMesh(root);
+          Expect(cache.IsSoftDeferHeld(root),
+                 "fixture starts with a legacy light-held first-mesh owner");
+          cache.PrefetchMeshCapture(world, root, &registry);
+          Expect(
+              !cache.IsSoftDeferHeld(root) && cache.IsChunkMeshDirty(root),
+              "physical policy transfers legacy held target to geometry work");
+        }
+        cache.MarkDirtyPriority(root);
+        const auto revision = cache.GetChunkMeshRevision(root);
+        for (int tick = 0; tick < 4; ++tick)
+          cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        if (mesher.BuildsFor(root) != 0 || !cache.IsChunkMeshDirty(root) ||
+            cache.HasInflightMeshBuild(root) ||
+            cache.GetChunkMeshRevision(root) != revision)
+          std::cerr << "unknown geometry fixture async=" << asynchronous
+                    << " legacy_deferred=" << legacy_light_deferred
+                    << " builds=" << mesher.BuildsFor(root)
+                    << " dirty=" << cache.IsChunkMeshDirty(root)
+                    << " inflight=" << cache.HasInflightMeshBuild(root)
+                    << " revision=" << cache.GetChunkMeshRevision(root)
+                    << " expected_revision=" << revision << '\n';
+        Expect(
+            cache.GetCaptureStore().LightInputsPolicy() ==
+                    MeshLightInputs::PhysicalField &&
+                mesher.BuildsFor(root) == 0 && cache.IsChunkMeshDirty(root) &&
+                !cache.HasInflightMeshBuild(root) &&
+                cache.GetPublishCount(root) == 0 &&
+                cache.GetChunkMeshRevision(root) == revision,
+            "unknown physical geometry keeps one queued target without doomed "
+            "builds");
+        world.SetBlock({16, 8, 8}, kStone);
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "new resident geometry finishes actual worker");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+        Expect(mesher.BuildsFor(root) == 1 &&
+                   cache.IsGeometryAwaitingLight(root) &&
+                   cache.GetPublishCount(root) == 0 &&
+                   cache.GetChunkMeshRevision(root) == revision,
+               "data completion builds original target once before light is "
+               "calculated");
+        Expect(cache.NeedsPhysicalFieldInputColumn({1, 0, 1}) &&
+                   cache.NeedsPhysicalFieldInputColumn({-1, 0, -1}) &&
+                   !cache.NeedsPhysicalFieldInputColumn({2, 0, 0}) &&
+                   !cache.NeedsPhysicalFieldInputColumn({0, 1, 0}),
+               "current first-publication field owner prioritizes exactly its "
+               "horizontal data halo");
+        RelightJobSpec spec;
+        spec.min_world_y = world.GetVerticalProfile().MinY;
+        spec.max_world_y = world.GetVerticalProfile().MaxY;
+        const auto field =
+            UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                .Compute(registry);
+        Expect(
+            field.inputs_complete && field.chunks.size() == 1,
+            "resolved geometry supplies actual complete physical calculation");
+        world.GetChunkManager().ReplaceComputedSectionLightVolume(
+            root, *field.chunks[0].padded_light, true, true);
+        Expect(world.RecordLightCalculation(
+                   field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+               "resolved data installs actual private field proof");
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        const auto epoch = cache.GetCaptureStore().WorldEpoch();
+        cache.GetRenderDemandStore().NoteDemand(
+            root, revision, chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+            chunk->GetIncarnation());
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(
+            root, epoch, chunk->GetIncarnation(),
+            chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+        Expect(mesher.BuildsFor(root) == 1 &&
+                   cache.GetPublishCount(root) == 1 &&
+                   cache.GetGreedyVertexCount() == 20 &&
+                   cache.GetGeometryAwaitingLightCount() == 0 &&
+                   cache.GetPublishedRenderLightBinding(root) &&
+                   !cache.HasProvisionalLightPreview(root) &&
+                   !cache.ChunkHasStaleDarkFaces(root, world) &&
+                   cache.GetChunkMeshRevision(root) == revision,
+               "resident undrawn neighbor hides shared face and current field "
+               "publishes original geometry once");
+        Expect(!cache.NeedsPhysicalFieldInputColumn({1, 0, 1}),
+               "published field consumer cannot leave a data priority owner "
+               "behind");
+        const auto previous_binding =
+            cache.GetPublishedRenderLightBinding(root);
+        const auto previous_generation =
+            cache.GetCaptureStore().CapturePolicyGeneration();
+        settings.Lighting = LightingMode::Flat;
+        cache.SetRenderSettings(settings);
+        cache.PrefetchMeshCapture(world, root, &registry);
+        Expect(cache.GetCaptureStore().LightInputsPolicy() ==
+                       MeshLightInputs::Baked &&
+                   cache.GetCaptureStore().CapturePolicyGeneration() !=
+                       previous_generation &&
+                   cache.GetCaptureStore().WorldEpoch() == epoch &&
+                   cache.IsChunkMeshDirty(root) &&
+                   !cache.HasInflightMeshBuild(root) &&
+                   cache.GetPublishedRenderLightBinding(root) ==
+                       previous_binding &&
+                   cache.GetPublishCount(root) == 1 &&
+                   cache.GetChunkMeshRevision(root) == revision,
+               "physical to flat transition queues same target and preserves "
+               "predecessor ownership");
+        settings.Lighting = LightingMode::Full;
+        cache.SetRenderSettings(settings);
+        cache.PrefetchMeshCapture(world, root, &registry);
+        Expect(cache.GetCaptureStore().LightInputsPolicy() ==
+                       MeshLightInputs::PhysicalField &&
+                   cache.GetCaptureStore().WorldEpoch() == epoch &&
+                   cache.IsChunkMeshDirty(root) &&
+                   !cache.HasInflightMeshBuild(root) &&
+                   cache.GetPublishedRenderLightBinding(root) ==
+                       previous_binding &&
+                   mesher.BuildsFor(root) == 1 &&
+                   cache.GetChunkMeshRevision(root) == revision,
+               "return to physical mode preserves original source and drawable "
+               "until replacement");
+        if (legacy_light_deferred)
+        {
+          world.SetBlock({8, 8, 8}, kStone);
+          // Isolate enter-light quiesce from unrelated missing-neighbor
+          // pressure.
+          cache.SetMeshRebuildFocus({-1, 0, 0}, 1, 2);
+          MeshWorkAdmission admission;
+          admission.protect_lit_settle_remesh = reserved_remesh;
+          cache.SetMeshWorkAdmission(admission);
+          cache.SetEnterLitQuiesce(true);
+          cache.MarkDirty(root);
+          const auto edited_revision = cache.GetChunkMeshRevision(root);
+          cache.RebuildDirtyChunksWithStats(world, registry, 8, 1, false, 0);
+          Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+                 "geometry edit under legacy light quiesce finishes worker");
+          cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+          if (mesher.BuildsFor(root) != 2 ||
+              !cache.IsGeometryAwaitingLight(root) ||
+              cache.GetPublishCount(root) != 1 ||
+              cache.GetPublishedRenderLightBinding(root) != previous_binding ||
+              cache.GetChunkMeshRevision(root) != edited_revision)
+            std::cerr << "geometry edit fixture async=" << asynchronous
+                      << " reserved_remesh=" << reserved_remesh
+                      << " builds=" << mesher.BuildsFor(root)
+                      << " awaiting_light="
+                      << cache.IsGeometryAwaitingLight(root)
+                      << " dirty=" << cache.IsChunkMeshDirty(root)
+                      << " inflight=" << cache.HasInflightMeshBuild(root)
+                      << " publishes=" << cache.GetPublishCount(root)
+                      << " previous_binding="
+                      << (cache.GetPublishedRenderLightBinding(root) ==
+                          previous_binding)
+                      << " revision=" << cache.GetChunkMeshRevision(root)
+                      << " expected_revision=" << edited_revision << '\n';
+          Expect(mesher.BuildsFor(root) == 2 &&
+                     cache.IsGeometryAwaitingLight(root) &&
+                     cache.GetPublishCount(root) == 1 &&
+                     cache.GetPublishedRenderLightBinding(root) ==
+                         previous_binding &&
+                     cache.GetChunkMeshRevision(root) == edited_revision,
+                 "legacy light quiesce cannot erase a real geometry edit; old "
+                 "publication survives until the replacement field is current");
+        }
+      }
 }
 
 static void

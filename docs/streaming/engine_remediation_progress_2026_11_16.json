@@ -8309,7 +8309,7 @@
       ]
     },
     "field_input_ready_io_admission": {
-      "status": "Existing completed disk results can use one first-publication field-input opportunity on alternating apply ticks. Ordinary distance/age service remains on the other ticks and in the rest of each batch. No new I/O request, worker, apply-count quota, time quota or light-readiness exception was introduced. Native application verification is pending.",
+      "status": "Implemented and unit/driver verified; required Release app built and unchanged native wet route completed. Hint exercised212times, but17/17366opaque-depthFAIL. Full acceptance remains open.",
       "native_cause_evidence": {
         "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
         "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/mesh-publication-field-input-diagnostics.json",
@@ -8355,13 +8355,225 @@
         "expected_failures": 2,
         "exact_source_restore": true,
         "python": "9publication parser +21smoke runner +5depth attribution =35PASS. Includes incomplete certificates, missing worker data, bounded history, delayed ready-result linkage and promotion without completion.",
-        "native": "Required Release application build and the unchanged no-teleport wet route pending. Existing4/19555FAIL is not superseded by unit tests."
+        "native": "build/desktop-msvc/engine-field-input-admission-wet-native/field-input-admission-observation.json: source85b672d4f371391baac6bfa885dfec844754850c, all5provenance checks true, wrapper1/overallFAIL, startup1176ready,19chunks0relocations24verifiedviews;17/17366depthFAIL; RGB UNTESTED. Host CPU median100%, estimated other84.55%, performance causal comparison unavailable."
       },
       "remaining": [
-        "Build Windows Release application and repeat19chunk24inspection wet route with selected(-5,-3,3) capture/field trace; inspect depth, ownership, disk ready-result waits and residual required-input debt. Preserve failures and do not infer success from source counters.",
+        "Close observed queued-first-geometry and incomplete-field publication deadlines. Inspect remaining legacy lighting gates in physical geometry scheduling and repeated transient field computation as data arrives. Require targeted causal regressions and unchanged native acceptance; do not weaken geometry or field proof.",
         "Complete end-to-end readiness latency prediction (I/O admission through installation/light/publication), canonical consumer/data domain prioritization and controlled performance/memory acceptance.",
         "Continue full original scope: cancellation/source/provider lifecycle, semantic geometry/optics catalogs, persistence certificates, RGB/wet/transparency references and full backend/radius/edit/return/eviction matrix."
-      ]
+      ],
+      "native_observation": {
+        "schema": "field-input-admission-observation.v1",
+        "source_commit": "85b672d4f371391baac6bfa885dfec844754850c",
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "wrapper_exit": 1,
+        "overall": "FAIL",
+        "artifacts": "build/desktop-msvc/engine-field-input-admission-wet-native",
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 256,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 724,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 452,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 839
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "depth": {
+          "status": "FAIL",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 17366,
+          "faults": 17,
+          "frame_epochs": 131,
+          "skipped_unscoped_or_occluded": 418,
+          "fault_attribution": {
+            "schema": "engine-depth-fault-attribution.v1",
+            "section_count": 5,
+            "sections": [
+              {
+                "coord": [
+                  -5,
+                  -3,
+                  3
+                ],
+                "faults": 7,
+                "voxel_matches_reference": 7,
+                "no_published_geometry": 7,
+                "queued_without_published_geometry": 0,
+                "reported_settled_revision": 0,
+                "maximum_dirty_age": 0,
+                "work_owner_flag_counts": {
+                  "4098": 7
+                },
+                "frame_epochs": 2,
+                "first_frame_epoch": 366,
+                "last_frame_epoch": 375
+              },
+              {
+                "coord": [
+                  -8,
+                  -3,
+                  2
+                ],
+                "faults": 3,
+                "voxel_matches_reference": 3,
+                "no_published_geometry": 3,
+                "queued_without_published_geometry": 0,
+                "reported_settled_revision": 0,
+                "maximum_dirty_age": 0,
+                "work_owner_flag_counts": {
+                  "4098": 3
+                },
+                "frame_epochs": 1,
+                "first_frame_epoch": 482,
+                "last_frame_epoch": 482
+              },
+              {
+                "coord": [
+                  -5,
+                  -2,
+                  3
+                ],
+                "faults": 3,
+                "voxel_matches_reference": 3,
+                "no_published_geometry": 3,
+                "queued_without_published_geometry": 0,
+                "reported_settled_revision": 0,
+                "maximum_dirty_age": 0,
+                "work_owner_flag_counts": {
+                  "4098": 3
+                },
+                "frame_epochs": 1,
+                "first_frame_epoch": 375,
+                "last_frame_epoch": 375
+              },
+              {
+                "coord": [
+                  -9,
+                  -3,
+                  3
+                ],
+                "faults": 2,
+                "voxel_matches_reference": 2,
+                "no_published_geometry": 2,
+                "queued_without_published_geometry": 2,
+                "reported_settled_revision": 2,
+                "maximum_dirty_age": 39,
+                "work_owner_flag_counts": {
+                  "1": 2
+                },
+                "frame_epochs": 1,
+                "first_frame_epoch": 509,
+                "last_frame_epoch": 509
+              },
+              {
+                "coord": [
+                  -5,
+                  -3,
+                  2
+                ],
+                "faults": 2,
+                "voxel_matches_reference": 2,
+                "no_published_geometry": 2,
+                "queued_without_published_geometry": 0,
+                "reported_settled_revision": 0,
+                "maximum_dirty_age": 0,
+                "work_owner_flag_counts": {
+                  "4098": 2
+                },
+                "frame_epochs": 1,
+                "first_frame_epoch": 366,
+                "last_frame_epoch": 366
+              }
+            ],
+            "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+          },
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 17784,
+          "captures": 135,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "runtime_resources": {
+          "schema": "flight-runtime-resources.v1",
+          "available": true,
+          "disabled_by_user": false,
+          "sample_interval_sec": 1.0,
+          "sample_count": 454,
+          "logical_cpu_count": 8,
+          "host_cpu_percent_summary": {
+            "median": 100.0,
+            "p95": 100.0,
+            "max": 100.0
+          },
+          "app_cpu_machine_percent_summary": {
+            "median": 12.8,
+            "p95": 50.7375,
+            "max": 58.8875
+          },
+          "other_cpu_machine_percent_estimate_summary": {
+            "median": 84.55,
+            "p95": 100.0,
+            "max": 100.0
+          },
+          "app_rss_mb_max": 763.37109375,
+          "system_available_memory_mb_min": 9125.75,
+          "timed_out": false,
+          "audio_disabled_for_test": true
+        },
+        "evidence_limits": [
+          "212 actual field_input_promoted events prove the ready-result admission hint was exercised, not that the required data or light completed before drawing.",
+          "Selected section(-5,-3,3) remained queued across81 trace watches; later geometry was explicitly retained awaiting actual light. Incomplete calculations reported unknown inputs before a later complete calculation.",
+          "Host CPU median100%, estimated other-process CPU median84.55%; cross-run performance causality is not established. Native depth FAIL remains authoritative."
+        ]
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8390,7 +8602,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
+    "latest_source_commit": "85b672d4f371391baac6bfa885dfec844754850c",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -8405,36 +8617,7 @@
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
     "completion": "Not established. Physical policy activated and14ReleaseGREEN; latest completed nativea1dac63a4FAIL4/19555depth inone retained-awaiting-field section,19chunks0relocations24verifiedcaptures. RGBUNTESTED, performance/post-stop debtFAIL. FullS0..S6scope unchanged.",
-    "latest_native_counterexample": {
-      "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
-      "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/physical-geometry-activation-observation.json",
-      "result": "FAIL",
-      "runtime_exit": 0,
-      "wrapper_exit": 1,
-      "route": "PASS19chunks1124outside0relocations",
-      "inspection": "PASS24verified",
-      "startup": "PASS1176ready",
-      "opaque_depth": {
-        "faults": 4,
-        "checked": 19555,
-        "epochs": [
-          374,
-          375
-        ],
-        "section": [
-          -5,
-          -3,
-          3
-        ],
-        "owner_mask": 4098
-      },
-      "visual": "UNTESTEDmissingRGBreference",
-      "performance": "FAIL",
-      "preserved_previous": [
-        "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
-        "build/desktop-msvc/engine-field-completion-hint-wet-native/field-completion-hint-timeout-observation.json"
-      ]
-    },
+    "latest_native_counterexample": "build/desktop-msvc/engine-field-input-admission-wet-native/field-input-admission-observation.json: source85b672d4f371391baac6bfa885dfec844754850c, all5provenance checks true, wrapper1/overallFAIL, startup1176ready,19chunks0relocations24verifiedviews;17/17366depthFAIL; RGB UNTESTED. Host CPU median100%, estimated other84.55%, performance causal comparison unavailable.",
     "last_completed_depth_counterexample": {
       "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
       "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/physical-geometry-activation-observation.json",
@@ -8442,5 +8625,143 @@
       "checked": 19555,
       "status": "FAIL"
     }
+  },
+  "new_host_release_fixture_verification_2026_11_19": {
+    "status": "partial; full S0..S6 goal resumed and remains incomplete",
+    "verified_at_utc": "2026-11-19T16:24:51.728920+00:00",
+    "host": "Ryzen7-5825U",
+    "source_head": "85b672d4f371391baac6bfa885dfec844754850c",
+    "configuration": {
+      "generator": "Visual Studio 18 2026",
+      "compiler": "MSVC 19.51.36260.0",
+      "toolset": "14.51.36231",
+      "windows_sdk": "10.0.26100.0",
+      "cmake": "4.3.1-msvc1",
+      "python": "3.14.7",
+      "configuration_types": [
+        "Release"
+      ],
+      "vcpkg_manifest_install": false
+    },
+    "environment_repair": "Initial configure failed because pkg-config was missing. Installed MSYS2 mingw-w64-x86_64-pkgconf 2.5.1 locally under build/desktop-msvc/host-tools, verified SHA512 against local vcpkg acquisition metadata. No global installation or source-build changes.",
+    "initial_test": {
+      "status": "FAIL",
+      "log": "build/desktop-msvc/new-host-decor-release-test-20261119.log",
+      "assertion": "legacy light quiesce cannot erase a real geometry edit; old publication survives until the replacement field is current"
+    },
+    "changes": [
+      "Preserved incoming four-file WIP; added Baked-only policy condition to the second async remesh EnterLitQuiesce pruning path.",
+      "Isolated the edit/quiesce fixture focus to center(-1,0,0), radius1: root included, unpublished neighbor(1,0,0) excluded. Previous focus enabled separate missing-neighbor admission pressure. Added failure-only diagnostics; unknown-data, field publication and old-binding assertions retained."
+    ],
+    "verification": {
+      "configure_exit": 0,
+      "build_target": "decor_mesh_integration_test",
+      "build_exit": 0,
+      "ctest_filter": "^decor_mesh_integration_test$",
+      "test_exit": 0,
+      "passed": 1,
+      "total": 1,
+      "test_seconds": 2.42,
+      "configure_log": "build/desktop-msvc/new-host-release-configure-pkgconf-20261119.log",
+      "build_log": "build/desktop-msvc/new-host-decor-final-build-20261119.log",
+      "test_log": "build/desktop-msvc/new-host-decor-final-test-20261119.log",
+      "git_diff_check_exit": 0
+    },
+    "source_sha256": {
+      "src/Render/Mesh/ChunkMeshCache.cpp": "b47e5bf3ff48214d8accd8b790df9f5a7d23d1bcebc4bea9d4f18b1164ee1eda",
+      "src/Render/Mesh/ChunkMeshCache.h": "19d611f88f5722a2e548074cab992ce41344faf0e027247a567c885d9c73371e",
+      "src/Test/DecorMeshIntegrationTest.cpp": "2858ba035d1c796167df2a24c706af9f01f5173422e0472827985b6e877fa465"
+    },
+    "baseline_exe_sha256": "fb54fcf7d0a64a116446735771a102272acc13933555decee665138a8dfb2ef0",
+    "limits": [
+      "No causal negative controls run yet; additional remesh-gate necessity has not been isolated by a negative control.",
+      "No restored16matrix, Release application build or native run performed in this slice. Baseline EXE remains85b and does not contain WIP.",
+      "Combined missing-neighbor pressure and ordinary geometry-edit admission remains outside the isolated quiesce fixture and needs follow-up; original failing receipts preserved.",
+      "Original native depth FAIL, RGB UNTESTED, lifecycle/persistence/backend/performance/memory requirements remain open."
+    ],
+    "next": [
+      "Complete causal legacy-gate controls, including the added remesh suffix gate, with exact-byte source restoration.",
+      "Rebuild related Release targets and verify the restored16matrix before application/native work."
+    ]
+  },
+  "physical_legacy_gate_causal_verification_2026_11_19": {
+    "verified_at_utc": "2026-11-19T16:33:04.348452+00:00",
+    "status": "scoped legacy-gate correction verified; full S0..S6 incomplete",
+    "implementation": [
+      "Functional legacy column-light gates now apply only to Baked captures. Raw callback remains diagnostic; actual physical field/resource publication proof remains mandatory.",
+      "Capture-policy transitions transfer SoftDeferHeld targets and clear old held ages, preserving current geometry obligations.",
+      "Physical geometry edits bypass enter-light pruning in pre-prune, reserved scheduler and ordinary remesh suffix. Sync hole-fill configures capture policy before admission."
+    ],
+    "regression_scope": "Sync/async x legacy gate open/closed x ordinary/reserved remesh. Unknown geometry retains one target without doomed builds; actual completed field publishes original geometry once. After an edit under enter quiesce, completed replacement geometry waits for its current field and keeps the old publication/binding.",
+    "negative_controls": {
+      "schema": "new-host-legacy-gate-controls.v1",
+      "source_sha256": {
+        "src/Render/Mesh/ChunkMeshCache.cpp": "b47e5bf3ff48214d8accd8b790df9f5a7d23d1bcebc4bea9d4f18b1164ee1eda",
+        "src/Render/Mesh/ChunkMeshCache.h": "19d611f88f5722a2e548074cab992ce41344faf0e027247a567c885d9c73371e",
+        "src/Test/DecorMeshIntegrationTest.cpp": "a28f33c3820e000e8279a089d27087fcf79351d73241a2fe1f2c4ad9f66f085e"
+      },
+      "head": "85b672d4f371391baac6bfa885dfec844754850c",
+      "controls": [
+        {
+          "name": "physical-producer",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "unknown physical geometry keeps one queued target without doomed builds",
+          "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-physical-producer-test.log"
+        },
+        {
+          "name": "held-transfer",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "physical policy transfers legacy held target to geometry work",
+          "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-held-transfer-test.log"
+        },
+        {
+          "name": "enter-pre-prune",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "legacy light quiesce cannot erase a real geometry edit",
+          "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-enter-pre-prune-test.log"
+        },
+        {
+          "name": "enter-schedule-prune",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "legacy light quiesce cannot erase a real geometry edit",
+          "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-enter-schedule-prune-test.log"
+        },
+        {
+          "name": "enter-remesh-prune",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "legacy light quiesce cannot erase a real geometry edit",
+          "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-enter-remesh-prune-test.log"
+        }
+      ],
+      "exact_source_restore": true,
+      "restored_build_exit": 0,
+      "restored_test_exit": 0,
+      "restored_green": true,
+      "matrix_log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-restored-sixteen-tests.log"
+    },
+    "coverage_discovery": "v1 control for try_schedule remained GREEN because only ordinary remesh was exercised. Original failure/control receipts preserved. Added protect_lit_settle_remesh variant to drive reserved lane; v2 now detects both scheduler gate regressions separately (reserved_remesh1 vs0).",
+    "restored_matrix": {
+      "passed": 16,
+      "total": 16,
+      "skipped": 0,
+      "seconds": 7.28,
+      "log": "build/desktop-msvc/new-host-legacy-gate-20261119-v2-restored-sixteen-tests.log"
+    },
+    "remaining": [
+      "Build application Release from coherent committed source, repeat unchanged wet native route on isolated World_261 clone, preserving full parent-process freeze and exact provenance.",
+      "Do not infer native/RGB/performance closure from headless or driver tests. Original17/17366depthFAIL and all previous counterexamples remain.",
+      "Combined missing-neighbor/ordinary edit admission, repeated transient field jobs and queued-firstmesh deadlines require further investigation after native evidence.",
+      "Semantic geometry/optics catalogs, persisted content certificates, lifecycle/backend parity, independent nonzero RGB/wet/transparency references and complete native/performance/memory matrix remain in scope."
+    ]
   }
 }
