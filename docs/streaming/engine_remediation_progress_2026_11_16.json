@@ -18088,5 +18088,984 @@
     "Add independently predicted source removal/AIR-border and wet/transparency shader composition cases; retain the real zero-blocklight shader negative control and restored normal evidence.",
     "Continue all original lifecycle/catalog/procedural-AIR/performance/memory obligations; do not closeS5/S6 or the goal from this scoped success."
   ]
+},
+"positive_air_border_internal_geometry_counterexample_2026_11_20": {
+  "assessment_path": "build\\desktop-msvc\\positive-air-border-native-counterexample-20261120.json",
+  "schema": "positive-air-border-native-counterexample.v1",
+  "date": "2026-11-20",
+  "source_commit": "93213da959affd5c6945e500b07fad1facb1abfc",
+  "goal_status": "active; full original S0..S6 unchanged",
+  "artifacts": "build\\desktop-msvc\\engine-positive-air-border-20261120-native",
+  "fixture": {
+    "schema": "engine-smoke-fixture.v1",
+    "name": "dry-negative-cave",
+    "starting_eye": [
+      22.0,
+      -46.88,
+      51.0
+    ],
+    "chunk_x_bounds": [
+      -20,
+      3
+    ],
+    "chunks_replaced": 312,
+    "omitted_internal_air_slices": 48,
+    "cave_bounds": {
+      "floor": -48.5,
+      "ceiling": -16.5,
+      "z_low": 34.5,
+      "z_high": 67.5
+    },
+    "route_rise": 6,
+    "expected_eye_in_fluid": false,
+    "expected_max_eye_y": -16.5,
+    "route_yaw": 180.0,
+    "variant": "air-border",
+    "air_border_fixture": {
+      "schema": "engine-positive-air-border-fixture.v1",
+      "source_section_y": -4,
+      "target_section_y": -3,
+      "scope": "opaque emitter Y=-49; entire target Y=-48..-33,Z=48..63 is AIR, without geometry"
+    },
+    "lighting_fixture": {
+      "schema": "engine-positive-blocklight-fixture.v1",
+      "emitters": [
+        [
+          -320,
+          -49,
+          51
+        ],
+        [
+          -312,
+          -49,
+          51
+        ],
+        [
+          -304,
+          -49,
+          51
+        ],
+        [
+          -296,
+          -49,
+          51
+        ],
+        [
+          -288,
+          -49,
+          51
+        ],
+        [
+          -280,
+          -49,
+          51
+        ],
+        [
+          -272,
+          -49,
+          51
+        ],
+        [
+          -264,
+          -49,
+          51
+        ],
+        [
+          -256,
+          -49,
+          51
+        ],
+        [
+          -248,
+          -49,
+          51
+        ],
+        [
+          -240,
+          -49,
+          51
+        ],
+        [
+          -232,
+          -49,
+          51
+        ],
+        [
+          -224,
+          -49,
+          51
+        ],
+        [
+          -216,
+          -49,
+          51
+        ],
+        [
+          -208,
+          -49,
+          51
+        ],
+        [
+          -200,
+          -49,
+          51
+        ],
+        [
+          -192,
+          -49,
+          51
+        ],
+        [
+          -184,
+          -49,
+          51
+        ],
+        [
+          -176,
+          -49,
+          51
+        ],
+        [
+          -168,
+          -49,
+          51
+        ],
+        [
+          -160,
+          -49,
+          51
+        ],
+        [
+          -152,
+          -49,
+          51
+        ],
+        [
+          -144,
+          -49,
+          51
+        ],
+        [
+          -136,
+          -49,
+          51
+        ],
+        [
+          -128,
+          -49,
+          51
+        ],
+        [
+          -120,
+          -49,
+          51
+        ],
+        [
+          -112,
+          -49,
+          51
+        ],
+        [
+          -104,
+          -49,
+          51
+        ],
+        [
+          -96,
+          -49,
+          51
+        ],
+        [
+          -88,
+          -49,
+          51
+        ],
+        [
+          -80,
+          -49,
+          51
+        ],
+        [
+          -72,
+          -49,
+          51
+        ],
+        [
+          -64,
+          -49,
+          51
+        ],
+        [
+          -56,
+          -49,
+          51
+        ],
+        [
+          -48,
+          -49,
+          51
+        ],
+        [
+          -40,
+          -49,
+          51
+        ],
+        [
+          -32,
+          -49,
+          51
+        ],
+        [
+          -24,
+          -49,
+          51
+        ],
+        [
+          -16,
+          -49,
+          51
+        ],
+        [
+          -8,
+          -49,
+          51
+        ],
+        [
+          0,
+          -49,
+          51
+        ],
+        [
+          8,
+          -49,
+          51
+        ],
+        [
+          16,
+          -49,
+          51
+        ],
+        [
+          24,
+          -49,
+          51
+        ],
+        [
+          32,
+          -49,
+          51
+        ],
+        [
+          40,
+          -49,
+          51
+        ],
+        [
+          48,
+          -49,
+          51
+        ],
+        [
+          56,
+          -49,
+          51
+        ]
+      ],
+      "emission": 15,
+      "material_name": "glowstone",
+      "material_id": 376,
+      "material_sha256": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96",
+      "source_material_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json",
+      "scope": "prepared opaque floor emitters; current runtime catalog, physical transport and drawn light are not yet verified"
+    },
+    "rgb_fixture": {
+      "schema": "engine-constant-floor-rgb-fixture.v1",
+      "pack_id": "EngineSmoke_rgb_75419faaa98a4d1d8e3247fc3ab57c4c",
+      "pack_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\EngineSmoke_rgb_75419faaa98a4d1d8e3247fc3ab57c4c",
+      "materials": [
+        {
+          "name": "stone",
+          "id": 560,
+          "emission": 0,
+          "rgba": [
+            192,
+            128,
+            64,
+            255
+          ],
+          "stem": "EngineSmoke_rgb_75419faaa98a4d1d8e3247fc3ab57c4c/reference_stone"
+        },
+        {
+          "name": "glowstone",
+          "id": 376,
+          "emission": 15,
+          "rgba": [
+            96,
+            192,
+            224,
+            255
+          ],
+          "stem": "EngineSmoke_rgb_75419faaa98a4d1d8e3247fc3ab57c4c/reference_glowstone"
+        }
+      ],
+      "source_material_sha256": {
+        "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\stone.json": "c2edb572f187a9b36572e95ebacfc87553f227bd9c057bc5596d3255d69a0f85",
+        "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96"
+      },
+      "files_sha256": {
+        "pack.json": "7c1478948e5986fe60f0bceab95fb8a9d8403324ec2ae496b243705f7791c43c",
+        "texture_overrides.json": "54711f0ec728caf934e5e78d54b78960a4cc76b1eb5ec8ddd8bd1524a7746486",
+        "blocks/glowstone.json": "350d6ec673157c99177d05ad76d8e5843337412680900dcba5600a7efae49b82",
+        "blocks/stone.json": "cd81e28f048e1bc5bf5a1772f58210e3e33c53b3545fb0cebd94dcb389b728ba",
+        "textures/blocks/reference_glowstone.png": "7ea3d24917422a0149f65d9c94f4ecb0068f676841e70c3dbc2bf51a27d7147b",
+        "textures/blocks/reference_stone.png": "c184aceead724efaff4756559847f865ed162df97d6371cf88de753829a38519"
+      },
+      "scope": "constant fully opaque textures, unchanged optics and ordinary color shader; independent dry floor blocklight"
+    }
+  },
+  "native_exit": 0,
+  "wrapper_exit": 1,
+  "overall": "FAIL",
+  "provenance": {
+    "exe": true,
+    "config_restored": true,
+    "source_world": true,
+    "runtime_shader_assets": true,
+    "source_commit": true
+  },
+  "camera_reference": {
+    "schema": "engine-camera-light-reference.v1",
+    "status": "FAIL",
+    "reason": "camera_canonical_field_at_paint",
+    "samples": 4956,
+    "ready_samples": 0,
+    "air_samples": 0,
+    "frame_epochs": 4956,
+    "distinct_air_sections": 0,
+    "expected_game_frames": 4956,
+    "observed_paint_frames": 4956,
+    "unsupported_mode_samples": 0,
+    "skipped_unscoped": 0,
+    "faults": 4956,
+    "examples": [
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):1",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):2",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):3",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):4",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):5",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):6",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):7",
+      "air_target_has_geometry_or_wrong_band:(1, -3, 3):8"
+    ],
+    "missing_coverage": [
+      "first_camera_sample",
+      "samples",
+      "absent_geometry_sections"
+    ],
+    "expected_block_levels": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "scope": "roofed AIR section, sky0 and independent emitter Manhattan blocklight at every paint; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+  },
+  "independent_camera_diagnostic": {
+    "counts": {
+      "paint_samples": 4956,
+      "resident_geometry_holder": 4956,
+      "ready_field": 4956,
+      "field_incarnation_positive": 4956,
+      "independent_value_match": 4956
+    },
+    "distinct_target_sections": 20,
+    "levels": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ]
+  },
+  "saved_empty_air_slices": [
+    {
+      "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_75419faaa98a4d1d8e3247fc3ab57c4c\\chunks\\1_-3_3.cchunk",
+      "sha256": "a949c70e5239d5104db6b684ebfaf9fed4d2579bf2b8d833e6f06a327c192adb",
+      "palette": [
+        0
+      ],
+      "runs": [
+        [
+          4096,
+          0
+        ]
+      ],
+      "all4096_cells_air": true,
+      "bytes": 8239
+    },
+    {
+      "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_75419faaa98a4d1d8e3247fc3ab57c4c\\chunks\\1_-2_3.cchunk",
+      "sha256": "98daef0f3970042b665151e48480f07b38eda23d6dd2911266eec17cf3016f66",
+      "palette": [
+        0
+      ],
+      "runs": [
+        [
+          4096,
+          0
+        ]
+      ],
+      "all4096_cells_air": true,
+      "bytes": 8239
+    }
+  ],
+  "draw_field": {
+    "status": "PASS",
+    "reason": "analytic_floor_draw_source_light",
+    "checked": 7011,
+    "positive_expected": 5711,
+    "faults": 0,
+    "source_counts": {
+      "cpu": 0,
+      "packed_gpu": 7011,
+      "bound_gpu": 7011
+    },
+    "missing_bound_fields": 0,
+    "positive_bound_with_baked_zero": 5711,
+    "frame_epochs": 101,
+    "observed_emitter_cells": 2,
+    "distinct_floor_cells": 2404,
+    "distinct_expected_levels": 15,
+    "skipped": 8215,
+    "skip_reasons": {
+      "unscoped_floor_cell": 876,
+      "not_joined_floor_depth": 2288,
+      "not_downward_valid_ray": 5016,
+      "missing_or_provisional_source_match": 35
+    },
+    "missing_coverage": [],
+    "examples": [],
+    "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+  },
+  "rgb_reference": {
+    "schema": "engine-floor-rgb-reference.v1",
+    "status": "FAIL",
+    "reason": "analytic_positive_floor_normal_rgb",
+    "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+    "checked": 5729,
+    "faults": 18,
+    "frame_epochs": 101,
+    "distinct_cells": 1835,
+    "expected_levels": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "draw_sources": [
+      0,
+      2
+    ],
+    "unwitnessed": 0,
+    "skipped": 9497,
+    "examples": [
+      {
+        "frame_epoch": 3240,
+        "cell": [
+          -255,
+          -49,
+          54
+        ],
+        "expected_light": 10,
+        "predicted_rgba": [
+          96.5991467146068,
+          124.65118841517832,
+          169.1355275535972,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            97,
+            125,
+            169,
+            255
+          ],
+          [
+            97,
+            125,
+            169,
+            255
+          ]
+        ],
+        "error_bytes": 0.40085328539319676,
+        "intensity": 0.2452666666666666,
+        "fog_factor": 0.6992608334784381,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3240,
+        "cell": [
+          -253,
+          -49,
+          52
+        ],
+        "expected_light": 10,
+        "predicted_rgba": [
+          104.3620918940347,
+          139.27408138968448,
+          193.19498546542377,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            104,
+            139,
+            193,
+            255
+          ],
+          [
+            104,
+            139,
+            193,
+            255
+          ]
+        ],
+        "error_bytes": 0.3620918940347053,
+        "intensity": 0.2452666666666666,
+        "fog_factor": 0.8089063323658441,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -262,
+          -49,
+          48
+        ],
+        "expected_light": 9,
+        "predicted_rgba": [
+          65.27666352026793,
+          69.56666239346455,
+          80.96090309755736,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            65,
+            70,
+            81,
+            255
+          ],
+          [
+            65,
+            70,
+            81,
+            255
+          ]
+        ],
+        "error_bytes": 0.43333760653544573,
+        "intensity": 0.22123999999999996,
+        "fog_factor": 0.3023142736245165,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -263,
+          -49,
+          45
+        ],
+        "expected_light": 7,
+        "predicted_rgba": [
+          56.04026002636301,
+          60.55922900087824,
+          71.4052131526579,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            56,
+            61,
+            71,
+            255
+          ],
+          [
+            56,
+            61,
+            71,
+            255
+          ]
+        ],
+        "error_bytes": 0.4407709991217601,
+        "intensity": 0.17318666666666666,
+        "fog_factor": 0.26924013048197465,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -264,
+          -49,
+          42
+        ],
+        "expected_light": 5,
+        "predicted_rgba": [
+          49.27361372679403,
+          56.02565955604456,
+          69.09859185934468,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            49,
+            56,
+            69,
+            255
+          ],
+          [
+            49,
+            56,
+            69,
+            255
+          ]
+        ],
+        "error_bytes": 0.2736137267940322,
+        "intensity": 0.1251333333333333,
+        "fog_factor": 0.26897932932898005,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -269,
+          -49,
+          49
+        ],
+        "expected_light": 9,
+        "predicted_rgba": [
+          42.47807999999999,
+          28.318719999999995,
+          14.159359999999998,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            42,
+            28,
+            14,
+            255
+          ],
+          [
+            42,
+            28,
+            14,
+            255
+          ]
+        ],
+        "error_bytes": 0.4780799999999914,
+        "intensity": 0.22123999999999996,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -270,
+          -49,
+          45
+        ],
+        "expected_light": 6,
+        "predicted_rgba": [
+          28.63872,
+          19.09248,
+          9.54624,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            29,
+            19,
+            10,
+            255
+          ],
+          [
+            29,
+            19,
+            10,
+            255
+          ]
+        ],
+        "error_bytes": 0.45376000000000083,
+        "intensity": 0.14916,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 3060,
+        "cell": [
+          -271,
+          -49,
+          43
+        ],
+        "expected_light": 5,
+        "predicted_rgba": [
+          24.02559999999999,
+          16.01706666666666,
+          8.00853333333333,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            24,
+            16,
+            8,
+            255
+          ],
+          [
+            24,
+            16,
+            8,
+            255
+          ]
+        ],
+        "error_bytes": 0.025599999999990075,
+        "intensity": 0.1251333333333333,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      }
+    ],
+    "missing_coverage": []
+  },
+  "rgb_failure_diagnostic": {
+    "reasons": {
+      "material": 18,
+      "face": 18,
+      "failed_rows": 18
+    },
+    "maximum_error_bytes": 0.6045794468927284,
+    "examples": [
+      {
+        "frame": 3240,
+        "cell": [
+          -255,
+          -49,
+          54
+        ],
+        "error_bytes": 0.40085328539319676,
+        "source_kind": 0,
+        "packed_payload_valid": 0,
+        "packed_quads": 0,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 3240,
+        "cell": [
+          -253,
+          -49,
+          52
+        ],
+        "error_bytes": 0.3620918940347053,
+        "source_kind": 0,
+        "packed_payload_valid": 0,
+        "packed_quads": 0,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 3060,
+        "cell": [
+          -262,
+          -49,
+          48
+        ],
+        "error_bytes": 0.43333760653544573,
+        "source_kind": 0,
+        "packed_payload_valid": 0,
+        "packed_quads": 0,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 3060,
+        "cell": [
+          -263,
+          -49,
+          45
+        ],
+        "error_bytes": 0.4407709991217601,
+        "source_kind": 0,
+        "packed_payload_valid": 1,
+        "packed_quads": 1,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      }
+    ]
+  },
+  "startup": {
+    "status": "PASS",
+    "reason": "first_world_paint_required_ring_census",
+    "evidence": {
+      "certified_no_surface_sections": 236,
+      "columns": 49,
+      "domain": "configured-render-ring.v1",
+      "expected_columns": 49,
+      "expected_sections": 1176,
+      "focus": [
+        1,
+        -3,
+        3
+      ],
+      "known_air_sections": 724,
+      "light_unready_sections": 0,
+      "max_y": 319,
+      "min_y": -64,
+      "missing_data_columns": 0,
+      "phase": "first_world_paint",
+      "publication_unready_sections": 0,
+      "radius": 3,
+      "ready": true,
+      "render_distance_chunks": 3,
+      "render_pass_complete": true,
+      "resident_air_sections": 12,
+      "schema": "required-presentation-witness.v2",
+      "sections": 1176,
+      "surface_sections": 440,
+      "unknown_sections": 0,
+      "world_epoch": 4
+    },
+    "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+  },
+  "route": {
+    "status": "PASS",
+    "reason": "frontier_route_covered",
+    "displacement_chunks": 19,
+    "outside_initial_resident_samples": 3203
+  },
+  "inspection": {
+    "verified": 26,
+    "requested": 26,
+    "reason": "inspection_views_joined_to_png"
+  },
+  "opaque_depth": {
+    "status": "PASS",
+    "reason": "analytic_near_cave_opaque_depth",
+    "checked": 12992,
+    "faults": 0,
+    "frame_epochs": 113,
+    "skipped_unscoped_or_occluded": 2234,
+    "examples": [],
+    "fault_attribution": {
+      "schema": "engine-depth-fault-attribution.v1",
+      "section_count": 0,
+      "sections": [],
+      "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+    },
+    "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+  },
+  "air_service": {
+    "schema": "engine-air-light-service.v1",
+    "status": "PASS",
+    "reason": "joined_air_light_producer_receipts",
+    "joined_completed_jobs": 161,
+    "distinct_columns": 38,
+    "minimum_columns": 3,
+    "observed_records": 2511,
+    "unjoined_completions": 0,
+    "faults": 0,
+    "examples": [],
+    "scope": "observed requested AIR fields with complete canonical physical receipts; no all-request coverage, field-value, latency, GPU or framebuffer acceptance"
+  },
+  "tests": {
+    "python_engine_tests": 135,
+    "python_pass": true,
+    "release_desktop_build_log": "air-border-desktop-build-20261120.log",
+    "caveat": "No C++ production changes this turn; previous3driver results retained, not claimed rerun."
+  },
+  "source_findings": [
+    "WorldPersistence.cpp async disk slice apply explicitly EnsureChunk for empty/absent disk results near4903/4909; source-code candidates for observed internal AIR holders, exact allocation call chain not yet traced in this run.",
+    "WorldPersistence.cpp SaveAsyncTerrainColumn explicitly materializes every minCy..highest_to_save slice near5506 before ordinary chunk saves; empty AIR binary files exist after outbound eviction with palette[0] and4096AIR cells.",
+    "ChunkBuffer::ApplyToChunk ensures a geometry chunk before applying buffer data, including legacy light/weather-only payloads. Simply skipping absent-file EnsureChunk does not handle legacy denseAIR files or the save path.",
+    "KnownAirTerrainSlice uses completed producer + exact disk absence + pending-save gates for internal AIR proof. Removing allocations must preserve explicit known-empty authority and membership/version/cancellation invariants; unknown or pending-save absence cannot be promoted to AIR.",
+    "18RGBrows have no matched source triangle/material while colors agree numerically; native packed readback currently has16unique-chunk diagnostic cap. Budget refusal versus other unreadable-source causes needs explicit attribution before fixing this coverage gap."
+  ],
+  "limits": [
+    "This is an intentional new acceptance counterexample, not a completed AIR cutover. Camera requirement resident0 is retained; do not relabel empty geometry holders as absent to turn the test green.",
+    "Canonical camera numeric values, readiness and GPU floor field can be correct while internalAIR geometry holders remain. Generic AIR service activity does not prove this exact camera target is field-only.",
+    "Raw cameraFAIL4956/4956 and RGBFAIL18/5729 retained; ordinary native exit0 and parent0 signify process/provenance only. A diagnostic color match does not waive missing triangle/owner evidence.",
+    "Source removal is still pending: it needs action/publication/field-generation timeline evidence, not static omission of a saved emitter. Full wet/transparency, CPU/MDI/GLES native consumers, solver parity, lifecycle/catalog/procedural AIR and complete performance/memory matrix remain original obligations."
+  ],
+  "performance": {
+    "legacy_pass": false,
+    "metrics": {
+      "wall_ms_med": 22.1703,
+      "wall_ms_fly_med": 29.9777,
+      "wall_ms_no_holes_med": 33.95,
+      "post_stop_readiness_debt_max": 0.0,
+      "post_stop_visual_holes_max": 0.0,
+      "post_stop_focus_dirty_med": 0.0
+    }
+  },
+  "artifact_sha256": {
+    "fixture.json": "0360cb133c3c8f1cf8e42f8c9d19e9795e3f1e52345e53d2ccd297b317f25b69",
+    "route.json": "fe2a6a5c5752a31fe3e517a99779f0bb727e01e5d842a88b275a0ae189e21fb3",
+    "flight_sim_report.json": "eb5afdfda16af8c6d671281c34955beb22b6f6e4f8ccd8e1dbbd2ed99edc23bf",
+    "smoke-verdict.json": "116ea7d2ebaeb9b19f7521da3e6263cdda1423b661a654848a5fee7e1ee7ec8e",
+    "fixture-camera-light-reference.json": "d0eb1a152ec8b736f63cc0885611560a72109a26697b0f3fa8ec7763b98f3f4f",
+    "fixture-floor-light-reference.json": "47ac6e0e9aa296671d7c19fd0fd25be38ae43f9b6e01867767ff4e214026a4a7",
+    "fixture-floor-rgb-reference.json": "ada56b31a346e6f41fe937c518ef072668d19506f743749167825788d655012e"
+  },
+  "next": [
+    "Trace then replace legacy internalAIR materialization with explicit loaded/known-empty slice evidence and geometry-free legacy light/weather storage, preserving cancellation and source clocks.",
+    "Save empty AIR compatibility payloads or sparse absence without creating live geometry; verify dense legacy and sparse worlds, save/evict/return/cold reload and the current positive AIR camera/GPU/RGB route.",
+    "Attribute missing packed-source readback coverage explicitly, preserving bounded diagnostics and no falsePASS; then continue source-removal timeline and all originalS0..S6 tasks."
+  ]
 }
 }
