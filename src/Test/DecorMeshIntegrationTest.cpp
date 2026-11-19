@@ -2241,6 +2241,7 @@ static void TestFirstComputedLightPublication(
       GreedyMeshBatch legacy = *batch;
       legacy.renderLightBinding.reset();
       GreedyGpuPassCache legacy_pass;
+      legacy_pass.passId = GreedyGpuPassId::Opaque;
       backend.RefreshPass(legacy_pass, {legacy}, cache.GetMeshRevision(),
                           cache.GetCullRevision(), 1);
       Expect(legacy_pass.batches.size() == 1 &&
@@ -2261,6 +2262,16 @@ static void TestFirstComputedLightPublication(
              "GPU reuse cannot omit newly admitted source artifact light lease");
       Expect(cache.GetPublishCount(root) == cpu_publications,
              "field admission repair does not run another CPU geometry publication");
+      backend.DestroyPass(legacy_pass);
+      backend.RefreshPass(legacy_pass, {legacy}, cache.GetMeshRevision(),
+                          cache.GetCullRevision(), 1);
+      cache.ConsumeGeometryDirtyChunks(drained);
+      cache.BeginGpuPassDirtyFrame();
+      backend.RefreshPassRefs(legacy_pass, cache, {}, cache.GetMeshRevision(),
+                              cache.GetCullRevision(), 1);
+      Expect(legacy_pass.batches.size() == 1 &&
+                 legacy_pass.batches[0].renderLightBinding == binding,
+             "retained GPU cohorts admit source light outside current visibility refs");
       backend.DestroyPass(legacy_pass);
 #endif
     }
