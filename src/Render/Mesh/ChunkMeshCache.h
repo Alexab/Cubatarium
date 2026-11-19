@@ -1461,6 +1461,7 @@ private:
   bool MeshCaptureOwnerStillCurrent(const UBlockWorld &world,
                                     uint64_t world_epoch, uint64_t generation,
                                     MeshLightInputs policy) const;
+  void ConfigureCapturePolicy(const UBlockWorld &world);
   bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
                                  const UBlockRegistry &registry,
                                  const MeshBuildResult &result) const;

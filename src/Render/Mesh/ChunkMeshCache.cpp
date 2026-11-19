@@ -1565,6 +1565,12 @@ bool UChunkMeshCache::ChunkHasStaleDarkFaces(glm::ivec3 chunk_coord,
   auto mix = [&key](uint64_t value)
   { key ^= value + 0x9e3779b97f4a7c15ull + (key << 6) + (key >> 2); };
   const ChunkGreedyMesh &mesh = it->second;
+  // Full physical draws use their private field. Baked zero vertices carry
+  // no illumination evidence; resource liveness/refresh has separate owners.
+  if (mesh.RenderLightBinding && mesh.RenderLight &&
+      mesh.RenderGeometryInputs.valid &&
+      mesh.RenderLight->MatchesGeometry(mesh.RenderGeometryInputs))
+    return false;
   // A mesh baked from exactly the light that is current now (same light
   // revision, same neighbor halo signatures) is a deterministic function of
   // that input: rebuilding it would reproduce the same vertices. Its dark
@@ -1627,6 +1633,10 @@ bool UChunkMeshCache::ChunkHasStaleDarkFacesUncached(
   {
     return false;
   }
+  if (it->second.RenderLightBinding && it->second.RenderLight &&
+      it->second.RenderGeometryInputs.valid &&
+      it->second.RenderLight->MatchesGeometry(it->second.RenderGeometryInputs))
+    return false;
   auto face_air_offset = [](int fi) -> glm::ivec3
   {
     switch (fi)
@@ -2454,6 +2464,7 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
                                           glm::ivec3 chunk_coord,
                                           const UBlockRegistry *registry)
 {
+  ConfigureCapturePolicy(world);
   CaptureStore.SetNeighborVisualDrawableFn(CacheNeighborVisuallyDrawable, this);
   const uint64_t rev = MeshRevisions.Current(chunk_coord);
   if (CaptureStore.TryGet(world, chunk_coord, rev))
@@ -5766,6 +5777,7 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
                                                glm::ivec3 coord,
                                                uint64_t source_revision)
 {
+  ConfigureCapturePolicy(world);
   SnapshotAcquireResult out;
   const auto store_lookup_t0 = std::chrono::steady_clock::now();
   auto cached = CaptureStore.TryGet(world, coord, source_revision);
@@ -6360,6 +6372,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     gpu_result.provisionalLightPreview = false;
     accepted_input_stale = false;
     accepted_geom_stale = false;
+    // Full physical shaders sample the validated field, not baked attributes.
+    gpu_result.hasFullyDarkFace = false;
+    gpu_result.hasLitDrawableFace =
+        gpu_result.quadCount > 0 || HasCrossInstances(cross_centers);
   }
   // SoftDefer is column-wide; an exact slice can be settled while another Y
   // slice still owns PendingLight. Permit this dark candidate only when all
@@ -6880,6 +6896,7 @@ int UChunkMeshCache::DrainPendingGpuMeshes(UBlockWorld &world,
                                            UBlockRegistry &registry,
                                            int max_count, double budget_ms)
 {
+  ConfigureCapturePolicy(world);
   const auto start = std::chrono::steady_clock::now();
   (void)DrainPublishedLightRefresh(world, registry, max_count);
   const int ready = DrainGeometryAwaitingLight(world, registry, max_count);
@@ -6899,6 +6916,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
                                             int max_drain, int gpu_max,
                                             double gpu_budget_ms)
 {
+  ConfigureCapturePolicy(world);
   // Sysreset v3: accumulate kick/finish across Consume calls in one frame.
   // Emerge coordinator zeros telem once before the first Consume.
   LastGpuKickDeferReason_.clear();
@@ -6966,6 +6984,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                              int max_count, double budget_ms,
                                              MeshRebuildTickStats &stats)
 {
+  ConfigureCapturePolicy(world);
   // Draining CPU/synchronous ready results needs no GL pipeline. In
   // particular, an empty GPU queue must also be safe without a GL context.
   if (!Render.GpuPackedMeshing || PendingGpuApplies.empty() || max_count <= 0 ||
@@ -7333,6 +7352,7 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     // P1-b2/P2: light-only always commit; geom+drawable commit (avoid remesh
     // unfinished blink mid-cruise). Holes (!drawable) still fail+Priority.
     const bool accept_input_stale =
+        pending.snapshot.lightInputs == MeshLightInputs::Baked &&
         !pending.snapshot.certifiedPaddedLight &&
         (stale_reason == MeshApplyStaleInputReason::Light ||
          (stale_reason == MeshApplyStaleInputReason::Geom &&
@@ -8355,6 +8375,56 @@ static std::pair<std::ostream *, uint64_t> MeshApplyProfileOutput()
   return {profile_sink, profile_sequence};
 }
 
+void UChunkMeshCache::ConfigureCapturePolicy(const UBlockWorld &world)
+{
+  const auto policy = Render.GreedyMeshing && PrepareRenderLight &&
+                              Render.Lighting == LightingMode::Full &&
+                              world.GetLightingConfigurationIdentity() !=
+                                  static_cast<uint64_t>(LightingMode::Flat)
+                          ? MeshLightInputs::PhysicalField
+                          : MeshLightInputs::Baked;
+  if (!CaptureStore.SetLightInputsPolicy(policy))
+    return;
+  std::unordered_set<glm::ivec3, IVec3Hash> retry;
+  for (const auto &[coord, mesh] : GreedyCache)
+    retry.insert(coord);
+  for (const auto &[coord, revision] : ActiveMeshSourceRevision)
+    retry.insert(coord);
+  for (const auto &[coord, state] : PendingCaptureSet_)
+    retry.insert(coord);
+  for (const auto &[coord, state] : PendingCaptureReady_)
+    retry.insert(coord);
+  for (const auto &[coord, state] : GeometryAwaitingLight_)
+    retry.insert(coord);
+  for (auto &pending : PendingGpuApplies)
+  {
+    retry.insert(pending.coord);
+    ReleasePendingGpuTicket(pending);
+  }
+  for (const auto &coord : RemeshAfterApply)
+    retry.insert(coord);
+  if (AsyncBuilder)
+    AsyncBuilder->CancelPending();
+  if (CaptureWorker)
+    CaptureWorker->CancelPending();
+  ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
+  PendingGpuApplies.clear();
+  TouchPendingGpuIndex();
+  GpuExtractInFlight.clear();
+  ActiveMeshSourceRevision.clear();
+  RemeshAfterApply.clear();
+  PendingCaptureSet_.clear();
+  PendingCaptureReady_.clear();
+  for (const auto &coord : retry)
+    if (world.GetChunkManager().HasChunk(coord))
+    {
+      if (HasDrawableGreedyMesh(coord))
+        Dirty.MarkDirty(coord);
+      else
+        Dirty.MarkDirtyPriority(coord);
+    }
+}
+
 bool UChunkMeshCache::MeshCaptureOwnerStillCurrent(const UBlockWorld &world,
                                                    uint64_t world_epoch,
                                                    uint64_t generation,
@@ -8678,13 +8748,15 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
            { return !batch.vertices.empty() && !batch.indices.empty(); }));
   const MeshApplyStaleInputReason stale_reason =
       (result.IndependentPhysicalField || result.GpuExtractPending ||
-       completed_physical_geometry) &&
+       completed_physical_geometry ||
+       result.lightInputs == MeshLightInputs::PhysicalField) &&
               current_physical_geometry
           ? MeshApplyStaleInputReason::Ok
           : ChunkMeshSnapshot::ClassifyStaleInput(
                 result.InputStampsValid, catalog_ok, result.InputStamps, world,
                 result.InputLightHaloSignatures, result.CertifiedPaddedLight);
   const bool accept_input_stale =
+      result.lightInputs == MeshLightInputs::Baked &&
       !result.CertifiedPaddedLight &&
       (stale_reason == MeshApplyStaleInputReason::Light ||
        (stale_reason == MeshApplyStaleInputReason::Geom &&
@@ -9115,9 +9187,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool had_lit_mesh = had_mesh && ChunkHasLitDrawableFace(result.coord);
   const bool had_live_lit_gpu = ChunkHasLiveGpuDraw(result.coord) &&
                                 ChunkHasLitDrawableFace(result.coord);
-  const bool new_cpu_has_dark_face = BatchesHaveFullyDarkFace(result.batches);
+  const bool physical_lighting =
+      result.IndependentPhysicalField && current_physical_geometry &&
+      result.RenderLight &&
+      result.RenderLight->MatchesGeometry(result.GeometryInputs);
+  const bool new_cpu_has_dark_face =
+      !physical_lighting && BatchesHaveFullyDarkFace(result.batches);
   const bool new_cpu_has_lit_drawable_face =
-      BatchesHaveLitDrawableFace(result.batches);
+      physical_lighting
+          ? !result.batches.empty() || HasCrossInstances(result.crossCenters)
+          : BatchesHaveLitDrawableFace(result.batches);
   const bool new_dark = new_cpu_has_dark_face && !new_cpu_has_lit_drawable_face;
   const int prior_lit_age = GetPriorLitHoldAge(result.coord);
   const UChunk *source_chunk = world.GetChunkManager().GetChunk(result.coord);
@@ -9550,7 +9629,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // for a packed successor that was never queued would hide completed edits.
   const bool show_new_cpu_now =
       current_computed_candidate && chunkMesh.RenderLightBinding &&
-      had_gpu_drawable && new_cpu_drawable && !new_dark && !defer_until_lit;
+      had_gpu_drawable && new_cpu_drawable &&
+      (physical_lighting || (!new_dark && !defer_until_lit));
   if (!show_new_cpu_now &&
       ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                              new_cpu_drawable) &&
@@ -9761,6 +9841,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     int max_schedule_per_frame, bool force_sync, int max_sync_rebuild,
     double max_sync_ms, bool skip_gpu_consume)
 {
+  ConfigureCapturePolicy(world);
   Dirty.AdvanceScheduleFrame();
   if (const auto &target = PublicationTraceChunk();
       target && (Dirty.Contains(*target) || HasInflightMeshBuild(*target)))
@@ -11237,7 +11318,18 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         return std::next(it);
       }
       ChunkMeshSnapshot snapshot = std::move(*acquire.snapshot);
-      if (Dirty.IsFirstMesh(*it) && !HasDrawableGreedyMesh(*it))
+      if (snapshot.lightInputs == MeshLightInputs::PhysicalField &&
+          snapshot.boundaryOverlay.missingNeighborFaces != 0)
+      {
+        NoteFaceDebtOverlayMask(*it,
+                                snapshot.boundaryOverlay.missingNeighborFaces);
+        note_snapshot_defer(SnapshotAcquireDeferReason::DependencyChanged);
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSnapshotN;
+        return std::next(it);
+      }
+      if (snapshot.lightInputs == MeshLightInputs::Baked &&
+          Dirty.IsFirstMesh(*it) && !HasDrawableGreedyMesh(*it))
       {
         const UChunk *chunk = world.GetChunkManager().GetChunk(*it);
         const ChunkRenderDemandRecord *demand =
@@ -12330,6 +12422,17 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       ChunkMeshSnapshot snapshot = std::move(*acquire.snapshot);
+      if (snapshot.lightInputs == MeshLightInputs::PhysicalField &&
+          snapshot.boundaryOverlay.missingNeighborFaces != 0)
+      {
+        NoteFaceDebtOverlayMask(*it,
+                                snapshot.boundaryOverlay.missingNeighborFaces);
+        note_snapshot_defer(SnapshotAcquireDeferReason::DependencyChanged);
+        ++LastMeshDirtyScheduleSkipN;
+        ++LastMeshDirtyScheduleSkipSnapshotN;
+        ++it;
+        continue;
+      }
       LastMeshSnapshotMs +=
           std::chrono::duration<double, std::milli>(
               std::chrono::high_resolution_clock::now() - snap_t0)
@@ -12898,6 +13001,7 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
                                             UBlockRegistry &registry,
                                             int max_per_frame)
 {
+  ConfigureCapturePolicy(world);
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return;
@@ -12996,6 +13100,7 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
                                    UBlockRegistry &registry,
                                    glm::ivec3 chunkCoord)
 {
+  ConfigureCapturePolicy(world);
   const UChunk *chunk = world.GetChunkManager().GetChunk(chunkCoord);
   if (!chunk)
   {
@@ -13032,6 +13137,15 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
         CaptureStore.LightInputsPolicy());
     sync_snap.sourceWorldEpoch = sync_epoch;
     sync_snap.sourceCaptureGeneration = sync_capture_generation;
+    if (sync_snap.lightInputs == MeshLightInputs::PhysicalField &&
+        sync_snap.boundaryOverlay.missingNeighborFaces != 0)
+    {
+      NoteFaceDebtOverlayMask(chunkCoord,
+                              sync_snap.boundaryOverlay.missingNeighborFaces);
+      Dirty.MarkDirtyPriority(chunkCoord);
+      LastApplyWasRetainedPrior_ = true;
+      return;
+    }
     const auto quads = MesherBackend && !CpuMeshRecovery.count(chunkCoord)
                            ? MesherBackend->BuildChunkMesh(sync_snap, registry,
                                                            sync_catalog.get())

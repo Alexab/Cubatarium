@@ -34,6 +34,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -99,6 +100,13 @@ struct CrossGpuBackendDriverTestAccess
 #endif
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static std::optional<ChunkMeshSnapshot>
+  CaptureForSchedule(UChunkMeshCache &cache, const UBlockWorld &world,
+                     glm::ivec3 coord, uint64_t revision)
+  {
+    cache.ConfigureCapturePolicy(world);
+    return cache.GetCaptureStore().CaptureAndStore(world, coord, revision);
+  }
   static void TrackSource(UChunkMeshCache &cache, glm::ivec3 coord,
                           uint64_t revision)
   {
@@ -136,6 +144,7 @@ struct ChunkMeshCaptureAdmissionTestAccess
                                         const UBlockWorld &world,
                                         glm::ivec3 coord)
   {
+    cache.ConfigureCapturePolicy(world);
     const auto epoch = cache.GetCaptureStore().WorldEpoch();
     auto snapshot = ChunkMeshSnapshot::Capture(
         world, coord, cache.GetChunkMeshRevision(coord), nullptr, nullptr,
@@ -145,7 +154,7 @@ struct ChunkMeshCaptureAdmissionTestAccess
         cache.GetCaptureStore().CapturePolicyGeneration();
     return snapshot;
   }
-  static bool PrepareOnly(UChunkMeshCache &cache,
+  static bool PrepareOnly(UChunkMeshCache &cache, const UBlockWorld &world,
                           const ChunkMeshSnapshot &snapshot,
                           UBlockRegistry &registry,
                           const SectionNoSurfaceProof *no_surface = nullptr)
@@ -155,8 +164,10 @@ struct ChunkMeshCaptureAdmissionTestAccess
         snapshot.sourceWorldEpoch,
         snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight, snapshot.provisionalLightPreview, prepared,
-        no_surface);
+        snapshot.lightInputs == MeshLightInputs::PhysicalField
+            ? world.CaptureRenderLightSnapshot(snapshot.coord)
+            : snapshot.renderLight,
+        snapshot.provisionalLightPreview, prepared, no_surface);
   }
   static bool CommitEmptyPacked(UChunkMeshCache &cache,
                                 const UBlockWorld &world,
@@ -1517,8 +1528,8 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   Expect(
       ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2,
       "failed actual GPU ticket releases its staging slot even when invalid");
-  Expect(cache.GetCaptureStore()
-             .CaptureAndStore(world, coord, cache.GetChunkMeshRevision(coord))
+  Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+             cache, world, coord, cache.GetChunkMeshRevision(coord))
              .has_value(),
          "overflow recovery can recapture current authoritative inputs");
   const auto retry =
@@ -1600,10 +1611,14 @@ static void TestPackedLightArtifactOwnership(
   cache.SetMeshRebuildFocus(root, 4, 1);
   cache.MarkDirty(root);
   SectionRenderLightBindings owner;
+  bool reject_successor = false;
   cache.SetPrepareRenderLightFn(
       [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
           const SectionRenderLightSnapshot &light)
-      { return owner.PrepareForWorld(epoch, geometry, light); });
+      {
+        return reject_successor ? nullptr
+                                : owner.PrepareForWorld(epoch, geometry, light);
+      });
   const auto settle = [&]()
   {
     RelightJobSpec spec;
@@ -1719,16 +1734,18 @@ static void TestPackedLightArtifactOwnership(
   cache.MarkDirty(root);
   cache.GetCaptureStore().Invalidate(root);
   settle();
+  reject_successor = true;
   cache.RebuildChunkImmediate(world, registry, root);
   flatten();
-  auto successor = cache.GetPublishedRenderLightBinding(root);
-  Expect(successor && successor != original &&
-             !successor->GeometryInputs().Matches(original->GeometryInputs()),
-         "dark CPU successor publishes distinct geometry and physical lease");
+  Expect(cache.GetPublishedRenderLightBinding(root) == original &&
+             cache.GetGeometryAwaitingLightCount() == 1 &&
+             cache.GetPublishCount(root) == original_publication,
+         "actual resource refusal retains packed predecessor and completed CPU "
+         "geometry");
   Expect(cache.GetGpuPackedOpaqueRefs().size() == 1 &&
              cache.GetGpuPackedOpaqueRefs()[0].slotIndex == original_slot &&
              packed_bytes() == original_bytes,
-         "CPU publication retains the actual complete previous packed slot");
+         "resource refusal retains the actual complete previous packed slot");
   Expect(cache.GetGpuPackedOpaqueRefs()[0].renderLightBinding == original &&
              original->ShaderWords() == original_words && original->IsLive(),
          "retained packed draw keeps its own field rather than CPU successor "
@@ -1736,6 +1753,17 @@ static void TestPackedLightArtifactOwnership(
   original.reset();
   Expect(!weak_original.expired(),
          "live packed slot retains previous physical lease");
+  reject_successor = false;
+  cache.DrainPendingGpuMeshes(world, registry, 8, -1);
+  flatten();
+  const auto successor = cache.GetPublishedRenderLightBinding(root);
+  Expect(successor && cache.GetGpuPackedOpaqueRefs().empty() &&
+             !cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+             weak_original.expired() &&
+             cache.GetGeometryAwaitingLightCount() == 0 &&
+             cache.GetPublishCount(root) == original_publication + 1,
+         "ready zero-field CPU geometry retires packed predecessor without "
+         "another build");
   for (int x = -16; x < 32; ++x)
     for (int z = -16; z < 32; ++z)
       world.SetBlock({x, 31, z}, BLOCK_AIR);
@@ -2132,18 +2160,18 @@ static void TestNoDrawPhysicalResourceAdmission(
         });
     auto snapshot =
         ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
-    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, snapshot,
-                                                             registry),
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+               cache, world, snapshot, registry),
            "empty-looking data without private geometry proof cannot skip "
            "physical resource admission");
-    Expect(ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, snapshot,
-                                                            registry, &*proof),
+    Expect(ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+               cache, world, snapshot, registry, &*proof),
            "private NoSurface proof admits no-draw geometry without a light "
            "resource");
     auto stale = snapshot;
     stale.sourceWorldEpoch = 0;
-    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, stale,
-                                                             registry, &*proof),
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+               cache, world, stale, registry, &*proof),
            "NoDraw cannot bypass missing source epoch");
     cache.GetRenderDemandStore().RequestLightSample(
         root, cache.GetCaptureStore().WorldEpoch(), 5, 8);
@@ -2162,7 +2190,7 @@ static void TestNoDrawPhysicalResourceAdmission(
     cache.GetCaptureStore().BumpWorldEpoch();
     Expect(cache.GetCaptureStore().WorldEpoch() != old_epoch &&
                !ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                   cache, snapshot, registry, &*proof),
+                   cache, world, snapshot, registry, &*proof),
            "private NoDraw evidence cannot revive a previous world epoch");
     UChunkMeshCache packed;
     packed.SetRenderSettings(settings);
@@ -2192,7 +2220,7 @@ static void TestNoDrawPhysicalResourceAdmission(
     auto wrong_geometry = snapshot;
     ++wrong_geometry.inputStamps[0].content;
     Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-               cache, wrong_geometry, registry, &*proof),
+               cache, world, wrong_geometry, registry, &*proof),
            "NoDraw proof must match exact seven geometry stamps");
     if (hidden)
     {
@@ -2209,9 +2237,9 @@ static void TestNoDrawPhysicalResourceAdmission(
             return {};
           });
       asynchronous.MarkDirtyPriority(root);
-      Expect(asynchronous.GetCaptureStore()
-                 .CaptureAndStore(world, root,
-                                  asynchronous.GetChunkMeshRevision(root))
+      Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                 asynchronous, world, root,
+                 asynchronous.GetChunkMeshRevision(root))
                  .has_value(),
              "hidden NoDraw fixture captures owned async inputs");
       const auto scheduled = asynchronous.RebuildDirtyChunksWithStats(
@@ -2229,8 +2257,8 @@ static void TestNoDrawPhysicalResourceAdmission(
     world.SetBlock({4, 4, 4}, hidden ? BLOCK_AIR : kStone);
     auto changed =
         ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
-    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(cache, changed,
-                                                             registry, &*proof),
+    Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+               cache, world, changed, registry, &*proof),
            "old NoDraw proof rejects a changed exposed surface");
   }
   for (const BlockId block : {kStone, kTallGrass, kSolidCutout, kWater})
@@ -2348,7 +2376,7 @@ public:
                  cutum::UBlockRegistry &registry,
                  const cutum::BlockDefinitionCatalog *catalog) override
   {
-    ++builds;
+    Count(coord);
     return cutum::UGreedyMesher::BuildChunkMesh(world, coord, registry,
                                                 catalog);
   }
@@ -2357,10 +2385,142 @@ public:
                  cutum::UBlockRegistry &registry,
                  const cutum::BlockDefinitionCatalog *catalog) override
   {
-    ++builds;
+    Count(snapshot.coord);
     return cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
   }
+  unsigned BuildsFor(glm::ivec3 coord) const
+  {
+    const std::lock_guard<std::mutex> lock(CountsMutex);
+    const auto it = BuildsByCoord.find(coord);
+    return it == BuildsByCoord.end() ? 0 : it->second;
+  }
+
+private:
+  void Count(glm::ivec3 coord)
+  {
+    ++builds;
+    const std::lock_guard<std::mutex> lock(CountsMutex);
+    ++BuildsByCoord[coord];
+  }
+  mutable std::mutex CountsMutex;
+  std::unordered_map<glm::ivec3, unsigned, cutum::IVec3Hash> BuildsByCoord;
 };
+
+static void TestUnknownGeometryDefersPhysicalBuild(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0), missing(1, 0, 0);
+  for (const bool asynchronous : {false, true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(
+        static_cast<uint64_t>(LightingMode::Full));
+    world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord)
+                                     { return coord != missing; });
+    world.SetBlock({15, 8, 8}, kStone);
+    CountingPhysicalMesher mesher;
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = asynchronous;
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    cache.SetPrepareRenderLightFn(
+        [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+           const SectionRenderLightSnapshot &light)
+        {
+          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                          light);
+        });
+    cache.MarkDirtyPriority(root);
+    const auto revision = cache.GetChunkMeshRevision(root);
+    for (int tick = 0; tick < 4; ++tick)
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(cache.GetCaptureStore().LightInputsPolicy() ==
+                   MeshLightInputs::PhysicalField &&
+               mesher.BuildsFor(root) == 0 && cache.IsChunkMeshDirty(root) &&
+               !cache.HasInflightMeshBuild(root) &&
+               cache.GetPublishCount(root) == 0 &&
+               cache.GetChunkMeshRevision(root) == revision,
+           "unknown physical geometry keeps one queued target without doomed "
+           "builds");
+    world.SetBlock({16, 8, 8}, kStone);
+    cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "new resident geometry finishes actual worker");
+    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    Expect(mesher.BuildsFor(root) == 1 && cache.IsGeometryAwaitingLight(root) &&
+               cache.GetPublishCount(root) == 0 &&
+               cache.GetChunkMeshRevision(root) == revision,
+           "data completion builds original target once before light is "
+           "calculated");
+    RelightJobSpec spec;
+    spec.min_world_y = world.GetVerticalProfile().MinY;
+    spec.max_world_y = world.GetVerticalProfile().MaxY;
+    const auto field =
+        UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+            .Compute(registry);
+    Expect(field.inputs_complete && field.chunks.size() == 1,
+           "resolved geometry supplies actual complete physical calculation");
+    world.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *field.chunks[0].padded_light, true, true);
+    Expect(world.RecordLightCalculation(
+               field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+           "resolved data installs actual private field proof");
+    const auto *chunk = world.GetChunkManager().GetChunk(root);
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    cache.GetRenderDemandStore().NoteDemand(
+        root, revision, chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+        chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(
+        root, epoch, chunk->GetIncarnation(), chunk->GetLightFieldRevision(),
+        chunk->GetContentRevision());
+    cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+    Expect(mesher.BuildsFor(root) == 1 && cache.GetPublishCount(root) == 1 &&
+               cache.GetGreedyVertexCount() == 20 &&
+               cache.GetGeometryAwaitingLightCount() == 0 &&
+               cache.GetPublishedRenderLightBinding(root) &&
+               !cache.HasProvisionalLightPreview(root) &&
+               !cache.ChunkHasStaleDarkFaces(root, world) &&
+               cache.GetChunkMeshRevision(root) == revision,
+           "resident undrawn neighbor hides shared face and current field "
+           "publishes original geometry once");
+    const auto previous_binding = cache.GetPublishedRenderLightBinding(root);
+    const auto previous_generation =
+        cache.GetCaptureStore().CapturePolicyGeneration();
+    settings.Lighting = LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.PrefetchMeshCapture(world, root, &registry);
+    Expect(
+        cache.GetCaptureStore().LightInputsPolicy() == MeshLightInputs::Baked &&
+            cache.GetCaptureStore().CapturePolicyGeneration() !=
+                previous_generation &&
+            cache.GetCaptureStore().WorldEpoch() == epoch &&
+            cache.IsChunkMeshDirty(root) && !cache.HasInflightMeshBuild(root) &&
+            cache.GetPublishedRenderLightBinding(root) == previous_binding &&
+            cache.GetPublishCount(root) == 1 &&
+            cache.GetChunkMeshRevision(root) == revision,
+        "physical to flat transition queues same target and preserves "
+        "predecessor ownership");
+    settings.Lighting = LightingMode::Full;
+    cache.SetRenderSettings(settings);
+    cache.PrefetchMeshCapture(world, root, &registry);
+    Expect(cache.GetCaptureStore().LightInputsPolicy() ==
+                   MeshLightInputs::PhysicalField &&
+               cache.GetCaptureStore().WorldEpoch() == epoch &&
+               cache.IsChunkMeshDirty(root) &&
+               !cache.HasInflightMeshBuild(root) &&
+               cache.GetPublishedRenderLightBinding(root) == previous_binding &&
+               mesher.BuildsFor(root) == 1 &&
+               cache.GetChunkMeshRevision(root) == revision,
+           "return to physical mode preserves original source and drawable "
+           "until replacement");
+  }
+}
 
 static void
 TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
@@ -2458,8 +2618,8 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
   cache.SetMeshWorkAdmission(admission);
   const auto queue_age = cache.GetDirtyQueueAgeFrames(root);
   Expect(queue_age > 0, "ray witness fixture has a nonzero existing queue age");
-  Expect(cache.GetCaptureStore()
-             .CaptureAndStore(world, root, revision)
+  Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world,
+                                                                 root, revision)
              .has_value(),
          "first-publication ray fixture captures actual current geometry");
   Expect(!cache.HasDrawableGreedyMesh(root) &&
@@ -2502,7 +2662,7 @@ class GatedPhysicalMesher final : public cutum::IUChunkMesher
 {
 public:
   std::atomic<unsigned> builds{0};
-  std::atomic<bool> captured_certified{false};
+  std::atomic<bool> captured_physical{false};
   std::atomic<bool> timed_out{false};
   GatedPhysicalMesher()
       : entered_future(entered.get_future()),
@@ -2542,8 +2702,12 @@ public:
         cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
     if (first)
     {
-      captured_certified =
-          snapshot.certifiedPaddedLight && bool(snapshot.renderLight);
+      captured_physical =
+          snapshot.lightInputs == cutum::MeshLightInputs::PhysicalField &&
+          !snapshot.certifiedPaddedLight && !snapshot.renderLight &&
+          !snapshot.provisionalLightPreview &&
+          std::none_of(snapshot.inputStamps.begin(), snapshot.inputStamps.end(),
+                       [](const auto &stamp) { return stamp.readsLight; });
       entered.set_value();
       timed_out = resume_future.wait_for(std::chrono::seconds(5)) !=
                   std::future_status::ready;
@@ -2638,14 +2802,14 @@ static void TestCertifiedGeometrySurvivesInflightLight(
     const auto old_light =
         world.GetChunkManager().GetChunk(root)->GetLightFieldRevision();
     Expect(
-        cache.GetCaptureStore()
-                .CaptureAndStore(world, root, revision)
+        ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world,
+                                                                root, revision)
                 .has_value() &&
             cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0)
                     .Scheduled == 1 &&
-            mesher.WaitEntered() && mesher.captured_certified,
-        "actual worker pauses after building geometry from certified captured "
-        "light");
+            mesher.WaitEntered() && mesher.captured_physical && old_light != 0,
+        "actual worker pauses after building light-free geometry while current "
+        "field exists");
     if (scenario == 1)
     {
       mesher.Release();
@@ -2693,6 +2857,12 @@ static void TestCertifiedGeometrySurvivesInflightLight(
                  cache.GetChunkMeshRevision(root) == revision,
              "policy generation change before apply or during preparation "
              "rejects original geometry");
+      if (scenario == 11)
+        Expect(!cache.HasInflightMeshBuild(root) &&
+                   cache.IsChunkMeshDirty(root) &&
+                   cache.GetGeometryAwaitingLightCount() == 0,
+               "policy transition retires obsolete executable owner and "
+               "requeues exact target");
       continue;
     }
     if (scenario == 3 || scenario == 4 || scenario == 5 || scenario == 6)
@@ -2707,8 +2877,8 @@ static void TestCertifiedGeometrySurvivesInflightLight(
                "inflight geometry mutation preserves an actual rebuild "
                "obligation");
         const auto next_revision = cache.GetChunkMeshRevision(root);
-        Expect(cache.GetCaptureStore()
-                       .CaptureAndStore(world, root, next_revision)
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                   cache, world, root, next_revision)
                        .has_value() &&
                    cache.RebuildDirtyChunksWithStats(world, registry, 0, 1,
                                                      false, 0)
@@ -2769,7 +2939,7 @@ static void TestCertifiedGeometrySurvivesInflightLight(
                        .GetChunk(root)
                        ->GetLightFieldRevision() &&
                ChunkMeshCaptureAdmissionTestAccess::PublishedOriginalLight(
-                   cache, root) == old_light,
+                   cache, root) == 0,
            "inflight light-only changes publish original geometry once with "
            "current physical field");
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
@@ -2848,8 +3018,8 @@ static void TestPublishedLightRefreshLifecycle(
                                            chunk->GetLightFieldRevision(),
                                            chunk->GetContentRevision());
         if (asynchronous)
-          Expect(cache.GetCaptureStore()
-                     .CaptureAndStore(world, root, revision)
+          Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                     cache, world, root, revision)
                      .has_value(),
                  "field-refresh fixture captures actual async geometry");
         const auto tick =
@@ -3199,7 +3369,9 @@ static void TestGeometryWaitsForPhysicalLight(
     demand.NoteDemand(root, geom, chunk->GetLightFieldRevision(), 0, 1.0, epoch,
                       chunk->GetIncarnation());
     Expect(
-        cache.GetCaptureStore().CaptureAndStore(world, root, geom).has_value(),
+        ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world,
+                                                                root, geom)
+            .has_value(),
         "awaiting-field fixture captures actual geometry before calculation");
     const auto initial =
         cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
@@ -3411,8 +3583,8 @@ static void TestGeometryLightQueueCapacity(
   {
     cache.SetMeshRebuildFocus(coord, 4, 1);
     cache.MarkDirtyPriority(coord);
-    Expect(cache.GetCaptureStore()
-               .CaptureAndStore(world, coord, cache.GetChunkMeshRevision(coord))
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+               cache, world, coord, cache.GetChunkMeshRevision(coord))
                .has_value(),
            "bounded awaiting-field fixture captures actual source");
     Expect(cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0)
@@ -3852,8 +4024,10 @@ static void TestPackedGeometryWaitsForPhysicalLight(
                       epoch, chunk->GetIncarnation());
     const auto snapshot =
         ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
-    Expect(!snapshot.renderLight && snapshot.provisionalLightPreview,
-           "packed source geometry precedes physical calculation proof");
+    Expect(!snapshot.renderLight && !snapshot.provisionalLightPreview &&
+               snapshot.lightInputs == MeshLightInputs::PhysicalField,
+           "packed source is light-free geometry before physical calculation "
+           "proof");
     ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, snapshot, registry);
     for (int tick = 0; tick < 8 && cache.GetPendingGpuAppliesCount(); ++tick)
     {
@@ -4120,8 +4294,8 @@ static void TestFirstComputedLightPublication(
       auto input = ChunkMeshSnapshot::Capture(world, root, 0);
       input.sourceWorldEpoch = epoch_cache.GetCaptureStore().WorldEpoch();
       epoch_cache.GetCaptureStore().BumpWorldEpoch();
-      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(epoch_cache,
-                                                               input, registry),
+      Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
+                 epoch_cache, world, input, registry),
              "old captured epoch cannot borrow current epoch for GPU light "
              "preparation");
       Expect(prepare_calls == 0,
@@ -4131,24 +4305,24 @@ static void TestFirstComputedLightPublication(
       auto missing = current;
       missing.sourceWorldEpoch = 0;
       Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                 epoch_cache, missing, registry),
+                 epoch_cache, world, missing, registry),
              "unowned raw capture cannot acquire current render epoch");
       auto future = current;
       ++future.sourceWorldEpoch;
       Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                 epoch_cache, future, registry) &&
+                 epoch_cache, world, future, registry) &&
                  prepare_calls == 0,
              "future source epoch cannot allocate renderer resources");
       Expect(ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                 epoch_cache, current, registry),
+                 epoch_cache, world, current, registry),
              "current capture owner epoch can prepare a compatible binding");
       Expect(
           !epoch_cache.GetCaptureStore().TryCommit(
               root, 0, epoch_cache.GetCaptureStore().WorldEpoch(), input,
               nullptr),
           "capture store cannot relabel old owned snapshot with current epoch");
-      auto stored =
-          epoch_cache.GetCaptureStore().CaptureAndStore(world, root, 0);
+      auto stored = ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+          epoch_cache, world, root, 0);
       Expect(
           stored && stored->sourceWorldEpoch ==
                         epoch_cache.GetCaptureStore().WorldEpoch(),
@@ -4163,7 +4337,7 @@ static void TestFirstComputedLightPublication(
                                                             light);
           });
       Expect(
-          !ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(epoch_cache,
+          !ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(epoch_cache, world,
                                                             current, registry),
           "resource callback epoch transition cannot publish an old candidate");
       auto worker_input = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
@@ -4181,9 +4355,9 @@ static void TestFirstComputedLightPublication(
              "epoch");
       epoch_cache.SetPrepareRenderLightFn({});
       Expect(!ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                 epoch_cache, input, registry) &&
+                 epoch_cache, world, input, registry) &&
                  ChunkMeshCaptureAdmissionTestAccess::PrepareOnly(
-                     epoch_cache, worker_input, registry),
+                     epoch_cache, world, worker_input, registry),
              "capture epoch authority also applies without an optional GPU "
              "callback");
     }
@@ -4234,9 +4408,10 @@ static void TestFirstComputedLightPublication(
                                          chunk->GetContentRevision());
     Expect(demand.Find(root)->published_light_rev == 0,
            "fixture has no predecessor publication");
-    Expect(
-        cache.GetCaptureStore().CaptureAndStore(world, root, geom).has_value(),
-        "fixture captures exact current first-mesh inputs");
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world,
+                                                                   root, geom)
+               .has_value(),
+           "fixture captures exact current first-mesh inputs");
     const auto scheduled =
         cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
     if (scheduled.Scheduled != 1)
@@ -4445,8 +4620,8 @@ static void TestFirstComputedLightPublication(
            "packed failure reaches actual resource preparation callback");
     cache.MarkDirtyPriority(root);
     cache.GetCaptureStore().Invalidate(root);
-    Expect(cache.GetCaptureStore()
-               .CaptureAndStore(world, root, cache.GetChunkMeshRevision(root))
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+               cache, world, root, cache.GetChunkMeshRevision(root))
                .has_value(),
            "resource-rejected async candidate recaptures current geometry");
     const auto retry_schedule =
@@ -4547,6 +4722,7 @@ static void TestFirstComputedLightPublication(
       const auto before_field_only_count = sync_cache.GetPublishCount(root);
       const auto before_field_only_vertices = sync_cache.GetGreedyVertexCount();
       const auto before_field_only_builds = sync_mesher.builds.load();
+      const auto before_field_only_root_builds = sync_mesher.BuildsFor(root);
       const auto sync_epoch = sync_cache.GetCaptureStore().WorldEpoch();
       sync_cache.SetRepairGuardWorld(&world);
       for (const bool emitter_present : {true, false})
@@ -4582,6 +4758,40 @@ static void TestFirstComputedLightPublication(
             root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
         sync_cache.RebuildDirtyChunksWithStats(world, registry, 100, 100, false,
                                                0);
+        if (sync_cache.GetPublishedRenderLightBinding(root) !=
+                current_binding ||
+            !current_binding->Matches(sync_epoch, current_geometry,
+                                      *new_light) ||
+            sync_cache.GetPublishCount(root) != before_field_only_count ||
+            sync_mesher.builds != before_field_only_builds ||
+            sync_cache.GetMeshedLightRevision(root) !=
+                chunk->GetLightFieldRevision() ||
+            sync_cache.GetGreedyVertexCount() != before_field_only_vertices)
+          std::cerr << "field-only activation diagnostic emitter="
+                    << emitter_present << " same_binding="
+                    << (sync_cache.GetPublishedRenderLightBinding(root) ==
+                        current_binding)
+                    << " binding_matches="
+                    << current_binding->Matches(sync_epoch, current_geometry,
+                                                *new_light)
+                    << " publish=" << sync_cache.GetPublishCount(root) << "/"
+                    << before_field_only_count
+                    << " builds=" << sync_mesher.builds << "/"
+                    << before_field_only_builds
+                    << " root_builds=" << sync_mesher.BuildsFor(root) << "/"
+                    << before_field_only_root_builds
+                    << " emitter_builds=" << sync_mesher.BuildsFor({1, 0, 1})
+                    << " light=" << sync_cache.GetMeshedLightRevision(root)
+                    << "/" << chunk->GetLightFieldRevision()
+                    << " vertices=" << sync_cache.GetGreedyVertexCount() << "/"
+                    << before_field_only_vertices
+                    << " geom=" << sync_cache.GetChunkMeshRevision(root) << "/"
+                    << sync_cache.GetMeshPublishRevs(root).geom_rev
+                    << " active=" << sync_cache.HasInflightMeshBuild(root)
+                    << " dirty=" << sync_cache.IsChunkMeshDirty(root)
+                    << " field_queue="
+                    << sync_cache.GetPublishedLightRefreshPendingCount()
+                    << '\n';
         Expect(
             sync_cache.GetPublishedRenderLightBinding(root) ==
                     current_binding &&
@@ -4589,7 +4799,7 @@ static void TestFirstComputedLightPublication(
                                          *new_light) &&
                 current_binding->ShaderWords() == current_words &&
                 sync_cache.GetPublishCount(root) == before_field_only_count &&
-                sync_mesher.builds == before_field_only_builds &&
+                sync_mesher.BuildsFor(root) == before_field_only_root_builds &&
                 sync_cache.GetMeshedLightRevision(root) ==
                     chunk->GetLightFieldRevision() &&
                 sync_cache.GetGreedyVertexCount() == before_field_only_vertices,
@@ -6123,6 +6333,7 @@ int main(int argc, char **argv)
   TestSecondPlaneGeometryParity(registry, definitions.get());
   TestPhysicalCaptureOwnership(registry, definitions.get());
   TestMeshResultCaptureOwnership(registry, definitions.get());
+  TestUnknownGeometryDefersPhysicalBuild(registry, definitions.get());
   TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);

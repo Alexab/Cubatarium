@@ -8184,7 +8184,8 @@
         "Defer physical worker construction while actual geometric dependencies remainUnknown, preserving exact queued section ownership and triggering data completion rather than repeated doomed mesh work.",
         "Then complete semantic geometry/optics catalog partition, persisted content certificates, full independentRGB/transparency/backend/native and controlled performance/memory acceptance."
       ],
-      "native": "No native run for this opt-in contract foundation. Latest whole-route verification remains incomplete:ae7657bcftimeout600under measured hostCPU contention; last completed6b369f738depth15/14860FAIL retained."
+      "native": "No native run for this opt-in contract foundation. Latest whole-route verification remains incomplete:ae7657bcftimeout600under measured hostCPU contention; last completed6b369f738depth15/14860FAIL retained.",
+      "runtime_default_status_superseded_by": "runtime_physical_geometry_activation"
     },
     "owned_physical_capture_policy": {
       "status": "Owned capture policy and independent generation now pass through production main-thread/prefetch/optional-worker capture tokens, store admission and mesh dependency stamps. Default runtime policy remains Baked until mesh-result/application transition is complete; full S5 remains open.",
@@ -8216,7 +8217,8 @@
         "Remove physical reliance on legacy preview, light-halo stale classification and baked-dark retention. Actual compatible current field proof and receiver resource preparation remain mandatory.",
         "Complete semantic catalog separation, persistence, original native first-publication counterexample closure, RGB/transparency/backend matrix and controlled performance/memory acceptance."
       ],
-      "native": "No application build or native flight for this intermediate capture-owner change. Latest whole-route ae7657bcf timeout FAIL and last completed 6b369f738 depth 15/14860 FAIL remain authoritative."
+      "native": "No application build or native flight for this intermediate capture-owner change. Latest whole-route ae7657bcf timeout FAIL and last completed 6b369f738 depth 15/14860 FAIL remain authoritative.",
+      "runtime_default_status_superseded_by": "runtime_physical_geometry_activation"
     },
     "mesh_result_capture_policy_ownership": {
       "status": "Original capture policy/generation now travels through actual async mesh results, pending GPU snapshots, retained CPU/GPU geometry and synchronous physical mesh results. Receiver checks reject obsolete generations and unsupported physical consumers before apply and after resource preparation. Runtime remains Baked until transition ownership and physical preview/dark/empty policies are completed.",
@@ -8251,7 +8253,42 @@
         "Physical captures must bypass legacy first-mesh preview/light-halo invalidation and baked-dark retention decisions; zero baked bytes are a geometry format. Empty output still requires actual geometry absence proof, and actual private calculated light is still mandatory for drawable publication.",
         "Defer work while geometric dependencies remainUnknown, preserve exact section demand, then finish semantic geometry/optics catalog separation, persisted certificates and complete independent native RGB/transparency/backend/performance/memory acceptance."
       ],
-      "native": "No application/native verification for this intermediate change. Latest ae7657bcf whole-route timeout FAIL and completed6b369f738 depth15/14860FAIL remain open; do not infer visual PASS from these tests."
+      "native": "No application/native verification for this intermediate change. Latest ae7657bcf whole-route timeout FAIL and completed6b369f738 depth15/14860FAIL remain open; do not infer visual PASS from these tests.",
+      "runtime_default_status_superseded_by": "runtime_physical_geometry_activation"
+    },
+    "runtime_physical_geometry_activation": {
+      "status": "PhysicalField is now the production capture policy for Greedy Full worlds with an independent-field consumer. Baked remains the compatibility policy for Flat/legacy/unsupported consumers. All original S0..S6 acceptance remains required; native verification for this revision is pending.",
+      "implementation": [
+        "ConfigureCapturePolicy runs before capture, schedule, CPU/retained/GPU drains and synchronous rebuild. Policy changes cancel outstanding capture/mesh work, release original retained/staging/PBO resources, and requeue exact resident targets without changing geometry revisions or world/field epoch. Published predecessors remain owned until prepared replacements exist.",
+        "Published cached geometry is also queued across policy changes, preserving its field/geometry resources while a supported replacement is admitted. Full to Flat to Full is tested through the real prefetch entrypoint with the same source revision.",
+        "Physical producers do not enter legacy first-mesh preview. Physical valid empty results bypass baked halo stale classification but still need actual geometry absence proof. Physical geometry edits cannot use the Baked stale-geometry fallback.",
+        "Unknown axial geometry defers both async admission paths and synchronous/immediate meshing while preserving queued data debt. Actual data arrival captures/builds the original target once, then retains it until calculated field and resource proof are current.",
+        "Independent-field CPU/GPU publication classifies readiness using the actual paired field, not the zero baked format. A ready physical CPU successor retires a packed predecessor, including an actually calculated all-zero field. True preparation refusal retains original packed bytes and original field lease plus the completed CPU candidate.",
+        "Both cached and witness stale-dark scanners skip baked-vertex comparisons for published independent-field geometry. Field refresh and resource liveness have separate ownership; legal zero field does not create a geometric repair."
+      ],
+      "verification": {
+        "initial_format_counterexamples": "build/desktop-msvc/engine-physical-policy-activation-tests.log",
+        "physical_cpu_gpu_contract": "build/desktop-msvc/engine-physical-policy-contract-tests.log",
+        "field_global_counter_diagnostic": "build/desktop-msvc/engine-physical-policy-field-attribution-test.log",
+        "field_counter_correction": "CountingPhysicalMesher now records builds per coordinate under a mutex. The earlier global7->8 change did not rebuild root (5->5), alter its binding, publication, source/light revisions or vertex count. Tests retain a no-root-remesh assertion instead of equating unrelated global work with a root remesh. The other coordinate is not attributed to the emitter (its recorded count was0).",
+        "before_transition_extensions": "build/desktop-msvc/engine-physical-policy-unknown-inputs-fourteen-tests.log",
+        "transition_cpu_and_actual_gpu": "build/desktop-msvc/engine-physical-policy-transition-tests.log",
+        "negative_controls": "build/desktop-msvc/engine-physical-activation-v3-negative-controls.json",
+        "inherited_same_source_controls": "build/desktop-msvc/engine-physical-activation-v2-negative-controls.json",
+        "expected_failure_mutations": 4,
+        "controls": "Disable production physical policy; disable unknown-data deferral; restore baked stale-dark scans; disable ready CPU replacement of packed geometry. All expectedFAIL on the exact restored source identity. The replacement control uses actual desktop GL4.3 gpu_material_visibility_driver_test, whose material suite invokes the packed artifact ownership fixture.",
+        "control_orchestration_limit": "The v1 runner expected a later assertion but the new unknown-geometry test caught disabled policy earlier. The v2 fourth control chose GL3.3, which does not invoke the packed artifact fixture; that control passed and was correctly not accepted. Both attempts restored sources and14ReleaseGREEN. v3 preserves those receipts, imports the three validated same-hash v2 controls, reruns the fourth on GL4.3, then restores and verifies the full matrix.",
+        "exact_source_restore": true,
+        "cache_source_sha256": "922941689a31c85d5455b068b95605bb597c91a14416802d402f72ea11d0db49",
+        "restored_matrix": "build/desktop-msvc/engine-physical-activation-v3-restored-fourteen-tests.log",
+        "result": "14/14 Release PASS49.14seconds; actual desktop GL3.3/4.3 and GLES consumer drivers included. Async and sync data-completion scenario proves zero doomed builds, one geometry build, five exposed cube faces against a loaded undrawn neighbor, then one publication after actual field calculation. Original epochs/stamps are not relabeled.",
+        "native": "Application build and required World_261 wet-negative-cave flight pending. Unit/driver success is not whole-world visual or performance acceptance."
+      },
+      "remaining": [
+        "Run mandatory Release application build and a provenance-checked no-teleport19chunk24inspection wet native flight. Preserve previous completed15/14860depthFAIL and the later timeout; close first-publication counterexamples with new framebuffer evidence, not readiness metadata.",
+        "Complete cancellation/source-revision revalidation beyond capture-policy transitions, provider/storage lifecycle and full backend/Flat/edit/return/eviction/radius8 acceptance.",
+        "Finish semantic geometry-vs-optics catalog identity, persisted content certificates and algorithm/profile compatibility, independent nonzero RGB/wet/transparency references, CPU/GPU solver/backend matrix, controlled performance/memory and whole-pipeline readiness prediction."
+      ]
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8287,9 +8324,9 @@
       "Runtime-verified synchronous native flight harness",
       "Required Release builds and full GPU/sync dry frontier flights; retained CPUwet evidence"
     ],
-    "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
+    "S5": "Production Greedy Full geometry capture now uses PhysicalField; CPU/GPU/retained/synchronous owners carry versioned policy and validate actual private field separately. Legacy preview, stale-dark scans and packed retention no longer read zero baked data as missing light. Unknown data defers builds.14ReleaseGREEN and4expected-failure activation controls with exact source restoration. Full native/RGB/backend/persistence/performance acceptance remains open.",
     "remaining_critical_path": [
-      "Physical merge contract and versioned capture/store/mesh-result/CPU+GPU receiver ownership are Release verified (14/14, three mesh-owner negative mutations with exact restoration, in addition to earlier capture controls). Runtime remains Baked: finish atomic policy transitions/cancellation, physical preview/empty/dark-retention behavior, unknown-geometry scheduling and full native acceptance before claiming S5 completion.",
+      "Physical geometry policy is active for supported Full consumers and locally verified, including data completion, exact target transition ownership and ready CPU replacing packed geometry. Mandatory application build and provenance-checked native first-publication/visual acceptance for this activation are next; prior15/14860depthFAIL and timeout remain open.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
