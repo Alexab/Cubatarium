@@ -29,7 +29,8 @@ class PublicationDiagnosticsTest(unittest.TestCase):
             f"{key}={value}" for key, value in fields.items())
 
     def test_rotation_joins_consecutive_samples_and_retains_depth_failure(self):
-        fault = dict(coord=[-5, -3, 3], faults=78, no_published_geometry=78)
+        fault = dict(coord=[-5, -3, 3], faults=78, no_published_geometry=78,
+                     first_frame_epoch=360, last_frame_epoch=362)
         report = self.run_trace({
             "game.log.INFO.001": [self.watch(360), self.watch(361)],
             "game.log.INFO.002": [self.watch(362),
@@ -42,6 +43,25 @@ class PublicationDiagnosticsTest(unittest.TestCase):
         self.assertEqual(section["repair_actions"]["first_mesh_ticket_rejected"], 1)
         self.assertEqual(section["timeline"][0]["event"], "resource")
         self.assertNotIn("published", section)
+        self.assertEqual([row["frame_epoch"] for row in section["fault_boundary_watch"]],
+                         [360, 362])
+
+    def test_active_source_can_be_waiting_for_light_instead_of_a_cpu_worker(self):
+        fault = dict(coord=[-5, -3, 3], faults=2, first_frame_epoch=269,
+                     last_frame_epoch=269, work_owner_flag_counts={"2": 2})
+        report = self.run_trace({"game.log.INFO.001": [
+            self.watch(269, queue_kind=0, inflight=1, awaiting_light=1),
+            self.watch(269, queue_kind=0, inflight=1, awaiting_light=1),
+            self.watch(269, queue_kind=0, inflight=1, awaiting_light=0),
+        ]}, [fault])
+        section = report["sections"][0]
+        self.assertEqual(section["queue_only_samples"], 0)
+        self.assertEqual(section["fault_boundary_watch"][0]["awaiting_light"], 1)
+        self.assertEqual(len(section["fault_boundary_watch"]), 1)
+        self.assertEqual(section["fault_boundary_watch_conflicts"], 1)
+        self.assertEqual(section["depth_fault_attribution"]["work_owner_flag_counts"], {"2": 2})
+        self.assertNotIn("cpu_builder", section)
+        self.assertEqual(len(report["analyzer_sha256"]), 64)
 
     def test_unknown_watch_owners_do_not_become_zero(self):
         report = self.run_trace({"game.log.INFO.001": [

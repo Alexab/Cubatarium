@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -21,6 +22,10 @@ EXECUTORS = ("inflight", "capture_pending", "awaiting_light", "light_refresh")
 def analyze(artifacts: Path, verdict: dict) -> dict:
     faults = verdict.get("components", {}).get("fixture_opaque_depth", {}).get(
         "fault_attribution", {}).get("sections", [])
+    fault_boundaries = {
+        tuple(fault["coord"]): {fault.get("first_frame_epoch"), fault.get("last_frame_epoch")}
+        for fault in faults
+    }
     sections: dict[tuple[int, ...], dict] = {}
     malformed = 0
     logs = sorted((artifacts / "logs").glob("*.log.INFO.*"))
@@ -65,6 +70,19 @@ def analyze(artifacts: Path, verdict: dict) -> dict:
                     malformed += 1
                     section["_run"] = None
                     continue
+                if frame in fault_boundaries.get(key, ()):
+                    sample = {
+                        "frame_epoch": frame, "revision": revision,
+                        "queue_kind": int(fields["queue_kind"]),
+                        **dict(zip(EXECUTORS, owners)),
+                    }
+                    boundary = section.setdefault("fault_boundary_watch", [])
+                    prior = next((row for row in boundary if row["frame_epoch"] == frame), None)
+                    if prior is None:
+                        boundary.append(sample)
+                    elif prior != sample:
+                        section["fault_boundary_watch_conflicts"] = section.get(
+                            "fault_boundary_watch_conflicts", 0) + 1
                 section["maximum_observed_queue_age"] = max(
                     age, section["maximum_observed_queue_age"])
                 if not queued or any(owners):
@@ -90,12 +108,17 @@ def analyze(artifacts: Path, verdict: dict) -> dict:
         section["trace_observed"] = bool(section.get("events"))
     return {
         "schema": "mesh-publication-diagnostics.v1",
+        "analyzer_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "log_files": len(logs), "malformed_rows": malformed,
         "sections": [sections[key] for key in sorted(sections)],
         "scope": "Selected CUBA_TRACE_CHUNK scheduling observations plus ray-repair logs. "
                  "Queue-only means no executor reported by that watch sample; it is not "
                  "a proof of permanent starvation or its cause. Frame gaps/revisions break "
                  "runs. Resource preparation is not publication. Missing trace is unknown. "
+                 "Fault-boundary watches precede that tick's work and are not exact pixel-time "
+                 "stage samples; conflicting same-frame watches are counted. Renderer "
+                 "owner bit 1 (mask 2) is an aggregate active-source flag, "
+                 "not proof that a CPU builder is executing. "
                  "Independent depth faults are retained verbatim and never overridden.",
     }
 

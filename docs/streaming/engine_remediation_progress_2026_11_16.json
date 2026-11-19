@@ -7908,7 +7908,12 @@
     "automated_publication_trace_analysis": {
       "implementation": "tools/analyze_mesh_publication.py streams rotated INFO logs and joins selected watch/enqueue/schedule/resource events plus screen-ray repair actions to independent depth-fault section attribution. engine_smoke_run writes mesh-publication-diagnostics.json automatically after every terminal native run.",
       "validation": "4parser regression tests and21existing smoke-runner testsPASS; applied to existing d782failed native:5rotated logs,0malformed rows,selected135consecutive queue-only samples313..447.",
-      "scope": "Diagnostic only; missing owner fields remain unknown, gaps/revisions/active ownership break runs, resource preparation is not publication. It neither modifies depth verdict nor accepts ready flags in place of pixels."
+      "scope": "Diagnostic only; missing owner fields remain unknown, gaps/revisions/active ownership break runs, resource preparation is not publication. It neither modifies depth verdict nor accepts ready flags in place of pixels.",
+      "fault_boundary_followup": {
+        "implementation": "Join selected watches at first/last independently attributed fault frames, retain at most2distinct boundary frames and count conflicting same-frame observations. Include analyzer SHA256; owner mask2never classified as CPU execution.",
+        "validation": "5parser tests plus21existing smoke-runner testsPASS. Applied post-terminal to6b369f738native: selected269watch awaiting_light1, no same-frame conflict.",
+        "scope": "Beginning-of-tick watch is not an exact pixel-time stage sample. Raw depth verdict unchanged."
+      }
     },
     "screen_ray_first_publication_service": {
       "status": "Deterministic ray-prioritized FirstMesh service repaired/tested,13ReleaseGREEN24.53seconds; service-disabled negative control expectedFAIL with exact restoration/GREEN. Required Release app built. Native stillFAIL21/13924over8sections; original class remains open.",
@@ -7982,11 +7987,16 @@
           "Selected target was enqueued11times,9with unknown geometry input mask2 before its negative-X neighbor was known, then known/uncertified319 and certified323. Priority does not remove initial capture/geometry availability waste.",
           "Residual(-4,-3,3) ray witness195has drawable0, published_geom0, existing priorityRemesh queue2 and visible_geometry_promoted1. FirstMesh service currently only covers queue1; a solid exact witness in queue2 can still miss the FirstMesh reservation.",
           "Some remaining fault sections have a live CPU builder instead of queue-only ownership. Complete whole-pipeline latency/readiness scheduling remains necessary."
-        ]
+        ],
+        "attribution_erratum": {
+          "original_interpretation": "Some remaining fault sections have a live CPU builder instead of queue-only ownership.",
+          "correction": "Renderer mask2uses aggregate HasInflightMeshBuild, not AsyncBuilder::IsInFlight. It can denote retained geometry awaiting field pairing or field refresh. Prior raw counts are preserved; CPU execution cannot be inferred from mask2alone.",
+          "basis": "src/Render/Engine/GeometryEngine.cpp renderer_pixel_voxel_chunk_work_owner_flags and src/Render/Mesh/ChunkMeshCache.cpp HasInflightMeshBuild;6b369f738selected269watch has awaiting_light1 with rawmask2."
+        }
       }
     },
     "ray_first_publication_queue_classification": {
-      "status": "Implemented; actual pre-focus Remesh ownership regressionRED thenGREEN for3initial queue classes. Classification-disabled control expectedFAIL; exact source restoration and full related-target rebuild/13Release checksGREEN. Required Release app/native pending.",
+      "status": "Implemented and regression-verified for3pre-focus queue classes; classification-disabled negative control expectedFAIL, exact source restore, full related rebuild and13ReleaseGREEN25.76seconds. Required Release app built. Full wet native stillFAIL15/14860over7sections; original class remains open.",
       "native_counterexample": "a2474e2ccwet FAIL21/13924. Exact ray witness(-4,-3,3) at195has drawable0/published_geom0 but priorityRemesh queue2 and promoted1; remaining FM-only slot reservation can still bypass it.",
       "implementation": "PrioritizeScreenRayRepair transfers an existing Dirty ticket with no drawable from ordinary/priority Remesh to FirstMesh using the existing non-revision-bumping dirty-set transfer. It retains one queue owner, original revision, enqueue age and column count; the existing bounded ray-FM lane then services it. Drawable repairs keep their Remesh path. No new geometry/light proof or admission bypass.",
       "regression": "Actual world/physical light/CPU worker fixture covers initialFirstMesh, ordinaryRemesh and priorityRemesh. Remesh cases are enqueued before focus approaches, then the focus moves to the real target. With108nearer unrelated FirstMeshes, zero quota starts no job; one FM slot serves exact ray target and actual worker publishes current field. Nonzero age/count/revision retained across classification/repeated hints; eviction removes hint and cannot create detached work.",
@@ -7999,7 +8009,73 @@
         "exact_source_restore": true,
         "restored_green": true
       },
-      "limits": "Required app/native confirmation pending. Residual first-publication faults, initial Unknown geometry/light capture churn, full geometry/light separation, lifecycle/backend/persistence/visual/performance acceptance remain open."
+      "limits": "Post-terminal reanalysis with fault-boundary watch join. Does not change original native verdict or provenance. FullRGB/transparencyUNTESTED; performanceFAIL; no statistical improvement claim from separate runs.",
+      "native": {
+        "source_commit": "6b369f73817cf7d74ef6999f002f93f606ffdc65",
+        "artifact": "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
+        "result": "FAIL",
+        "app_exit": 0,
+        "wrapper_exit": 1,
+        "route_chunks": 19,
+        "outside_initial_samples": 934,
+        "relocations": 0,
+        "inspection_verified": 24,
+        "inspection_requested": 24,
+        "startup_sections": 1176,
+        "startup_light_unready": 0,
+        "startup_publication_unready": 0,
+        "opaque_depth_faults": 15,
+        "opaque_depth_checked": 14860,
+        "depth_epochs": 115,
+        "affected_sections": 7,
+        "fault_owner_masks": {
+          "2": 8,
+          "1": 7
+        },
+        "selected_fault_boundary_watch": [
+          {
+            "frame_epoch": 269,
+            "revision": 4,
+            "queue_kind": 0,
+            "inflight": 1,
+            "capture_pending": 0,
+            "awaiting_light": 1,
+            "light_refresh": 0
+          }
+        ],
+        "selected_retained_geometry_watch_count": 43,
+        "selected_retained_geometry_frame_range": [
+          228,
+          270
+        ],
+        "analysis": {
+          "result": "StillFAIL15/14860opaque-depth checks across115epochs and7sections; all sampled fault voxels match independent reference and have no publication.",
+          "selected_classification": "Target(-4,-3,3) now scheduled throughFirstMesh, source4captured227with7known geometry inputs, no new target enqueue until current-field resource preparation270.",
+          "selected_field_pairing": "43beginning-of-tick observations228..270retain computed geometry awaiting a compatible field pairing. Fault boundary269has queue0,inflight1,awaiting_light1,capture_pending0,light_refresh0 and no conflicting same-frame watch. Exact field availability/settlement/resource checks at each drain were not logged; do not infer which condition held for all43frames.",
+          "owner_masks": "Mask2comes from cache.HasInflightMeshBuild and denotes aggregate active source, including retained geometry and field refresh. It does not establish an executing CPU builder. Selected2fault samples269overlap retained-geometry watch; other mask2sections lack this selected detailed trace.",
+          "remaining": "Seven mask1and eight mask2fault samples still require first-publication/whole-pipeline latency closure. Initial capture still builds with unknown geometry and includes light-dependent validity/merge inputs. FullS0..S6scope unchanged."
+        },
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "performance": {
+          "status": "FAIL",
+          "metrics": {
+            "wall_ms_med": 154.9265,
+            "wall_ms_fly_med": 156.538,
+            "world_streaming_phase_ms": 107.141,
+            "scene_ms": 40.7219,
+            "post_stop_readiness_debt_max": 0.0,
+            "post_stop_mesh_missing_max": 1.0,
+            "post_stop_visible_black_stalled_max": 2.0
+          },
+          "scope": "Intrusive diagnostics/captures; no controlled performance A/B."
+        }
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8028,7 +8104,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "a2474e2cc318b6356bb78b43a597bfa2a84008c4",
+    "latest_source_commit": "6b369f73817cf7d74ef6999f002f93f606ffdc65",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -8037,38 +8113,57 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Pre-focus ordinary/priorityRemesh tickets without a drawable now transfer to FM for exact ray service, preserving age/revision/owner. Three actual-worker scenarios, classification-disabled control and13Release checksGREEN; required app/native pending. Unknown-geometry capture churn and actual worker latency remain; finish initial capture/CPU/GPU merge/light dependency separation.",
+      "Pre-focus ordinary/priorityRemesh ray witnesses now transfer toFM without age/revision/owner loss (3worker scenarios/control13GREEN). Native stillFAIL15/14860: selected geometry retained228..270awaiting field pairing, fault269before resource preparation270. Do not infer CPU work from mask2. Resolve actual light proof/settlement/resource eligibility and complete initial capture/CPU/GPU merge/light dependency separation.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. a2474e2ccwet native21/13924faults remainsFAIL; d782448/8312andall prior failures are preserved. FullS0..S6scope unchanged, including capture/geometry/light separation and visual/backend/persistence/performance acceptance.",
+    "completion": "Not established. Latest6b369f738wet native15/14860remainsFAIL; earlier21/13924and448/8312preserved. FullS0..S6scope unchanged; retain independent RGB/transparency, backend/persistence and performance acceptance.",
     "latest_native_counterexample": {
-      "source_commit": "a2474e2cc318b6356bb78b43a597bfa2a84008c4",
-      "artifact": "build/desktop-msvc/engine-ray-first-publication-wet-native/ray-first-publication-observation.json",
+      "source_commit": "6b369f73817cf7d74ef6999f002f93f606ffdc65",
+      "artifact": "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
       "result": "FAIL",
       "app_exit": 0,
       "wrapper_exit": 1,
       "route_chunks": 19,
-      "outside_initial_samples": 1041,
+      "outside_initial_samples": 934,
       "relocations": 0,
       "inspection_verified": 24,
       "inspection_requested": 24,
       "startup_sections": 1176,
-      "startup_unready_light": 0,
-      "startup_unready_publication": 0,
-      "opaque_depth_faults": 21,
-      "opaque_depth_checked": 13924,
-      "depth_epochs": 109,
-      "affected_sections": 8,
-      "selected_section_fault_attribution_present": false,
-      "selected_longest_queue_only_run": {
-        "first_frame_epoch": 283,
-        "last_frame_epoch": 319,
-        "samples": 37,
-        "revision": 2
+      "startup_light_unready": 0,
+      "startup_publication_unready": 0,
+      "opaque_depth_faults": 15,
+      "opaque_depth_checked": 14860,
+      "depth_epochs": 115,
+      "affected_sections": 7,
+      "fault_owner_masks": {
+        "2": 8,
+        "1": 7
       },
-      "selected_enqueue_count": 11,
+      "selected_fault_boundary_watch": [
+        {
+          "frame_epoch": 269,
+          "revision": 4,
+          "queue_kind": 0,
+          "inflight": 1,
+          "capture_pending": 0,
+          "awaiting_light": 1,
+          "light_refresh": 0
+        }
+      ],
+      "selected_retained_geometry_watch_count": 43,
+      "selected_retained_geometry_frame_range": [
+        228,
+        270
+      ],
+      "analysis": {
+        "result": "StillFAIL15/14860opaque-depth checks across115epochs and7sections; all sampled fault voxels match independent reference and have no publication.",
+        "selected_classification": "Target(-4,-3,3) now scheduled throughFirstMesh, source4captured227with7known geometry inputs, no new target enqueue until current-field resource preparation270.",
+        "selected_field_pairing": "43beginning-of-tick observations228..270retain computed geometry awaiting a compatible field pairing. Fault boundary269has queue0,inflight1,awaiting_light1,capture_pending0,light_refresh0 and no conflicting same-frame watch. Exact field availability/settlement/resource checks at each drain were not logged; do not infer which condition held for all43frames.",
+        "owner_masks": "Mask2comes from cache.HasInflightMeshBuild and denotes aggregate active source, including retained geometry and field refresh. It does not establish an executing CPU builder. Selected2fault samples269overlap retained-geometry watch; other mask2sections lack this selected detailed trace.",
+        "remaining": "Seven mask1and eight mask2fault samples still require first-publication/whole-pipeline latency closure. Initial capture still builds with unknown geometry and includes light-dependent validity/merge inputs. FullS0..S6scope unchanged."
+      },
       "provenance": {
         "exe": true,
         "config_restored": true,
@@ -8079,23 +8174,16 @@
       "performance": {
         "status": "FAIL",
         "metrics": {
-          "wall_ms_med": 139.3755,
-          "wall_ms_fly_med": 152.53750000000002,
-          "world_streaming_phase_ms": 104.681,
-          "scene_ms": 35.386250000000004,
+          "wall_ms_med": 154.9265,
+          "wall_ms_fly_med": 156.538,
+          "world_streaming_phase_ms": 107.141,
+          "scene_ms": 40.7219,
           "post_stop_readiness_debt_max": 0.0,
           "post_stop_mesh_missing_max": 1.0,
-          "post_stop_visible_black_stalled_max": 1.0
+          "post_stop_visible_black_stalled_max": 2.0
         },
-        "scope": "Intrusive diagnostics/captures; no controlled A/B, no performance acceptance."
-      },
-      "observations": [
-        "Full native FAIL21/13924opaque-depth faults over109epochs and8sections. All sampled fault voxels match independent reference and have no published geometry; owner counts={'1': 14, '2': 7}.",
-        "Selected(-5,-3,3) absent from depth fault attribution. It has59beginning-of-tick queue-only observations, longest consecutive run37at283..319, vs prior135at313..447. Current field resource prepared324 vs prior448; different-run frame counts are not a controlled latency/performance comparison.",
-        "Selected target was enqueued11times,9with unknown geometry input mask2 before its negative-X neighbor was known, then known/uncertified319 and certified323. Priority does not remove initial capture/geometry availability waste.",
-        "Residual(-4,-3,3) ray witness195has drawable0, published_geom0, existing priorityRemesh queue2 and visible_geometry_promoted1. FirstMesh service currently only covers queue1; a solid exact witness in queue2 can still miss the FirstMesh reservation.",
-        "Some remaining fault sections have a live CPU builder instead of queue-only ownership. Complete whole-pipeline latency/readiness scheduling remains necessary."
-      ]
+        "scope": "Intrusive diagnostics/captures; no controlled performance A/B."
+      }
     }
   }
 }
