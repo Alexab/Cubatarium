@@ -1,6 +1,9 @@
 #include "Blocks/BlockRegistry.h"
+#include "Core/FrameDeadline.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Core/RuntimeTuning.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -19,8 +22,59 @@ static void Expect(bool value, const char *message)
   }
 }
 
+static void TestRetiredUnloadCandidate()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  UBlockRegistry registry(nullptr);
+  // The cursor snapshots both columns; the second can retire before its turn.
+  const glm::ivec3 first(40, -4, 3), second(41, -4, 3);
+  world.SetBlock(first * CHUNK_SIZE, 8);
+  world.SetBlock(second * CHUNK_SIZE, 8);
+  UChunkStreamer streamer(world, registry, 1, 0, 319, -64);
+  streamer.SetMaxUnloadOpsPerFrame(1);
+  int saved = 0, unloaded = 0;
+  streamer.SetCallbacks(
+      nullptr, [&](glm::ivec3) { ++saved; }, nullptr, nullptr);
+  streamer.SetUnloadColumnCallback(
+      [&](glm::ivec3, int)
+      {
+        ++unloaded;
+        return true;
+      });
+  auto &tuning = URuntimeTuning::Get();
+  const int prior = tuning.UnloadAmortizeMode;
+  tuning.UnloadAmortizeMode = kUnloadAmortizeUB;
+  UFrameDeadline::Get().BeginFrame(0);
+  const PlayerCapsule cap;
+  const glm::vec3 eye(8, -60, 8);
+  streamer.UnloadPass({0, -4, 0}, eye, cap);
+  Expect(saved == 1 && unloaded == 1 &&
+             !world.GetChunkManager().HasChunk(first),
+         "first resident candidate saves once before eviction");
+  world.GetChunkManager().RemoveChunk(second);
+  streamer.UnloadPass({0, -4, 0}, eye, cap);
+  Expect(
+      saved == 1 && unloaded == 1,
+      "retired cursor candidate cannot save or purge a column with no terrain");
+  // Geometry outside the configured vertical domain cannot authorize saving
+  // an absent terrain column. It must not repeatedly delete its disk snapshot.
+  world.SetBlock({second.x * CHUNK_SIZE, -81, second.z * CHUNK_SIZE}, 8);
+  streamer.UnloadPass({0, -4, 0}, eye, cap);
+  streamer.UnloadPass({0, -4, 0}, eye, cap);
+  Expect(saved == 1 && unloaded == 1,
+         "out-of-profile geometry cannot authorize an empty terrain eviction");
+  world.SetBlock(second * CHUNK_SIZE, 50);
+  streamer.UnloadPass({0, -4, 0}, eye, cap);
+  Expect(saved == 2 && unloaded == 2 &&
+             !world.GetChunkManager().HasChunk(second),
+         "returned resident geometry has a fresh save obligation");
+  tuning.UnloadAmortizeMode = prior;
+}
+
 int main()
 {
+  TestRetiredUnloadCandidate();
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr);
   const glm::ivec3 center(-21, 0, 3);

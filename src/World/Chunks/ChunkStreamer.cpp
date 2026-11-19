@@ -42,6 +42,18 @@ void LogStreamerUnloadPhase(const char *phase, glm::ivec3 ground,
   CubatariumLogInfo("StreamerUnloadPhase", message);
 }
 
+// A cursor/deferred coordinate is only a scheduling hint. Another unload can
+// retire its geometry before it is visited; saving that absence would cause
+// persistence to classify the column as incomplete and delete its disk copy.
+bool HasResidentTerrainSlice(const UBlockWorld &world, glm::ivec3 ground,
+                             int min_cy, int max_cy)
+{
+  for (int cy = min_cy; cy <= max_cy; ++cy)
+    if (world.GetChunkManager().HasChunk({ground.x, cy, ground.z}))
+      return true;
+  return false;
+}
+
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
                                const PlayerCapsule &cap)
 {
@@ -795,6 +807,9 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       return true; // scanned ok, not a candidate
     }
 
+    if (!HasResidentTerrainSlice(World, ground, minCy, maxCy))
+      return true;
+
     bool keepColumn = false;
     for (int cy = keep_cy_min; cy <= keep_cy_max; ++cy)
     {
@@ -991,6 +1006,12 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
       ++ops;
       continue;
     }
+    if (!HasResidentTerrainSlice(World, ground, minCy, maxCy))
+    {
+      ++ops;
+      continue;
+    }
+
     bool keepColumn = false;
     for (int cy = keep_cy_min; cy <= keep_cy_max; ++cy)
     {

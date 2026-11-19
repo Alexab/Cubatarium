@@ -11824,5 +11824,101 @@
     "Resolve three missing nonempty metadata writes and unsaved/regenerated dependencies with owner-aware IO completion/cancellation evidence; preserve current restore guards.",
     "Continue full original S0..S6 plan without audit restart or narrowing success."
   ]
+},
+"retired_unload_save_disk_purge_regression_2026_11_19": {
+  "status": "native_cause_reproduced_and_regression_fix_green_native_fix_check_pending_full_S0_S6_active",
+  "native_before_fix": {
+    "artifacts": "build\\desktop-msvc\\engine-frozen-light-save-lifecycle-20261119-native",
+    "world": "EngineSmoke_33a36a5a6a754d38b5856523b26e19a4",
+    "captures": 247,
+    "captured_receipts": 1724,
+    "durable_files": 241,
+    "durable_receipts": 1694,
+    "outcomes": {
+      "discard_incomplete_queued": 34,
+      "stale_cleanup_done": 281,
+      "queued": 247,
+      "light_receipts_written": 247,
+      "slice_written": 2160,
+      "shutdown_state": 1
+    },
+    "all_six_missing_written_then_full_purged": true,
+    "missing_columns": [
+      {
+        "column": [
+          7,
+          6
+        ],
+        "exported": 0,
+        "written_then_full_purge": true
+      },
+      {
+        "column": [
+          7,
+          7
+        ],
+        "exported": 0,
+        "written_then_full_purge": true
+      },
+      {
+        "column": [
+          7,
+          8
+        ],
+        "exported": 0,
+        "written_then_full_purge": true
+      },
+      {
+        "column": [
+          6,
+          6
+        ],
+        "exported": 10,
+        "written_then_full_purge": true
+      },
+      {
+        "column": [
+          6,
+          7
+        ],
+        "exported": 10,
+        "written_then_full_purge": true
+      },
+      {
+        "column": [
+          6,
+          8
+        ],
+        "exported": 10,
+        "written_then_full_purge": true
+      }
+    ],
+    "shutdown": [
+      "I20261119 23:05:18.625730  5148 Log.cpp:601] [WorldColumnSave] outcome=shutdown_state pending_save_columns=0 pending_disk_columns=0 io_jobs=0 io_active=0 ready_saves=0 ready_loads=0 light_flags_in_flight=0 light_flags_dirty=0"
+    ],
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "scope": "19chunk motor route PASS; native overallUNTESTED, independent RGB/wet/transparency reference missing. All247cache writes completed,2160terrain slices written; six laterfull_column purges exactly account for30receipt loss. IO idle atshutdown excludes exit cancellation in this run. Does not retroactively prove old untraced run event sequence."
+  },
+  "fix": "ChunkStreamer cursor and deferred unload queues must recheck actual geometry residency within configured vertical domain before owner cleanup/save callbacks. Absent coordinates and out-of-profile-only geometry cannot authorize persistence purge. Returned resident geometry still saves. No incomplete-generation validity or light readiness gate weakened.",
+  "regressions": {
+    "baseline_red": {
+      "log": "build\\desktop-msvc\\retired-unload-20261119-red-test.log",
+      "assertion": "retired cursor candidate cannot save or purge a column with no terrain"
+    },
+    "green": true,
+    "matrix_tests": 33,
+    "matrix_log": "build\\desktop-msvc\\retired-unload-20261119-matrix-tests.log",
+    "scope": "actual public UnloadPass cursor retirement, out-of-profile stale column, returned resident save; existing32 regression matrix. Deferred guard uses same residency predicate but separate deferred scheduling not directly exercised."
+  },
+  "limits": [
+    "Headless regression demonstrates absent-cursor candidate bug; whether this guard alone removes all six native fullpurges still needs native evidence. Partial geometry recreated after eviction could require separate owner/incarnation protection.",
+    "Full S0..S6 stays active. Historical cache content mismatch, procedural regeneration, save/edit/return/reload compatibility, lifecycle/provider/cancellation, semantic identities, GPU/backend parity, independent RGB/wet/transparency and performance/memory remain open. Prior perfFAIL unchanged."
+  ]
 }
 }
