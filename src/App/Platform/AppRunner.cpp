@@ -1893,8 +1893,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       const auto column = ChunkResidencyTraceColumn();
       if (!column)
         return;
-      const auto &profile = world->BlockWorld.GetVerticalProfile();
-      const auto &manager = world->BlockWorld.GetChunkManager();
+      const auto &profile = world->GetBlockWorld().GetVerticalProfile();
+      const auto &manager = world->GetBlockWorld().GetChunkManager();
       for (int cy = profile.MinChunkY(CHUNK_SIZE);
            cy <= profile.MaxChunkY(CHUNK_SIZE); ++cy)
       {
@@ -3008,7 +3008,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 start_focus_cz = focus_chunk.z;
                 start_focus_captured = true;
                 TraceChunkResidencyRuntimeOwner(
-                    &world->BlockWorld.GetChunkManager(), focus_chunk);
+                    &world->GetBlockWorld().GetChunkManager(), focus_chunk);
                 trace_residency_snapshot("runtime_initial");
                 if (route_line_tracking_enabled)
                 {
