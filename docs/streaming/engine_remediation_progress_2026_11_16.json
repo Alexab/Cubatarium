@@ -11609,5 +11609,220 @@
   },
   "next": "Build committed Windows Release desktop, cold-start a copy of unchanged EngineSmoke_ad132419519846279e6e96bbedfad0ea and attribute refusals. Prior 77 refusal causes remain unproven until this run.",
   "scope": "Full original S0..S6 stays active. Optional save durability gap, motor return/edit/save/evict/reload, lifecycle/provider/cancellation, semantic identities, GPU/backend parity, independent RGB/wet/transparency, performance/memory and procedural AIR discovery remain open."
+},
+"persisted_light_refusal_native_attribution_2026_11_19": {
+  "status": "scoped_native_reason_attribution_verified_full_S0_S6_active",
+  "source_commit": "502d987c851f2b1fd0016babefd06cc306b34f8c",
+  "desktop_release": {
+    "exit": 0,
+    "log": "build/desktop-msvc/restore-reasons-desktop-build-20261119.log",
+    "static_verifier": "PASS,6systemDLLs"
+  },
+  "native_artifacts": "build/desktop-msvc/engine-frozen-light-reject-reasons-20261119-native",
+  "source_world": "EngineSmoke_ad132419519846279e6e96bbedfad0ea",
+  "source_world_sha256": "23973a119955e821cd2ee1d2d59083b36cd6bb84c84847a8c832662c9a24c16a",
+  "fixture_scene": null,
+  "native_startup": {
+    "schema": "engine-startup-smoke-verdict.v1",
+    "status": "PASS",
+    "components": {
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "observation": {
+        "status": "PASS",
+        "reason": "stationary_native_observation",
+        "samples": 40,
+        "maximum_drift_blocks": 0.0
+      },
+      "route": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "inspection": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "fixture_opaque_depth": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      }
+    },
+    "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+    "runner_exit_code": 1,
+    "inspection_evidence": {
+      "verified": 0,
+      "requested": 0,
+      "reason": "inspection_views_joined_to_png"
+    },
+    "publication_diagnostics": {
+      "artifact": "mesh-publication-diagnostics.json",
+      "scope": "diagnostics only; does not alter acceptance"
+    }
+  },
+  "counts": {
+    "restored": 307,
+    "rejected": 75,
+    "cancelled": 0,
+    "reject_content_mismatch": 75
+  },
+  "aggregate_events": 196,
+  "sample_count": 39,
+  "max_pending": 254,
+  "max_retained_bytes": 4033994,
+  "last_logged_pending": 44,
+  "provenance": {
+    "exe": true,
+    "config_restored": true,
+    "source_world": true,
+    "runtime_shader_assets": true,
+    "source_commit": true
+  },
+  "independent_disk_comparison": {
+    "method": "Read CCHK header/palette/RLE in Python matching BinaryChunkSerializer traversal and UChunk::LocalIndex; FNV1a64 over little-endian 16bit IDs; compare preserved source chunk hash with current native diagnostic and on-disk receipt expected hash. No source-world writes.",
+    "source_disk_matches_native_current": 30,
+    "receipt_matches_source_disk": 0,
+    "inputs_with_existing_binary_files": [
+      [
+        0,
+        4,
+        8
+      ],
+      [
+        1,
+        4,
+        8
+      ],
+      [
+        2,
+        3,
+        8
+      ],
+      [
+        3,
+        4,
+        8
+      ]
+    ],
+    "nine_samples_without_either_binary_or_json_chunk_files": [
+      [
+        6,
+        4,
+        6
+      ],
+      [
+        6,
+        4,
+        7
+      ]
+    ],
+    "assessment": "build/desktop-msvc/restore-reasons-native-assessment-20261119.json"
+  },
+  "capture_durable_gap": {
+    "capture_events": 247,
+    "unique_capture_columns": 247,
+    "duplicates": [],
+    "captured_receipts": 1724,
+    "last_capture_receipts": 1724,
+    "durable_files": 241,
+    "durable_receipts": 1694,
+    "missing_columns": [
+      {
+        "column": [
+          7,
+          6
+        ],
+        "exported": 0
+      },
+      {
+        "column": [
+          7,
+          7
+        ],
+        "exported": 0
+      },
+      {
+        "column": [
+          7,
+          8
+        ],
+        "exported": 0
+      },
+      {
+        "column": [
+          6,
+          6
+        ],
+        "exported": 10
+      },
+      {
+        "column": [
+          6,
+          7
+        ],
+        "exported": 10
+      },
+      {
+        "column": [
+          6,
+          8
+        ],
+        "exported": 10
+      }
+    ],
+    "mismatched_counts": [],
+    "no_observed_capture": []
+  },
+  "limits": [
+    "New native run classifies all75rejections as content_mismatch; this is not a one-to-one retrospective classification of earlier77 refusals. Scheduling changes counts (307restored vs293 before).",
+    "39bounded samples;30 independently match source disk geometry that differs from receipt. Nine samples in two absent-on-disk coordinates need procedural geometry/eviction provenance; exact timing/source of geometry change is unproven.",
+    "Missing6metadata files are distinct captured columns, not duplicates. Three contain0exports; three contain10each, accounting exactly for30receipt gap. Other241files match capture counts exactly. Completion/cancellation/purge cause remains unproven. AbortAsyncChunkIoFor calls CancelPending, including background IO, but no native cancellation trace proves this path caused the gap.",
+    "Startup49columns1176sections ready and40stationary observations support only startup readiness. No native visual/RGB/wet/transparency, backend parity or motion acceptance inferred. Lastloggedpending44 is not final queue emptiness proof.",
+    "Full S0..S6, prior perfFAIL and independent RGBUNTESTED remain; semantic identities, lifecycle/provider/cancellation, procedural AIR cache discovery, full motor return/edit/save/evict/reload and performance/memory matrix remain open."
+  ],
+  "next": [
+    "Resolve three missing nonempty metadata writes and unsaved/regenerated dependencies with owner-aware IO completion/cancellation evidence; preserve current restore guards.",
+    "Continue full original S0..S6 plan without audit restart or narrowing success."
+  ]
 }
 }
