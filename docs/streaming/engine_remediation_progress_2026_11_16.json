@@ -10536,5 +10536,215 @@
       "Build required Release Cubatarium from committed source and run wet native regression without changing diagnostics/route.",
       "Use retained isolated world and cold reload/return to inspect real metadata writes/restores/ownership, then add missing procedural AIR discovery and performance/lifecycle bounds without weakening readiness."
     ]
+  },
+  "persisted_section_light_column_IO_native_2026_11_19": {
+    "status": "desktop_and_scoped_native_verified_persistence_receipt_acceptance_failed_empty_exports_full_S0_S6_active",
+    "source_commit": "01ab21f0695c3f1ff41ca7d05bfff5e0a7473d55",
+    "checkout_commit": "01ab21f0695c3f1ff41ca7d05bfff5e0a7473d55",
+    "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-01ab21f",
+    "desktop": {
+      "build_exit": 0,
+      "log": "build/desktop-msvc/persisted-light-column-io-desktop-build-20261119.log",
+      "static_verifier": "PASS,6systemDLLs"
+    },
+    "native": {
+      "path": "build/desktop-msvc/engine-persisted-light-column-io-wet-20261119-native",
+      "retained_world": "bin/worlds/EngineSmoke_c3e36396355847bfbbe8c0db4b3f6628",
+      "parent_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3936
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "fixture": {
+        "status": "PASS",
+        "reason": "negative_wet_cave_observed",
+        "samples": 237
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 15253,
+        "faults": 0,
+        "frame_epochs": 117,
+        "skipped_unscoped_or_occluded": 291,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference",
+        "samples": 15544,
+        "captures": 121,
+        "attributed_samples": 0,
+        "faults": 0
+      },
+      "movement": {
+        "chunks_traveled_cheb": 19,
+        "teleport_cruise": false,
+        "diagnostic_relocations_after_start": 0,
+        "wall_elapsed_sec": 206.054
+      }
+    },
+    "persistence": {
+      "status": "FAIL_for_real_native_receipt_reuse",
+      "metadata_files": 247,
+      "total_bytes": 11835,
+      "exported_section_receipts": 0,
+      "finding": "Ordinary native save invokes the new writer but all247column files contain empty fields arrays. No cache reuse/reload success is established. The header-only core and actual unit IO paths pass, but production proof availability at save needs correction.",
+      "hypotheses": [
+        "SaveSessionSnapshot explicitly calls RefreshBlockRegistry before serializing columns; it reloads definitions/catalog. CaptureSectionLight currently requires proof catalog pointer equality with the refreshed registry, although persistence uses semantic signatures. Equivalent catalog refresh may invalidate export admission. This is an inference to verify, not a proven sole native cause.",
+        "Legacy AIR materialization, partial input eviction and pending-save absence evidence can also invalidate a retained field context before capture. Diagnose actual native capture refusal reasons; do not export stale fields by bypassing readiness."
+      ]
+    },
+    "performance": {
+      "status": "FAIL",
+      "metrics": {
+        "wall_ms_med": 20.6145,
+        "wall_ms_fly_med": 23.6899,
+        "post_stop_readiness_debt_max": 0.0,
+        "post_stop_mesh_missing_max": 1.0,
+        "post_stop_focus_dirty_med": 0.0
+      },
+      "failed_gates": [
+        "stream_pressure_red_rate_le_0_30",
+        "post_load_ring_not_ready_eq_0",
+        "mesh_async_floor_when_dirty",
+        "miss_stuck_max_run_sec_le_4",
+        "miss_end_eq_0",
+        "miss_end_stop_eq_0",
+        "post_stop_focus_miss_zero",
+        "post_stop_miss_low_cy_zero",
+        "post_stop_underfeet_ok_miss_zero",
+        "tail_focus_miss_zero",
+        "tail_miss_low_cy_zero",
+        "tail_underfeet_ok_miss_zero",
+        "opaque_idle_churn_max_le_120",
+        "emerge_spike_frac_le_0_05",
+        "cruise_schedule_ok_med_ge_2",
+        "mesh_schedule_retry_after_capture_gt_0",
+        "witness_latch_diet_share_ge_0_70",
+        "effective_holes_blink_rate_le_0_05",
+        "policy_headers_have_budget",
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5"
+      ],
+      "gates_stop": {
+        "post_stop_pending_med_le_15": true,
+        "post_stop_black_sticky_zero": true,
+        "post_stop_visible_black_no_ticket_zero": true,
+        "post_stop_visible_black_stalled_zero": true,
+        "post_stop_missing_zero": true,
+        "post_stop_visual_holes_zero": true,
+        "post_stop_effective_holes_zero": true,
+        "post_stop_pending_falling": true,
+        "post_stop_relight_active": true,
+        "post_stop_pending_not_plateau_8s": true,
+        "post_stop_healthy_fps_not_unfinished": true,
+        "post_stop_not_ready_falling": true,
+        "post_stop_focus_dirty_falling": true
+      },
+      "resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 203,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 40.4,
+          "p95": 56.6,
+          "max": 65.4
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 11.88125,
+          "p95": 51.5125,
+          "max": 54.35
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 6.96875,
+          "p95": 35.15,
+          "max": 49.225
+        },
+        "app_rss_mb_max": 691.14453125,
+        "system_available_memory_mb_min": 19243.2890625,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "limits": [
+      "0/15253is scoped near opaque depth, not RGB/transparency/wet composition. OverallUNTESTED and failed performance gates remain authoritative.",
+      "Stop readinessdebt0does not erase post-stop mesh-coverage proxy max1or establish all coverage/performance acceptance.",
+      "Do not cold-reload these empty caches and call that a persistence PASS. Real nonempty exports and positive restores with correct identities/dependencies are required.",
+      "Full S0..S6 remains incomplete: lifecycle/provider/cancellation, content certificates integration, semantic geometry/optics identity, GPU/backend parity, independent nonzero RGB/wet/transparency and full motor/performance/memory matrix."
+    ],
+    "next": [
+      "Add a regression for a semantically unchanged material catalog refresh before capture, plus a changed-optics refusal; verify the production snapshot ordering and capture refusal reasons.",
+      "Correct export admission only with proven content/solver/profile/material equivalence and still-current field/read sets. Add native capture diagnostics if needed; preserve stale/unknown rejection.",
+      "Repeat Release native save, require nonempty receipts, then cold reload/return with actual restore telemetry and full provenance."
+    ]
   }
 }
