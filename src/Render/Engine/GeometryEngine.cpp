@@ -80,6 +80,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -5857,6 +5858,98 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
 
 } // namespace
 
+namespace
+{
+void TraceSurfaceDrawState(const std::shared_ptr<UShaderProgram> &shader,
+                          const GreedyGpuPassCache &cache, size_t row,
+                          uint64_t frame, unsigned path)
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  static unsigned writes = 0;
+  static const bool enabled = [] {
+    const auto *value = std::getenv("CUBA_SURFACE_LIGHT_DIAGNOSTICS");
+    return value && value[0] == '1';
+  }();
+  if (!enabled || frame < 1 || frame > 5 ||
+      writes >= 10 || row >= cache.batches.size())
+    return;
+  const auto &batch = cache.batches[row];
+  if (batch.chunkCoord != glm::ivec3(1, -3, 3))
+    return;
+  ++writes;
+  std::ostringstream out;
+  out << "frame=" << frame << " path=" << path << " row=" << row
+      << " block=" << batch.blockId << " old_error=" << glGetError();
+  GLint active_program = 0, active_texture = 0;
+  glGetIntegerv(GL_CURRENT_PROGRAM, &active_program);
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &active_texture);
+  out << " program=" << active_program << " expected_program=" << shader->GetProgramID();
+  const auto uniform = [&](const char *name)
+  {
+    GLint value = -1;
+    const auto at = shader->GetUniformLocation(name);
+    if (at >= 0) glGetUniformiv(shader->GetProgramID(), at, &value);
+    out << ' ' << name << '=' << value;
+    return value;
+  };
+  uniform("uUseSurfaceSectionLight");
+  uniform("uUseSurfaceSectionLightDrawTable");
+  const GLint atlas_unit = uniform("uSectionLightAtlas");
+  const GLint table_unit = uniform("uSectionLightBindings");
+  const auto words = batch.renderLightBinding ? batch.renderLightBinding->ShaderWords()
+                                             : SectionLightDrawTable::Words{};
+  out << " lease=" << bool(batch.renderLightBinding);
+  for (auto word : words) out << " expected_word=" << word;
+  std::array<GLuint, 4> incarnation{};
+  const auto inc_at = shader->GetUniformLocation("uSectionLightTableIncarnation");
+  if (inc_at >= 0) glGetUniformuiv(shader->GetProgramID(), inc_at, incarnation.data());
+  out << " shader_inc=" << incarnation[0] << ',' << incarnation[1];
+  GLint attrib_buffer = 0, divisor = 0, stride = 0, array_enabled = 0;
+  glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &attrib_buffer);
+  glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &divisor);
+  glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+  glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &array_enabled);
+  out << " attribute=" << array_enabled << ',' << attrib_buffer << ',' << divisor << ',' << stride;
+  if (attrib_buffer && array_enabled)
+  {
+    void *offset = nullptr;
+    glGetVertexAttribPointerv(7, GL_VERTEX_ATTRIB_ARRAY_POINTER, &offset);
+    GLint old_copy = 0;
+    glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &old_copy);
+    glBindBuffer(GL_COPY_READ_BUFFER, attrib_buffer);
+    SectionLightDrawTable::Words actual{};
+    glGetBufferSubData(GL_COPY_READ_BUFFER,
+        static_cast<GLintptr>(reinterpret_cast<uintptr_t>(offset) + row * stride),
+        sizeof(actual), actual.data());
+    glBindBuffer(GL_COPY_READ_BUFFER, old_copy);
+    for (auto word : actual) out << " actual_word=" << word;
+  }
+  for (const auto unit : {atlas_unit, table_unit})
+  {
+    if (unit < 0 || unit >= 16) continue;
+    glActiveTexture(GL_TEXTURE0 + unit);
+    GLint texture = 0, width = 0, format = 0;
+    const GLenum target = unit == atlas_unit ? GL_TEXTURE_3D : GL_TEXTURE_2D;
+    glGetIntegerv(unit == atlas_unit ? GL_TEXTURE_BINDING_3D : GL_TEXTURE_BINDING_2D, &texture);
+    if (texture)
+    {
+      glGetTexLevelParameteriv(target, 0, GL_TEXTURE_WIDTH, &width);
+      glGetTexLevelParameteriv(target, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
+    }
+    out << " texture=" << unit << ',' << texture << ',' << width << ',' << format;
+  }
+  glActiveTexture(active_texture);
+  glValidateProgram(shader->GetProgramID());
+  GLint valid = 0;
+  glGetProgramiv(shader->GetProgramID(), GL_VALIDATE_STATUS, &valid);
+  char log[512]{};
+  if (!valid) glGetProgramInfoLog(shader->GetProgramID(), sizeof(log), nullptr, log);
+  out << " valid=" << valid << " error=" << glGetError() << " log=" << log;
+  CubatariumLogInfo("SurfaceLightDrawState", out.str());
+#endif
+}
+} // namespace
+
 void UGeometryEngine::DrawGreedyGpuBatches(
     GreedyGpuPassCache &cache, const glm::mat4 &vp,
     const std::map<size_t, UTextureCube> &textures, bool alphaCutout,
@@ -6238,6 +6331,8 @@ void UGeometryEngine::DrawGreedyGpuBatches(
 
       if (physical_light && !table_light && !prepare_direct_surface_light(head))
       {
+        TraceSurfaceDrawState(greedyShader, cache, i,
+            WorldInstance->GetStreamingFrameEpoch(), 4);
         i = j;
         continue;
       }
@@ -6291,7 +6386,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         generic_draw_state = g_gpu_opaque_draw_state_witness;
       }
       const bool gpu_range_submitted =
-          store.SubmitIndirectCommandsGpuRange(cache, i, j);
+          [&] {
+            for (size_t n = i; n < j; ++n)
+              TraceSurfaceDrawState(greedyShader, cache, n,
+                  WorldInstance ? WorldInstance->GetStreamingFrameEpoch() : 0, 0);
+            return store.SubmitIndirectCommandsGpuRange(cache, i, j);
+          }();
       if (has_draw_witness_batch)
       {
         g_gpu_opaque_draw_state_witness.submitted = gpu_range_submitted;
