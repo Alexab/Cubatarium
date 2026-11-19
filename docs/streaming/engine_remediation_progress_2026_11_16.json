@@ -7564,7 +7564,7 @@
       }
     },
     "synchronous_geometry_awaiting_physical_field": {
-      "status": "Implemented;15lifecycle cases run through actual synchronous builders with headless and real GL field resources.12Release checksGREEN;21Python harness testsGREEN. Required Release app/native sync flight pending.",
+      "status": "Implemented;15actual synchronous lifecycle cases headless and real GL resources;12Release testsGREEN21Python testsGREEN. Required Release app built. Full sync dry19chunk native0/9716scoped depth faults; native1370/1370samples async=false. OverallUNTESTED; performanceFAIL.",
       "implementation": "Full physical-light synchronous and immediate builders now submit immutable captured geometry, catalog, boundary/cross inputs, original source stamps and epoch to shared ApplyMeshResult and bounded awaiting-field publication. Uses current cache source revision rather than content XOR light revision. Synchronous cache adopts light settlement only from actual current world calculation certificate. Synchronous scheduler drains ready results and does not resubmit retained geometry.",
       "lifecycle": "Identical render settings no longer cancel retained results. Actual async/greedy/light policy changes do. KeepDirty and outside-radius cancellation operate on retained owners even without an async builder. Empty/disabled/zero-budget packed processing returns before GL pipeline initialization, so headless ready-result drain is safe.",
       "regressions": {
@@ -7574,7 +7574,85 @@
       },
       "validation": "engine-sync-awaiting-field-packed-replace-twelve-tests.log12/12PASS20.41seconds. Extended15case matrix executes actual sync builds, repeated identical settings, dirty hints, edits, eviction, same-coordinate incarnation, world epoch, cancel modes and policy changes; verified physical pairing without extra build. Existing immediate resource failure/dead/wrong-epoch tests now require retained geometry, unchanged predecessor binding and recovery. All original failing artifacts preserved.",
       "automation": "tools/engine_smoke_run.py --synchronous-meshing isolates config change and requires explicit boolean native async_meshing_enabled=false in every movement sample. Missing observations UNTESTED; mixed/malformed modes FAIL. Scope is scheduling mode, not CPU/GPU mesher backend. Failure restores exact original config bytes; default mode unchanged. engine-sync-meshing-harness-tests.log21testsPASS7.503seconds.",
-      "limits": "Full sync native pending. Geometry merge/capture/dependency keys still include light; semantic catalog geometry identity, persisted certificates, complete lifecycle/backend parity and RGB/transparency/performance acceptance remain. No closure of original sporadic first-publication class."
+      "limits": "One32block opaque-depth scenario does not close original sporadic fault class. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free merge/capture/dependency identities, full lifecycle and backend/persistence acceptance remain.",
+      "native_followup": {
+        "source_commit": "d40902be6249717c7e25066fef006be484c08f43",
+        "overall": "UNTESTED",
+        "opaque_depth": {
+          "status": "PASS",
+          "reason": "analytic_near_cave_opaque_depth",
+          "checked": 9716,
+          "faults": 0,
+          "frame_epochs": 82,
+          "skipped_unscoped_or_occluded": 228,
+          "examples": [],
+          "fault_attribution": {
+            "schema": "engine-depth-fault-attribution.v1",
+            "section_count": 0,
+            "sections": [],
+            "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+          },
+          "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+        },
+        "route": {
+          "status": "PASS",
+          "reason": "frontier_route_covered",
+          "displacement_chunks": 19,
+          "outside_initial_resident_samples": 984
+        },
+        "inspection": {
+          "status": "PASS",
+          "reason": "inspection_capture_coverage",
+          "requested": 24,
+          "queued": 24,
+          "verified": 24
+        },
+        "runtime_synchronous_mode": {
+          "status": "PASS",
+          "reason": "native_async_meshing_disabled",
+          "samples": 1370,
+          "async_samples": 0,
+          "scope": "native scheduling mode only; does not certify CPU/GPU mesher backend"
+        },
+        "ingame_frames": 1373,
+        "active_elapsed_sec": 403.969,
+        "relocations": 0,
+        "camera_observation": {
+          "samples": 1373,
+          "ready_zero_zero": 1373,
+          "scope": "Canonical samples observed; no independent RGB/light reference."
+        },
+        "awaiting_frame_epochs": [
+          218,
+          219,
+          220,
+          221,
+          222
+        ],
+        "target_causal_observation": "At(-5,-3,3) synchronous source1 retains original geometry content2336/incarnation2105/light0 and later publishes with current certified field light1. Five awaiting observations and no packed commits. Native counters identify sync scheduling separately from mesher backend; do not claim full backend CPU control.",
+        "performance": {
+          "legacy_pass": false,
+          "metrics": {
+            "wall_ms_med": 159.7255,
+            "wall_ms_fly_med": 172.652,
+            "world_streaming_phase_ms": 154.279,
+            "scene_ms": 18.0856,
+            "post_stop_readiness_debt_max": 0.0,
+            "post_stop_mesh_missing_max": 0.0,
+            "post_stop_visible_black_stalled_max": 0.0
+          },
+          "scope": "Diagnostics/captures enabled; no controlled performance A/B."
+        },
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "limits": "One32block opaque-depth scenario does not close original sporadic fault class. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free merge/capture/dependency identities, full lifecycle and backend/persistence acceptance remain.",
+        "artifact": "build/desktop-msvc/engine-sync-awaiting-field-dry-native/synchronous-geometry-awaiting-field-observation.json"
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7596,9 +7674,27 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous completed-geometry awaiting-field paths implemented. Sync12Release checksGREEN plus21harness tests; sync app/native pending. Prior GPUdry0/12838 and CPUwet0/13630scoped native depth faults,19chunk0relocations24views each. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free merge/capture/dependency keys and complete acceptance remain.",
+      "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
+  },
+  "execution_status_review_2026_11_19": {
+    "goal": "active; full originalS0..S6 scope unchanged",
+    "latest_source_commit": "d40902be6249717c7e25066fef006be484c08f43",
+    "completed_this_slice": [
+      "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
+      "Shared physical synchronous publication and15lifecycle cases including real resources",
+      "Runtime-verified synchronous native flight harness",
+      "Required Release builds and full GPU/sync dry frontier flights; retained CPUwet evidence"
+    ],
+    "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
+    "remaining_critical_path": [
+      "Remove light from actual geometry merge/capture/dependency identity and scheduler invalidations; prove light-only update with zero remeshing through actual world/cache.",
+      "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
+      "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
+      "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
+    ],
+    "completion": "Not established. Clean scoped native geometry checks do not prove full original defect closure or whole-plan completion."
   }
 }
