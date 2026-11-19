@@ -15,6 +15,10 @@ public:
   struct DrainStats
   {
     size_t restored{0}, rejected{0}, cancelled{0}, waiting{0}, current{0};
+    std::array<size_t, static_cast<size_t>(SectionLightRestoreFailure::Count)>
+        reasons{};
+    std::optional<std::pair<glm::ivec3, SectionLightRestoreDiagnostic>>
+        first_rejected;
   };
   bool Offer(std::shared_ptr<const PersistedSectionLight> receipt,
              uint64_t owner)
@@ -63,7 +67,8 @@ public:
         on_ready(coord);
         continue;
       }
-      switch (RestoreSectionLight(world, *entry.receipt, catalog))
+      SectionLightRestoreDiagnostic diagnostic;
+      switch (RestoreSectionLight(world, *entry.receipt, catalog, &diagnostic))
       {
       case SectionLightRestoreResult::Restored:
         ++stats.restored;
@@ -71,6 +76,9 @@ public:
         break;
       case SectionLightRestoreResult::Rejected:
         ++stats.rejected;
+        ++stats.reasons[static_cast<size_t>(diagnostic.reason)];
+        if (!stats.first_rejected)
+          stats.first_rejected = std::make_pair(coord, diagnostic);
         break;
       case SectionLightRestoreResult::InputsUnavailable:
         ++stats.waiting;

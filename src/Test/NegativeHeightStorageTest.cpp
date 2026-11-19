@@ -224,7 +224,16 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   Expect(queue.Offer((*loaded)[0], 7),
          "stale cache receipt can be queued for validation");
   stats = queue.Drain(cold, catalog, owner_current, on_ready);
-  Expect(stats.rejected == 1 && queue.Size() == 0 && ready == 2,
+  Expect(stats.rejected == 1 && queue.Size() == 0 && ready == 2 &&
+             stats.reasons[static_cast<size_t>(
+                 SectionLightRestoreFailure::ContentMismatch)] == 1 &&
+             stats.first_rejected && stats.first_rejected->first == root &&
+             stats.first_rejected->second.reason ==
+                 SectionLightRestoreFailure::ContentMismatch &&
+             stats.first_rejected->second.has_input &&
+             stats.first_rejected->second.current_known &&
+             stats.first_rejected->second.input_coord ==
+                 UChunkManager::WorldToChunk(source_pos),
          "changed source retires disk cache owner without satisfying real "
          "relight debt");
   cold.SetBlock(source_pos, 50);

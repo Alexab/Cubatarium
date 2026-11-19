@@ -5068,13 +5068,41 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         [&](glm::ivec3 coord)
         { world.NoteChunkSliceLightCalculationSettled(coord); });
     if (stats.restored || stats.rejected || stats.cancelled)
+    {
+      std::string rejection_details;
+      for (size_t n = 0; n < stats.reasons.size(); ++n)
+        if (stats.reasons[n])
+          rejection_details +=
+              " reject_" +
+              std::string(SectionLightRestoreFailureName(
+                  static_cast<SectionLightRestoreFailure>(n))) +
+              "=" + std::to_string(stats.reasons[n]);
       CubatariumLogInfo(
           "PersistedLight",
           "restored=" + std::to_string(stats.restored) +
               " rejected=" + std::to_string(stats.rejected) +
               " cancelled=" + std::to_string(stats.cancelled) + " pending=" +
               std::to_string(PendingSectionLightRestores.Size()) + " bytes=" +
-              std::to_string(PendingSectionLightRestores.RetainedBytes()));
+              std::to_string(PendingSectionLightRestores.RetainedBytes()) +
+              rejection_details);
+      if (stats.first_rejected)
+      {
+        const auto &[coord, d] = *stats.first_rejected;
+        const auto xyz = [](glm::ivec3 v)
+        {
+          return std::to_string(v.x) + "," + std::to_string(v.y) + "," +
+                 std::to_string(v.z);
+        };
+        CubatariumLogInfo("PersistedLightReject",
+                          "target=" + xyz(coord) + " reason=" +
+                              SectionLightRestoreFailureName(d.reason) +
+                              " has_input=" + std::to_string(d.has_input) +
+                              " input=" + xyz(d.input_coord) +
+                              " known=" + std::to_string(d.current_known) +
+                              " expected=" + std::to_string(d.expected) +
+                              " current=" + std::to_string(d.current));
+      }
+    }
   }
   const auto light_flags_save_started = std::chrono::steady_clock::now();
   SaveColumnLightFlagsIfDirty(&metrics.light_flags_snapshot_ms,

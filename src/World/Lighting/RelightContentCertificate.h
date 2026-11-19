@@ -10,6 +10,10 @@ namespace cutum
 class UChunkRelightSnapshot;
 class UBlockWorld;
 enum class SectionLightRestoreResult;
+inline SectionLightRestoreResult
+RestoreSectionLight(UBlockWorld &, const PersistedSectionLight &,
+                    const std::shared_ptr<const BlockDefinitionCatalog> &,
+                    SectionLightRestoreDiagnostic * = nullptr);
 
 // Only the actual snapshot solver or fully validated disk restore can create
 // this evidence. It retains compact input contents and output hashes, never
@@ -62,7 +66,8 @@ private:
   friend class UChunkRelightSnapshot;
   friend SectionLightRestoreResult
   RestoreSectionLight(UBlockWorld &, const PersistedSectionLight &,
-                      const std::shared_ptr<const BlockDefinitionCatalog> &);
+                      const std::shared_ptr<const BlockDefinitionCatalog> &,
+                      SectionLightRestoreDiagnostic *);
   std::vector<ChunkInputStamp> Stamps;
   std::vector<PersistedSectionLight::Input> Contents;
   WorldVerticalProfile Profile;

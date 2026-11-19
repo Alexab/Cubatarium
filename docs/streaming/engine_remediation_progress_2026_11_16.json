@@ -11579,5 +11579,35 @@
       "Attribute cold restore refusals without weakening guards; inspect optional metadata write gap and completion/cancellation ownership.",
       "Complete motor-based return/eviction/reload/edit/save scenarios and procedural AIR cache lifecycle, then continue independent nonzero RGB/wet/transparency/backend/performance/memory matrix and all remaining S0..S6."
     ]
-  }
+  },
+"persisted_light_restore_reason_diagnostics_2026_11_19": {
+  "status": "diagnostics_and_regressions_verified_native_attribution_pending_full_S0_S6_active",
+  "change": "Preserve restore gates/order; report catalog/profile/configuration/materials/footprint/checksum/unknown-input/content-mismatch/read-set/install reasons. Clear diagnostics on every call. Queue counts every rejected reason and retains one sample per drain with target/input coordinates and expected/current content hashes; aggregate and sample tags are distinct. No cache readiness or retention gate weakened.",
+  "verification": {
+    "source_sha256": {
+      "src/World/Lighting/PersistedSectionLight.h": "713ee041165745a5a64d6abb98a743d4d755b27014c0ca45de791f9c043f1cb7",
+      "src/World/Lighting/SectionLightRestoreQueue.h": "c26d070f48df40049de24ff86b851a62be6b11a6687ae0f46467bf0f5142127b"
+    },
+    "controls": [
+      {
+        "name": "content-classification",
+        "expected_failure": true,
+        "test_exit": 8,
+        "log": "build\\desktop-msvc\\restore-reasons-20261119-content-classification-test.log"
+      },
+      {
+        "name": "queue-accounting",
+        "expected_failure": true,
+        "test_exit": 8,
+        "log": "build\\desktop-msvc\\restore-reasons-20261119-queue-accounting-test.log"
+      }
+    ],
+    "exact_source_restore": true,
+    "matrix_build_exit": 0,
+    "matrix_green": true,
+    "matrix_log": "build\\desktop-msvc\\restore-reasons-20261119-matrix-tests.log"
+  },
+  "next": "Build committed Windows Release desktop, cold-start a copy of unchanged EngineSmoke_ad132419519846279e6e96bbedfad0ea and attribute refusals. Prior 77 refusal causes remain unproven until this run.",
+  "scope": "Full original S0..S6 stays active. Optional save durability gap, motor return/edit/save/evict/reload, lifecycle/provider/cancellation, semantic identities, GPU/backend parity, independent RGB/wet/transparency, performance/memory and procedural AIR discovery remain open."
+}
 }

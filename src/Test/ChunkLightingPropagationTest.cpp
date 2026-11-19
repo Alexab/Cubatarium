@@ -374,11 +374,17 @@ static void TestPersistedSectionLight()
             !reloaded.HasCompleteLightSamplingCalculation(root, cloned_catalog),
         "stale geometry exports only the original frozen artifact without "
         "runtime readiness");
+    SectionLightRestoreDiagnostic diagnostic;
     UBlockWorld changed_roof;
     populate(changed_roof, resident);
     changed_roof.SetBlock(roof, BLOCK_AIR);
-    Expect(RestoreSectionLight(changed_roof, *decoded, catalog) ==
+    Expect(RestoreSectionLight(changed_roof, *decoded, catalog, &diagnostic) ==
                    SectionLightRestoreResult::Rejected &&
+               diagnostic.reason ==
+                   SectionLightRestoreFailure::ContentMismatch &&
+               diagnostic.has_input && diagnostic.current_known &&
+               diagnostic.expected != diagnostic.current &&
+               diagnostic.input_coord == UChunkManager::WorldToChunk(roof) &&
                (!changed_roof.GetChunkManager().GetSectionLightField(root) ||
                 !changed_roof.GetChunkManager()
                      .GetSectionLightField(root)
@@ -386,49 +392,60 @@ static void TestPersistedSectionLight()
            "far upper sky context is validated before installing any field");
     UBlockWorld unavailable;
     unavailable.SetLightingConfigurationIdentity(1);
-    Expect(RestoreSectionLight(unavailable, *decoded, catalog) ==
+    Expect(RestoreSectionLight(unavailable, *decoded, catalog, &diagnostic) ==
                    SectionLightRestoreResult::InputsUnavailable &&
+               diagnostic.reason == SectionLightRestoreFailure::UnknownInput &&
+               diagnostic.has_input && !diagnostic.current_known &&
                !unavailable.GetChunkManager().GetSectionLightField(root),
            "unloaded unknown dependencies defer restore without allocating a "
            "field");
     populate(unavailable, resident);
     Expect(
-        RestoreSectionLight(unavailable, *decoded, catalog) ==
-            SectionLightRestoreResult::Restored,
+        RestoreSectionLight(unavailable, *decoded, catalog, &diagnostic) ==
+                SectionLightRestoreResult::Restored &&
+            diagnostic.reason == SectionLightRestoreFailure::None &&
+            !diagnostic.has_input,
         "late known dependencies allow the original disk receipt to restore");
     UBlockWorld incompatible;
     populate(incompatible, resident);
     auto profile = incompatible.GetVerticalProfile();
     ++profile.SeaLevelY;
     incompatible.SetVerticalProfile(profile);
-    Expect(RestoreSectionLight(incompatible, *decoded, catalog) ==
-               SectionLightRestoreResult::Rejected,
+    Expect(RestoreSectionLight(incompatible, *decoded, catalog, &diagnostic) ==
+                   SectionLightRestoreResult::Rejected &&
+               diagnostic.reason == SectionLightRestoreFailure::Profile,
            "all vertical profile fields participate in disk compatibility");
     incompatible.SetVerticalProfile(original.GetVerticalProfile());
     incompatible.SetLightingConfigurationIdentity(0);
-    Expect(RestoreSectionLight(incompatible, *decoded, catalog) ==
-               SectionLightRestoreResult::Rejected,
+    Expect(RestoreSectionLight(incompatible, *decoded, catalog, &diagnostic) ==
+                   SectionLightRestoreResult::Rejected &&
+               diagnostic.reason == SectionLightRestoreFailure::Configuration,
            "lighting configuration changes reject persisted completion");
     incompatible.SetLightingConfigurationIdentity(1);
     auto changed_catalog = std::make_shared<BlockDefinitionCatalog>(*catalog);
     changed_catalog->ById.at(50).Lighting.Emission = 12;
-    Expect(RestoreSectionLight(incompatible, *decoded, changed_catalog) ==
-               SectionLightRestoreResult::Rejected,
+    Expect(RestoreSectionLight(incompatible, *decoded, changed_catalog,
+                               &diagnostic) ==
+                   SectionLightRestoreResult::Rejected &&
+               diagnostic.reason == SectionLightRestoreFailure::Materials,
            "optical material changes reject persisted completion");
     auto damaged = *decoded;
     damaged.volume.cells[0] ^= 1;
-    Expect(RestoreSectionLight(incompatible, damaged, catalog) ==
+    Expect(RestoreSectionLight(incompatible, damaged, catalog, &diagnostic) ==
                    SectionLightRestoreResult::Rejected &&
+               diagnostic.reason == SectionLightRestoreFailure::Checksum &&
                !DecodeSectionLight(EncodeSectionLight(damaged)),
            "corrupted padded bytes fail both disk and typed restore checksums");
     damaged = *decoded;
     damaged.inputs.erase(damaged.inputs.begin());
     damaged.checksum = persisted_light_detail::Checksum(damaged);
-    Expect(!DecodeSectionLight(EncodeSectionLight(damaged)) &&
-               RestoreSectionLight(incompatible, damaged, catalog) ==
-                   SectionLightRestoreResult::Rejected,
-           "missing sky/halo dependency fails even with a recomputed payload "
-           "checksum");
+    Expect(
+        !DecodeSectionLight(EncodeSectionLight(damaged)) &&
+            RestoreSectionLight(incompatible, damaged, catalog, &diagnostic) ==
+                SectionLightRestoreResult::Rejected &&
+            diagnostic.reason == SectionLightRestoreFailure::Footprint,
+        "missing sky/halo dependency fails even with a recomputed payload "
+        "checksum");
     auto malformed = encoded;
     malformed["coord"][0] = uint64_t{1} << 40;
     Expect(!DecodeSectionLight(malformed),
@@ -881,7 +898,8 @@ int main(int argc, char **argv)
            "E: torch A reaches attenuation tail in middle chunk");
     Expect(block_light_at(glm::ivec3(4, 20, 4)) == 0,
            "E: torch A exhausts at range");
-    // Torch B at (12,26,12): crosses the middle→top seam.
+    // Torch B at (12,26,12): crosses the
+    // middleР В Р вЂ Р Р†Р вЂљР’В Р Р†Р вЂљРІвЂћСћtop seam.
     Expect(block_light_at(glm::ivec3(12, 31, 12)) == 9,
            "E: torch B lights middle-chunk seam face");
     Expect(block_light_at(glm::ivec3(12, 32, 12)) == 8,

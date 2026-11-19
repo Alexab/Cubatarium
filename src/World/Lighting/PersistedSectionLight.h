@@ -272,19 +272,37 @@ enum class SectionLightRestoreResult
 
 inline SectionLightRestoreResult RestoreSectionLight(
     UBlockWorld &world, const PersistedSectionLight &receipt,
-    const std::shared_ptr<const BlockDefinitionCatalog> &catalog)
+    const std::shared_ptr<const BlockDefinitionCatalog> &catalog,
+    SectionLightRestoreDiagnostic *diagnostic)
 {
   using namespace persisted_light_detail;
+  if (diagnostic)
+    *diagnostic = {};
+  const auto fail = [&](SectionLightRestoreFailure reason,
+                        SectionLightRestoreResult result =
+                            SectionLightRestoreResult::Rejected)
+  {
+    if (diagnostic)
+      diagnostic->reason = reason;
+    return result;
+  };
   const auto &p = world.GetVerticalProfile();
   const auto &saved = receipt.profile;
-  if (!catalog || p.MinY != saved.MinY || p.MaxY != saved.MaxY ||
+  if (!catalog)
+    return fail(SectionLightRestoreFailure::Catalog);
+  if (p.MinY != saved.MinY || p.MaxY != saved.MaxY ||
       p.SeaLevelY != saved.SeaLevelY || p.BedrockTopY != saved.BedrockTopY ||
-      p.DatumY != saved.DatumY ||
-      receipt.configuration != world.GetLightingConfigurationIdentity() ||
-      receipt.signature !=
-          MakeLightCacheSignature(p, *catalog, int(receipt.configuration)) ||
-      !CoversSamplingDomain(receipt) || Checksum(receipt) != receipt.checksum)
-    return SectionLightRestoreResult::Rejected;
+      p.DatumY != saved.DatumY)
+    return fail(SectionLightRestoreFailure::Profile);
+  if (receipt.configuration != world.GetLightingConfigurationIdentity())
+    return fail(SectionLightRestoreFailure::Configuration);
+  if (receipt.signature !=
+      MakeLightCacheSignature(p, *catalog, int(receipt.configuration)))
+    return fail(SectionLightRestoreFailure::Materials);
+  if (!CoversSamplingDomain(receipt))
+    return fail(SectionLightRestoreFailure::Footprint);
+  if (Checksum(receipt) != receipt.checksum)
+    return fail(SectionLightRestoreFailure::Checksum);
   RelightComputeResult context;
   context.input_catalog = catalog;
   context.input_profile = p;
@@ -296,15 +314,36 @@ inline SectionLightRestoreResult RestoreSectionLight(
     auto stamp = world.CaptureInputStamp(input.coord, false, true);
     if (!stamp.incarnation &&
         stamp.missingEvidence != MissingChunkEvidence::KnownAir)
-      return SectionLightRestoreResult::InputsUnavailable;
+    {
+      if (diagnostic)
+      {
+        diagnostic->has_input = true;
+        diagnostic->input_coord = input.coord;
+      }
+      return fail(SectionLightRestoreFailure::UnknownInput,
+                  SectionLightRestoreResult::InputsUnavailable);
+    }
     context.read_set.push_back(stamp);
   }
   for (const auto &input : receipt.inputs)
-    if (GeometryContent(world, input.coord) != input.content)
-      return SectionLightRestoreResult::Rejected;
+  {
+    const auto current = GeometryContent(world, input.coord);
+    if (current != input.content)
+    {
+      if (diagnostic)
+      {
+        diagnostic->has_input = true;
+        diagnostic->input_coord = input.coord;
+        diagnostic->expected = input.content;
+        diagnostic->current_known = current.has_value();
+        diagnostic->current = current.value_or(0);
+      }
+      return fail(SectionLightRestoreFailure::ContentMismatch);
+    }
+  }
   if (ValidateRelightInputs(context, world, catalog, true) !=
       RelightInputValidation::Current)
-    return SectionLightRestoreResult::Rejected;
+    return fail(SectionLightRestoreFailure::ReadSet);
   RelightChunkLightData data;
   data.coord = receipt.coord;
   data.padded_light =
@@ -335,6 +374,6 @@ inline SectionLightRestoreResult RestoreSectionLight(
       receipt.coord, receipt.volume, true, true);
   return world.RecordLightCalculation(context, catalog) == 1
              ? SectionLightRestoreResult::Restored
-             : SectionLightRestoreResult::Rejected;
+             : fail(SectionLightRestoreFailure::Install);
 }
 } // namespace cutum
