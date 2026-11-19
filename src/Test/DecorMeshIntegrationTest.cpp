@@ -2027,6 +2027,109 @@ public:
   }
 };
 
+static void
+TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
+                              const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(-5, -3, 3);
+  const glm::ivec3 focus(-3, -3, 3);
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetLightingConfigurationIdentity(
+      static_cast<uint64_t>(LightingMode::Full));
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock(root * CHUNK_SIZE + glm::ivec3(8), kStone);
+  std::vector<glm::ivec3> unrelated;
+  for (int x = -4; x <= -2; ++x)
+    for (int z = 2; z <= 4; ++z)
+      for (int y = -3; y <= 8; ++y)
+      {
+        const glm::ivec3 coord(x, y, z);
+        unrelated.push_back(coord);
+        world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(8), kStone);
+      }
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  RelightJobSpec spec;
+  spec.min_world_y = world.GetVerticalProfile().MinY;
+  spec.max_world_y = world.GetVerticalProfile().MaxY;
+  const auto calculation =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+          .Compute(registry);
+  Expect(calculation.inputs_complete && calculation.chunks.size() == 1,
+         "first-publication ray fixture computes actual physical light");
+  auto *chunk = world.GetChunkManager().GetChunk(root);
+  chunk->ReplaceComputedLightVolume(*calculation.chunks[0].padded_light, true,
+                                    true);
+  Expect(world.RecordLightCalculation(calculation, catalog) == 1,
+         "first-publication ray fixture installs current field proof");
+  CountingPhysicalMesher mesher;
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = true;
+  settings.FrustumCulling = false;
+  cache.SetRenderSettings(settings);
+  cache.SetMesherBackend(&mesher);
+  cache.SetMeshRebuildFocus(focus, 4, 1);
+  cache.SetMeshSnapshotBudgetMs(1000);
+  cache.SetMeshEmergeTotalBudgetMs(1000);
+  MeshWorkAdmission admission;
+  admission.enforce_schedule_lanes = true;
+  admission.max_schedule = 1;
+  admission.first_mesh_schedule = 1;
+  admission.remesh_schedule = 0;
+  cache.SetMeshWorkAdmission(admission);
+  cache.SetPrepareRenderLightFn(
+      [](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+         const SectionRenderLightSnapshot &light)
+          -> std::shared_ptr<SectionRenderLightBinding>
+      {
+        return std::make_shared<TestRenderLightBinding>(epoch, geometry, light);
+      });
+  cache.MarkDirtyPriority(root);
+  for (const auto coord : unrelated)
+    cache.MarkDirtyPriority(coord);
+  const auto revision = cache.GetChunkMeshRevision(root);
+  const auto dirty_count = cache.GetDirtyCount();
+  auto &demand = cache.GetRenderDemandStore();
+  demand.NoteDemand(root, revision, chunk->GetLightFieldRevision(), 0, 1.0,
+                    cache.GetCaptureStore().WorldEpoch(),
+                    chunk->GetIncarnation());
+  demand.NoteLightCalculationSettled(
+      root, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
+      chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  Expect(cache.GetCaptureStore()
+             .CaptureAndStore(world, root, revision)
+             .has_value(),
+         "first-publication ray fixture captures actual current geometry");
+  Expect(!cache.HasDrawableGreedyMesh(root) &&
+             !cache.HasInflightMeshBuild(root),
+         "first-publication ray witness has only an existing dirty owner");
+  Expect(cache.PrioritizeScreenRayRepair(root),
+         "screen-ray first-publication witness promotes its existing queued "
+         "slice");
+  Expect(cache.PrioritizeScreenRayRepair(root) &&
+             cache.GetDirtyCount() == dirty_count &&
+             cache.GetChunkMeshRevision(root) == revision,
+         "duplicate ray witnesses create no geometry revision or work owner");
+  const auto tick =
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+  Expect(tick.Scheduled == 1 && cache.HasInflightMeshBuild(root),
+         "one bounded FirstMesh slot serves the exact ray slice before "
+         "unrelated debt");
+  for (int i = 0; i < 2000 && cache.GetPublishCount(root) == 0; ++i)
+  {
+    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  Expect(mesher.builds == 1 && cache.GetPublishCount(root) == 1 &&
+             cache.HasDrawableGreedyMesh(root) &&
+             cache.GetPublishedRenderLightBinding(root) &&
+             cache.GetMeshPublishRevs(root).geom_rev == revision,
+         "ray-prioritized first publication uses one actual worker and current "
+         "physical field");
+}
+
 class GatedPhysicalMesher final : public cutum::IUChunkMesher
 {
 public:
@@ -5492,6 +5595,7 @@ int main(int argc, char **argv)
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
+  TestScreenRayFirstPublication(registry, definitions.get());
   TestPublishedLightRefreshLifecycle(registry, definitions.get());
   TestPublishedLightRefreshFairness(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());

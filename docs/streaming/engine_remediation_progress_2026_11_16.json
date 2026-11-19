@@ -7909,6 +7909,27 @@
       "implementation": "tools/analyze_mesh_publication.py streams rotated INFO logs and joins selected watch/enqueue/schedule/resource events plus screen-ray repair actions to independent depth-fault section attribution. engine_smoke_run writes mesh-publication-diagnostics.json automatically after every terminal native run.",
       "validation": "4parser regression tests and21existing smoke-runner testsPASS; applied to existing d782failed native:5rotated logs,0malformed rows,selected135consecutive queue-only samples313..447.",
       "scope": "Diagnostic only; missing owner fields remain unknown, gaps/revisions/active ownership break runs, resource preparation is not publication. It neither modifies depth verdict nor accepts ready flags in place of pixels."
+    },
+    "screen_ray_first_publication_service": {
+      "status": "Implemented; actual queued-worker regressionRED thenGREEN,13Release testsPASS24.53seconds, service-disabled negative control expectedFAIL and exact restoration/GREEN. Required Release app/native pending; no claim of closure for448fault native.",
+      "counterexample": "d78238d0dwet native448/8312opaque-depth faults. Selected(-5,-3,3) had78faults360..410 and135consecutive beginning-of-tick queue-only observations313..447. World ray promotion required an existing drawable and could not prioritize these first-publication holes.",
+      "implementation": [
+        "WorldStreaming promotes ray-confirmed current geometry debt even before first drawable; a newly admitted exact slice also gets the hint.",
+        "ScreenRayFirstMesh hint belongs only to an existing FirstMesh queue entry, preserves revision/age/count under repeat hints and sorts, and retires on consume/evict/full cancellation.",
+        "Bounded prepass tries at most4in-focus ray-marked FirstMesh entries and uses at most2existing first-mesh slots before generic forward/age work. Existing source, pipeline, snapshot, light and time validation remains active; no new job owner or raised cap."
+      ],
+      "regression": "TestScreenRayFirstPublication uses actual world, calculated/certified physical field,108nearer unrelated queued sections, one asynchronous slot and no synchronous fill. Duplicate ray hints preserve queue count/revision; exact slice gets that slot and one actual worker publishes drawable geometry/current field binding. WorldMeshServiceTest covers pin ownership, age, sorting, consume, eviction, clear and no detached/remesh reclassification.",
+      "validation": {
+        "baseline_red": "build/desktop-msvc/engine-ray-first-publication-red-test.log",
+        "green": "build/desktop-msvc/engine-ray-first-publication-thirteen-tests.log",
+        "tests_passed": 13,
+        "control": "build/desktop-msvc/engine-ray-first-publication-negative-control.json",
+        "expected_failure": true,
+        "exact_restore": true,
+        "restored_green": true,
+        "scope": "Deterministic existing queued FirstMesh service and actual CPU physical publication; not full native acceptance or all capture-retry admission paths."
+      },
+      "limits": "Native confirmation pending. Initial capture/merge light dependencies, complete lifecycle/admission, full RGB/transparency, backend/persistence/performance and originalS0..S6acceptance remain open."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7946,7 +7967,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Latest certified CPU inflight-light testsGREEN but full wet nativeFAIL448/8312: queued first-publication ray witnesses can remain without sampled executor135frames. Add deterministic bounded exact-slice scheduling regression/fix; then remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity.",
+      "Ray-confirmed first-publication queue priority gap repaired in deterministic actual-worker regression:13ReleaseGREEN, service-disabled negative control exact restoration/GREEN. Full native pending; original448/8312counterexample retained. Still remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

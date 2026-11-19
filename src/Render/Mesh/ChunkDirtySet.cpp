@@ -349,6 +349,14 @@ bool UChunkDirtySet::PrioritizeRemesh(glm::ivec3 coord)
   return true;
 }
 
+bool UChunkDirtySet::PrioritizeScreenRayFirstMesh(glm::ivec3 coord)
+{
+  if (FirstMeshSet.count(coord) == 0)
+    return false;
+  ScreenRayFirstMeshSet.insert(coord);
+  return true;
+}
+
 bool UChunkDirtySet::PrioritizeScreenRayRemesh(glm::ivec3 coord)
 {
   if (FirstMeshSet.count(coord) > 0)
@@ -401,6 +409,7 @@ void UChunkDirtySet::ClearDeferredScreenRayRemesh(glm::ivec3 coord)
 
 void UChunkDirtySet::Erase(glm::ivec3 coord)
 {
+  ScreenRayFirstMeshSet.erase(coord);
   DeferredPriorityRemeshSet.erase(coord);
   DeferredScreenRayRemeshSet.erase(coord);
   bool erased = false;
@@ -431,6 +440,7 @@ void UChunkDirtySet::Clear()
   FirstMeshQ.clear();
   RemeshQ.clear();
   FirstMeshSet.clear();
+  ScreenRayFirstMeshSet.clear();
   RemeshSet.clear();
   PriorityRemeshSet.clear();
   ScreenRayRemeshSet.clear();
@@ -446,6 +456,7 @@ UChunkDirtySet::iterator UChunkDirtySet::RemoveAt(iterator it)
 {
   EnsureUnified();
   const glm::ivec3 coord = *it;
+  ScreenRayFirstMeshSet.erase(coord);
   const bool preserve_screen_ray_successor =
       ScreenRayRemeshSet.count(coord) > 0;
   if (preserve_screen_ray_successor)

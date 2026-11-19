@@ -26,6 +26,12 @@ public:
   /// Keep a screen-ray-confirmed geometry hole at the head of visible repair
   /// work, including across queue sorting and deferred RAA ownership.
   bool PrioritizeScreenRayRemesh(glm::ivec3 coord);
+  /// An urgency hint owned only by an existing FirstMesh queue entry.
+  bool PrioritizeScreenRayFirstMesh(glm::ivec3 coord);
+  bool IsScreenRayFirstMesh(glm::ivec3 coord) const
+  {
+    return ScreenRayFirstMeshSet.count(coord) > 0;
+  }
   /// Drop a deferred ray pin after its visual demand and debt are satisfied.
   void ClearDeferredScreenRayRemesh(glm::ivec3 coord);
   void AdvanceScheduleFrame() { ++ScheduleFrame; }
@@ -171,6 +177,7 @@ private:
   std::vector<glm::ivec3> FirstMeshQ;
   std::vector<glm::ivec3> RemeshQ;
   std::unordered_set<glm::ivec3, IVec3Hash> FirstMeshSet;
+  std::unordered_set<glm::ivec3, IVec3Hash> ScreenRayFirstMeshSet;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshSet;
   std::unordered_set<glm::ivec3, IVec3Hash> PriorityRemeshSet;
   /// Screen-ray hits form a stable sub-prefix ahead of other priority remesh.

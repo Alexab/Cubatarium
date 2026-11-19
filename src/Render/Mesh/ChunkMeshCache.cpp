@@ -4144,8 +4144,10 @@ bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord)
   return true;
 }
 
-bool UChunkMeshCache::PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord)
+bool UChunkMeshCache::PrioritizeScreenRayRepair(glm::ivec3 chunkCoord)
 {
+  if (Dirty.IsFirstMesh(chunkCoord))
+    return Dirty.PrioritizeScreenRayFirstMesh(chunkCoord);
   // The current Dirty ticket can be consumed while the async/capture/GPU
   // pipeline still owns the target. Keep the exact ray witness through that
   // owner so a later FaceDebtCallback successor does not return to ordinary
@@ -10749,7 +10751,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         {
           trace.flags |= kFirstMeshForwardReserveTraceFlag;
         }
-        if (Dirty.IsScreenRayRemesh(schedule_coord))
+        if (Dirty.IsScreenRayRemesh(schedule_coord) ||
+            Dirty.IsScreenRayFirstMesh(schedule_coord))
         {
           trace.flags |= kScreenRayRemeshTraceFlag;
         }
@@ -11646,6 +11649,41 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (MeshFocusValid && first_mesh_cap > 0)
     {
+      // A concrete ray hit must also be serviced before its first publication.
+      // ColumnFlow admission is not an executor for an already-queued slice.
+      // Borrow at most two existing FM slots and four attempts; every normal
+      // snapshot, pipeline, time, source and light gate still applies.
+      std::vector<glm::ivec3> ray_first_mesh;
+      for (const auto coord : Dirty.FirstMeshQueue())
+      {
+        if (Dirty.IsScreenRayFirstMesh(coord) &&
+            std::max(std::abs(coord.x - MeshFocusGroundChunk.x),
+                     std::abs(coord.z - MeshFocusGroundChunk.z)) <=
+                MeshFocusRadiusChunks &&
+            !HasDrawableGreedyMesh(coord))
+        {
+          ray_first_mesh.push_back(coord);
+          if (ray_first_mesh.size() == 4)
+            break;
+        }
+      }
+      int ray_first_mesh_scheduled = 0;
+      for (const auto coord : ray_first_mesh)
+      {
+        if (ray_first_mesh_scheduled >= 2 ||
+            scheduled >= max_schedule_per_frame ||
+            reserved_focus_scheduled >= first_mesh_cap)
+          break;
+        auto it = std::find(Dirty.begin(), Dirty.end(), coord);
+        if (it == Dirty.end() || !Dirty.IsFirstMesh(coord))
+          continue;
+        const int scheduled_before = scheduled;
+        const auto next = try_schedule(it, false, false, true);
+        if (scheduled > scheduled_before)
+          ++ray_first_mesh_scheduled;
+        if (next == Dirty.end())
+          break;
+      }
       // Spend at most two existing FirstMesh slots on directly forward h3-h7
       // holes seen by renderer ray probes. This is a placement reservation
       // inside the current cap; try_schedule still owns every admission budget.

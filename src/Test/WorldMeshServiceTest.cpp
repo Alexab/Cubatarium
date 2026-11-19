@@ -90,6 +90,42 @@ int main()
   Expect((dirty.begin() + 1)->x == 1, "partial_sort: second nearest");
   Expect((dirty.begin() + 2)->x == 2, "partial_sort: third nearest");
 
+  dirty.Clear();
+  const glm::ivec3 ray(-5, -3, 3);
+  Expect(!dirty.PrioritizeScreenRayFirstMesh(ray) &&
+             !dirty.IsScreenRayFirstMesh(ray),
+         "ray urgency cannot create a detached FirstMesh owner");
+  dirty.MarkDirtyPriority(ray);
+  dirty.AdvanceScheduleFrame();
+  const auto ray_age = dirty.GetEnqueueAgeFrames(ray);
+  Expect(dirty.PrioritizeScreenRayFirstMesh(ray) &&
+             dirty.PrioritizeScreenRayFirstMesh(ray) && dirty.GetCount() == 1 &&
+             dirty.GetEnqueueAgeFrames(ray) == ray_age,
+         "repeated ray witnesses preserve one dirty owner and its age");
+  dirty.MarkDirtyPriority(ray);
+  dirty.SortByDistanceKey({-3, -3, 3}, -3, false, true, {});
+  dirty.PrioritizeAgedNearHorizontal({-3, -3, 3}, 4, 0);
+  Expect(dirty.IsScreenRayFirstMesh(ray),
+         "queue sorting and re-admission retain exact slice urgency");
+  dirty.RemoveAt(dirty.begin());
+  Expect(!dirty.IsScreenRayFirstMesh(ray) && dirty.empty(),
+         "consuming a FirstMesh queue entry retires its urgency hint");
+  dirty.MarkDirtyPriority(ray);
+  Expect(!dirty.IsScreenRayFirstMesh(ray),
+         "a later FirstMesh incarnation cannot inherit a consumed hint");
+  dirty.PrioritizeScreenRayFirstMesh(ray);
+  dirty.Erase(ray);
+  Expect(!dirty.IsScreenRayFirstMesh(ray),
+         "eviction retires queued ray urgency");
+  dirty.MarkDirtyPriority(ray);
+  dirty.PrioritizeScreenRayFirstMesh(ray);
+  dirty.Clear();
+  Expect(!dirty.IsScreenRayFirstMesh(ray),
+         "world cancellation retires ray urgency");
+  dirty.MarkDirty(ray);
+  Expect(!dirty.PrioritizeScreenRayFirstMesh(ray),
+         "FirstMesh urgency cannot reclassify existing remesh work");
+
   std::cout << "world_mesh_service_test: OK" << std::endl;
   return 0;
 }

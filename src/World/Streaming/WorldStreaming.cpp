@@ -1981,21 +1981,20 @@ void UWorldStreaming::RefreshStreamingPressure(
         }
         const UChunk *chunk =
             world.GetBlockWorld().GetChunkManager().GetChunk(coord);
-        if (!chunk || !world.GetMeshService().HasDrawableGreedyMesh(coord) ||
+        if (!chunk ||
             !world.GetMeshService().HasScreenRayRepairableGeometryDebt(
                 coord, chunk->GetIncarnation()))
         {
           return false;
         }
-        return world.GetMeshService()
-            .GetCache()
-            .PrioritizeScreenRayRepairRemesh(coord);
+        return world.GetMeshService().GetCache().PrioritizeScreenRayRepair(
+            coord);
       };
       const auto enqueue_first_mesh =
           [&](glm::ivec3 coord, bool screen_ray_selected)
       {
         const glm::ivec2 column(coord.x, coord.z);
-        const bool visible_geometry_promoted =
+        bool visible_geometry_promoted =
             promote_visible_geometry_debt(coord, screen_ray_selected);
         const bool light_debt = world.IsPendingLightBeforeMeshSlice(coord);
         const glm::ivec2 world_key(coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE);
@@ -2097,6 +2096,9 @@ void UWorldStreaming::RefreshStreamingPressure(
           {
             preview_marked = mark_direct_missing_slice(coord);
             screen_ray_preview_marked = preview_marked > 0;
+            if (preview_marked > 0)
+              visible_geometry_promoted |=
+                  promote_visible_geometry_debt(coord, true);
           }
           if (preview_marked > 0)
           {
@@ -2128,6 +2130,9 @@ void UWorldStreaming::RefreshStreamingPressure(
         if (screen_ray_selected && !light_debt)
         {
           direct_slice_marked = mark_direct_missing_slice(coord);
+          if (direct_slice_marked > 0)
+            visible_geometry_promoted |=
+                promote_visible_geometry_debt(coord, true);
         }
         if (screen_ray_selected)
         {

@@ -107,7 +107,7 @@ public:
   void RequeueDirtyPriority(glm::ivec3 chunkCoord,
                             MeshRevisionBumpReason reason);
   bool PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord);
-  bool PrioritizeScreenRayRepairRemesh(glm::ivec3 chunkCoord);
+  bool PrioritizeScreenRayRepair(glm::ivec3 chunkCoord);
   void QueueMeshDependencyInvalidations(
       const UBlockWorld &world,
       const std::vector<glm::ivec3> &changed_input_chunks,
@@ -914,7 +914,8 @@ public:
   size_t GetDirtyCount() const { return Dirty.GetCount(); }
   bool HasScreenRayRepairPin(glm::ivec3 chunk_coord) const
   {
-    return Dirty.IsScreenRayRemesh(chunk_coord);
+    return Dirty.IsScreenRayRemesh(chunk_coord) ||
+           Dirty.IsScreenRayFirstMesh(chunk_coord);
   }
   void ReserveDirtyCapacity(size_t n) { Dirty.ReserveCapacity(n); }
   int MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk, size_t soft_cap,
