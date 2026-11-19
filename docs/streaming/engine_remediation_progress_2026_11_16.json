@@ -17088,5 +17088,1005 @@
     "Trace and compare the physical field actually bound at draw time (owner, geometry identity, field incarnation/revision, shader handle/table/page) with independent nonzero reference; distinguish it from intentionally stale/zero baked VBO data.",
     "Exercise a controlled native zero-blocklight shader counterexample and restored normal run for final RGB; continue wet/transparency/source-removal/AIR-boundary/backend/full-matrix work."
   ]
+},
+"native_bound_field_and_rgb_causal_control_2026_11_20": {
+  "assessment_path": "build\\desktop-msvc\\native-bound-field-rgb-causal-assessment-20261120.json",
+  "schema": "native-bound-field-rgb-causal-assessment.v1",
+  "date": "2026-11-20",
+  "checkout_commit": "903bce3cfc58258138c79185257261a276a2793b",
+  "goal_status": "active; full original S0..S6 preserved",
+  "changes": [
+    "20f97dea2 opt-in bounded GL3.3 query of the actual current program/direct handle, actual sampler units/textures/table incarnation and all8000GPU cells immediately before a packed range draw; restored GL state, matching range retained through pixel attribution. GPU data compared to immutable certified CPU lease snapshot and independent per-floor physical reference.",
+    "7bae627cc strict frame_epoch + world/geometry/field owner join; missing requested bound capture never falls back to baked vertices.",
+    "4cb0b452e portable32-bit RGBA_INTEGER readback for existing GL/GLES atlas driver fixture, preserving all exact-cell/ABA/fence/ordered-reuse assertions.",
+    "903bce3cf parser follows the existing table contract: index/generation0valid; zero table incarnation invalid. Native capture itself was correct in the initial refused run; retained rawFAIL not rewritten."
+  ],
+  "tests": {
+    "python_engine_tests": 131,
+    "python_pass": true,
+    "release_driver_tests": [
+      "bound_section_light_probe_driver_test",
+      "section_light_atlas_driver_test",
+      "section_light_atlas_gles_driver_test"
+    ],
+    "release_driver_tests_pass": true,
+    "bound_driver_scope": "Full8000-cell independent pattern; stale expected handle, CPU-byte mismatch and disabled actual physical mode rejected; real ordered-page overwrite leaves earlier captured data unchanged; pack/PBO/active texture/program/raster state restored.",
+    "gles_initial_failure": "Original GLES3 AMD readback returned zero at cell1 instead of113 with GL_INVALID_OPERATION1282 for GL_RED_INTEGER. This was a driver-test transfer-format defect; shader/production atlas code unchanged.",
+    "gles_causal_control": {
+      "control": "GL_RED_INTEGER integer framebuffer readback on actual GLES3 AMD context",
+      "red_returncode": 1,
+      "red_stdout": "GPU: AMD Radeon (TM) Graphics GL: OpenGL ES 3.0.0 OGLP-230330 \n",
+      "red_stderr": "section_light_atlas_driver_test: integer readback GL error: 1282\n",
+      "restored_returncode": 0,
+      "restored_stdout": "Test project C:/Projects/Cubatarium/build/desktop-msvc\n    Start 74: section_light_atlas_driver_test\n1/3 Test #74: section_light_atlas_driver_test .........   Passed    0.30 sec\n    Start 75: section_light_atlas_gles_driver_test\n2/3 Test #75: section_light_atlas_gles_driver_test ....   Passed    0.22 sec\n    Start 76: bound_section_light_probe_driver_test\n3/3 Test #76: bound_section_light_probe_driver_test ...   Passed    0.22 sec\n\n100% tests passed, 0 tests failed out of 3\n\nLabel Time Summary:\ngles           =   0.22 sec*proc (1 test)\ngpu            =   0.74 sec*proc (3 tests)\nintegration    =   0.74 sec*proc (3 tests)\n\nTotal Test time (real) =   0.83 sec\n",
+      "source_sha256_before": "6e2d4c2ef9dbafe919f42d90d77c983da58ad9ece91f00c93fe950348e389c66",
+      "source_sha256_after": "6e2d4c2ef9dbafe919f42d90d77c983da58ad9ece91f00c93fe950348e389c66",
+      "scope": "Test readback only. All exact8000-cell, ownership, retirement, signed-origin and ordered-reuse comparisons retained; no application/native from temporary control source."
+    },
+    "build_logs": [
+      "bound-field-desktop-build-20261120.log",
+      "bound-field-frame-desktop-build-20261120.log",
+      "bound-field-zero-generation-desktop-build-20261120.log"
+    ]
+  },
+  "cases": {
+    "zero_generation_parser_refusal": {
+      "artifacts": "build\\desktop-msvc\\engine-bound-positive-floor-rgb-20261120-native",
+      "built_source_commit": "4cb0b452e736e5c5ed1c9f3201a267275cdbfd12",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-4cb0b45",
+      "exe_sha256": "b11bc45774befad8a3f1ff9195236c5ba25739ba5f00a596a3ba3b0aa6bf3704",
+      "native_exit": 0,
+      "wrapper_exit": 1,
+      "native_cached_overall": "FAIL",
+      "cached_field_component": {
+        "status": "FAIL",
+        "reason": "malformed_floor_reference_trace"
+      },
+      "current_field_reevaluation": {
+        "status": "PASS",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 3172,
+        "positive_expected": 3172,
+        "faults": 0,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 3172,
+          "bound_gpu": 3172
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 3172,
+        "frame_epochs": 93,
+        "observed_emitter_cells": 2,
+        "distinct_floor_cells": 1051,
+        "distinct_expected_levels": 11,
+        "skipped": 11894,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6282,
+          "unscoped_floor_cell": 376,
+          "not_downward_valid_ray": 5236
+        },
+        "missing_coverage": [],
+        "examples": [],
+        "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "current_rgb_component": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "PASS",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 3172,
+        "faults": 0,
+        "frame_epochs": 93,
+        "distinct_cells": 1051,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11894,
+        "examples": [],
+        "missing_coverage": []
+      },
+      "gpu_capture_observation_counts": {
+        "captured_pixel_rows": 14835,
+        "valid_gpu_rows": 14835,
+        "all8000_cpu_bytes_match_rows": 14835,
+        "initial_generation_zero_rows": 3827,
+        "ordered_index4095_rows": 0,
+        "distinct_gpu_programs": 1,
+        "distinct_atlas_table_pairs": 1,
+        "distinct_owner_tuples": 95,
+        "max_observed_handles_per_frame": 12
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "retained_world": "EngineSmoke_cd77b27813b0459aa7a51d8fbd959883",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3379
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14807,
+        "faults": 0,
+        "frame_epochs": 116,
+        "skipped_unscoped_or_occluded": 259,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 193.637,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 169,
+        "outside_initial_resident_samples": 3379
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 24.4835,
+          "wall_ms_fly_med": 29.0288,
+          "wall_ms_no_holes_med": 32.5422,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 14.0
+        }
+      },
+      "artifact_sha256": {
+        "flight_sim_report.json": "46df1096f53a9269472bbc3a67f14c75520f0c8c2eac164f5d90a85c74cfb186",
+        "route.json": "6e6f6b8805ceca4893f70fe35ed586b44fbb681be00f6540de0a14d2f8d7a387",
+        "fixture.json": "45b857b41d8f14ca07a6b65ccaf1e5a2a7bdc5b47275c7ce37b86420261bb342",
+        "smoke-verdict.json": "0e3c7941ddb03521487d92d4bc1f71dab5d2cb2e4fc0fe921faa22fdc4a13614",
+        "fixture-floor-light-reference.json": "5b6ab178777d681254f8fe4d05a5c4c7b740ce92d4521689aa97b7dee0d6d8c8",
+        "fixture-floor-rgb-reference.json": "802a7db68531cb95a3ec035e04432e487e11062ead01b262d1ea4bc428f393b8"
+      }
+    },
+    "zero_shader_control": {
+      "artifacts": "build\\desktop-msvc\\engine-bound-positive-rgb-zero-shader-20261120-native",
+      "built_source_commit": "903bce3cfc58258138c79185257261a276a2793b",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-903bce3",
+      "exe_sha256": "72879ffea3811e90ee9fbe4b59c87c6aabd2aded085de4bbfd800a2bd814e3d5",
+      "native_exit": 0,
+      "wrapper_exit": 1,
+      "native_cached_overall": "FAIL",
+      "cached_field_component": {
+        "status": "PASS",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2842,
+        "positive_expected": 2842,
+        "faults": 0,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2842,
+          "bound_gpu": 2842
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 2842,
+        "frame_epochs": 89,
+        "observed_emitter_cells": 2,
+        "distinct_floor_cells": 977,
+        "distinct_expected_levels": 11,
+        "skipped": 11904,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6026,
+          "unscoped_floor_cell": 565,
+          "not_downward_valid_ray": 5313
+        },
+        "missing_coverage": [],
+        "examples": [],
+        "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "current_field_reevaluation": {
+        "status": "PASS",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2842,
+        "positive_expected": 2842,
+        "faults": 0,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2842,
+          "bound_gpu": 2842
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 2842,
+        "frame_epochs": 89,
+        "observed_emitter_cells": 2,
+        "distinct_floor_cells": 977,
+        "distinct_expected_levels": 11,
+        "skipped": 11904,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6026,
+          "unscoped_floor_cell": 565,
+          "not_downward_valid_ray": 5313
+        },
+        "missing_coverage": [],
+        "examples": [],
+        "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "current_rgb_component": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "FAIL",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 2842,
+        "faults": 2779,
+        "frame_epochs": 89,
+        "distinct_cells": 977,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11904,
+        "examples": [
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              55
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 19.86495999999999,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              53
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 29.091199999999986,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              52
+            ],
+            "expected_light": 11,
+            "predicted_rgba": [
+              51.70432,
+              34.469546666666666,
+              17.234773333333333,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 33.70432,
+            "intensity": 0.26929333333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              50
+            ],
+            "expected_light": 11,
+            "predicted_rgba": [
+              51.70432,
+              34.469546666666666,
+              17.234773333333333,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 33.70432,
+            "intensity": 0.26929333333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              49
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 29.091199999999986,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -274,
+              -44,
+              47
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 19.86495999999999,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -277,
+              -44,
+              56
+            ],
+            "expected_light": 6,
+            "predicted_rgba": [
+              28.63872,
+              19.09248,
+              9.54624,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 10.63872,
+            "intensity": 0.14916,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -277,
+              -44,
+              55
+            ],
+            "expected_light": 7,
+            "predicted_rgba": [
+              33.251839999999994,
+              22.167893333333332,
+              11.083946666666666,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                18,
+                12,
+                6,
+                255
+              ],
+              [
+                18,
+                12,
+                6,
+                255
+              ]
+            ],
+            "error_bytes": 15.251839999999994,
+            "intensity": 0.17318666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": true
+          }
+        ],
+        "missing_coverage": []
+      },
+      "gpu_capture_observation_counts": {
+        "captured_pixel_rows": 14526,
+        "valid_gpu_rows": 14526,
+        "all8000_cpu_bytes_match_rows": 14526,
+        "initial_generation_zero_rows": 3319,
+        "ordered_index4095_rows": 0,
+        "distinct_gpu_programs": 1,
+        "distinct_atlas_table_pairs": 1,
+        "distinct_owner_tuples": 94,
+        "max_observed_handles_per_frame": 12
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "retained_world": "EngineSmoke_a23d0d352a7e422b9edf69f4e6ea981a",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3426
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14494,
+        "faults": 0,
+        "frame_epochs": 114,
+        "skipped_unscoped_or_occluded": 252,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 192.114,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 171,
+        "outside_initial_resident_samples": 3426
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 25.258,
+          "wall_ms_fly_med": 28.1725,
+          "wall_ms_no_holes_med": 34.06665,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "flight_sim_report.json": "2f4838f0b7556535473943bcf34be3c5dcaf98e2e124a5eb9401384dceb76e74",
+        "route.json": "77282eb3175798dbede6973d34a1339f3ccbba167e8a102f2b09892d61d09da6",
+        "fixture.json": "dbec79e4316da9e279cb956a47b70fc000469177226bc8e8f1057c46798ae537",
+        "smoke-verdict.json": "d64d8c50d41a44d392653006baa1eddc2d4a643cf6265c7491932783ab0370ab",
+        "fixture-floor-light-reference.json": "f2f0b4833115c2c837ab9a1e7e32258734418c6a83a1f42a666974cf32403c58",
+        "fixture-floor-rgb-reference.json": "bed3bbdd0d73215d4216034e0855de4664e602339ad00029f3178ff97889d87e"
+      }
+    },
+    "restored_normal": {
+      "artifacts": "build\\desktop-msvc\\engine-bound-positive-floor-rgb-restored-20261120-native",
+      "built_source_commit": "903bce3cfc58258138c79185257261a276a2793b",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-903bce3",
+      "exe_sha256": "72879ffea3811e90ee9fbe4b59c87c6aabd2aded085de4bbfd800a2bd814e3d5",
+      "native_exit": 0,
+      "wrapper_exit": 2,
+      "native_cached_overall": "UNTESTED",
+      "cached_field_component": {
+        "status": "PASS",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2974,
+        "positive_expected": 2974,
+        "faults": 0,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2974,
+          "bound_gpu": 2974
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 2974,
+        "frame_epochs": 88,
+        "observed_emitter_cells": 2,
+        "distinct_floor_cells": 964,
+        "distinct_expected_levels": 11,
+        "skipped": 11932,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6043,
+          "unscoped_floor_cell": 637,
+          "not_downward_valid_ray": 5252
+        },
+        "missing_coverage": [],
+        "examples": [],
+        "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "current_field_reevaluation": {
+        "status": "PASS",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2974,
+        "positive_expected": 2974,
+        "faults": 0,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2974,
+          "bound_gpu": 2974
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 2974,
+        "frame_epochs": 88,
+        "observed_emitter_cells": 2,
+        "distinct_floor_cells": 964,
+        "distinct_expected_levels": 11,
+        "skipped": 11932,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6043,
+          "unscoped_floor_cell": 637,
+          "not_downward_valid_ray": 5252
+        },
+        "missing_coverage": [],
+        "examples": [],
+        "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "current_rgb_component": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "PASS",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 2974,
+        "faults": 0,
+        "frame_epochs": 88,
+        "distinct_cells": 964,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11932,
+        "examples": [],
+        "missing_coverage": []
+      },
+      "gpu_capture_observation_counts": {
+        "captured_pixel_rows": 14694,
+        "valid_gpu_rows": 14694,
+        "all8000_cpu_bytes_match_rows": 14694,
+        "initial_generation_zero_rows": 3830,
+        "ordered_index4095_rows": 0,
+        "distinct_gpu_programs": 1,
+        "distinct_atlas_table_pairs": 1,
+        "distinct_owner_tuples": 96,
+        "max_observed_handles_per_frame": 12
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "retained_world": "EngineSmoke_7ffec269cd1e497e9a05d76bc9c4e174",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3268
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14662,
+        "faults": 0,
+        "frame_epochs": 115,
+        "skipped_unscoped_or_occluded": 244,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 191.147,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 171,
+        "outside_initial_resident_samples": 3268
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 22.0647,
+          "wall_ms_fly_med": 28.1691,
+          "wall_ms_no_holes_med": 30.4177,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "flight_sim_report.json": "d77c537f5aaf1b14dde771ba45c0d54574e19208210330deb5db3593a53d7c73",
+        "route.json": "840ed7b50881405ec6fa4a8454f4b677f5efce773f88532a32235bcce2155f3b",
+        "fixture.json": "bd2b0c3d87b6b0d7ae1f679f4a0a1d538b93acf90a9fcb2d0e20b220de040646",
+        "smoke-verdict.json": "d6cac7af1eb670db83a6c996132b445ee643b43465515cf991d70d66390d86ef",
+        "fixture-floor-light-reference.json": "32d9ad9c18a695fb3322182758934a021879b614e5e2871f83e7fa425d4b95aa",
+        "fixture-floor-rgb-reference.json": "56a4d67a2201d72b8af74c62b8ff943340b06bcd104d5175a399a81e433bd291"
+      }
+    }
+  },
+  "shader_control": {
+    "schema": "bound-field-zero-shader-native-control.v1",
+    "source_commit": "903bce3cfc58258138c79185257261a276a2793b",
+    "baseline_cached_status": "FAIL",
+    "baseline_bound_field_reevaluation": {
+      "status": "PASS",
+      "reason": "analytic_floor_draw_source_light",
+      "checked": 3172,
+      "positive_expected": 3172,
+      "faults": 0,
+      "source_counts": {
+        "cpu": 0,
+        "packed_gpu": 3172,
+        "bound_gpu": 3172
+      },
+      "missing_bound_fields": 0,
+      "positive_bound_with_baked_zero": 3172,
+      "frame_epochs": 93,
+      "observed_emitter_cells": 2,
+      "distinct_floor_cells": 1051,
+      "distinct_expected_levels": 11,
+      "skipped": 11894,
+      "skip_reasons": {
+        "not_joined_floor_depth": 6282,
+        "unscoped_floor_cell": 376,
+        "not_downward_valid_ray": 5236
+      },
+      "missing_coverage": [],
+      "examples": [],
+      "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+    },
+    "variant": "same physical field fetch and bindings; force block01=0 after fetch before normal color lighting",
+    "before_shader_sha256": "488e2e1a7215c3255090c5cd57d0e9589afd988918e86978f317289b960f4a9a",
+    "control_shader_sha256": "1fba0690d6e2329d35632822b9c7c8807df19b9cfba0c5236359cfb789ce774a",
+    "controlled_paths": [
+      "C:\\Projects\\Cubatarium\\shaders\\fshader_greedy.glsl",
+      "C:\\Projects\\Cubatarium\\bin\\shaders\\fshader_greedy.glsl"
+    ],
+    "command": [
+      "C:\\Users\\User\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe",
+      "-B",
+      "-X",
+      "utf8",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_bound_shader_variant_native_20261120.py",
+      "engine-bound-positive-rgb-zero-shader-20261120",
+      "1,-3,3",
+      "dry-rgb-negative-cave",
+      "default",
+      "World_261"
+    ],
+    "parent_returncode": 0,
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "expected_rejection_verified": true,
+    "restored_shader_sha256": {
+      "C:\\Projects\\Cubatarium\\shaders\\fshader_greedy.glsl": "488e2e1a7215c3255090c5cd57d0e9589afd988918e86978f317289b960f4a9a",
+      "C:\\Projects\\Cubatarium\\bin\\shaders\\fshader_greedy.glsl": "488e2e1a7215c3255090c5cd57d0e9589afd988918e86978f317289b960f4a9a"
+    },
+    "exact_shader_restore": true,
+    "source_commit_unchanged": true
+  },
+  "interpretation": [
+    "The final normal native case has2974/2974 independent positive physical-field values and2974/2974 normal-color RGB samples correct,88epochs, no missing requested GPU-bound field. All matched baked blocklight values are0; those bytes are not the consumer truth when the actual shader reads a certified physical field.",
+    "The actual negative shader control keeps real GPU-bound field/referencePASS2842/2842 but forcesblock01=0 after fetch before shading: RGBFAIL2779/2842. Exact source/runtime shader bytes restored, then the same Release EXE passes normal physical-field and RGB checks in a new ordinary native run. This proves the RGB oracle rejects an actual shader-use defect even when binding/readback truth is correct.",
+    "The controlled shader variant intentionally changes one named GLSL file in source/runtime. Its dedicated wrapper excludes ONLY that declared source path from ordinary source-diff preflight; all other source/EXE/config/world/shader-copy checks remain active. Recorded before/control/restored hashes disclose this variation. Do not describe it as an unchanged normal shader run.",
+    "Initial native parser-refusal case remains cachedFAIL/malformed_floor_reference_trace, with a separate current-verifier reevaluationPASS3172/3172 under the actual valid-generation0 table contract. No retained report was overwritten.",
+    "Ordinary restored overallUNTESTED still reflects missing general visual reference, not a full-screen or stage-completion verdict. Legacy performance remainsFAIL."
+  ],
+  "limits": [
+    "One copied dry negative-height cave/R3/seed/current Windows packed backend; positive floor levels4..14 and sky0. Same-draw GPU sampler data and RGB are independently checked for scoped floor rays, not every field cell against an independent solver, not every screen pixel.",
+    "Native query currently covers direct-uniform packed ranges for declared stone/glowstone within32block AABB distance. Its GL3.3 diagnostic class is disabled for GLES/Android; other CPU/MDI/GLES native consumers remain unverified here. GL3.3/GLES sampler-driver parity is not full lighting solver/backend parity.",
+    "At most512 retained range captures per probe frame, each8000data bytes plus bounded metadata, one32KiB transfer buffer/output texture. Observed pixel-owner counts are a sampled lower bound, not a measured whole-app memory high-water mark. Readbacks add stalls and can alter timing/retirement; no uninstrumented readiness/lifetime or production performance inference.",
+    "Driver ordered-reuse test retains exact queued draw comparisons without an intervening readback/fence/glFinish between overwrite submissions; new bound-probe driver separately validates snapshots surviving real reuse. Native ordered-index observation counts are reported numerically without claiming broad pressure coverage.",
+    "131Python and3driver tests were verified; no claim that the prior38-test engine matrix was rerun for the diagnostic-only changes. Release builds only; no normal application/native from the temporary GLES RED test source.",
+    "Full original S0..S6 remains active: semantic geometry/optics identities, lifecycle/provider/cancellation, procedural AIR discovery, actual CPU/GPU solver + CPU/MDI/GLES native parity, source removal and AIR-border emitters, independent wet/transparency, multi-seed/R8 and complete performance/memory matrix. No audit restart or historical greenwashing."
+  ],
+  "next": [
+    "Extend bound-consumer observation to CPU/MDI and portable native backends; carry the same strict owner/frame/physical proof contract.",
+    "Add independently predicted source removal/AIR-border and wet/transparency shader composition cases; retain the real zero-blocklight shader negative control and restored normal evidence.",
+    "Continue all original lifecycle/catalog/procedural-AIR/performance/memory obligations; do not closeS5/S6 or the goal from this scoped success."
+  ]
 }
 }
