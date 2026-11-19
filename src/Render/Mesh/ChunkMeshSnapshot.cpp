@@ -799,7 +799,8 @@ std::optional<ChunkMeshSnapshot> UBlockWorld::ReadChunkBandForCapture(
     ChunkMeshSnapshot::NeighborVisualDrawableFn neighbor_drawable,
     void *neighbor_drawable_ctx) const
 {
-  if (token.world_epoch == 0 || token.source_revision == 0)
+  if (token.world_epoch == 0 || token.source_revision == 0 ||
+      token.capture_policy_generation == 0)
   {
     return std::nullopt;
   }
@@ -809,8 +810,10 @@ std::optional<ChunkMeshSnapshot> UBlockWorld::ReadChunkBandForCapture(
   }
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       *this, coord, token.source_revision, neighbor_drawable,
-      neighbor_drawable_ctx);
+      neighbor_drawable_ctx, token.light_inputs);
   snap.sourceRevision = token.source_revision;
+  snap.sourceWorldEpoch = token.world_epoch;
+  snap.sourceCaptureGeneration = token.capture_policy_generation;
   return snap;
 }
 

@@ -2469,12 +2469,17 @@ void UChunkMeshCache::PrefetchMeshCapture(const UBlockWorld &world,
     }
     WorkToken work_token = MakeCaptureWorkToken(chunk_coord);
     const MeshCaptureToken token{work_token.world_epoch, rev,
-                                 work_token.generation};
+                                 work_token.generation,
+                                 CaptureStore.LightInputsPolicy(),
+                                 CaptureStore.CapturePolicyGeneration()};
     DependencyStamp deps;
+    deps.mesh_light_inputs = CaptureStore.LightInputsPolicy();
+    deps.capture_policy_generation = CaptureStore.CapturePolicyGeneration();
     if (registry != nullptr)
     {
-      deps =
-          BuildMeshCaptureDependencyStamp(world, chunk_coord, rev, *registry);
+      deps = BuildMeshCaptureDependencyStamp(
+          world, chunk_coord, rev, *registry, CaptureStore.LightInputsPolicy(),
+          CaptureStore.CapturePolicyGeneration());
     }
     else
     {
@@ -5536,7 +5541,9 @@ bool UChunkMeshCache::TryCommitCompletedCapture(
   if (registry != nullptr)
   {
     const DependencyStamp current = BuildMeshCaptureDependencyStamp(
-        world, done.token.coord, done.source_revision, *registry);
+        world, done.token.coord, done.source_revision, *registry,
+        CaptureStore.LightInputsPolicy(),
+        CaptureStore.CapturePolicyGeneration());
     if (!CaptureDependencyStillValid(done.deps, current))
     {
       return false;
@@ -5581,8 +5588,9 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(
 
   WorkToken work_token = MakeCaptureWorkToken(coord);
   work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
-  const MeshCaptureToken token{work_token.world_epoch, source_revision,
-                               work_token.generation};
+  const MeshCaptureToken token{
+      work_token.world_epoch, source_revision, work_token.generation,
+      CaptureStore.LightInputsPolicy(), CaptureStore.CapturePolicyGeneration()};
   const auto band_read_t0 = std::chrono::steady_clock::now();
   auto band = world.ReadChunkBandForCapture(
       coord, token, CaptureStore.GetNeighborDrawableFn(),
@@ -5593,14 +5601,20 @@ bool UChunkMeshCache::CaptureAndCommitOnMain(
     return deferred(SnapshotAcquireDeferReason::MissingCaptureBand);
   }
   DependencyStamp deps;
+  deps.mesh_light_inputs = CaptureStore.LightInputsPolicy();
+  deps.capture_policy_generation = CaptureStore.CapturePolicyGeneration();
   deps.content_revision = source_revision;
   if (registry != nullptr)
   {
     const auto dependency_check_t0 = std::chrono::steady_clock::now();
-    deps = BuildMeshCaptureDependencyStamp(world, coord, source_revision,
-                                           *registry);
+    deps = BuildMeshCaptureDependencyStamp(
+        world, coord, source_revision, *registry,
+        CaptureStore.LightInputsPolicy(),
+        CaptureStore.CapturePolicyGeneration());
     const DependencyStamp current = BuildMeshCaptureDependencyStamp(
-        world, coord, source_revision, *registry);
+        world, coord, source_revision, *registry,
+        CaptureStore.LightInputsPolicy(),
+        CaptureStore.CapturePolicyGeneration());
     if (!CaptureDependencyStillValid(deps, current))
     {
       if (!HasDrawableGreedyMesh(coord) && !Dirty.Contains(coord))
@@ -5863,9 +5877,13 @@ UChunkMeshCache::TryAcquireSnapshotForSchedule(const UBlockWorld &world,
     WorkToken work_token = MakeCaptureWorkToken(coord);
     work_token.chunk_incarnation = ChunkIncarnationAt(world, coord);
     const MeshCaptureToken token{work_token.world_epoch, source_revision,
-                                 work_token.generation};
-    DependencyStamp deps = BuildMeshCaptureDependencyStamp(
-        world, coord, source_revision, registry);
+                                 work_token.generation,
+                                 CaptureStore.LightInputsPolicy(),
+                                 CaptureStore.CapturePolicyGeneration()};
+    DependencyStamp deps =
+        BuildMeshCaptureDependencyStamp(world, coord, source_revision, registry,
+                                        CaptureStore.LightInputsPolicy(),
+                                        CaptureStore.CapturePolicyGeneration());
     // Q7: reserve before band allocate / worker enqueue.
     if (!CaptureStore.TryAcquireSnapshotCredit())
     {

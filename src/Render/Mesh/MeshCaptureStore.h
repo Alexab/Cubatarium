@@ -25,6 +25,10 @@ public:
   void InvalidateAll();
   void BumpWorldEpoch();
   uint64_t WorldEpoch() const { return WorldEpoch_; }
+  /// Invalidates captures without changing published world/field ownership.
+  bool SetLightInputsPolicy(MeshLightInputs policy);
+  MeshLightInputs LightInputsPolicy() const { return LightInputsPolicy_; }
+  uint64_t CapturePolicyGeneration() const { return CapturePolicyGeneration_; }
 
   std::optional<ChunkMeshSnapshot> TryGet(const UBlockWorld &world,
                                           glm::ivec3 coord,
@@ -97,6 +101,8 @@ private:
   };
   bool EvictLeastRecentlyUsed(bool require_credit);
   uint64_t WorldEpoch_{1};
+  MeshLightInputs LightInputsPolicy_{MeshLightInputs::Baked};
+  uint64_t CapturePolicyGeneration_{1};
   uint64_t NextAccessSequence_{1};
   uint64_t StaleEntryEvictions_{0};
   uint64_t CapacityEvictions_{0};

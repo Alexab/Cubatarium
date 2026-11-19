@@ -13,12 +13,20 @@ namespace cutum
 /// Build dependency stamp for mesh capture at `coord`.
 inline DependencyStamp BuildMeshCaptureDependencyStamp(
     const UBlockWorld &world, glm::ivec3 coord, uint64_t content_revision,
-    const UBlockRegistry &registry)
+    const UBlockRegistry &registry,
+    MeshLightInputs light_inputs = MeshLightInputs::Baked,
+    uint64_t capture_policy_generation = 1)
 {
   DependencyStamp stamp;
   stamp.content_revision = content_revision;
   stamp.material_catalog_revision =
       MaterialCatalogRevision(registry.GetDefinitionsCatalogSnapshot());
+  stamp.mesh_light_inputs = light_inputs;
+  stamp.capture_policy_generation = capture_policy_generation;
+  if (light_inputs == MeshLightInputs::PhysicalField)
+  {
+    return stamp;
+  }
   if (const UChunk *chunk = world.GetChunkManager().GetChunk(coord))
   {
     stamp.light_revision = chunk->GetLightFieldRevision();
@@ -83,6 +91,11 @@ inline uint64_t ChunkIncarnationAt(const UBlockWorld &world, glm::ivec3 coord)
 inline bool CaptureDependencyStillValid(const DependencyStamp &captured,
                                         const DependencyStamp &current)
 {
+  if (captured.mesh_light_inputs != current.mesh_light_inputs ||
+      captured.capture_policy_generation != current.capture_policy_generation)
+  {
+    return false;
+  }
   if (captured.content_revision != 0 &&
       captured.content_revision != current.content_revision)
   {

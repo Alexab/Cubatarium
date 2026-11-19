@@ -27,6 +27,17 @@ void UMeshCaptureStore::Invalidate(glm::ivec3 coord) { Store_.erase(coord); }
 
 void UMeshCaptureStore::InvalidateAll() { Store_.clear(); }
 
+bool UMeshCaptureStore::SetLightInputsPolicy(MeshLightInputs policy)
+{
+  if (LightInputsPolicy_ == policy)
+    return false;
+  LightInputsPolicy_ = policy;
+  if (++CapturePolicyGeneration_ == 0)
+    CapturePolicyGeneration_ = 1;
+  Store_.clear();
+  return true;
+}
+
 void UMeshCaptureStore::BumpWorldEpoch()
 {
   ++WorldEpoch_;
@@ -46,7 +57,9 @@ UMeshCaptureStore::TryGet(const UBlockWorld &world, glm::ivec3 coord,
   {
     return std::nullopt;
   }
-  if (it->second.worldEpoch != WorldEpoch_)
+  if (it->second.worldEpoch != WorldEpoch_ ||
+      it->second.data.lightInputs != LightInputsPolicy_ ||
+      it->second.data.sourceCaptureGeneration != CapturePolicyGeneration_)
   {
     Store_.erase(it);
     ++StaleEntryEvictions_;
@@ -115,8 +128,17 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
                                   std::unique_ptr<UPipelineCreditGuard> credit)
 {
   if (world_epoch == 0 || world_epoch != WorldEpoch_ ||
+      ((snapshot.sourceWorldEpoch == 0) !=
+       (snapshot.sourceCaptureGeneration == 0)) ||
       (snapshot.sourceWorldEpoch != 0 &&
-       snapshot.sourceWorldEpoch != world_epoch))
+       snapshot.sourceWorldEpoch != world_epoch) ||
+      snapshot.lightInputs != LightInputsPolicy_ ||
+      (snapshot.sourceCaptureGeneration != CapturePolicyGeneration_ &&
+       !(snapshot.sourceWorldEpoch == 0 &&
+         snapshot.sourceCaptureGeneration == 0)) ||
+      (captured_deps != nullptr &&
+       (captured_deps->mesh_light_inputs != LightInputsPolicy_ ||
+        captured_deps->capture_policy_generation != CapturePolicyGeneration_)))
   {
     return false;
   }
@@ -131,6 +153,7 @@ bool UMeshCaptureStore::TryCommit(glm::ivec3 coord, uint64_t source_revision,
   }
   Entry entry;
   snapshot.sourceWorldEpoch = world_epoch;
+  snapshot.sourceCaptureGeneration = CapturePolicyGeneration_;
   entry.worldEpoch = world_epoch;
   entry.sourceRevision = source_revision;
   if (captured_deps != nullptr)
@@ -166,7 +189,10 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
       PipelineCreditKind::Snapshot, kEstimatedChunkSnapshotBytes, true);
   const uint64_t capture_epoch = WorldEpoch_;
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
-      world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_);
+      world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_,
+      LightInputsPolicy_);
+  snap.sourceWorldEpoch = capture_epoch;
+  snap.sourceCaptureGeneration = CapturePolicyGeneration_;
   if (!TryCommit(coord, source_revision, capture_epoch, std::move(snap),
                  nullptr, std::move(credit)))
     return std::nullopt;
@@ -199,6 +225,8 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
   if (it != Store_.end() &&
       (it->second.sourceRevision != source_revision ||
        it->second.worldEpoch != WorldEpoch_ ||
+       it->second.data.lightInputs != LightInputsPolicy_ ||
+       it->second.data.sourceCaptureGeneration != CapturePolicyGeneration_ ||
        !it->second.data.InputsStillValid(world, NeighborDrawableFn_,
                                          NeighborDrawableCtx_) ||
        CompletedLightRequiresRecapture(world, it->second.data)))
@@ -213,6 +241,14 @@ std::optional<ChunkMeshSnapshot> UMeshCaptureStore::RefreshIncrementalShell(
     return TakeOrRefresh(world, coord, source_revision, budget);
   }
   it->second.last_access_sequence = NextAccessSequence_++;
+  // Physical captures already validate all seven whole-content stamps and
+  // absence evidence. A changed face required the full capture above; an
+  // unchanged one must not acquire drawable state or legacy light counters.
+  if (LightInputsPolicy_ == MeshLightInputs::PhysicalField)
+  {
+    ++LastStoreHitN_;
+    return it->second.data;
+  }
   ChunkMeshSnapshot snap = it->second.data;
   const glm::ivec3 origin = snap.ChunkOrigin();
   uint8_t missing_faces = snap.boundaryOverlay.missingNeighborFaces;

@@ -19,10 +19,12 @@
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/IUChunkMesher.h"
+#include "Render/Mesh/MeshCaptureToken.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
+#include "World/Streaming/DependencyStampBuilder.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -122,6 +124,8 @@ struct ChunkMeshCaptureAdmissionTestAccess
     auto snapshot = ChunkMeshSnapshot::Capture(
         world, coord, cache.GetChunkMeshRevision(coord));
     snapshot.sourceWorldEpoch = epoch;
+    snapshot.sourceCaptureGeneration =
+        cache.GetCaptureStore().CapturePolicyGeneration();
     return snapshot;
   }
   static bool PrepareOnly(UChunkMeshCache &cache,
@@ -998,6 +1002,91 @@ TestNoSurfaceGeometryProof(cutum::UBlockRegistry &registry,
   world.SetFluidState(interior,
                       FluidCellState::Source().WithKind(FluidKind::Water));
   Expect(!classify(), "fluid rejects a previously certified AIR-only section");
+}
+
+static void
+TestPhysicalCaptureOwnership(cutum::UBlockRegistry &registry,
+                             const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 root(0);
+  world.SetBlock({8, 8, 8}, kStone);
+  UMeshCaptureStore store;
+  const auto epoch = store.WorldEpoch();
+  const auto original_generation = store.CapturePolicyGeneration();
+  auto baked = store.CaptureAndStore(world, root, 7);
+  Expect(baked.has_value(), "capture policy initial owned capture");
+  Expect(store.SetLightInputsPolicy(MeshLightInputs::PhysicalField) &&
+             store.Size() == 0 && store.WorldEpoch() == epoch &&
+             store.CapturePolicyGeneration() != original_generation,
+         "capture policy change clears captures without changing world epoch");
+  const MeshCaptureToken token{epoch, 7, 1, store.LightInputsPolicy(),
+                               store.CapturePolicyGeneration()};
+  auto band = world.ReadChunkBandForCapture(root, token);
+  Expect(band && band->lightInputs == MeshLightInputs::PhysicalField &&
+             band->sourceWorldEpoch == epoch &&
+             band->sourceCaptureGeneration == token.capture_policy_generation,
+         "world band records actual capture policy and generation");
+  auto deps = BuildMeshCaptureDependencyStamp(world, root, 7, registry,
+                                              token.light_inputs,
+                                              token.capture_policy_generation);
+  Expect(store.TryCommit(root, 7, epoch, *band, &deps),
+         "current physical band commits with matching dependency owner");
+  const auto stable_generation = store.CapturePolicyGeneration();
+  Expect(!store.SetLightInputsPolicy(MeshLightInputs::PhysicalField) &&
+             store.CapturePolicyGeneration() == stable_generation &&
+             store.Size() == 1,
+         "repeated capture policy preserves cached capture and generation");
+  auto *chunk = world.GetChunkManager().GetChunk(root);
+  chunk->SetLightLocal({8, 9, 8}, 15, 4);
+  auto current_deps = BuildMeshCaptureDependencyStamp(
+      world, root, 7, registry, token.light_inputs,
+      token.capture_policy_generation);
+  Expect(CaptureDependencyStillValid(deps, current_deps) &&
+             deps.Matches(current_deps) && store.TryGet(world, root, 7),
+         "physical capture owner survives actual field mutation");
+  auto wrong_deps = deps;
+  ++wrong_deps.capture_policy_generation;
+  Expect(!store.TryCommit(root, 7, epoch, *band, &wrong_deps) &&
+             !CaptureDependencyStillValid(deps, wrong_deps) &&
+             !deps.Matches(wrong_deps),
+         "capture dependency generation rejects obsolete owner");
+  wrong_deps = deps;
+  wrong_deps.mesh_light_inputs = MeshLightInputs::Baked;
+  Expect(!store.TryCommit(root, 7, epoch, *band, &wrong_deps) &&
+             !CaptureDependencyStillValid(deps, wrong_deps),
+         "capture dependency policy rejects incompatible inputs");
+  const auto refreshed = store.RefreshIncrementalShell(world, root, 7, 0x3f);
+  Expect(refreshed &&
+             refreshed->lightInputs == MeshLightInputs::PhysicalField &&
+             std::none_of(refreshed->inputStamps.begin(),
+                          refreshed->inputStamps.end(),
+                          [](const auto &stamp) { return stamp.readsLight; }),
+         "physical shell refresh preserves geometry-only stamps");
+  world.SetBlock({8, 8, 8}, BLOCK_AIR);
+  Expect(!store.TryGet(world, root, 7),
+         "physical capture owner still rejects actual geometry mutation");
+  store.SetLightInputsPolicy(MeshLightInputs::Baked);
+  Expect(!store.TryCommit(root, 7, epoch, *baked),
+         "capture policy ABA rejects old same-mode owned result");
+  store.SetLightInputsPolicy(MeshLightInputs::PhysicalField);
+  Expect(!store.TryCommit(root, 7, epoch, *band, &deps),
+         "physical capture policy ABA rejects old owned result");
+  auto unowned = ChunkMeshSnapshot::Capture(world, root, 7, nullptr, nullptr,
+                                            MeshLightInputs::PhysicalField);
+  auto partial_owner = unowned;
+  partial_owner.sourceWorldEpoch = epoch;
+  Expect(!store.TryCommit(root, 7, epoch, partial_owner),
+         "capture with missing policy generation cannot be rebound");
+  Expect(store.TryCommit(root, 7, epoch, unowned),
+         "explicit unowned raw capture can be adopted by current owner");
+  auto invalid_token = token;
+  invalid_token.capture_policy_generation = 0;
+  Expect(!world.ReadChunkBandForCapture(root, invalid_token),
+         "world band rejects missing capture policy generation");
 }
 
 static void
@@ -5852,6 +5941,7 @@ int main(int argc, char **argv)
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestNoSurfaceGeometryProof(registry, definitions.get());
   TestSecondPlaneGeometryParity(registry, definitions.get());
+  TestPhysicalCaptureOwnership(registry, definitions.get());
   TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);

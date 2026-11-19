@@ -8185,6 +8185,38 @@
         "Then complete semantic geometry/optics catalog partition, persisted content certificates, full independentRGB/transparency/backend/native and controlled performance/memory acceptance."
       ],
       "native": "No native run for this opt-in contract foundation. Latest whole-route verification remains incomplete:ae7657bcftimeout600under measured hostCPU contention; last completed6b369f738depth15/14860FAIL retained."
+    },
+    "owned_physical_capture_policy": {
+      "status": "Owned capture policy and independent generation now pass through production main-thread/prefetch/optional-worker capture tokens, store admission and mesh dependency stamps. Default runtime policy remains Baked until mesh-result/application transition is complete; full S5 remains open.",
+      "implementation": [
+        "Move MeshLightInputs to the shared World/Mesh contract. ReadChunkBandForCapture records the actual token policy, world epoch and policy generation at capture time; a zero generation is rejected.",
+        "Capture-store mode changes clear cached entries and release their credits, advance a separate policy generation, and preserve world/field epoch. Repeated identical configuration preserves both generation and entries.",
+        "Admission rejects incompatible policy, mismatched generation/dependency owners, old same-mode ABA completions, and either kind of partially owned capture. Only fully raw captures with epoch=0 and generation=0 can be adopted explicitly.",
+        "Physical capture dependency stamps contain source/catalog/policy/generation, with no field revision or 26 light halo signatures. Snapshot geometric validation still checks original world/profile/center+six axial content and absence inputs.",
+        "Physical incremental-shell reuse first validates the complete geometry inputs. A valid entry remains geometry-only; changed content takes the existing full admitted capture path instead of importing legacy light counters or visual drawability."
+      ],
+      "validation": {
+        "initial_green": "build/desktop-msvc/engine-capture-policy-owner-thirteen-tests.log",
+        "negative_controls": "build/desktop-msvc/engine-capture-policy-owner-negative-controls.json",
+        "expected_failures": 2,
+        "controls": "Disabling generation rejection admits an old same-mode owned capture; restoring the physical field dependency invalidates a capture after a real light mutation. Both actual tests fail at their intended assertions; source restored byte-for-byte.",
+        "restored_green": "build/desktop-msvc/engine-capture-policy-owner-restored-fourteen-tests.log",
+        "final_identity_guard": "After the controls, symmetric rejection of generation-only partial ownership was added with a dedicated capture_token_validation_test case. The control receipt hashes identify the pre-tightening source, not the final source.",
+        "final_build": "build/desktop-msvc/engine-capture-policy-owner-complete-identity-build.log",
+        "final_green": "build/desktop-msvc/engine-capture-policy-owner-complete-identity-fourteen-tests.log",
+        "final_result": "14/14 Release PASS; includes real desktop GL and GLES driver tests plus actual cache/world capture cases.",
+        "final_source_sha256": {
+          "src/Render/Mesh/MeshCaptureStore.cpp": "d1d00d659978454ef84a5c9bf7f9b5da60a0296d64fd9167e5ef31b34aae2a64",
+          "src/World/Streaming/DependencyStampBuilder.h": "e735d4d64b65404e6717e305e80ab81d50549b322e9079e1c1ee4dda0b85cc15"
+        }
+      },
+      "remaining": [
+        "Carry original policy/generation through MeshBuildResult and synchronous/GPU publication carriers and validate at each receiver, including after preparation callbacks. Cancellation must not erase a replacement owner.",
+        "Configure PhysicalField for actual supported world consumers, cancel/requeue obsolete captures and preserve predecessor resources during transitions; synchronous producer must select the same contract.",
+        "Remove physical reliance on legacy preview, light-halo stale classification and baked-dark retention. Actual compatible current field proof and receiver resource preparation remain mandatory.",
+        "Complete semantic catalog separation, persistence, original native first-publication counterexample closure, RGB/transparency/backend matrix and controlled performance/memory acceptance."
+      ],
+      "native": "No application build or native flight for this intermediate capture-owner change. Latest whole-route ae7657bcf timeout FAIL and last completed 6b369f738 depth 15/14860 FAIL remain authoritative."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8222,7 +8254,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "PhysicalField geometry capture/merge contract now explicit and CPU/real vertex+packed GPU verified (3negative controls, exact restore13ReleaseGREEN). Production cache capture owners are still defaultBaked: wire versioned policy through tokens/store/worker/dependency, sync/prefetch/incremental paths and physical publication/dark-retention rules; preserve actual source/data/field proof ownership. Do not equate foundation tests with fullS5cutover or native visual acceptance.",
+      "Physical geometry merge foundation and versioned capture-store/token/dependency ownership implemented and Release verified (14/14 plus2expected-failure controls for capture ownership). Runtime remains defaultBaked until original mode/generation reaches MeshBuildResult, sync/GPU receivers, callback revalidation and cancellation/transition; then enable physical policy and remove legacy preview/dark/stale-light decisions without bypassing actual field proof. No full S5 or native visual acceptance.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

@@ -7,6 +7,7 @@
 #include "World/Lighting/SectionRenderLightSnapshot.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
+#include "World/Mesh/Contracts/MeshLightInputs.h"
 #include "World/Mesh/Contracts/MeshNeighborPolicy.h"
 #include <array>
 #include <cstdint>
@@ -29,14 +30,6 @@ enum class MeshApplyStaleInputReason : uint8_t
   Light = 4,
 };
 
-enum class MeshLightInputs : uint8_t
-{
-  Baked,
-  /// Geometry has zero baked attributes. This is not a calculated-field proof;
-  /// a physical world publication must independently prepare its field lease.
-  PhysicalField,
-};
-
 /// Read-only voxel view for background meshing (center chunk, adjacent
 /// shell and axial second geometry planes). Shell faces are dense arrays (6 *
 /// CHUNK_SIZE^2), not hash maps.
@@ -54,6 +47,8 @@ struct ChunkMeshSnapshot
   /// Capture-owner epoch, independent of worker submission and trace epochs.
   /// Raw world captures have no mesh-cache epoch until an owner stamps them.
   uint64_t sourceWorldEpoch{0};
+  /// Policy generation at capture time; zero denotes an unowned raw capture.
+  uint64_t sourceCaptureGeneration{0};
   MeshLightInputs lightInputs{MeshLightInputs::Baked};
   std::array<BlockId, CHUNK_VOLUME> blocks{};
   std::array<uint8_t, CHUNK_VOLUME> fluid_packed{};

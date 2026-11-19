@@ -2,6 +2,7 @@
 
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Mesh/Contracts/MeshLightInputs.h"
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -53,13 +54,17 @@ struct DependencyStamp
   /// Mesh: exact light sample signatures for all adjacent chunks. Relight
   /// dependencies use the same slots for their legacy neighbor revisions.
   std::array<uint64_t, kChunkMeshNeighborStampCount> halo_light_dependency{};
+  MeshLightInputs mesh_light_inputs{MeshLightInputs::Baked};
+  uint64_t capture_policy_generation{0};
 
   bool Matches(const DependencyStamp &current) const
   {
     return content_revision == current.content_revision &&
            light_revision == current.light_revision &&
            material_catalog_revision == current.material_catalog_revision &&
-           halo_light_dependency == current.halo_light_dependency;
+           halo_light_dependency == current.halo_light_dependency &&
+           mesh_light_inputs == current.mesh_light_inputs &&
+           capture_policy_generation == current.capture_policy_generation;
   }
 };
 

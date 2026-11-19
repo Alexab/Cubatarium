@@ -20,6 +20,14 @@ int main()
   snap.coord = coord;
   snap.sourceRevision = rev;
 
+  auto partial_owner = snap;
+  partial_owner.sourceCaptureGeneration = store.CapturePolicyGeneration();
+  if (store.TryCommit(coord, rev, store.WorldEpoch(), partial_owner))
+  {
+    std::cerr << "FAIL: generation without capture epoch must be rejected\n";
+    return 1;
+  }
+
   if (!store.TryCommit(coord, rev, store.WorldEpoch(), snap))
   {
     std::cerr << "FAIL: initial TryCommit\n";
