@@ -4940,7 +4940,8 @@ int UWorld::CountUnfinishedVisualNear(glm::ivec3 focus_ground_chunk,
           (gpu_extract ? 1u << 6 : 0u) | (flow_ticket ? 1u << 7 : 0u) |
           (soft_defer ? 1u << 8 : 0u) | (defer_until_lit ? 1u << 9 : 0u) |
           (pending_light ? 1u << 10 : 0u) |
-          (pending_capture_work ? 1u << 11 : 0u);
+          (pending_capture_work ? 1u << 11 : 0u) |
+          (cache.IsGeometryAwaitingLight(coord) ? 1u << 12 : 0u);
       trace.flags = static_cast<uint32_t>(
           trace.flags | (fully_dark ? 1u << 9 : 0u) |
           (has_lit_face ? 1u << 10 : 0u) | (stale_dark ? 1u << 11 : 0u) |

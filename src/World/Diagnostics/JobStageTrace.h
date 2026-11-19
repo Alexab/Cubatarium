@@ -24,6 +24,7 @@ enum class JobStage : uint8_t
   GpuKicked,
   GpuCountersReady,
   GpuReady,
+  AwaitingLight,
   Count
 };
 

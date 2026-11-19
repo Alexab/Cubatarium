@@ -221,6 +221,18 @@ public:
   double GetLastMeshImmediateMs() const { return LastMeshImmediateMs; }
   int GetLastMeshImmediateCount() const { return LastMeshImmediateCount; }
   bool HasPendingDirty() const;
+  bool IsGeometryAwaitingLight(glm::ivec3 coord) const
+  {
+    return GeometryAwaitingLight_.count(coord) != 0;
+  }
+  size_t GetGeometryAwaitingLightCount() const
+  {
+    return GeometryAwaitingLight_.size();
+  }
+  size_t GetGeometryAwaitingLightBytes() const
+  {
+    return GeometryAwaitingLightBytes_;
+  }
   bool HasDirtyWithinHorizontalRadius(glm::ivec3 center_chunk,
                                       int radius_chunks) const;
   /// Dirty chunk count inside Chebyshev radius (lit-but-dirty debt metric).
@@ -1092,6 +1104,15 @@ public:
   /// lease before overwriting geometry or retiring a packed predecessor.
   void SetPrepareRenderLightFn(PrepareRenderLightFn fn)
   {
+    if (!fn)
+    {
+      for (const auto &entry : GeometryAwaitingLight_)
+      {
+        ActiveMeshSourceRevision.erase(entry.first);
+        Dirty.MarkDirtyPriority(entry.first);
+      }
+      ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
+    }
     PrepareRenderLight = std::move(fn);
   }
   std::shared_ptr<SectionRenderLightBinding>
@@ -1402,6 +1423,16 @@ private:
                     glm::ivec3 chunkCoord);
   void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
                        MeshBuildResult &&result);
+  bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
+                                 const UBlockRegistry &registry,
+                                 const MeshBuildResult &result) const;
+  bool RetainGeometryAwaitingLight(const UBlockWorld &world,
+                                   const UBlockRegistry &registry,
+                                   MeshBuildResult &&result);
+  int DrainGeometryAwaitingLight(const UBlockWorld &world,
+                                 UBlockRegistry &registry, int max_count);
+  void DropGeometryAwaitingLight(glm::ivec3 coord);
+  void ClearGeometryAwaitingLight(JobTerminalReason reason);
   void EnsureAsyncBuilder();
   void EnsureCaptureWorker();
   enum class SnapshotAcquireKind : uint8_t
@@ -1491,6 +1522,19 @@ private:
   int AltitudeFogThresholdBlocks{32};
   RenderSettings Render;
   std::unique_ptr<UAsyncMeshBuilder> AsyncBuilder;
+  struct GeometryAwaitingLight
+  {
+    MeshBuildResult result;
+    size_t bytes{0};
+  };
+  // Completed CPU geometry retains its result credit until paired or retired.
+  // Both limits are independent of the number of loaded world sections.
+  static constexpr size_t kAwaitingLightMaxCount = 32;
+  static constexpr size_t kAwaitingLightMaxBytes = 32u * 1024u * 1024u;
+  std::unordered_map<glm::ivec3, GeometryAwaitingLight, IVec3Hash>
+      GeometryAwaitingLight_;
+  std::deque<glm::ivec3> GeometryAwaitingLightQueue_;
+  size_t GeometryAwaitingLightBytes_{0};
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};

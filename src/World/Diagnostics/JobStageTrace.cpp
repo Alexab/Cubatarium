@@ -1507,6 +1507,8 @@ const char *UJobStageTrace::StageName(JobStage s)
     return "gpu_counters_ready";
   case JobStage::GpuReady:
     return "gpu_ready";
+  case JobStage::AwaitingLight:
+    return "awaiting_light";
   default:
     return "unknown";
   }

@@ -577,6 +577,17 @@ void UChunkMeshCache::InvalidateVisibleList()
 }
 void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 {
+  if ((!settings.AsyncMeshing || !settings.GreedyMeshing ||
+       settings.Lighting != Render.Lighting) &&
+      !GeometryAwaitingLight_.empty())
+  {
+    for (const auto &entry : GeometryAwaitingLight_)
+    {
+      ActiveMeshSourceRevision.erase(entry.first);
+      Dirty.MarkDirtyPriority(entry.first);
+    }
+    ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
+  }
   const bool meshPathChanged = settings.GreedyMeshing != Render.GreedyMeshing;
   Render = settings;
   if (meshPathChanged)
@@ -595,6 +606,7 @@ void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 }
 void UChunkMeshCache::MarkAllDirty()
 {
+  ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
   Cache.clear();
   GreedyCache.clear();
@@ -654,6 +666,8 @@ void UChunkMeshCache::RebuildAll(UBlockWorld &world, UBlockRegistry &registry)
 
 bool UChunkMeshCache::HasPendingAsyncMeshWork() const
 {
+  if (!GeometryAwaitingLight_.empty())
+    return true;
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return false;
@@ -664,6 +678,11 @@ bool UChunkMeshCache::HasPendingAsyncMeshWork() const
 bool UChunkMeshCache::HasAsyncInflightInHorizontalRadius(
     glm::ivec3 center_ground_chunk, int radius_chunks) const
 {
+  for (const auto &entry : GeometryAwaitingLight_)
+    if (std::max(std::abs(entry.first.x - center_ground_chunk.x),
+                 std::abs(entry.first.z - center_ground_chunk.z)) <=
+        radius_chunks)
+      return true;
   if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
   {
     return false;
@@ -726,6 +745,7 @@ bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
 
 void UChunkMeshCache::CancelAsyncMeshWork()
 {
+  ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
   ActiveMeshSourceRevision.clear();
   RemeshAfterApply.clear();
@@ -784,6 +804,16 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
   // Builder InFlight was cleared; Active/RemeshAfterApply must follow or
   // HasInflightMeshBuild stays true and RemeshAfterApply loops forever while
   // async count (builder-only) looks drained.
+  std::vector<glm::ivec3> cancelled_geometry;
+  for (const auto &entry : GeometryAwaitingLight_)
+  {
+    const int horiz = std::max(std::abs(entry.first.x - focus_ground_chunk.x),
+                               std::abs(entry.first.z - focus_ground_chunk.z));
+    if (keep_horiz_lease < 0 || horiz > keep_horiz_lease)
+      cancelled_geometry.push_back(entry.first);
+  }
+  for (const auto &coord : cancelled_geometry)
+    DropGeometryAwaitingLight(coord);
   ActiveMeshSourceRevision.clear();
   RemeshAfterApply.clear();
   for (const auto &entry : keep_active)
@@ -849,6 +879,7 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   }
   for (const glm::ivec3 &coord : outside)
   {
+    DropGeometryAwaitingLight(coord);
     // Drop Active tracking only. Do not MarkDirty — that re-fed the remesh
     // storm while standing. InFlight stays until Drain; result applies or
     // discards without another Capture cycle.
@@ -857,7 +888,8 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
   }
   // Phase 2: destroy kicked fences / free staging outside focus — do not
   // touch live ChunkToSlot (only staging via FreeSlotByIndex).
-  EnsureGpuPipeline();
+  // Cancellation retires existing work; it must never initialize a new GPU
+  // pipeline (including when the selected producer is entirely CPU-based).
   for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();)
   {
     const int horiz = std::max(std::abs(it->coord.x - focus_ground_chunk.x),
@@ -2447,6 +2479,7 @@ void UChunkMeshCache::InvalidateMeshCapture(glm::ivec3 chunk_coord)
 
 void UChunkMeshCache::InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord)
 {
+  DropGeometryAwaitingLight(chunk_coord);
   ActiveMeshSourceRevision.erase(chunk_coord);
   RemeshAfterApply.erase(chunk_coord);
   BumpChunkMeshRevision(chunk_coord,
@@ -3268,6 +3301,12 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord)
 void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
                                 MeshRevisionBumpReason reason)
 {
+  // This is an input-change hint, not evidence that completed geometry is
+  // obsolete. Its bounded owner validates the actual seven geometry inputs
+  // before pairing; real edits retire it there, while repeated repair hints
+  // cannot turn the same result back into a worker job.
+  if (GeometryAwaitingLight_.count(chunkCoord))
+    return;
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
   if (!repair_guard_off && RepairGuardWorld &&
@@ -3480,6 +3519,11 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
                                             MeshRevisionBumpReason reason,
                                             bool bump_revision)
 {
+  // A completed result is a live owner even after the worker releases it.
+  // Revalidate actual input identities in the bounded queue instead of
+  // invalidating that owner on an untyped dirty/repair notification.
+  if (GeometryAwaitingLight_.count(chunkCoord))
+    return;
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
   if (!repair_guard_off && RepairGuardWorld &&
@@ -3993,6 +4037,25 @@ PublishedLightHaloState UChunkMeshCache::GetPublishedLightHaloState(
   if (cache_entry_present)
   {
     *cache_entry_present = true;
+  }
+  // A physical publication owns a certified padded volume independently of
+  // the worker's historical baked halo. Compare that actual resource first;
+  // raw neighbor light writes cannot invalidate its geometry or its proof.
+  if (mesh->second.RenderLightBinding && mesh->second.RenderLight &&
+      mesh->second.RenderGeometryInputs.valid)
+  {
+    const auto current = world.CaptureRenderLightSnapshot(chunk_coord);
+    if (signature_stamp_valid)
+      *signature_stamp_valid = bool(current);
+    if (!current)
+      return PublishedLightHaloState::Unavailable;
+    return current->MatchesGeometry(mesh->second.RenderGeometryInputs) &&
+                   current->FieldIncarnation() ==
+                       mesh->second.RenderLight->FieldIncarnation() &&
+                   current->FieldRevision() ==
+                       mesh->second.RenderLight->FieldRevision()
+               ? PublishedLightHaloState::MatchesCurrent
+               : PublishedLightHaloState::DiffersFromCurrent;
   }
   if (!mesh->second.MeshedLightHaloSignaturesValid)
   {
@@ -4547,6 +4610,7 @@ const UGpuMeshPipeline *UChunkMeshCache::GetGpuMeshPipeline() const
 
 void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  DropGeometryAwaitingLight(chunkCoord);
   GetRenderDemandStore().RemoveGeometry(chunkCoord);
   CpuMeshRecovery.erase(chunkCoord);
   PendingStaleLightRemeshes_.erase(chunkCoord);
@@ -4608,6 +4672,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
+    DropGeometryAwaitingLight(slice);
     GetRenderDemandStore().RemoveGeometry(slice);
     PendingStaleLightRemeshes_.erase(slice);
     PendingMeshDependencyInvalidations_.erase(slice);
@@ -6374,6 +6439,7 @@ int UChunkMeshCache::ConsumeGpuApplyBacklog(UBlockWorld &world,
   LastGpuKickDeferReason_.clear();
   int done = 0;
   MeshRebuildTickStats stats{};
+  done += DrainGeometryAwaitingLight(world, registry, max_drain);
   if (AsyncBuilder)
   {
     const MeshWorkAdmission &adm = WorkAdmission;
@@ -7792,6 +7858,172 @@ static std::pair<std::ostream *, uint64_t> MeshApplyProfileOutput()
   return {profile_sink, profile_sequence};
 }
 
+bool UChunkMeshCache::IsCurrentPhysicalGeometry(
+    const UBlockWorld &world, const UBlockRegistry &registry,
+    const MeshBuildResult &result) const
+{
+  return PrepareRenderLight && Render.Lighting == LightingMode::Full &&
+         world.GetLightingConfigurationIdentity() !=
+             static_cast<uint64_t>(LightingMode::Flat) &&
+         !result.GpuExtractPending && !result.PendingSnapshot &&
+         result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+         result.InputStampsValid && result.GeometryInputs.valid &&
+         (!result.BoundaryOverlay.active ||
+          result.BoundaryOverlay.missingNeighborFaces == 0) &&
+         result.InputCatalog == registry.GetDefinitionsCatalogSnapshot() &&
+         GeometryMatchesSourceStamps(&result.InputStamps,
+                                     result.GeometryInputs) &&
+         result.GeometryInputs.Matches(world.CaptureGeometryRenderInputs(
+             result.coord, result.InputCatalog));
+}
+
+void UChunkMeshCache::DropGeometryAwaitingLight(glm::ivec3 coord)
+{
+  const auto found = GeometryAwaitingLight_.find(coord);
+  if (found == GeometryAwaitingLight_.end())
+    return;
+  if (found->second.result.jobId)
+    UJobStageTrace::NoteTerminal(found->second.result.stageTrace,
+                                 JobStage::Cancelled,
+                                 JobTerminalReason::JobIdentityReplaced);
+  GeometryAwaitingLightBytes_ -= found->second.bytes;
+  GeometryAwaitingLight_.erase(found);
+  const auto queued = std::find(GeometryAwaitingLightQueue_.begin(),
+                                GeometryAwaitingLightQueue_.end(), coord);
+  if (queued != GeometryAwaitingLightQueue_.end())
+    GeometryAwaitingLightQueue_.erase(queued);
+}
+
+void UChunkMeshCache::ClearGeometryAwaitingLight(JobTerminalReason reason)
+{
+  for (const auto &entry : GeometryAwaitingLight_)
+    if (entry.second.result.jobId)
+      UJobStageTrace::NoteTerminal(entry.second.result.stageTrace,
+                                   JobStage::Cancelled, reason);
+  GeometryAwaitingLight_.clear();
+  GeometryAwaitingLightQueue_.clear();
+  GeometryAwaitingLightBytes_ = 0;
+}
+
+bool UChunkMeshCache::RetainGeometryAwaitingLight(
+    const UBlockWorld &world, const UBlockRegistry &registry,
+    MeshBuildResult &&result)
+{
+  if (!IsCurrentPhysicalGeometry(world, registry, result) ||
+      result.sourceRevision != MeshRevisions.Current(result.coord) ||
+      (!HasCrossInstances(result.crossCenters) &&
+       std::none_of(
+           result.batches.begin(), result.batches.end(), [](const auto &batch)
+           { return !batch.vertices.empty() && !batch.indices.empty(); })))
+    return false;
+  const auto active = ActiveMeshSourceRevision.find(result.coord);
+  if (active != ActiveMeshSourceRevision.end() &&
+      active->second != result.sourceRevision)
+    return false;
+  size_t bytes = sizeof(GeometryAwaitingLight);
+  const auto add = [&](size_t count, size_t stride)
+  {
+    if (count > (kAwaitingLightMaxBytes - bytes) / stride)
+      return false;
+    bytes += count * stride;
+    return true;
+  };
+  if (!add(result.batches.capacity(), sizeof(GreedyMeshBatch)))
+    return false;
+  for (const auto &batch : result.batches)
+    if (!add(batch.vertices.capacity(), sizeof(GreedyMeshVertex)) ||
+        !add(batch.indices.capacity(), sizeof(uint32_t)))
+      return false;
+  for (const auto &cross : result.crossCenters)
+    if (!add(cross.second.capacity(), sizeof(CrossInstanceGpu)))
+      return false;
+  if (GeometryAwaitingLight_.count(result.coord) ||
+      GeometryAwaitingLight_.size() >= kAwaitingLightMaxCount ||
+      bytes > kAwaitingLightMaxBytes - GeometryAwaitingLightBytes_)
+    return false;
+  const glm::ivec3 coord = result.coord;
+  ActiveMeshSourceRevision[coord] = result.sourceRevision;
+  Dirty.Erase(coord);
+  RemeshAfterApply.erase(coord);
+  if (result.jobId)
+    NoteMeshJobStage(result.stageTrace, JobStage::AwaitingLight);
+  GeometryAwaitingLight_.emplace(
+      coord, GeometryAwaitingLight{std::move(result), bytes});
+  GeometryAwaitingLightQueue_.push_back(coord);
+  GeometryAwaitingLightBytes_ += bytes;
+  LastApplyWasRetainedPrior_ = true;
+  return true;
+}
+
+int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
+                                                UBlockRegistry &registry,
+                                                int max_count)
+{
+  const size_t count =
+      std::min(GeometryAwaitingLightQueue_.size(),
+               static_cast<size_t>(std::clamp(max_count, 0, 4)));
+  int published = 0;
+  for (size_t n = 0; n < count && !GeometryAwaitingLightQueue_.empty(); ++n)
+  {
+    const glm::ivec3 coord = GeometryAwaitingLightQueue_.front();
+    GeometryAwaitingLightQueue_.pop_front();
+    const auto found = GeometryAwaitingLight_.find(coord);
+    auto &result = found->second.result;
+    const auto active = ActiveMeshSourceRevision.find(coord);
+    const bool owned = active != ActiveMeshSourceRevision.end() &&
+                       active->second == result.sourceRevision;
+    const bool geometry_current =
+        IsCurrentPhysicalGeometry(world, registry, result);
+    const bool revision_current =
+        result.sourceRevision == MeshRevisions.Current(coord);
+    if (!owned || !revision_current || !geometry_current)
+    {
+      const bool needs_new_geometry_revision =
+          owned && revision_current &&
+          result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+          !geometry_current;
+      if (result.jobId)
+        UJobStageTrace::NoteTerminal(result.stageTrace, JobStage::Retired,
+                                     JobTerminalReason::StaleGeometryInput);
+      if (owned)
+        ActiveMeshSourceRevision.erase(active);
+      GeometryAwaitingLightBytes_ -= found->second.bytes;
+      GeometryAwaitingLight_.erase(found);
+      if (world.GetChunkManager().HasChunk(coord))
+      {
+        if (needs_new_geometry_revision)
+          MarkDirtyPriority(coord,
+                            MeshRevisionBumpReason::PriorityDirtyEnqueued);
+        else
+          RequeueDirtyPriority(coord,
+                               MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      }
+      continue;
+    }
+    auto light = world.CaptureRenderLightSnapshot(coord);
+    const auto *chunk = world.GetChunkManager().GetChunk(coord);
+    const auto *demand = GetRenderDemandStore().Find(coord);
+    if (!light || !light->MatchesGeometry(result.GeometryInputs) ||
+        !LightSettlementMatchesCurrentCalculation(demand, chunk,
+                                                  CaptureStore.WorldEpoch(),
+                                                  world, result.InputCatalog))
+    {
+      GeometryAwaitingLightQueue_.push_back(coord);
+      continue;
+    }
+    result.RenderLight = std::move(light);
+    result.ProvisionalLightPreview = false;
+    result.IndependentPhysicalField = true;
+    MeshBuildResult ready = std::move(result);
+    GeometryAwaitingLightBytes_ -= found->second.bytes;
+    GeometryAwaitingLight_.erase(found);
+    const auto before = GetPublishCount(coord);
+    ApplyMeshResult(world, registry, std::move(ready));
+    published += GetPublishCount(coord) != before;
+  }
+  return published;
+}
+
 void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                                       UBlockRegistry &registry,
                                       MeshBuildResult &&result)
@@ -7828,9 +8060,12 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const MeshApplyStaleInputReason stale_reason =
-      ChunkMeshSnapshot::ClassifyStaleInput(
-          result.InputStampsValid, catalog_ok, result.InputStamps, world,
-          result.InputLightHaloSignatures, result.CertifiedPaddedLight);
+      result.IndependentPhysicalField &&
+              IsCurrentPhysicalGeometry(world, registry, result)
+          ? MeshApplyStaleInputReason::Ok
+          : ChunkMeshSnapshot::ClassifyStaleInput(
+                result.InputStampsValid, catalog_ok, result.InputStamps, world,
+                result.InputLightHaloSignatures, result.CertifiedPaddedLight);
   const bool accept_input_stale =
       !result.CertifiedPaddedLight &&
       (stale_reason == MeshApplyStaleInputReason::Light ||
@@ -8211,13 +8446,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     result.GpuExtractPending = false;
   }
 
-  if (result.ProvisionalLightPreview)
+  if (result.ProvisionalLightPreview || result.IndependentPhysicalField)
   {
     for (GreedyMeshBatch &batch : result.batches)
     {
       for (GreedyMeshVertex &vertex : batch.vertices)
       {
-        vertex.lightPreview = 1.0f;
+        vertex.lightPreview = result.ProvisionalLightPreview ? 1.0f : 0.0f;
       }
     }
   }
@@ -8270,7 +8505,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
               registry.GetDefinitionsCatalogSnapshot()),
           result.sourceRevision, expected_revision,
           slice_demand ? slice_demand->desired_geom_rev : 0,
-          result.InputStamps[0].light,
+          result.IndependentPhysicalField && source_chunk
+              ? source_chunk->GetLightFieldRevision()
+              : result.InputStamps[0].light,
           source_chunk ? source_chunk->GetLightFieldRevision() : 0,
           slice_demand ? slice_demand->settled_light_rev : 0,
           slice_demand ? slice_demand->desired_light_rev : 0);
@@ -8426,6 +8663,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
                              result.ProvisionalLightPreview, prepared_light,
                              no_surface ? &*no_surface : nullptr))
   {
+    if (RetainGeometryAwaitingLight(world, registry, std::move(result)))
+      return;
     MarkDirtyPriority(result.coord);
     note_terminal(JobTerminalReason::PublicationRejected);
     return;
@@ -8533,11 +8772,15 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     NoteFaceDebtOverlayMask(result.coord,
                             result.BoundaryOverlay.missingNeighborFaces);
   }
-  // Audit R05: MeshedLightRevision = bake source stamp, not current world
-  // light.
+  // Legacy paths retain the bake stamp. A late-paired physical publication
+  // instead records the certified resource that actually lights these draws;
+  // the original worker input stamps remain immutable for provenance.
   if (result.InputStampsValid)
   {
-    chunkMesh.MeshedLightRevision = result.InputStamps[0].light;
+    chunkMesh.MeshedLightRevision =
+        result.IndependentPhysicalField && source_chunk
+            ? source_chunk->GetLightFieldRevision()
+            : result.InputStamps[0].light;
     chunkMesh.MeshedLightHaloSignatures = result.InputLightHaloSignatures;
   }
   chunkMesh.MeshedLightHaloSignaturesValid = result.InputStampsValid;
@@ -8896,6 +9139,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             << " render_catalog_match=" << catalog_match
             << " inflight=" << HasInflightMeshBuild(*target)
             << " capture_pending=" << PendingCaptureSet_.count(*target)
+            << " awaiting_light=" << GeometryAwaitingLight_.count(*target)
             << " async_completed=" << GetMeshCompletedSize();
     CubatariumLogInfo("ChunkPublication", message.str());
   }
@@ -9053,7 +9297,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     const glm::ivec3 coord = it->first;
     if ((AsyncBuilder && AsyncBuilder->IsInFlight(coord)) ||
         IsPendingGpuApply(coord) || GpuExtractInFlight.count(coord) != 0 ||
-        HasPendingCaptureWork(coord))
+        HasPendingCaptureWork(coord) || GeometryAwaitingLight_.count(coord))
     {
       ++it;
       continue;
@@ -9614,6 +9858,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     if (!skip_gpu_consume)
     {
+      stats.Completed +=
+          DrainGeometryAwaitingLight(world, registry, max_drain_per_frame);
       const MeshWorkAdmission &adm = WorkAdmission;
       int drain_cap = max_drain_per_frame;
       if (adm.mode != MeshWorkAdmission::Mode::Normal)
@@ -9838,6 +10084,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
                             bool count_reserved) -> decltype(it)
     {
       const glm::ivec3 schedule_coord = *it;
+      if (GeometryAwaitingLight_.count(schedule_coord))
+        return std::next(it);
       const bool trace_first_mesh =
           Dirty.IsFirstMesh(schedule_coord) && MeshFocusValid &&
           std::max(std::abs(schedule_coord.x - MeshFocusGroundChunk.x),
@@ -9948,7 +10196,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (builder_inflight ? 1u << 1 : 0u) |
             (IsRemeshAfterApplyPending(schedule_coord) ? 1u << 2 : 0u) |
             (gpu_apply ? 1u << 3 : 0u) | (gpu_queued ? 1u << 4 : 0u) |
-            (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u);
+            (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u) |
+            (IsGeometryAwaitingLight(schedule_coord) ? 1u << 12 : 0u);
         trace.flags = static_cast<uint32_t>(
             (drawable ? 1u << 0 : 0u) |
             (Dirty.IsPriorityRemesh(schedule_coord) ? 1u << 1 : 0u) |
@@ -11598,7 +11847,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
             (gpu_apply ? 1u << 3 : 0u) | (gpu_queued ? 1u << 4 : 0u) |
             (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u) |
-            (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
+            (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u) |
+            (cache.IsGeometryAwaitingLight(coord) ? 1u << 12 : 0u);
         trace.flags =
             (drawable ? 1u << 0 : 0u) |
             (cache.Dirty.IsPriorityRemesh(coord) ? 1u << 1 : 0u) |
@@ -11800,7 +12050,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             (builder_inflight ? 1u << 1 : 0u) |
             (IsRemeshAfterApplyPending(selected_coord) ? 1u << 2 : 0u) |
             (gpu_apply ? 1u << 3 : 0u) | (gpu_queued ? 1u << 4 : 0u) |
-            (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u);
+            (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u) |
+            (IsGeometryAwaitingLight(selected_coord) ? 1u << 12 : 0u);
         trace.flags = soft_defer ? 1u : 0u;
         if (const ChunkRenderDemandRecord *demand =
                 GetRenderDemandStore().Find(selected_coord))
@@ -11963,6 +12214,7 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   {
     return;
   }
+  (void)DrainGeometryAwaitingLight(world, registry, max_per_frame);
   for (MeshBuildResult &result : AsyncBuilder->DrainCompleted(max_per_frame))
   {
     ApplyMeshResult(world, registry, std::move(result));

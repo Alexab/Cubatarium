@@ -52,6 +52,10 @@ struct MeshBuildResult
       InputLightHaloSignatures{};
   bool InputStampsValid{false};
   bool CertifiedPaddedLight{false};
+  /// Geometry may outlive its baked light inputs in Full mode. Only the
+  /// publication owner sets this after matching a current certified field to
+  /// the original immutable geometry; captured stamps are never rewritten.
+  bool IndependentPhysicalField{false};
   std::shared_ptr<const BlockDefinitionCatalog> InputCatalog;
   SectionGeometryRenderInputs GeometryInputs;
   std::optional<SectionRenderLightSnapshot> RenderLight;
