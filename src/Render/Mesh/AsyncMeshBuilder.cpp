@@ -173,6 +173,8 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         result.coord = snapshot.coord;
         result.sourceRevision = snapshot.sourceRevision;
         result.sourceWorldEpoch = snapshot.sourceWorldEpoch;
+        result.sourceCaptureGeneration = snapshot.sourceCaptureGeneration;
+        result.lightInputs = snapshot.lightInputs;
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
         result.InputStamps = snapshot.inputStamps;

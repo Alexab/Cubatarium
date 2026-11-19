@@ -188,11 +188,12 @@ UMeshCaptureStore::CaptureAndStore(const UBlockWorld &world, glm::ivec3 coord,
   auto credit = std::make_unique<UPipelineCreditGuard>(
       PipelineCreditKind::Snapshot, kEstimatedChunkSnapshotBytes, true);
   const uint64_t capture_epoch = WorldEpoch_;
+  const uint64_t capture_generation = CapturePolicyGeneration_;
   ChunkMeshSnapshot snap = ChunkMeshSnapshot::Capture(
       world, coord, source_revision, NeighborDrawableFn_, NeighborDrawableCtx_,
       LightInputsPolicy_);
   snap.sourceWorldEpoch = capture_epoch;
-  snap.sourceCaptureGeneration = CapturePolicyGeneration_;
+  snap.sourceCaptureGeneration = capture_generation;
   if (!TryCommit(coord, source_revision, capture_epoch, std::move(snap),
                  nullptr, std::move(credit)))
     return std::nullopt;

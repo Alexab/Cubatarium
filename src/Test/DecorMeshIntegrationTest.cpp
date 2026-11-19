@@ -99,6 +99,22 @@ struct CrossGpuBackendDriverTestAccess
 #endif
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static void TrackSource(UChunkMeshCache &cache, glm::ivec3 coord,
+                          uint64_t revision)
+  {
+    cache.ActiveMeshSourceRevision[coord] = revision;
+  }
+  static bool TracksSource(const UChunkMeshCache &cache, glm::ivec3 coord,
+                           uint64_t revision)
+  {
+    const auto it = cache.ActiveMeshSourceRevision.find(coord);
+    return it != cache.ActiveMeshSourceRevision.end() && it->second == revision;
+  }
+  static void Apply(UChunkMeshCache &cache, const UBlockWorld &world,
+                    UBlockRegistry &registry, MeshBuildResult &&result)
+  {
+    cache.ApplyMeshResult(world, registry, std::move(result));
+  }
   static glm::ivec3 AwaitingLightBack(const UChunkMeshCache &cache)
   {
     return cache.GeometryAwaitingLightQueue_.back();
@@ -122,7 +138,8 @@ struct ChunkMeshCaptureAdmissionTestAccess
   {
     const auto epoch = cache.GetCaptureStore().WorldEpoch();
     auto snapshot = ChunkMeshSnapshot::Capture(
-        world, coord, cache.GetChunkMeshRevision(coord));
+        world, coord, cache.GetChunkMeshRevision(coord), nullptr, nullptr,
+        cache.GetCaptureStore().LightInputsPolicy());
     snapshot.sourceWorldEpoch = epoch;
     snapshot.sourceCaptureGeneration =
         cache.GetCaptureStore().CapturePolicyGeneration();
@@ -154,7 +171,8 @@ struct ChunkMeshCaptureAdmissionTestAccess
         false, 0, false, {}, false, {},
         snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight, snapshot.sourceWorldEpoch);
+        snapshot.renderLight, snapshot.sourceWorldEpoch, nullptr, nullptr,
+        snapshot.lightInputs, snapshot.sourceCaptureGeneration);
   }
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   static void QueuePacked(UChunkMeshCache &cache, ChunkMeshSnapshot snapshot,
@@ -223,7 +241,8 @@ struct ChunkMeshCaptureAdmissionTestAccess
         false, snapshot.inputStamps[0].light, true, {}, false, {},
         &snapshot.inputStamps,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight, snapshot.sourceWorldEpoch);
+        snapshot.renderLight, snapshot.sourceWorldEpoch, nullptr, nullptr,
+        snapshot.lightInputs, snapshot.sourceCaptureGeneration);
   }
   static void ReserveOneRepair(UChunkMeshCache &cache)
   {
@@ -1087,6 +1106,75 @@ TestPhysicalCaptureOwnership(cutum::UBlockRegistry &registry,
   invalid_token.capture_policy_generation = 0;
   Expect(!world.ReadChunkBandForCapture(root, invalid_token),
          "world band rejects missing capture policy generation");
+}
+
+static void TestMeshResultCaptureOwnership(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (const auto policy :
+       {MeshLightInputs::Baked, MeshLightInputs::PhysicalField})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({8, 8, 8}, kStone);
+    const glm::ivec3 root(0);
+    UChunkMeshCache cache;
+    cache.MarkDirtyPriority(root);
+    auto &store = cache.GetCaptureStore();
+    store.SetLightInputsPolicy(policy);
+    const auto revision = cache.GetChunkMeshRevision(root);
+    const auto captured = store.CaptureAndStore(world, root, revision);
+    Expect(bool(captured),
+           "mesh policy fixture captures actual owned geometry");
+    UAsyncMeshBuilder builder(1);
+    Expect(builder.Enqueue(*captured, registry) &&
+               builder.WaitIdleFor(std::chrono::seconds(5)),
+           "actual mesh worker completes versioned capture");
+    auto results = builder.DrainCompleted(1);
+    Expect(results.size() == 1 && results[0].lightInputs == policy &&
+               results[0].sourceCaptureGeneration ==
+                   captured->sourceCaptureGeneration &&
+               results[0].sourceWorldEpoch == captured->sourceWorldEpoch,
+           "actual mesh worker preserves original capture policy generation");
+    store.SetLightInputsPolicy(policy == MeshLightInputs::Baked
+                                   ? MeshLightInputs::PhysicalField
+                                   : MeshLightInputs::Baked);
+    store.SetLightInputsPolicy(policy);
+    const auto replacement = store.CaptureAndStore(world, root, revision);
+    Expect(
+        replacement && replacement->sourceCaptureGeneration !=
+                           captured->sourceCaptureGeneration,
+        "replacement capture has a new generation with same source revision");
+    ChunkMeshCaptureAdmissionTestAccess::TrackSource(cache, root, revision);
+    ChunkMeshCaptureAdmissionTestAccess::Apply(cache, world, registry,
+                                               std::move(results[0]));
+    Expect(cache.GetPublishCount(root) == 0 &&
+               ChunkMeshCaptureAdmissionTestAccess::TracksSource(cache, root,
+                                                                 revision) &&
+               store.TryGet(world, root, revision),
+           "obsolete mesh result cannot publish or erase replacement capture "
+           "owner");
+    if (policy == MeshLightInputs::PhysicalField)
+    {
+      Expect(builder.Enqueue(*replacement, registry) &&
+                 builder.WaitIdleFor(std::chrono::seconds(5)),
+             "unsupported receiver fixture builds actual current physical "
+             "geometry");
+      auto unsupported = builder.DrainCompleted(1);
+      Expect(unsupported.size() == 1,
+             "unsupported receiver gets actual worker result");
+      ChunkMeshCaptureAdmissionTestAccess::Apply(cache, world, registry,
+                                                 std::move(unsupported[0]));
+      Expect(cache.GetPublishCount(root) == 0 &&
+                 ChunkMeshCaptureAdmissionTestAccess::TracksSource(cache, root,
+                                                                   revision),
+             "physical mesh cannot publish through a receiver without field "
+             "support");
+    }
+  }
 }
 
 static void
@@ -2477,7 +2565,7 @@ static void TestCertifiedGeometrySurvivesInflightLight(
 {
   using namespace cutum;
   const glm::ivec3 root(0);
-  for (int scenario = 0; scenario < 11; ++scenario)
+  for (int scenario = 0; scenario < 14; ++scenario)
   {
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
@@ -2505,10 +2593,18 @@ static void TestCertifiedGeometrySurvivesInflightLight(
           ++preparations;
           if (reject_resource)
             return {};
-          if (use_gpu)
-            return resources.PrepareForWorld(epoch, geometry, light);
-          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
-                                                          light);
+          std::shared_ptr<SectionRenderLightBinding> prepared =
+              use_gpu ? resources.PrepareForWorld(epoch, geometry, light)
+                      : std::make_shared<TestRenderLightBinding>(
+                            epoch, geometry, light);
+          if (scenario >= 12)
+          {
+            cache.GetCaptureStore().SetLightInputsPolicy(
+                MeshLightInputs::PhysicalField);
+            cache.GetCaptureStore().SetLightInputsPolicy(
+                MeshLightInputs::Baked);
+          }
+          return scenario == 13 ? nullptr : prepared;
         });
     const auto calculate = [&](bool settle = true)
     {
@@ -2573,6 +2669,12 @@ static void TestCertifiedGeometrySurvivesInflightLight(
       cache.GetCaptureStore().BumpWorldEpoch();
     if (scenario == 5)
       cache.CancelAsyncMeshWork();
+    if (scenario == 11)
+    {
+      cache.GetCaptureStore().SetLightInputsPolicy(
+          MeshLightInputs::PhysicalField);
+      cache.GetCaptureStore().SetLightInputsPolicy(MeshLightInputs::Baked);
+    }
     if (scenario == 8)
     {
       cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
@@ -2584,6 +2686,15 @@ static void TestCertifiedGeometrySurvivesInflightLight(
                !mesher.timed_out,
            "actual worker resumes and returns the original immutable geometry");
     cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    if (scenario >= 11)
+    {
+      Expect(cache.GetPublishCount(root) == 0 && mesher.builds == 1 &&
+                 preparations == (scenario >= 12 ? 1 : 0) &&
+                 cache.GetChunkMeshRevision(root) == revision,
+             "policy generation change before apply or during preparation "
+             "rejects original geometry");
+      continue;
+    }
     if (scenario == 3 || scenario == 4 || scenario == 5 || scenario == 6)
     {
       Expect(cache.GetPublishCount(root) == 0 && preparations == 0 &&
@@ -3044,7 +3155,7 @@ static void TestGeometryWaitsForPhysicalLight(
 {
   using namespace cutum;
   const glm::ivec3 root(0);
-  for (int lifecycle = 0; lifecycle < 15; ++lifecycle)
+  for (int lifecycle = 0; lifecycle < 16; ++lifecycle)
   {
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
@@ -3178,6 +3289,12 @@ static void TestGeometryWaitsForPhysicalLight(
     }
     default:
       break;
+    }
+    if (lifecycle == 15)
+    {
+      cache.GetCaptureStore().SetLightInputsPolicy(
+          MeshLightInputs::PhysicalField);
+      cache.GetCaptureStore().SetLightInputsPolicy(MeshLightInputs::Baked);
     }
     if (lifecycle == 11 || lifecycle == 12)
     {
@@ -3611,13 +3728,60 @@ static void TestGpuTicketStorageReplacement(
   allocator.ReleaseStagingSlot(replacement);
 }
 
+static void TestGpuCapturePolicyTransitions(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (const bool kicked : {false, true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({4, 4, 4}, kStone);
+    const glm::ivec3 root(0);
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    cache.SetRenderSettings(settings);
+    cache.MarkDirtyPriority(root);
+    const auto snapshot =
+        ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, snapshot, registry);
+    if (kicked)
+    {
+      ChunkMeshCaptureAdmissionTestAccess::KickOnly(cache, registry);
+      glFinish();
+    }
+    auto &store = cache.GetCaptureStore();
+    store.SetLightInputsPolicy(MeshLightInputs::PhysicalField);
+    store.SetLightInputsPolicy(MeshLightInputs::Baked);
+    const auto revision = cache.GetChunkMeshRevision(root);
+    Expect(bool(store.CaptureAndStore(world, root, revision)),
+           "GPU policy fixture captures actual replacement owner");
+    ChunkMeshCaptureAdmissionTestAccess::TrackSource(cache, root, revision);
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    Expect(
+        cache.GetPendingGpuAppliesCount() == 0 &&
+            cache.GetPublishCount(root) == 0 && !cache.HasLiveGpuDraw(root) &&
+            ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 2 &&
+            ChunkMeshCaptureAdmissionTestAccess::TracksSource(cache, root,
+                                                              revision) &&
+            store.TryGet(world, root, revision),
+        "queued or computed GPU policy predecessor releases only its own "
+        "resources");
+    Expect(glGetError() == GL_NO_ERROR,
+           "GPU policy transition has no GL errors");
+  }
+}
+
 static void TestPackedGeometryWaitsForPhysicalLight(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
   const glm::ivec3 root(0);
-  for (int lifecycle = 0; lifecycle < 11; ++lifecycle)
+  for (int lifecycle = 0; lifecycle < 14; ++lifecycle)
   {
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
@@ -3665,6 +3829,13 @@ static void TestPackedGeometryWaitsForPhysicalLight(
             const SectionRenderLightSnapshot &light)
         {
           auto binding = resources.Prepare(source_epoch, source, light);
+          if (lifecycle >= 12)
+          {
+            cache.GetCaptureStore().SetLightInputsPolicy(
+                MeshLightInputs::PhysicalField);
+            cache.GetCaptureStore().SetLightInputsPolicy(
+                MeshLightInputs::Baked);
+          }
           if (reset_during_prepare)
           {
             auto &slots = cache.GetGpuMeshPipeline()->GetAllocator();
@@ -3672,7 +3843,7 @@ static void TestPackedGeometryWaitsForPhysicalLight(
             replacement_key =
                 slots.CaptureStagingSlotKey(slots.AllocateStagingSlot(false));
           }
-          return binding;
+          return lifecycle == 13 ? nullptr : binding;
         });
     cache.MarkDirtyPriority(root);
     auto &demand = cache.GetRenderDemandStore();
@@ -3742,6 +3913,12 @@ static void TestPackedGeometryWaitsForPhysicalLight(
     default:
       break;
     }
+    if (lifecycle == 11)
+    {
+      cache.GetCaptureStore().SetLightInputsPolicy(
+          MeshLightInputs::PhysicalField);
+      cache.GetCaptureStore().SetLightInputsPolicy(MeshLightInputs::Baked);
+    }
     const auto field =
         UChunkRelightSnapshot::CaptureSections(world, spec, {root})
             .Compute(registry);
@@ -3783,13 +3960,15 @@ static void TestPackedGeometryWaitsForPhysicalLight(
       cache.DrainPendingGpuMeshes(world, registry, 8, 1000);
     else
       cache.DrainAsyncMeshResults(world, registry, 8);
-    if (lifecycle >= 1 && lifecycle <= 8)
+    if ((lifecycle >= 1 && lifecycle <= 8) || lifecycle >= 11)
     {
       if (cache.GetPublishCount(root) != 0)
         std::cerr << "packed unexpected publication lifecycle=" << lifecycle
                   << '\n';
       Expect(
           cache.GetPublishCount(root) == 0 &&
+              (lifecycle < 11 ||
+               cache.GetChunkMeshRevision(root) == revision) &&
               cache.GetGeometryAwaitingLightCount() == 0 &&
               !cache.HasLiveGpuDraw(root),
           "cancelled edited superseded or reset GPU geometry cannot publish");
@@ -5873,6 +6052,7 @@ int main(int argc, char **argv)
       TestGpuStagingSlotOwnership();
       TestGpuReadbackOwnership();
       TestGpuTicketStorageReplacement(registry, definitions.get());
+      TestGpuCapturePolicyTransitions(registry, definitions.get());
       TestPackedGeometryWaitsForPhysicalLight(registry, definitions.get());
       Expect(glGetError() == GL_NO_ERROR, "packed lifecycle has no GL errors");
       glfwDestroyWindow(window);
@@ -5942,6 +6122,7 @@ int main(int argc, char **argv)
   TestNoSurfaceGeometryProof(registry, definitions.get());
   TestSecondPlaneGeometryParity(registry, definitions.get());
   TestPhysicalCaptureOwnership(registry, definitions.get());
+  TestMeshResultCaptureOwnership(registry, definitions.get());
   TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);

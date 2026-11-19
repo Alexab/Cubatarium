@@ -29,6 +29,13 @@ public:
   bool SetLightInputsPolicy(MeshLightInputs policy);
   MeshLightInputs LightInputsPolicy() const { return LightInputsPolicy_; }
   uint64_t CapturePolicyGeneration() const { return CapturePolicyGeneration_; }
+  bool MatchesCaptureOwner(uint64_t world_epoch, uint64_t generation,
+                           MeshLightInputs policy) const
+  {
+    return world_epoch == WorldEpoch_ &&
+           generation == CapturePolicyGeneration_ &&
+           policy == LightInputsPolicy_;
+  }
 
   std::optional<ChunkMeshSnapshot> TryGet(const UBlockWorld &world,
                                           glm::ivec3 coord,

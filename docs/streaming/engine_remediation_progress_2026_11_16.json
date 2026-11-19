@@ -8211,12 +8211,47 @@
         }
       },
       "remaining": [
-        "Carry original policy/generation through MeshBuildResult and synchronous/GPU publication carriers and validate at each receiver, including after preparation callbacks. Cancellation must not erase a replacement owner.",
+        "Original mode/generation now travels through MeshBuildResult, synchronous physical and GPU publication carriers, with receiver checks before/after preparation. Runtime policy configuration, full cancellation/transition ownership and legacy/Flat fallback revalidation remain before activation.",
         "Configure PhysicalField for actual supported world consumers, cancel/requeue obsolete captures and preserve predecessor resources during transitions; synchronous producer must select the same contract.",
         "Remove physical reliance on legacy preview, light-halo stale classification and baked-dark retention. Actual compatible current field proof and receiver resource preparation remain mandatory.",
         "Complete semantic catalog separation, persistence, original native first-publication counterexample closure, RGB/transparency/backend matrix and controlled performance/memory acceptance."
       ],
       "native": "No application build or native flight for this intermediate capture-owner change. Latest whole-route ae7657bcf timeout FAIL and last completed 6b369f738 depth 15/14860 FAIL remain authoritative."
+    },
+    "mesh_result_capture_policy_ownership": {
+      "status": "Original capture policy/generation now travels through actual async mesh results, pending GPU snapshots, retained CPU/GPU geometry and synchronous physical mesh results. Receiver checks reject obsolete generations and unsupported physical consumers before apply and after resource preparation. Runtime remains Baked until transition ownership and physical preview/dark/empty policies are completed.",
+      "implementation": [
+        "AsyncMeshBuilder copies original sourceCaptureGeneration and lightInputs without changing world epoch or input stamps; pending GPU and final packed publication carry the same identity.",
+        "CPU apply, GPU pending revision validation, final GPU commit and retained-geometry drains reject incompatible capture owners. An obsolete result does not erase a current same-revision ActiveMeshSourceRevision or replacement capture entry; obsolete GPU staging/PBO tickets release their own identities.",
+        "CPU and GPU repeat receiver owner validation after actual resource preparation, on both success and failure. A callback policy ABA cannot publish the predecessor or advance a replacement geometry revision through retry handling.",
+        "PhysicalField output is refused when the receiver lacks Full-mode independent-field support. The default Baked compatibility producer remains in use.",
+        "CaptureAndStore and the synchronous capture owner freeze generation before world payload reads. World-query reentry changing policy twice cannot relabel the original capture."
+      ],
+      "verification": {
+        "initial_matrix": "build/desktop-msvc/engine-mesh-capture-owner-fourteen-tests.log",
+        "final_before_controls": "build/desktop-msvc/engine-mesh-capture-owner-final-fourteen-tests.log",
+        "negative_controls": "build/desktop-msvc/engine-mesh-capture-owner-v2-negative-controls.json",
+        "restored_matrix": "build/desktop-msvc/engine-mesh-capture-owner-v2-restored-fourteen-tests.log",
+        "expected_failure_mutations": 3,
+        "post_prepare_control": "Disabling both post-preparation checks fails the CPU lifecycle and actual desktop GL packed lifecycle (2/2 expected failures).",
+        "worker_control": "Losing the generation fails the earlier real-worker publication regression (replacement eventually publishes), before the new metadata assertion. Initial runner expected only the later message, stopped and restored GREEN; its receipt and logs remain under engine-mesh-capture-owner-* without v2. The v2 runner records the actual earlier witness.",
+        "capture_control": "Replacing the saved pre-query generation with the live post-query generation fails capture_token_validation_test at its reentrant-world-query assertion.",
+        "exact_source_restore": true,
+        "restored_source_sha256": {
+          "worker": "5e81c6e881a6b3ee011beb00024f2016a27b1444f65b81290b4c0e3764a3fe71",
+          "cache": "eb4e3856ad3fdef527a063b0e0a2804450f08bde049f803d2d9683c64d957949",
+          "store": "579459fb860cd8439bb6f6b10221cd106f8dcfe4d9685b8a132884e37426c301"
+        },
+        "final_result": "14/14 Release PASS after exact restoration; actual desktop GL/GLES drivers included.",
+        "cases": "Actual workers for both capture modes, current unsupported physical receiver, same-source ABA replacement preservation;14paused-worker field lifecycle cases,16CPU/synchronous awaiting-field cases, queued and actually kicked GPU policy predecessors,14real packed awaiting-field/resource lifecycle cases. Raw stamps/epochs remain original.",
+        "limits": "These are ownership and resource lifecycle tests. They do not prove whole-world RGB/transparency, native first-publication closure or the complete backend/performance/memory matrix."
+      },
+      "remaining": [
+        "Configure the physical policy for supported world consumers and atomically cancel/requeue obsolete CPU/GPU/capture work, including source/ticket ownership during render-policy transitions. Final cancellation/source-revision revalidation across callbacks and legacy/Flat synchronous fallback must remain covered.",
+        "Physical captures must bypass legacy first-mesh preview/light-halo invalidation and baked-dark retention decisions; zero baked bytes are a geometry format. Empty output still requires actual geometry absence proof, and actual private calculated light is still mandatory for drawable publication.",
+        "Defer work while geometric dependencies remainUnknown, preserve exact section demand, then finish semantic geometry/optics catalog separation, persisted certificates and complete independent native RGB/transparency/backend/performance/memory acceptance."
+      ],
+      "native": "No application/native verification for this intermediate change. Latest ae7657bcf whole-route timeout FAIL and completed6b369f738 depth15/14860FAIL remain open; do not infer visual PASS from these tests."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8254,7 +8289,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Physical geometry merge foundation and versioned capture-store/token/dependency ownership implemented and Release verified (14/14 plus2expected-failure controls for capture ownership). Runtime remains defaultBaked until original mode/generation reaches MeshBuildResult, sync/GPU receivers, callback revalidation and cancellation/transition; then enable physical policy and remove legacy preview/dark/stale-light decisions without bypassing actual field proof. No full S5 or native visual acceptance.",
+      "Physical merge contract and versioned capture/store/mesh-result/CPU+GPU receiver ownership are Release verified (14/14, three mesh-owner negative mutations with exact restoration, in addition to earlier capture controls). Runtime remains Baked: finish atomic policy transitions/cancellation, physical preview/empty/dark-retention behavior, unknown-geometry scheduling and full native acceptance before claiming S5 completion.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

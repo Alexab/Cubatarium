@@ -121,6 +121,32 @@ int main()
     return 1;
   }
 
+  // A world query can reenter the capture owner. Preserve the generation from
+  // before reading any payload; a same-mode return cannot rebind this capture.
+  UMeshCaptureStore reentrant_store;
+  cutum::UBlockWorld reentrant_world;
+  reentrant_world.GetChunkManager().EnsureChunk(coord);
+  bool changed_policy = false;
+  reentrant_world.SetKnownOpenSkyAbsentQuery(
+      [&](glm::ivec3)
+      {
+        if (!changed_policy)
+        {
+          changed_policy = true;
+          reentrant_store.SetLightInputsPolicy(
+              cutum::MeshLightInputs::PhysicalField);
+          reentrant_store.SetLightInputsPolicy(cutum::MeshLightInputs::Baked);
+        }
+        return true;
+      });
+  if (reentrant_store.CaptureAndStore(reentrant_world, coord, rev) ||
+      !changed_policy || reentrant_store.Size() != 0)
+  {
+    std::cerr
+        << "FAIL: reentrant capture must keep original policy generation\n";
+    return 1;
+  }
+
   // R2: exhausted snapshot admission must not yield empty Ready.
   cutum::UPipelineAdmission::Get().SetSnapshotCap(0);
   store.Invalidate(coord);

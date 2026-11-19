@@ -6196,7 +6196,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     uint64_t source_world_epoch,
     std::unique_ptr<UPipelineCreditGuard> result_credit,
     const std::array<uint64_t, kChunkMeshNeighborStampCount>
-        *source_light_signatures)
+        *source_light_signatures,
+    MeshLightInputs light_inputs, uint64_t capture_policy_generation)
 {
   (void)registry;
   (void)source_revision;
@@ -6259,6 +6260,13 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     if (GpuPipeline)
       GpuPipeline->GetAllocator().ReleaseStagingSlot(slot_key);
   };
+  if (!MeshCaptureOwnerStillCurrent(world, source_world_epoch,
+                                    capture_policy_generation, light_inputs))
+  {
+    release_candidate();
+    note_terminal(JobTerminalReason::SubmissionEpochChanged);
+    return false;
+  }
   if (GpuPipeline && (gpu_result.slotIndex >= 0 || gpu_result.quadCount > 0) &&
       (slot_key.Index() != gpu_result.slotIndex ||
        !GpuPipeline->GetAllocator().OwnsStagingSlot(slot_key)))
@@ -6304,6 +6312,8 @@ bool UChunkMeshCache::CommitGpuMeshResult(
   physical_geometry.coord = coord;
   physical_geometry.sourceRevision = source_revision;
   physical_geometry.sourceWorldEpoch = source_world_epoch;
+  physical_geometry.sourceCaptureGeneration = capture_policy_generation;
+  physical_geometry.lightInputs = light_inputs;
   physical_geometry.jobId = job_trace.job_id;
   physical_geometry.stageTrace = job_trace;
   physical_geometry.InputStampsValid = source_stamps != nullptr;
@@ -6638,10 +6648,18 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     }
   }
   std::shared_ptr<SectionRenderLightBinding> prepared_light;
-  if (!TryPrepareRenderLight(source_world_epoch, source_stamps, source_geometry,
-                             source_light, gpu_result.provisionalLightPreview,
-                             prepared_light,
-                             no_surface ? &*no_surface : nullptr))
+  const bool light_prepared = TryPrepareRenderLight(
+      source_world_epoch, source_stamps, source_geometry, source_light,
+      gpu_result.provisionalLightPreview, prepared_light,
+      no_surface ? &*no_surface : nullptr);
+  if (!MeshCaptureOwnerStillCurrent(world, source_world_epoch,
+                                    capture_policy_generation, light_inputs))
+  {
+    release_candidate();
+    note_terminal(JobTerminalReason::SubmissionEpochChanged);
+    return false;
+  }
+  if (!light_prepared)
   {
     if (independent_physical_geometry && retain_candidate())
       return false;
@@ -7240,7 +7258,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     ReleasePendingGpuTicket(pending);
     const auto active = ActiveMeshSourceRevision.find(pending.coord);
-    if (pending.snapshot.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+    if (MeshCaptureOwnerStillCurrent(world, pending.snapshot.sourceWorldEpoch,
+                                     pending.snapshot.sourceCaptureGeneration,
+                                     pending.snapshot.lightInputs) &&
         active != ActiveMeshSourceRevision.end() &&
         active->second == pending.sourceRevision)
       ActiveMeshSourceRevision.erase(active);
@@ -7265,7 +7285,9 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
   auto revision_ok = [&](PendingGpuApply &pending, bool &out_drop) -> bool
   {
     out_drop = false;
-    if (pending.snapshot.sourceWorldEpoch != CaptureStore.WorldEpoch())
+    if (!MeshCaptureOwnerStillCurrent(world, pending.snapshot.sourceWorldEpoch,
+                                      pending.snapshot.sourceCaptureGeneration,
+                                      pending.snapshot.lightInputs))
     {
       fail_ticket(pending, JobTerminalReason::SubmissionEpochChanged);
       out_drop = true;
@@ -7285,6 +7307,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     MeshBuildResult geometry;
     geometry.coord = pending.coord;
     geometry.sourceWorldEpoch = pending.snapshot.sourceWorldEpoch;
+    geometry.sourceCaptureGeneration = pending.snapshot.sourceCaptureGeneration;
+    geometry.lightInputs = pending.snapshot.lightInputs;
     geometry.InputStampsValid = pending.snapshot.inputStampsValid;
     geometry.InputStamps = pending.snapshot.inputStamps;
     geometry.InputCatalog = pending.inputCatalog;
@@ -7511,7 +7535,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
           pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
           std::move(pending.resultCredit),
-          &pending.snapshot.lightHaloSignatures);
+          &pending.snapshot.lightHaloSignatures, pending.snapshot.lightInputs,
+          pending.snapshot.sourceCaptureGeneration);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -7659,7 +7684,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                           : nullptr,
         pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
         pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
-        std::move(pending.resultCredit), &pending.snapshot.lightHaloSignatures);
+        std::move(pending.resultCredit), &pending.snapshot.lightHaloSignatures,
+        pending.snapshot.lightInputs, pending.snapshot.sourceCaptureGeneration);
     if (gpu_process_profile_sample)
     {
       gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -8152,7 +8178,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
           pending.snapshot.GeometryRenderInputs(pending.inputCatalog),
           pending.snapshot.renderLight, pending.snapshot.sourceWorldEpoch,
           std::move(pending.resultCredit),
-          &pending.snapshot.lightHaloSignatures);
+          &pending.snapshot.lightHaloSignatures, pending.snapshot.lightInputs,
+          pending.snapshot.sourceCaptureGeneration);
       if (gpu_process_profile_sample)
       {
         gpu_profile_commit_ms += std::chrono::duration<double, std::milli>(
@@ -8328,6 +8355,18 @@ static std::pair<std::ostream *, uint64_t> MeshApplyProfileOutput()
   return {profile_sink, profile_sequence};
 }
 
+bool UChunkMeshCache::MeshCaptureOwnerStillCurrent(const UBlockWorld &world,
+                                                   uint64_t world_epoch,
+                                                   uint64_t generation,
+                                                   MeshLightInputs policy) const
+{
+  return CaptureStore.MatchesCaptureOwner(world_epoch, generation, policy) &&
+         (policy != MeshLightInputs::PhysicalField ||
+          (PrepareRenderLight && Render.Lighting == LightingMode::Full &&
+           world.GetLightingConfigurationIdentity() !=
+               static_cast<uint64_t>(LightingMode::Flat)));
+}
+
 bool UChunkMeshCache::IsCurrentPhysicalGeometry(
     const UBlockWorld &world, const UBlockRegistry &registry,
     const MeshBuildResult &result) const
@@ -8335,7 +8374,9 @@ bool UChunkMeshCache::IsCurrentPhysicalGeometry(
   return PrepareRenderLight && Render.Lighting == LightingMode::Full &&
          world.GetLightingConfigurationIdentity() !=
              static_cast<uint64_t>(LightingMode::Flat) &&
-         result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
+         MeshCaptureOwnerStillCurrent(world, result.sourceWorldEpoch,
+                                      result.sourceCaptureGeneration,
+                                      result.lightInputs) &&
          result.InputStampsValid && result.GeometryInputs.valid &&
          (!result.BoundaryOverlay.active ||
           result.BoundaryOverlay.missingNeighborFaces == 0) &&
@@ -8487,6 +8528,20 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
     const auto found = GeometryAwaitingLight_.find(coord);
     found->second.lightReadyHint = false;
     auto &result = found->second.result;
+    if (!MeshCaptureOwnerStillCurrent(world, result.sourceWorldEpoch,
+                                      result.sourceCaptureGeneration,
+                                      result.lightInputs))
+    {
+      if (result.jobId)
+        UJobStageTrace::NoteTerminal(result.stageTrace, JobStage::Retired,
+                                     JobTerminalReason::SubmissionEpochChanged);
+      if (GpuPipeline && found->second.gpu)
+        GpuPipeline->GetAllocator().ReleaseStagingSlot(
+            found->second.gpu->slotKey);
+      GeometryAwaitingLightBytes_ -= found->second.bytes;
+      GeometryAwaitingLight_.erase(found);
+      continue;
+    }
     const auto active = ActiveMeshSourceRevision.find(coord);
     const bool owned = active != ActiveMeshSourceRevision.end() &&
                        active->second == result.sourceRevision;
@@ -8554,7 +8609,8 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
           true, ready.BoundaryOverlay, false, ready.stageTrace,
           &ready.InputStamps, ready.GeometryInputs, ready.RenderLight,
           ready.sourceWorldEpoch, std::move(ready.ResultCredit),
-          &ready.InputLightHaloSignatures);
+          &ready.InputLightHaloSignatures, ready.lightInputs,
+          ready.sourceCaptureGeneration);
       if (committed)
       {
         ++LastGpuFinishN;
@@ -8601,6 +8657,14 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
   };
+  if (!MeshCaptureOwnerStillCurrent(world, result.sourceWorldEpoch,
+                                    result.sourceCaptureGeneration,
+                                    result.lightInputs))
+  {
+    ++MeshApplyStaleCount;
+    note_terminal(JobTerminalReason::SubmissionEpochChanged);
+    return;
+  }
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const bool current_physical_geometry =
@@ -9241,12 +9305,19 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
   }
   std::shared_ptr<SectionRenderLightBinding> prepared_light;
-  if (!TryPrepareRenderLight(result.sourceWorldEpoch,
-                             result.InputStampsValid ? &result.InputStamps
-                                                     : nullptr,
-                             result.GeometryInputs, result.RenderLight,
-                             result.ProvisionalLightPreview, prepared_light,
-                             no_surface ? &*no_surface : nullptr))
+  const bool light_prepared = TryPrepareRenderLight(
+      result.sourceWorldEpoch,
+      result.InputStampsValid ? &result.InputStamps : nullptr,
+      result.GeometryInputs, result.RenderLight, result.ProvisionalLightPreview,
+      prepared_light, no_surface ? &*no_surface : nullptr);
+  if (!MeshCaptureOwnerStillCurrent(world, result.sourceWorldEpoch,
+                                    result.sourceCaptureGeneration,
+                                    result.lightInputs))
+  {
+    note_terminal(JobTerminalReason::SubmissionEpochChanged);
+    return;
+  }
+  if (!light_prepared)
   {
     if (RetainGeometryAwaitingLight(world, registry, std::move(result)))
       return;
@@ -12955,9 +13026,12 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
                   (static_cast<uint64_t>(chunk->GetLightFieldRevision()) << 1);
     const auto sync_catalog = registry.GetDefinitionsCatalogSnapshot();
     const auto sync_epoch = CaptureStore.WorldEpoch();
+    const auto sync_capture_generation = CaptureStore.CapturePolicyGeneration();
     ChunkMeshSnapshot sync_snap = ChunkMeshSnapshot::Capture(
-        world, chunkCoord, sync_rev, CacheNeighborVisuallyDrawable, this);
+        world, chunkCoord, sync_rev, CacheNeighborVisuallyDrawable, this,
+        CaptureStore.LightInputsPolicy());
     sync_snap.sourceWorldEpoch = sync_epoch;
+    sync_snap.sourceCaptureGeneration = sync_capture_generation;
     const auto quads = MesherBackend && !CpuMeshRecovery.count(chunkCoord)
                            ? MesherBackend->BuildChunkMesh(sync_snap, registry,
                                                            sync_catalog.get())
@@ -12995,6 +13069,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
       result.coord = chunkCoord;
       result.sourceRevision = sync_rev;
       result.sourceWorldEpoch = sync_epoch;
+      result.sourceCaptureGeneration = sync_snap.sourceCaptureGeneration;
+      result.lightInputs = sync_snap.lightInputs;
       result.InputStamps = sync_snap.inputStamps;
       result.InputLightHaloSignatures = sync_snap.lightHaloSignatures;
       result.InputStampsValid = sync_snap.inputStampsValid;

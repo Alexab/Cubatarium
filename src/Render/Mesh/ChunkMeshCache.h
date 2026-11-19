@@ -1448,7 +1448,9 @@ private:
       uint64_t source_world_epoch = 0,
       std::unique_ptr<UPipelineCreditGuard> result_credit = nullptr,
       const std::array<uint64_t, kChunkMeshNeighborStampCount>
-          *source_light_signatures = nullptr);
+          *source_light_signatures = nullptr,
+      MeshLightInputs light_inputs = MeshLightInputs::Baked,
+      uint64_t capture_policy_generation = 0);
   int ProcessPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                               int max_count, double budget_ms,
                               MeshRebuildTickStats &stats);
@@ -1456,6 +1458,9 @@ private:
                     glm::ivec3 chunkCoord);
   void ApplyMeshResult(const UBlockWorld &world, UBlockRegistry &registry,
                        MeshBuildResult &&result);
+  bool MeshCaptureOwnerStillCurrent(const UBlockWorld &world,
+                                    uint64_t world_epoch, uint64_t generation,
+                                    MeshLightInputs policy) const;
   bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
                                  const UBlockRegistry &registry,
                                  const MeshBuildResult &result) const;
