@@ -12614,5 +12614,695 @@
   "test_scope": "Four concurrent producers; all admitted event values/sequences retained exactly once; other columns excluded; no file until flush; bounded overflow explicitly incomplete; repeated flush and late records cannot append/rewrite evidence. Tests cover joined writers; racing-unpublished branch is guarded by atomic publication and reported, not claimed dynamically forced.",
   "next": "Build committed desktop Release and repeat original -14,2,-1 trace-point motor scenario with selected6,6 deferred export; require summary complete1 before interpreting absence. Previous full-column purge/30receipt loss remains open.",
   "scope": "Full original S0..S6 remains active; diagnostics never grant readiness or replace provider/cancellation/semantic identities, independent RGB/wet/transparency/backend and complete motor/edit/save/evict/reload/performance/memory verification."
+},
+"buffered_water_recreation_committed_shore_residency_fix_2026_11_19": {
+  "status": "native_water_recreation_reproduced_complete_buffer_export_guarded_shore_fix_regression_green_native_fix_check_pending",
+  "source_commit": "a838bdaf03a4a4877d9ab9bedbf047a71370210c",
+  "trace_path": "build\\desktop-msvc\\engine-chunk-recreation-buffered-20261119-residency.log",
+  "trace_sha256": "4ff5c79a0bb406ec7177023412b53a26d727a5346a5652780af813009d557ef2",
+  "summary": {
+    "buffered": 1,
+    "reserved": 49,
+    "published": 49,
+    "dropped": 0,
+    "unpublished": 0,
+    "complete": 1
+  },
+  "runtime_manager": "00000274DD786C28",
+  "runtime_events": [
+    {
+      "sequence": 5,
+      "tick_ms": 719302108,
+      "source": "worldgen_buffer_missing",
+      "coord": [
+        6,
+        5,
+        6
+      ],
+      "origin": [
+        6,
+        0,
+        7
+      ],
+      "value": 469,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 6,
+      "tick_ms": 719302108,
+      "source": "set_block_missing",
+      "coord": [
+        6,
+        5,
+        6
+      ],
+      "origin": [
+        104,
+        82,
+        108
+      ],
+      "value": 469,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 7,
+      "tick_ms": 719302108,
+      "source": "create",
+      "coord": [
+        6,
+        5,
+        6
+      ],
+      "origin": [
+        6,
+        5,
+        6
+      ],
+      "value": 936,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 8,
+      "tick_ms": 719302113,
+      "source": "worldgen_buffer_missing",
+      "coord": [
+        6,
+        4,
+        6
+      ],
+      "origin": [
+        6,
+        0,
+        7
+      ],
+      "value": 417,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 9,
+      "tick_ms": 719302113,
+      "source": "set_block_missing",
+      "coord": [
+        6,
+        4,
+        6
+      ],
+      "origin": [
+        98,
+        78,
+        111
+      ],
+      "value": 417,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 10,
+      "tick_ms": 719302113,
+      "source": "create",
+      "coord": [
+        6,
+        4,
+        6
+      ],
+      "origin": [
+        6,
+        4,
+        6
+      ],
+      "value": 943,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 21,
+      "tick_ms": 719305006,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        -3,
+        6
+      ],
+      "origin": [
+        6,
+        -3,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 22,
+      "tick_ms": 719305006,
+      "source": "create",
+      "coord": [
+        6,
+        -3,
+        6
+      ],
+      "origin": [
+        6,
+        -3,
+        6
+      ],
+      "value": 1951,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 23,
+      "tick_ms": 719305006,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 24,
+      "tick_ms": 719305006,
+      "source": "create",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 1952,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 25,
+      "tick_ms": 719305007,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        -4,
+        6
+      ],
+      "origin": [
+        6,
+        -4,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 26,
+      "tick_ms": 719305007,
+      "source": "create",
+      "coord": [
+        6,
+        -4,
+        6
+      ],
+      "origin": [
+        6,
+        -4,
+        6
+      ],
+      "value": 1953,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 27,
+      "tick_ms": 719305007,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        -2,
+        6
+      ],
+      "origin": [
+        6,
+        -2,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 28,
+      "tick_ms": 719305007,
+      "source": "create",
+      "coord": [
+        6,
+        -2,
+        6
+      ],
+      "origin": [
+        6,
+        -2,
+        6
+      ],
+      "value": 1954,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 29,
+      "tick_ms": 719305007,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        -1,
+        6
+      ],
+      "origin": [
+        6,
+        -1,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 30,
+      "tick_ms": 719305007,
+      "source": "create",
+      "coord": [
+        6,
+        -1,
+        6
+      ],
+      "origin": [
+        6,
+        -1,
+        6
+      ],
+      "value": 1955,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 31,
+      "tick_ms": 719305008,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        0,
+        6
+      ],
+      "origin": [
+        6,
+        0,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 32,
+      "tick_ms": 719305008,
+      "source": "create",
+      "coord": [
+        6,
+        0,
+        6
+      ],
+      "origin": [
+        6,
+        0,
+        6
+      ],
+      "value": 1956,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 33,
+      "tick_ms": 719305151,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        1,
+        6
+      ],
+      "origin": [
+        6,
+        1,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 34,
+      "tick_ms": 719305151,
+      "source": "create",
+      "coord": [
+        6,
+        1,
+        6
+      ],
+      "origin": [
+        6,
+        1,
+        6
+      ],
+      "value": 1957,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 35,
+      "tick_ms": 719305227,
+      "source": "ensure_missing",
+      "coord": [
+        6,
+        2,
+        6
+      ],
+      "origin": [
+        6,
+        2,
+        6
+      ],
+      "value": 0,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 36,
+      "tick_ms": 719305227,
+      "source": "create",
+      "coord": [
+        6,
+        2,
+        6
+      ],
+      "origin": [
+        6,
+        2,
+        6
+      ],
+      "value": 1958,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 37,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        -4,
+        6
+      ],
+      "origin": [
+        6,
+        -4,
+        6
+      ],
+      "value": 1953,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 38,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        -3,
+        6
+      ],
+      "origin": [
+        6,
+        -3,
+        6
+      ],
+      "value": 1951,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 39,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        -2,
+        6
+      ],
+      "origin": [
+        6,
+        -2,
+        6
+      ],
+      "value": 1954,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 40,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        -1,
+        6
+      ],
+      "origin": [
+        6,
+        -1,
+        6
+      ],
+      "value": 1955,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 41,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        0,
+        6
+      ],
+      "origin": [
+        6,
+        0,
+        6
+      ],
+      "value": 1956,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 42,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        1,
+        6
+      ],
+      "origin": [
+        6,
+        1,
+        6
+      ],
+      "value": 1957,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 43,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        2,
+        6
+      ],
+      "origin": [
+        6,
+        2,
+        6
+      ],
+      "value": 1958,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 44,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 1952,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 45,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        4,
+        6
+      ],
+      "origin": [
+        6,
+        4,
+        6
+      ],
+      "value": 943,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 46,
+      "tick_ms": 719329501,
+      "source": "remove",
+      "coord": [
+        6,
+        5,
+        6
+      ],
+      "origin": [
+        6,
+        5,
+        6
+      ],
+      "value": 936,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 47,
+      "tick_ms": 719331374,
+      "source": "set_block_missing",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        96,
+        62,
+        111
+      ],
+      "value": 575,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 48,
+      "tick_ms": 719331374,
+      "source": "create",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 2473,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 49,
+      "tick_ms": 719331426,
+      "source": "remove",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 2473,
+      "manager": "00000274DD786C28"
+    }
+  ],
+  "recreated_chunk": [
+    {
+      "sequence": 47,
+      "tick_ms": 719331374,
+      "source": "set_block_missing",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        96,
+        62,
+        111
+      ],
+      "value": 575,
+      "manager": "00000274DD786C28"
+    },
+    {
+      "sequence": 48,
+      "tick_ms": 719331374,
+      "source": "create",
+      "coord": [
+        6,
+        3,
+        6
+      ],
+      "origin": [
+        6,
+        3,
+        6
+      ],
+      "value": 2473,
+      "manager": "00000274DD786C28"
+    }
+  ],
+  "regression": {
+    "status": "PASS",
+    "test_count": 37,
+    "build_log": "build\\desktop-msvc\\committed-shore-20261119-matrix-build.log",
+    "test_log": "build\\desktop-msvc\\committed-shore-20261119-matrix-test.log",
+    "baseline_red": {
+      "log": "build\\desktop-msvc\\committed-shore-20261119-red-test.log",
+      "assertion": "committed shore maintenance cannot resurrect retired neighbor terrain"
+    },
+    "focused_green_log": "build\\desktop-msvc\\committed-shore-20261119-green-test.log",
+    "scope": "Both committed shore APIs, positive/negative X/Z, retired neighbor absence, returned residentAIR water+publication, repeated eviction. Existing deep-neighbor positive fixture now owns residentAIR explicitly; procedural worker fill untouched."
+  },
+  "fix": "Committed shore-air sealing rechecks 3x3 slice residency per vertical band and skips absent target geometry. ResidentAIR still seals on return and publishes changes; both public APIs and negative coordinates exercised. Worker terrain fill and cross-boundary object buffers are not changed.",
+  "interpretation": "Complete low-IO trace proves direct water575 SetBlock recreated6,3,6 after full eviction, followed by purge; a matching committed shore API recreates the same unknown edge in a deterministic RED test. Native pre-fix capture does not include a symbolized caller stack; fixed-native skip-band evidence and artifact durability still required.",
+  "full_scope": "Full S0..S6 active; no general durability/visual/backend/performance claim.",
+  "native_before_fix": {
+    "artifacts": "build\\desktop-msvc\\engine-chunk-recreation-buffered-20261119-native",
+    "world": "EngineSmoke_6813e77ff1e84b1587127b5e41601319",
+    "capture_events": 247,
+    "captured_receipts": 1668,
+    "durable_files": 241,
+    "durable_receipts": 1638,
+    "outcomes": {
+      "discard_incomplete_queued": 34,
+      "stale_cleanup_done": 281,
+      "queued": 247,
+      "light_receipts_written": 247,
+      "slice_written": 2160,
+      "shutdown_state": 1
+    },
+    "shutdown": [
+      "I20261119 23:48:39.233505 15012 Log.cpp:601] [WorldColumnSave] outcome=shutdown_state pending_save_columns=0 pending_disk_columns=0 io_jobs=0 io_active=0 ready_saves=0 ready_loads=0 light_flags_in_flight=0 light_flags_dirty=0"
+    ],
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    }
+  },
+  "next": "Build committed desktop Release, rerun original motor route with buffered trace and validate complete export, no post-eviction recreation, rejected absent shore bands and exact capture/durable receipt join. Then continue all original S0..S6 gates, including cold/return/edit/save/reload/perf/memory and independent RGB/wet/transparency/backend."
 }
 }

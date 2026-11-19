@@ -468,6 +468,72 @@ static void TestMutationSnapshotTracksContentAndIncarnation()
       "incarnation reuse cannot hide behind an equal content revision");
 }
 
+static void TestCommittedShoreSealPreservesRetiredNeighbors()
+{
+  using namespace cutum;
+  for (const glm::ivec3 column : {glm::ivec3(6, 0, 6), glm::ivec3(-6, 0, -6)})
+    for (const bool air_only : {false, true})
+    {
+      UBlockWorld world;
+      UBlockRegistry registry(nullptr, FluidTest::MakeTestFluidDefinitions());
+      ProceduralSettings settings;
+      settings.FillWater = true;
+      settings.SeaLevel = 63;
+      const glm::ivec3 target(column.x * CHUNK_SIZE, 62,
+                              column.z * CHUNK_SIZE + 15);
+      const glm::ivec3 coord = UChunkManager::WorldToChunk(target);
+      const glm::ivec3 source = target + glm::ivec3(-1, 0, 0);
+      const glm::ivec3 owner(column.x - 1, 0, column.z);
+      world.GetChunkManager().EnsureChunk(coord);
+      const auto retired =
+          world.GetChunkManager().GetChunk(coord)->GetIncarnation();
+      world.GetChunkManager().RemoveChunk(coord);
+      world.SetBlock(source, kWater);
+      world.SetFluidState(source,
+                          FluidCellState::Source().WithKind(FluidKind::Water));
+      std::vector<glm::ivec3> changed;
+      auto seal = [&]
+      {
+        changed.clear();
+        if (air_only)
+          SealFluidShoreAirOnChunkCommitted(world, registry, settings, "",
+                                            owner, &changed);
+        else
+          SealFluidShoreOnChunkCommitted(world, registry, settings, "", owner,
+                                         true, &changed);
+      };
+      const auto resident = world.GetChunkManager().GetResidentChunkCount();
+      seal();
+      FluidTest::Expect(!world.GetChunkManager().HasChunk(coord) &&
+                            world.GetChunkManager().GetResidentChunkCount() ==
+                                resident,
+                        kTestName,
+                        "committed shore maintenance cannot resurrect retired "
+                        "neighbor terrain");
+      FluidTest::Expect(
+          std::find(changed.begin(), changed.end(), coord) == changed.end(),
+          kTestName, "unknown shore targets do not publish invented mutations");
+      world.GetChunkManager().EnsureChunk(coord);
+      FluidTest::Expect(
+          world.GetChunkManager().GetChunk(coord)->GetIncarnation() != retired,
+          kTestName, "returning neighbor has fresh geometry ownership");
+      seal();
+      FluidTest::Expect(
+          world.GetBlock(target) == kWater &&
+              PackFluidCellState(world.GetFluidState(target)) != 0 &&
+              std::find(changed.begin(), changed.end(), coord) != changed.end(),
+          kTestName,
+          "returned resident AIR still receives shore water and publication");
+      world.GetChunkManager().RemoveChunk(coord);
+      seal();
+      FluidTest::Expect(
+          !world.GetChunkManager().HasChunk(coord) &&
+              world.GetBlock(source) == kWater,
+          kTestName,
+          "repeated deferred shore work cannot recreate an evicted neighbor");
+    }
+}
+
 static void TestCommittedShoreSealReportsDeepNeighborMutations()
 {
   using namespace cutum;
@@ -476,6 +542,9 @@ static void TestCommittedShoreSealReportsDeepNeighborMutations()
   ProceduralSettings settings;
   settings.FillWater = true;
   settings.SeaLevel = 63;
+  // This positive neighbor-mutation fixture owns resident AIR, not unknown
+  // data.
+  world.GetChunkManager().EnsureChunk({1, -3, 0});
   world.SetBlock({15, -40, 8}, kWater);
   world.SetFluidState({15, -40, 8},
                       FluidCellState::Source().WithKind(FluidKind::Water));
@@ -499,6 +568,7 @@ static void TestCommittedShoreSealReportsDeepNeighborMutations()
 
 int main()
 {
+  TestCommittedShoreSealPreservesRetiredNeighbors();
   TestFillColumnBelowSea();
   TestFillColumnAboveSea();
   TestFillColumnAfterRavineCarve();

@@ -1,14 +1,15 @@
 #include "WorldGen/Stages/WorldGenStages.h"
-#include "World/Chunks/ChunkMutationSnapshot.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkMutationSnapshot.h"
+#include "World/Chunks/ChunkResidencyTrace.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Objects/ObjectUtil.h"
 #include "World/Physics/FluidSpreadSystem.h"
-#include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/ColumnHash.h"
+#include "WorldGen/Core/Noise.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/AquiferSampler.h"
@@ -513,6 +514,13 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
   // just the ocean band.
   const int seal_top =
       std::max(sea, HighestFluidTopInChunk(ctx, base_x, base_z));
+  // Committed maintenance may touch resident AIR, never invent geometry in
+  // an unloaded neighbor. Such a ghost slice can later classify a saved
+  // column as incomplete and purge its terrain and light receipts.
+  const auto ground = UChunkManager::WorldToChunk({base_x, 0, base_z});
+  const auto &chunks = ctx.World.GetChunkManager();
+  std::array<bool, 9> resident{};
+  std::optional<int> resident_cy;
   bool any = false;
   // 8 full-volume passes were 200–470ms on main (CB hole spikes). Two passes
   // close the common shore strip; remaining edges catch up on later frames.
@@ -521,10 +529,31 @@ bool SealShoreAirAdjacencyInChunk(WorldGenContext &ctx, int base_x, int base_z)
     bool changed = false;
     for (int y = ctx.Settings.MinHeight; y <= seal_top; ++y)
     {
+      const int cy = UChunkManager::WorldToChunk({base_x, y, base_z}).y;
+      if (resident_cy != cy)
+      {
+        for (int dx = -1; dx <= 1; ++dx)
+          for (int dz = -1; dz <= 1; ++dz)
+          {
+            const glm::ivec3 target(ground.x + dx, cy, ground.z + dz);
+            const bool present = chunks.HasChunk(target);
+            resident[(dx + 1) * 3 + dz + 1] = present;
+            if (!present)
+              TraceChunkResidency("shore_air_absent_band", target, ground, 0,
+                                  &chunks);
+          }
+        resident_cy = cy;
+      }
       for (int x = min_x; x <= max_x; ++x)
       {
+        const int x_slot =
+            x < base_x ? 0 : (x > base_x + CHUNK_SIZE - 1 ? 2 : 1);
         for (int z = min_z; z <= max_z; ++z)
         {
+          const int z_slot =
+              z < base_z ? 0 : (z > base_z + CHUNK_SIZE - 1 ? 2 : 1);
+          if (!resident[x_slot * 3 + z_slot])
+            continue;
           const glm::ivec3 pos(x, y, z);
           if (ctx.World.GetBlock(pos) != BLOCK_AIR)
           {
