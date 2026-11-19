@@ -4708,9 +4708,25 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     // remainder, while budget-eligible ticks can drain beyond a fixed batch of
     // four without rescanning the whole queue after every applied slice.
     const std::size_t max_ranked_loads = max_slice_applies;
-    auto completed_loads = AsyncChunkIo->DrainLoadsBestByKeyUpTo(
-        max_ranked_loads, result_rank, &metrics.ready_loads_before_n,
-        &metrics.result_selection_mutex_wait_ms,
+    const auto field_input_required = [&](const AsyncChunkLoadResult &load)
+    {
+      const glm::ivec3 column(load.coord.x, 0, load.coord.z);
+      const auto pending = PendingAsyncColumnLoadSlices.find(column);
+      return pending != PendingAsyncColumnLoadSlices.end() &&
+             load.cancellation &&
+             !load.cancellation->load(std::memory_order_acquire) &&
+             load.demandId == pending->second.demand_id &&
+             load.cancellation == pending->second.cancellation &&
+             world.MeshService &&
+             world.MeshService->GetCache().NeedsPhysicalFieldInputColumn(
+                 column);
+    };
+    const bool prefer_field_input =
+        PreferFieldInputLoadNext_ && world.MeshService &&
+        world.MeshService->GetCache().GetGeometryAwaitingLightCount() != 0;
+    auto completed_loads = AsyncChunkIo->DrainConsumerLoadsUpTo(
+        max_ranked_loads, result_rank, field_input_required, prefer_field_input,
+        &metrics.ready_loads_before_n, &metrics.result_selection_mutex_wait_ms,
         &metrics.result_selection_mutex_held_ms);
     metrics.result_selection_ms =
         std::chrono::duration<double, std::milli>(
@@ -4755,6 +4771,11 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
                 " cancelled=" + (result_cancelled ? "1" : "0"));
         continue;
       }
+      if (trace_async_io && prefer_field_input && applied_slices == 1 &&
+          field_input_required(load))
+        LogWorldColumnSource("disk", "field_input_promoted", ground,
+                             "slice_y=" + std::to_string(load.coord.y) +
+                                 " demand_id=" + std::to_string(load.demandId));
       if (trace_async_io)
       {
         ++state.timing_slice_count;
@@ -4910,6 +4931,8 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - result_apply_started)
             .count();
+    if (applied_slices > 0)
+      PreferFieldInputLoadNext_ = !PreferFieldInputLoadNext_;
     if (next_load < completed_loads.size())
     {
       const auto requeue_started = std::chrono::steady_clock::now();

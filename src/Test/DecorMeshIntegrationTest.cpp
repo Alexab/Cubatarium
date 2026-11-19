@@ -2458,6 +2458,12 @@ static void TestUnknownGeometryDefersPhysicalBuild(
                cache.GetChunkMeshRevision(root) == revision,
            "data completion builds original target once before light is "
            "calculated");
+    Expect(cache.NeedsPhysicalFieldInputColumn({1, 0, 1}) &&
+               cache.NeedsPhysicalFieldInputColumn({-1, 0, -1}) &&
+               !cache.NeedsPhysicalFieldInputColumn({2, 0, 0}) &&
+               !cache.NeedsPhysicalFieldInputColumn({0, 1, 0}),
+           "current first-publication field owner prioritizes exactly its "
+           "horizontal data halo");
     RelightJobSpec spec;
     spec.min_world_y = world.GetVerticalProfile().MinY;
     spec.max_world_y = world.GetVerticalProfile().MaxY;
@@ -2489,6 +2495,9 @@ static void TestUnknownGeometryDefersPhysicalBuild(
                cache.GetChunkMeshRevision(root) == revision,
            "resident undrawn neighbor hides shared face and current field "
            "publishes original geometry once");
+    Expect(
+        !cache.NeedsPhysicalFieldInputColumn({1, 0, 1}),
+        "published field consumer cannot leave a data priority owner behind");
     const auto previous_binding = cache.GetPublishedRenderLightBinding(root);
     const auto previous_generation =
         cache.GetCaptureStore().CapturePolicyGeneration();

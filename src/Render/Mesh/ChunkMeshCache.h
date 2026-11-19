@@ -231,6 +231,8 @@ public:
   {
     return GeometryAwaitingLight_.size();
   }
+  /// Scheduling hint for existing ready I/O; never proof of data or light.
+  bool NeedsPhysicalFieldInputColumn(glm::ivec3 column) const;
   size_t GetGeometryAwaitingLightBytes() const
   {
     return GeometryAwaitingLightBytes_;

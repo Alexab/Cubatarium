@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/IO/ReadyDataAdmission.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -162,6 +163,16 @@ public:
                                              mutex_held_ms);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
+  template <typename Rank, typename Required>
+  std::vector<AsyncChunkLoadResult>
+  DrainConsumerLoadsUpTo(std::size_t max_count, Rank rank, Required required,
+                         bool prefer_consumer, std::size_t *available = nullptr,
+                         double *wait_ms = nullptr, double *held_ms = nullptr)
+  {
+    return DrainReadyDataForConsumers(CompletedLoads, max_count, rank, required,
+                                      prefer_consumer, available, wait_ms,
+                                      held_ms);
+  }
   std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves(
       double *mutex_wait_ms = nullptr, double *mutex_held_ms = nullptr);
   bool WaitForColumnLightFlagsSaveIdleFor(std::chrono::milliseconds timeout);

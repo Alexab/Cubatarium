@@ -8307,6 +8307,61 @@
         "Complete cancellation/source-revision revalidation beyond capture-policy transitions, provider/storage lifecycle and full backend/Flat/edit/return/eviction/radius8 acceptance.",
         "Finish semantic geometry-vs-optics catalog identity, persisted content certificates and algorithm/profile compatibility, independent nonzero RGB/wet/transparency references, CPU/GPU solver/backend matrix, controlled performance/memory and whole-pipeline readiness prediction."
       ]
+    },
+    "field_input_ready_io_admission": {
+      "status": "Existing completed disk results can use one first-publication field-input opportunity on alternating apply ticks. Ordinary distance/age service remains on the other ticks and in the rest of each batch. No new I/O request, worker, apply-count quota, time quota or light-readiness exception was introduced. Native application verification is pending.",
+      "native_cause_evidence": {
+        "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
+        "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/mesh-publication-field-input-diagnostics.json",
+        "fault_section": [
+          -5,
+          -3,
+          3
+        ],
+        "depth_faults": 4,
+        "incomplete_input_jobs": [
+          809,
+          813
+        ],
+        "reported_unknown_counts": [
+          23,
+          19
+        ],
+        "later_complete_job": 818,
+        "reported_unknown_column": [
+          -6,
+          0,
+          4
+        ],
+        "data_demand_id": 2151,
+        "queued_at": "20261119 16:44:11.257079",
+        "completed_at": "20261119 16:44:29.001675",
+        "elapsed_ms": 17744.5526,
+        "result_wait_max_ms": 17673.5714,
+        "file_read_ms": 14.8918,
+        "worker_queue_max_ms": 65.2832,
+        "limits": "Unknown-coordinate logs contain at most8stamps per job; these are partial input lists. Same-column I/O timing is observational, not a matching data-token certificate or exact pixel-time proof. Native4fault verdict is preserved."
+      },
+      "implementation": [
+        "ReadyDataAdmission selects at most one consumer-required existing result first, then fills the remainder with the existing ordinary distance/age rank. The caller alternates after an apply attempt, preserving ordinary progress when the time budget permits only one result. Deferred suffixes remain in the same production completion queue.",
+        "Cache data hints come only from current retained first-publication geometry owners with matching capture epoch/generation/policy and source revision. They cover the3x3horizontal field influence footprint across the input column, including sky-input and column-completion slices; they are not light or data proofs.",
+        "Persistence grants the hint only to an existing uncancelled load with the current demand ID and cancellation owner. Existing source validation, deserialization, install, accounting and apply count/time limits remain in place. No-field ticks retain the ordinary single-rank path.",
+        "WorldColumnSource field_input_promoted records actual priority selections. Publication diagnostics now join worker input completeness, bounded unknown coordinate logs, calculation certificates, reported handoffs and same-column queued/complete/promoted observations. Missing metadata stays unknown and reported selection is not column completion."
+      ],
+      "verification": {
+        "release": "build/desktop-msvc/engine-field-input-admission-restored-sixteen-tests.log",
+        "release_result": "16/16PASS29.11seconds, including actual completion-queue selection/requeue, payload preservation, ordinary/consumer fairness under one-apply budgets and cache-owned dependency hints.",
+        "negative_controls": "build/desktop-msvc/engine-field-input-admission-negative-controls.json",
+        "expected_failures": 2,
+        "exact_source_restore": true,
+        "python": "9publication parser +21smoke runner +5depth attribution =35PASS. Includes incomplete certificates, missing worker data, bounded history, delayed ready-result linkage and promotion without completion.",
+        "native": "Required Release application build and the unchanged no-teleport wet route pending. Existing4/19555FAIL is not superseded by unit tests."
+      },
+      "remaining": [
+        "Build Windows Release application and repeat19chunk24inspection wet route with selected(-5,-3,3) capture/field trace; inspect depth, ownership, disk ready-result waits and residual required-input debt. Preserve failures and do not infer success from source counters.",
+        "Complete end-to-end readiness latency prediction (I/O admission through installation/light/publication), canonical consumer/data domain prioritization and controlled performance/memory acceptance.",
+        "Continue full original scope: cancellation/source/provider lifecycle, semantic geometry/optics catalogs, persistence certificates, RGB/wet/transparency references and full backend/radius/edit/return/eviction matrix."
+      ]
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8344,7 +8399,7 @@
     ],
     "S5": "Production Greedy Full geometry capture now uses PhysicalField; CPU/GPU/retained/synchronous owners carry versioned policy and validate actual private field separately. Legacy preview, stale-dark scans and packed retention no longer read zero baked data as missing light. Unknown data defers builds.14ReleaseGREEN and4expected-failure activation controls with exact source restoration. Full native/RGB/backend/persistence/performance acceptance remains open.",
     "remaining_critical_path": [
-      "Native activation run completed with19chunks0relocations24verifiedcaptures and1176startup-ready sections but4/19555opaque-depthFAIL at(-5,-3,3),frames374..375. Geometry is explicitly retained awaiting light (mask4098); early field handoffs do not yet settle current calculation. Close the current-field completion/publication deadline with source evidence, a regression and further native acceptance. RGB remainsUNTESTED and performance/post-stop debtFAIL.",
+      "Native4/19555depthFAIL is linked to incomplete light input contexts and an observed17.67second ready-result installation wait in a required neighbor column. Bounded consumer-aware ready I/O admission and automatic field/I/O diagnosis are implemented and16Release/35Python verified, with2negative controls. Required Release application build and unchanged native route repeat remain before evaluating closure.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

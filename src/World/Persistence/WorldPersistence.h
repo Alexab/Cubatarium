@@ -304,6 +304,7 @@ private:
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
       PendingAsyncColumnLoadSlices;
+  bool PreferFieldInputLoadNext_{true};
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
   struct PlayerRelightRequest
   {

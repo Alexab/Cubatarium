@@ -1030,6 +1030,12 @@ cubatarium_add_test(NAME completed_job_queue_test
     SOURCES
         src/Test/CompletedJobQueueTest.cpp)
 
+cubatarium_add_test(NAME ready_data_admission_test
+    SOURCES src/Test/ReadyDataAdmissionTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME ready_data_admission_test COMMAND $<TARGET_FILE:ready_data_admission_test>)
+set_tests_properties(ready_data_admission_test PROPERTIES LABELS "unit;streaming")
+
 cubatarium_add_test(NAME audio_event_queue_test
     SOURCES
         src/Audio/AudioEventQueue.cpp

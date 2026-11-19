@@ -8375,6 +8375,29 @@ static std::pair<std::ostream *, uint64_t> MeshApplyProfileOutput()
   return {profile_sink, profile_sequence};
 }
 
+bool UChunkMeshCache::NeedsPhysicalFieldInputColumn(glm::ivec3 column) const
+{
+  if (column.y != 0 ||
+      CaptureStore.LightInputsPolicy() != MeshLightInputs::PhysicalField)
+    return false;
+  for (const auto &[coord, pending] : GeometryAwaitingLight_)
+  {
+    const auto &result = pending.result;
+    const auto active = ActiveMeshSourceRevision.find(coord);
+    if (std::max(std::abs(coord.x - column.x), std::abs(coord.z - column.z)) <=
+            1 &&
+        !HasDrawableGreedyMesh(coord) &&
+        CaptureStore.MatchesCaptureOwner(result.sourceWorldEpoch,
+                                         result.sourceCaptureGeneration,
+                                         result.lightInputs) &&
+        result.sourceRevision == MeshRevisions.Current(coord) &&
+        active != ActiveMeshSourceRevision.end() &&
+        active->second == result.sourceRevision)
+      return true;
+  }
+  return false;
+}
+
 void UChunkMeshCache::ConfigureCapturePolicy(const UBlockWorld &world)
 {
   const auto policy = Render.GreedyMeshing && PrepareRenderLight &&
