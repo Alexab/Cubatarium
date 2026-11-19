@@ -310,6 +310,18 @@ SectionGeometryRenderInputs UBlockWorld::CaptureGeometryRenderInputs(
       std::move(catalog), inputs);
 }
 
+SectionGeometryRenderInputs
+UBlockWorld::CaptureCurrentGeometryRenderInputs(glm::ivec3 coord) const
+{
+  if (!FluidDefinitions)
+    return {};
+  const auto catalog = FluidDefinitions->GetCatalogSnapshot();
+  auto inputs = CaptureGeometryRenderInputs(coord, catalog);
+  return FluidDefinitions->GetCatalogSnapshot() == catalog
+             ? std::move(inputs)
+             : SectionGeometryRenderInputs{};
+}
+
 std::optional<SectionRenderLightSnapshot>
 UBlockWorld::CaptureRenderLightSnapshot(glm::ivec3 coord) const
 {

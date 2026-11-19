@@ -179,11 +179,12 @@ struct ChunkMeshCaptureAdmissionTestAccess
     return cache.CommitGpuMeshResult(
         world, registry, snapshot.coord,
         cache.GetChunkMeshRevision(snapshot.coord), std::move(result), {},
-        false, 0, false, {}, false, {},
+        false, snapshot.inputStamps[0].light, true, {}, false, {},
         snapshot.inputStampsValid ? &snapshot.inputStamps : nullptr,
         snapshot.GeometryRenderInputs(registry.GetDefinitionsCatalogSnapshot()),
-        snapshot.renderLight, snapshot.sourceWorldEpoch, nullptr, nullptr,
-        snapshot.lightInputs, snapshot.sourceCaptureGeneration);
+        snapshot.renderLight, snapshot.sourceWorldEpoch, nullptr,
+        &snapshot.lightHaloSignatures, snapshot.lightInputs,
+        snapshot.sourceCaptureGeneration);
   }
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   static void QueuePacked(UChunkMeshCache &cache, ChunkMeshSnapshot snapshot,
@@ -2405,6 +2406,146 @@ private:
   mutable std::mutex CountsMutex;
   std::unordered_map<glm::ivec3, unsigned, cutum::IVec3Hash> BuildsByCoord;
 };
+
+static void
+TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
+                             const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0);
+  for (const bool hidden : {false, true})
+    for (int lane = 0; lane < 3; ++lane)
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(
+          static_cast<uint64_t>(LightingMode::Full));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      world.GetChunkManager().EnsureChunk(root);
+      if (hidden)
+        for (const glm::ivec3 coord :
+             {root, glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+              glm::ivec3(0, -1, 0), glm::ivec3(0, 1, 0), glm::ivec3(0, 0, -1),
+              glm::ivec3(0, 0, 1)})
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            for (int y = 0; y < CHUNK_SIZE; ++y)
+              for (int x = 0; x < CHUNK_SIZE; ++x)
+                world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(x, y, z),
+                               kStone);
+      // Install a real nonzero-revision calculation while physical captures
+      // retain their light-free worker stamp, as in the native counterexample.
+      world.GetChunkManager().GetChunk(root)->SetLightLocal({8, 8, 8}, 7, 7);
+      RelightJobSpec spec;
+      spec.min_world_y = world.GetVerticalProfile().MinY;
+      spec.max_world_y = world.GetVerticalProfile().MaxY;
+      const auto field =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+              .Compute(registry);
+      Expect(field.inputs_complete && field.chunks.size() == 1,
+             "NoSurface repair fixture calculates actual complete light");
+      world.GetChunkManager().ReplaceComputedSectionLightVolume(
+          root, *field.chunks[0].padded_light, true, true);
+      Expect(world.RecordLightCalculation(
+                 field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+             "NoSurface repair fixture installs the actual field proof");
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = lane == 1;
+      settings.FrustumCulling = false;
+      cache.SetRenderSettings(settings);
+      CountingPhysicalMesher mesher;
+      cache.SetMesherBackend(&mesher);
+      cache.SetRepairGuardWorld(&world);
+      cache.SetPrepareRenderLightFn(
+          [](uint64_t, const SectionGeometryRenderInputs &,
+             const SectionRenderLightSnapshot &)
+              -> std::shared_ptr<SectionRenderLightBinding> { return {}; });
+      cache.MarkDirtyPriority(root);
+      if (lane == 2)
+      {
+        const auto snapshot = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+            cache, world, root);
+        Expect(snapshot.inputStamps[0].light == 0 &&
+                   world.GetChunkManager()
+                           .GetChunk(root)
+                           ->GetLightFieldRevision() > 0,
+               "packed NoSurface worker and actual field have different light "
+               "stamps");
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CommitEmptyPacked(
+                   cache, world, registry, snapshot),
+               "packed NoSurface geometry publishes without a field resource");
+        cache.ClearDirtyAndRemeshAfterApply(root);
+      }
+      else
+      {
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "NoSurface actual geometry worker finishes");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      }
+      const auto revision = cache.GetChunkMeshRevision(root);
+      const auto publications = cache.GetPublishCount(root);
+      cache.GetRenderDemandStore().RequestLightSample(
+          root, cache.GetCaptureStore().WorldEpoch(), 5, 8);
+      Expect(
+          publications == 1 &&
+              cache.IsPublishedMeshCurrentForInputs(root, world),
+          "current NoSurface publication is independent of baked light stamps");
+      for (int tick = 0; tick < 4; ++tick)
+      {
+        cache.MarkDirtyPriority(
+            root, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+        cache.MarkDirty(root, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        Expect(!cache.IsChunkMeshDirty(root) &&
+                   cache.GetChunkMeshRevision(root) == revision &&
+                   cache.GetPublishCount(root) == publications,
+               "repair hints cannot churn current NoSurface geometry");
+      }
+      Expect(
+          !cache.GetPublishedRenderLightBinding(root) &&
+              cache.GetRenderDemandStore().HasLightSampleDemand(
+                  root, cache.GetCaptureStore().WorldEpoch(), 5),
+          "NoSurface repair retirement preserves independent light consumers");
+      world.SetFluidDefinitions(nullptr);
+      Expect(!cache.IsPublishedMeshCurrentForInputs(root, world),
+             "NoSurface repair proof requires the world's current catalog");
+      UBlockDefinitionStorage other_definitions;
+      world.SetFluidDefinitions(&other_definitions);
+      Expect(!cache.IsPublishedMeshCurrentForInputs(root, world),
+             "another installed catalog invalidates NoSurface repair evidence");
+      world.SetFluidDefinitions(definitions);
+      if (lane == 2)
+      {
+        UChunkMeshCache epoch_cache;
+        epoch_cache.SetRenderSettings(settings);
+        epoch_cache.SetPrepareRenderLightFn(
+            [](uint64_t, const SectionGeometryRenderInputs &,
+               const SectionRenderLightSnapshot &)
+                -> std::shared_ptr<SectionRenderLightBinding> { return {}; });
+        epoch_cache.MarkDirtyPriority(root);
+        const auto snapshot = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+            epoch_cache, world, root);
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CommitEmptyPacked(
+                   epoch_cache, world, registry, snapshot),
+               "epoch fixture publishes certified NoSurface geometry");
+        epoch_cache.ClearDirtyAndRemeshAfterApply(root);
+        Expect(epoch_cache.IsPublishedMeshCurrentForInputs(root, world),
+               "NoSurface epoch fixture starts with current evidence");
+        epoch_cache.GetCaptureStore().BumpWorldEpoch();
+        Expect(!epoch_cache.IsPublishedMeshCurrentForInputs(root, world),
+               "NoSurface repair evidence cannot cross a capture epoch");
+      }
+      world.SetBlock(hidden ? glm::ivec3(16, 8, 8) : glm::ivec3(4, 4, 4),
+                     hidden ? BLOCK_AIR : kStone);
+      Expect(!cache.IsPublishedMeshCurrentForInputs(root, world) &&
+                 !UGreedyMesher::BuildChunkMesh(world, root, registry).empty(),
+             "geometry edit invalidates NoSurface and exposes real faces");
+      cache.MarkDirtyPriority(
+          root, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
+      Expect(cache.IsChunkMeshDirty(root),
+             "NoSurface retirement cannot erase a later geometry obligation");
+    }
+}
 
 static void TestUnknownGeometryDefersPhysicalBuild(
     cutum::UBlockRegistry &registry,
@@ -6489,6 +6630,7 @@ int main(int argc, char **argv)
   TestPhysicalCaptureOwnership(registry, definitions.get());
   TestMeshResultCaptureOwnership(registry, definitions.get());
   TestUnknownGeometryDefersPhysicalBuild(registry, definitions.get());
+  TestNoSurfaceRepairStability(registry, definitions.get());
   TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);

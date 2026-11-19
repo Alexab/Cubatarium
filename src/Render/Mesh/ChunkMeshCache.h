@@ -1379,6 +1379,8 @@ private:
     std::array<ChunkInputStamp, 7> PublishedGeomStamps{};
     bool PublishedGeomStampsValid{false};
     SectionGeometryRenderInputs RenderGeometryInputs;
+    std::shared_ptr<const SectionNoSurfaceProof> PublishedNoSurface;
+    uint64_t NoSurfaceWorldEpoch{0};
     std::optional<SectionRenderLightSnapshot> RenderLight;
     std::shared_ptr<SectionRenderLightBinding> RenderLightBinding;
     uint32_t PublishCount{0};
@@ -1389,7 +1391,9 @@ private:
       ChunkGreedyMesh &mesh,
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
       SectionGeometryRenderInputs geometry_inputs = {},
-      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt);
+      std::optional<SectionRenderLightSnapshot> source_light = std::nullopt,
+      const SectionNoSurfaceProof *no_surface = nullptr,
+      uint64_t source_world_epoch = 0);
   bool TryPrepareRenderLight(
       uint64_t source_world_epoch,
       const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,

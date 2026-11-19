@@ -144,6 +144,9 @@ public:
   SectionGeometryRenderInputs CaptureGeometryRenderInputs(
       glm::ivec3 coord,
       std::shared_ptr<const BlockDefinitionCatalog> catalog) const;
+  /// Geometry-only inputs against the currently installed material catalog.
+  SectionGeometryRenderInputs
+  CaptureCurrentGeometryRenderInputs(glm::ivec3 coord) const;
 
   /// Full current physical proof and immutable GPU-upload bytes, paired with
   /// geometry-only provenance from the same main-thread observation.

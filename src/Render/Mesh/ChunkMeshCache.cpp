@@ -3485,10 +3485,13 @@ void UChunkMeshCache::RecordPublishedGeomStamps(
     ChunkGreedyMesh &mesh,
     const std::array<ChunkInputStamp, kChunkMeshInputStampCount> *stamps,
     SectionGeometryRenderInputs geometry_inputs,
-    std::optional<SectionRenderLightSnapshot> source_light)
+    std::optional<SectionRenderLightSnapshot> source_light,
+    const SectionNoSurfaceProof *no_surface, uint64_t source_world_epoch)
 {
   mesh.RenderGeometryInputs = {};
   mesh.RenderLight.reset();
+  mesh.PublishedNoSurface.reset();
+  mesh.NoSurfaceWorldEpoch = 0;
   if (stamps && geometry_inputs.valid)
   {
     std::array<ChunkInputStamp, 7> source;
@@ -3501,6 +3504,13 @@ void UChunkMeshCache::RecordPublishedGeomStamps(
   }
   if (source_light && source_light->MatchesGeometry(mesh.RenderGeometryInputs))
     mesh.RenderLight = std::move(source_light);
+  if (source_world_epoch && no_surface &&
+      no_surface->Matches(mesh.RenderGeometryInputs))
+  {
+    mesh.PublishedNoSurface =
+        std::make_shared<SectionNoSurfaceProof>(*no_surface);
+    mesh.NoSurfaceWorldEpoch = source_world_epoch;
+  }
   ++mesh.PublishCount;
   if (!stamps)
   {
@@ -3576,6 +3586,16 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
     glm::ivec3 chunk_coord, const UBlockWorld &world) const
 {
   const auto it = GreedyCache.find(chunk_coord);
+  // A privately certified NoDraw publication has no sampled-light inputs.
+  // Validate its current geometry/catalog/epoch and outstanding owners; never
+  // stamp a light revision or satisfy an independent field consumer here.
+  if (it != GreedyCache.end() && it->second.PublishedNoSurface &&
+      CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField &&
+      it->second.NoSurfaceWorldEpoch == CaptureStore.WorldEpoch() &&
+      HasMeshSatisfyingColumnReady(chunk_coord) &&
+      it->second.PublishedNoSurface->Matches(
+          world.CaptureCurrentGeometryRenderInputs(chunk_coord)))
+    return true;
   if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid ||
       !it->second.MeshedLightHaloSignaturesValid ||
       it->second.ProvisionalLightPreview)
@@ -6767,9 +6787,10 @@ bool UChunkMeshCache::CommitGpuMeshResult(
         source_light_signatures
             ? *source_light_signatures
             : std::array<uint64_t, kChunkMeshNeighborStampCount>{};
-    RecordPublishedGeomStamps(chunkMesh, source_stamps,
-                              std::move(source_geometry),
-                              std::move(source_light));
+    RecordPublishedGeomStamps(
+        chunkMesh, source_stamps, std::move(source_geometry),
+        std::move(source_light), no_surface ? &*no_surface : nullptr,
+        source_world_epoch);
     chunkMesh.GpuBoundContentRev =
         source_stamps ? (*source_stamps)[0].content : 0;
   }
@@ -9594,7 +9615,8 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     RecordPublishedGeomStamps(
         chunkMesh, result.InputStampsValid ? &result.InputStamps : nullptr,
-        std::move(result.GeometryInputs), std::move(result.RenderLight));
+        std::move(result.GeometryInputs), std::move(result.RenderLight),
+        no_surface ? &*no_surface : nullptr, result.sourceWorldEpoch);
     chunkMesh.PublishRevs.material_stamp =
         MeshPublishMaterialStamp(ids.data(), ids.size());
   }
@@ -13522,7 +13544,8 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
           sync_catalog == registry.GetDefinitionsCatalogSnapshot()
               ? sync_snap.GeometryRenderInputs(sync_catalog)
               : SectionGeometryRenderInputs{},
-          sync_snap.renderLight);
+          sync_snap.renderLight, no_surface ? &*no_surface : nullptr,
+          sync_snap.sourceWorldEpoch);
       chunkMesh.PublishRevs.material_stamp =
           MeshPublishMaterialStamp(ids.data(), ids.size());
       chunkMesh.BoundaryOverlay = sync_snap.boundaryOverlay;
