@@ -1026,6 +1026,12 @@ cubatarium_add_test(NAME diagnostic_world_actions_test
 add_test(NAME diagnostic_world_actions_test COMMAND $<TARGET_FILE:diagnostic_world_actions_test>)
 set_tests_properties(diagnostic_world_actions_test PROPERTIES LABELS "unit;streaming")
 
+cubatarium_add_test(NAME framebuffer_surface_cell_test
+    SOURCES src/Test/FramebufferSurfaceCellTest.cpp
+    LIBRARIES glm::glm)
+add_test(NAME framebuffer_surface_cell_test COMMAND $<TARGET_FILE:framebuffer_surface_cell_test>)
+set_tests_properties(framebuffer_surface_cell_test PROPERTIES LABELS "unit;rendering")
+
 cubatarium_add_test(NAME chunk_load_priority_test
     SOURCES
         src/World/Chunks/ChunkLoadPriority.cpp

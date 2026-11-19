@@ -28,6 +28,7 @@
 #include "Render/Engine/EnvironmentLight.h"
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/FluidUnderwaterFogLogic.h"
+#include "Render/Engine/FramebufferSurfaceCell.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/HorizonFogColor.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
@@ -1938,10 +1939,8 @@ void CaptureTransparentPixelProbe(
                   : glm::dot(opaque_view_point - camera_ray.view_near,
                              camera_ray.view_direction);
           record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
-          const glm::ivec3 opaque_cell(
-              static_cast<int>(std::floor(opaque_point.x)),
-              static_cast<int>(std::floor(opaque_point.y)),
-              static_cast<int>(std::floor(opaque_point.z)));
+          const glm::ivec3 opaque_cell =
+              FramebufferSurfaceCell(opaque_point, voxel_ray_direction);
           const glm::ivec3 opaque_chunk =
               UChunkManager::WorldToChunk(opaque_cell);
           record.renderer_pixel_opaque_surface_valid = 1;
