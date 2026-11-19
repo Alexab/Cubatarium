@@ -14670,5 +14670,2423 @@
     "Continue independent nonzero light/RGB/wet/transparency reference and CPU/GPU/backend checks with actual data consumers.",
     "Continue remaining original semantic/lifecycle/procedural AIR discovery and complete native persistence/performance/memory coverage; retain current material lifecycle proof as one matrix cell."
   ]
+},
+"native_positive_floor_rgb_and_framebuffer_cell_2026_11_20": {
+  "assessment_path": "build\\desktop-msvc\\native-positive-floor-rgb-assessment-20261120.json",
+  "schema": "native-positive-floor-rgb-assessment.v1",
+  "date": "2026-11-20",
+  "goal_status": "active; full S0..S6 unchanged",
+  "checkout_commit": "d33318232fbd6fc46b48ca6002b1ed3a94ff3b87",
+  "changes": [
+    "f72e15256 bounded runtime catalog/GPU-atlas witnesses and independent analytic normal-color RGB reference for a copied dry lit cave + selected secondary constant texture pack",
+    "ec0f4cc92 diagnostic pack six-face override after primary texture overrides, and native JSON boolean marker mode admission",
+    "d33318232 framebuffer opaque-hit source cell now uses center-based grid and an inward ray bias; matching native triangle witness at positive/negative section boundaries"
+  ],
+  "tests": {
+    "python_engine_tests": 126,
+    "python_pass": true,
+    "release_cpp_tests": [
+      "framebuffer_surface_cell_test",
+      "view_ray_math_test",
+      "packed_quad_parity_test"
+    ],
+    "release_cpp_pass": true,
+    "causal_control": {
+      "control": "original floor(point) framebuffer attribution",
+      "red_returncode": 1,
+      "red_stderr": "wrong framebuffer solid cell: 15,-32,47 expected 16,-32,48\n",
+      "restored_returncode": 0,
+      "restored_stdout": "framebuffer center-grid surface ownership PASS\n",
+      "source_sha256_before": "b84caf961a38d90e89adc5681f39f90db9411dfbe797a8665c7e61b43c57107b",
+      "source_sha256_after": "b84caf961a38d90e89adc5681f39f90db9411dfbe797a8665c7e61b43c57107b",
+      "scope": "unit regression only; no application build/native executed from the temporary control header"
+    },
+    "release_build_logs": [
+      "positive-rgb-desktop-build-20261120.log",
+      "positive-rgb-v2-desktop-build-20261120.log",
+      "positive-rgb-surface-desktop-build-20261120.log"
+    ]
+  },
+  "cases": {
+    "wrong_primary_override": {
+      "artifacts": "build\\desktop-msvc\\engine-positive-floor-rgb-20261120-native",
+      "built_source_commit": "f72e15256e55e185a1ec135e38fa9eebd0926300",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-f72e152",
+      "native_exit": 0,
+      "smoke_overall": "FAIL",
+      "wrapper_exit": 1,
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "cached_rgb": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "FAIL",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 3040,
+        "faults": 3040,
+        "frame_epochs": 91,
+        "distinct_cells": 1006,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          0,
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11706,
+        "examples": [
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              57
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                17,
+                18,
+                19,
+                255
+              ],
+              [
+                17,
+                18,
+                19,
+                255
+              ]
+            ],
+            "error_bytes": 20.86495999999999,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              55
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                21,
+                22,
+                23,
+                255
+              ],
+              [
+                21,
+                22,
+                23,
+                255
+              ]
+            ],
+            "error_bytes": 26.091199999999986,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              52
+            ],
+            "expected_light": 13,
+            "predicted_rgba": [
+              60.93055999999999,
+              40.620373333333326,
+              20.310186666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                27,
+                28,
+                30,
+                255
+              ],
+              [
+                27,
+                28,
+                30,
+                255
+              ]
+            ],
+            "error_bytes": 33.93055999999999,
+            "intensity": 0.3173466666666666,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              50
+            ],
+            "expected_light": 13,
+            "predicted_rgba": [
+              60.93055999999999,
+              40.620373333333326,
+              20.310186666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                27,
+                28,
+                30,
+                255
+              ],
+              [
+                27,
+                28,
+                30,
+                255
+              ]
+            ],
+            "error_bytes": 33.93055999999999,
+            "intensity": 0.3173466666666666,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              47
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                21,
+                22,
+                23,
+                255
+              ],
+              [
+                21,
+                22,
+                23,
+                255
+              ]
+            ],
+            "error_bytes": 26.091199999999986,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -272,
+              -44,
+              45
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                14,
+                15,
+                16,
+                255
+              ],
+              [
+                14,
+                15,
+                16,
+                255
+              ]
+            ],
+            "error_bytes": 23.86495999999999,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -274,
+              -44,
+              56
+            ],
+            "expected_light": 7,
+            "predicted_rgba": [
+              33.251839999999994,
+              22.167893333333332,
+              11.083946666666666,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                12,
+                13,
+                13,
+                255
+              ],
+              [
+                12,
+                13,
+                13,
+                255
+              ]
+            ],
+            "error_bytes": 21.251839999999994,
+            "intensity": 0.17318666666666666,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -274,
+              -44,
+              55
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                13,
+                14,
+                15,
+                255
+              ],
+              [
+                13,
+                14,
+                15,
+                255
+              ]
+            ],
+            "error_bytes": 24.86495999999999,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": false,
+            "surface_ok": false
+          }
+        ],
+        "missing_coverage": []
+      },
+      "current_verifier_status": "FAIL",
+      "independent_reevaluation_stats": {
+        "maximum_rgba_error_bytes": 56.46762666666666,
+        "checked_rows": 3040,
+        "triangle_matched_rows": 2938,
+        "baked_block_matches_independent": 0,
+        "baked_block_zero": 2938,
+        "live_cpu_face_valid": 2938,
+        "live_cpu_face_matches_independent": 2938,
+        "triangle_unmatched_rows": 102
+      },
+      "first_frame_witness": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3375
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14499,
+        "faults": 0,
+        "frame_epochs": 114,
+        "skipped_unscoped_or_occluded": 247,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "baked_draw_source_light": {
+        "status": "FAIL",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2887,
+        "positive_expected": 2887,
+        "faults": 2887,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2887
+        },
+        "frame_epochs": 91,
+        "observed_emitter_cells": 0,
+        "distinct_floor_cells": 948,
+        "distinct_expected_levels": 11,
+        "skipped": 11859,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6005,
+          "unscoped_floor_cell": 367,
+          "missing_or_provisional_source_match": 153,
+          "not_downward_valid_ray": 5334
+        },
+        "missing_coverage": [
+          "emitter_surface"
+        ],
+        "examples": [
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              57
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              55
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              52
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              50
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              47
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              45
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -274,
+              -44,
+              56
+            ],
+            "expected_block_level": 7,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -274,
+              -44,
+              55
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          }
+        ],
+        "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 190.687,
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 166,
+        "outside_initial_resident_samples": 3375,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ]
+      },
+      "fixture": {
+        "schema": "engine-smoke-fixture.v1",
+        "name": "dry-negative-cave",
+        "starting_eye": [
+          22.0,
+          -41.88,
+          51.0
+        ],
+        "chunk_x_bounds": [
+          -20,
+          3
+        ],
+        "chunks_replaced": 216,
+        "omitted_internal_air_slices": 0,
+        "cave_bounds": {
+          "floor": -43.5,
+          "ceiling": -30.5,
+          "z_low": 44.5,
+          "z_high": 57.5
+        },
+        "route_rise": 6,
+        "expected_eye_in_fluid": false,
+        "expected_max_eye_y": -30.5,
+        "route_yaw": 180.0,
+        "lighting_fixture": {
+          "schema": "engine-positive-blocklight-fixture.v1",
+          "emitters": [
+            [
+              -320,
+              -44,
+              51
+            ],
+            [
+              -312,
+              -44,
+              51
+            ],
+            [
+              -304,
+              -44,
+              51
+            ],
+            [
+              -296,
+              -44,
+              51
+            ],
+            [
+              -288,
+              -44,
+              51
+            ],
+            [
+              -280,
+              -44,
+              51
+            ],
+            [
+              -272,
+              -44,
+              51
+            ],
+            [
+              -264,
+              -44,
+              51
+            ],
+            [
+              -256,
+              -44,
+              51
+            ],
+            [
+              -248,
+              -44,
+              51
+            ],
+            [
+              -240,
+              -44,
+              51
+            ],
+            [
+              -232,
+              -44,
+              51
+            ],
+            [
+              -224,
+              -44,
+              51
+            ],
+            [
+              -216,
+              -44,
+              51
+            ],
+            [
+              -208,
+              -44,
+              51
+            ],
+            [
+              -200,
+              -44,
+              51
+            ],
+            [
+              -192,
+              -44,
+              51
+            ],
+            [
+              -184,
+              -44,
+              51
+            ],
+            [
+              -176,
+              -44,
+              51
+            ],
+            [
+              -168,
+              -44,
+              51
+            ],
+            [
+              -160,
+              -44,
+              51
+            ],
+            [
+              -152,
+              -44,
+              51
+            ],
+            [
+              -144,
+              -44,
+              51
+            ],
+            [
+              -136,
+              -44,
+              51
+            ],
+            [
+              -128,
+              -44,
+              51
+            ],
+            [
+              -120,
+              -44,
+              51
+            ],
+            [
+              -112,
+              -44,
+              51
+            ],
+            [
+              -104,
+              -44,
+              51
+            ],
+            [
+              -96,
+              -44,
+              51
+            ],
+            [
+              -88,
+              -44,
+              51
+            ],
+            [
+              -80,
+              -44,
+              51
+            ],
+            [
+              -72,
+              -44,
+              51
+            ],
+            [
+              -64,
+              -44,
+              51
+            ],
+            [
+              -56,
+              -44,
+              51
+            ],
+            [
+              -48,
+              -44,
+              51
+            ],
+            [
+              -40,
+              -44,
+              51
+            ],
+            [
+              -32,
+              -44,
+              51
+            ],
+            [
+              -24,
+              -44,
+              51
+            ],
+            [
+              -16,
+              -44,
+              51
+            ],
+            [
+              -8,
+              -44,
+              51
+            ],
+            [
+              0,
+              -44,
+              51
+            ],
+            [
+              8,
+              -44,
+              51
+            ],
+            [
+              16,
+              -44,
+              51
+            ],
+            [
+              24,
+              -44,
+              51
+            ],
+            [
+              32,
+              -44,
+              51
+            ],
+            [
+              40,
+              -44,
+              51
+            ],
+            [
+              48,
+              -44,
+              51
+            ],
+            [
+              56,
+              -44,
+              51
+            ]
+          ],
+          "emission": 15,
+          "material_name": "glowstone",
+          "material_id": 376,
+          "material_sha256": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96",
+          "source_material_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json",
+          "scope": "prepared opaque floor emitters; current runtime catalog, physical transport and drawn light are not yet verified"
+        },
+        "rgb_fixture": {
+          "schema": "engine-constant-floor-rgb-fixture.v1",
+          "pack_id": "EngineSmoke_rgb_dd7838ccc28d4cefa1604c8efa4d8e53",
+          "pack_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\EngineSmoke_rgb_dd7838ccc28d4cefa1604c8efa4d8e53",
+          "materials": [
+            {
+              "name": "stone",
+              "id": 560,
+              "emission": 0,
+              "rgba": [
+                192,
+                128,
+                64,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_dd7838ccc28d4cefa1604c8efa4d8e53/reference_stone"
+            },
+            {
+              "name": "glowstone",
+              "id": 376,
+              "emission": 15,
+              "rgba": [
+                96,
+                192,
+                224,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_dd7838ccc28d4cefa1604c8efa4d8e53/reference_glowstone"
+            }
+          ],
+          "source_material_sha256": {
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\stone.json": "c2edb572f187a9b36572e95ebacfc87553f227bd9c057bc5596d3255d69a0f85",
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96"
+          },
+          "files_sha256": {
+            "pack.json": "8bb6181e210ed56bbf706a520691cea46031bfbc3c38630018fbd0867c501b4f",
+            "blocks/glowstone.json": "350d6ec673157c99177d05ad76d8e5843337412680900dcba5600a7efae49b82",
+            "blocks/stone.json": "cd81e28f048e1bc5bf5a1772f58210e3e33c53b3545fb0cebd94dcb389b728ba",
+            "textures/blocks/reference_glowstone.png": "7ea3d24917422a0149f65d9c94f4ecb0068f676841e70c3dbc2bf51a27d7147b",
+            "textures/blocks/reference_stone.png": "c184aceead724efaff4756559847f865ed162df97d6371cf88de753829a38519"
+          },
+          "scope": "constant fully opaque textures, unchanged optics and ordinary color shader; independent dry floor blocklight"
+        }
+      },
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "retained_world": "EngineSmoke_dd7838ccc28d4cefa1604c8efa4d8e53",
+      "performance": {
+        "legacy_pass": false,
+        "metrics": {
+          "wall_ms_med": 24.3894,
+          "wall_ms_fly_med": 27.477,
+          "wall_ms_no_holes_med": 33.5313,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 10.0
+        }
+      },
+      "artifact_sha256": {
+        "fixture.json": "d3120accc5359839d25b693c65a113046a0f75342e60fd8251c63a8895181b20",
+        "bot-route.json": "863f072166754c2c2bd74c2d61874ebb75d69d312befa964de33a0405d795030",
+        "route.json": "dc35210714529d931891c9086995da4f58d254c4e87e1d89bba0bfacf68c764b",
+        "flight_sim_report.json": "b123a86ba85f899b2d9b057a6756284d44e49fe81d65b21f19c55abea6349817",
+        "smoke-verdict.json": "78601a02517c24aaeb4d202130c314d7ef30e0a6f75678a0de11609329a5a329",
+        "fixture-floor-rgb-reference.json": "56c2320ea3018b4f2bc77ac5e5ca05aa98c4069e6343ea81987c14c4755946ba",
+        "fixture-floor-light-reference.json": "711b0a51783fb9ed483dc5ebd66347021de494a1ac9392952b1d93fcd298577c"
+      }
+    },
+    "correct_atlas_old_cell_mapping": {
+      "artifacts": "build\\desktop-msvc\\engine-positive-floor-rgb-fixed-20261120-native",
+      "built_source_commit": "ec0f4cc9226598978ede88a24c728ee249b87d73",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-ec0f4cc",
+      "native_exit": 0,
+      "smoke_overall": "FAIL",
+      "wrapper_exit": 1,
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "cached_rgb": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "FAIL",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 3121,
+        "faults": 129,
+        "frame_epochs": 90,
+        "distinct_cells": 1068,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          0,
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11785,
+        "examples": [
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -281,
+              -44,
+              48
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                47,
+                31,
+                16,
+                255
+              ],
+              [
+                47,
+                31,
+                16,
+                255
+              ]
+            ],
+            "error_bytes": 0.39413333333332545,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 5040,
+            "cell": [
+              -283,
+              -44,
+              48
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                38,
+                25,
+                13,
+                255
+              ],
+              [
+                38,
+                25,
+                13,
+                255
+              ]
+            ],
+            "error_bytes": 0.37834666666666905,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4980,
+            "cell": [
+              -281,
+              -44,
+              48
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                47,
+                31,
+                16,
+                255
+              ],
+              [
+                47,
+                31,
+                16,
+                255
+              ]
+            ],
+            "error_bytes": 0.39413333333332545,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4980,
+            "cell": [
+              -282,
+              -44,
+              48
+            ],
+            "expected_light": 9,
+            "predicted_rgba": [
+              42.47807999999999,
+              28.318719999999995,
+              14.159359999999998,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                42,
+                28,
+                14,
+                255
+              ],
+              [
+                42,
+                28,
+                14,
+                255
+              ]
+            ],
+            "error_bytes": 0.4780799999999914,
+            "intensity": 0.22123999999999996,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -281,
+              -44,
+              48
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                47,
+                31,
+                16,
+                255
+              ],
+              [
+                47,
+                31,
+                16,
+                255
+              ]
+            ],
+            "error_bytes": 0.39413333333332545,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4920,
+            "cell": [
+              -283,
+              -44,
+              48
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                38,
+                25,
+                13,
+                255
+              ],
+              [
+                38,
+                25,
+                13,
+                255
+              ]
+            ],
+            "error_bytes": 0.37834666666666905,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4860,
+            "cell": [
+              -281,
+              -44,
+              48
+            ],
+            "expected_light": 10,
+            "predicted_rgba": [
+              47.091199999999986,
+              31.394133333333325,
+              15.697066666666663,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                47,
+                31,
+                16,
+                255
+              ],
+              [
+                47,
+                31,
+                16,
+                255
+              ]
+            ],
+            "error_bytes": 0.39413333333332545,
+            "intensity": 0.2452666666666666,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          },
+          {
+            "frame_epoch": 4860,
+            "cell": [
+              -283,
+              -44,
+              48
+            ],
+            "expected_light": 8,
+            "predicted_rgba": [
+              37.86495999999999,
+              25.243306666666662,
+              12.621653333333331,
+              255.0
+            ],
+            "actual_rgba": [
+              [
+                38,
+                25,
+                13,
+                255
+              ],
+              [
+                38,
+                25,
+                13,
+                255
+              ]
+            ],
+            "error_bytes": 0.37834666666666905,
+            "intensity": 0.1972133333333333,
+            "fog_factor": 0.0,
+            "valid_material": true,
+            "surface_ok": false
+          }
+        ],
+        "missing_coverage": []
+      },
+      "current_verifier_status": "FAIL",
+      "independent_reevaluation_stats": {
+        "maximum_rgba_error_bytes": 0.5478602982661585,
+        "checked_rows": 3121,
+        "triangle_matched_rows": 2992,
+        "baked_block_matches_independent": 0,
+        "baked_block_zero": 2992,
+        "live_cpu_face_valid": 2992,
+        "live_cpu_face_matches_independent": 2992,
+        "triangle_unmatched_rows": 129
+      },
+      "first_frame_witness": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3464
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14663,
+        "faults": 0,
+        "frame_epochs": 115,
+        "skipped_unscoped_or_occluded": 243,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "baked_draw_source_light": {
+        "status": "FAIL",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 2938,
+        "positive_expected": 2938,
+        "faults": 2938,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 2938
+        },
+        "frame_epochs": 90,
+        "observed_emitter_cells": 0,
+        "distinct_floor_cells": 990,
+        "distinct_expected_levels": 11,
+        "skipped": 11968,
+        "skip_reasons": {
+          "not_joined_floor_depth": 6042,
+          "unscoped_floor_cell": 370,
+          "missing_or_provisional_source_match": 183,
+          "not_downward_valid_ray": 5373
+        },
+        "missing_coverage": [
+          "emitter_surface"
+        ],
+        "examples": [
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              57
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              55
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              52
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              50
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              47
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -272,
+              -44,
+              45
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -274,
+              -44,
+              56
+            ],
+            "expected_block_level": 7,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 5040,
+            "floor_cell": [
+              -274,
+              -44,
+              55
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          }
+        ],
+        "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 190.646,
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 166,
+        "outside_initial_resident_samples": 3464,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ]
+      },
+      "fixture": {
+        "schema": "engine-smoke-fixture.v1",
+        "name": "dry-negative-cave",
+        "starting_eye": [
+          22.0,
+          -41.88,
+          51.0
+        ],
+        "chunk_x_bounds": [
+          -20,
+          3
+        ],
+        "chunks_replaced": 216,
+        "omitted_internal_air_slices": 0,
+        "cave_bounds": {
+          "floor": -43.5,
+          "ceiling": -30.5,
+          "z_low": 44.5,
+          "z_high": 57.5
+        },
+        "route_rise": 6,
+        "expected_eye_in_fluid": false,
+        "expected_max_eye_y": -30.5,
+        "route_yaw": 180.0,
+        "lighting_fixture": {
+          "schema": "engine-positive-blocklight-fixture.v1",
+          "emitters": [
+            [
+              -320,
+              -44,
+              51
+            ],
+            [
+              -312,
+              -44,
+              51
+            ],
+            [
+              -304,
+              -44,
+              51
+            ],
+            [
+              -296,
+              -44,
+              51
+            ],
+            [
+              -288,
+              -44,
+              51
+            ],
+            [
+              -280,
+              -44,
+              51
+            ],
+            [
+              -272,
+              -44,
+              51
+            ],
+            [
+              -264,
+              -44,
+              51
+            ],
+            [
+              -256,
+              -44,
+              51
+            ],
+            [
+              -248,
+              -44,
+              51
+            ],
+            [
+              -240,
+              -44,
+              51
+            ],
+            [
+              -232,
+              -44,
+              51
+            ],
+            [
+              -224,
+              -44,
+              51
+            ],
+            [
+              -216,
+              -44,
+              51
+            ],
+            [
+              -208,
+              -44,
+              51
+            ],
+            [
+              -200,
+              -44,
+              51
+            ],
+            [
+              -192,
+              -44,
+              51
+            ],
+            [
+              -184,
+              -44,
+              51
+            ],
+            [
+              -176,
+              -44,
+              51
+            ],
+            [
+              -168,
+              -44,
+              51
+            ],
+            [
+              -160,
+              -44,
+              51
+            ],
+            [
+              -152,
+              -44,
+              51
+            ],
+            [
+              -144,
+              -44,
+              51
+            ],
+            [
+              -136,
+              -44,
+              51
+            ],
+            [
+              -128,
+              -44,
+              51
+            ],
+            [
+              -120,
+              -44,
+              51
+            ],
+            [
+              -112,
+              -44,
+              51
+            ],
+            [
+              -104,
+              -44,
+              51
+            ],
+            [
+              -96,
+              -44,
+              51
+            ],
+            [
+              -88,
+              -44,
+              51
+            ],
+            [
+              -80,
+              -44,
+              51
+            ],
+            [
+              -72,
+              -44,
+              51
+            ],
+            [
+              -64,
+              -44,
+              51
+            ],
+            [
+              -56,
+              -44,
+              51
+            ],
+            [
+              -48,
+              -44,
+              51
+            ],
+            [
+              -40,
+              -44,
+              51
+            ],
+            [
+              -32,
+              -44,
+              51
+            ],
+            [
+              -24,
+              -44,
+              51
+            ],
+            [
+              -16,
+              -44,
+              51
+            ],
+            [
+              -8,
+              -44,
+              51
+            ],
+            [
+              0,
+              -44,
+              51
+            ],
+            [
+              8,
+              -44,
+              51
+            ],
+            [
+              16,
+              -44,
+              51
+            ],
+            [
+              24,
+              -44,
+              51
+            ],
+            [
+              32,
+              -44,
+              51
+            ],
+            [
+              40,
+              -44,
+              51
+            ],
+            [
+              48,
+              -44,
+              51
+            ],
+            [
+              56,
+              -44,
+              51
+            ]
+          ],
+          "emission": 15,
+          "material_name": "glowstone",
+          "material_id": 376,
+          "material_sha256": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96",
+          "source_material_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json",
+          "scope": "prepared opaque floor emitters; current runtime catalog, physical transport and drawn light are not yet verified"
+        },
+        "rgb_fixture": {
+          "schema": "engine-constant-floor-rgb-fixture.v1",
+          "pack_id": "EngineSmoke_rgb_532d187f4cbe4dfea600bad636ccbf50",
+          "pack_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\EngineSmoke_rgb_532d187f4cbe4dfea600bad636ccbf50",
+          "materials": [
+            {
+              "name": "stone",
+              "id": 560,
+              "emission": 0,
+              "rgba": [
+                192,
+                128,
+                64,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_532d187f4cbe4dfea600bad636ccbf50/reference_stone"
+            },
+            {
+              "name": "glowstone",
+              "id": 376,
+              "emission": 15,
+              "rgba": [
+                96,
+                192,
+                224,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_532d187f4cbe4dfea600bad636ccbf50/reference_glowstone"
+            }
+          ],
+          "source_material_sha256": {
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\stone.json": "c2edb572f187a9b36572e95ebacfc87553f227bd9c057bc5596d3255d69a0f85",
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96"
+          },
+          "files_sha256": {
+            "pack.json": "1bedbc27048666149627991498b3e6bd7c4a5d7ea659d8fa0b8927252cfe354b",
+            "texture_overrides.json": "54711f0ec728caf934e5e78d54b78960a4cc76b1eb5ec8ddd8bd1524a7746486",
+            "blocks/glowstone.json": "350d6ec673157c99177d05ad76d8e5843337412680900dcba5600a7efae49b82",
+            "blocks/stone.json": "cd81e28f048e1bc5bf5a1772f58210e3e33c53b3545fb0cebd94dcb389b728ba",
+            "textures/blocks/reference_glowstone.png": "7ea3d24917422a0149f65d9c94f4ecb0068f676841e70c3dbc2bf51a27d7147b",
+            "textures/blocks/reference_stone.png": "c184aceead724efaff4756559847f865ed162df97d6371cf88de753829a38519"
+          },
+          "scope": "constant fully opaque textures, unchanged optics and ordinary color shader; independent dry floor blocklight"
+        }
+      },
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "retained_world": "EngineSmoke_532d187f4cbe4dfea600bad636ccbf50",
+      "performance": {
+        "legacy_pass": false,
+        "metrics": {
+          "wall_ms_med": 23.08,
+          "wall_ms_fly_med": 28.4904,
+          "wall_ms_no_holes_med": 32.1661,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "fixture.json": "8928b5b79afa5f81fb87af0ff4f1f53cd378c7e7d1ea8b4e82db189ad4a61dc1",
+        "bot-route.json": "863f072166754c2c2bd74c2d61874ebb75d69d312befa964de33a0405d795030",
+        "route.json": "b87c4fc81040f15dab60395aa576f422475b2815421b5507962f14522a18de86",
+        "flight_sim_report.json": "7648b68b4dc38ddbe4c61b1362030ac85bc78d1cda17794492280772d0677f3b",
+        "smoke-verdict.json": "72c4ddcc69842f2f826eba6383d52dfbbd5f603b92c9aba64306d44308337dfd",
+        "fixture-floor-rgb-reference.json": "21004e819b9ba9243ccca32bbfd7c1a55b541f32301511cffe35c2581db1ecf3",
+        "fixture-floor-light-reference.json": "c808c4b0e8749179fd6e527ee1f7aa01d1bfd79f8af32f8e88006f81a6433126"
+      }
+    },
+    "centered_cell_mapping": {
+      "artifacts": "build\\desktop-msvc\\engine-positive-floor-rgb-centered-20261120-native",
+      "built_source_commit": "d33318232fbd6fc46b48ca6002b1ed3a94ff3b87",
+      "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-d333182",
+      "native_exit": 0,
+      "smoke_overall": "FAIL",
+      "wrapper_exit": 1,
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "cached_rgb": {
+        "schema": "engine-floor-rgb-reference.v1",
+        "status": "PASS",
+        "reason": "analytic_positive_floor_normal_rgb",
+        "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+        "checked": 3006,
+        "faults": 0,
+        "frame_epochs": 89,
+        "distinct_cells": 1020,
+        "expected_levels": [
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "draw_sources": [
+          2
+        ],
+        "unwitnessed": 0,
+        "skipped": 11260,
+        "examples": [],
+        "missing_coverage": []
+      },
+      "current_verifier_status": "PASS",
+      "independent_reevaluation_stats": {
+        "maximum_rgba_error_bytes": 0.5540601744260982,
+        "checked_rows": 3006,
+        "triangle_matched_rows": 3006,
+        "baked_block_matches_independent": 0,
+        "baked_block_zero": 3006,
+        "live_cpu_face_valid": 3006,
+        "live_cpu_face_matches_independent": 3006
+      },
+      "first_frame_witness": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3372
+      },
+      "inspection": {
+        "verified": 26,
+        "requested": 26,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 14022,
+        "faults": 0,
+        "frame_epochs": 111,
+        "skipped_unscoped_or_occluded": 244,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "baked_draw_source_light": {
+        "status": "FAIL",
+        "reason": "analytic_floor_draw_source_light",
+        "checked": 3006,
+        "positive_expected": 3006,
+        "faults": 3006,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 3006
+        },
+        "frame_epochs": 89,
+        "observed_emitter_cells": 0,
+        "distinct_floor_cells": 1020,
+        "distinct_expected_levels": 11,
+        "skipped": 11260,
+        "skip_reasons": {
+          "not_joined_floor_depth": 5948,
+          "unscoped_floor_cell": 359,
+          "not_downward_valid_ray": 4953
+        },
+        "missing_coverage": [
+          "emitter_surface"
+        ],
+        "examples": [
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              57
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              55
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              52
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              50
+            ],
+            "expected_block_level": 13,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              47
+            ],
+            "expected_block_level": 10,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -272,
+              -44,
+              45
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -274,
+              -44,
+              56
+            ],
+            "expected_block_level": 7,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 4980,
+            "floor_cell": [
+              -274,
+              -44,
+              55
+            ],
+            "expected_block_level": 8,
+            "source_block_light": 0,
+            "expected_sky_level": 0,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          }
+        ],
+        "scope": "prepared dry-cave opaque floor CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 191.201,
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 171,
+        "outside_initial_resident_samples": 3372,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          -18,
+          3
+        ]
+      },
+      "fixture": {
+        "schema": "engine-smoke-fixture.v1",
+        "name": "dry-negative-cave",
+        "starting_eye": [
+          22.0,
+          -41.88,
+          51.0
+        ],
+        "chunk_x_bounds": [
+          -20,
+          3
+        ],
+        "chunks_replaced": 216,
+        "omitted_internal_air_slices": 0,
+        "cave_bounds": {
+          "floor": -43.5,
+          "ceiling": -30.5,
+          "z_low": 44.5,
+          "z_high": 57.5
+        },
+        "route_rise": 6,
+        "expected_eye_in_fluid": false,
+        "expected_max_eye_y": -30.5,
+        "route_yaw": 180.0,
+        "lighting_fixture": {
+          "schema": "engine-positive-blocklight-fixture.v1",
+          "emitters": [
+            [
+              -320,
+              -44,
+              51
+            ],
+            [
+              -312,
+              -44,
+              51
+            ],
+            [
+              -304,
+              -44,
+              51
+            ],
+            [
+              -296,
+              -44,
+              51
+            ],
+            [
+              -288,
+              -44,
+              51
+            ],
+            [
+              -280,
+              -44,
+              51
+            ],
+            [
+              -272,
+              -44,
+              51
+            ],
+            [
+              -264,
+              -44,
+              51
+            ],
+            [
+              -256,
+              -44,
+              51
+            ],
+            [
+              -248,
+              -44,
+              51
+            ],
+            [
+              -240,
+              -44,
+              51
+            ],
+            [
+              -232,
+              -44,
+              51
+            ],
+            [
+              -224,
+              -44,
+              51
+            ],
+            [
+              -216,
+              -44,
+              51
+            ],
+            [
+              -208,
+              -44,
+              51
+            ],
+            [
+              -200,
+              -44,
+              51
+            ],
+            [
+              -192,
+              -44,
+              51
+            ],
+            [
+              -184,
+              -44,
+              51
+            ],
+            [
+              -176,
+              -44,
+              51
+            ],
+            [
+              -168,
+              -44,
+              51
+            ],
+            [
+              -160,
+              -44,
+              51
+            ],
+            [
+              -152,
+              -44,
+              51
+            ],
+            [
+              -144,
+              -44,
+              51
+            ],
+            [
+              -136,
+              -44,
+              51
+            ],
+            [
+              -128,
+              -44,
+              51
+            ],
+            [
+              -120,
+              -44,
+              51
+            ],
+            [
+              -112,
+              -44,
+              51
+            ],
+            [
+              -104,
+              -44,
+              51
+            ],
+            [
+              -96,
+              -44,
+              51
+            ],
+            [
+              -88,
+              -44,
+              51
+            ],
+            [
+              -80,
+              -44,
+              51
+            ],
+            [
+              -72,
+              -44,
+              51
+            ],
+            [
+              -64,
+              -44,
+              51
+            ],
+            [
+              -56,
+              -44,
+              51
+            ],
+            [
+              -48,
+              -44,
+              51
+            ],
+            [
+              -40,
+              -44,
+              51
+            ],
+            [
+              -32,
+              -44,
+              51
+            ],
+            [
+              -24,
+              -44,
+              51
+            ],
+            [
+              -16,
+              -44,
+              51
+            ],
+            [
+              -8,
+              -44,
+              51
+            ],
+            [
+              0,
+              -44,
+              51
+            ],
+            [
+              8,
+              -44,
+              51
+            ],
+            [
+              16,
+              -44,
+              51
+            ],
+            [
+              24,
+              -44,
+              51
+            ],
+            [
+              32,
+              -44,
+              51
+            ],
+            [
+              40,
+              -44,
+              51
+            ],
+            [
+              48,
+              -44,
+              51
+            ],
+            [
+              56,
+              -44,
+              51
+            ]
+          ],
+          "emission": 15,
+          "material_name": "glowstone",
+          "material_id": 376,
+          "material_sha256": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96",
+          "source_material_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json",
+          "scope": "prepared opaque floor emitters; current runtime catalog, physical transport and drawn light are not yet verified"
+        },
+        "rgb_fixture": {
+          "schema": "engine-constant-floor-rgb-fixture.v1",
+          "pack_id": "EngineSmoke_rgb_f4aa1c9624ed47f189bf302ada291276",
+          "pack_path": "C:\\Projects\\Cubatarium\\bin\\resource_packs\\EngineSmoke_rgb_f4aa1c9624ed47f189bf302ada291276",
+          "materials": [
+            {
+              "name": "stone",
+              "id": 560,
+              "emission": 0,
+              "rgba": [
+                192,
+                128,
+                64,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_f4aa1c9624ed47f189bf302ada291276/reference_stone"
+            },
+            {
+              "name": "glowstone",
+              "id": 376,
+              "emission": 15,
+              "rgba": [
+                96,
+                192,
+                224,
+                255
+              ],
+              "stem": "EngineSmoke_rgb_f4aa1c9624ed47f189bf302ada291276/reference_glowstone"
+            }
+          ],
+          "source_material_sha256": {
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\stone.json": "c2edb572f187a9b36572e95ebacfc87553f227bd9c057bc5596d3255d69a0f85",
+            "C:\\Projects\\Cubatarium\\bin\\resource_packs\\cubatarium_worldgen_cc0\\blocks\\glowstone.json": "7f8376e36b3dda9dc2fb2b698676a98b8b8cb85d6f889ddbda115c596ae52d96"
+          },
+          "files_sha256": {
+            "pack.json": "98ed0ee661f87835f138794475794cab163112699a4deac3a43d23ecf2e2910a",
+            "texture_overrides.json": "54711f0ec728caf934e5e78d54b78960a4cc76b1eb5ec8ddd8bd1524a7746486",
+            "blocks/glowstone.json": "350d6ec673157c99177d05ad76d8e5843337412680900dcba5600a7efae49b82",
+            "blocks/stone.json": "cd81e28f048e1bc5bf5a1772f58210e3e33c53b3545fb0cebd94dcb389b728ba",
+            "textures/blocks/reference_glowstone.png": "7ea3d24917422a0149f65d9c94f4ecb0068f676841e70c3dbc2bf51a27d7147b",
+            "textures/blocks/reference_stone.png": "c184aceead724efaff4756559847f865ed162df97d6371cf88de753829a38519"
+          },
+          "scope": "constant fully opaque textures, unchanged optics and ordinary color shader; independent dry floor blocklight"
+        }
+      },
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+      "retained_world": "EngineSmoke_f4aa1c9624ed47f189bf302ada291276",
+      "performance": {
+        "legacy_pass": false,
+        "metrics": {
+          "wall_ms_med": 21.5007,
+          "wall_ms_fly_med": 29.5239,
+          "wall_ms_no_holes_med": 34.8668,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 7.0
+        }
+      },
+      "artifact_sha256": {
+        "fixture.json": "f8cb884b333e44dd683ba9dae916ee41a6af07a845634b6023ffe28d26e8e88c",
+        "bot-route.json": "863f072166754c2c2bd74c2d61874ebb75d69d312befa964de33a0405d795030",
+        "route.json": "f691ab3e1d1ca09a2e606678edc47710dee470435caa5b0fb353074a78a7b07b",
+        "flight_sim_report.json": "665837eb65852ef714c1fbf868590ec6d8d364fa68c8e13a8e4da4b7fe91df46",
+        "smoke-verdict.json": "8351a0aa59071f989234953a075a654a296795278a4b51e97524146f8bee12a9",
+        "fixture-floor-rgb-reference.json": "5b42dacd1cb1e2e2309d6a3580183ce6a75505e04554ec14e000f8d359a61e33",
+        "fixture-floor-light-reference.json": "9e0b8c04dc877f9897ec84a3e565c09d171de4686a3e78bb67cfc3b15e04d8c1"
+      }
+    }
+  },
+  "interpretation": [
+    "Wrong primary texture-override case remainsFAIL3040/3040; actual GPU readback proves old atlas despite copied block render variation0. This was fixture preparation, not a proven production texture bug.",
+    "Correct-atlas old-address case remainsFAIL129/3121 due exclusively missing triangle face/material attribution; standalone diagnostic replay found all RGB within0.548bytes. Do not rewrite its native verdict toPASS. Actual cause: floor(point) chooses previous center-grid cell for coordinates in[n-.5,n), crossing section boundaries.",
+    "New native centered-cell case passes normal framebuffer RGB with independent source levels4..14, actual constant GPU atlas/catalog on same frames, analytic ray/depth/material, and matched submitted packed triangles. The reference uses declared source geometry, never measured vertex or current field light as its expected light.",
+    "Current CPU live-face samples are counted separately against independent levels. Even if those and RGB agree, they are not a readback of the exact field table/page/handle consumed by every actual draw. Baked VBO light zeros remain a separate failing legacy component; no source/binding failure is waived or recast asPASS.",
+    "Observed inspection_0025.png was visually viewed for context only. The numerical oracle samples terrain framebuffer before/after transparent pass and before later overlays; it does not certify whole PNG/UI or all screen pixels."
+  ],
+  "limits": [
+    "Overall smokeFAIL remains in all3runs because the baked-draw-light component still fails; missing general visual reference remainsUNTESTED. New positive RGB componentPASS does not completeS5/S6 or the goal.",
+    "Constant opaque materials, one dry negative-height cave, one seed/R3/current Windows backend, scoped floor rays. No wet/transparency, arbitrary texture UVs, source-removal, AIR-border-emitter or full CPU/GPU/backend equality acceptance.",
+    "126Python and3relevant Release C++ tests plus original-floor attribution causal RED/restoredGREEN were verified here. No claim of repeating the prior38-test engine matrix.",
+    "Two bounded atlas readbacks per opt-in framebuffer capture add diagnostic work; performance remainsFAIL and cannot be compared causally with runs lacking this QA workload.",
+    "Original worlds/config/EXE/runtime shaders/checkout remain protected under all5parent provenance checks. Only unique selected diagnostic resource packs and cloned worlds were authored, retained for repro; original stone/glowstone definitions additionally hashed.",
+    "All prior journal entries/artifacts retained, no audit restart. Semantic geometry/optical identities, lifecycle/provider/cancellation, procedural AIR discovery, exact bound physical field proof, source removal, independent wet/transparency and complete native/performance/memory matrix remain original obligations."
+  ],
+  "next": [
+    "Trace and compare the physical field actually bound at draw time (owner, geometry identity, field incarnation/revision, shader handle/table/page) with independent nonzero reference; distinguish it from intentionally stale/zero baked VBO data.",
+    "Exercise a controlled native zero-blocklight shader counterexample and restored normal run for final RGB; continue wet/transparency/source-removal/AIR-boundary/backend/full-matrix work."
+  ]
 }
 }
