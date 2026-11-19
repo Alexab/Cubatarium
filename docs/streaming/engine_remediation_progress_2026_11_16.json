@@ -10336,5 +10336,97 @@
       "Continue full S0..S6: canonical section lifecycle/provider/cancellation and persisted dependency certificates, semantic geometry/optics catalog identity, actual CPU/GPU/backend parity.",
       "Complete independent nonzero RGB/wet/transparency references and motor-based return/edit/save/eviction plus seed/radius/backend/performance/memory matrix. Do not restart the audit or treat this native result as whole-engine completion."
     ]
+  },
+  "persisted_section_light_content_core_2026_11_19": {
+    "status": "content_certificate_core_and_codec_verified_runtime_IO_integration_pending_full_S0_S6_active",
+    "source_base_commit": "74cf077e590ceb03f0f25f46dd6e78f4113b1bb4",
+    "finding": "Current column_light.json format2 stores only a global solver/material/profile signature and complete column coordinates. Runtime field proofs contain exact geometry read sets but runtime incarnation/revisions cannot be persisted or reused as content certificates.",
+    "implementation": {
+      "module": "src/World/Lighting/PersistedSectionLight.h",
+      "format_version": 1,
+      "capture": "Only current installed complete sky+block padded calculations with geometry-only retained input contexts issue receipts. Retain exact padded bytes; validate again after content/evidence queries.",
+      "content": "Deterministic little-endian block-ID content digests for the union of recorded sky/block dependency coordinates. Known absent AIR and resident all-AIR are content-equivalent; unknown inputs cannot issue/restore completion. Solver currently derives light from block IDs and material optics, not mutable neighbor light bytes or fluid-state geometry.",
+      "compatibility": "Current light solver cache version/material signature, full lighting configuration identity, all5 vertical profile fields and section coordinates. Runtime world/field/geometry/catalog pointer or incarnation identities are not serialized.",
+      "coverage": "Require the complete 3x3 horizontal geometry footprint from clipped targetY-1 to configured sky ceiling. Reject absent mandatory dependency even if payload checksum is recomputed. Dependency count bounded65536; malformed/narrowing/bool coordinates, duplicate/noncanonical rows and bad padded hex fail closed.",
+      "restore": "Validate compatibility/coverage/checksum and known geometry before any field mutation. Verify current content then recapture and validate fresh runtime read-set identities. Install complete padded volume through ChunkManager and RecordLightCalculation; do not compute a readiness flag from raw saved light. Distinguish InputsUnavailable from Rejected for future bounded deferred owner integration.",
+      "checksum": "FNV-1a64 content/payload corruption checksums, not authentication of adversarial save files."
+    },
+    "regression": {
+      "file": "src/Test/ChunkLightingPropagationTest.cpp",
+      "function": "TestPersistedSectionLight",
+      "coverage": [
+        "Real calculated nonzero sky/block fixture at negative coordinates, cross-section torch transport13 and distant roofY304.",
+        "All8000 padded cells JSON encode/parse/decode round-trip into fresh world/field/geometry and semantically cloned catalog identity. Both resident AIR geometry and absent known-AIR field-only outputs; restore does not allocate missing geometry.",
+        "Neighbor source removal and far roof edits reject old receipt before installation; stale or raw runtime fields cannot issue receipts.",
+        "Unknown dependencies return InputsUnavailable without field allocation, then restore unchanged receipt after authoritative input arrival.",
+        "Full profile including SeaLevel, lighting configuration and optical material changes reject old receipts.",
+        "Typed and serialized padded corruption checksums; deleted mandatory dependency with recomputed checksum; strict integer bounds/schema and duplicate rows; legacy interior-only light rejected."
+      ]
+    },
+    "controls": {
+      "schema": "persisted-section-light-core-controls.v1",
+      "source_sha256": {
+        "src/World/Lighting/PersistedSectionLight.h": "1b7f4a855b859fa1746ccb60fe20424190005ca3cc8afb1016df4f5e90cb3061",
+        "src/Test/ChunkLightingPropagationTest.cpp": "7af4496705080bcece63da327b99c07c9ed9728a44e066d83f54216fa13a7a5a"
+      },
+      "head": "74cf077e590ceb03f0f25f46dd6e78f4113b1bb4",
+      "controls": [
+        {
+          "name": "content-validation",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "changed neighbor content rejects saved light even with matching global signature",
+          "log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-content-validation-test.log"
+        },
+        {
+          "name": "required-read-set",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "missing sky/halo dependency fails even with a recomputed payload checksum",
+          "log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-required-read-set-test.log"
+        },
+        {
+          "name": "restore-checksum",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "corrupted padded bytes fail both disk and typed restore checksums",
+          "log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-restore-checksum-test.log"
+        },
+        {
+          "name": "full-profile",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "all vertical profile fields participate in disk compatibility",
+          "log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-full-profile-test.log"
+        }
+      ],
+      "exact_source_restore": true,
+      "restored_build_exit": 0,
+      "restored_test_exit": 0,
+      "restored_green": true,
+      "matrix_log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-restored-thirty-two-tests.log"
+    },
+    "restored_matrix": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 8.44,
+      "log": "build/desktop-msvc/persisted-section-light-core-v2-20261119-restored-thirty-two-tests.log"
+    },
+    "harness_preparation": "First runner preflight rejected a nonunique checksum replacement before any negative variant ran; it restored exact bytes and passed32tests. Evidence retained in persisted-section-light-core-20261119-controls.json. V2 uses the unique typed-restore branch and completes all4controls.",
+    "limits": [
+      "Core capture/codec/restore is implemented and exercised but is not yet invoked by ordinary world save/load. Existing production chunk formats and column flags are unchanged by this commit. Do not claim persisted-cache reuse or reload acceptance in native gameplay yet.",
+      "Full next step includes async IO serialization/decode, bounded pending restore owners tied to current world/load/target identity, invalidation/cancellation/retry and cache writes including independently resident AIR fields. Legacy disk light must not gain physical authority from global flags.",
+      "No native run is claimed for this core-only step. Previous committed native wet convergence remains a scoped observation of d79c8f026; no RGB/transparency/performance completion follows.",
+      "Full S0..S6, lifecycle/provider, semantic geometry/optics identity, actual GPU/backend parity, independent nonzero framebuffer references and full motor/performance/memory matrix remain active."
+    ],
+    "next": [
+      "Integrate typed receipts into normal asynchronous terrain save/load with optional backward-compatible metadata, bounded IO/memory and pending restore ownership; keep missing/corrupt/stale metadata on the real relight path.",
+      "Add real save/evict/reload and deferred/mutated dependency regressions before Release native return/reload scenarios. Continue other S0..S6 requirements without restarting the audit."
+    ]
   }
 }

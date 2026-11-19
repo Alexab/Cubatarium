@@ -8,6 +8,7 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/GpuFullLightingPipeline.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Lighting/PersistedSectionLight.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -255,6 +256,162 @@ static void TestSyncContract(const std::string &mode)
         "single-section sync calculation never mutates read-only halo light");
 }
 
+static void TestPersistedSectionLight()
+{
+  using namespace cutum;
+  auto registry = MakeRegistry();
+  const auto catalog = registry->GetDefinitionsCatalogSnapshot();
+  const glm::ivec3 root(-2, -3, 1);
+  const glm::ivec3 source = root * CHUNK_SIZE + glm::ivec3(16, 8, 8);
+  const glm::ivec3 roof =
+      root * CHUNK_SIZE + glm::ivec3(8, 0, 8) + glm::ivec3(0, 352, 0);
+  const auto populate = [&](UBlockWorld &world, bool resident)
+  {
+    world.SetLightingConfigurationIdentity(1);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock(source, 50);
+    world.SetBlock(roof, 8);
+    if (resident)
+      world.GetChunkManager().EnsureChunk(root);
+  };
+  for (const bool resident : {false, true})
+  {
+    UBlockWorld original;
+    populate(original, resident);
+    Expect(!CaptureSectionLight(original, root, catalog),
+           "raw or missing light cannot produce a persisted receipt");
+    RelightJobSpec spec;
+    spec.min_world_y = -64;
+    spec.max_world_y = 319;
+    spec.include_known_air_outputs = true;
+    const auto computed =
+        UChunkRelightSnapshot::CaptureSections(original, spec, {root})
+            .Compute(*registry);
+    Expect(computed.inputs_complete && computed.chunks.size() == 1,
+           "persisted fixture has a complete actual sky/block calculation");
+    original.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *computed.chunks[0].padded_light, true, true);
+    Expect(original.RecordLightCalculation(computed, catalog) == 1,
+           "persisted fixture records the installed calculation");
+    const auto receipt = CaptureSectionLight(original, root, catalog);
+    Expect(
+        receipt &&
+            UnpackBlock(
+                receipt->volume.cells[SectionLightVolume::Index(15, 8, 8)]) ==
+                13,
+        "persisted receipt retains nonzero transport across the section "
+        "border");
+    const auto encoded = EncodeSectionLight(*receipt);
+    const auto decoded =
+        DecodeSectionLight(nlohmann::json::parse(encoded.dump()));
+    Expect(decoded &&
+               decoded->volume.cells == computed.chunks[0].padded_light->cells,
+           "all 8000 padded cells round-trip without runtime identities");
+    UBlockWorld reloaded;
+    populate(reloaded, resident);
+    const auto cloned_catalog =
+        std::make_shared<const BlockDefinitionCatalog>(*catalog);
+    Expect(cloned_catalog != catalog &&
+               RestoreSectionLight(reloaded, *decoded, cloned_catalog) ==
+                   SectionLightRestoreResult::Restored &&
+               reloaded.HasCompleteLightSamplingCalculation(root,
+                                                            cloned_catalog) &&
+               reloaded.GetChunkManager()
+                       .GetSectionLightField(root)
+                       ->GetPaddedData()
+                       ->cells == receipt->volume.cells &&
+               bool(reloaded.GetChunkManager().GetChunk(root)) == resident,
+           "reload restores calculated padded light with fresh "
+           "catalog/field/geometry identities including AIR");
+    Expect(reloaded.GetChunkManager()
+                   .GetSectionLightField(root)
+                   ->GetIncarnation() != original.GetChunkManager()
+                                             .GetSectionLightField(root)
+                                             ->GetIncarnation(),
+           "disk receipts never preserve runtime field incarnation");
+    reloaded.SetBlock(source, BLOCK_AIR);
+    Expect(
+        !reloaded.HasCompleteLightSamplingCalculation(root, cloned_catalog) &&
+            RestoreSectionLight(reloaded, *decoded, cloned_catalog) ==
+                SectionLightRestoreResult::Rejected,
+        "changed neighbor content rejects saved light even with matching "
+        "global signature");
+    Expect(!CaptureSectionLight(reloaded, root, cloned_catalog),
+           "stale runtime calculations cannot issue new persisted receipts");
+    UBlockWorld changed_roof;
+    populate(changed_roof, resident);
+    changed_roof.SetBlock(roof, BLOCK_AIR);
+    Expect(RestoreSectionLight(changed_roof, *decoded, catalog) ==
+                   SectionLightRestoreResult::Rejected &&
+               (!changed_roof.GetChunkManager().GetSectionLightField(root) ||
+                !changed_roof.GetChunkManager()
+                     .GetSectionLightField(root)
+                     ->GetPaddedData()),
+           "far upper sky context is validated before installing any field");
+    UBlockWorld unavailable;
+    unavailable.SetLightingConfigurationIdentity(1);
+    Expect(RestoreSectionLight(unavailable, *decoded, catalog) ==
+                   SectionLightRestoreResult::InputsUnavailable &&
+               !unavailable.GetChunkManager().GetSectionLightField(root),
+           "unloaded unknown dependencies defer restore without allocating a "
+           "field");
+    populate(unavailable, resident);
+    Expect(
+        RestoreSectionLight(unavailable, *decoded, catalog) ==
+            SectionLightRestoreResult::Restored,
+        "late known dependencies allow the original disk receipt to restore");
+    UBlockWorld incompatible;
+    populate(incompatible, resident);
+    auto profile = incompatible.GetVerticalProfile();
+    ++profile.SeaLevelY;
+    incompatible.SetVerticalProfile(profile);
+    Expect(RestoreSectionLight(incompatible, *decoded, catalog) ==
+               SectionLightRestoreResult::Rejected,
+           "all vertical profile fields participate in disk compatibility");
+    incompatible.SetVerticalProfile(original.GetVerticalProfile());
+    incompatible.SetLightingConfigurationIdentity(0);
+    Expect(RestoreSectionLight(incompatible, *decoded, catalog) ==
+               SectionLightRestoreResult::Rejected,
+           "lighting configuration changes reject persisted completion");
+    incompatible.SetLightingConfigurationIdentity(1);
+    auto changed_catalog = std::make_shared<BlockDefinitionCatalog>(*catalog);
+    changed_catalog->ById.at(50).Lighting.Emission = 12;
+    Expect(RestoreSectionLight(incompatible, *decoded, changed_catalog) ==
+               SectionLightRestoreResult::Rejected,
+           "optical material changes reject persisted completion");
+    auto damaged = *decoded;
+    damaged.volume.cells[0] ^= 1;
+    Expect(RestoreSectionLight(incompatible, damaged, catalog) ==
+                   SectionLightRestoreResult::Rejected &&
+               !DecodeSectionLight(EncodeSectionLight(damaged)),
+           "corrupted padded bytes fail both disk and typed restore checksums");
+    damaged = *decoded;
+    damaged.inputs.erase(damaged.inputs.begin());
+    damaged.checksum = persisted_light_detail::Checksum(damaged);
+    Expect(!DecodeSectionLight(EncodeSectionLight(damaged)) &&
+               RestoreSectionLight(incompatible, damaged, catalog) ==
+                   SectionLightRestoreResult::Rejected,
+           "missing sky/halo dependency fails even with a recomputed payload "
+           "checksum");
+    auto malformed = encoded;
+    malformed["coord"][0] = uint64_t{1} << 40;
+    Expect(!DecodeSectionLight(malformed),
+           "persisted coordinates cannot narrow");
+    malformed = encoded;
+    malformed["format_version"] = true;
+    Expect(!DecodeSectionLight(malformed),
+           "boolean schema version cannot grant disk authority");
+    malformed = encoded;
+    malformed["inputs"].push_back(malformed["inputs"][0]);
+    Expect(!DecodeSectionLight(malformed),
+           "duplicate dependency coordinates fail closed");
+    malformed = encoded;
+    malformed.erase("padded_light");
+    Expect(!DecodeSectionLight(malformed),
+           "legacy interior bytes are not a padded-field certificate");
+  }
+}
+
 int main(int argc, char **argv)
 {
   if (argc == 2)
@@ -263,6 +420,7 @@ int main(int argc, char **argv)
     std::cout << "sync_light_contract_test: OK\n";
     return 0;
   }
+  TestPersistedSectionLight();
   constexpr cutum::BlockId kStone = 8;
   constexpr cutum::BlockId kTorch = 50;
   constexpr int kMaxWorldY = cutum::CHUNK_SIZE - 1;
