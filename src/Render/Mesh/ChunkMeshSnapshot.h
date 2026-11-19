@@ -29,6 +29,14 @@ enum class MeshApplyStaleInputReason : uint8_t
   Light = 4,
 };
 
+enum class MeshLightInputs : uint8_t
+{
+  Baked,
+  /// Geometry has zero baked attributes. This is not a calculated-field proof;
+  /// a physical world publication must independently prepare its field lease.
+  PhysicalField,
+};
+
 /// Read-only voxel view for background meshing (center chunk, adjacent
 /// shell and axial second geometry planes). Shell faces are dense arrays (6 *
 /// CHUNK_SIZE^2), not hash maps.
@@ -46,6 +54,7 @@ struct ChunkMeshSnapshot
   /// Capture-owner epoch, independent of worker submission and trace epochs.
   /// Raw world captures have no mesh-cache epoch until an owner stamps them.
   uint64_t sourceWorldEpoch{0};
+  MeshLightInputs lightInputs{MeshLightInputs::Baked};
   std::array<BlockId, CHUNK_VOLUME> blocks{};
   std::array<uint8_t, CHUNK_VOLUME> fluid_packed{};
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
@@ -101,7 +110,8 @@ struct ChunkMeshSnapshot
                                            glm::ivec3 neighbor_coord, int axis,
                                            int sign);
 
-  /// Geom/light stamp check. Optional drawable args are ignored (API symmetry
+  /// PhysicalField validates geometry/world/profile only; Baked also validates
+  /// sampled light. Optional drawable args are ignored (API symmetry
   /// with Capture call sites); SoftDefer visual flips do not invalidate.
   bool InputsStillValid(const UBlockWorld &world,
                         NeighborVisualDrawableFn neighbor_drawable = nullptr,
@@ -123,7 +133,8 @@ struct ChunkMeshSnapshot
   Capture(const UBlockWorld &world, glm::ivec3 chunkCoord,
           uint64_t sourceRevision,
           NeighborVisualDrawableFn neighbor_drawable = nullptr,
-          void *neighbor_drawable_ctx = nullptr);
+          void *neighbor_drawable_ctx = nullptr,
+          MeshLightInputs light_inputs = MeshLightInputs::Baked);
 
   BlockId GetBlock(glm::ivec3 worldPos) const;
   /// Same as GetBlock but never forces AIR under boundary overlay (R06).

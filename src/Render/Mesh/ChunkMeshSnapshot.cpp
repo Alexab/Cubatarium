@@ -242,6 +242,22 @@ bool ChunkMeshSnapshot::InputsStillValid(
   {
     return false;
   }
+  if (lightInputs == MeshLightInputs::PhysicalField)
+  {
+    const auto &current_profile = world.GetVerticalProfile();
+    if (worldGeometryIdentity !=
+            world.GetChunkManager().GetGeometryInputRevisionIdentity() ||
+        geometryProfile.MinY != current_profile.MinY ||
+        geometryProfile.MaxY != current_profile.MaxY ||
+        geometryProfile.SeaLevelY != current_profile.SeaLevelY ||
+        geometryProfile.BedrockTopY != current_profile.BedrockTopY ||
+        geometryProfile.DatumY != current_profile.DatumY)
+      return false;
+    for (size_t n = 0; n < 7; ++n)
+      if (!MeshInputStampMatchesWorld(inputStamps[n], world))
+        return false;
+    return true;
+  }
   for (const auto &stamp : inputStamps)
   {
     if (!MeshInputStampMatchesWorld(stamp, world))
@@ -306,10 +322,13 @@ MeshApplyStaleInputReason ChunkMeshSnapshot::ClassifyStaleInput(
 
 ChunkMeshSnapshot ChunkMeshSnapshot::Capture(
     const UBlockWorld &world, glm::ivec3 chunkCoord, uint64_t sourceRevision,
-    NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx)
+    NeighborVisualDrawableFn neighbor_drawable, void *neighbor_drawable_ctx,
+    MeshLightInputs light_inputs)
 {
-  return CaptureImpl(world, chunkCoord, sourceRevision, neighbor_drawable,
-                     neighbor_drawable_ctx, true);
+  const bool baked = light_inputs == MeshLightInputs::Baked;
+  return CaptureImpl(world, chunkCoord, sourceRevision,
+                     baked ? neighbor_drawable : nullptr,
+                     baked ? neighbor_drawable_ctx : nullptr, baked);
 }
 
 ChunkMeshSnapshot ChunkMeshSnapshot::CaptureGeometry(const UBlockWorld &world,
@@ -344,13 +363,30 @@ ChunkMeshSnapshot::CaptureImpl(const UBlockWorld &world, glm::ivec3 chunkCoord,
   };
 
   ChunkMeshSnapshot snapshot;
+  snapshot.lightInputs =
+      capture_light ? MeshLightInputs::Baked : MeshLightInputs::PhysicalField;
+  if (!capture_light)
+    for (auto &stamp : snapshot.inputStamps)
+    {
+      stamp.readsContent = false;
+      stamp.readsLight = false;
+    }
   snapshot.coord = chunkCoord;
   snapshot.worldGeometryIdentity =
       world.GetChunkManager().GetGeometryInputRevisionIdentity();
   snapshot.geometryProfile = world.GetVerticalProfile();
   snapshot.sourceRevision = sourceRevision;
   const UChunk *chunk = world.GetChunkManager().GetChunk(chunkCoord);
-  snapshot.inputStamps[0] = ChunkInputStamp::Capture(chunkCoord, chunk);
+  snapshot.inputStamps[0] =
+      ChunkInputStamp::Capture(chunkCoord, chunk, capture_light);
+  const auto geometry_stamp = [](ChunkInputStamp &stamp)
+  {
+    stamp.readsLight = false;
+    stamp.light = stamp.skyLight = stamp.blockLight = stamp.lightIncarnation =
+        0;
+  };
+  if (!capture_light)
+    geometry_stamp(snapshot.inputStamps[0]);
   if (!chunk)
   {
     return snapshot;
@@ -498,6 +534,8 @@ ChunkMeshSnapshot::CaptureImpl(const UBlockWorld &world, glm::ivec3 chunkCoord,
         snapshot.inputStamps[static_cast<size_t>(face + 1)].missingEvidence =
             known_world_exterior ? MissingChunkEvidence::KnownAir
                                  : MissingChunkEvidence::Unknown;
+      if (!capture_light)
+        geometry_stamp(snapshot.inputStamps[static_cast<size_t>(face + 1)]);
       bool neighbor_visually_drawable = neighbor_loaded;
       if (neighbor_loaded && neighbor_drawable)
       {
@@ -649,12 +687,16 @@ BlockId ChunkMeshSnapshot::GetBlockLocal(glm::ivec3 local) const
 
 uint8_t ChunkMeshSnapshot::GetLightPackedLocal(glm::ivec3 local) const
 {
+  if (lightInputs == MeshLightInputs::PhysicalField)
+    return 0;
   return light_packed[local.x + CHUNK_SIZE * local.y +
                       CHUNK_SIZE * CHUNK_SIZE * local.z];
 }
 
 uint8_t ChunkMeshSnapshot::GetLightPacked(glm::ivec3 worldPos) const
 {
+  if (lightInputs == MeshLightInputs::PhysicalField)
+    return 0;
   const glm::ivec3 local = worldPos - ChunkOrigin();
   if (InChunkLocal(local))
   {

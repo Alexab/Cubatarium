@@ -8155,6 +8155,36 @@
           "Preserve prior completed6b369f738wet15/14860depth counterexample. Do not replace it with this untested visual run or rerun immediately while contention remains."
         ]
       }
+    },
+    "physical_geometry_capture_contract": {
+      "status": "Explicit physical-field geometry capture contract implemented/tested onCPU, actual desktop GPU vertex emission and actual packed GPU compute.3negative controls expectedFAIL, exact restoration and13ReleaseGREEN122.05seconds. Runtime mesh-cache producers still use defaultBaked capture; production owner/token/dependency cutover remains required. No fullS5completion claim.",
+      "implementation": [
+        "MeshLightInputs distinguishesBaked compatibility fromPhysicalField capture. Physical capture copies geometry/fluid data and7geometry-only stamps, deactivates unused stamps, does not capture baked center/halo arrays or a field proof, and ignores neighbor visual drawability.",
+        "Physical capture validity checks exact geometry inputs, owning world-geometry identity and all vertical-profile parameters; field changes and diagonal-light changes do not invalidate it.",
+        "Physical light getters return zero baked attributes regardless of historical payload. CPU solid/fluid merge readers, GPU host face extraction/merge and GPU vertex generator therefore use geometry-stable light keys. Packed pipeline center packing now uses the policy-aware light getter instead of bypassing it through the raw array.",
+        "DefaultBaked path retains existing sampled-light validity and merge behavior. Physical capture does not invent a calculated field or make a drawable publication ready; actual field pairing remains the publication responsibility.",
+        "GPU greedy production mesher source is now part ofdecor_mesh_integration_test so the new contract exercises its real vertex-emission wrapper and owned GL resources."
+      ],
+      "validation": {
+        "baseline_red": "build/desktop-msvc/engine-physical-geometry-policy-red-linked-test.log",
+        "intermediate_unused_stamp_counterexample": "build/desktop-msvc/engine-physical-geometry-policy-tests.log",
+        "green": "build/desktop-msvc/engine-physical-geometry-policy-restored-thirteen-tests.log",
+        "control": "build/desktop-msvc/engine-physical-geometry-policy-negative-controls.json",
+        "expected_failures": 3,
+        "exact_source_restore": true,
+        "restored_green": true,
+        "cases": "Actual slab retains six merged surfaces after center/diagonal field mutations; Baked compatibility still splits faces by light. Poisoned historical center/halo arrays do not alter physical CPU/GPU-host geometry or real GPU vertex/packed output. Real content and profile edits invalidate capture. Stored neighbor content, not peer drawability, controls shared-face geometry.",
+        "limits": "CPU and desktop GL4.3 raw mesh-generation contract; not production capture-owner cutover or native framebuffer acceptance. ExistingGLESconsumer tests pass but nativeGLES/GL3.3physical-producer matrix remains open."
+      },
+      "required_production_cutover": [
+        "Carry effective light-input policy through owned capture tokens, cached entries, worker completions and dependency checks; reject obsolete policy/generation without relabeling original epochs or stamps.",
+        "Apply the same policy to async/prefetch/main-thread/incremental/synchronous capture paths. Remove light revision and halo signatures from PhysicalField capture dependency identity while preserving real geometry/catalog/profile/epoch invalidation.",
+        "Late-pair actual current private field proof at all CPU/GPU/cross/MDI publications; keep true backpressure/cancellation ownership and validate policy transitions and legacy/flat consumers.",
+        "Remove baked-dark retention decisions from validated physical publications: zero baked attributes are a geometry format, not evidence of an unready or dark physical field. Retain actual predecessor resources until compatible successor preparation succeeds.",
+        "Defer physical worker construction while actual geometric dependencies remainUnknown, preserving exact queued section ownership and triggering data completion rather than repeated doomed mesh work.",
+        "Then complete semantic geometry/optics catalog partition, persisted content certificates, full independentRGB/transparency/backend/native and controlled performance/memory acceptance."
+      ],
+      "native": "No native run for this opt-in contract foundation. Latest whole-route verification remains incomplete:ae7657bcftimeout600under measured hostCPU contention; last completed6b369f738depth15/14860FAIL retained."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8192,7 +8222,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Completed-field notification and bounded2hint/2FIFO cycle verified by actual retained-result regression,2negative controls13ReleaseGREEN,31PythonGREEN. App built; runtime hook observed but native timed out600under host100percent/other83.6percentCPU, route/depthUNTESTED. Preserve15/14860last completed depth counterexample. Continue initial capture/CPU/GPU light-independent geometry identity and eligibility/latency closure; repeat full native when host contention permits meaningful coverage.",
+      "PhysicalField geometry capture/merge contract now explicit and CPU/real vertex+packed GPU verified (3negative controls, exact restore13ReleaseGREEN). Production cache capture owners are still defaultBaked: wire versioned policy through tokens/store/worker/dependency, sync/prefetch/incremental paths and physical publication/dark-retention rules; preserve actual source/data/field proof ownership. Do not equate foundation tests with fullS5cutover or native visual acceptance.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."

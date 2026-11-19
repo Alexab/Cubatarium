@@ -15,6 +15,7 @@
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Mesh/FaceMaskComputeSource.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/IUChunkMesher.h"
@@ -997,6 +998,155 @@ TestNoSurfaceGeometryProof(cutum::UBlockRegistry &registry,
   world.SetFluidState(interior,
                       FluidCellState::Source().WithKind(FluidKind::Water));
   Expect(!classify(), "fluid rejects a previously certified AIR-only section");
+}
+
+static void
+TestPhysicalGeometryCapture(cutum::UBlockRegistry &registry,
+                            const cutum::UBlockDefinitionStorage *definitions,
+                            bool use_gpu = false)
+{
+  using namespace cutum;
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 root(0);
+  world.GetChunkManager().EnsureChunk({1, 1, 1});
+  for (int z = 4; z <= 11; ++z)
+    for (int x = 4; x <= 11; ++x)
+      world.SetBlock({x, 4, z}, kStone);
+  const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+  const auto capture = [&](MeshLightInputs policy)
+  {
+    return ChunkMeshSnapshot::Capture(world, root, 7, nullptr, nullptr, policy);
+  };
+  auto physical = capture(MeshLightInputs::PhysicalField);
+  const auto baked = capture(MeshLightInputs::Baked);
+  Expect(physical.lightInputs == MeshLightInputs::PhysicalField &&
+             !physical.renderLight && !physical.certifiedPaddedLight &&
+             physical.openSkyAbsentMask == 0 &&
+             std::all_of(physical.paddedLight.begin(),
+                         physical.paddedLight.end(),
+                         [](uint8_t value) { return value == 0; }),
+         "physical geometry capture owns no baked halo or field proof");
+  for (size_t n = 0; n < physical.inputStamps.size(); ++n)
+    Expect(!physical.inputStamps[n].readsLight &&
+               physical.inputStamps[n].readsContent == (n < 7) &&
+               physical.inputStamps[n].light == 0 &&
+               physical.inputStamps[n].lightIncarnation == 0,
+           "physical geometry capture stamps only its seven geometric inputs");
+  const auto canonical = [](const std::vector<GreedyQuad> &quads)
+  {
+    std::vector<std::array<int, 11>> keys;
+    for (const auto &q : quads)
+      keys.push_back({q.axis, q.faceSign, q.slice, q.u, q.v, q.width, q.height,
+                      q.Id, q.FluidPacked, q.FluidSurface, q.LightPacked});
+    std::sort(keys.begin(), keys.end());
+    return keys;
+  };
+  const auto before =
+      UGreedyMesher::BuildChunkMesh(physical, registry, catalog.get());
+  Expect(before.size() == 6, "physical slab has six merged geometric surfaces");
+  auto *chunk = world.GetChunkManager().GetChunk(root);
+  for (int z = 0; z < CHUNK_SIZE; ++z)
+    for (int y = 0; y < CHUNK_SIZE; ++y)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+        chunk->SetLightLocal({x, y, z}, (x + z) % 2 ? 15 : 2, y % 3);
+  auto changed = capture(MeshLightInputs::PhysicalField);
+  Expect(
+      physical.InputsStillValid(world) && !baked.InputsStillValid(world) &&
+          canonical(UGreedyMesher::BuildChunkMesh(
+              changed, registry, catalog.get())) == canonical(before),
+      "light mutation preserves physical geometry validity and merge layout");
+  const auto changed_baked = capture(MeshLightInputs::Baked);
+  Expect(UGreedyMesher::BuildChunkMesh(changed_baked, registry, catalog.get())
+                 .size() > before.size(),
+         "baked compatibility reader still splits faces by light");
+  world.GetChunkManager().GetChunk({1, 1, 1})->SetLightLocal({0, 0, 0}, 0, 14);
+  Expect(physical.InputsStillValid(world) &&
+             !changed_baked.InputsStillValid(world),
+         "diagonal field changes do not invalidate physical geometry");
+  changed.light_packed.fill(255);
+  changed.paddedLight.fill(255);
+  changed.openSkyAbsentMask = ~uint32_t{0};
+  Expect(canonical(UGreedyMesher::BuildChunkMesh(
+             changed, registry, catalog.get())) == canonical(before) &&
+             canonical(MergeOpaqueQuadsStrict(ExtractOpaqueFacesCpu(
+                 changed, registry))) == canonical(before),
+         "physical CPU and GPU-host merges ignore all historical baked bytes");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  if (use_gpu)
+  {
+    UGpuGreedyMesher gpu;
+    std::vector<GreedyMeshBatch> batches;
+    Expect(gpu.TryExtractOpaqueToBatches(changed, registry, root, batches,
+                                         false, true, catalog.get()),
+           "physical geometry exercises actual GPU greedy vertex emission");
+    size_t indices = 0;
+    for (const auto &batch : batches)
+    {
+      indices += batch.indices.size();
+      for (const auto &vertex : batch.vertices)
+        Expect(vertex.skyLight == 0 && vertex.blockLight == 0,
+               "physical GPU vertex emission does not bake historical light");
+    }
+    Expect(indices == 36,
+           "physical GPU vertex emitter preserves six rectangles");
+    UGpuMeshPipeline pipeline;
+    Expect(pipeline.Init(1),
+           "physical geometry initializes actual packed pipeline");
+    const int slot = pipeline.GetAllocator().AllocateStagingSlot(false);
+    UGpuMeshPipeline::GpuApplyTicket ticket;
+    Expect(slot >= 0 && pipeline.KickComputePasses(changed, registry, root,
+                                                   slot, ticket, catalog.get()),
+           "physical geometry dispatches actual packed compute");
+    glFinish();
+    Expect(pipeline.TryCompleteCountersAndEmit(ticket, registry, 0) ==
+               UGpuMeshPipeline::GpuFinishStatus::Ready,
+           "physical packed counters and emission complete");
+    glFinish();
+    uint32_t count = 0;
+    bool dark = false, lit = false;
+    std::vector<GpuBlockDrawRange> ranges;
+    Expect(
+        pipeline.TryFinishComputePasses(ticket, registry, count, &ranges, &dark,
+                                        &lit, 0) ==
+                UGpuMeshPipeline::GpuFinishStatus::Ready &&
+            count == 6 && !lit,
+        "physical packed geometry ignores historical center and padded light");
+    pipeline.GetAllocator().ReleaseStagingSlot(ticket.slotKey);
+    Expect(glGetError() == GL_NO_ERROR,
+           "physical geometry GPU paths have no GL errors");
+  }
+#else
+  (void)use_gpu;
+#endif
+  world.SetBlock({5, 5, 5}, kStone);
+  Expect(!physical.InputsStillValid(world),
+         "physical geometry rejects real content edits");
+  const auto current = capture(MeshLightInputs::PhysicalField);
+  auto profile = world.GetVerticalProfile();
+  ++profile.SeaLevelY;
+  world.SetVerticalProfile(profile);
+  Expect(!current.InputsStillValid(world),
+         "physical geometry rejects profile identity changes");
+  UBlockWorld seam;
+  seam.SetFluidDefinitions(definitions);
+  seam.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  seam.SetBlock({15, 8, 8}, kStone);
+  seam.SetBlock({16, 8, 8}, kStone);
+  const auto ordinary = ChunkMeshSnapshot::Capture(
+      seam, root, 7, nullptr, nullptr, MeshLightInputs::PhysicalField);
+  const auto hidden_peer = ChunkMeshSnapshot::Capture(
+      seam, root, 7, +[](void *, glm::ivec3) { return false; }, nullptr,
+      MeshLightInputs::PhysicalField);
+  Expect(canonical(UGreedyMesher::BuildChunkMesh(ordinary, registry,
+                                                 catalog.get())) ==
+                 canonical(UGreedyMesher::BuildChunkMesh(hidden_peer, registry,
+                                                         catalog.get())) &&
+             UGreedyMesher::BuildChunkMesh(hidden_peer, registry, catalog.get())
+                     .size() == 5,
+         "physical geometry depends on stored neighbor content rather than "
+         "peer visibility");
 }
 
 static void
@@ -5630,6 +5780,7 @@ int main(int argc, char **argv)
               << " GL: " << glGetString(GL_VERSION) << '\n';
     if (packed_lifecycle_driver)
     {
+      TestPhysicalGeometryCapture(registry, definitions.get(), true);
       TestGpuStagingSlotOwnership();
       TestGpuReadbackOwnership();
       TestGpuTicketStorageReplacement(registry, definitions.get());
@@ -5701,6 +5852,7 @@ int main(int argc, char **argv)
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestNoSurfaceGeometryProof(registry, definitions.get());
   TestSecondPlaneGeometryParity(registry, definitions.get());
+  TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);
   TestPublicationRefreshesDrawRefs(registry);

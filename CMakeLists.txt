@@ -2434,6 +2434,7 @@ cubatarium_add_test(NAME decor_mesh_integration_test
         src/Render/Mesh/MeshCaptureWorker.cpp
         src/Render/Mesh/FluidSurfaceColumnSlice.cpp
         src/Render/Mesh/GpuGreedyOpaqueEmit.cpp
+        src/Render/Mesh/GpuGreedyMesher.cpp
         src/Render/Mesh/GpuMeshPipeline.cpp
         src/Render/Mesh/GpuMeshSlotAllocator.cpp
         src/Render/Backend/RenderBackendCaps.cpp

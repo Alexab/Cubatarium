@@ -850,10 +850,7 @@ bool UGpuMeshPipeline::KickComputePasses(const ChunkMeshSnapshot &snapshot,
         uint8_t value = 0u;
         if (inside_yz && x >= 0 && x < CHUNK_SIZE)
         {
-          const size_t block_index =
-              static_cast<size_t>(x + CHUNK_SIZE * y +
-                                  CHUNK_SIZE * CHUNK_SIZE * z);
-          value = snapshot.light_packed[block_index];
+          value = snapshot.GetLightPackedLocal({x, y, z});
         }
         else
         {
