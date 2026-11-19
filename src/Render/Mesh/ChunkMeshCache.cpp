@@ -3582,6 +3582,13 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
   }
 }
 
+bool UChunkMeshCache::HasPhysicalNoSurfacePublication(glm::ivec3 coord) const
+{
+  const auto found = GreedyCache.find(coord);
+  return CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField &&
+         found != GreedyCache.end() && found->second.PublishedNoSurface;
+}
+
 bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
     glm::ivec3 chunk_coord, const UBlockWorld &world) const
 {
@@ -3590,12 +3597,12 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
   // Validate its current geometry/catalog/epoch and outstanding owners; never
   // stamp a light revision or satisfy an independent field consumer here.
   if (it != GreedyCache.end() && it->second.PublishedNoSurface &&
-      CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField &&
-      it->second.NoSurfaceWorldEpoch == CaptureStore.WorldEpoch() &&
-      HasMeshSatisfyingColumnReady(chunk_coord) &&
-      it->second.PublishedNoSurface->Matches(
-          world.CaptureCurrentGeometryRenderInputs(chunk_coord)))
-    return true;
+      CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+    return it->second.NoSurfaceWorldEpoch == CaptureStore.WorldEpoch() &&
+           !HasDrawableGreedyMesh(chunk_coord) &&
+           HasMeshSatisfyingColumnReady(chunk_coord) &&
+           it->second.PublishedNoSurface->Matches(
+               world.CaptureCurrentGeometryRenderInputs(chunk_coord));
   if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid ||
       !it->second.MeshedLightHaloSignaturesValid ||
       it->second.ProvisionalLightPreview)
@@ -3664,7 +3671,8 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
   if (!repair_guard_off && RepairGuardWorld &&
-      IsRedundantRepairReason(reason) &&
+      (IsRedundantRepairReason(reason) ||
+       HasPhysicalNoSurfacePublication(chunkCoord)) &&
       IsPublishedMeshCurrentForInputs(chunkCoord, *RepairGuardWorld))
   {
     // The published mesh is a function of exactly these inputs: nothing to
@@ -3883,7 +3891,8 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
   static const bool repair_guard_off =
       std::getenv("CUBA_NO_REPAIR_GUARD") != nullptr;
   if (!repair_guard_off && RepairGuardWorld &&
-      IsRedundantRepairReason(reason) &&
+      (IsRedundantRepairReason(reason) ||
+       HasPhysicalNoSurfacePublication(chunkCoord)) &&
       IsPublishedMeshCurrentForInputs(chunkCoord, *RepairGuardWorld))
   {
     // The published mesh is a function of exactly these inputs: nothing to

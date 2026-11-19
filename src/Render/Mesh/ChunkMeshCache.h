@@ -1469,6 +1469,7 @@ private:
                                     uint64_t world_epoch, uint64_t generation,
                                     MeshLightInputs policy) const;
   void ConfigureCapturePolicy(const UBlockWorld &world);
+  bool HasPhysicalNoSurfacePublication(glm::ivec3 coord) const;
   bool ShouldDeferBakedMeshUntilLit(glm::ivec3 coord) const;
   bool IsCurrentPhysicalGeometry(const UBlockWorld &world,
                                  const UBlockRegistry &registry,

@@ -9601,5 +9601,145 @@
       "Required Release app build, then unchanged wet native with selected(-16,-3,5) trace to evaluate churn and residual readiness/performance. Current evidence does not establish native repair impact.",
       "Full original lifecycle/cancellation/provider, catalog semantics, persisted certificates, true GPU/backend parity, independent RGB/nonzero-light/wet/transparency and full scenario/performance/memory matrix remain incomplete."
     ]
+  },
+  "no_surface_queue_entry_closure_2026_11_19": {
+    "verified_at_utc": "2026-11-19T17:33:29.384313+00:00",
+    "goal": "active; full S0..S6 unchanged",
+    "first_candidate_native": {
+      "artifacts": "build/desktop-msvc/engine-no-surface-repair-wet-20261119-native",
+      "source_commit": "401e2a60deda8fcd0b260a9485c77c09c4a5bf5a",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "parent_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 21459,
+        "faults": 0,
+        "frame_epochs": 156,
+        "skipped_unscoped_or_occluded": 325,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 2733
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "relocations": 0,
+      "target_zero_quad_commits": 7,
+      "prior_target_commits": 136,
+      "repair_reasons": {
+        "30": 9,
+        "5": 21
+      },
+      "first_commit": "I20261119 20:24:42.852990  8068 Log.cpp:601] [ChunkTrace] gpu_commit coord=(-16,-3,5) sourceRev=1 srcLight=0 hasSrcLight=1 nowLight=1 acceptedStale=0 acceptedGeomStale=0 quads=0 slot=126 allocation=95682 darkFace=0 litFace=0 preview=0",
+      "last_commit": "I20261119 20:25:20.620846  8068 Log.cpp:601] [ChunkTrace] gpu_commit coord=(-16,-3,5) sourceRev=7 srcLight=0 hasSrcLight=1 nowLight=1 acceptedStale=0 acceptedGeomStale=0 quads=0 slot=124 allocation=96791 darkFace=0 litFace=0 preview=0",
+      "performance_pass": false,
+      "metrics": {
+        "wall_ms_med": 28.2159,
+        "wall_ms_fly_med": 28.0225,
+        "dirty_med": 132.0,
+        "post_stop_readiness_debt_max": 6.0,
+        "post_stop_mesh_missing_max": 1.0
+      },
+      "limits": "Partial native improvement7vs136; residual repair/retry tags still triggered geometry.0/21459depth is scoped; RGBUNTESTED, performance/debtFAIL. No full native closure claimed."
+    },
+    "followup": {
+      "problem": "Only enumerated repair tags consulted the NoSurface proof; generic retry and PriorityRelitInstallRepair still requeued input-equivalent zero geometry.",
+      "implementation": "Allow both dirty-entry APIs to consult the exact physical NoSurface publication for every hint. Suppress only after epoch/catalog/geometry/NoDraw and existing desired geometry/coverage/successor-owner checks succeed. Stale physical NoSurface evidence now fails closed without falling through baked-light equivalence. Actual geometry edits still queue; independent light consumers and proofs unchanged.",
+      "red": "build/desktop-msvc/no-surface-all-hints-red-test-20261119.log",
+      "negative_controls": {
+        "schema": "no-surface-repair-controls.v1",
+        "source_sha256": {
+          "src/Render/Mesh/ChunkMeshCache.cpp": "021a31ad87055347660a73dd193c3eeffa5f96b55354c7bd9e31d1375605ee64",
+          "src/Render/Mesh/ChunkMeshCache.h": "90d9f5f179a0a6a3c580fb624a49df40d64e614cb298b6a8cd75e9645b1fb9fd",
+          "src/Test/DecorMeshIntegrationTest.cpp": "9b35624b4325a963567d89b4016c3b08288791ea02ecd3e356afd4547d6091b6",
+          "src/World/Core/BlockWorld.cpp": "a6b93aef012653fc9dab82ef804b9e5d58433e2325725fe2652da5c32b5909d0",
+          "src/World/Core/BlockWorld.h": "663f5fc0aee19165a2dd0c85e8d983213b248c01e3edac854b686d780eebc17b"
+        },
+        "head": "401e2a60deda8fcd0b260a9485c77c09c4a5bf5a",
+        "controls": [
+          {
+            "name": "ordinary-hint",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "repair hints cannot churn current NoSurface geometry",
+            "log": "build/desktop-msvc/no-surface-all-hints-20261119-ordinary-hint-test.log"
+          },
+          {
+            "name": "priority-hint",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "repair hints cannot churn current NoSurface geometry",
+            "log": "build/desktop-msvc/no-surface-all-hints-20261119-priority-hint-test.log"
+          },
+          {
+            "name": "geometry-inputs",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "geometry edit invalidates NoSurface and exposes real faces",
+            "log": "build/desktop-msvc/no-surface-all-hints-20261119-geometry-inputs-test.log"
+          },
+          {
+            "name": "catalog-inputs",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "NoSurface repair proof requires the world's current catalog",
+            "log": "build/desktop-msvc/no-surface-all-hints-20261119-catalog-inputs-test.log"
+          },
+          {
+            "name": "capture-epoch",
+            "build_exit": 0,
+            "test_exit": 8,
+            "expected_failure": true,
+            "expected_assertion": "NoSurface repair evidence cannot cross a capture epoch",
+            "log": "build/desktop-msvc/no-surface-all-hints-20261119-capture-epoch-test.log"
+          }
+        ],
+        "exact_source_restore": true,
+        "restored_build_exit": 0,
+        "restored_test_exit": 0,
+        "restored_green": true,
+        "matrix_log": "build/desktop-msvc/no-surface-all-hints-20261119-restored-sixteen-tests.log"
+      },
+      "restored_matrix": {
+        "passed": 16,
+        "total": 16,
+        "skipped": 0,
+        "seconds": 7.87,
+        "log": "build/desktop-msvc/no-surface-all-hints-20261119-restored-sixteen-tests.log"
+      },
+      "native": "NOT RUN for queue-entry followup yet; required Release app rebuild and same selected native route next."
+    },
+    "remaining": [
+      "Verify repeated NoSurface publication and required-domain readiness in native after queue-entry followup. Do not treat lower dirty/quad counts as independent image proof.",
+      "Complete full S0..S6: lifecycle/source/cancellation/provider, semantic geometry/optics catalogs, persisted certificates, true GPU/backend parity, independent nonzero RGB/wet/transparency and full seed/radius/edit/return/eviction/performance/memory matrix."
+    ]
   }
 }

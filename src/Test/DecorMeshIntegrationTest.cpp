@@ -2496,6 +2496,10 @@ TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
         cache.MarkDirtyPriority(
             root, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
         cache.MarkDirty(root, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+        cache.MarkDirtyPriority(
+            root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+        cache.MarkDirtyPriority(root);
+        cache.MarkDirty(root);
         Expect(!cache.IsChunkMeshDirty(root) &&
                    cache.GetChunkMeshRevision(root) == revision &&
                    cache.GetPublishCount(root) == publications,
