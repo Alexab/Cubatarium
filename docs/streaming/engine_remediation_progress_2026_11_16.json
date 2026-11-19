@@ -13304,5 +13304,195 @@
     }
   },
   "next": "Build committed desktop Release, rerun original motor route with buffered trace and validate complete export, no post-eviction recreation, rejected absent shore bands and exact capture/durable receipt join. Then continue all original S0..S6 gates, including cold/return/edit/save/reload/perf/memory and independent RGB/wet/transparency/backend."
+},
+"committed_shore_residency_native_verification_2026_11_20": {
+  "status": "committed_shore_guard_regression_verified_and_scoped_native_loss_not_repeated_full_S0_S6_active",
+  "built_source_commit": "1795eea696d92ce7e9bdcc200e490f0b904b2075",
+  "artifacts": "build\\desktop-msvc\\engine-committed-shore-fixed-20261119-native",
+  "retained_world": "EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d",
+  "desktop_release": {
+    "exit": 0,
+    "log": "build\\desktop-msvc\\committed-shore-desktop-build-20261119.log",
+    "static_exe_verifier": "PASS,6systemDLLs"
+  },
+  "regression": {
+    "status": "PASS",
+    "test_count": 37,
+    "build_log": "build\\desktop-msvc\\committed-shore-20261119-matrix-build.log",
+    "test_log": "build\\desktop-msvc\\committed-shore-20261119-matrix-test.log",
+    "baseline_red": {
+      "log": "build\\desktop-msvc\\committed-shore-20261119-red-test.log",
+      "assertion": "committed shore maintenance cannot resurrect retired neighbor terrain"
+    },
+    "focused_green_log": "build\\desktop-msvc\\committed-shore-20261119-green-test.log",
+    "scope": "Both committed shore APIs, positive/negative X/Z, retired neighbor absence, returned residentAIR water+publication, repeated eviction. Existing deep-neighbor positive fixture now owns residentAIR explicitly; procedural worker fill untouched."
+  },
+  "native": {
+    "parent_exit": 0,
+    "wrapper_exit": 2,
+    "overall": "UNTESTED",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "route": {
+      "status": "PASS",
+      "reason": "frontier_route_covered",
+      "displacement_chunks": 19,
+      "outside_initial_resident_samples": 3537
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 256,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 724,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 452,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "inspection": {
+      "status": "PASS",
+      "reason": "inspection_capture_coverage",
+      "requested": 24,
+      "queued": 24,
+      "verified": 24
+    },
+    "fixture_opaque_depth": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 14151,
+      "faults": 0,
+      "frame_epochs": 110,
+      "skipped_unscoped_or_occluded": 273,
+      "examples": [],
+      "fault_attribution": {
+        "schema": "engine-depth-fault-attribution.v1",
+        "section_count": 0,
+        "sections": [],
+        "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+      },
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "visual": {
+      "status": "UNTESTED",
+      "reason": "missing_visual_reference",
+      "samples": 14424,
+      "captures": 114,
+      "attributed_samples": 0,
+      "faults": 0
+    },
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    }
+  },
+  "persistence": {
+    "capture_events": 247,
+    "unique_capture_columns": 247,
+    "captured_receipts": 1681,
+    "durable_files": 247,
+    "durable_receipts": 1681,
+    "outcomes": {
+      "discard_incomplete_queued": 28,
+      "stale_cleanup_done": 275,
+      "queued": 247,
+      "light_receipts_written": 247,
+      "slice_written": 2160,
+      "shutdown_state": 1
+    },
+    "shutdown": [
+      "I20261120 00:01:33.855638 14432 Log.cpp:601] [WorldColumnSave] outcome=shutdown_state pending_save_columns=0 pending_disk_columns=0 io_jobs=0 io_active=0 ready_saves=0 ready_loads=0 light_flags_in_flight=0 light_flags_dirty=0"
+    ],
+    "missing": [],
+    "mismatched_counts": []
+  },
+  "residency_trace": {
+    "path": "build\\desktop-msvc\\engine-committed-shore-fixed-20261119-residency.log",
+    "sha256": "a3082bc0c47f4668c57663a12b31f31c4e8e602e06fd20836a9b1b470b14e41b",
+    "summary": {
+      "buffered": 1,
+      "reserved": 46,
+      "published": 46,
+      "dropped": 0,
+      "unpublished": 0,
+      "complete": 1
+    },
+    "runtime_manager": "000001F1786212A8",
+    "removed_sections": 10,
+    "post_first_eviction_mutations": [],
+    "shore_absent_band_rows": 0,
+    "scope": "one selected column, complete admitted-event export through fast-exit flush; native guard skip branch not observed, not claimed dynamically covered. Public API RED/GREEN regression proves branch behavior for retired and returning resident neighbors."
+  },
+  "performance": {
+    "pass": false,
+    "selected_metrics": {
+      "wall_ms_med": 24.5579,
+      "wall_ms_fly_med": 26.3123,
+      "fly_only_wall_ms_med": 26.3123,
+      "wall_ms_no_holes_med": 35.24635,
+      "post_stop_missing_max": 0.0,
+      "post_stop_readiness_debt_max": 0.0,
+      "post_stop_readiness_debt_rate": 0.0,
+      "post_stop_visual_holes_rate": 0.0,
+      "post_stop_visual_holes_sample_coverage": 1.0,
+      "post_stop_visual_holes_max": 0.0,
+      "post_stop_focus_dirty_med": 9.0,
+      "post_stop_focus_dirty_end": 9.0
+    },
+    "gates_stop": {
+      "post_stop_pending_med_le_15": true,
+      "post_stop_black_sticky_zero": true,
+      "post_stop_visible_black_no_ticket_zero": true,
+      "post_stop_visible_black_stalled_zero": true,
+      "post_stop_missing_zero": true,
+      "post_stop_visual_holes_zero": true,
+      "post_stop_effective_holes_zero": true,
+      "post_stop_pending_falling": true,
+      "post_stop_relight_active": true,
+      "post_stop_pending_not_plateau_8s": true,
+      "post_stop_healthy_fps_not_unfinished": true,
+      "post_stop_not_ready_falling": true,
+      "post_stop_focus_dirty_falling": true
+    },
+    "scope": "diagnostic run only; no global performance or memory acceptance, no causal performance improvement claim"
+  },
+  "limits": [
+    "One native route/config/backend preserves every captured receipt after fix; no general durability/return/reload guarantee claimed. Before-fix buffered run proved water575 recreation at96,62,111 and6fullpurges/30receipt loss. After-fix native records no recreation or guard skip for selected6,6; branch causality is established by deterministic actual committed-seal API regression, not a symbolized native caller stack.",
+    "Native overallUNTESTED retains missing independent nonzeroRGB/wet/transparency oracle.0/14151is near opaque depth only. PerformanceFAIL, wall_no_holes35.24635ms, stop focusdirty9 remain open.",
+    "All original S0..S6 requirements, including semantic geometry/optical identities, lifecycle/provider/cancellation, procedural AIR cache discovery, CPU/GPU/backend parity and full motor return/edit/save/evict/reload/performance/memory matrix remain active."
+  ],
+  "next": [
+    "Cold-load a new copy of retained EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d without fixture preparation, preserving source fingerprint and all existing evidence. Verify actual receipt restore with fresh runtime identities.",
+    "Continue motor-based return/edit/save/evict/reload coverage and all remaining original S0..S6 gates; do not promote scoped depth/startup/cache success to overall completion."
+  ]
 }
 }
