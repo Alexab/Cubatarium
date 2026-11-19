@@ -7458,14 +7458,22 @@
       }
     },
     "geometry_awaiting_physical_field": {
-      "status": "Implemented bounded completed CPU-geometry ownership awaiting certified physical field or resource admission.15lifecycle cases plus32-result capacity/fairness/credit recovery and actual GPU binding probe pass. Full packed-GPU/synchronous lifecycle and geometry/light key removal remain pending. Required app/native verification pending.",
+      "status": "Bounded completed CPU-geometry awaiting-field ownership implemented,15lifecycle cases plus actual32-result capacity/fairness/credit recovery and real GPU byte probe pass.11Release testsGREEN. Required Release app built; full wet19chunk native0/13630opaque-depth faults. OverallUNTESTED due absent fullRGB reference. Packed-GPU/sync lifecycle and light-free keys remain open.",
       "native_motivation": "9908aab24 wet full19chunk flights:4/11744 and6/11752 missing-first-publication depth faults remain. Target trace shows repeated completed geometry discarded for unready field; these motivating traces do not causally close original fault class.",
       "red": "engine-awaiting-field-red-test.log actual worker result loses owner before physical calculation: completed geometry keeps one owner while awaiting physical light. Original failure preserved. Owner/capacity follow-up failures and Release-only crash stack also retained.",
       "implementation": "Complete regular CPU mesh result retains immutable source epoch/revision, seven geometry certificates, original input stamps, vertices and result-memory credit. At most32results and32MiB accounted retained payload; four round-robin admission checks per call. Actual current certified field can pair only after current geometry/catalog/profile/epoch, active source revision and light calculation settlement match. Captured source stamps are never rewritten. Full-mode late-paired geometry uses current physical resource revision, not historical baked-light stamp.",
       "owner_lifecycle": "Completed geometry is an explicit live owner after worker completion. Generic dirty/repair notifications cannot discard it or add remesh-after-apply work; bounded validation detects actual geometry changes and advances the retry target. Orphan cleanup and scheduling recognize awaiting ownership. Eviction, world deletion/reload ABA, cancellation, callback removal, render-policy changes and epoch reset release retained credits. Job trace adds awaiting_light, diagnostics owner bit12.",
       "cancellation_fix": "CancelInFlightOutsideHorizontalRadius must retire existing work without EnsureGpuPipeline. Actual no-context CPU lifecycle exposed null GL call on cancellation; removing initialization repairs that path.",
       "validation": "engine-awaiting-field-related-build.log rebuilds all affected selected test targets in Release. engine-awaiting-field-aba-eleven-tests.log11/11PASS18.97seconds. Actual GPU resource preparation/byte probe participates in15lifecycle cases; actual33-worker-result pressure verifies count cap, retained retry, eviction reuse, fairness behind31unready peers and result-credit restoration. Byte limit not separately saturated.",
-      "limits": "This first lifecycle cutover applies to completed regular CPU results only. Deferred/packed GPU candidates and synchronous work still use existing retries. Full light-only zero-remesh, light-free merge/capture/dependency keys, semantic geometry/material identity, persisted certificates, complete native RGB/backend/performance matrix and original first-publication fault class remain open."
+      "limits": "This first lifecycle cutover applies to completed regular CPU results only. Deferred/packed GPU candidates and synchronous work still use existing retries. Full light-only zero-remesh, light-free merge/capture/dependency keys, semantic geometry/material identity, persisted certificates, complete native RGB/backend/performance matrix and original first-publication fault class remain open.",
+      "native_followup": {
+        "source": "e86bb039754ffd8c35be44fb74feed4916da28a3",
+        "artifact": "build/desktop-msvc/engine-awaiting-field-wet-native/geometry-awaiting-field-observation.json",
+        "result": "app0wrapper2overallUNTESTED;1774frames270.974active seconds;19chunks1361outside0relocations24/24inspectionviews;13630depthchecks0faults107epochs. Required startup1176sections publication/light/unknown blockers0.1774/1774camera samplesready0/0 observed, not formal wet-light oracle.",
+        "causal_target": "(-5,-3,3) first attemptunknown negative-X cannot retain; second actualCPU source2 waits fromframe283/284 to315 and publishes with unchanged geometry content/incarnation, capturedlight0/currentlight1 and no new enqueue.",
+        "provenance": "EXE/config restoration/source-world/all runtime shaders/source commit independently true at terminal wrapper.",
+        "limits": "One clean32block opaque-depth flight does not prove original sporadic defect closed. RGB/transparencyUNTESTED. Legacy performanceFAIL:fly104.108ms,total95.9157ms,stream70.0855ms,scene26.12445ms medians under diagnostics; post-stop mesh-missing proxy max1 and stalled-visual proxy max1 remain, no controlled A/B."
+      }
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7487,7 +7495,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "All main physical-field consumers implemented;9Release checksGREEN and full wet19chunk native retains correct GPU field handles.4/11744depth faults of unpublished-firstgeometry remain; geometry/light keys and lifecycle split incomplete.",
+      "S5": "All main physical-field consumers implemented; bounded completed CPU geometry now awaits actual field without resubmission,15lifecycle/capacity controls and11Release checksGREEN, full wet19chunk native0/13630scoped depth faults. Packed-GPU/sync awaiting lifecycle, light-free merge/capture/dependency keys and complete acceptance remain.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
