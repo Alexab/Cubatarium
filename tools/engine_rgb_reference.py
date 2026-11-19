@@ -43,6 +43,12 @@ def prepare(scene: dict, world: Path) -> dict:
     manifest = dict(id=pack_id,name="Isolated constant-color RGB reference",version=1,
                     pack_format=1,resolution=16,worldgen_role="secondary",merge_mode="override",priority=50)
     (overlay / "pack.json").write_text(json.dumps(manifest,indent=2)+"\n",encoding="utf-8")
+    # Overrides from the primary pack are applied after block definitions.
+    # Supply the secondary pack's own final six-face override as well.
+    overrides={name:[dict(stem="reference_"+name,
+                          faces=["front","right","back","left","top","bottom"])]
+               for name in COLORS}
+    (overlay / "texture_overrides.json").write_text(json.dumps(overrides,indent=2)+"\n",encoding="utf-8")
     materials=[]
     source_hashes={}
     for name, identifier, emission in (("stone",560,0),("glowstone",376,15)):
@@ -233,7 +239,8 @@ def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
                 actuals.append([(packed>>s)&255 for s in (24,16,8,0)])
             error=max(abs(a-b) for actual in actuals for a,b in zip(actual,predicted))
             surface_ok=(number(actual_depth) and abs(actual_depth-depth) <= .05+depth*.001 and
-                        row.get("renderer_pixel_marker_visible")==2 and
+                        row.get("renderer_pixel_marker_mode") is False and
+                        row.get("renderer_pixel_marker_visible") is False and
                         row.get("renderer_pixel_opaque_surface_valid")==1 and
                         row.get("renderer_pixel_opaque_vertex_light_block_id")==material["id"] and
                         row.get("renderer_pixel_opaque_vertex_light_face_index")==4)

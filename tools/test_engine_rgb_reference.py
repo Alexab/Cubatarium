@@ -46,7 +46,7 @@ class RgbReferenceTest(unittest.TestCase):
                     renderer_pixel_ray_origin_x=x,renderer_pixel_ray_origin_y=-40.5,renderer_pixel_ray_origin_z=51,
                     renderer_pixel_ray_direction_x=0,renderer_pixel_ray_direction_y=-1,renderer_pixel_ray_direction_z=0,
                     renderer_pixel_camera_pos_x=x,renderer_pixel_camera_pos_y=-40.5,renderer_pixel_camera_pos_z=51,
-                    renderer_pixel_opaque_hit_distance=3,renderer_pixel_marker_visible=2,
+                    renderer_pixel_opaque_hit_distance=3,renderer_pixel_marker_mode=False,renderer_pixel_marker_visible=False,
                     renderer_pixel_opaque_surface_valid=1,renderer_pixel_opaque_vertex_light_block_id=376 if x in (0,8) else 560,
                     renderer_pixel_opaque_vertex_light_face_index=4,renderer_pixel_opaque_light_source_kind=2,
                     renderer_pixel_pretransparent_rgba=packed,renderer_pixel_rgba=packed,
@@ -124,6 +124,15 @@ class RgbReferenceTest(unittest.TestCase):
         pack=Path(self.scene['rgb_fixture']['pack_path'])
         (pack/'blocks/stone.json').write_text('{}',encoding='utf-8')
         self.assertEqual(self.check()['reason'],'rgb_fixture_pack_changed')
+
+    def test_final_secondary_texture_override_covers_all_faces(self):
+        pack=Path(self.scene['rgb_fixture']['pack_path'])
+        overrides=json.loads((pack/'texture_overrides.json').read_text(encoding='utf-8'))
+        for name in COLORS:
+            self.assertEqual(overrides[name][0]['stem'],'reference_'+name)
+            self.assertEqual(set(overrides[name][0]['faces']),{'front','right','back','left','top','bottom'})
+        self.rows[0]['renderer_pixel_marker_mode']=True
+        self.assertEqual(self.check()['status'],'FAIL')
 
     def test_sparse_or_unrequested_coverage_cannot_pass(self):
         self.rows=self.rows[:3]
