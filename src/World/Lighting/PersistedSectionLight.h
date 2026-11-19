@@ -29,23 +29,8 @@ inline std::optional<uint64_t> GeometryContent(const UBlockWorld &world,
   const auto *chunk = world.GetChunkManager().GetChunk(coord);
   if (!chunk && !world.IsKnownAbsentAirChunk(coord))
     return std::nullopt;
-  const auto hash_data = [](const auto *data)
-  {
-    uint64_t hash = 14695981039346656037ull;
-    for (size_t n = 0; n < CHUNK_VOLUME; ++n)
-    {
-      const uint16_t id = data ? (*data)[n] : BLOCK_AIR;
-      for (int shift : {0, 8})
-      {
-        hash ^= static_cast<uint8_t>(id >> shift);
-        hash *= 1099511628211ull;
-      }
-    }
-    return hash;
-  };
-  static const uint64_t air = hash_data(
-      static_cast<const std::array<BlockId, CHUNK_VOLUME> *>(nullptr));
-  return chunk && !chunk->IsAirOnly() ? hash_data(&chunk->GetData()) : air;
+  return SectionGeometryContentHash(
+      chunk && !chunk->IsAirOnly() ? &chunk->GetData() : nullptr);
 }
 
 inline auto Key(glm::ivec3 coord)
@@ -224,23 +209,8 @@ inline std::optional<PersistedSectionLight> CaptureSectionLight(
     const std::shared_ptr<const BlockDefinitionCatalog> &catalog)
 {
   using namespace persisted_light_detail;
-  if (!catalog)
+  if (!catalog || !world.HasRecordedLightSamplingOutput(coord))
     return std::nullopt;
-  auto proof_catalog = catalog;
-  if (!world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
-  {
-    const auto recorded =
-        world.GetRecordedLightInputContext(coord, LightDomain::Sky);
-    if (!recorded || !recorded->input_catalog ||
-        !LightCacheCatalogsEquivalent(*recorded->input_catalog, *catalog))
-      return std::nullopt;
-    proof_catalog = recorded->input_catalog;
-    // Save refreshes the registry after quiescing. Equal optical/cache
-    // semantics permit a disk receipt, but the original proof must still be
-    // complete/current against its own immutable catalog and read set.
-    if (!world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
-      return std::nullopt;
-  }
   const auto field = world.GetChunkManager().GetSectionLightField(coord);
   const auto volume = field->GetPaddedData();
   PersistedSectionLight receipt;
@@ -253,30 +223,40 @@ inline std::optional<PersistedSectionLight> CaptureSectionLight(
   for (const auto domain : {LightDomain::Sky, LightDomain::Block})
   {
     const auto context = world.GetRecordedLightInputContext(coord, domain);
-    if (!context || !context->retained_inputs_geometry_only)
+    const auto &p = receipt.profile;
+    if (!context || !context->content_certificate ||
+        !context->retained_inputs_geometry_only || !context->input_catalog ||
+        !LightCacheCatalogsEquivalent(*context->input_catalog, *catalog) ||
+        context->input_lighting_configuration != receipt.configuration ||
+        context->input_profile.MinY != p.MinY ||
+        context->input_profile.MaxY != p.MaxY ||
+        context->input_profile.SeaLevelY != p.SeaLevelY ||
+        context->input_profile.BedrockTopY != p.BedrockTopY ||
+        context->input_profile.DatumY != p.DatumY)
       return std::nullopt;
-    for (const auto &stamp : context->read_set)
+    for (const auto &input : context->content_certificate->Inputs())
     {
-      if (!stamp.readsContent || stamp.readsLight)
-        return std::nullopt;
-      if (inputs.count(Key(stamp.coord)))
+      const auto found = inputs.find(Key(input.coord));
+      if (found != inputs.end())
+      {
+        if (found->second.content != input.content)
+          return std::nullopt; // channels came from incompatible geometry
         continue;
-      const auto content = GeometryContent(world, stamp.coord);
-      if (!content || inputs.size() >= PersistedSectionLight::MaxDependencies)
+      }
+      if (inputs.size() >= PersistedSectionLight::MaxDependencies)
         return std::nullopt;
-      inputs.emplace(Key(stamp.coord),
-                     PersistedSectionLight::Input{stamp.coord, *content});
+      inputs.emplace(Key(input.coord), input);
     }
   }
   for (const auto &entry : inputs)
     receipt.inputs.push_back(entry.second);
   if (!CoversSamplingDomain(receipt))
     return std::nullopt;
-  // Evidence queries may publish new terrain/index evidence while hashing.
-  // Never certify new content against an earlier output or proof context.
+  // Export the computed artifact's original inputs, not a statement about
+  // present geometry. Reload must independently validate every saved content.
   if (world.GetChunkManager().GetSectionLightField(coord) != field ||
       field->GetPaddedData() != volume ||
-      !world.HasCompleteLightSamplingCalculation(coord, proof_catalog))
+      !world.HasRecordedLightSamplingOutput(coord))
     return std::nullopt;
   receipt.volume = *volume;
   receipt.checksum = Checksum(receipt);
@@ -335,6 +315,22 @@ inline SectionLightRestoreResult RestoreSectionLight(
         data.light_packed[UChunk::LocalIndex({x, y, z})] =
             receipt.volume.cells[SectionLightVolume::Index(x, y, z)];
   context.chunks.push_back(std::move(data));
+  // The disk checksum, material/profile contract, mandatory footprint and
+  // every current geometry content were validated above. Bind this imported
+  // artifact to fresh runtime stamps so a later eviction can export it again.
+  auto certificate =
+      std::shared_ptr<RelightContentCertificate>(new RelightContentCertificate);
+  certificate->Stamps = context.read_set;
+  certificate->Contents = receipt.inputs;
+  certificate->Profile = p;
+  certificate->Configuration = receipt.configuration;
+  certificate->Catalog = catalog;
+  certificate->Sky = certificate->Block = true;
+  certificate->Outputs.emplace(
+      receipt.coord,
+      std::array<uint64_t, 2>{SectionLightDomainHash(receipt.volume, 0),
+                              SectionLightDomainHash(receipt.volume, 1)});
+  context.content_certificate = std::move(certificate);
   world.GetChunkManager().ReplaceComputedSectionLightVolume(
       receipt.coord, receipt.volume, true, true);
   return world.RecordLightCalculation(context, catalog) == 1

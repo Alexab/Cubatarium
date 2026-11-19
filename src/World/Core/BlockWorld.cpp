@@ -37,6 +37,12 @@ int UBlockWorld::RecordLightCalculation(
   context->unknown_input_chunks = result.unknown_input_chunks;
   context->include_skylight = result.include_skylight;
   context->include_block_light = result.include_block_light;
+  if (context->inputs_complete && result.content_certificate &&
+      result.content_certificate->MatchesInputs(
+          result.read_set, result.input_profile,
+          result.input_lighting_configuration, result.input_catalog,
+          result.include_skylight, result.include_block_light))
+    context->content_certificate = result.content_certificate;
   int recorded = 0;
   for (const auto &data : result.chunks)
   {
@@ -284,6 +290,32 @@ bool UBlockWorld::HasCompleteLightSamplingCalculation(
       !field->LightProofs[1].padded_installed)
     return false;
   return HasCompleteLightCalculation(coord, catalog);
+}
+
+bool UBlockWorld::HasRecordedLightSamplingOutput(glm::ivec3 coord) const
+{
+  const auto field = Chunks.GetSectionLightField(coord);
+  if (!field || !field->GetPaddedData() || field->GetPaddedDomains() != 3)
+    return false;
+  for (int domain = 0; domain < 2; ++domain)
+  {
+    const auto &proof = field->LightProofs[domain];
+    const auto &context = proof.input;
+    if (!context || !context->inputs_complete ||
+        !context->content_certificate || proof.owner != LightCalculationOwner ||
+        proof.incarnation != field->GetIncarnation() ||
+        proof.field_revision != (domain == 0 ? field->GetSkyRevision()
+                                             : field->GetBlockRevision()) ||
+        !proof.padded_installed ||
+        !context->content_certificate->MatchesInputs(
+            context->read_set, context->input_profile,
+            context->input_lighting_configuration, context->input_catalog,
+            context->include_skylight, context->include_block_light) ||
+        !context->content_certificate->MatchesOutput(
+            coord, *field->GetPaddedData(), domain))
+      return false;
+  }
+  return true;
 }
 
 std::shared_ptr<const SectionLightVolume>

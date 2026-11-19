@@ -241,6 +241,9 @@ UWorldPersistence::UWorldPersistence(UWorld *world_context)
               " stale_inputs=" + std::to_string(stats.stale_inputs) +
               " no_context=" + std::to_string(stats.no_context) +
               " exported=" + std::to_string(stats.exported) +
+              " frozen_context=" + std::to_string(stats.frozen_context) +
+              " complete_context=" + std::to_string(stats.complete_context) +
+              " recorded_output=" + std::to_string(stats.recorded_output) +
               " bytes=" + std::to_string(stats.bytes) +
               " stale_sample=" + std::to_string(stats.has_stale_sample) +
               " stale_reason=" + std::to_string(stats.stale_reason) +

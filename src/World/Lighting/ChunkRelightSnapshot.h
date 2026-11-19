@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Lighting/RelightContentCertificate.h"
 #include "World/Lighting/SectionLightVolume.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/WorldVerticalProfile.h"
@@ -107,6 +108,7 @@ struct RelightComputeResult
   /// Set from the immutable read set when retaining a calculation context.
   /// Raw result flags never replace validation of the actual input stamps.
   bool retained_inputs_geometry_only{false};
+  std::shared_ptr<const RelightContentCertificate> content_certificate;
   int unknown_input_chunks{0};
   std::vector<RelightChunkLightData> chunks;
   bool frontier_unfinished{false};

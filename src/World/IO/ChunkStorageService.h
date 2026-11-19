@@ -29,6 +29,7 @@ struct ColumnLightCaptureStats
   size_t fields{0}, padded{0}, current{0}, retained_current{0},
       equivalent_catalog{0}, stale_inputs{0}, no_context{0}, exported{0},
       bytes{0};
+  size_t frozen_context{0}, complete_context{0}, recorded_output{0};
   bool has_stale_sample{false};
   glm::ivec3 stale_coord{0};
   int stale_reason{0}, absent_before{0}, absent_now{0};

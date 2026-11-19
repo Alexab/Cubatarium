@@ -589,6 +589,7 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
               world.GetChunkManager().GetSectionLightField(coord))
       {
         ++stats.fields;
+        stats.recorded_output += world.HasRecordedLightSamplingOutput(coord);
         stats.padded +=
             field->GetPaddedData() && field->GetPaddedDomains() == 3;
         stats.current +=
@@ -597,6 +598,8 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
             world.GetRecordedLightInputContext(coord, LightDomain::Sky);
         if (context && context->input_catalog)
         {
+          stats.frozen_context += bool(context->content_certificate);
+          stats.complete_context += context->inputs_complete;
           stats.retained_current += world.HasCompleteLightSamplingCalculation(
               coord, context->input_catalog);
           stats.equivalent_catalog +=

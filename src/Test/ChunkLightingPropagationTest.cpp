@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <memory>
+#include <type_traits>
 #include <unordered_map>
 
 namespace cutum
@@ -262,6 +263,17 @@ static void TestPersistedSectionLight()
   auto registry = MakeRegistry();
   const auto catalog = registry->GetDefinitionsCatalogSnapshot();
   const glm::ivec3 root(-2, -3, 1);
+  static_assert(!std::is_default_constructible_v<RelightContentCertificate>);
+  UBlockWorld unknown;
+  unknown.GetChunkManager().EnsureChunk(root);
+  RelightJobSpec unknown_spec;
+  unknown_spec.min_world_y = -64;
+  unknown_spec.max_world_y = 319;
+  const auto transient =
+      UChunkRelightSnapshot::CaptureSections(unknown, unknown_spec, {root})
+          .Compute(*registry);
+  Expect(!transient.inputs_complete && !transient.content_certificate,
+         "unknown snapshot cannot mint frozen content evidence");
   const glm::ivec3 source = root * CHUNK_SIZE + glm::ivec3(16, 8, 8);
   const glm::ivec3 roof =
       root * CHUNK_SIZE + glm::ivec3(8, 0, 8) + glm::ivec3(0, 352, 0);
@@ -356,8 +368,12 @@ static void TestPersistedSectionLight()
                 SectionLightRestoreResult::Rejected,
         "changed neighbor content rejects saved light even with matching "
         "global signature");
-    Expect(!CaptureSectionLight(reloaded, root, cloned_catalog),
-           "stale runtime calculations cannot issue new persisted receipts");
+    const auto historical = CaptureSectionLight(reloaded, root, cloned_catalog);
+    Expect(
+        historical && historical->checksum == receipt->checksum &&
+            !reloaded.HasCompleteLightSamplingCalculation(root, cloned_catalog),
+        "stale geometry exports only the original frozen artifact without "
+        "runtime readiness");
     UBlockWorld changed_roof;
     populate(changed_roof, resident);
     changed_roof.SetBlock(roof, BLOCK_AIR);
@@ -430,9 +446,108 @@ static void TestPersistedSectionLight()
     Expect(!DecodeSectionLight(malformed),
            "legacy interior bytes are not a padded-field certificate");
     original.SetBlock(source, BLOCK_AIR);
+    const auto before_eviction =
+        CaptureSectionLight(original, root, refreshed_catalog);
+    Expect(before_eviction && before_eviction->checksum == receipt->checksum &&
+               RestoreSectionLight(original, *before_eviction,
+                                   refreshed_catalog) ==
+                   SectionLightRestoreResult::Rejected,
+           "export preserves original input contents and reload rejects "
+           "changed geometry");
+    original.GetChunkManager().RemoveChunk(UChunkManager::WorldToChunk(source));
+    original.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return false; });
+    const auto after_eviction =
+        CaptureSectionLight(original, root, refreshed_catalog);
     Expect(
-        !CaptureSectionLight(original, root, refreshed_catalog),
-        "catalog-equivalent export still rejects changed geometry read sets");
+        after_eviction && after_eviction->checksum == receipt->checksum &&
+            !original.HasCompleteLightSamplingCalculation(root,
+                                                          refreshed_catalog) &&
+            RestoreSectionLight(original, *after_eviction, refreshed_catalog) ==
+                SectionLightRestoreResult::InputsUnavailable,
+        "retired unknown inputs cannot erase frozen certificate or grant "
+        "current readiness");
+    original.SetBlock(source, 50);
+    original.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const auto restored =
+        RestoreSectionLight(original, *after_eviction, refreshed_catalog);
+    const auto reexported =
+        CaptureSectionLight(original, root, refreshed_catalog);
+    Expect(restored == SectionLightRestoreResult::Restored &&
+               original.HasCompleteLightSamplingCalculation(
+                   root, refreshed_catalog) &&
+               reexported && reexported->checksum == receipt->checksum,
+           "unchanged reloaded contents restore fresh stamps and retain "
+           "reexportable evidence");
+    auto raw_bytes =
+        original.GetChunkManager().GetSectionLightField(root)->GetData();
+    raw_bytes[0] ^= 1;
+    original.GetChunkManager().ReplaceSectionLightData(root, raw_bytes);
+    Expect(!CaptureSectionLight(original, root, refreshed_catalog),
+           "raw field mutation invalidates frozen output evidence");
+    auto raw_result =
+        UChunkRelightSnapshot::CaptureSections(original, spec, {root})
+            .Compute(*registry);
+    raw_result.content_certificate.reset();
+    original.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *raw_result.chunks[0].padded_light, true, true);
+    Expect(
+        original.RecordLightCalculation(raw_result, catalog) == 1 &&
+            original.HasCompleteLightSamplingCalculation(root, catalog) &&
+            !CaptureSectionLight(original, root, catalog),
+        "raw legacy result cannot manufacture private frozen content evidence");
+    auto substituted =
+        UChunkRelightSnapshot::CaptureSections(original, spec, {root})
+            .Compute(*registry);
+    auto altered_volume = std::make_shared<SectionLightVolume>(
+        *substituted.chunks[0].padded_light);
+    altered_volume->cells[0] ^= 1;
+    substituted.chunks[0].padded_light = altered_volume;
+    original.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *altered_volume, true, true);
+    Expect(original.RecordLightCalculation(substituted, catalog) == 1 &&
+               !CaptureSectionLight(original, root, catalog),
+           "borrowed input certificate cannot bless substituted padded output "
+           "bytes");
+    auto mismatched =
+        UChunkRelightSnapshot::CaptureSections(original, spec, {root})
+            .Compute(*registry);
+    mismatched.read_set.push_back(mismatched.read_set.back());
+    original.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *mismatched.chunks[0].padded_light, true, true);
+    Expect(original.RecordLightCalculation(mismatched, catalog) == 1 &&
+               !CaptureSectionLight(original, root, catalog),
+           "borrowed content certificate cannot bless a different runtime read "
+           "set");
+    for (const bool sky : {true, false})
+    {
+      auto channel_spec = spec;
+      channel_spec.include_skylight = sky;
+      channel_spec.include_block_light = !sky;
+      const auto channel =
+          UChunkRelightSnapshot::CaptureSections(original, channel_spec, {root})
+              .Compute(*registry);
+      original.GetChunkManager().ReplaceComputedSectionLightVolume(
+          root, *channel.chunks[0].padded_light, sky, !sky);
+      Expect(original.RecordLightCalculation(channel, catalog) == 1,
+             "individual channel records its own private calculated output");
+    }
+    const auto merged = CaptureSectionLight(original, root, catalog);
+    Expect(merged && merged->checksum == receipt->checksum,
+           "independent sky and block calculations merge identical frozen "
+           "geometry evidence");
+    original.SetBlock(root * CHUNK_SIZE + glm::ivec3(8, 8, 8), 8);
+    auto block_spec = spec;
+    block_spec.include_skylight = false;
+    const auto new_block =
+        UChunkRelightSnapshot::CaptureSections(original, block_spec, {root})
+            .Compute(*registry);
+    original.GetChunkManager().ReplaceComputedSectionLightVolume(
+        root, *new_block.chunks[0].padded_light, false, true);
+    Expect(original.RecordLightCalculation(new_block, catalog) == 1 &&
+               original.HasRecordedLightSamplingOutput(root) &&
+               !CaptureSectionLight(original, root, catalog),
+           "independent channel certificates cannot mix incompatible geometry "
+           "contents");
   }
 }
 

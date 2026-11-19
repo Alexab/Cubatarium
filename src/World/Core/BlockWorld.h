@@ -135,6 +135,9 @@ public:
   bool HasCompleteLightSamplingCalculation(
       glm::ivec3 coord,
       const std::shared_ptr<const BlockDefinitionCatalog> &catalog) const;
+  /// Installed computed bytes with private frozen content evidence. This is
+  /// solely an export query, never current-geometry/light readiness.
+  bool HasRecordedLightSamplingOutput(glm::ivec3 coord) const;
 
   /// Capture only against this world's currently installed material catalog.
   std::shared_ptr<const SectionLightVolume>

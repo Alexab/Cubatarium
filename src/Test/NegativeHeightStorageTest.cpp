@@ -96,7 +96,8 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
              capture_stats.current == 0 &&
              capture_stats.retained_current == 2 &&
              capture_stats.equivalent_catalog == 2 &&
-             capture_stats.exported == 2 &&
+             capture_stats.exported == 2 && capture_stats.frozen_context == 2 &&
+             capture_stats.recorded_output == 2 &&
              (*refreshed_snapshot)[0]->volume.cells ==
                  (*snapshot)[0]->volume.cells,
          "real registry refresh exports current retained proofs and diagnoses "

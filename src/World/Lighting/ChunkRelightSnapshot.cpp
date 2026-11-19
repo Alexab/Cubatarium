@@ -587,6 +587,36 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
         }
     result.chunks.push_back({c, it->second, std::move(padded)});
   }
+  if (result.inputs_complete && !result.chunks.empty() &&
+      (result.include_skylight || result.include_block_light) &&
+      ReadSet.size() <= RelightContentCertificate::MaxInputs &&
+      result.chunks.size() <= RelightContentCertificate::MaxOutputs &&
+      std::all_of(ReadSet.begin(), ReadSet.end(),
+                  [&](const ChunkInputStamp &stamp)
+                  {
+                    return stamp.readsContent && !stamp.readsLight &&
+                           IsKnownGeometry(stamp.coord);
+                  }))
+  {
+    auto certificate = std::shared_ptr<RelightContentCertificate>(
+        new RelightContentCertificate);
+    certificate->Stamps = ReadSet;
+    certificate->Profile = result.input_profile;
+    certificate->Configuration = result.input_lighting_configuration;
+    certificate->Catalog = result.input_catalog;
+    certificate->Sky = result.include_skylight;
+    certificate->Block = result.include_block_light;
+    certificate->Contents.reserve(ReadSet.size());
+    for (const auto &stamp : ReadSet)
+      certificate->Contents.push_back(
+          {stamp.coord, SectionGeometryContentHash(GeometryData(stamp.coord))});
+    for (const auto &data : result.chunks)
+      certificate->Outputs.emplace(
+          data.coord, std::array<uint64_t, 2>{
+                          SectionLightDomainHash(*data.padded_light, 0),
+                          SectionLightDomainHash(*data.padded_light, 1)});
+    result.content_certificate = std::move(certificate);
+  }
   return result;
 }
 } // namespace cutum

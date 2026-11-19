@@ -11150,5 +11150,102 @@
       "Stop readinessdebtmax2and performanceFAIL remain authoritative. Diagnostic timings are not a controlled causal benchmark.",
       "Full S0..S6 remains active: canonical lifecycle/provider/cancellation, persisted certificates, semantic geometry/optics identities, actual GPU/backend parity and full motor/seed/radius/return/edit/save/eviction/performance/memory matrix."
     ]
+  },
+  "frozen_light_compute_content_certificate_2026_11_19": {
+    "status": "frozen_compute_content_certificate_implemented_causally_verified_native_export_pending_full_S0_S6_active",
+    "source_base_commit": "3c28a303b6f559777d2e27468bee773ed08e771f",
+    "problem": "Streaming save occurs after dependency geometry may have retired. Rehashing only currently live geometry either drops valid computed artifacts or incorrectly binds old light bytes to new input contents. Runtime-current readiness and export of a historical computed artifact are separate contracts.",
+    "implementation": {
+      "private_producer": "RelightContentCertificate has private construction, accessible only to actual UChunkRelightSnapshot::Compute and fully validated RestoreSectionLight. Complete known geometry/material snapshots produce frozen little-endian block-ID input hashes, original runtime stamps/profile/config/catalog/channel flags and per-output/per-domain padded hashes. Unknown/transient/no-output/no-channel/over-cap results cannot mint it.",
+      "bounds": "At most65536inputs/4096output hash records per computed certificate. Retained context shares metadata, never voxel geometry or output voxel arrays. Actual field volume remains its existing immutable owner. Whole-process memory/frame acceptance is still separate.",
+      "installation": "RecordLightCalculation retains the private certificate only when complete validated input context matches its exact original stamps/profile/config/catalog/channel flags. Export additionally requires actual world owner, field incarnation, channel revision, padded installation and private output hash to match for both domains. Raw/copied/altered results cannot manufacture export authority.",
+      "export": "CaptureSectionLight reads the frozen computed input contents, not current-world hashes. Identical cached artifacts survive dependency eviction/unknownness and preserve original checksum. Current geometry readiness remains false while dependencies are stale. Profile/config/current material contract remains mandatory; independently calculated sky/block channels must agree on overlapping geometry contents.",
+      "reload": "Existing mandatory footprint/checksum/profile/material/known-input/full-content checks still precede installation. Validated imported bytes get private evidence bound to fresh runtime stamps, so save/reload/evict/reexport cycles preserve authority without retaining old incarnations on disk.",
+      "diagnostics": "Capture observer now counts frozen_context/complete_context/recorded_output in addition to current/retained/stale input diagnostics, to distinguish missing complete provenance from retired input liveness in native saves."
+    },
+    "regressions": {
+      "file": "src/Test/ChunkLightingPropagationTest.cpp",
+      "coverage": [
+        "Private certificate is not publicly default constructible; unknown real snapshot emits no certificate.",
+        "Actual nonzero computed AIR/resident field, changed geometry and removed dependency: export retains original frozen checksum and cannot grant runtime readiness; changed contents reject restore, unknown contents defer, original returned contents restore fresh proof and reexport.",
+        "Raw byte mutation, raw legacy result without packet, substituted padded halo bytes, borrowed certificate with mismatched runtime read set reject export.",
+        "Independent sky/block solves merge identical frozen geometry, while incompatible geometry across domain contexts rejects joint artifact.",
+        "Existing complete catalog-refresh/optical-change/export and ordinary sync/async disk/restore-owner/cap regressions pass."
+      ],
+      "initial_target_logs": [
+        "build/desktop-msvc/frozen-light-content-first-test-20261119.log",
+        "build/desktop-msvc/frozen-light-domain-merge-test-20261119.log"
+      ]
+    },
+    "controls": [
+      {
+        "name": "frozen-input-data",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "stale geometry exports only the original frozen artifact without runtime readiness",
+        "log": "build/desktop-msvc/frozen-light-content-20261119-frozen-input-data-test.log"
+      },
+      {
+        "name": "input-retirement",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "stale geometry exports only the original frozen artifact without runtime readiness",
+        "log": "build/desktop-msvc/frozen-light-content-20261119-input-retirement-test.log"
+      },
+      {
+        "name": "private-output-binding",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "borrowed input certificate cannot bless substituted padded output bytes",
+        "log": "build/desktop-msvc/frozen-light-content-20261119-private-output-binding-test.log"
+      },
+      {
+        "name": "private-read-set-binding",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "borrowed content certificate cannot bless a different runtime read set",
+        "log": "build/desktop-msvc/frozen-light-content-20261119-private-read-set-binding-test.log"
+      },
+      {
+        "name": "channel-input-coherence",
+        "expected_failure": true,
+        "test_exit": 8,
+        "assertion": "independent channel certificates cannot mix incompatible geometry contents",
+        "log": "build/desktop-msvc/frozen-light-content-v2-20261119-channel-input-coherence-test.log"
+      }
+    ],
+    "final_sha256": {
+      "src/Test/ChunkLightingPropagationTest.cpp": "77d354921e0995cb53a1bd0388a387e4cb2cc3a92d4bbed3739bb734c4363294",
+      "src/Test/NegativeHeightStorageTest.cpp": "907b7df44c0ae2deda3a835dabc984d3444f75a4e40e18e9079897a477ae5d21",
+      "src/World/Core/BlockWorld.cpp": "1b6e79234b5a850f2650591f7565b1e1e4b2cdbcfc4287f61e0829723e692dc4",
+      "src/World/Core/BlockWorld.h": "e43b0dfc9cf1fda54abbe1ebe6cf647028a0dc5b5370fcb573c40a269f81ad06",
+      "src/World/IO/ChunkStorageService.cpp": "dbfee4ce11ea3b60369f32c53a0cbd19e20e4d5eb850629713df83d3da5232d5",
+      "src/World/IO/ChunkStorageService.h": "bf393990ba918ac39e256667c95b0b3507c347e8cb99ca218ce8f3b35040a4e0",
+      "src/World/Lighting/ChunkRelightSnapshot.cpp": "de49fce0dd9d0363289102ca3e4fe44f22f6e559e7180a6509958c5ed79510aa",
+      "src/World/Lighting/ChunkRelightSnapshot.h": "0c6d457849d9d88eadd184d73fb915bb1b999ff1268af053187968d0d214aeb6",
+      "src/World/Lighting/PersistedSectionLight.h": "411a776f6ffa02438823e3b1caf9095639b08154df96e55d04421fc2c278e1ef",
+      "src/World/Persistence/WorldPersistence.cpp": "da1c1025d69d21206a63f5090a5863ffde1af2d8e99a688797d30d0e2ced5cb3",
+      "src/World/Lighting/RelightContentCertificate.h": "7a35bbc02b5d3a404cd1b2321e17a540a8a4337b059326b421cfa9377d751d25",
+      "src/World/Lighting/SectionLightContentHash.h": "71529d0879456d43a710e0ca9ed3d6933d77c38fa64bcaf6960274036e3f65cd"
+    },
+    "restored_matrix": {
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 9.84,
+      "log": "build/desktop-msvc/frozen-light-content-v2-20261119-restored-thirty-two-tests.log"
+    },
+    "evidence_note": "Four base controls passed with exact source restoration. A sky/block coherence regression and its independent fifth control were added afterward; predicate/production hashes are unchanged from the first receipt, final test file is additive, and final32matrix passed on the recorded final hashes.",
+    "limits": [
+      "Native save export and cold restore not yet proved for this implementation. Previous257a02db9native247files/0receipts remains prior evidence; new private-producer wiring must produce real nonempty exports before cache reuse acceptance.",
+      "Frozen artifact availability is not current physical readiness. HasCompleteLightSamplingCalculation/GetCurrentLightSamplingVolume/render acceptance remain unchanged.",
+      "Checksum hashes detect corruption, not hostile-save authentication. Imported disk fields are accepted only under their saved solver/content/material/profile contract.",
+      "No retained previous output history is added when current field bytes are replaced; current installed output must still match its private computed evidence. Native diagnostics will determine whether incomplete overwrites also need lifecycle treatment.",
+      "Full S0..S6 remains active: canonical lifecycle/provider/cancellation, procedural AIR cache discovery, semantic geometry/optics identities, real GPU/backend parity, independent nonzero RGB/wet/transparency references and seed/radius/return/edit/save/eviction/performance/memory matrix."
+    ],
+    "next": [
+      "Build required committed Windows Release desktop and run unchanged wet motor route with full provenance and capture diagnostics.",
+      "Require nonempty real exported certificates, then cold reload with positive compatible restore telemetry; preserve altered/unknown output refusal and complete remaining full-goal matrix."
+    ]
   }
 }
