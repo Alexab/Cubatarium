@@ -9307,7 +9307,7 @@
         "passed": 16,
         "total": 16,
         "skipped": 0,
-        "seconds": 7.36,
+        "seconds": 7.37,
         "log": "build/desktop-msvc/physical-edit-admission-20261119-v2-restored-sixteen-tests.log"
       },
       "coverage_correction": "Initial single-slot control stayedGREEN because the fixture still used the alternate repair lane. Added explicit zero-quota while neighbor miss persists; now each of three removal controls fails the intended assertion. Initial control receipt retained.",
@@ -9318,5 +9318,162 @@
       "Continue full lifecycle/ownership/cancellation, semantic catalog identities, persisted content certificates, independent RGB/nonzero-light/wet/transparency and complete backend/seed/radius/edit/return/eviction/performance/memory acceptance.",
       "Investigate actual required-domain publication/field deadlines, fair progress and bounded maintenance; do not optimize outside-ring queue age as if it were a proven visible failure."
     ]
+  },
+  "physical_edit_admission_native_2026_11_19": {
+    "schema": "physical-edit-admission-native-assessment.v1",
+    "verified_at_utc": "2026-11-19T17:04:13.999001+00:00",
+    "source_commit": "c738e5f4eee5e63b820e6a4f9b2a45809f79f973",
+    "checkout_commit": "c738e5f4eee5e63b820e6a4f9b2a45809f79f973",
+    "artifacts": "build/desktop-msvc/engine-physical-edit-admission-wet-20261119-native",
+    "required_release_build": {
+      "exit": 0,
+      "log": "build/desktop-msvc/physical-edit-admission-app-build-20261119.log"
+    },
+    "parent_exit": 0,
+    "wrapper_exit": 2,
+    "overall": "UNTESTED",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 256,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 724,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 452,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "route": {
+      "status": "PASS",
+      "reason": "frontier_route_covered",
+      "displacement_chunks": 19,
+      "outside_initial_resident_samples": 2352
+    },
+    "inspection": {
+      "status": "PASS",
+      "reason": "inspection_capture_coverage",
+      "requested": 24,
+      "queued": 24,
+      "verified": 24
+    },
+    "relocations": 0,
+    "depth": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 15242,
+      "faults": 0,
+      "frame_epochs": 117,
+      "skipped_unscoped_or_occluded": 302,
+      "examples": [],
+      "fault_attribution": {
+        "schema": "engine-depth-fault-attribution.v1",
+        "section_count": 0,
+        "sections": [],
+        "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+      },
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "visual": {
+      "status": "UNTESTED",
+      "reason": "missing_visual_reference",
+      "samples": 15544,
+      "captures": 121,
+      "attributed_samples": 0,
+      "faults": 0
+    },
+    "performance": {
+      "status": "FAIL",
+      "legacy_gates_pass": false,
+      "metrics": {
+        "dirty_med": 367.0,
+        "wall_ms_med": 37.626400000000004,
+        "wall_ms_fly_med": 40.8803,
+        "stop_mesh_dirty_tick_med": 7.5545,
+        "post_stop_readiness_debt_max": 2.0,
+        "post_stop_mesh_missing_max": 1.0
+      },
+      "runtime_resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 211,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 35.8,
+          "p95": 57.1,
+          "max": 64.2
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 12.00625,
+          "p95": 52.63125,
+          "max": 54.2
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 2.25,
+          "p95": 27.456250000000004,
+          "max": 35.81875
+        },
+        "app_rss_mb_max": 712.625,
+        "system_available_memory_mb_min": 19578.09765625,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "residual_witness": {
+      "frame_epoch": 3330,
+      "miss_cx": -16,
+      "miss_cy": -3,
+      "miss_cz": 5,
+      "near_focus_hole_probe_witness_mesh_revision": 548,
+      "near_focus_hole_probe_witness_drawable": 0,
+      "near_focus_hole_probe_witness_dirty": 1,
+      "near_focus_hole_probe_witness_build_in_flight": 0,
+      "near_focus_hole_probe_witness_geometry_debt": 1,
+      "near_focus_hole_probe_witness_content_revision": 4096,
+      "near_focus_hole_probe_witness_light_revision": 1,
+      "dirty_n": 271,
+      "pending_light_n": 118
+    },
+    "evidence_limits": [
+      "Native parent0 is provenance only; wrapper2/overallUNTESTED and legacy performanceFAIL preserved.0/15242 is scoped opaque depth, not independent lighting/RGB/transparency proof.",
+      "Baseline repeat0/15562 and post-repair0/15242 on same host are observations, not controlled causal performance improvement. Deterministic edit-lifetime causality is established by three expected-failure controls and restored16GREEN.",
+      "Readiness witness with empty publication/high mesh revision is a concrete rebuild/publication churn lead, not by itself proof of a visible hole or of its cause."
+    ],
+    "next": [
+      "Trace one residual resident/non-drawable high-revision section through capture, zero-surface proof, current field, admission, apply and publication; reproduce causal regression before choosing repair.",
+      "Complete geometry/optics catalog identity, persisted field certificates and backend lifecycle parity, independent nonzero RGB/wet/transparency references, required-domain deadlines, return/edit/eviction/seed/radius/backend and controlled performance/memory acceptance."
+    ],
+    "goal": "active; full original S0..S6 incomplete"
   }
 }
