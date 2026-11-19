@@ -8282,10 +8282,28 @@
         "cache_source_sha256": "922941689a31c85d5455b068b95605bb597c91a14416802d402f72ea11d0db49",
         "restored_matrix": "build/desktop-msvc/engine-physical-activation-v3-restored-fourteen-tests.log",
         "result": "14/14 Release PASS49.14seconds; actual desktop GL3.3/4.3 and GLES consumer drivers included. Async and sync data-completion scenario proves zero doomed builds, one geometry build, five exposed cube faces against a loaded undrawn neighbor, then one publication after actual field calculation. Original epochs/stamps are not relabeled.",
-        "native": "Application build and required World_261 wet-negative-cave flight pending. Unit/driver success is not whole-world visual or performance acceptance."
+        "native": {
+          "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/physical-geometry-activation-observation.json",
+          "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
+          "release_application_build": "build/desktop-msvc/engine-physical-policy-app-build.log",
+          "runtime": "PASSexit0",
+          "route": "PASS19chunks1124outside0relocations",
+          "inspection": "PASS24verified",
+          "startup": "PASS1176ready",
+          "opaque_depth": "FAIL4/19555rays,2epochs,1section(-5,-3,3),owner4098",
+          "visual": "UNTESTEDmissingRGBreference",
+          "performance": "FAIL; no controlledA/B",
+          "provenance": {
+            "exe": true,
+            "config_restored": true,
+            "source_world": true,
+            "runtime_shader_assets": true,
+            "source_commit": true
+          }
+        }
       },
       "remaining": [
-        "Run mandatory Release application build and a provenance-checked no-teleport19chunk24inspection wet native flight. Preserve previous completed15/14860depthFAIL and the later timeout; close first-publication counterexamples with new framebuffer evidence, not readiness metadata.",
+        "Native activation run completed with19chunks0relocations24verifiedcaptures and1176startup-ready sections but4/19555opaque-depthFAIL at(-5,-3,3),frames374..375. Geometry is explicitly retained awaiting light (mask4098); early field handoffs do not yet settle current calculation. Close the current-field completion/publication deadline with source evidence, a regression and further native acceptance. RGB remainsUNTESTED and performance/post-stop debtFAIL.",
         "Complete cancellation/source-revision revalidation beyond capture-policy transitions, provider/storage lifecycle and full backend/Flat/edit/return/eviction/radius8 acceptance.",
         "Finish semantic geometry-vs-optics catalog identity, persisted content certificates and algorithm/profile compatibility, independent nonzero RGB/wet/transparency references, CPU/GPU solver/backend matrix, controlled performance/memory and whole-pipeline readiness prediction."
       ]
@@ -8317,7 +8335,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "ae7657bcf5fa7af07bfcd7757aa93da33dfc530b",
+    "latest_source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -8326,75 +8344,47 @@
     ],
     "S5": "Production Greedy Full geometry capture now uses PhysicalField; CPU/GPU/retained/synchronous owners carry versioned policy and validate actual private field separately. Legacy preview, stale-dark scans and packed retention no longer read zero baked data as missing light. Unknown data defers builds.14ReleaseGREEN and4expected-failure activation controls with exact source restoration. Full native/RGB/backend/persistence/performance acceptance remains open.",
     "remaining_critical_path": [
-      "Physical geometry policy is active for supported Full consumers and locally verified, including data completion, exact target transition ownership and ready CPU replacing packed geometry. Mandatory application build and provenance-checked native first-publication/visual acceptance for this activation are next; prior15/14860depthFAIL and timeout remain open.",
+      "Native activation run completed with19chunks0relocations24verifiedcaptures and1176startup-ready sections but4/19555opaque-depthFAIL at(-5,-3,3),frames374..375. Geometry is explicitly retained awaiting light (mask4098); early field handoffs do not yet settle current calculation. Close the current-field completion/publication deadline with source evidence, a regression and further native acceptance. RGB remainsUNTESTED and performance/post-stop debtFAIL.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. Latestae7657bcfapp/runtime timeoutFAIL with no framebuffer acceptance; last completed6b369f738depth15/14860FAIL preserved. FullS0..S6scope unchanged.",
+    "completion": "Not established. Physical policy activated and14ReleaseGREEN; latest completed nativea1dac63a4FAIL4/19555depth inone retained-awaiting-field section,19chunks0relocations24verifiedcaptures. RGBUNTESTED, performance/post-stop debtFAIL. FullS0..S6scope unchanged.",
     "latest_native_counterexample": {
-      "source_commit": "ae7657bcf5fa7af07bfcd7757aa93da33dfc530b",
-      "artifact": "build/desktop-msvc/engine-field-completion-hint-wet-native/field-completion-hint-timeout-observation.json",
+      "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
+      "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/physical-geometry-activation-observation.json",
       "result": "FAIL",
+      "runtime_exit": 0,
       "wrapper_exit": 1,
-      "process_exit": 124,
-      "process_timeout_s": 600,
-      "native_report_exists": false,
-      "startup": "PASS1176sections; no data/light/publication blockers",
-      "route": "UNTESTEDmissing_route_evidence",
-      "opaque_depth": "UNTESTEDmissing_framebuffer_trace",
-      "visual": "UNTESTEDmissing_visual_reference",
-      "runtime_resources": {
-        "schema": "flight-runtime-resources.v1",
-        "available": true,
-        "disabled_by_user": false,
-        "sample_interval_sec": 1.0,
-        "sample_count": 264,
-        "logical_cpu_count": 8,
-        "host_cpu_percent_summary": {
-          "median": 100.0,
-          "p95": 100.0,
-          "max": 100.0
-        },
-        "app_cpu_machine_percent_summary": {
-          "median": 13.9,
-          "p95": 24.925,
-          "max": 42.9375
-        },
-        "other_cpu_machine_percent_estimate_summary": {
-          "median": 83.5875,
-          "p95": 98.7,
-          "max": 100.0
-        },
-        "app_rss_mb_max": 738.9609375,
-        "system_available_memory_mb_min": 11206.0703125,
-        "timed_out": true,
-        "audio_disabled_for_test": true
+      "route": "PASS19chunks1124outside0relocations",
+      "inspection": "PASS24verified",
+      "startup": "PASS1176ready",
+      "opaque_depth": {
+        "faults": 4,
+        "checked": 19555,
+        "epochs": [
+          374,
+          375
+        ],
+        "section": [
+          -5,
+          -3,
+          3
+        ],
+        "owner_mask": 4098
       },
-      "provenance": {
-        "exe": true,
-        "config_restored": true,
-        "source_world": true,
-        "runtime_shader_assets": true,
-        "source_commit": true
-      },
-      "selected_field_completion_and_preparation_trace": [
-        "I20261119 13:22:50.121465 38100 Log.cpp:601] [ChunkPublication] field_completion_hint coord=(-4,-3,3) frame_epoch=228 source_revision=3",
-        "I20261119 13:22:50.419547 38100 Log.cpp:601] [ChunkPublication] resource coord=(-4,-3,3) frame_epoch=229 decision=prepared source_epoch=4 current_epoch=4 geometry_valid=1 unknown_mask=0 physical_snapshot=1 provisional=0 field_geometry_match=1 catalog_match=1"
-      ],
-      "analysis": [
-        "Native killed at600second deadline (exit124); no final native report or retained framebuffer trace. OverallFAIL, route/depth/RGBUNTESTED. It is not a zero-fault run.",
-        "Actual first-world-paint required-ring witness1176sectionsPASS with no data/light/publication blockers; this does not imply pixel/light acceptance.",
-        "Runtime field completion hook and subsequent validated physical resource preparation occurred for selected geometry. Event uses cached mesh focus frame epoch (228), preparation229; use timestamps when interpreting cross-phase events, not a claimed exact render-frame latency.",
-        "Measured hostCPU median100percent, other-CPU estimate median83.5875percent, appCPU median13.9percent; available memory minimum11206MiB. This run cannot establish code-induced performance change or successful full route/visual acceptance.",
-        "Preserve prior completed6b369f738wet15/14860depth counterexample. Do not replace it with this untested visual run or rerun immediately while contention remains."
+      "visual": "UNTESTEDmissingRGBreference",
+      "performance": "FAIL",
+      "preserved_previous": [
+        "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
+        "build/desktop-msvc/engine-field-completion-hint-wet-native/field-completion-hint-timeout-observation.json"
       ]
     },
     "last_completed_depth_counterexample": {
-      "source_commit": "6b369f738",
-      "artifact": "build/desktop-msvc/engine-ray-first-lane-wet-native/ray-first-lane-observation.json",
-      "faults": 15,
-      "checked": 14860,
+      "source_commit": "a1dac63a4e990e9555d793b0d423ec8c4a1e9e6b",
+      "artifact": "build/desktop-msvc/engine-physical-policy-activated-wet-native/physical-geometry-activation-observation.json",
+      "faults": 4,
+      "checked": 19555,
       "status": "FAIL"
     }
   }
