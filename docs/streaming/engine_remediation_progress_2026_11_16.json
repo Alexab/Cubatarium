@@ -7446,6 +7446,14 @@
           "remaining_faults": "All4 faults are at31.15..31.16blocks, coords(-3,-3,3),(-4,-3,3),2faults each, no published geometry, queued, reportedsettled, dirtyages12/14frames owner1. Matches original first-publication failure class; do not close original287case.",
           "provenance": "EXE/config restored/source-world/all runtime shaders/source commit independently verified true after terminal wrapper.",
           "target_trace": "Selected(-5,-3,3):7provisional-light rejected builds frames263..283, then current physical field prepared frame311. This is adjacent diagnostic evidence, not same-hit cause of4faults."
+        },
+        "unchanged_exe_repeat": {
+          "source": "9908aab24; checkoutcb39ed5f6differs only documentation, verified beforelaunch",
+          "artifact": "build/desktop-msvc/engine-first-publication-minus3-native/surface-lease-cohort-observation.json",
+          "result": "app0wrapper1 overallFAIL;1605frames360.244active seconds;19chunks1184outside0relocations;24/24inspectionviews;11752depthchecks6faults95epochs. All5provenancechecks true.",
+          "faults": "All6 reference-matching solid hits lack published geometry:5queued owner1dirtyage26/45frames,1async-inflight owner2. Sections(-5,-3,3),(-5,-2,3),(-5,-2,2),distance22.68..31.16blocks. Original first-publication class persists.",
+          "target_trace": "Traced(-3,-3,3) has no faults in this repeat, eighthbuild prepares atframe220. Four earlier builds lack negative-X geometry input;3later validgeometry builds lack current physicalfield. Evidence for redundant work/dependency latency, not same-hit proof for6faults.",
+          "next_required": "Implement actual retained geometry awaiting computed field with bounded resource ownership, cancellation/eviction/epoch cleanup, and remove light from geometry scheduling/merge/dependency identity after consumer cutover. Add regression through real world/cache invalidation and scheduling, not only direct binding.Refresh. Then repeat native fault coverage and independent RGB/light references."
         }
       }
     }
