@@ -7562,6 +7562,19 @@
         "limits": "One scoped32block opaque-depth run cannot close original sporadic first-publication class. FullRGB/transparencyUNTESTED. Performance fails. Post-stop mesh-missing/stalled proxies remain1. Sync awaiting and light-free geometry keys remain open.",
         "artifact": "build/desktop-msvc/engine-packed-awaiting-field-dry-native/packed-geometry-awaiting-field-observation.json"
       }
+    },
+    "synchronous_geometry_awaiting_physical_field": {
+      "status": "Implemented;15lifecycle cases run through actual synchronous builders with headless and real GL field resources.12Release checksGREEN;21Python harness testsGREEN. Required Release app/native sync flight pending.",
+      "implementation": "Full physical-light synchronous and immediate builders now submit immutable captured geometry, catalog, boundary/cross inputs, original source stamps and epoch to shared ApplyMeshResult and bounded awaiting-field publication. Uses current cache source revision rather than content XOR light revision. Synchronous cache adopts light settlement only from actual current world calculation certificate. Synchronous scheduler drains ready results and does not resubmit retained geometry.",
+      "lifecycle": "Identical render settings no longer cancel retained results. Actual async/greedy/light policy changes do. KeepDirty and outside-radius cancellation operate on retained owners even without an async builder. Empty/disabled/zero-budget packed processing returns before GL pipeline initialization, so headless ready-result drain is safe.",
+      "regressions": {
+        "original_red": "engine-sync-awaiting-field-red-test.log: completed geometry keeps one owner while awaiting physical light FAIL on original synchronous path.",
+        "headless_followup": "engine-sync-awaiting-field-cancel-tests.log: actual headless drain SegFault; empty GPU queue initialized GL pipeline. Fixed by checking actual work before initialization.",
+        "packed_followup": "engine-sync-awaiting-field-twelve-tests.log: visible lit CPU replacement retires packed slot and its source lease FAIL after common-path migration. Shared path now immediately displays a certified lit drawable CPU successor; cannot wait for unqueued packed successor. Dark retained artifact ownership test remains intact."
+      },
+      "validation": "engine-sync-awaiting-field-packed-replace-twelve-tests.log12/12PASS20.41seconds. Extended15case matrix executes actual sync builds, repeated identical settings, dirty hints, edits, eviction, same-coordinate incarnation, world epoch, cancel modes and policy changes; verified physical pairing without extra build. Existing immediate resource failure/dead/wrong-epoch tests now require retained geometry, unchanged predecessor binding and recovery. All original failing artifacts preserved.",
+      "automation": "tools/engine_smoke_run.py --synchronous-meshing isolates config change and requires explicit boolean native async_meshing_enabled=false in every movement sample. Missing observations UNTESTED; mixed/malformed modes FAIL. Scope is scheduling mode, not CPU/GPU mesher backend. Failure restores exact original config bytes; default mode unchanged. engine-sync-meshing-harness-tests.log21testsPASS7.503seconds.",
+      "limits": "Full sync native pending. Geometry merge/capture/dependency keys still include light; semantic catalog geometry identity, persisted certificates, complete lifecycle/backend parity and RGB/transparency/performance acceptance remain. No closure of original sporadic first-publication class."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7583,7 +7596,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "All main physical-field consumers and bounded CPU/GPU completed-geometry awaiting-field paths implemented.12Release testsGREEN and5GPUownership negative controls. CPUwet native0/13630 and packedGPUdry native0/12838scoped depth faults, each19chunk0relocations24inspectionviews. Same GPUslot/generation observed waiting then publishing with ready field. FullRGB/transparencyUNTESTED; performanceFAIL. Sync awaiting, light-free geometry keys and complete acceptance remain.",
+      "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous completed-geometry awaiting-field paths implemented. Sync12Release checksGREEN plus21harness tests; sync app/native pending. Prior GPUdry0/12838 and CPUwet0/13630scoped native depth faults,19chunk0relocations24views each. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free merge/capture/dependency keys and complete acceptance remain.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."

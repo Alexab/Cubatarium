@@ -577,7 +577,8 @@ void UChunkMeshCache::InvalidateVisibleList()
 }
 void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 {
-  if ((!settings.AsyncMeshing || !settings.GreedyMeshing ||
+  if ((settings.AsyncMeshing != Render.AsyncMeshing ||
+       settings.GreedyMeshing != Render.GreedyMeshing ||
        settings.Lighting != Render.Lighting) &&
       !GeometryAwaitingLight_.empty())
   {
@@ -764,10 +765,6 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty()
 void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
     glm::ivec3 focus_ground_chunk, int keep_horiz_lease)
 {
-  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder)
-  {
-    return;
-  }
   // Dirty is removed at schedule time — re-queue Active coords before drop so
   // "KeepDirty" is real (otherwise cancel orphans remesh debt).
   // Underfeet lease: keep Active tracking for horiz≤keep (no MarkDirty storm).
@@ -800,7 +797,8 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
       Dirty.MarkDirtyPriority(entry.first);
     }
   }
-  AsyncBuilder->CancelPending();
+  if (AsyncBuilder)
+    AsyncBuilder->CancelPending();
   // Builder InFlight was cleared; Active/RemeshAfterApply must follow or
   // HasInflightMeshBuild stays true and RemeshAfterApply loops forever while
   // async count (builder-only) looks drained.
@@ -825,8 +823,7 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
 void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
     glm::ivec3 focus_ground_chunk, int radius_chunks, int keep_horiz_lease)
 {
-  if (!Render.AsyncMeshing || !Render.GreedyMeshing || !AsyncBuilder ||
-      radius_chunks < 0)
+  if (radius_chunks < 0)
   {
     return;
   }
@@ -6597,18 +6594,18 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
                                              int max_count, double budget_ms,
                                              MeshRebuildTickStats &stats)
 {
+  // Draining CPU/synchronous ready results needs no GL pipeline. In
+  // particular, an empty GPU queue must also be safe without a GL context.
+  if (!Render.GpuPackedMeshing || PendingGpuApplies.empty() || max_count <= 0 ||
+      budget_ms == 0.0)
+    return 0;
   EnsureGpuPipeline();
   UGpuMeshPipeline *pipeline = GpuPipeline.get();
-  if (!pipeline || !pipeline->IsReady() || !Render.GpuPackedMeshing ||
-      PendingGpuApplies.empty() || max_count <= 0)
+  if (!pipeline || !pipeline->IsReady())
   {
     return 0;
   }
-  // budget_ms < 0 → unlimited; == 0 → no work; > 0 → elapsed cap.
-  if (budget_ms == 0.0)
-  {
-    return 0;
-  }
+  // budget_ms < 0 → unlimited; > 0 → elapsed cap.
   LastGpuKickDeferReason_.clear();
 
   using GpuProfileClock = std::chrono::steady_clock;
@@ -9047,7 +9044,13 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   // Underfeet: also retain on intentional empty (no PreferKick storm).
   // P4: vis/keep ring also keeps until Bind (cruise pool 13.8→2 MB).
   // LitRing: lit GpuPacked keep-until-replace (never free into dark plug).
-  if (ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
+  // A certified lit CPU successor is already a drawable replacement. Waiting
+  // for a packed successor that was never queued would hide completed edits.
+  const bool show_new_cpu_now =
+      current_computed_candidate && chunkMesh.RenderLightBinding &&
+      had_gpu_drawable && new_cpu_drawable && !new_dark && !defer_until_lit;
+  if (!show_new_cpu_now &&
+      ShouldDeferFreeChunkUntilPackedReplace(had_gpu_drawable,
                                              new_cpu_drawable) &&
       (!intentional_empty ||
        ShouldRetainUnderfeetGpuOnEmptyReplace(underfeet_lease, had_gpu_drawable,
@@ -12232,6 +12235,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     return stats;
   }
 
+  if (!skip_gpu_consume)
+    stats.Completed +=
+        DrainGeometryAwaitingLight(world, registry, max_drain_per_frame);
   int rebuilt = 0;
   const int sync_budget =
       std::max(0, std::max(max_drain_per_frame, max_schedule_per_frame));
@@ -12245,11 +12251,15 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
   for (const auto &coord : sync_candidates)
   {
     Dirty.Erase(coord);
+    if (IsGeometryAwaitingLight(coord))
+      continue;
+    LastApplyWasRetainedPrior_ = false;
     RebuildChunk(world, registry, coord);
     ClearSatisfiedScreenRayRepairPin(coord);
     ++rebuilt;
     ++stats.SyncRebuilt;
-    ++stats.Completed;
+    if (!LastApplyWasRetainedPrior_)
+      ++stats.Completed;
   }
   LastMeshDirtySyncN += rebuilt;
   LastMeshDirtySyncMs += take_seg_ms();
@@ -12460,10 +12470,19 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
   {
     Cache.erase(chunkCoord);
     std::unordered_map<BlockId, GreedyMeshBatch> byBlockId;
+    const bool physical_publication =
+        PrepareRenderLight && Render.Lighting == LightingMode::Full &&
+        world.GetLightingConfigurationIdentity() !=
+            static_cast<uint64_t>(LightingMode::Flat);
+    if (physical_publication && (HasInflightMeshBuild(chunkCoord) ||
+                                 MeshRevisions.Current(chunkCoord) == 0))
+      InvalidateInFlightMeshBuild(chunkCoord);
     // Sysreset v2: sync rebuild must see BoundaryOverlay (heal sticky faces).
     const uint64_t sync_rev =
-        static_cast<uint64_t>(chunk->GetContentRevision()) ^
-        (static_cast<uint64_t>(chunk->GetLightFieldRevision()) << 1);
+        physical_publication
+            ? MeshRevisions.Current(chunkCoord)
+            : static_cast<uint64_t>(chunk->GetContentRevision()) ^
+                  (static_cast<uint64_t>(chunk->GetLightFieldRevision()) << 1);
     const auto sync_catalog = registry.GetDefinitionsCatalogSnapshot();
     const auto sync_epoch = CaptureStore.WorldEpoch();
     ChunkMeshSnapshot sync_snap = ChunkMeshSnapshot::Capture(
@@ -12499,6 +12518,37 @@ void UChunkMeshCache::RebuildChunk(const UBlockWorld &world,
     {
       pair.second.blockId = pair.first;
       new_batches.push_back(std::move(pair.second));
+    }
+    if (physical_publication)
+    {
+      MeshBuildResult result;
+      result.coord = chunkCoord;
+      result.sourceRevision = sync_rev;
+      result.sourceWorldEpoch = sync_epoch;
+      result.InputStamps = sync_snap.inputStamps;
+      result.InputLightHaloSignatures = sync_snap.lightHaloSignatures;
+      result.InputStampsValid = sync_snap.inputStampsValid;
+      result.CertifiedPaddedLight = sync_snap.certifiedPaddedLight;
+      result.InputCatalog = sync_catalog;
+      result.GeometryInputs = sync_snap.GeometryRenderInputs(sync_catalog);
+      result.RenderLight = sync_snap.renderLight;
+      result.BoundaryOverlay = sync_snap.boundaryOverlay;
+      result.ProvisionalLightPreview = sync_snap.provisionalLightPreview;
+      result.batches = std::move(new_batches);
+      CollectCrossInstancesFromSnapshot(sync_snap, registry, sync_catalog.get(),
+                                        result.crossCenters);
+      auto &demand = GetRenderDemandStore();
+      demand.NoteDemand(chunkCoord, sync_rev, chunk->GetLightFieldRevision(), 0,
+                        0.0, sync_epoch, chunk->GetIncarnation());
+      // A synchronous cache has its own publication epoch. Adopt settlement
+      // only from the world's actual current calculation certificate.
+      if (world.HasCompleteLightSamplingCalculation(chunkCoord, sync_catalog))
+        demand.NoteLightCalculationSettled(
+            chunkCoord, sync_epoch, chunk->GetIncarnation(),
+            chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+      ActiveMeshSourceRevision[chunkCoord] = sync_rev;
+      ApplyMeshResult(world, registry, std::move(result));
+      return;
     }
     const bool defer_until_lit =
         DeferMeshUntilLit && DeferMeshUntilLit(chunkCoord);

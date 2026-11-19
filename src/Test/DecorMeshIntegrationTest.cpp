@@ -1857,10 +1857,11 @@ static void TestNoDrawPhysicalResourceAdmission(
            const SectionRenderLightSnapshot &)
             -> std::shared_ptr<SectionRenderLightBinding> { return {}; });
     cache.RebuildChunkImmediate(world, registry, root);
-    Expect(
-        !cache.GetPublishedGeometryRenderInputs(root) &&
-            cache.IsChunkMeshDirty(root),
-        "drawable source without computed light retains its publication retry");
+    Expect(!cache.GetPublishedGeometryRenderInputs(root) &&
+               cache.GetGeometryAwaitingLightCount() == 1 &&
+               cache.HasInflightMeshBuild(root) &&
+               !cache.IsChunkMeshDirty(root),
+           "drawable source without computed light retains completed geometry");
   }
   UBlockWorld unknown;
   unknown.SetFluidDefinitions(definitions);
@@ -1970,7 +1971,8 @@ public:
 
 static void TestGeometryWaitsForPhysicalLight(
     cutum::UBlockRegistry &registry,
-    const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false)
+    const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false,
+    bool synchronous = false)
 {
   using namespace cutum;
   const glm::ivec3 root(0);
@@ -1987,7 +1989,7 @@ static void TestGeometryWaitsForPhysicalLight(
     CountingPhysicalMesher mesher;
     UChunkMeshCache cache;
     auto settings = MakeFrustumMeshSettings();
-    settings.AsyncMeshing = true;
+    settings.AsyncMeshing = !synchronous;
     settings.FrustumCulling = false;
     cache.SetRenderSettings(settings);
     cache.SetMesherBackend(&mesher);
@@ -2020,10 +2022,13 @@ static void TestGeometryWaitsForPhysicalLight(
     Expect(
         cache.GetCaptureStore().CaptureAndStore(world, root, geom).has_value(),
         "awaiting-field fixture captures actual geometry before calculation");
-    Expect(cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0)
-                       .Scheduled == 1 &&
-               cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
-           "actual worker computes geometry before the physical field");
+    const auto initial =
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(synchronous
+               ? initial.SyncRebuilt == 1
+               : initial.Scheduled == 1 &&
+                     cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "actual builder computes geometry before the physical field");
     cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
     Expect(mesher.builds == 1 && cache.HasInflightMeshBuild(root) &&
                !cache.IsChunkMeshDirty(root) &&
@@ -2033,6 +2038,8 @@ static void TestGeometryWaitsForPhysicalLight(
            "completed geometry keeps one owner while awaiting physical light");
     for (int tick = 0; tick < 8; ++tick)
     {
+      if (synchronous && tick == 1)
+        cache.SetRenderSettings(settings);
       if (tick == 2)
         cache.MarkDirtyPriority(
             root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
@@ -2085,7 +2092,7 @@ static void TestGeometryWaitsForPhysicalLight(
       cache.SetRenderSettings(settings);
       break;
     case 12:
-      settings.AsyncMeshing = false;
+      settings.AsyncMeshing = synchronous;
       cache.SetRenderSettings(settings);
       break;
     case 13:
@@ -2141,7 +2148,10 @@ static void TestGeometryWaitsForPhysicalLight(
     demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
                                        chunk->GetLightFieldRevision(),
                                        chunk->GetContentRevision());
-    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    if (synchronous)
+      cache.DrainPendingGpuMeshes(world, registry, 8, 0);
+    else
+      cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
     if (lifecycle)
     {
       if (cache.GetGeometryAwaitingLightCount() != 0 ||
@@ -3155,12 +3165,16 @@ static void TestFirstComputedLightPublication(
     Expect(sync_cache.GetPublishCount(root) == sync_count &&
                sync_cache.GetPublishedRenderLightBinding(root) ==
                    sync_binding &&
-               sync_cache.IsChunkMeshDirty(root),
-           "immediate resource failure retains predecessor and retry ticket");
+               sync_cache.IsGeometryAwaitingLight(root) &&
+               !sync_cache.IsChunkMeshDirty(root),
+           "immediate resource failure retains predecessor and completed "
+           "geometry");
     sync_cache.RebuildDirtyChunksWithStats(world, registry, 100, 0, false, 0);
     Expect(sync_cache.GetPublishCount(root) == sync_count &&
-               sync_cache.IsChunkMeshDirty(root),
-           "bounded synchronous drain cannot erase the rejected retry ticket");
+               sync_cache.IsGeometryAwaitingLight(root) &&
+               !sync_cache.IsChunkMeshDirty(root),
+           "bounded synchronous drain retains geometry while resource is "
+           "unavailable");
     for (const bool dead : {false, true})
     {
       sync_cache.SetPrepareRenderLightFn(
@@ -3177,7 +3191,8 @@ static void TestFirstComputedLightPublication(
       Expect(
           sync_cache.GetPublishCount(root) == sync_count &&
               sync_cache.GetPublishedRenderLightBinding(root) == sync_binding &&
-              sync_cache.IsChunkMeshDirty(root),
+              sync_cache.IsGeometryAwaitingLight(root) &&
+              !sync_cache.IsChunkMeshDirty(root),
           "wrong-epoch or dead prepared resource cannot replace predecessor");
     }
     sync_cache.SetPrepareRenderLightFn(
@@ -4732,6 +4747,8 @@ int main(int argc, char **argv)
       TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
       TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
       TestGeometryWaitsForPhysicalLight(registry, definitions.get(), true);
+      TestGeometryWaitsForPhysicalLight(registry, definitions.get(), true,
+                                        true);
       TestFirstComputedLightPublication(registry, definitions.get(), true);
       TestOrderedFieldBindings(registry, definitions.get());
       TestCrossLightArtifactTransport(registry, definitions.get(), true);
@@ -4766,6 +4783,7 @@ int main(int argc, char **argv)
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());
+  TestGeometryWaitsForPhysicalLight(registry, definitions.get(), false, true);
   TestGeometryLightQueueCapacity(registry, definitions.get());
   TestFirstComputedLightPublication(registry, definitions.get());
   TestCrossLightArtifactTransport(registry, definitions.get());

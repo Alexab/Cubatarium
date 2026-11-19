@@ -266,6 +266,34 @@ def render_distance_payload(payload: bytes, radius: int) -> bytes:
     return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
+def synchronous_meshing_payload(payload: bytes) -> bytes:
+    config = json.loads(payload)
+    config.setdefault("render", {})["async_meshing"] = False
+    return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def synchronous_meshing_evidence(path: Path) -> dict:
+    """Require runtime observations; config intent alone is not mode evidence."""
+    if not path.is_file():
+        return {"status": "UNTESTED", "reason": "missing_meshing_mode_observations"}
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+        samples = report["samples"]
+        if not isinstance(samples, list):
+            raise ValueError("samples must be a list")
+        if not samples:
+            return {"status": "UNTESTED", "reason": "empty_meshing_mode_observations"}
+        values = [row["async_meshing_enabled"] for row in samples]
+        if any(not isinstance(value, bool) for value in values):
+            raise ValueError("runtime mode must be boolean")
+    except (ValueError, KeyError, TypeError):
+        return {"status": "FAIL", "reason": "malformed_meshing_mode_observations"}
+    return {"status": "FAIL" if any(values) else "PASS",
+            "reason": "async_meshing_observed" if any(values) else "native_async_meshing_disabled",
+            "samples": len(values), "async_samples": sum(values),
+            "scope": "native scheduling mode only; does not certify CPU/GPU mesher backend"}
+
+
 def startup_observation_evidence(trace: Path) -> dict:
     """Verify the native driver actually stayed still and issued no movement."""
     import math
@@ -314,7 +342,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         minimum_chunks: int = 16, fixture_scene: str | None = None,
         process_timeout: float | None = None,
         render_distance: int | None = None, sprint: bool = False,
-        startup_only: bool = False, capture_encode_delay_ms: int = 0) -> dict:
+        startup_only: bool = False, capture_encode_delay_ms: int = 0,
+        synchronous_meshing: bool = False) -> dict:
     if (isinstance(capture_encode_delay_ms, bool) or
             not isinstance(capture_encode_delay_ms, int) or
             not 0 <= capture_encode_delay_ms <= 10000):
@@ -333,6 +362,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if render_distance is not None:
             config_path = runtime / "config.json"
             config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
+        if synchronous_meshing:
+            config_path = runtime / "config.json"
+            config_path.write_bytes(synchronous_meshing_payload(config_path.read_bytes()))
         scene = None
         if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
@@ -454,6 +486,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
                  "render_distance_override": render_distance,
+                 "synchronous_meshing": synchronous_meshing,
                  "sprint": sprint, "startup_only": startup_only,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
@@ -487,6 +520,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             from engine_smoke_verdict import startup_only_verdict
             verdict = startup_only_verdict(
                 report, verdict, startup_observation_evidence(artifacts / "diagnostic_bot.jsonl"))
+        if synchronous_meshing:
+            mode = synchronous_meshing_evidence(artifacts / "movement_diagnostics.json")
+            verdict["components"]["synchronous_meshing"] = mode
+            if mode["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif mode["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         if scene is not None and not startup_only:
             from engine_smoke_fixtures import evaluate_fixture_trace
             scene_verdict = evaluate_fixture_trace(scene, artifacts / "diagnostic_bot.jsonl")
@@ -602,6 +642,8 @@ def main() -> int:
     parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
+    parser.add_argument("--synchronous-meshing", action="store_true",
+                        help="disable async meshing in isolated config and verify native runtime mode")
     parser.add_argument("--stop-seconds", type=float, default=20)
     parser.add_argument("--idle-seconds", type=float, default=5)
     parser.add_argument("--yaw", type=float, default=180)
@@ -630,6 +672,7 @@ def main() -> int:
                   fixture_scene=args.fixture_scene, process_timeout=args.process_timeout,
                   render_distance=args.render_distance, sprint=args.sprint,
                   startup_only=args.startup_only,
+                  synchronous_meshing=args.synchronous_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]

@@ -56,6 +56,31 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertTrue((fixture / "chunks" / "new.cchunk").exists())
         self.assertEqual((self.artifacts / "config.original.json").read_bytes(), self.original)
 
+    def test_synchronous_meshing_restores_configuration_on_failure(self):
+        original = b'{"render":{"gpu_packed_meshing":true,"async_meshing":true},"other":7}\r\n'
+        self.config.write_bytes(original)
+        with self.assertRaisesRegex(RuntimeError, "after sync override"):
+            with isolated_fixture(self.runtime, "Saved", self.artifacts):
+                self.config.write_bytes(engine_smoke_run.synchronous_meshing_payload(self.config.read_bytes()))
+                config = json.loads(self.config.read_bytes())
+                self.assertIs(config["render"]["async_meshing"], False)
+                self.assertIs(config["render"]["gpu_packed_meshing"], True)
+                self.assertEqual(config["other"], 7)
+                raise RuntimeError("after sync override")
+        self.assertEqual(self.config.read_bytes(), original)
+
+    def test_synchronous_meshing_requires_actual_runtime_observations(self):
+        path = self.root / "mode.json"
+        self.assertEqual(engine_smoke_run.synchronous_meshing_evidence(path)["status"], "UNTESTED")
+        for samples, expected in (([], "UNTESTED"),
+                                  ([{"async_meshing_enabled": False}] * 3, "PASS"),
+                                  ([{"async_meshing_enabled": False}, {"async_meshing_enabled": True}], "FAIL"),
+                                  ([{"async_meshing_enabled": 0}], "FAIL"),
+                                  ([{}], "FAIL")):
+            with self.subTest(samples=samples):
+                path.write_text(json.dumps({"samples": samples}), encoding="utf-8")
+                self.assertEqual(engine_smoke_run.synchronous_meshing_evidence(path)["status"], expected)
+
     def test_second_runner_cannot_take_live_lease(self):
         with isolated_fixture(self.runtime, "Saved", self.artifacts):
             with self.assertRaises(FileExistsError):
