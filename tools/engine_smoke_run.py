@@ -21,6 +21,7 @@ import uuid
 import zlib
 
 from engine_smoke_verdict import classify, read_startup_warmup_evidence
+from analyze_mesh_publication import analyze as analyze_mesh_publication
 from flight_sim_fixed_day import fixed_day_payload
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -629,6 +630,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if not report_path.exists():
             verdict["status"] = "FAIL"
             verdict["components"]["runtime"] = {"status": "FAIL", "reason": "missing_native_report"}
+        publication = analyze_mesh_publication(artifacts, verdict)
+        (artifacts / "mesh-publication-diagnostics.json").write_text(
+            json.dumps(publication, indent=2) + "\n", encoding="utf-8")
+        verdict["publication_diagnostics"] = {
+            "artifact": "mesh-publication-diagnostics.json",
+            "scope": "diagnostics only; does not alter acceptance",
+        }
         (artifacts / "smoke-verdict.json").write_text(json.dumps(verdict, indent=2) + "\n", encoding="utf-8")
         return verdict
 

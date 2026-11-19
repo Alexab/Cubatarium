@@ -7828,7 +7828,7 @@
       }
     },
     "certified_cpu_geometry_survives_inflight_light": {
-      "status": "Implemented and tested through actual paused CPU workers plus real GL resources.11scenarios each headless/GL;12Release checksGREEN;2negative controls exact source restoration plusGREEN. Required Release app/native pending. Capture/merge/dependency split still open.",
+      "status": "Implemented/tested through actual paused CPU workers and real GL resources:11scenarios per headless/GL;12Release checksGREEN;2negative controls exact restoration/GREEN. Required Release app built. Full wet native FAIL448/8312depth faults; original first-publication defect remains open.",
       "red": "engine-inflight-certified-light-red-test.log: actual worker computes geometry from certified physical light, diagonal emitter changes field before worker result apply, original geometry is discarded for stale light. Expected first publication without second build FAIL on original implementation.",
       "implementation": "A completed drawable CPU result with exact current original seven-input geometry/catalog/profile/world-epoch certificate can survive captured-light changes even when its original field was certified. After active source/revision validation, pair actual current settled compatible field and set independent physical consumption, or retain original geometry/result credit in existing bounded awaiting-field owner. Original input/halo stamps are not rewritten. Current physical pairing removes covered Dirty/RemeshAfterApply hints so relight notification during worker compute cannot cause a second build. Empty/NoSurface and deferred-GPU policies remain separately validated.",
       "validation": {
@@ -7860,7 +7860,55 @@
         "exact_source_restore": true,
         "restored_green": true
       },
-      "limits": "Required app/full native pending. Initial capture admission still depends on light, geometry merge keys still include baked light, whole-catalog identity couples optics to geometry. No full S4/S5 completion; original sporadic fault class, formal RGB/transparency, backend/persistence and performance acceptance remain open."
+      "limits": "Initial capture admission still depends on light; merge keys include baked light and whole-catalog identity couples optics to geometry. Failed native is retained and not superseded by a passing repeat. First-publication scheduling/publication, full S4/S5, RGB/transparency, persistence/backend and performance acceptance remain open.",
+      "native": {
+        "source_commit": "d78238d0da91c05fbaea8829c3ea1c0d45e12553",
+        "build_log": "build/desktop-msvc/engine-inflight-certified-light-release-build.log",
+        "result": "FAIL",
+        "app_exit": 0,
+        "wrapper_exit": 1,
+        "route_chunks": 19,
+        "outside_initial_samples": 1048,
+        "relocations": 0,
+        "inspection_views_verified": 24,
+        "inspection_views_requested": 24,
+        "startup_sections": 1176,
+        "startup_light_unready": 0,
+        "startup_publication_unready": 0,
+        "opaque_depth_faults": 448,
+        "opaque_depth_checked": 8312,
+        "frame_epochs": 73,
+        "affected_sections": 9,
+        "provenance": {
+          "exe": true,
+          "config_restored": true,
+          "source_world": true,
+          "runtime_shader_assets": true,
+          "source_commit": true
+        },
+        "selected_section_queue_only_samples": 201,
+        "selected_section_longest_queue_only_run": {
+          "first_frame_epoch": 313,
+          "last_frame_epoch": 447,
+          "samples": 135,
+          "revision": 2
+        },
+        "selected_section_depth_faults": 78,
+        "artifact": "build/desktop-msvc/engine-inflight-certified-light-wet-native/certified-inflight-native-counterexample.json",
+        "limits": "Full RGB/transparency untested. One failed flight cannot quantify regression rate. No performance comparison or complete S4/S5 acceptance.",
+        "diagnosis": [
+          "Selected section has 78 independently matched-reference depth faults at frames360..410; every sample has published geometry0, queued work and owner flag1.",
+          "Selected watch has135 consecutive beginning-of-tick queue-only samples at313..447 with source revision2; this does not imply absence of work later within those ticks.",
+          "Known seven geometry inputs at enqueue304 did not lead to a resource-prepared event until448. Logs do not establish the precise rejection path for enqueue304.",
+          "Screen ray repair observes the same hole at390/405/420/435 but only requests the column FirstMesh ticket; that ticket is rejected while the concrete slice remains queued.",
+          "WorldStreaming promote_visible_geometry_debt explicitly requires an existing drawable, so these first-publication holes cannot inherit current remesh ray priority. This is a demonstrated priority coverage gap, not yet a proven sole cause of448faults."
+        ]
+      }
+    },
+    "automated_publication_trace_analysis": {
+      "implementation": "tools/analyze_mesh_publication.py streams rotated INFO logs and joins selected watch/enqueue/schedule/resource events plus screen-ray repair actions to independent depth-fault section attribution. engine_smoke_run writes mesh-publication-diagnostics.json automatically after every terminal native run.",
+      "validation": "4parser regression tests and21existing smoke-runner testsPASS; applied to existing d782failed native:5rotated logs,0malformed rows,selected135consecutive queue-only samples313..447.",
+      "scope": "Diagnostic only; missing owner fields remain unknown, gaps/revisions/active ownership break runs, resource preparation is not publication. It neither modifies depth verdict nor accepts ready flags in place of pixels."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7889,7 +7937,7 @@
   },
   "execution_status_review_2026_11_19": {
     "goal": "active; full originalS0..S6 scope unchanged",
-    "latest_source_commit": "25cfad6ecb1939e9dbcfcfb09fdf37cc8f07ca3a",
+    "latest_source_commit": "d78238d0da91c05fbaea8829c3ea1c0d45e12553",
     "completed_this_slice": [
       "Packed GPU retained geometry and independent staging/PBO identities with5negative controls",
       "Shared physical synchronous publication and15lifecycle cases including real resources",
@@ -7898,11 +7946,54 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Published field refresh and no-op startup guard are scoped-native verified. Certified CPU results now late-pair actual current field or wait without rebuilding;11paused-worker cases per headless/GL,12GREEN2negative controls, app/native pending. Still remove light from initial capture admission and actual CPU/GPU geometry merge/capture/dependency identity.",
+      "Latest certified CPU inflight-light testsGREEN but full wet nativeFAIL448/8312: queued first-publication ray witnesses can remain without sampled executor135frames. Add deterministic bounded exact-slice scheduling regression/fix; then remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
     ],
-    "completion": "Not established. Published field refresh and no-op startup regression repaired in scoped tests/native. Full initial/inflight geometry/light identity separation, complete visual/performance matrix and original sporadic fault closure remain open."
+    "completion": "Not established. Latest native explicitly contradicts complete first-publication correctness. Full originalS0..S6scope stays active; no replacement of the failed run by earlier clean repetitions.",
+    "latest_native_counterexample": {
+      "source_commit": "d78238d0da91c05fbaea8829c3ea1c0d45e12553",
+      "build_log": "build/desktop-msvc/engine-inflight-certified-light-release-build.log",
+      "result": "FAIL",
+      "app_exit": 0,
+      "wrapper_exit": 1,
+      "route_chunks": 19,
+      "outside_initial_samples": 1048,
+      "relocations": 0,
+      "inspection_views_verified": 24,
+      "inspection_views_requested": 24,
+      "startup_sections": 1176,
+      "startup_light_unready": 0,
+      "startup_publication_unready": 0,
+      "opaque_depth_faults": 448,
+      "opaque_depth_checked": 8312,
+      "frame_epochs": 73,
+      "affected_sections": 9,
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "selected_section_queue_only_samples": 201,
+      "selected_section_longest_queue_only_run": {
+        "first_frame_epoch": 313,
+        "last_frame_epoch": 447,
+        "samples": 135,
+        "revision": 2
+      },
+      "selected_section_depth_faults": 78,
+      "artifact": "build/desktop-msvc/engine-inflight-certified-light-wet-native/certified-inflight-native-counterexample.json",
+      "limits": "Full RGB/transparency untested. One failed flight cannot quantify regression rate. No performance comparison or complete S4/S5 acceptance.",
+      "diagnosis": [
+        "Selected section has 78 independently matched-reference depth faults at frames360..410; every sample has published geometry0, queued work and owner flag1.",
+        "Selected watch has135 consecutive beginning-of-tick queue-only samples at313..447 with source revision2; this does not imply absence of work later within those ticks.",
+        "Known seven geometry inputs at enqueue304 did not lead to a resource-prepared event until448. Logs do not establish the precise rejection path for enqueue304.",
+        "Screen ray repair observes the same hole at390/405/420/435 but only requests the column FirstMesh ticket; that ticket is rejected while the concrete slice remains queued.",
+        "WorldStreaming promote_visible_geometry_debt explicitly requires an existing drawable, so these first-publication holes cannot inherit current remesh ray priority. This is a demonstrated priority coverage gap, not yet a proven sole cause of448faults."
+      ]
+    }
   }
 }
