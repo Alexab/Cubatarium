@@ -135,6 +135,8 @@ def evaluate(artifacts: Path, world: Path, plan: dict, route_evidence: dict | No
         observation = json.loads(path.read_text(encoding="utf-8"))
         if (observation.get("schema") != "engine-world-actions-observation.v1" or
                 observation.get("world") != world.name or observation.get("api") != "UWorld::ReplaceBlockAt" or
+                observation.get("storage_matches_isolated_world") is not True or
+                Path(observation["world_folder"]).resolve() != world.resolve() or
                 observation.get("started") is not True or observation.get("failed") is not False):
             return result("FAIL", "native_action_failed_or_world_mismatch")
         rows = observation["observations"]

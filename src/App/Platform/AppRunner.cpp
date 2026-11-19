@@ -1894,6 +1894,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     bool world_actions_started = false;
     bool world_actions_failed = false;
     nlohmann::json world_action_observations = nlohmann::json::array();
+    const auto isolated_world_folder =
+        paths.ResolveWritable("worlds") / options.WorldName;
     const auto observe_world_actions = [&](bool initial, glm::vec3 eye)
     {
       if (world_actions.empty())
@@ -1921,15 +1923,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         const auto before = blocks.GetBlock(action.cell);
         const float reach =
             glm::length(glm::vec3(action.cell) + glm::vec3(0.5f) - eye);
-        bool success = chunk && known &&
-                       before == (initial ? expected : target) &&
-                       world->GetWorldName() == options.WorldName;
+        bool success =
+            chunk && known && before == (initial ? expected : target) &&
+            DiagnosticWorldStorageMatches(world->GetWorldFolderPath(),
+                                          isolated_world_folder);
         bool api_called = false;
         bool api_success = false;
         if (initial && action.replacement)
         {
-          success = success && expected != target && reach <= 6.0f &&
-                    world->GetWorldName() == options.WorldName;
+          success = success && expected != target && reach <= 6.0f;
           if (success)
           {
             api_called = true;
@@ -1949,7 +1951,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
              {"after_id", blocks.GetBlock(action.cell)},
              {"resident", chunk != nullptr},
              {"incarnation", chunk ? chunk->GetIncarnation() : 0},
-             {"reach_blocks", reach},
+             {"reach_blocks",
+              initial ? nlohmann::json(reach) : nlohmann::json(nullptr)},
              {"api_called", api_called},
              {"api_success", api_success},
              {"success", success},
@@ -3199,15 +3202,23 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::filesystem::create_directories(report_path.parent_path());
       std::ofstream actions_report(report_path.parent_path() /
                                    "world-actions.json");
-      actions_report << nlohmann::json(
-                            {{"schema", "engine-world-actions-observation.v1"},
-                             {"world", world->GetWorldName()},
-                             {"api", "UWorld::ReplaceBlockAt"},
-                             {"started", world_actions_started},
-                             {"failed", world_actions_failed},
-                             {"observations", world_action_observations}})
-                            .dump(2)
-                     << '\n';
+      actions_report
+          << nlohmann::json(
+                 {{"schema", "engine-world-actions-observation.v1"},
+                  {"world", options.WorldName},
+                  {"saved_world_label", world->GetWorldName()},
+                  {"world_folder",
+                   std::filesystem::absolute(world->GetWorldFolderPath())
+                       .string()},
+                  {"storage_matches_isolated_world",
+                   DiagnosticWorldStorageMatches(world->GetWorldFolderPath(),
+                                                 isolated_world_folder)},
+                  {"api", "UWorld::ReplaceBlockAt"},
+                  {"started", world_actions_started},
+                  {"failed", world_actions_failed},
+                  {"observations", world_action_observations}})
+                 .dump(2)
+          << '\n';
       if (!actions_report)
         exit_code = 1;
     }

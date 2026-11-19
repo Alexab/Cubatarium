@@ -1,4 +1,5 @@
 #include "App/Diagnostics/DiagnosticWorldActions.h"
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 
@@ -14,6 +15,24 @@ static void Expect(bool value, const char *message)
 }
 int main()
 {
+  const auto root =
+      std::filesystem::temp_directory_path() /
+      ("cubatarium-world-actions-" +
+       std::to_string(
+           std::chrono::steady_clock::now().time_since_epoch().count()));
+  const auto clone = root / "EngineSmoke_test";
+  const auto original = root / "World_261";
+  std::filesystem::create_directories(clone);
+  std::filesystem::create_directories(original);
+  Expect(DiagnosticWorldStorageMatches(clone / ".", clone),
+         "copy storage identity rejected");
+  Expect(!DiagnosticWorldStorageMatches(original, clone),
+         "source storage admitted as copy");
+  Expect(!DiagnosticWorldStorageMatches(root / "missing", clone),
+         "missing storage admitted");
+  std::filesystem::remove(clone);
+  std::filesystem::remove(original);
+  std::filesystem::remove(root);
   json route = {{"purpose", "round_trip"},
                 {"isolated_world", "EngineSmoke_test"},
                 {"world_actions",

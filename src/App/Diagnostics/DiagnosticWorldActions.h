@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <limits>
 #include <nlohmann/json.hpp>
@@ -12,6 +13,14 @@
 
 namespace cutum
 {
+inline bool DiagnosticWorldStorageMatches(const std::filesystem::path &actual,
+                                          const std::filesystem::path &expected)
+{
+  std::error_code error;
+  const bool same = std::filesystem::equivalent(actual, expected, error);
+  return same && !error;
+}
+
 struct DiagnosticWorldAction
 {
   glm::ivec3 cell{0};

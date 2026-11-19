@@ -27,6 +27,8 @@ class WorldActionsTest(unittest.TestCase):
             dict(cell=self.cell, expected='stone', replacement='glowstone')])
         self.observation = dict(schema='engine-world-actions-observation.v1', world=self.world.name,
                                 api='UWorld::ReplaceBlockAt', started=True, failed=False,
+                                saved_world_label='World_261',world_folder=str(self.world.resolve()),
+                                storage_matches_isolated_world=True,
                                 observations=[dict(phase='initial',cell=self.cell,section=[1,-3,3],
                                     expected_id=560,target_id=376,before_id=560,after_id=376,
                                     resident=True,incarnation=7,reach_blocks=3,api_called=True,
@@ -78,6 +80,14 @@ class WorldActionsTest(unittest.TestCase):
             row.update(expected_id=376,before_id=376,api_called=False,api_success=False)
         self.route=None
         self.assertEqual(self.run_evidence()['status'],'PASS')
+
+    def test_saved_label_is_not_storage_identity(self):
+        self.assertEqual(self.run_evidence()['status'],'PASS')
+        self.observation['world_folder']=str(self.root/'World_261')
+        self.assertEqual(self.run_evidence()['status'],'FAIL')
+        self.observation['world_folder']=str(self.world)
+        self.observation['storage_matches_isolated_world']=False
+        self.assertEqual(self.run_evidence()['status'],'FAIL')
 
     def test_plan_bounds(self):
         validate_plan(self.plan,round_trip=True)
