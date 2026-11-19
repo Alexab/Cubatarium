@@ -11247,5 +11247,337 @@
       "Build required committed Windows Release desktop and run unchanged wet motor route with full provenance and capture diagnostics.",
       "Require nonempty real exported certificates, then cold reload with positive compatible restore telemetry; preserve altered/unknown output refusal and complete remaining full-goal matrix."
     ]
+  },
+  "frozen_light_content_export_cold_restore_native_2026_11_19": {
+    "status": "scoped_native_frozen_exports_and_cold_restore_verified_full_S0_S6_active",
+    "source_commit": "6c8988008af085787b1a90f8d5875e2212863a6e",
+    "checkout_commit": "6c8988008af085787b1a90f8d5875e2212863a6e",
+    "embedded_version": "0.0.4.1-codex-engine-streaming-remediation2-6c89880",
+    "desktop": {
+      "exit": 0,
+      "log": "build/desktop-msvc/frozen-light-content-desktop-build-20261119.log",
+      "static_verifier": "PASS,6systemDLLs"
+    },
+    "motor_export": {
+      "path": "build/desktop-msvc/engine-frozen-light-content-wet-20261119-native",
+      "retained_world": "bin/worlds/EngineSmoke_ad132419519846279e6e96bbedfad0ea",
+      "parent_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3863
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "fixture": {
+        "status": "PASS",
+        "reason": "negative_wet_cave_observed",
+        "samples": 236
+      },
+      "opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 16222,
+        "faults": 0,
+        "frame_epochs": 123,
+        "skipped_unscoped_or_occluded": 282,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference",
+        "samples": 16504,
+        "captures": 127,
+        "attributed_samples": 0,
+        "faults": 0
+      },
+      "movement": {
+        "chunks_traveled_cheb": 19,
+        "teleport_cruise": false,
+        "diagnostic_relocations_after_start": 0,
+        "wall_elapsed_sec": 205.446
+      },
+      "durable_cache": {
+        "files": 241,
+        "bytes": 38423772,
+        "fields": 1694,
+        "nonempty_files": 195
+      },
+      "capture_events": 247,
+      "capture_totals": {
+        "fields": 2160,
+        "padded": 1768,
+        "current": 0,
+        "retained_current": 0,
+        "stale_inputs": 1768,
+        "frozen_context": 1724,
+        "complete_context": 1724,
+        "recorded_output": 1724,
+        "exported": 1724,
+        "bytes": 27235844
+      },
+      "finding": "All current/retained-current input queries at export are0because inputs have retired, but1724complete private computed artifacts qualify for export.1694section receipts are present on disk in195nonemptyfiles among241metadatafiles. Frozen evidence fixes the measured all-empty save failure without changing runtime readiness.",
+      "durability_limit": "247captureevents/1724eligibleartifacts differ from241files/1694durablereceipts; the30receipt/6file gap is not attributed here. Optional async-cache write completion/durability and shutdown matrix are not fully accepted."
+    },
+    "cold_reload": {
+      "path": "build/desktop-msvc/engine-frozen-light-cold-reload-v2-20261119-native",
+      "source_world": "EngineSmoke_ad132419519846279e6e96bbedfad0ea",
+      "source_world_sha256": "23973a119955e821cd2ee1d2d59083b36cd6bb84c84847a8c832662c9a24c16a",
+      "fixture_scene": null,
+      "scene_reprepared": false,
+      "parent_exit": 0,
+      "wrapper_exit": 0,
+      "overall": "PASS",
+      "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "components": {
+        "runtime": {
+          "status": "PASS",
+          "reason": "native_process",
+          "exit_code": 0
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 256,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 724,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 452,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "observation": {
+          "status": "PASS",
+          "reason": "stationary_native_observation",
+          "samples": 40,
+          "maximum_drift_blocks": 0.0
+        },
+        "route": {
+          "status": "UNTESTED",
+          "reason": "not_requested_in_startup_only_scope"
+        },
+        "inspection": {
+          "status": "UNTESTED",
+          "reason": "not_requested_in_startup_only_scope"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "not_requested_in_startup_only_scope"
+        },
+        "fixture_opaque_depth": {
+          "status": "UNTESTED",
+          "reason": "not_requested_in_startup_only_scope"
+        }
+      },
+      "wall_elapsed_sec": 105.349,
+      "movement": {
+        "chunks_traveled_cheb": 0,
+        "teleport_cruise": false,
+        "diagnostic_relocations_after_start": 0
+      },
+      "restore_events": 187,
+      "restore_totals": {
+        "restored": 293,
+        "rejected": 77,
+        "cancelled": 0
+      },
+      "restored_before_first_paint": 133,
+      "first_paint_log_time": "20261119 22:42:19.11345",
+      "observed_max_pending": 254,
+      "observed_max_bytes": 4033994,
+      "observed_max_restores_per_tick": 2,
+      "first_events": [
+        "I20261119 22:40:59.977404 12792 Log.cpp:601] [PersistedLight] restored=2 rejected=0 cancelled=0 pending=126 bytes=1949346",
+        "I20261119 22:40:59.988095 12792 Log.cpp:601] [PersistedLight] restored=2 rejected=0 cancelled=0 pending=132 bytes=2050332",
+        "I20261119 22:40:59.999348 12792 Log.cpp:601] [PersistedLight] restored=2 rejected=0 cancelled=0 pending=140 bytes=2183300"
+      ],
+      "last_events": [
+        "I20261119 22:42:28.197205 12792 Log.cpp:601] [PersistedLight] restored=0 rejected=2 cancelled=0 pending=32 bytes=511712",
+        "I20261119 22:42:28.220094 12792 Log.cpp:601] [PersistedLight] restored=0 rejected=2 cancelled=0 pending=30 bytes=479730",
+        "I20261119 22:42:28.245238 12792 Log.cpp:601] [PersistedLight] restored=0 rejected=2 cancelled=0 pending=28 bytes=447748"
+      ],
+      "finding": "Cold process loads a fresh copy of the exercised saved world without preparing/replacing the fixture.293actual RestoreSectionLight installations are reported. Initial49columns/1176sections ready with unknown/light/publication unready0;40stationary observations,drift0.77rejections preserve fallback but individual causes are not yet attributed.",
+      "limits": "Stationary startup-only PASS is not frontier/return/depth/RGB/full physical-light or all-cache-hit acceptance. Last logged pending count does not prove final queue emptiness; current-only retirements and shutdown clear are not all individually logged."
+    },
+    "failed_preparation": {
+      "path": "build/desktop-msvc/engine-frozen-light-cold-reload-20261119-native",
+      "stage": "before route manifest and before native EXE",
+      "child_returncode": 4294967295,
+      "cause": "unknown child termination, DWORD-1",
+      "cleanup": "Lease PID11700confirmed missing; config byte-identical; source readable/fingerprint recorded; disk free1.59TB. Only that exact stale lease was removed; failed artifacts retained. Unique V2 completed normally with all5provenance checks."
+    },
+    "performance": {
+      "status": "FAIL",
+      "metrics": {
+        "wall_ms_med": 21.2742,
+        "wall_ms_fly_med": 25.3455,
+        "post_stop_readiness_debt_max": 0.0,
+        "post_stop_mesh_missing_max": 1.0,
+        "post_stop_focus_dirty_med": 0.0
+      },
+      "failed_gates": [
+        "stream_pressure_red_rate_le_0_30",
+        "wall_ms_med_le_25",
+        "post_load_ring_not_ready_eq_0",
+        "mesh_async_floor_when_dirty",
+        "miss_stuck_max_run_sec_le_4",
+        "miss_end_eq_0",
+        "miss_end_stop_eq_0",
+        "post_stop_focus_miss_zero",
+        "post_stop_miss_low_cy_zero",
+        "post_stop_underfeet_ok_miss_zero",
+        "tail_focus_miss_zero",
+        "tail_miss_low_cy_zero",
+        "tail_underfeet_ok_miss_zero",
+        "opaque_idle_churn_max_le_120",
+        "emerge_spike_frac_le_0_05",
+        "cruise_schedule_ok_med_ge_2",
+        "mesh_schedule_retry_after_capture_gt_0",
+        "witness_latch_diet_share_ge_0_70",
+        "effective_holes_blink_rate_le_0_05",
+        "policy_headers_have_budget",
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5"
+      ],
+      "gates_stop": {
+        "post_stop_pending_med_le_15": true,
+        "post_stop_black_sticky_zero": true,
+        "post_stop_visible_black_no_ticket_zero": true,
+        "post_stop_visible_black_stalled_zero": true,
+        "post_stop_missing_zero": true,
+        "post_stop_visual_holes_zero": true,
+        "post_stop_effective_holes_zero": true,
+        "post_stop_pending_falling": true,
+        "post_stop_relight_active": true,
+        "post_stop_pending_not_plateau_8s": true,
+        "post_stop_healthy_fps_not_unfinished": true,
+        "post_stop_not_ready_falling": true,
+        "post_stop_focus_dirty_falling": true
+      },
+      "resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": true,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 203,
+        "logical_cpu_count": 16,
+        "host_cpu_percent_summary": {
+          "median": 34.5,
+          "p95": 55.9,
+          "max": 63.2
+        },
+        "app_cpu_machine_percent_summary": {
+          "median": 11.5625,
+          "p95": 52.675,
+          "max": 54.36875
+        },
+        "other_cpu_machine_percent_estimate_summary": {
+          "median": 3.3374999999999986,
+          "p95": 24.44375,
+          "max": 38.96875
+        },
+        "app_rss_mb_max": 710.96484375,
+        "system_available_memory_mb_min": 19454.83984375,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "limits": [
+      "Native nonempty save+positive cold restore are now observed for one source/route/config/backend. No whole-stage completion is claimed.",
+      "0/16222is near opaque cave depth only; motor overallUNTESTED preserves absent independent nonzero RGB/wet/transparency reference. Cold startup PASS has explicitly narrower scope.",
+      "77cold cache rejections and capture/durable artifact gap remain to explain; actual source alteration/control/reload/return/eviction combinations still need coverage.",
+      "PerformanceFAIL, stop missing-mesh proxymax1, global process memory/capacity/latency, job/provider lifecycle, procedural AIR discovery, semantic geometry/optics identities and actual GPU/backend parity remain open. Full S0..S6 active."
+    ],
+    "next": [
+      "Attribute cold restore refusals without weakening guards; inspect optional metadata write gap and completion/cancellation ownership.",
+      "Complete motor-based return/eviction/reload/edit/save scenarios and procedural AIR cache lifecycle, then continue independent nonzero RGB/wet/transparency/backend/performance/memory matrix and all remaining S0..S6."
+    ]
   }
 }
