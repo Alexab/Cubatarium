@@ -9935,5 +9935,181 @@
       "Continue canonical lifecycle/provider/cancellation, semantic geometry/optics catalog identities, persisted certificates and actual GPU/backend parity.",
       "Implement independent nonzero RGB/wet/transparency references and complete seed/radius/return/edit/save/eviction/backend/performance/memory matrix."
     ]
+  },
+  "new_host_empty_fluid_field_pairing_regression_2026_11_19": {
+    "status": "focused_fix_verified_native_followup_required_full_S0_S6_active",
+    "prior_native": {
+      "path": "build/desktop-msvc/engine-outer-surface-debt-trace-wet-20261119-native",
+      "source_commit": "c6b3ebfb8bb59c3b06a86f79aee9e7061131548f",
+      "checkout_commit": "84e48094b440e34bc55e31132058a1e84cfd9918",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 13954,
+        "faults": 0,
+        "frame_epochs": 109,
+        "skipped_unscoped_or_occluded": 310,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3322
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "performance_status": "FAIL",
+      "metrics": {
+        "wall_ms_med": 23.809,
+        "wall_ms_fly_med": 22.3754,
+        "dirty_med": 123.0,
+        "post_stop_readiness_debt_max": 6.0,
+        "post_stop_mesh_missing_max": 0.0,
+        "post_stop_focus_dirty_med": 47.0
+      }
+    },
+    "finding": {
+      "target": [
+        -14,
+        2,
+        -1
+      ],
+      "terminal_state": "settled actual field revision1, desired geometry72, no published geometry; CPU empty liquid output repeatedly rejected",
+      "target_captures": 585,
+      "target_priority_marks": 1569,
+      "target_gpu_commits": 0,
+      "interpretation": "Fully enclosed liquid legitimately emits zero quads but cannot obtain the conservative opaque/AIR NoSurface proof. Completed-geometry and retained-owner predicates previously excluded this output, leaving captured physical light0 to fail against actual field1. Readiness radius and light proof predicates are not weakened."
+    },
+    "implementation": [
+      "Completed physical CPU geometry includes empty output. Only a genuine private NoSurface proof skips actual current field pairing.",
+      "Empty fluid/transparent CPU results may retain the original completed geometry in the existing bounded32/32MiB owner until a current calculated field and settlement are available.",
+      "Empty packed results without a private NoSurface proof use the same actual-field pairing gate as nonempty packed geometry. Existing slot ownership/cancellation and field provenance remain mandatory."
+    ],
+    "regression": {
+      "file": "src/Test/DecorMeshIntegrationTest.cpp",
+      "name": "TestEmptyPhysicalFluidPublication",
+      "cases": [
+        "Actual UGreedyMesher enclosed source-water fixture emits no quads and explicitly cannot obtain NoSurface.",
+        "Sync and async, field calculated before or after completed geometry: no resource/publication without actual calculation, no repeated worker build during field wait, original geometry publishes once.",
+        "Headless packed empty completion pairs already-calculated field despite physical worker captured light0; actual-slot retention remains covered separately by GPU lifecycle driver.",
+        "Opening neighboring liquid exposes actual faces: prior publication/binding stays until new actual field; successor publishes drawable geometry."
+      ],
+      "initial_red": "build/desktop-msvc/empty-fluid-publication-red-test-20261119.log",
+      "initial_red_assertion": "empty liquid geometry retains its owner until actual light"
+    },
+    "controls": {
+      "schema": "empty-fluid-publication-controls.v1",
+      "source_sha256": {
+        "src/Render/Mesh/ChunkMeshCache.cpp": "7b30ee51e23ff918b9c1dc489048c76dc800a0a6d495e070ae56126e72015269",
+        "src/Render/Mesh/ChunkMeshCache.h": "90d9f5f179a0a6a3c580fb624a49df40d64e614cb298b6a8cd75e9645b1fb9fd",
+        "src/Test/DecorMeshIntegrationTest.cpp": "32aac6b7548edd571b2d1ee3289036ed87de647c2e438541691942e930d1ef5c",
+        "src/World/Core/BlockWorld.cpp": "a6b93aef012653fc9dab82ef804b9e5d58433e2325725fe2652da5c32b5909d0",
+        "src/World/Core/BlockWorld.h": "663f5fc0aee19165a2dd0c85e8d983213b248c01e3edac854b686d780eebc17b"
+      },
+      "head": "84e48094b440e34bc55e31132058a1e84cfd9918",
+      "controls": [
+        {
+          "name": "cpu-empty-completion",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "empty liquid geometry retains its owner until actual light",
+          "log": "build/desktop-msvc/empty-fluid-publication-20261119-cpu-empty-completion-test.log"
+        },
+        {
+          "name": "cpu-empty-retention",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "empty liquid geometry retains its owner until actual light",
+          "log": "build/desktop-msvc/empty-fluid-publication-20261119-cpu-empty-retention-test.log"
+        },
+        {
+          "name": "packed-empty-field-pairing",
+          "build_exit": 0,
+          "test_exit": 8,
+          "expected_failure": true,
+          "expected_assertion": "empty packed liquid pairs actual field before first publication",
+          "log": "build/desktop-msvc/empty-fluid-publication-20261119-packed-empty-field-pairing-test.log"
+        }
+      ],
+      "exact_source_restore": true,
+      "restored_build_exit": 0,
+      "restored_test_exit": 0,
+      "restored_green": true,
+      "matrix_log": "build/desktop-msvc/empty-fluid-publication-20261119-restored-sixteen-tests.log"
+    },
+    "restored_matrix": {
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0,
+      "seconds": 7.57,
+      "log": "build/desktop-msvc/empty-fluid-publication-20261119-restored-sixteen-tests.log"
+    },
+    "limits": [
+      "Focused regressions and causal controls do not establish native convergence, true GPU extraction parity, independent nonzero RGB/wet/transparency or performance/memory acceptance.",
+      "NoSurface proof remains conservative opaque/AIR only. No fabricated field calculation, settlement, light revision or independent consumer completion is introduced.",
+      "Full S0..S6 remains active, including canonical lifecycle/cancellation/provider, semantic geometry/optics identity, persisted certificates, GPU/backend parity and full native matrix."
+    ],
+    "next": [
+      "Build required Release desktop from committed source; repeat unchanged wet motor route targeting (-14,2,-1), preserving all provenance.",
+      "Inspect terminal readiness and exact target publication/owner trace in addition to opaque depth. Continue remaining broad obligations."
+    ]
   }
 }

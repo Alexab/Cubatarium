@@ -6379,8 +6379,7 @@ bool UChunkMeshCache::CommitGpuMeshResult(
     return RetainGeometryAwaitingLight(
         world, registry, std::move(physical_geometry), std::move(gpu_result));
   };
-  if (independent_physical_geometry &&
-      (gpu_result.quadCount > 0 || HasCrossInstances(cross_centers)))
+  if (independent_physical_geometry && !verified_no_surface)
   {
     const auto current = world.CaptureRenderLightSnapshot(coord);
     if (!current || !current->MatchesGeometry(source_geometry) ||
@@ -8564,11 +8563,7 @@ bool UChunkMeshCache::RetainGeometryAwaitingLight(
 {
   if (result.GpuExtractPending || result.PendingSnapshot ||
       !IsCurrentPhysicalGeometry(world, registry, result) ||
-      result.sourceRevision != MeshRevisions.Current(result.coord) ||
-      (!gpu && !HasCrossInstances(result.crossCenters) &&
-       std::none_of(
-           result.batches.begin(), result.batches.end(), [](const auto &batch)
-           { return !batch.vertices.empty() && !batch.indices.empty(); })))
+      result.sourceRevision != MeshRevisions.Current(result.coord))
     return false;
   if (gpu && (!GpuPipeline || gpu->slotIndex != gpu->slotKey.Index() ||
               !GpuPipeline->GetAllocator().OwnsStagingSlot(gpu->slotKey)))
@@ -8805,13 +8800,9 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
   const bool current_physical_geometry =
       IsCurrentPhysicalGeometry(world, registry, result);
-  const bool completed_physical_geometry =
-      current_physical_geometry && !result.GpuExtractPending &&
-      !result.PendingSnapshot &&
-      (HasCrossInstances(result.crossCenters) ||
-       std::any_of(
-           result.batches.begin(), result.batches.end(), [](const auto &batch)
-           { return !batch.vertices.empty() && !batch.indices.empty(); }));
+  const bool completed_physical_geometry = current_physical_geometry &&
+                                           !result.GpuExtractPending &&
+                                           !result.PendingSnapshot;
   const MeshApplyStaleInputReason stale_reason =
       (result.IndependentPhysicalField || result.GpuExtractPending ||
        completed_physical_geometry ||
@@ -8956,7 +8947,22 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     return;
   }
 
-  if (completed_physical_geometry)
+  std::optional<SectionNoSurfaceProof> no_surface;
+  bool no_surface_checked = false;
+  if (completed_physical_geometry && !HasCrossInstances(result.crossCenters) &&
+      std::none_of(
+          result.batches.begin(), result.batches.end(), [](const auto &batch)
+          { return !batch.vertices.empty() && !batch.indices.empty(); }))
+  {
+    no_surface_checked = true;
+    no_surface = UGreedyMesher::CaptureNoSurface(world, result.coord, registry,
+                                                 result.InputCatalog);
+  }
+  const bool proven_no_draw =
+      no_surface && no_surface->Matches(result.GeometryInputs);
+  // Empty transparent/fluid output is completed geometry too. Only the
+  // private opaque/AIR NoSurface proof can skip actual field pairing.
+  if (completed_physical_geometry && !proven_no_draw)
   {
     const auto light = world.CaptureRenderLightSnapshot(result.coord);
     const auto *chunk = world.GetChunkManager().GetChunk(result.coord);
@@ -9273,12 +9279,11 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       slice_demand->world_epoch == CaptureStore.WorldEpoch() &&
       slice_demand->incarnation == current_incarnation;
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::CandidateValidation);
-  std::optional<SectionNoSurfaceProof> no_surface;
   const bool has_drawable_output = std::any_of(
       result.batches.begin(), result.batches.end(), [](const auto &batch)
       { return !batch.vertices.empty() && !batch.indices.empty(); });
-  if (!has_drawable_output && !HasCrossInstances(result.crossCenters) &&
-      result.sourceWorldEpoch != 0 &&
+  if (!no_surface_checked && !has_drawable_output &&
+      !HasCrossInstances(result.crossCenters) && result.sourceWorldEpoch != 0 &&
       result.sourceWorldEpoch == CaptureStore.WorldEpoch() &&
       GeometryMatchesSourceStamps(result.InputStampsValid ? &result.InputStamps
                                                           : nullptr,

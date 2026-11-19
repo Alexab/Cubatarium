@@ -2407,6 +2407,155 @@ private:
   std::unordered_map<glm::ivec3, unsigned, cutum::IVec3Hash> BuildsByCoord;
 };
 
+static void TestEmptyPhysicalFluidPublication(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0);
+  for (int lane = 0; lane < 3; ++lane)
+    for (const bool initially_calculated : {false, true})
+    {
+      // Headless packed commit has no allocator slot to retain while waiting;
+      // actual-slot retention is covered by the GPU lifecycle driver.
+      if (lane == 2 && !initially_calculated)
+        continue;
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(
+          static_cast<uint64_t>(LightingMode::Full));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      for (const glm::ivec3 coord :
+           {root, glm::ivec3(-1, 0, 0), glm::ivec3(1, 0, 0),
+            glm::ivec3(0, -1, 0), glm::ivec3(0, 1, 0), glm::ivec3(0, 0, -1),
+            glm::ivec3(0, 0, 1)})
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+            for (int x = 0; x < CHUNK_SIZE; ++x)
+            {
+              const auto pos = coord * CHUNK_SIZE + glm::ivec3(x, y, z);
+              world.SetBlock(pos, kWater);
+              world.SetFluidState(
+                  pos, FluidCellState::Source().WithKind(FluidKind::Water));
+            }
+      const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+      Expect(
+          UGreedyMesher::BuildChunkMesh(world, root, registry).empty() &&
+              !UGreedyMesher::CaptureNoSurface(world, root, registry, catalog),
+          "enclosed liquid emits zero quads without an opaque NoSurface proof");
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = lane == 1;
+      settings.FrustumCulling = false;
+      cache.SetRenderSettings(settings);
+      CountingPhysicalMesher mesher;
+      cache.SetMesherBackend(&mesher);
+      cache.SetRepairGuardWorld(&world);
+      unsigned resource_calls = 0;
+      cache.SetPrepareRenderLightFn(
+          [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+              const SectionRenderLightSnapshot &light)
+          {
+            ++resource_calls;
+            auto binding = std::make_shared<TestRenderLightBinding>(
+                epoch, geometry, light);
+            binding->refreshable = true;
+            return binding;
+          });
+      cache.MarkDirtyPriority(root);
+      const auto snapshot =
+          ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+      const auto revision = cache.GetChunkMeshRevision(root);
+      const auto install_actual_field = [&]()
+      {
+        world.GetChunkManager().GetChunk(root)->SetLightLocal({8, 8, 8}, 7, 7);
+        RelightJobSpec spec;
+        spec.min_world_y = world.GetVerticalProfile().MinY;
+        spec.max_world_y = world.GetVerticalProfile().MaxY;
+        const auto field =
+            UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+                .Compute(registry);
+        Expect(field.inputs_complete && field.chunks.size() == 1,
+               "empty liquid fixture calculates complete real field inputs");
+        world.GetChunkManager().ReplaceComputedSectionLightVolume(
+            root, *field.chunks[0].padded_light, true, true);
+        Expect(world.RecordLightCalculation(field, catalog) == 1,
+               "empty liquid fixture installs actual field provenance");
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        auto &demand = cache.GetRenderDemandStore();
+        demand.NoteDemand(root, cache.GetChunkMeshRevision(root),
+                          chunk->GetLightFieldRevision(), 0, 0.0,
+                          cache.GetCaptureStore().WorldEpoch(),
+                          chunk->GetIncarnation());
+        demand.NoteLightCalculationSettled(
+            root, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
+            chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+      };
+      if (initially_calculated)
+        install_actual_field();
+      if (lane == 2)
+      {
+        Expect(
+            ChunkMeshCaptureAdmissionTestAccess::CommitEmptyPacked(
+                cache, world, registry, snapshot),
+            "empty packed liquid pairs actual field before first publication");
+        cache.ClearDirtyAndRemeshAfterApply(root);
+      }
+      else
+      {
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "empty liquid actual mesh worker finishes");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      }
+      if (!initially_calculated)
+      {
+        Expect(mesher.BuildsFor(root) == 1 &&
+                   cache.IsGeometryAwaitingLight(root) &&
+                   cache.GetPublishCount(root) == 0 && resource_calls == 0,
+               "empty liquid geometry retains its owner until actual light");
+        for (int tick = 0; tick < 4; ++tick)
+          cache.RebuildDirtyChunksWithStats(world, registry, 8, 1, false, 0);
+        Expect(mesher.BuildsFor(root) == 1 &&
+                   cache.GetChunkMeshRevision(root) == revision,
+               "empty liquid field wait cannot rebuild completed geometry");
+        install_actual_field();
+        cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+      }
+      const unsigned initial_builds = lane == 2 ? 0 : 1;
+      Expect(mesher.BuildsFor(root) == initial_builds &&
+                 cache.GetPublishCount(root) == 1 &&
+                 cache.HasMeshSatisfyingColumnReady(root) &&
+                 !cache.HasDrawableGreedyMesh(root) && resource_calls == 1 &&
+                 cache.GetPublishedRenderLightBinding(root) &&
+                 cache.GetPublishedRenderLightSnapshot(root) &&
+                 cache.GetChunkMeshRevision(root) == revision &&
+                 snapshot.inputStamps[0].light == 0,
+             "calculated field publishes original empty liquid geometry once");
+      const auto prior_binding = cache.GetPublishedRenderLightBinding(root);
+      world.SetBlock({16, 8, 8}, BLOCK_AIR);
+      world.SetFluidState({16, 8, 8}, FluidCellState{});
+      Expect(!UGreedyMesher::BuildChunkMesh(world, root, registry).empty(),
+             "neighbor opening exposes actual fluid faces");
+      cache.MarkDirty(root);
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+             "fluid exposure replacement worker finishes");
+      cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      Expect(mesher.BuildsFor(root) == initial_builds + 1 &&
+                 cache.IsGeometryAwaitingLight(root) &&
+                 cache.GetPublishCount(root) == 1 &&
+                 cache.GetPublishedRenderLightBinding(root) == prior_binding,
+             "new fluid faces wait for their current field without losing "
+             "predecessor");
+      install_actual_field();
+      cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+      Expect(cache.GetPublishCount(root) == 2 &&
+                 cache.HasDrawableGreedyMesh(root) && resource_calls == 2,
+             "actual successor field publishes exposed fluid geometry");
+    }
+}
+
 static void
 TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
                              const cutum::UBlockDefinitionStorage *definitions)
@@ -6635,6 +6784,7 @@ int main(int argc, char **argv)
   TestMeshResultCaptureOwnership(registry, definitions.get());
   TestUnknownGeometryDefersPhysicalBuild(registry, definitions.get());
   TestNoSurfaceRepairStability(registry, definitions.get());
+  TestEmptyPhysicalFluidPublication(registry, definitions.get());
   TestPhysicalGeometryCapture(registry, definitions.get());
   TestMaterialVisibilityParity(registry, definitions.get(), false);
   TestOccludedMeshDependencyRepair(registry);
