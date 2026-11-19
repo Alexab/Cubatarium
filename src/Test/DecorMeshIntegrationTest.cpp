@@ -27,6 +27,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <future>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 #include <memory>
@@ -95,6 +96,15 @@ struct CrossGpuBackendDriverTestAccess
 #endif
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static std::optional<uint64_t>
+  PublishedOriginalLight(const UChunkMeshCache &cache, glm::ivec3 coord)
+  {
+    const auto found = cache.GreedyCache.find(coord);
+    if (found == cache.GreedyCache.end() ||
+        !found->second.PublishedGeomStampsValid)
+      return std::nullopt;
+    return found->second.PublishedGeomStamps[0].light;
+  }
   static ChunkMeshSnapshot CaptureOwned(UChunkMeshCache &cache,
                                         const UBlockWorld &world,
                                         glm::ivec3 coord)
@@ -2016,6 +2026,270 @@ public:
     return cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
   }
 };
+
+class GatedPhysicalMesher final : public cutum::IUChunkMesher
+{
+public:
+  std::atomic<unsigned> builds{0};
+  std::atomic<bool> captured_certified{false};
+  std::atomic<bool> timed_out{false};
+  GatedPhysicalMesher()
+      : entered_future(entered.get_future()),
+        resume_future(resume.get_future().share())
+  {
+  }
+  const char *BackendName() const override { return "gated-physical-cpu"; }
+  bool WaitEntered()
+  {
+    return entered_future.wait_for(std::chrono::seconds(5)) ==
+           std::future_status::ready;
+  }
+  void Release()
+  {
+    if (!released)
+    {
+      released = true;
+      resume.set_value();
+    }
+  }
+  std::vector<cutum::GreedyQuad>
+  BuildChunkMesh(const cutum::UBlockWorld &world, glm::ivec3 coord,
+                 cutum::UBlockRegistry &registry,
+                 const cutum::BlockDefinitionCatalog *catalog) override
+  {
+    ++builds;
+    return cutum::UGreedyMesher::BuildChunkMesh(world, coord, registry,
+                                                catalog);
+  }
+  std::vector<cutum::GreedyQuad>
+  BuildChunkMesh(const cutum::ChunkMeshSnapshot &snapshot,
+                 cutum::UBlockRegistry &registry,
+                 const cutum::BlockDefinitionCatalog *catalog) override
+  {
+    const bool first = builds.fetch_add(1) == 0;
+    auto quads =
+        cutum::UGreedyMesher::BuildChunkMesh(snapshot, registry, catalog);
+    if (first)
+    {
+      captured_certified =
+          snapshot.certifiedPaddedLight && bool(snapshot.renderLight);
+      entered.set_value();
+      timed_out = resume_future.wait_for(std::chrono::seconds(5)) !=
+                  std::future_status::ready;
+    }
+    return quads;
+  }
+
+private:
+  std::promise<void> entered;
+  std::future<void> entered_future;
+  std::promise<void> resume;
+  std::shared_future<void> resume_future;
+  bool released{false};
+};
+
+static void TestCertifiedGeometrySurvivesInflightLight(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false)
+{
+  using namespace cutum;
+  const glm::ivec3 root(0);
+  for (int scenario = 0; scenario < 11; ++scenario)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(
+        static_cast<uint64_t>(LightingMode::Full));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({14, 8, 14}, kStone);
+    GatedPhysicalMesher mesher;
+    SectionRenderLightBindings resources;
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    cache.SetRepairGuardWorld(&world);
+    int preparations = 0;
+    bool reject_resource = scenario == 7;
+    cache.SetPrepareRenderLightFn(
+        [&](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
+            const SectionRenderLightSnapshot &light)
+            -> std::shared_ptr<SectionRenderLightBinding>
+        {
+          ++preparations;
+          if (reject_resource)
+            return {};
+          if (use_gpu)
+            return resources.PrepareForWorld(epoch, geometry, light);
+          return std::make_shared<TestRenderLightBinding>(epoch, geometry,
+                                                          light);
+        });
+    const auto calculate = [&](bool settle = true)
+    {
+      RelightJobSpec spec;
+      spec.min_world_y = world.GetVerticalProfile().MinY;
+      spec.max_world_y = world.GetVerticalProfile().MaxY;
+      const auto result =
+          UChunkRelightSnapshot::CaptureSections(world, spec, {root})
+              .Compute(registry);
+      Expect(result.inputs_complete && result.chunks.size() == 1,
+             "inflight-light fixture computes actual current physical field");
+      world.GetChunkManager().ReplaceComputedSectionLightVolume(
+          root, *result.chunks[0].padded_light, true, true);
+      Expect(world.RecordLightCalculation(
+                 result, registry.GetDefinitionsCatalogSnapshot()) == 1,
+             "inflight-light fixture installs actual calculation certificate");
+      const auto *chunk = world.GetChunkManager().GetChunk(root);
+      auto &demand = cache.GetRenderDemandStore();
+      const auto epoch = cache.GetCaptureStore().WorldEpoch();
+      demand.NoteDemand(root, cache.GetChunkMeshRevision(root),
+                        chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+                        chunk->GetIncarnation());
+      if (settle)
+        demand.NoteLightCalculationSettled(root, epoch, chunk->GetIncarnation(),
+                                           chunk->GetLightFieldRevision(),
+                                           chunk->GetContentRevision());
+    };
+    cache.MarkDirtyPriority(root);
+    calculate();
+    const auto revision = cache.GetChunkMeshRevision(root);
+    const auto old_light =
+        world.GetChunkManager().GetChunk(root)->GetLightFieldRevision();
+    Expect(
+        cache.GetCaptureStore()
+                .CaptureAndStore(world, root, revision)
+                .has_value() &&
+            cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0)
+                    .Scheduled == 1 &&
+            mesher.WaitEntered() && mesher.captured_certified,
+        "actual worker pauses after building geometry from certified captured "
+        "light");
+    if (scenario == 1)
+    {
+      mesher.Release();
+      Expect(
+          cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+          "completed result remains queued before independent field changes");
+    }
+    if (scenario == 9)
+      for (int x = -16; x < 32; ++x)
+        for (int z = -16; z < 32; ++z)
+          world.SetBlock({x, 63, z}, kStone);
+    else
+      world.SetBlock({16, 8, 16}, kFire);
+    if (scenario == 3)
+      world.SetBlock({13, 8, 14}, kStone);
+    if (scenario == 6)
+      world.SetBlock({16, 8, 14}, kStone);
+    if (scenario != 2)
+      calculate(scenario != 10);
+    if (scenario == 4)
+      cache.GetCaptureStore().BumpWorldEpoch();
+    if (scenario == 5)
+      cache.CancelAsyncMeshWork();
+    if (scenario == 8)
+    {
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
+      cache.MarkDirtyPriority(
+          root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
+    }
+    mesher.Release();
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) &&
+               !mesher.timed_out,
+           "actual worker resumes and returns the original immutable geometry");
+    cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+    if (scenario == 3 || scenario == 4 || scenario == 5 || scenario == 6)
+    {
+      Expect(cache.GetPublishCount(root) == 0 && preparations == 0 &&
+                 mesher.builds == 1,
+             "edited cancelled or wrong-epoch geometry cannot use fresh field "
+             "as publication proof");
+      if (scenario == 3 || scenario == 6)
+      {
+        Expect(cache.IsChunkMeshDirty(root),
+               "inflight geometry mutation preserves an actual rebuild "
+               "obligation");
+        const auto next_revision = cache.GetChunkMeshRevision(root);
+        Expect(cache.GetCaptureStore()
+                       .CaptureAndStore(world, root, next_revision)
+                       .has_value() &&
+                   cache.RebuildDirtyChunksWithStats(world, registry, 0, 1,
+                                                     false, 0)
+                           .Scheduled == 1 &&
+                   cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "changed geometry is captured and computed by a replacement "
+               "worker");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+        const auto replacement = cache.GetPublishedRenderLightBinding(root);
+        Expect(mesher.builds == 2 && cache.GetPublishCount(root) == 1 &&
+                   replacement &&
+                   replacement->GeometryInputs().Matches(
+                       world.CaptureGeometryRenderInputs(
+                           root, registry.GetDefinitionsCatalogSnapshot())),
+               "replacement publishes actual edited geometry rather than the "
+               "discarded predecessor");
+      }
+      continue;
+    }
+    if (scenario == 2 || scenario == 7 || scenario == 10)
+    {
+      Expect(cache.GetGeometryAwaitingLightCount() == 1 &&
+                 cache.HasInflightMeshBuild(root) &&
+                 cache.GetPublishCount(root) == 0 && mesher.builds == 1,
+             "certified captured geometry survives later unready field or "
+             "resource pressure");
+      if (scenario == 2)
+      {
+        Expect(preparations == 0, "unready current field cannot prepare an "
+                                  "obsolete captured resource");
+        calculate();
+      }
+      if (scenario == 10)
+      {
+        Expect(preparations == 0,
+               "calculated field without current demand settlement retains "
+               "geometry without resource preparation");
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(
+            root, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
+            chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+      }
+      reject_resource = false;
+      cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
+    }
+    const auto current = world.CaptureRenderLightSnapshot(root);
+    const auto binding = cache.GetPublishedRenderLightBinding(root);
+    if (cache.GetPublishCount(root) != 1)
+      std::cerr << "inflight-light scenario=" << scenario << " gpu=" << use_gpu
+                << '\n';
+    Expect(current && binding && mesher.builds == 1 &&
+               cache.GetPublishCount(root) == 1 &&
+               cache.GetChunkMeshRevision(root) == revision &&
+               binding->Matches(cache.GetCaptureStore().WorldEpoch(),
+                                binding->GeometryInputs(), *current) &&
+               cache.GetMeshedLightRevision(root) ==
+                   world.GetChunkManager()
+                       .GetChunk(root)
+                       ->GetLightFieldRevision() &&
+               ChunkMeshCaptureAdmissionTestAccess::PublishedOriginalLight(
+                   cache, root) == old_light,
+           "inflight light-only changes publish original geometry once with "
+           "current physical field");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+    if (use_gpu)
+      ProbeCertifiedBinding(resources, binding);
+#endif
+    for (int tick = 0; tick < 8; ++tick)
+      cache.RebuildDirtyChunksWithStats(world, registry, 8, 1, false, 0);
+    Expect(mesher.builds == 1 && cache.GetPublishCount(root) == 1 &&
+               !cache.HasPendingDirty(),
+           "late-paired inflight geometry cannot acquire historical-light "
+           "remesh debt");
+  }
+}
 
 static void TestPublishedLightRefreshLifecycle(
     cutum::UBlockRegistry &registry,
@@ -5177,6 +5451,8 @@ int main(int argc, char **argv)
     {
       TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
       TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
+      TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get(),
+                                                 true);
       TestPublishedLightRefreshLifecycle(registry, definitions.get());
       TestPublishedLightRefreshFairness(registry, definitions.get());
       TestGeometryWaitsForPhysicalLight(registry, definitions.get(), true);
@@ -5215,6 +5491,7 @@ int main(int argc, char **argv)
   TestPublicationRefreshesDrawRefs(registry);
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
+  TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
   TestPublishedLightRefreshLifecycle(registry, definitions.get());
   TestPublishedLightRefreshFairness(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());

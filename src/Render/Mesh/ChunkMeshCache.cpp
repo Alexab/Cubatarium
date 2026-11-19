@@ -8541,9 +8541,19 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   };
   const bool catalog_ok =
       result.InputCatalog == registry.GetDefinitionsCatalogSnapshot();
+  const bool current_physical_geometry =
+      IsCurrentPhysicalGeometry(world, registry, result);
+  const bool completed_physical_geometry =
+      current_physical_geometry && !result.GpuExtractPending &&
+      !result.PendingSnapshot &&
+      (HasCrossInstances(result.crossCenters) ||
+       std::any_of(
+           result.batches.begin(), result.batches.end(), [](const auto &batch)
+           { return !batch.vertices.empty() && !batch.indices.empty(); }));
   const MeshApplyStaleInputReason stale_reason =
-      (result.IndependentPhysicalField || result.GpuExtractPending) &&
-              IsCurrentPhysicalGeometry(world, registry, result)
+      (result.IndependentPhysicalField || result.GpuExtractPending ||
+       completed_physical_geometry) &&
+              current_physical_geometry
           ? MeshApplyStaleInputReason::Ok
           : ChunkMeshSnapshot::ClassifyStaleInput(
                 result.InputStampsValid, catalog_ok, result.InputStamps, world,
@@ -8680,6 +8690,37 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     abandon_fm_watch();
     note_terminal(JobTerminalReason::CurrentRevisionAdvanced);
     return;
+  }
+
+  if (completed_physical_geometry)
+  {
+    const auto light = world.CaptureRenderLightSnapshot(result.coord);
+    const auto *chunk = world.GetChunkManager().GetChunk(result.coord);
+    if (light && light->MatchesGeometry(result.GeometryInputs) &&
+        LightSettlementMatchesCurrentCalculation(
+            GetRenderDemandStore().Find(result.coord), chunk,
+            CaptureStore.WorldEpoch(), world, result.InputCatalog))
+    {
+      // A calculated field may advance while a certified mesh is computing or
+      // waiting in Completed. Keep the original geometry/source stamps and
+      // pair the actual current field only after executable ownership passed.
+      result.RenderLight = *light;
+      result.IndependentPhysicalField = true;
+      result.ProvisionalLightPreview = false;
+      Dirty.Erase(result.coord);
+      RemeshAfterApply.erase(result.coord);
+    }
+    else
+    {
+      if (RetainGeometryAwaitingLight(world, registry, std::move(result)))
+        return;
+      ActiveMeshSourceRevision.erase(revisionIt);
+      CaptureStore.Invalidate(result.coord);
+      RequeueDirtyPriority(result.coord,
+                           MeshRevisionBumpReason::PriorityWorldCoreRepair);
+      note_terminal(JobTerminalReason::PublicationRejected);
+      return;
+    }
   }
 
   // N04 I3t: accepted light/geom stale on prior drawable — hold prior sole live

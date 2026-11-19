@@ -7826,6 +7826,41 @@
         "limits": "One scoped32block opaque-depth pass does not close original sporadic first-publication class. FullRGB/transparencyUNTESTED; performanceFAIL. Initial/inflight light-free geometry identity, semantic optics/catalog split, persistence/backend/lifecycle acceptance remain.",
         "artifact": "build/desktop-msvc/engine-published-field-noop-wet-native/published-field-noop-observation.json"
       }
+    },
+    "certified_cpu_geometry_survives_inflight_light": {
+      "status": "Implemented and tested through actual paused CPU workers plus real GL resources.11scenarios each headless/GL;12Release checksGREEN;2negative controls exact source restoration plusGREEN. Required Release app/native pending. Capture/merge/dependency split still open.",
+      "red": "engine-inflight-certified-light-red-test.log: actual worker computes geometry from certified physical light, diagonal emitter changes field before worker result apply, original geometry is discarded for stale light. Expected first publication without second build FAIL on original implementation.",
+      "implementation": "A completed drawable CPU result with exact current original seven-input geometry/catalog/profile/world-epoch certificate can survive captured-light changes even when its original field was certified. After active source/revision validation, pair actual current settled compatible field and set independent physical consumption, or retain original geometry/result credit in existing bounded awaiting-field owner. Original input/halo stamps are not rewritten. Current physical pairing removes covered Dirty/RemeshAfterApply hints so relight notification during worker compute cannot cause a second build. Empty/NoSurface and deferred-GPU policies remain separately validated.",
+      "validation": {
+        "artifact": "build/desktop-msvc/engine-inflight-certified-light-twelve-tests.log",
+        "result": "12/12PASS27.53seconds",
+        "worker_control": "Promise gate pauses actual worker after quad computation from a snapshot containing certified physical light. No fabricated result/epoch. Main computes and installs real changed field before worker release or after completed-result queueing.",
+        "cases": [
+          "changed field during worker",
+          "changed field after worker completed but before apply",
+          "originally certified geometry waits when current calculation is unready",
+          "actual center edit rejects old geometry and replacement worker publishes edited geometry",
+          "cache epoch change prevents preparation/publication",
+          "worker cancellation prevents publication",
+          "axial neighbor edit rejects and replacement publishes current geometry certificate",
+          "resource rejection/recovery without remeshing",
+          "typed relight hint during compute creates no follow-up build",
+          "distant roof outside geometric neighborhood changes sky to computed zero without geometry change",
+          "calculated current field with stale demand settlement retains geometry until settlement acknowledgement"
+        ],
+        "assertions": "One build/one publication for light-only cases, original captured light stamp retained in published provenance, current field binding/revision, no historical-halo remesh across8ticks. Actual edits build replacement and publish current geometry. Real GL variants read8000canonical sky/block cells through resource table."
+      },
+      "negative_controls": {
+        "artifact": "build/desktop-msvc/engine-inflight-certified-owner-negative-controls.json",
+        "expected_failures": 2,
+        "guards": [
+          "actual_geometry_certificate",
+          "current_calculation_settlement"
+        ],
+        "exact_source_restore": true,
+        "restored_green": true
+      },
+      "limits": "Required app/full native pending. Initial capture admission still depends on light, geometry merge keys still include baked light, whole-catalog identity couples optics to geometry. No full S4/S5 completion; original sporadic fault class, formal RGB/transparency, backend/persistence and performance acceptance remain open."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -7863,7 +7898,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Published compatible geometry receives field-only refresh with world/cache CPU/packed GPU tests. Initial native exposed no-op owner starvation; causalRED/admission fix12GREEN and repaired full wet startup1176ready0/13146depth. Still remove baked light from initial/inflight merge/capture/dependency identity and scheduling.",
+      "Published field refresh and no-op startup guard are scoped-native verified. Certified CPU results now late-pair actual current field or wait without rebuilding;11paused-worker cases per headless/GL,12GREEN2negative controls, app/native pending. Still remove light from initial capture admission and actual CPU/GPU geometry merge/capture/dependency identity.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
