@@ -4146,6 +4146,12 @@ bool UChunkMeshCache::PrioritizeVisibleLightRepairRemesh(glm::ivec3 chunkCoord)
 
 bool UChunkMeshCache::PrioritizeScreenRayRepair(glm::ivec3 chunkCoord)
 {
+  // The slice may have entered RemeshQ before the camera reached it. An exact
+  // solid ray witness with no drawable still needs its first publication;
+  // transfer that existing ticket without a revision bump or age reset.
+  if (Dirty.Contains(chunkCoord) && !HasDrawableGreedyMesh(chunkCoord) &&
+      !Dirty.IsFirstMesh(chunkCoord))
+    Dirty.MarkDirtyPriority(chunkCoord);
   if (Dirty.IsFirstMesh(chunkCoord))
     return Dirty.PrioritizeScreenRayFirstMesh(chunkCoord);
   // The current Dirty ticket can be consumed while the async/capture/GPU

@@ -2029,7 +2029,8 @@ public:
 
 static void
 TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
-                              const cutum::UBlockDefinitionStorage *definitions)
+                              const cutum::UBlockDefinitionStorage *definitions,
+                              int initial_lane = 0)
 {
   using namespace cutum;
   const glm::ivec3 root(-5, -3, 3);
@@ -2070,7 +2071,6 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
   settings.FrustumCulling = false;
   cache.SetRenderSettings(settings);
   cache.SetMesherBackend(&mesher);
-  cache.SetMeshRebuildFocus(focus, 4, 1);
   cache.SetMeshSnapshotBudgetMs(1000);
   cache.SetMeshEmergeTotalBudgetMs(1000);
   MeshWorkAdmission admission;
@@ -2086,7 +2086,21 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
       {
         return std::make_shared<TestRenderLightBinding>(epoch, geometry, light);
       });
-  cache.MarkDirtyPriority(root);
+  if (initial_lane == 0)
+    cache.MarkDirtyPriority(root);
+  else
+  {
+    cache.MarkDirty(root);
+    if (initial_lane == 2)
+      Expect(cache.PrioritizeVisibleLightRepairRemesh(root),
+             "first-publication fixture starts with priority remesh ownership");
+  }
+  // Streaming can enqueue this slice before the camera focus reaches it.
+  cache.SetMeshRebuildFocus(focus, 4, 1);
+  int32_t queue_index = -1, queue_size = 0;
+  Expect(cache.GetDirtyQueueTrace(root, queue_index, queue_size) ==
+             (initial_lane == 0 ? 1 : (initial_lane == 1 ? 3 : 2)),
+         "first-publication fixture retains its actual pre-focus queue class");
   for (const auto coord : unrelated)
     cache.MarkDirtyPriority(coord);
   const auto revision = cache.GetChunkMeshRevision(root);
@@ -2098,6 +2112,17 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
   demand.NoteLightCalculationSettled(
       root, cache.GetCaptureStore().WorldEpoch(), chunk->GetIncarnation(),
       chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  auto paused_admission = admission;
+  paused_admission.max_schedule = 0;
+  paused_admission.first_mesh_schedule = 0;
+  cache.SetMeshWorkAdmission(paused_admission);
+  Expect(cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0)
+                     .Scheduled == 0 &&
+             !cache.HasInflightMeshBuild(root),
+         "zero FirstMesh quota leaves the existing queued witness unstarted");
+  cache.SetMeshWorkAdmission(admission);
+  const auto queue_age = cache.GetDirtyQueueAgeFrames(root);
+  Expect(queue_age > 0, "ray witness fixture has a nonzero existing queue age");
   Expect(cache.GetCaptureStore()
              .CaptureAndStore(world, root, revision)
              .has_value(),
@@ -2110,8 +2135,11 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
          "slice");
   Expect(cache.PrioritizeScreenRayRepair(root) &&
              cache.GetDirtyCount() == dirty_count &&
-             cache.GetChunkMeshRevision(root) == revision,
-         "duplicate ray witnesses create no geometry revision or work owner");
+             cache.GetChunkMeshRevision(root) == revision &&
+             cache.GetDirtyQueueAgeFrames(root) == queue_age &&
+             cache.GetDirtyQueueTrace(root, queue_index, queue_size) == 1,
+         "ray classification and duplicate hints preserve one owner, revision "
+         "and age");
   const auto tick =
       cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
   Expect(tick.Scheduled == 1 && cache.HasInflightMeshBuild(root),
@@ -2128,6 +2156,11 @@ TestScreenRayFirstPublication(cutum::UBlockRegistry &registry,
              cache.GetMeshPublishRevs(root).geom_rev == revision,
          "ray-prioritized first publication uses one actual worker and current "
          "physical field");
+  cache.RemoveChunk(root);
+  Expect(!cache.HasScreenRayRepairPin(root) &&
+             !cache.PrioritizeScreenRayRepair(root),
+         "evicted first-publication witness cannot create a detached repair "
+         "owner");
 }
 
 class GatedPhysicalMesher final : public cutum::IUChunkMesher
@@ -5596,6 +5629,8 @@ int main(int argc, char **argv)
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get());
+  TestScreenRayFirstPublication(registry, definitions.get(), 1);
+  TestScreenRayFirstPublication(registry, definitions.get(), 2);
   TestPublishedLightRefreshLifecycle(registry, definitions.get());
   TestPublishedLightRefreshFairness(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());
