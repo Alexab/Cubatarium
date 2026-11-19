@@ -13853,5 +13853,822 @@
     "Extend actual native edit/save/evict/cold-reload compatibility while preserving worlds and real movement; retain completed cold/return evidence without restarting audit.",
     "Continue independent nonzero RGB/wet/transparency/backend and all remaining original S0..S6 acceptance gates."
   ]
+},
+"native_material_edit_return_cold_reload_2026_11_20": {
+  "assessment_path": "build\\desktop-msvc\\native-edited-material-return-cold-assessment-20261120.json",
+  "schema": "native-edited-material-return-cold-assessment.v1",
+  "date": "2026-11-20",
+  "goal_status": "active; full original S0..S6 unchanged",
+  "verifier_commit": "f2dab69b4437eb1ebeac1f8c70a0cd2e25254b22",
+  "changes": [
+    "08cbe917e native bounded world-action adapter + independent binary/JSON voxel reader and evidence verifier",
+    "6053c06da bind admission to equivalent actual storage directory; saved display label World_261 is not copy folder identity",
+    "f2dab69b4 bind independent reevaluation to executed native bot action plan; native binary remains6053c06da"
+  ],
+  "verification": {
+    "python_engine_tests": 116,
+    "python_engine_tests_passed": true,
+    "release_diagnostic_tests": [
+      "diagnostic_world_actions_test",
+      "diagnostic_flight_controller_test"
+    ],
+    "release_diagnostic_tests_passed": true,
+    "native_binary": "6053c06da",
+    "release_build_logs": [
+      "world-actions-desktop-build-20261120.log",
+      "world-actions-storage-desktop-build-20261120.log"
+    ],
+    "caveat": "Only the two relevant diagnostic C++ tests were rerun for this adapter; do not claim the previous38-test engine matrix was rerun on this change. Native runs used6053; stricter Python-only verifierf2d reevaluated all three retained artifact sets identically, without rerunning or overwriting them."
+  },
+  "original_disk_cell_after_runs": {
+    "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d\\chunks\\1_-3_3.cchunk",
+    "sha256": "c954da3e1b591f7fd7a9643446a7ab2274bb5199f69a38c25cde422099db9117",
+    "section": [
+      1,
+      -3,
+      3
+    ],
+    "local": [
+      8,
+      4,
+      3
+    ],
+    "id": 560
+  },
+  "cases": {
+    "initial_refusal": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-material-return-20261120-native",
+      "source_world": "EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d",
+      "fixture_world": "EngineSmoke_375cda415e2747459a8800756c325861",
+      "native_source_commit": "08cbe917e527c5cd90215b80cf05d32a762ac9a2",
+      "source_version": "0.0.4.1-codex-engine-streaming-remediation2-08cbe91",
+      "native_exit": 1,
+      "wrapper_exit": 1,
+      "overall": "FAIL",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "material_evidence": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "FAIL",
+        "reason": "native_action_failed_or_world_mismatch",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance"
+      },
+      "material_observations": {
+        "api": "UWorld::ReplaceBlockAt",
+        "failed": true,
+        "observations": [
+          {
+            "after_id": 560,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 560,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 560,
+            "incarnation": 11,
+            "phase": "initial",
+            "reach_blocks": 3.0206615924835205,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 723446349,
+            "success": false,
+            "target_id": 376
+          },
+          {
+            "after_id": 560,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 560,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 560,
+            "incarnation": 6067,
+            "phase": "final",
+            "reach_blocks": 71.72691345214844,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 723653716,
+            "success": false,
+            "target_id": 376
+          }
+        ],
+        "schema": "engine-world-actions-observation.v1",
+        "started": true,
+        "world": "World_261"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route_evidence": {
+        "schema": "engine-round-trip-evidence.v1",
+        "status": "PASS",
+        "reason": "motor_return_with_fresh_disk_cohort",
+        "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance",
+        "column": [
+          1,
+          3
+        ],
+        "sections": [
+          {
+            "coord": [
+              1,
+              -4,
+              3
+            ],
+            "retired_incarnation": 2,
+            "returned_incarnation": 6069
+          },
+          {
+            "coord": [
+              1,
+              -3,
+              3
+            ],
+            "retired_incarnation": 11,
+            "returned_incarnation": 6067
+          },
+          {
+            "coord": [
+              1,
+              -2,
+              3
+            ],
+            "retired_incarnation": 3,
+            "returned_incarnation": 6070
+          },
+          {
+            "coord": [
+              1,
+              -1,
+              3
+            ],
+            "retired_incarnation": 4,
+            "returned_incarnation": 6071
+          },
+          {
+            "coord": [
+              1,
+              0,
+              3
+            ],
+            "retired_incarnation": 5,
+            "returned_incarnation": 6072
+          },
+          {
+            "coord": [
+              1,
+              1,
+              3
+            ],
+            "retired_incarnation": 6,
+            "returned_incarnation": 6073
+          },
+          {
+            "coord": [
+              1,
+              2,
+              3
+            ],
+            "retired_incarnation": 7,
+            "returned_incarnation": 6074
+          },
+          {
+            "coord": [
+              1,
+              3,
+              3
+            ],
+            "retired_incarnation": 1,
+            "returned_incarnation": 6068
+          },
+          {
+            "coord": [
+              1,
+              4,
+              3
+            ],
+            "retired_incarnation": 8,
+            "returned_incarnation": 6075
+          }
+        ],
+        "maximum_excursion_blocks": 303.493,
+        "disk_demand_id": 52858,
+        "far_tick_ms": 723533763,
+        "return_tick_ms": 723617182
+      },
+      "report": {
+        "wall_elapsed_sec": 288.587,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          1,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 101,
+        "outside_initial_resident_samples": 4354
+      },
+      "inspection": {
+        "verified": 36,
+        "requested": 36,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "observation": null,
+      "cache_restore_totals": {
+        "restored": 2254,
+        "rejected": 230,
+        "cancelled": 0,
+        "reject_content_mismatch": 230
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 25.8873,
+          "wall_ms_fly_med": 26.8255,
+          "wall_ms_no_holes_med": 24.645850000000003,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifacts_sha256": {
+        "bot-route.json": "cc4206829d6daa962f2c6d98f9d5b63207e0ebc15c9a1d5fcb336103bdaebdab",
+        "route.json": "beb1863e4fb9be5d49f5c04ce7255ed8d70dc7ec0f3806e346779100af12bd52",
+        "world-actions.json": "bf17f12ddc7fc2ae82a7fec4a968a65d189c1fd34e0b0028dae16bcbb06019f6",
+        "world-actions-evidence.json": "e7213d672868171c3b287f2aa042a2bda07fc9420e47647928579bdfa4379d81",
+        "flight_sim_report.json": "5af421a0886989aebde5bf0dd48787fd32f3b72f14c86c71c9eee8148ce4525a",
+        "smoke-verdict.json": "50ec9d6d462cb3b72238cdacc48c0c5f761fcf5d75e650ef34e2a3bb2c80c5bc"
+      },
+      "residency_trace": {
+        "sha256": "661f0b48fd7af934216a31bc0722f60ced9745f18a75171663b3759f4bf69d5a",
+        "footer": {
+          "buffered": 1,
+          "reserved": 48,
+          "published": 48,
+          "dropped": 0,
+          "unpublished": 0,
+          "complete": 1
+        }
+      }
+    },
+    "edited_return": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-material-return-fixed-20261120-native",
+      "source_world": "EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d",
+      "fixture_world": "EngineSmoke_a8451b0d024d41aa978c5f7a597b6f19",
+      "native_source_commit": "6053c06da3e085a774ba1ae2f5fc0de62c4fd35f",
+      "source_version": "0.0.4.1-codex-engine-streaming-remediation2-6053c06",
+      "native_exit": 0,
+      "wrapper_exit": 2,
+      "overall": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "material_evidence": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "PASS",
+        "reason": "edited_material_survived_fresh_disk_return",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+        "cells": [
+          {
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "before_id": 560,
+            "after_id": 376,
+            "initial_incarnation": 11,
+            "final_incarnation": 6067,
+            "disk": {
+              "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_a8451b0d024d41aa978c5f7a597b6f19\\chunks\\1_-3_3.cchunk",
+              "sha256": "e908cfc038a04fb4d0b31e9cfe5ee32953c2a74c439a9f8138078446ca5e837c",
+              "section": [
+                1,
+                -3,
+                3
+              ],
+              "local": [
+                8,
+                4,
+                3
+              ],
+              "id": 376
+            }
+          }
+        ]
+      },
+      "material_observations": {
+        "api": "UWorld::ReplaceBlockAt",
+        "failed": false,
+        "observations": [
+          {
+            "after_id": 376,
+            "api_called": true,
+            "api_success": true,
+            "before_id": 560,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 560,
+            "incarnation": 11,
+            "phase": "initial",
+            "reach_blocks": 3.0206615924835205,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 723926105,
+            "success": true,
+            "target_id": 376
+          },
+          {
+            "after_id": 376,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 376,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 560,
+            "incarnation": 6067,
+            "phase": "final",
+            "reach_blocks": null,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 724132735,
+            "success": true,
+            "target_id": 376
+          }
+        ],
+        "saved_world_label": "World_261",
+        "schema": "engine-world-actions-observation.v1",
+        "started": true,
+        "storage_matches_isolated_world": true,
+        "world": "EngineSmoke_a8451b0d024d41aa978c5f7a597b6f19",
+        "world_folder": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_a8451b0d024d41aa978c5f7a597b6f19"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route_evidence": {
+        "schema": "engine-round-trip-evidence.v1",
+        "status": "PASS",
+        "reason": "motor_return_with_fresh_disk_cohort",
+        "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance",
+        "column": [
+          1,
+          3
+        ],
+        "sections": [
+          {
+            "coord": [
+              1,
+              -4,
+              3
+            ],
+            "retired_incarnation": 2,
+            "returned_incarnation": 6069
+          },
+          {
+            "coord": [
+              1,
+              -3,
+              3
+            ],
+            "retired_incarnation": 11,
+            "returned_incarnation": 6067
+          },
+          {
+            "coord": [
+              1,
+              -2,
+              3
+            ],
+            "retired_incarnation": 3,
+            "returned_incarnation": 6070
+          },
+          {
+            "coord": [
+              1,
+              -1,
+              3
+            ],
+            "retired_incarnation": 4,
+            "returned_incarnation": 6071
+          },
+          {
+            "coord": [
+              1,
+              0,
+              3
+            ],
+            "retired_incarnation": 5,
+            "returned_incarnation": 6072
+          },
+          {
+            "coord": [
+              1,
+              1,
+              3
+            ],
+            "retired_incarnation": 6,
+            "returned_incarnation": 6073
+          },
+          {
+            "coord": [
+              1,
+              2,
+              3
+            ],
+            "retired_incarnation": 7,
+            "returned_incarnation": 6074
+          },
+          {
+            "coord": [
+              1,
+              3,
+              3
+            ],
+            "retired_incarnation": 1,
+            "returned_incarnation": 6068
+          },
+          {
+            "coord": [
+              1,
+              4,
+              3
+            ],
+            "retired_incarnation": 8,
+            "returned_incarnation": 6075
+          }
+        ],
+        "maximum_excursion_blocks": 303.449,
+        "disk_demand_id": 57988,
+        "far_tick_ms": 724013237,
+        "return_tick_ms": 724096227
+      },
+      "report": {
+        "wall_elapsed_sec": 287.816,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          1,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 100,
+        "outside_initial_resident_samples": 5018
+      },
+      "inspection": {
+        "verified": 36,
+        "requested": 36,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "observation": null,
+      "cache_restore_totals": {
+        "restored": 2134,
+        "rejected": 274,
+        "cancelled": 0,
+        "reject_content_mismatch": 274
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 23.5655,
+          "wall_ms_fly_med": 25.1457,
+          "wall_ms_no_holes_med": 23.1615,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifacts_sha256": {
+        "bot-route.json": "4b11294507112613d1aa6abf607d5e457b78f6d780793f2bc94076e9bf2f501a",
+        "route.json": "c444402f35d068c957080dbaf61f57a12a2ef306e8fda01f0b2ae0c1200e7742",
+        "world-actions.json": "2deeeb6e62b895f3fb1151e4965180d30de08e865912068ff48af4f881ba091f",
+        "world-actions-evidence.json": "88999efdeda6a4e6d13f673ea7af378f5c4c63027a2f9593e51522e9dc8a8632",
+        "flight_sim_report.json": "72a2b07a289b3fe32ce953e3d78f7295e6f810afe983cbb27be73ee9c8c892f7",
+        "smoke-verdict.json": "a3b76572bc0a79bc6eee52eace635ceaab41be20552c2868a817e16252dd2f19"
+      },
+      "residency_trace": {
+        "sha256": "6de8b04c554e56067c5f783625ed3bea20820836472a65a08e539fad23a5b87e",
+        "footer": {
+          "buffered": 1,
+          "reserved": 48,
+          "published": 48,
+          "dropped": 0,
+          "unpublished": 0,
+          "complete": 1
+        }
+      }
+    },
+    "cold_probe": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-material-cold-reload-20261120-native",
+      "source_world": "EngineSmoke_a8451b0d024d41aa978c5f7a597b6f19",
+      "fixture_world": "EngineSmoke_b6b9ffe13ed14580ad4d11696f3b1a7c",
+      "native_source_commit": "6053c06da3e085a774ba1ae2f5fc0de62c4fd35f",
+      "source_version": "0.0.4.1-codex-engine-streaming-remediation2-6053c06",
+      "native_exit": 0,
+      "wrapper_exit": 0,
+      "overall": "PASS",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "material_evidence": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "PASS",
+        "reason": "cold_material_probe_and_disk_agree",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+        "cells": [
+          {
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "before_id": 376,
+            "after_id": 376,
+            "initial_incarnation": 11,
+            "final_incarnation": 11,
+            "disk": {
+              "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_b6b9ffe13ed14580ad4d11696f3b1a7c\\chunks\\1_-3_3.cchunk",
+              "sha256": "e908cfc038a04fb4d0b31e9cfe5ee32953c2a74c439a9f8138078446ca5e837c",
+              "section": [
+                1,
+                -3,
+                3
+              ],
+              "local": [
+                8,
+                4,
+                3
+              ],
+              "id": 376
+            }
+          }
+        ]
+      },
+      "material_observations": {
+        "api": "UWorld::ReplaceBlockAt",
+        "failed": false,
+        "observations": [
+          {
+            "after_id": 376,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 376,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 376,
+            "incarnation": 11,
+            "phase": "initial",
+            "reach_blocks": 3.0206615924835205,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 724362611,
+            "success": true,
+            "target_id": 376
+          },
+          {
+            "after_id": 376,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 376,
+            "cell": [
+              24,
+              -44,
+              51
+            ],
+            "expected_id": 376,
+            "incarnation": 11,
+            "phase": "final",
+            "reach_blocks": null,
+            "resident": true,
+            "section": [
+              1,
+              -3,
+              3
+            ],
+            "steady_tick_ms": 724386618,
+            "success": true,
+            "target_id": 376
+          }
+        ],
+        "saved_world_label": "World_261",
+        "schema": "engine-world-actions-observation.v1",
+        "started": true,
+        "storage_matches_isolated_world": true,
+        "world": "EngineSmoke_b6b9ffe13ed14580ad4d11696f3b1a7c",
+        "world_folder": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_b6b9ffe13ed14580ad4d11696f3b1a7c"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "route_evidence": null,
+      "report": {
+        "wall_elapsed_sec": 108.29,
+        "start_focus": [
+          1,
+          3
+        ],
+        "end_focus": [
+          1,
+          3
+        ],
+        "diagnostic_relocations_after_start": 0,
+        "initial_resident_column_count": 133,
+        "outside_initial_resident_samples": 0
+      },
+      "inspection": {
+        "verified": 0,
+        "requested": 0,
+        "reason": "inspection_views_joined_to_png"
+      },
+      "observation": {
+        "status": "PASS",
+        "reason": "stationary_native_observation",
+        "samples": 39,
+        "maximum_drift_blocks": 0.0
+      },
+      "cache_restore_totals": {
+        "restored": 201,
+        "rejected": 4,
+        "cancelled": 0,
+        "reject_content_mismatch": 4
+      },
+      "legacy_performance": {
+        "passed": false,
+        "metrics": {
+          "wall_ms_med": 18.3267,
+          "wall_ms_fly_med": 18.3267,
+          "wall_ms_no_holes_med": null,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0,
+          "post_stop_focus_dirty_med": 0.0
+        }
+      },
+      "artifacts_sha256": {
+        "bot-route.json": "6df0c524ccc6a57eb19ed0d991aad86d1e77078f9cb4684c40bbdf95939aa63f",
+        "route.json": "da5f918732e104cc4966ae6e84442b10e8def5f8f76490f2c6106cc648aa59ed",
+        "world-actions.json": "55187b3bdef17f6330166460816dd7853256cee9144f2be190cc619be32d504a",
+        "world-actions-evidence.json": "c921b978aa899494f2983030c92c26e56eff1f28d3e690cf6bd6e33adfbad8bb",
+        "flight_sim_report.json": "a445b590bbb742e569929c9ac2e9dea76365973722e25ae3c78c56512c6e5b00",
+        "smoke-verdict.json": "d788c4c6ef1f9d9da9457fc4538745671eea447c833b70b7c8de2adb4dc30a67"
+      }
+    }
+  },
+  "limits": [
+    "One solid stone-to-glowstone cell at negativeY in one retained wet cave/R3 world, current Windows backend. CCHK content survives ordinary outbound stream save, observed initial-cohort retirement, matching actual disk demand57988 return, and new-process read-only cold copy. This does not complete general legacy-world/edit/save compatibility or multi-seed/R8/backend matrix.",
+    "Glowstone emission invokes the usual ReplaceBlockAt fast/full relight, dirty mesh and physics publication paths; material persistence does not certify physical light, optical cache validity, final RGB, wet shading or transparency.",
+    "36 verified return-route views are camera/PNG coverage; independent visual oracle missing, so return overallUNTESTED retained. Cold startupPASS includes ring readiness and stationary probe only; route/visual/depth are explicitly not requested.",
+    "Native pass excludes no readiness gates: first-world-paint49columns1176sections configured ring ready. Cache content-mismatch counters remain diagnostic, not physical-light acceptance or individually attributed root causes; last pending log does not prove queueempty.",
+    "Legacy performance remainsFAIL; endpoint displacement0 is expected on a roundtrip but other performance obligations remain. No controlled speedup or global performance/memory acceptance claimed.",
+    "Original full S0..S6 stays active, including lifecycle/provider/cancellation, geometry/optical semantics, procedural AIR discovery, CPU/GPU/backend parity, independent nonzero RGB/wet/transparency, broad persistence and performance/memory matrix. No audit restart or historical evidence rewriting."
+  ],
+  "next": [
+    "Continue independent nonzero light/RGB/wet/transparency reference and CPU/GPU/backend checks with actual data consumers.",
+    "Continue remaining original semantic/lifecycle/procedural AIR discovery and complete native persistence/performance/memory coverage; retain current material lifecycle proof as one matrix cell."
+  ]
 }
 }
