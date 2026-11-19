@@ -5951,6 +5951,8 @@ void UFramePerfMonitor::Shutdown()
               << r.renderer_pixel_opaque_source_index_count
               << ",\"renderer_pixel_opaque_light_source_kind\":"
               << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
+              << ",\"renderer_pixel_opaque_bound_field\":"
+              << r.renderer_pixel_opaque_bound_field
               << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
               << static_cast<int>(
                      r.renderer_pixel_opaque_packed_light_payload_valid)
@@ -6550,6 +6552,8 @@ void UFramePerfMonitor::Shutdown()
             << r.renderer_pixel_opaque_source_index_count
             << ",\"renderer_pixel_opaque_light_source_kind\":"
             << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
+            << ",\"renderer_pixel_opaque_bound_field\":"
+            << r.renderer_pixel_opaque_bound_field
             << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
             << static_cast<int>(
                    r.renderer_pixel_opaque_packed_light_payload_valid)

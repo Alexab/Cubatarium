@@ -57,6 +57,8 @@ namespace cutum
 class IUGameContent;
 class UCreatureTextureStorage;
 class UWorld;
+class BoundSectionLightProbe;
+struct BoundSectionLightCapture;
 
 // Structure for batch rendering
 struct RenderBatch
@@ -78,6 +80,7 @@ struct PackedDrawRangeWitness
   uint32_t quad_count{0};
   int32_t material_id{-1};
   uint64_t slot_generation{0};
+  std::shared_ptr<const BoundSectionLightCapture> bound_light;
 };
 
 struct PackedOpaqueDrawTrace
@@ -365,6 +368,9 @@ private:
   std::vector<PackedOpaqueDrawTrace> LastOpaquePackedDrawTrace;
   CrossGpuPassCache CrossGpuPass;
   std::shared_ptr<SectionRenderLightBindings> SectionLightOwner;
+  std::unique_ptr<BoundSectionLightProbe> BoundLightProbe_;
+  bool CaptureBoundLight_{false};
+  size_t BoundLightCaptures_{0};
   bool PhysicalLightPublicationBound_{false};
   uint64_t CrossPhysicalDrawCount_{0};
   uint64_t PackedPhysicalDrawCount_{0};

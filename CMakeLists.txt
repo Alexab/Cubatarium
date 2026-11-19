@@ -3441,6 +3441,18 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   if(WIN32)
     target_compile_definitions(section_light_atlas_driver_test PRIVATE GLEW_STATIC)
   endif()
+  add_executable(bound_section_light_probe_driver_test
+    src/Render/Lighting/SectionLightAtlas.cpp
+    src/Render/Lighting/SectionLightBindingTable.cpp
+    src/Test/BoundSectionLightProbeDriverTest.cpp)
+  target_include_directories(bound_section_light_probe_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(bound_section_light_probe_driver_test PRIVATE
+    glm::glm GLEW::GLEW OpenGL::GL glfw)
+  if(WIN32)
+    target_compile_definitions(bound_section_light_probe_driver_test PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME bound_section_light_probe_driver_test COMMAND $<TARGET_FILE:bound_section_light_probe_driver_test>)
+  set_tests_properties(bound_section_light_probe_driver_test PROPERTIES LABELS "gpu;integration" SKIP_RETURN_CODE 77 TIMEOUT 30)
   add_executable(greedy_vertex_pool_production_test
     src/Render/Lighting/SectionLightDrawTable.cpp
     src/Test/GreedyVertexPoolProductionTest.cpp

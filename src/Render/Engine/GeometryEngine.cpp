@@ -37,6 +37,7 @@
 #include "Render/Engine/RgbReferenceMaterialCapture.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
+#include "Render/Lighting/BoundSectionLightProbe.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
@@ -357,6 +358,7 @@ struct GreedyVertexLightMatch
   float wetness{0.0f};
   int face_index{-1};
   BlockId block_id{BLOCK_AIR};
+  std::shared_ptr<const BoundSectionLightCapture> bound_light;
 };
 
 struct ClosestTrianglePoint
@@ -1705,7 +1707,13 @@ void CaptureTransparentPixelProbe(
 
   struct PackedLightPayload
   {
-    std::vector<std::pair<PackedQuad, BlockId>> quads;
+    struct Quad
+    {
+      PackedQuad value;
+      BlockId material;
+      std::shared_ptr<const BoundSectionLightCapture> bound_light;
+    };
+    std::vector<Quad> quads;
     bool readable{false};
   };
   std::unordered_map<glm::ivec3, PackedLightPayload, IVec3Hash>
@@ -1763,7 +1771,8 @@ void CaptureTransparentPixelProbe(
       glGetBufferSubData(GL_COPY_READ_BUFFER, static_cast<GLintptr>(offset),
                          static_cast<GLsizeiptr>(count), data.data());
       for (const auto &q : data)
-        out.quads.emplace_back(q, static_cast<BlockId>(range.material_id));
+        out.quads.push_back(
+            {q, static_cast<BlockId>(range.material_id), range.bound_light});
       total += range.quad_count;
     }
     glBindBuffer(GL_COPY_READ_BUFFER, static_cast<GLuint>(previous));
@@ -1795,6 +1804,8 @@ void CaptureTransparentPixelProbe(
 
       VisualBlackTraceRecord record{};
       record.sample_kind = 9;
+      record.renderer_pixel_opaque_bound_field.requested =
+          BoundSectionLightProbeRequested();
       record.frame_epoch = frame_epoch;
       record.renderer_pixel_sample_time_ms = VisualObligationNowMs();
       record.renderer_pixel_sample_steady_ms =
@@ -2041,7 +2052,7 @@ void CaptureTransparentPixelProbe(
               record.renderer_pixel_opaque_packed_light_payload_valid = 1;
               record.renderer_pixel_opaque_packed_light_quad_count =
                   static_cast<uint32_t>(payload->quads.size());
-              for (const auto &[q, material] : payload->quads)
+              for (const auto &[q, material, bound_light] : payload->quads)
               {
                 std::array<glm::vec3, 4> corners;
                 if (!DecodePackedQuadCorners(q, opaque_chunk * CHUNK_SIZE,
@@ -2066,6 +2077,7 @@ void CaptureTransparentPixelProbe(
                       (q.word1 & kPackedQuadFlagLightPreview) ? 1.0f : 0.0f;
                   opaque_vertex_light.face_index = q.Face();
                   opaque_vertex_light.block_id = material;
+                  opaque_vertex_light.bound_light = bound_light;
                   opaque_vertex_light.valid =
                       distance <= kOpaqueVertexLightMatchDistance;
                 }
@@ -2092,6 +2104,28 @@ void CaptureTransparentPixelProbe(
                 opaque_vertex_light.block;
             record.renderer_pixel_opaque_vertex_light_preview =
                 opaque_vertex_light.preview;
+            if (const auto &bound = opaque_vertex_light.bound_light)
+            {
+              auto &e = record.renderer_pixel_opaque_bound_field;
+              e.captured = bound->captured;
+              e.cpu_matches = bound->cpu_matches;
+              e.program = bound->program;
+              e.atlas_texture = bound->atlas_texture;
+              e.table_texture = bound->table_texture;
+              e.handle = bound->handle;
+              e.world_epoch = bound->world_epoch;
+              e.field_incarnation = bound->field_incarnation;
+              e.field_revision = bound->field_revision;
+              e.geometry_incarnation = bound->geometry_incarnation;
+              e.geometry_content = bound->geometry_content;
+              if (const auto value =
+                      bound->SampleSurface(opaque_vertex_light.surface,
+                                           opaque_vertex_light.face_index))
+              {
+                e.valid = bound->valid;
+                e.packed = *value;
+              }
+            }
             const glm::ivec3 face_normal =
                 GreedyFaceNormal(opaque_vertex_light.face_index);
             // Voxel centers are integer coordinates. Move just inside the
@@ -4292,6 +4326,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyGreedyMeshBuffers();
   if (SectionLightOwner)
     SectionLightOwner->Reset();
+  BoundLightProbe_.reset();
   FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
   WeatherPass.DestroyGpuResources();
@@ -5141,10 +5176,14 @@ void UGeometryEngine::DrawCubeGeometry()
       g_capture_gpu_draw_state_for_pixel_probe =
           pixel_probe_capture.probe_id != 0 &&
           PixelProbeGpuDrawStateWindowContains(camera->GetRenderPosition());
+      CaptureBoundLight_ = pixel_probe_capture.probe_id != 0 &&
+                           BoundSectionLightProbeRequested();
+      BoundLightCaptures_ = 0;
       DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
                               camera->GetRenderPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
       g_capture_gpu_draw_state_for_pixel_probe = false;
+      CaptureBoundLight_ = false;
       {
         double cross_ms = 0.0;
         UScopedPhase cross_phase(&cross_ms);
@@ -7820,6 +7859,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
               : glm::vec3(0.0f),
           transparent_pass ? 4u : 3u, 0u, slot->QuadCount, true);
     }
+    std::optional<std::array<uint32_t, 4>> direct_light_words;
     if (physical_light)
     {
       const auto &binding = chunk.renderLightBinding;
@@ -7836,6 +7876,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       const auto words = SectionLightOwner->PrepareDraw(binding);
       if (!words)
         continue;
+      direct_light_words = words;
       glUniform4uiv(
           packedGreedyShader->GetUniformLocation("uSurfaceSectionLightHandle"),
           1, words->data());
@@ -7916,6 +7957,36 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
       if (trace)
         glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0,
                         &drawn_quad_buffer);
+      std::shared_ptr<BoundSectionLightCapture> bound_capture;
+      // The independent floor reference has a32-block ray domain. Its AABB
+      // can intersect at most6^3sections and two declared materials: a fixed
+      // 512range cap bounds retained bytes below4.1MiB plus one32KiB transfer.
+      const auto delta = glm::max(
+          glm::max(glm::vec3(origin) - glm::vec3(.5f) - camera_position,
+                   camera_position - (glm::vec3(origin) + glm::vec3(15.5f))),
+          glm::vec3(0.0f));
+      if (CaptureBoundLight_ && trace && direct_light_words &&
+          BoundLightCaptures_ < 512 &&
+          (range.blockId == 560 || range.blockId == 376) &&
+          glm::dot(delta, delta) <= 32.0f * 32.0f)
+      {
+        ++BoundLightCaptures_;
+        if (!BoundLightProbe_)
+          BoundLightProbe_ = std::make_unique<BoundSectionLightProbe>();
+        const auto &binding = chunk.renderLightBinding;
+        const auto &snapshot = binding->LightSnapshot();
+        bound_capture = std::make_shared<BoundSectionLightCapture>(
+            BoundLightProbe_->Capture(packedGreedyShader->GetProgramID(),
+                                      *direct_light_words, origin,
+                                      *snapshot.Volume()));
+        bound_capture->world_epoch = binding->WorldEpoch();
+        bound_capture->field_incarnation = snapshot.FieldIncarnation();
+        bound_capture->field_revision = snapshot.FieldRevision();
+        bound_capture->geometry_incarnation =
+            binding->GeometryInputs().stamps[0].incarnation;
+        bound_capture->geometry_content =
+            binding->GeometryInputs().stamps[0].content;
+      }
       glDrawArrays(GL_TRIANGLES, first, count);
       if (physical_light && ++PackedPhysicalDrawCount_ == 1)
         CubatariumLogInfo("SectionLightSurface",
@@ -7928,7 +7999,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
             {static_cast<uint32_t>(drawn_quad_buffer),
              static_cast<uint64_t>(slot->OffsetQuads) + range.quadOffset,
              range.quadCount, static_cast<int32_t>(range.blockId),
-             slot->generation});
+             slot->generation, bound_capture});
       if (fluid_trace && fluid_range)
       {
         ++fluid_draw_calls;

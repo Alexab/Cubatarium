@@ -8,6 +8,7 @@ import json
 import math
 from pathlib import Path
 from engine_fixture_reference import near_cave_surface
+from engine_bound_field_evidence import read_bound_field
 
 
 def finite(value):
@@ -47,6 +48,7 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
     if perf is None or not perf.is_file():
         return {"status": "UNTESTED", "reason": "missing_floor_draw_source_trace"}
     checked = faults = skipped = positive = 0
+    missing_bound = bound_baked_zero = 0
     source_counts = {"cpu": 0, "packed_gpu": 0}
     skip_reasons = {}
     def skip(reason):
@@ -102,8 +104,21 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
                               row[prefix + "packed_light_quad_count"] > 0)
                 if not cpu_source and not gpu_source:
                     skip("missing_readable_draw_source"); continue
-                actual = row.get(prefix + "vertex_block_light")
-                sky = row.get(prefix + "vertex_sky_light")
+                bound = read_bound_field(row)
+                wants_bound = bool(scene.get("rgb_fixture")) or (
+                    isinstance(row.get(prefix+"bound_field"),dict) and
+                    row[prefix+"bound_field"].get("requested") is True)
+                if wants_bound and bound is None:
+                    missing_bound += 1
+                    skip("missing_draw_time_bound_field"); continue
+                if bound is not None:
+                    actual = (bound["packed"] >> 4)/15
+                    sky = (bound["packed"] & 15)/15
+                    source_counts["bound_gpu"] = source_counts.get("bound_gpu",0)+1
+                    bound_baked_zero += row.get(prefix+"vertex_block_light")==0 and actual>0
+                else:
+                    actual = row.get(prefix + "vertex_block_light")
+                    sky = row.get(prefix + "vertex_sky_light")
                 epoch = row.get("frame_epoch")
                 if (not finite(actual) or not finite(sky) or not isinstance(epoch, int) or
                         isinstance(epoch, bool)):
@@ -129,16 +144,18 @@ def evaluate(scene: dict, perf: Path | None) -> dict:
         return {"status": "FAIL", "reason": "malformed_floor_reference_trace"}
     coverage = {"samples": checked >= 25, "positive_samples": positive >= 25,
                 "frame_epochs": len(epochs) >= 3, "floor_cells": len(observed_floor_cells) >= 8,
+                "requested_bound_fields": missing_bound==0,
                 **({} if direct_sky else {"light_levels": len(expected_levels) >= 3,
                                          "emitter_surface": bool(observed_emitters)})}
     status = "FAIL" if faults else "PASS" if all(coverage.values()) else "UNTESTED"
     return {"status": status, "reason": "analytic_direct_sky_floor_draw_source_light" if direct_sky else "analytic_floor_draw_source_light",
             "checked": checked, "positive_expected": positive, "faults": faults,
             "source_counts": source_counts,
+            "missing_bound_fields": missing_bound, "positive_bound_with_baked_zero": bound_baked_zero,
             "frame_epochs": len(epochs), "observed_emitter_cells": len(observed_emitters),
             "distinct_floor_cells": len(observed_floor_cells),
             "distinct_expected_levels": len(expected_levels),
             "skipped": skipped, "skip_reasons": skip_reasons,
             "missing_coverage": [k for k,v in coverage.items() if not v], "examples": examples,
             "scope": ("unobstructed constant direct-skylight floor" if direct_sky else "prepared dry-cave opaque floor") +
-                     " CPU vertex or witnessed packed GPU draw-buffer light joined to analytic framebuffer depth; no shaded RGB, transparency or full-screen acceptance"}
+                     " CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"}
