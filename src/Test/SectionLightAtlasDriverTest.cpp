@@ -19,6 +19,27 @@ void Expect(bool condition, const char *message)
     throw std::runtime_error(message);
 }
 
+template <class Output> void ReadRedWords(int width, int height, Output &out)
+{
+  Expect(out.size() == size_t(width) * size_t(height),
+         "readback extent matches destination");
+  const auto before = glGetError();
+  if (before != GL_NO_ERROR)
+    throw std::runtime_error("GL error before integer readback: " +
+                             std::to_string(before));
+  // GLES3 guarantees RGBA_INTEGER for integer color readback, not RED_INTEGER.
+  // Keep exact32-bit channels; extract red only after the legal RGBA transfer.
+  std::vector<uint32_t> rgba(out.size() * 4);
+  glReadPixels(0, 0, width, height, GL_RGBA_INTEGER, GL_UNSIGNED_INT,
+               rgba.data());
+  const auto error = glGetError();
+  if (error != GL_NO_ERROR)
+    throw std::runtime_error("integer readback GL error: " +
+                             std::to_string(error));
+  for (size_t n = 0; n < out.size(); ++n)
+    out[n] = rgba[n * 4];
+}
+
 GLuint Compile(GLenum type, const char *source)
 {
   std::string adapted(source);
@@ -161,8 +182,7 @@ void RunOrderedBindings()
     // Deliberately no readback, fence wait or glFinish between reuse and draw.
   }
   std::vector<uint32_t> pixels(width * 400);
-  glReadPixels(0, 0, width, 400, GL_RED_INTEGER, GL_UNSIGNED_INT,
-               pixels.data());
+  ReadRedWords(width, 400, pixels);
   for (int n = 0; n < count; ++n)
     for (int z = 0; z < 20; ++z)
       for (int y = 0; y < 20; ++y)
@@ -176,7 +196,7 @@ void RunOrderedBindings()
   {
     draw(handle, origin, 0);
     std::vector<uint32_t> result(20 * 400);
-    glReadPixels(0, 0, 20, 400, GL_RED_INTEGER, GL_UNSIGNED_INT, result.data());
+    ReadRedWords(20, 400, result);
     for (int z = 0; z < 20; ++z)
       for (int y = 0; y < 20; ++y)
         for (int x = 0; x < 20; ++x)
@@ -335,7 +355,7 @@ void RunBindings()
     glViewport(0, 0, 20, 400);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     std::array<uint32_t, Volume::CellCount> result{};
-    glReadPixels(0, 0, 20, 400, GL_RED_INTEGER, GL_UNSIGNED_INT, result.data());
+    ReadRedWords(20, 400, result);
     for (size_t n = 0; n < result.size(); ++n)
       if (result[n] != (expected ? expected->cells[n] : 256u))
         throw std::runtime_error(
@@ -586,11 +606,22 @@ void Run()
     glViewport(0, 0, 20, 400);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     std::array<uint32_t, Volume::CellCount> result{};
-    glReadPixels(0, 0, 20, 400, GL_RED_INTEGER, GL_UNSIGNED_INT, result.data());
+    ReadRedWords(20, 400, result);
     for (size_t n = 0; n < result.size(); ++n)
       if (result[n] != expected.cells[n])
-        throw std::runtime_error("shader atlas sample mismatch at cell " +
-                                 std::to_string(n));
+      {
+        const auto error = glGetError();
+        GLint format = 0, type = 0;
+        glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_FORMAT, &format);
+        glGetIntegerv(GL_IMPLEMENTATION_COLOR_READ_TYPE, &type);
+        throw std::runtime_error(
+            "shader atlas sample mismatch at cell " + std::to_string(n) +
+            " actual=" + std::to_string(result[n]) +
+            " expected=" + std::to_string(expected.cells[n]) +
+            " gl_error=" + std::to_string(error) +
+            " implementation_read_format=" + std::to_string(format) +
+            " type=" + std::to_string(type));
+      }
     Expect(glGetError() == GL_NO_ERROR, "field sampling has no GL errors");
   };
   std::array<Atlas::Page, 8> pages;
