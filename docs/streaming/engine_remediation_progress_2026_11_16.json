@@ -12155,5 +12155,34 @@
   },
   "next": "Build committed desktop Release then rerun existing motor route with selected6,6. Attribute actual recreated slice before modifying cross-boundary generation/physics behavior.",
   "scope": "All full S0..S6 obligations remain active, including unresolved30receipt disk purge, memory/performance, backend parity, independent nonzeroRGB/wet/transparency, semantic identities and lifecycle/provider/cancellation."
+},
+"chunk_creation_trace_file_sink_2026_11_19": {
+  "status": "trace_transport_corrected_preflight_and33tests_green_native_attribution_pending_full_S0_S6_active",
+  "first_native_attempt": {
+    "artifacts": "build/desktop-msvc/engine-chunk-recreation-origin-20261119-native",
+    "built_source": "4f8a6f3f05141adbc366df63d933022bd79ecb64",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "source_trace": "UNAVAILABLE: Windows flight-sim AttachParentConsole reopens stderr to CONOUT; runner.log contains zeroChunkResidency rows. No inference from absent trace. Ordinary native verdict remainsUNTESTED."
+  },
+  "correction": "CUBA_CHUNK_RESIDENCY_TRACE_FILE chooses append-only flushed FILE sink independent of Windows console. Each row includes manager address to distinguish scratch generation worlds from actual runtime. Default behavior remains disabled unless selected column configured.",
+  "preflight_and_regression": {
+    "status": "PASS",
+    "test_count": 33,
+    "build_log": "build\\desktop-msvc\\chunk-residency-file-20261119-matrix-build.log",
+    "test_log": "build\\desktop-msvc\\chunk-residency-file-20261119-matrix-tests.log",
+    "file_sink_preflight": {
+      "log": "build\\desktop-msvc\\chunk-residency-file-20261119-preflight.log",
+      "matching_create_remove_incarnation_and_manager": true,
+      "events": 3
+    },
+    "native_source_attribution": "PENDING"
+  },
+  "next": "Build committed desktop Release, rerun same route with explicit fresh artifact sink, join runtime manager identity through original removal/new allocation/final removal and IO fullpurge. Full S0..S6 stays active."
 }
 }

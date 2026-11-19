@@ -31,20 +31,29 @@ inline bool TraceChunkResidencyEnabled(glm::ivec3 coord)
   return selected.enabled && selected.x == coord.x && selected.z == coord.z;
 }
 inline void TraceChunkResidency(const char *source, glm::ivec3 coord,
-                                glm::ivec3 origin, uint64_t value = 0)
+                                glm::ivec3 origin, uint64_t value = 0,
+                                const void *manager = nullptr)
 {
   if (!TraceChunkResidencyEnabled(coord))
     return;
+  static FILE *output = []
+  {
+    if (const char *path = std::getenv("CUBA_CHUNK_RESIDENCY_TRACE_FILE"))
+      if (FILE *file = std::fopen(path, "ab"))
+        return file;
+    return stderr;
+  }();
   static std::atomic<uint64_t> sequence{0};
   const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                       std::chrono::steady_clock::now().time_since_epoch())
                       .count();
-  std::fprintf(stderr,
+  std::fprintf(output,
                "[ChunkResidency] seq=%llu tick_ms=%lld source=%s "
-               "coord=(%d,%d,%d) origin=(%d,%d,%d) value=%llu\n",
+               "coord=(%d,%d,%d) origin=(%d,%d,%d) value=%llu manager=%p\n",
                static_cast<unsigned long long>(++sequence),
                static_cast<long long>(ms), source, coord.x, coord.y, coord.z,
                origin.x, origin.y, origin.z,
-               static_cast<unsigned long long>(value));
+               static_cast<unsigned long long>(value), manager);
+  std::fflush(output);
 }
 } // namespace cutum

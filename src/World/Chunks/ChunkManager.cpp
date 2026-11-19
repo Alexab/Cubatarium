@@ -54,7 +54,7 @@ void UChunkManager::SetBlock(glm::ivec3 worldPos, BlockId Id)
 {
   const glm::ivec3 chunkCoord = WorldToChunk(worldPos);
   if (TraceChunkResidencyEnabled(chunkCoord) && !HasChunk(chunkCoord))
-    TraceChunkResidency("set_block_missing", chunkCoord, worldPos, Id);
+    TraceChunkResidency("set_block_missing", chunkCoord, worldPos, Id, this);
   UChunk &chunk = GetOrCreateChunk(chunkCoord);
   const bool was_air_only = chunk.IsAirOnly();
   chunk.SetBlockLocal(WorldToLocal(worldPos), Id);
@@ -69,7 +69,7 @@ void UChunkManager::SetFluidState(glm::ivec3 worldPos, FluidCellState state)
   const auto coord = WorldToChunk(worldPos);
   if (TraceChunkResidencyEnabled(coord) && !HasChunk(coord))
     TraceChunkResidency("set_fluid_missing", coord, worldPos,
-                        PackFluidCellState(state));
+                        PackFluidCellState(state), this);
   UChunk &chunk = GetOrCreateChunk(coord);
   chunk.SetFluidLocal(WorldToLocal(worldPos), state);
 }
@@ -252,7 +252,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
     return;
   }
   TraceChunkResidency("remove", chunkCoord, chunkCoord,
-                      it->second->GetIncarnation());
+                      it->second->GetIncarnation(), this);
   NoteInputMutation();
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   chunk->ClearLightCalculationProofs();
@@ -280,7 +280,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 void UChunkManager::EnsureChunk(glm::ivec3 chunkCoord)
 {
   if (TraceChunkResidencyEnabled(chunkCoord) && !HasChunk(chunkCoord))
-    TraceChunkResidency("ensure_missing", chunkCoord, chunkCoord);
+    TraceChunkResidency("ensure_missing", chunkCoord, chunkCoord, 0, this);
   (void)GetOrCreateChunk(chunkCoord);
 }
 
@@ -303,8 +303,8 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::make_unique<UChunk>(chunkCoord);
   }
-  TraceChunkResidency("create", chunkCoord, chunkCoord,
-                      chunk->GetIncarnation());
+  TraceChunkResidency("create", chunkCoord, chunkCoord, chunk->GetIncarnation(),
+                      this);
   NoteInputMutation();
   auto [field_it, field_inserted] =
       LightFields.emplace(chunkCoord, chunk->Light.field);

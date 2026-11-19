@@ -219,9 +219,9 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     const auto target = UChunkManager::WorldToChunk(entry.first);
     if (TraceChunkResidencyEnabled(target) &&
         !world.GetChunkManager().HasChunk(target))
-      TraceChunkResidency(HasWorldGenOwnerChunk ? "worldgen_buffer_missing"
-                                                : "buffer_missing",
-                          target, WorldGenOwnerChunk, entry.second);
+      TraceChunkResidency(
+          HasWorldGenOwnerChunk ? "worldgen_buffer_missing" : "buffer_missing",
+          target, WorldGenOwnerChunk, entry.second, &world.GetChunkManager());
     world.SetBlock(entry.first, entry.second);
     const auto fluid_it = FluidPacked.find(entry.first);
     if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
