@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <glm/glm.hpp>
+#include <optional>
 
 namespace cutum
 {
@@ -17,7 +18,7 @@ namespace residency_trace_detail
 struct Selection
 {
   int x{0}, z{0};
-  bool enabled{false}, buffered{false};
+  bool enabled{false}, buffered{false}, start_column{false};
 };
 inline const Selection &Config()
 {
@@ -32,9 +33,23 @@ inline const Selection &Config()
     }
     if (const char *mode = std::getenv("CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED"))
       result.buffered = mode[0] == '1';
+    if (const char *mode =
+            std::getenv("CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN"))
+      if (mode[0] == '1')
+        result.enabled = result.start_column = true;
     return result;
   }();
   return selected;
+}
+struct RuntimeColumn
+{
+  std::atomic<bool> claimed{false}, armed{false};
+  int x{0}, z{0};
+};
+inline RuntimeColumn &StartColumn()
+{
+  static RuntimeColumn column;
+  return column;
 }
 inline FILE *OpenOutput()
 {
@@ -104,11 +119,41 @@ inline void Record(const Event &event)
 }
 } // namespace residency_trace_detail
 
+// Runtime selection is published once; startup scratch workers cannot select
+// or redirect the observed column. Readers acquire the immutable coordinates.
+inline void SelectChunkResidencyStartColumn(glm::ivec3 focus)
+{
+  if (!residency_trace_detail::Config().start_column)
+    return;
+  auto &column = residency_trace_detail::StartColumn();
+  bool expected = false;
+  if (column.claimed.compare_exchange_strong(expected, true))
+  {
+    column.x = focus.x;
+    column.z = focus.z;
+    column.armed.store(true, std::memory_order_release);
+  }
+}
+inline std::optional<glm::ivec2> ChunkResidencyTraceColumn()
+{
+  const auto &selected = residency_trace_detail::Config();
+  if (!selected.enabled)
+    return std::nullopt;
+  if (!selected.start_column)
+    return glm::ivec2(selected.x, selected.z);
+  const auto &column = residency_trace_detail::StartColumn();
+  if (!column.armed.load(std::memory_order_acquire))
+    return std::nullopt;
+  return glm::ivec2(column.x, column.z);
+}
 // Opt-in, one-column mutation evidence; independent of presentation readiness.
 inline bool TraceChunkResidencyEnabled(glm::ivec3 coord)
 {
   const auto &selected = residency_trace_detail::Config();
-  return selected.enabled && selected.x == coord.x && selected.z == coord.z;
+  if (!selected.start_column)
+    return selected.enabled && selected.x == coord.x && selected.z == coord.z;
+  const auto column = ChunkResidencyTraceColumn();
+  return column && column->x == coord.x && column->y == coord.z;
 }
 inline void TraceChunkResidency(const char *source, glm::ivec3 coord,
                                 glm::ivec3 origin, uint64_t value = 0,
@@ -130,6 +175,14 @@ inline void TraceChunkResidency(const char *source, glm::ivec3 coord,
   static std::atomic<uint64_t> sequence{0};
   residency_trace_detail::Print(output, ++sequence, event);
   std::fflush(output);
+}
+inline void TraceChunkResidencyRuntimeOwner(const void *manager,
+                                            glm::ivec3 focus)
+{
+  SelectChunkResidencyStartColumn(focus);
+  if (const auto column = ChunkResidencyTraceColumn())
+    TraceChunkResidency("runtime_owner", {column->x, focus.y, column->y}, focus,
+                        0, manager);
 }
 inline void FlushChunkResidencyTrace()
 {

@@ -23,9 +23,10 @@ static void Environment(const char *key, const std::string &value)
   setenv(key, value.c_str(), 1);
 #endif
 }
-int main(int argc, char **)
+int main(int argc, char **argv)
 {
-  const bool overflow = argc > 1;
+  const bool overflow = argc > 1 && std::string(argv[1]) == "overflow";
+  const bool start = argc > 1 && std::string(argv[1]) == "start";
   const auto path =
       std::filesystem::temp_directory_path() /
       ("cubatarium-residency-" +
@@ -34,8 +35,22 @@ int main(int argc, char **)
        ".log");
   Expect(!std::filesystem::exists(path), "fresh trace file required");
   Environment("CUBA_CHUNK_RESIDENCY_TRACE", "6,6");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN", start ? "1" : "0");
   Environment("CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED", "1");
   Environment("CUBA_CHUNK_RESIDENCY_TRACE_FILE", path.string());
+  if (start)
+  {
+    cutum::TraceChunkResidency("startup_scratch", {6, 4, 6}, glm::ivec3(0));
+    cutum::TraceChunkResidency("startup_zero", {0, 4, 0}, glm::ivec3(0));
+    Expect(!cutum::TraceChunkResidencyEnabled({6, 4, 6}) &&
+               !cutum::TraceChunkResidencyEnabled({0, 4, 0}),
+           "start selection waits for runtime owner");
+    cutum::SelectChunkResidencyStartColumn({6, -3, 6});
+    cutum::SelectChunkResidencyStartColumn({7, -3, 6});
+    Expect(cutum::TraceChunkResidencyEnabled({6, 4, 6}) &&
+               !cutum::TraceChunkResidencyEnabled({7, 4, 6}),
+           "runtime selection is immutable across later callers");
+  }
   const size_t each = overflow ? 1024 : 128;
   const int manager = 7;
   std::vector<std::thread> workers;

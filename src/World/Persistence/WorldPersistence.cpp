@@ -20,6 +20,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/ChunkResidencyTrace.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
@@ -4422,6 +4423,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     return;
   }
 
+  if (has_disk && !state.had_disk_read_failure && !state.had_invalid_token)
+    TraceChunkResidency("disk_column_complete", ground_coord, ground_coord,
+                        state.demand_id, &world.BlockWorld.GetChunkManager());
   LogWorldColumnSource(
       has_disk ? "disk" : "empty-disk-column", "complete", ground_coord,
       "highest_cy=" + std::to_string(state.highest_cy_on_disk) +
@@ -5358,6 +5362,8 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
           " slices=" + std::to_string(state.remaining_results) +
           " discovery_ms=" + std::to_string(state.disk_discovery_ms));
 
+  TraceChunkResidency("disk_column_queued", ground_coord, ground_coord,
+                      state.demand_id, &world.BlockWorld.GetChunkManager());
   // I/O order: player cy / sea surface first, then expand. Finalize still waits
   // for the full column, but near-surface slices land in RAM sooner and mesh
   // can start as soon as light finishes after finalize.

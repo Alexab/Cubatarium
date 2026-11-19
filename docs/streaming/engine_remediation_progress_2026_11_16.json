@@ -13603,5 +13603,23 @@
     "StartupPASS covers49columns1176sections and40stationary samples; no route, pixel, nonzero-light or general durability acceptance. Full original S0..S6 stays active."
   ],
   "next": "Implement and run motor roundtrip with actual initial-cohort eviction, fresh-identity disk reload after far turnaround, and return evidence; preserve all remaining original requirements."
+},
+"motor_roundtrip_data_lifecycle_witness_2026_11_20": {
+  "status": "harness_and_native_witness_tests_green_actual_roundtrip_pending_full_S0_S6_active",
+  "change": "Optional --round-trip builds three ordinary-input waypoints (rise/inspect, frontier/inspect, return/inspect), requests no legacy hold-forward drift, and retains endpoint-only verdict for ordinary one-way runs. New route verdict requires far excursion, regained starting locus, native0relocations, initial-footprint crossing, uniquely marked actual runtime manager, every initial selected resident section retired before far turnaround, same-demand successful disk reload after turnaround, fresh section incarnations matching final resident snapshot, and complete bounded trace. Missing evidence staysUNTESTED; existing visual/runtime failures are preserved. No pixel/light/performance acceptance inferred.",
+  "native_observability": "Start-column selection is armed once by actual runtime focus (startup scratch worlds excluded), immutable across later selection. Runtime owner and initial/final incarnation snapshots, monotonic bot timestamps, disk-column queue/completion demand IDs recorded through bounded no-event-IO trace. Failed/token-invalid/no-disk completions are not promoted to successful disk proof.",
+  "verification": {
+    "header_sha256": "71ef0934b43d24cde0c953163588fad731f8822a722554c63e80517e00839a4b",
+    "mutable_owner_negative_control": true,
+    "exact_source_restore": true,
+    "matrix_green": true,
+    "test_count": 38,
+    "matrix_log": "build\\desktop-msvc\\roundtrip-20261120-matrix-test.log",
+    "harness_tests": {
+      "count": 104,
+      "log": "build\\desktop-msvc\\roundtrip-20261120-all-harness-tests.log"
+    }
+  },
+  "next": "Build committed Windows Release then run unchanged-source cold motor return against EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d using original19chunk outbound coverage and explicit900second wall deadline. All original S0..S6 requirements remain active, including edit/save compatibility, physical light, independent RGB/wet/transparency/backend and performance/memory matrix."
 }
 }

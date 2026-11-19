@@ -1888,6 +1888,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     int start_focus_cx = 0;
     int start_focus_cz = 0;
     bool start_focus_captured = false;
+    const auto trace_residency_snapshot = [&](const char *phase)
+    {
+      const auto column = ChunkResidencyTraceColumn();
+      if (!column)
+        return;
+      const auto &profile = world->BlockWorld.GetVerticalProfile();
+      const auto &manager = world->BlockWorld.GetChunkManager();
+      for (int cy = profile.MinChunkY(CHUNK_SIZE);
+           cy <= profile.MaxChunkY(CHUNK_SIZE); ++cy)
+      {
+        const glm::ivec3 coord(column->x, cy, column->y);
+        if (const auto *chunk = manager.GetChunk(coord))
+          TraceChunkResidency(phase, coord, {column->x, 0, column->y},
+                              chunk->GetIncarnation(), &manager);
+      }
+    };
     const bool route_line_tracking_enabled =
         options.AvoidObstacles && options.Fly && options.HoldForward &&
         !options.YawSweepMode && options.ReverseCourseAfterSec <= 0.0;
@@ -2947,9 +2963,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                   const auto fluid_column = world->FindFluidColumnSurface(pos);
                   bot_trace
                       << "{\"schema\":\"diagnostic-bot-trace.v1\",\"time\":"
-                      << ingame_sec << ",\"position\":[" << pos.x << ','
-                      << pos.y << ',' << pos.z << "],\"state\":\""
-                      << diagnostic_bot.StateName()
+                      << ingame_sec << ",\"steady_tick_ms\":"
+                      << std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::steady_clock::now()
+                                 .time_since_epoch())
+                             .count()
+                      << ",\"position\":[" << pos.x << ',' << pos.y << ','
+                      << pos.z << "],\"state\":\"" << diagnostic_bot.StateName()
                       << "\",\"waypoints_visited\":"
                       << diagnostic_bot.VisitedWaypoints()
                       << ",\"forward\":" << action.forward
@@ -2987,6 +3007,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 start_focus_cx = focus_chunk.x;
                 start_focus_cz = focus_chunk.z;
                 start_focus_captured = true;
+                TraceChunkResidencyRuntimeOwner(
+                    &world->BlockWorld.GetChunkManager(), focus_chunk);
+                trace_residency_snapshot("runtime_initial");
                 if (route_line_tracking_enabled)
                 {
                   route_line_origin = camera->GetPosition();
@@ -3268,6 +3291,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       }
     }
 
+    trace_residency_snapshot("runtime_final");
     UMovementDiagnosticsRecorder::SaveToFile(
         *world,
         (report_path.parent_path() / "movement_diagnostics.json").string());

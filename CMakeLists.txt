@@ -1091,6 +1091,9 @@ cubatarium_add_test(NAME chunk_residency_trace_test
 add_test(NAME chunk_residency_trace_overflow_test
     COMMAND $<TARGET_FILE:chunk_residency_trace_test> overflow)
 set_tests_properties(chunk_residency_trace_overflow_test PROPERTIES LABELS "unit")
+add_test(NAME chunk_residency_trace_start_column_test
+    COMMAND $<TARGET_FILE:chunk_residency_trace_test> start)
+set_tests_properties(chunk_residency_trace_start_column_test PROPERTIES LABELS "unit")
 
 cubatarium_add_test(NAME chunk_streamer_committed_column_test
     SOURCES

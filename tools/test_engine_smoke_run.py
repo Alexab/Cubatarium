@@ -130,6 +130,27 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertEqual(self.config.read_bytes(), self.original)
         self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
 
+    def test_round_trip_constructs_return_and_requires_lifecycle_evidence(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        child = Mock(pid=123, returncode=0)
+        with patch.object(engine_smoke_run, "ROOT", self.root), \
+             patch("flight_sim_run.exe_writable", return_value=True), \
+             patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+             patch.object(engine_smoke_run.subprocess, "Popen", return_value=child):
+            verdict = engine_smoke_run.run("Saved", self.artifacts, round_trip=True)
+        route = json.loads((self.artifacts / "bot-route.json").read_text(encoding="utf-8"))
+        self.assertEqual(route["purpose"], "round_trip")
+        self.assertEqual(len(route["waypoints"]), 3)
+        self.assertEqual(route["waypoints"][0], route["waypoints"][2])
+        manifest = json.loads((self.artifacts / "route.json").read_text(encoding="utf-8"))
+        self.assertTrue(manifest["round_trip"])
+        self.assertIn("--no-hold-forward", manifest["command"])
+        self.assertEqual(manifest["diagnostic_environment"]["CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN"], "1")
+        self.assertNotEqual(verdict["status"], "PASS")
+        self.assertEqual(self.config.read_bytes(), self.original)
+        with self.assertRaises(ValueError):
+            engine_smoke_run.run("Saved", self.artifacts, round_trip=True, startup_only=True)
+
     def test_startup_runner_records_scope_and_native_sprint_but_requires_report(self):
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         child = Mock(pid=123, returncode=0)

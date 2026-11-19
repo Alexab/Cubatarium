@@ -344,7 +344,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         process_timeout: float | None = None,
         render_distance: int | None = None, sprint: bool = False,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
-        synchronous_meshing: bool = False) -> dict:
+        synchronous_meshing: bool = False, round_trip: bool = False) -> dict:
+    if not isinstance(round_trip, bool) or (round_trip and startup_only):
+        raise ValueError("round trip requires a moving scenario")
     if (isinstance(capture_encode_delay_ms, bool) or
             not isinstance(capture_encode_delay_ms, int) or
             not 0 <= capture_encode_delay_ms <= 10000):
@@ -414,6 +416,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "10",
             "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS": str(capture_encode_delay_ms),
         })
+        if round_trip:
+            env.update({"CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN": "1",
+                        "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED": "1",
+                        "CUBA_CHUNK_RESIDENCY_TRACE_FILE": str((artifacts / "round-trip-residency.log").resolve())})
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
             # Exercise the normal FP viewmodel consumer. The default flight
             # benchmark hides it; no item/skin/save QA injection is needed.
@@ -462,6 +468,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 # Three ordinary inspection holds provide multiple paints of
                 # each same saved body, including at low diagnostic FPS.
                 point["inspection_targets"] = [target.copy() for _ in range(3)]
+        if round_trip:
+            import copy
+            bot_route["purpose"] = "round_trip"
+            bot_route["waypoints"].append(copy.deepcopy(bot_route["waypoints"][0]))
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -473,7 +483,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                    "--pitch", str(pitch), "--stop-after-blocked-sec", "8",
                    "--metrics", "--artifact-root", str(artifacts.resolve()),
                    "--report", str((artifacts / "legacy-gates.json").resolve())]
-        if startup_only:
+        if startup_only or round_trip:
+            # The bot supplies ordinary movement keys. The legacy native
+            # hold-forward exit gate measures endpoint displacement only.
             command.append("--no-hold-forward")
         if sprint:
             command.append("--sprint")
@@ -488,7 +500,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "bot_route_sha256": digest(bot_path),
                  "render_distance_override": render_distance,
                  "synchronous_meshing": synchronous_meshing,
-                 "sprint": sprint, "startup_only": startup_only,
+                 "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -517,6 +529,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             json.dumps(report, indent=2) + "\n", encoding="utf-8")
         perf = Path(report["perf_jsonl"]) if report.get("perf_jsonl") else None
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
+        if round_trip:
+            from engine_round_trip_evidence import evaluate as evaluate_round_trip
+            returned = evaluate_round_trip(artifacts, report, bot_route, minimum_chunks=minimum_chunks)
+            (artifacts / "round-trip-evidence.json").write_text(json.dumps(returned, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["route"] = returned
+            statuses = [part["status"] for part in verdict["components"].values()]
+            verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
+            verdict["scope"] = "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance"
         if startup_only:
             from engine_smoke_verdict import startup_only_verdict
             verdict = startup_only_verdict(
@@ -648,6 +668,8 @@ def main() -> int:
     parser.add_argument("--fly-seconds", type=float, default=300,
                         help="maximum in-game route budget; completion ends the run early")
     parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
+    parser.add_argument("--round-trip", action="store_true",
+                        help="motor return with initial-cohort eviction/fresh disk reload evidence")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--synchronous-meshing", action="store_true",
@@ -681,7 +703,8 @@ def main() -> int:
                   render_distance=args.render_distance, sprint=args.sprint,
                   startup_only=args.startup_only,
                   synchronous_meshing=args.synchronous_meshing,
-                  capture_encode_delay_ms=args.capture_encode_delay_ms)
+                  capture_encode_delay_ms=args.capture_encode_delay_ms,
+                  round_trip=args.round_trip)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
 
