@@ -62,6 +62,12 @@ class BoundFloorLightTest(unittest.TestCase):
             row['renderer_pixel_opaque_live_face_light_packed']=0
         result=self.check();self.assertEqual(result['status'],'FAIL')
         self.assertEqual(result['faults'],30)
+    def test_initial_zero_generation_is_valid_but_zero_table_is_not(self):
+        for row in self.rows:
+            row['renderer_pixel_opaque_bound_field']['handle']=[0,0,3,0]
+        self.assertEqual(self.check()['status'],'PASS')
+        self.rows[0]['renderer_pixel_opaque_bound_field']['handle']=[0,0,0,0]
+        self.assertEqual(self.check()['status'],'FAIL')
 
 
 if __name__=='__main__':unittest.main()

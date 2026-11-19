@@ -33,7 +33,7 @@ def read_bound_field(row):
             raise ValueError("invalid owner revision")
     handle=evidence.get("handle")
     if (not isinstance(handle,list) or len(handle)!=4 or any(not uint(v,32) for v in handle) or
-            handle[1]==0 or not any(handle[2:]) or not uint(evidence.get("packed"),8)):
+            not any(handle[2:]) or not uint(evidence.get("packed"),8)):
         raise ValueError("invalid shader handle or packed light")
     if evidence["world_epoch"] != row.get("renderer_pixel_opaque_world_epoch"):
         raise ValueError("bound field from another world")
