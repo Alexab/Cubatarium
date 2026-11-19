@@ -8781,5 +8781,276 @@
       ]
     },
     "remaining": "Repeat mandatory Release application build to terminal success before native. No native started from failed build."
+  },
+  "new_host_physical_legacy_gate_native_2026_11_19": {
+    "schema": "new-host-physical-legacy-gate-native-assessment.v1",
+    "assessed_at_utc": "2026-11-19T16:45:43.735758+00:00",
+    "source_commit": "b86474968899abbdd641037ca5c5e8ada62b84ca",
+    "branch": "codex/engine-streaming-remediation2",
+    "required_release_app_build": {
+      "exit": 0,
+      "log": "build/desktop-msvc/new-host-physical-legacy-gate-app-restored-build-20261119.log",
+      "static_system_dll_count": 6
+    },
+    "artifacts": "build/desktop-msvc/engine-new-host-physical-legacy-gate-wet-20261119-native",
+    "parent_exit": 0,
+    "wrapper_exit": 2,
+    "overall": "UNTESTED",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 256,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 724,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 452,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "route": {
+      "status": "PASS",
+      "reason": "frontier_route_covered",
+      "displacement_chunks": 19,
+      "outside_initial_resident_samples": 2391
+    },
+    "relocations": 0,
+    "inspection": {
+      "status": "PASS",
+      "reason": "inspection_capture_coverage",
+      "requested": 24,
+      "queued": 24,
+      "verified": 24
+    },
+    "fixture": {
+      "status": "PASS",
+      "reason": "negative_wet_cave_observed",
+      "samples": 236
+    },
+    "depth": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 15233,
+      "faults": 0,
+      "frame_epochs": 117,
+      "skipped_unscoped_or_occluded": 311,
+      "examples": [],
+      "fault_attribution": {
+        "schema": "engine-depth-fault-attribution.v1",
+        "section_count": 0,
+        "sections": [],
+        "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+      },
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    },
+    "rgb": {
+      "status": "UNTESTED",
+      "reason": "missing_visual_reference",
+      "samples": 15544,
+      "captures": 121,
+      "attributed_samples": 0,
+      "faults": 0
+    },
+    "performance_debt": {
+      "status": "FAIL",
+      "legacy_gates_pass": false,
+      "metrics": {
+        "readiness_debt_rate": 0.9661016949152542,
+        "visual_holes_rate": 1.0,
+        "dirty_med": 410.0,
+        "pending_light_focus_med": 0.0,
+        "wall_ms_med": 37.5777,
+        "wall_ms_fly_med": 39.5186,
+        "post_stop_focus_miss_max": 1.0,
+        "chunks_traveled": 19,
+        "post_stop_readiness_debt_max": 2.0,
+        "post_stop_mesh_missing_max": 1.0,
+        "post_stop_effective_holes_rate": 0.8
+      },
+      "failed_gates": [
+        "visual_holes_rate_le_0_10",
+        "dirty_med_le_400",
+        "dirty_not_plateau_gt800_10s",
+        "stream_pressure_red_rate_le_0_30",
+        "wall_ms_med_le_25",
+        "post_load_ring_not_ready_eq_0",
+        "miss_stuck_max_run_sec_le_4",
+        "miss_end_eq_0",
+        "miss_end_stop_eq_0",
+        "post_stop_focus_miss_zero",
+        "post_stop_miss_low_cy_zero",
+        "post_stop_underfeet_ok_miss_zero",
+        "tail_focus_miss_zero",
+        "tail_miss_low_cy_zero",
+        "tail_underfeet_ok_miss_zero",
+        "opaque_idle_churn_max_le_120",
+        "emerge_spike_frac_le_0_05",
+        "chunk_not_ready_med_le_4",
+        "cruise_schedule_ok_med_ge_2",
+        "mesh_schedule_retry_after_capture_gt_0",
+        "witness_latch_diet_share_ge_0_70",
+        "policy_headers_have_budget",
+        "wall_ms_fly_le_33",
+        "wall_ms_fly_le_16_6",
+        "scene_ms_le_5",
+        "stream_phase_ms_le_5"
+      ],
+      "resources": {
+        "schema": "flight-runtime-resources.v1",
+        "available": false,
+        "disabled_by_user": false,
+        "sample_interval_sec": 1.0,
+        "sample_count": 0,
+        "logical_cpu_count": null,
+        "samples": [],
+        "unavailable_reason": "ModuleNotFoundError",
+        "host_cpu_percent_summary": null,
+        "app_cpu_machine_percent_summary": null,
+        "other_cpu_machine_percent_estimate_summary": null,
+        "app_rss_mb_max": null,
+        "system_available_memory_mb_min": null,
+        "timed_out": false,
+        "audio_disabled_for_test": true
+      }
+    },
+    "selected_section": {
+      "coord": [
+        -5,
+        -3,
+        3
+      ],
+      "events": {
+        "watch": 657,
+        "schedule": 3,
+        "enqueue": 1,
+        "field_completion_hint": 1,
+        "resource": 1
+      },
+      "queue_only_samples": 612,
+      "longest_queue_only_run": {
+        "first_frame_epoch": 0,
+        "last_frame_epoch": 536,
+        "samples": 537,
+        "revision": 1
+      },
+      "maximum_observed_queue_age": 611,
+      "timeline": [
+        {
+          "event": "schedule",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "0",
+          "outcome": "13",
+          "detail": "1",
+          "enqueue_reject": "0",
+          "revision": "1",
+          "first_mesh": "0",
+          "queue_age": "22"
+        },
+        {
+          "event": "schedule",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "0",
+          "outcome": "13",
+          "detail": "1",
+          "enqueue_reject": "0",
+          "revision": "1",
+          "first_mesh": "0",
+          "queue_age": "23"
+        },
+        {
+          "event": "enqueue",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "536",
+          "source_revision": "1",
+          "source_epoch": "4",
+          "certified_padded": "0",
+          "physical_snapshot": "0",
+          "provisional": "0",
+          "unknown_mask": "0"
+        },
+        {
+          "event": "schedule",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "536",
+          "outcome": "15",
+          "detail": "0",
+          "enqueue_reject": "0",
+          "revision": "1",
+          "first_mesh": "0",
+          "queue_age": "611"
+        },
+        {
+          "event": "field_completion_hint",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "581",
+          "source_revision": "1"
+        },
+        {
+          "event": "resource",
+          "coord": "(-5,-3,3)",
+          "frame_epoch": "582",
+          "decision": "prepared",
+          "source_epoch": "4",
+          "current_epoch": "4",
+          "geometry_valid": "1",
+          "unknown_mask": "0",
+          "physical_snapshot": "1",
+          "provisional": "0",
+          "field_geometry_match": "1",
+          "catalog_match": "1"
+        }
+      ]
+    },
+    "post_run_environment_repair": {
+      "psutil": "7.2.2",
+      "target": "build/desktop-msvc/python-deps",
+      "install_receipt": "build/desktop-msvc/new-host-psutil-install-20261119.json",
+      "process_local_env": "build/desktop-msvc/new-host-release-env.ps1",
+      "probe": "Import/cpu_count/cpu_percent/process RSS/system memory PASS. Original native CPU/RSS remains unavailable; no retroactive reconstruction."
+    },
+    "limits": [
+      "Native parent0 proves provenance only. Smoke wrapper2/overallUNTESTED is preserved; sampled depthPASS is scoped to opaque cave within32blocks.",
+      "New host has different CPU/GPU/compiler and no CPU/RSS samples for this first run. No cross-host performance causality or closure of intermittent old17/17366FAIL is claimed.",
+      "Independent RGB/nonzero-light/transparency, full S0..S6, lifetime/persistence/backend parity and memory/performance acceptance remain incomplete."
+    ],
+    "next": [
+      "Repeat unchanged wet native route with local psutil environment to verify repeatability and runtime resource sampling.",
+      "Investigate selected queued-first-geometry deadline and repeated transient field jobs from exact source/trace; add causal regressions before changing admission/proofs.",
+      "Close combined missing-neighbor ordinary-edit admission and continue the full canonical lifecycle/catalog/persistence/reference/matrix plan."
+    ]
   }
 }
