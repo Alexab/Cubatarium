@@ -2113,6 +2113,7 @@ void CaptureTransparentPixelProbe(
               e.atlas_texture = bound->atlas_texture;
               e.table_texture = bound->table_texture;
               e.handle = bound->handle;
+              e.frame_epoch = bound->frame_epoch;
               e.world_epoch = bound->world_epoch;
               e.field_incarnation = bound->field_incarnation;
               e.field_revision = bound->field_revision;
@@ -7979,6 +7980,7 @@ size_t UGeometryEngine::DrawPackedGpuMeshes(
             BoundLightProbe_->Capture(packedGreedyShader->GetProgramID(),
                                       *direct_light_words, origin,
                                       *snapshot.Volume()));
+        bound_capture->frame_epoch = WorldInstance->GetStreamingFrameEpoch();
         bound_capture->world_epoch = binding->WorldEpoch();
         bound_capture->field_incarnation = snapshot.FieldIncarnation();
         bound_capture->field_revision = snapshot.FieldRevision();

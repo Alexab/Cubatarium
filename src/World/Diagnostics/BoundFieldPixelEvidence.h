@@ -13,7 +13,8 @@ struct BoundFieldPixelEvidence
   uint8_t packed{0};
   uint32_t program{0}, atlas_texture{0}, table_texture{0};
   std::array<uint32_t, 4> handle{};
-  uint64_t world_epoch{0}, field_incarnation{0}, field_revision{0};
+  uint64_t frame_epoch{0}, world_epoch{0}, field_incarnation{0},
+      field_revision{0};
   uint64_t geometry_incarnation{0}, geometry_content{0};
 };
 inline std::ostream &operator<<(std::ostream &out,
@@ -29,7 +30,8 @@ inline std::ostream &operator<<(std::ostream &out,
              << ",\"atlas_texture\":" << e.atlas_texture
              << ",\"table_texture\":" << e.table_texture << ",\"handle\":["
              << e.handle[0] << ',' << e.handle[1] << ',' << e.handle[2] << ','
-             << e.handle[3] << ']' << ",\"world_epoch\":" << e.world_epoch
+             << e.handle[3] << ']' << ",\"frame_epoch\":" << e.frame_epoch
+             << ",\"world_epoch\":" << e.world_epoch
              << ",\"field_incarnation\":" << e.field_incarnation
              << ",\"field_revision\":" << e.field_revision
              << ",\"geometry_incarnation\":" << e.geometry_incarnation

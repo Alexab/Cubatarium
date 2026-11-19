@@ -30,7 +30,7 @@ class BoundFloorLightTest(unittest.TestCase):
                 p+'world_epoch':4,
                 p+'bound_field':dict(schema='bound-section-light-pixel.v1',requested=True,captured=True,
                     valid=True,cpu_matches=True,packed=(14-x)<<4,program=9,atlas_texture=11,table_texture=12,
-                    handle=[0,2,3,0],world_epoch=4,field_incarnation=81,field_revision=0,
+                    handle=[0,2,3,0],frame_epoch=i//10+1,world_epoch=4,field_incarnation=81,field_revision=0,
                     geometry_incarnation=15,geometry_content=7)})
             self.rows.append(r)
     def check(self):
@@ -42,7 +42,7 @@ class BoundFloorLightTest(unittest.TestCase):
         self.assertEqual(result['positive_bound_with_baked_zero'],30)
     def test_zero_stale_missing_or_malformed_binding_cannot_pass(self):
         for key,value in [('packed',0),('captured',False),('valid',False),('cpu_matches',False),
-            ('world_epoch',5),('program',0),('handle',[0,0,0,0]),('field_incarnation',0),
+            ('world_epoch',5),('frame_epoch',2),('program',0),('handle',[0,0,0,0]),('field_incarnation',0),
             ('field_revision',-1),('atlas_texture',True),('packed',256)]:
             with self.subTest(key=key,value=value):
                 original=copy.deepcopy(self.rows[0]['renderer_pixel_opaque_bound_field'])

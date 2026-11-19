@@ -13,8 +13,8 @@ namespace cutum
 {
 inline bool BoundSectionLightProbeRequested()
 {
-  const auto *value=std::getenv("CUBA_RGB_REFERENCE");
-  return value && std::string(value)=="1";
+  const auto *value = std::getenv("CUBA_RGB_REFERENCE");
+  return value && std::string(value) == "1";
 }
 // Diagnostic only: copied while the actual direct-draw handle and texture
 // bindings are live, including the transient ordered-fallback page.
@@ -23,7 +23,8 @@ struct BoundSectionLightCapture
   bool captured{false}, valid{false}, cpu_matches{false};
   uint32_t program{0}, atlas_texture{0}, table_texture{0};
   std::array<uint32_t, 4> handle{};
-  uint64_t world_epoch{0}, field_incarnation{0}, field_revision{0};
+  uint64_t frame_epoch{0}, world_epoch{0}, field_incarnation{0},
+      field_revision{0};
   uint64_t geometry_incarnation{0}, geometry_content{0};
   glm::ivec3 origin{0};
   SectionLightVolume data;

@@ -25,7 +25,7 @@ def read_bound_field(row):
     for key in ("program","atlas_texture","table_texture"):
         if not uint(evidence.get(key),32,positive=True):
             raise ValueError("missing GPU object identity")
-    for key in ("world_epoch","field_incarnation","geometry_incarnation"):
+    for key in ("frame_epoch","world_epoch","field_incarnation","geometry_incarnation"):
         if not uint(evidence.get(key),positive=True):
             raise ValueError("missing owner identity")
     for key in ("field_revision","geometry_content"):
@@ -37,4 +37,6 @@ def read_bound_field(row):
         raise ValueError("invalid shader handle or packed light")
     if evidence["world_epoch"] != row.get("renderer_pixel_opaque_world_epoch"):
         raise ValueError("bound field from another world")
+    if evidence["frame_epoch"] != row.get("frame_epoch"):
+        raise ValueError("bound field from another frame")
     return evidence
