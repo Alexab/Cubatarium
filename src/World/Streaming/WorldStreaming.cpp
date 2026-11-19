@@ -69,6 +69,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -5867,7 +5868,13 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const bool trace_unload = IsStreamerUnloadTraceEnabled();
         const glm::ivec2 col(ground.x, ground.z);
         const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
-        const ColumnRecord *rec = world.GetColumnRecords().Find(col);
+        // Cleanup erases the table entry below. Keep an owned snapshot for
+        // both the decision and its post-eviction diagnostics.
+        const auto *found_record = world.GetColumnRecords().Find(col);
+        const std::optional<ColumnRecord> record_snapshot =
+            found_record ? std::optional<ColumnRecord>(*found_record)
+                         : std::nullopt;
+        const auto *rec = record_snapshot ? &*record_snapshot : nullptr;
         // ChunkStreamer calls this only after the column is outside its keep
         // ring and the camera capsule. At that point visual work is
         // cancelable; a pending ticket must not pin resident terrain forever.

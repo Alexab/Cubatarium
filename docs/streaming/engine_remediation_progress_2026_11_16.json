@@ -11920,5 +11920,216 @@
     "Headless regression demonstrates absent-cursor candidate bug; whether this guard alone removes all six native fullpurges still needs native evidence. Partial geometry recreated after eviction could require separate owner/incarnation protection.",
     "Full S0..S6 stays active. Historical cache content mismatch, procedural regeneration, save/edit/return/reload compatibility, lifecycle/provider/cancellation, semantic identities, GPU/backend parity, independent RGB/wet/transparency and performance/memory remain open. Prior perfFAIL unchanged."
   ]
+},
+"retired_unload_native_remaining_partial_recreation_2026_11_19": {
+  "status": "native_counterevidence_retained_partial_recreation_root_still_open_full_S0_S6_active",
+  "built_source_commit": "1d9419d56913f0f75a8ace7dfd75324e10db0efc",
+  "artifacts": "build\\desktop-msvc\\engine-retired-unload-wet-20261119-native",
+  "native_motor": {
+    "schema": "engine-smoke-verdict.v1",
+    "status": "UNTESTED",
+    "components": {
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered",
+        "displacement_chunks": 19,
+        "outside_initial_resident_samples": 3884
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference",
+        "samples": 15704,
+        "captures": 122,
+        "attributed_samples": 0,
+        "faults": 0
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage",
+        "requested": 24,
+        "queued": 24,
+        "verified": 24
+      },
+      "fixture": {
+        "status": "PASS",
+        "reason": "negative_wet_cave_observed",
+        "samples": 238
+      },
+      "fixture_opaque_depth": {
+        "status": "PASS",
+        "reason": "analytic_near_cave_opaque_depth",
+        "checked": 15430,
+        "faults": 0,
+        "frame_epochs": 118,
+        "skipped_unscoped_or_occluded": 274,
+        "examples": [],
+        "fault_attribution": {
+          "schema": "engine-depth-fault-attribution.v1",
+          "section_count": 0,
+          "sections": [],
+          "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+        },
+        "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+      }
+    },
+    "malformed_trace_rows": 0,
+    "backend_observations": {
+      "maxima": {
+        "cpu_light_seed_apply": 0,
+        "gpu_light_seed_apply": 0,
+        "gpu_light_readback": 0
+      },
+      "positive_records": {},
+      "records_by_kind": {
+        "spike": 9,
+        "period": 61,
+        "blink": 17,
+        "near_focus_witness_resolved_before_fog": 1,
+        "shutdown": 1
+      },
+      "invalid_counter_rows": 0,
+      "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+    },
+    "scope": "one-way frontier route and sampled reference checks; not full-screen proof",
+    "runner_exit_code": 1,
+    "inspection_evidence": {
+      "verified": 24,
+      "requested": 24,
+      "reason": "inspection_views_joined_to_png"
+    },
+    "publication_diagnostics": {
+      "artifact": "mesh-publication-diagnostics.json",
+      "scope": "diagnostics only; does not alter acceptance"
+    }
+  },
+  "provenance": {
+    "exe": true,
+    "config_restored": true,
+    "source_world": true,
+    "runtime_shader_assets": true,
+    "source_commit": true
+  },
+  "persistence": {
+    "capture_events": 247,
+    "unique_capture_columns": 247,
+    "captured_receipts": 1689,
+    "durable_files": 241,
+    "durable_receipts": 1659,
+    "outcomes": {
+      "discard_incomplete_queued": 34,
+      "stale_cleanup_done": 281,
+      "queued": 247,
+      "light_receipts_written": 247,
+      "slice_written": 2160,
+      "shutdown_state": 1
+    },
+    "shutdown": [
+      "I20261119 23:13:56.113001  8164 Log.cpp:601] [WorldColumnSave] outcome=shutdown_state pending_save_columns=0 pending_disk_columns=0 io_jobs=0 io_active=0 ready_saves=0 ready_loads=0 light_flags_in_flight=0 light_flags_dirty=0"
+    ],
+    "mismatched_counts": []
+  },
+  "missing": [
+    {
+      "column": [
+        7,
+        6
+      ],
+      "exported": 0,
+      "written_then_full_purge": true
+    },
+    {
+      "column": [
+        7,
+        7
+      ],
+      "exported": 0,
+      "written_then_full_purge": true
+    },
+    {
+      "column": [
+        7,
+        8
+      ],
+      "exported": 0,
+      "written_then_full_purge": true
+    },
+    {
+      "column": [
+        6,
+        6
+      ],
+      "exported": 10,
+      "written_then_full_purge": true
+    },
+    {
+      "column": [
+        6,
+        7
+      ],
+      "exported": 10,
+      "written_then_full_purge": true
+    },
+    {
+      "column": [
+        6,
+        8
+      ],
+      "exported": 10,
+      "written_then_full_purge": true
+    }
+  ],
+  "actual_geometry_removal_sample": [
+    "I20261119 23:12:15.666293  8164 Log.cpp:601] [StreamerUnloadPhase] phase=save_callback coord=(6,0,6) duration_ms=5.827500",
+    "I20261119 23:12:15.666311  8164 Log.cpp:601] [StreamerUnloadPhase] phase=chunk_remove coord=(6,0,6) duration_ms=0.014000 removed_slices=10 max_cy=19",
+    "I20261119 23:12:17.271636  8164 Log.cpp:601] [StreamerUnloadPhase] phase=save_callback coord=(6,0,6) duration_ms=0.013700",
+    "I20261119 23:12:17.271641  8164 Log.cpp:601] [StreamerUnloadPhase] phase=chunk_remove coord=(6,0,6) duration_ms=0.002100 removed_slices=1 max_cy=19"
+  ],
+  "finding": "The absence guard fixes the demonstrated stale cursor regression, but does NOT fix native cache loss. At6,6 first unload removes10resident terrain slices; about1.6seconds later another unload removes1resident slice, with a new relight obligation and no new disk load in between. All247cache writes and2160terrain slice writes completed; six subsequent fullcolumn purges account for30receipt loss. Origin of recreated geometry is still unproven.",
+  "additional_fix": "Unload callback borrowed ColumnRecord* then ClearColumnEmergeState erased the unordered_map entry before trace dereferences. Retain an owned optional<ColumnRecord> snapshot before invalidation; all later trace reads refer to that snapshot. Native trace record_visual/pending/debt values from pre-fix run are excluded from evidence; independent chunk_remove and WorldColumnSave tags do not use that pointer.",
+  "next": [
+    "Verify final desktop Release compilation after owned-record snapshot fix.",
+    "Identify exact source and owner of post-eviction slice creation; inspect cross-column worldgen buffer apply and other mutation paths using actual creation evidence. Cross-column UChunkBuffer::ApplyTo currently treats absent chunks as AIR and can create them; this is a hypothesis, not native attribution. Preserve features/compatibility rather than dropping unknown cross-column writes.",
+    "Fix recreation/owner lifetime and then repeat full native save/evict/return/cold-load matrix; absent-cursor guard alone must not close the durability issue."
+  ],
+  "scope": "All original S0..S6 remains active; performanceFAIL, independent RGB/wet/transparencyUNTESTED, backend parity, procedural AIR discovery, semantic identities, lifecycle/provider/cancellation and full memory/performance matrix are not closed."
 }
 }
