@@ -13494,5 +13494,114 @@
     "Cold-load a new copy of retained EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d without fixture preparation, preserving source fingerprint and all existing evidence. Verify actual receipt restore with fresh runtime identities.",
     "Continue motor-based return/edit/save/evict/reload coverage and all remaining original S0..S6 gates; do not promote scoped depth/startup/cache success to overall completion."
   ]
+},
+"guarded_shore_world_cold_restore_2026_11_20": {
+  "source_commit": "1795eea696d92ce7e9bdcc200e490f0b904b2075",
+  "artifacts": "build\\desktop-msvc\\engine-committed-shore-cold-reload-20261120-native",
+  "source_world": "EngineSmoke_278e2626b36d4a01b5671c8f2016ab5d",
+  "provenance": {
+    "exe": true,
+    "config_restored": true,
+    "source_world": true,
+    "runtime_shader_assets": true,
+    "source_commit": true
+  },
+  "verdict": {
+    "schema": "engine-startup-smoke-verdict.v1",
+    "status": "PASS",
+    "components": {
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 256,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 724,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 452,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "observation": {
+        "status": "PASS",
+        "reason": "stationary_native_observation",
+        "samples": 40,
+        "maximum_drift_blocks": 0.0
+      },
+      "route": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "inspection": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      },
+      "fixture_opaque_depth": {
+        "status": "UNTESTED",
+        "reason": "not_requested_in_startup_only_scope"
+      }
+    },
+    "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+    "runner_exit_code": 1,
+    "inspection_evidence": {
+      "verified": 0,
+      "requested": 0,
+      "reason": "inspection_views_joined_to_png"
+    },
+    "publication_diagnostics": {
+      "artifact": "mesh-publication-diagnostics.json",
+      "scope": "diagnostics only; does not alter acceptance"
+    }
+  },
+  "counts": {
+    "restored": 358,
+    "rejected": 30,
+    "cancelled": 0,
+    "reject_content_mismatch": 30
+  },
+  "restored_before_first_paint": 131,
+  "aggregate_events": 196,
+  "max_pending": 254,
+  "max_retained_bytes": 4051634,
+  "last_logged_pending": 40,
+  "scope": "one unchanged-source cold startup; no route/visual/physical-light/global durability acceptance",
+  "source_world_sha256": "626a14913dfa60db5ef24fa88dd69c0fc4afd860f53cfaecf5d2b4de77d7b0d2",
+  "fixture_scene": null,
+  "limits": [
+    "Actual358restored (131before firstpaint),30content-mismatch refusals for one new saved source/config/backend; no one-to-one causal comparison with previous source worlds. Lastloggedpending40 is not queue-empty evidence.",
+    "StartupPASS covers49columns1176sections and40stationary samples; no route, pixel, nonzero-light or general durability acceptance. Full original S0..S6 stays active."
+  ],
+  "next": "Implement and run motor roundtrip with actual initial-cohort eviction, fresh-identity disk reload after far turnaround, and return evidence; preserve all remaining original requirements."
 }
 }
