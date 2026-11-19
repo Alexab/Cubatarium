@@ -1546,7 +1546,9 @@ void NoteRendererGateCandidate(UWorld &world, const UChunkMeshCache &cache,
       (cache.IsRemeshAfterApplyPending(coord) ? 1u << 2 : 0u) |
       (gpu_pending ? 1u << 3 : 0u) | (gpu_queued ? 1u << 4 : 0u) |
       (gpu_kicked ? 1u << 5 : 0u) | (gpu_extract ? 1u << 6 : 0u) |
-      (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u);
+      (cache.HasPendingCaptureWork(coord) ? 1u << 7 : 0u) |
+      (cache.IsGeometryAwaitingLight(coord) ? 1u << 12 : 0u) |
+      (cache.IsPublishedLightRefreshPending(coord) ? 1u << 13 : 0u);
   const UChunk *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const ChunkRenderDemandRecord *slice_demand =
       world.GetRenderDemandStore().Find(coord);
@@ -2173,7 +2175,10 @@ void CaptureTransparentPixelProbe(
               (opaque_gpu_queued ? 1u << 4 : 0u) |
               (opaque_gpu_kicked ? 1u << 5 : 0u) |
               (opaque_gpu_extract ? 1u << 6 : 0u) |
-              (cache.HasPendingCaptureWork(opaque_chunk) ? 1u << 7 : 0u);
+              (cache.HasPendingCaptureWork(opaque_chunk) ? 1u << 7 : 0u) |
+              (cache.IsGeometryAwaitingLight(opaque_chunk) ? 1u << 12 : 0u) |
+              (cache.IsPublishedLightRefreshPending(opaque_chunk) ? 1u << 13
+                                                                  : 0u);
           const bool opaque_pending_light =
               world.IsPendingLightBeforeMesh(opaque_column);
           const bool opaque_async_relight =
@@ -2624,7 +2629,10 @@ void CaptureTransparentPixelProbe(
               (cache.IsPendingGpuKickedOrDispatched(voxel_chunk) ? 1u << 5
                                                                  : 0u) |
               (cache.IsGpuExtractInFlight(voxel_chunk) ? 1u << 6 : 0u) |
-              (cache.HasPendingCaptureWork(voxel_chunk) ? 1u << 7 : 0u);
+              (cache.HasPendingCaptureWork(voxel_chunk) ? 1u << 7 : 0u) |
+              (cache.IsGeometryAwaitingLight(voxel_chunk) ? 1u << 12 : 0u) |
+              (cache.IsPublishedLightRefreshPending(voxel_chunk) ? 1u << 13
+                                                                 : 0u);
           auto add_voxel_source_indices =
               [&](const std::vector<GreedyBatchRef> &refs)
           {

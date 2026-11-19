@@ -96,6 +96,14 @@ struct CrossGpuBackendDriverTestAccess
 #endif
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static glm::ivec3 AwaitingLightBack(const UChunkMeshCache &cache)
+  {
+    return cache.GeometryAwaitingLightQueue_.back();
+  }
+  static glm::ivec3 AwaitingLightFront(const UChunkMeshCache &cache)
+  {
+    return cache.GeometryAwaitingLightQueue_.front();
+  }
   static std::optional<uint64_t>
   PublishedOriginalLight(const UChunkMeshCache &cache, glm::ivec3 coord)
   {
@@ -3122,12 +3130,83 @@ static void TestGeometryLightQueueCapacity(
   Expect(cache.GetPublishCount(last) == 1 && mesher.builds == 34 &&
              cache.GetGeometryAwaitingLightCount() == 31,
          "round-robin field admission cannot starve behind unready geometry");
+  const auto notified =
+      ChunkMeshCaptureAdmissionTestAccess::AwaitingLightBack(cache);
+  const auto retained_bytes = cache.GetGeometryAwaitingLightBytes();
+  Expect(cache.NotifyGeometryLightReady(notified),
+         "an untrusted hint only addresses an existing retained result");
+  cache.RebuildDirtyChunksWithStats(world, registry, 4, 0, false, 0);
+  Expect(cache.GetPublishCount(notified) == 0 && mesher.builds == 34 &&
+             cache.GetGeometryAwaitingLightCount() == 31 &&
+             cache.GetGeometryAwaitingLightBytes() == retained_bytes,
+         "a completion hint cannot publish without actual current field proof");
+  const auto notified_field =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {notified})
+          .Compute(registry);
+  auto *notified_chunk = world.GetChunkManager().GetChunk(notified);
+  Expect(notified_field.inputs_complete && notified_field.chunks.size() == 1,
+         "completion hint fixture computes actual queued section field");
+  notified_chunk->ReplaceComputedLightVolume(
+      *notified_field.chunks[0].padded_light, true, true);
+  Expect(world.RecordLightCalculation(
+             notified_field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+         "completion hint fixture installs actual current provenance");
+  demand.NoteDemand(notified, cache.GetChunkMeshRevision(notified),
+                    notified_chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+                    notified_chunk->GetIncarnation());
+  demand.NoteLightCalculationSettled(notified, epoch,
+                                     notified_chunk->GetIncarnation(),
+                                     notified_chunk->GetLightFieldRevision(),
+                                     notified_chunk->GetContentRevision());
+  Expect(cache.NotifyGeometryLightReady(notified) &&
+             cache.NotifyGeometryLightReady(notified),
+         "field completion coalesces on one existing geometry owner");
+  cache.RebuildDirtyChunksWithStats(world, registry, 4, 0, false, 0);
+  Expect(cache.GetPublishCount(notified) == 1 && mesher.builds == 34 &&
+             cache.GetGeometryAwaitingLightCount() == 30,
+         "field completion services retained tail geometry in the next bounded "
+         "drain");
+  const auto fair =
+      ChunkMeshCaptureAdmissionTestAccess::AwaitingLightBack(cache);
+  const auto noisy =
+      ChunkMeshCaptureAdmissionTestAccess::AwaitingLightFront(cache);
+  Expect(fair != noisy, "fairness fixture has distinct actual retained owners");
+  const auto fair_field =
+      UChunkRelightSnapshot::CaptureSections(world, spec, {fair})
+          .Compute(registry);
+  auto *fair_chunk = world.GetChunkManager().GetChunk(fair);
+  Expect(fair_field.inputs_complete && fair_field.chunks.size() == 1,
+         "ordinary retained tail obtains actual physical light");
+  fair_chunk->ReplaceComputedLightVolume(*fair_field.chunks[0].padded_light,
+                                         true, true);
+  Expect(world.RecordLightCalculation(
+             fair_field, registry.GetDefinitionsCatalogSnapshot()) == 1,
+         "ordinary retained tail installs current light proof");
+  demand.NoteDemand(fair, cache.GetChunkMeshRevision(fair),
+                    fair_chunk->GetLightFieldRevision(), 0, 1.0, epoch,
+                    fair_chunk->GetIncarnation());
+  demand.NoteLightCalculationSettled(fair, epoch, fair_chunk->GetIncarnation(),
+                                     fair_chunk->GetLightFieldRevision(),
+                                     fair_chunk->GetContentRevision());
+  for (int tick = 0; tick < 64 && cache.GetPublishCount(fair) == 0; ++tick)
+  {
+    Expect(cache.NotifyGeometryLightReady(noisy),
+           "repeated hint retains its existing owner");
+    cache.RebuildDirtyChunksWithStats(world, registry, 1, 0, false, 0);
+  }
+  Expect(cache.GetPublishCount(fair) == 1 &&
+             cache.GetPublishCount(noisy) == 0 && mesher.builds == 34 &&
+             cache.GetGeometryAwaitingLightCount() == 29,
+         "one-check drains preserve ordinary progress under repeated unready "
+         "hints");
   cache.CancelAsyncMeshWork();
   Expect(cache.GetGeometryAwaitingLightCount() == 0 &&
              cache.GetGeometryAwaitingLightBytes() == 0 &&
              UPipelineAdmission::Get().ResultPendingBytes() ==
                  result_credits_before,
          "cancellation releases every retained result and capacity charge");
+  Expect(!cache.NotifyGeometryLightReady(notified),
+         "field completion cannot create a detached owner after cancellation");
 }
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)

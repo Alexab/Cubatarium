@@ -55,6 +55,17 @@ class DepthAttributionTest(unittest.TestCase):
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["fault_attribution"]["sections"], [])
 
+    def test_explicit_field_stage_bits_preserve_independent_depth_faults(self):
+        for stage in (1 << 12, 1 << 13):
+            row = self.row(frame=269, distance=-1)
+            mask = 2 | stage
+            row["renderer_pixel_voxel_chunk_work_owner_flags"] = mask
+            result = self.check([row])
+            self.assertEqual(result["status"], "FAIL")
+            section = result["fault_attribution"]["sections"][0]
+            self.assertEqual(section["work_owner_flag_counts"], {str(mask): 1})
+            self.assertEqual(section["no_published_geometry"], 1)
+
     def test_solid_side_attribution_uses_signed_floor_and_ceiling_cells(self):
         ceiling = self.row(frame=1, distance=-1)
         floor = self.row(frame=2, distance=-1)

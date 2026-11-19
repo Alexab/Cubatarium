@@ -3142,6 +3142,7 @@ void UWorld::NoteChunkSliceLightCalculationSettled(glm::ivec3 chunk_coord)
       chunk_coord, MeshService->GetCache().GetCaptureStore().WorldEpoch(),
       chunk->GetIncarnation(), chunk->GetLightFieldRevision(),
       chunk->GetContentRevision());
+  MeshService->GetCache().NotifyGeometryLightReady(chunk_coord);
 }
 
 bool UWorld::HasCurrentChunkSliceLightSettlement(glm::ivec3 chunk_coord) const

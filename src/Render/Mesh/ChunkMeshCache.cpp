@@ -8360,6 +8360,7 @@ void UChunkMeshCache::ClearGeometryAwaitingLight(JobTerminalReason reason)
   GeometryAwaitingLight_.clear();
   GeometryAwaitingLightQueue_.clear();
   GeometryAwaitingLightBytes_ = 0;
+  GeometryAwaitingLightDrainPhase_ = 0;
 }
 
 bool UChunkMeshCache::RetainGeometryAwaitingLight(
@@ -8419,6 +8420,26 @@ bool UChunkMeshCache::RetainGeometryAwaitingLight(
   return true;
 }
 
+bool UChunkMeshCache::NotifyGeometryLightReady(glm::ivec3 coord)
+{
+  const auto found = GeometryAwaitingLight_.find(coord);
+  if (found == GeometryAwaitingLight_.end())
+    return false;
+  if (!found->second.lightReadyHint)
+  {
+    found->second.lightReadyHint = true;
+    if (IsPublicationTraceChunk(coord))
+    {
+      std::ostringstream message;
+      message << "field_completion_hint coord=(" << coord.x << "," << coord.y
+              << "," << coord.z << ") frame_epoch=" << MeshFocusFrameEpoch
+              << " source_revision=" << found->second.result.sourceRevision;
+      CubatariumLogInfo("ChunkPublication", message.str());
+    }
+  }
+  return true;
+}
+
 int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
                                                 UBlockRegistry &registry,
                                                 int max_count)
@@ -8429,9 +8450,24 @@ int UChunkMeshCache::DrainGeometryAwaitingLight(const UBlockWorld &world,
   int published = 0;
   for (size_t n = 0; n < count && !GeometryAwaitingLightQueue_.empty(); ++n)
   {
-    const glm::ivec3 coord = GeometryAwaitingLightQueue_.front();
-    GeometryAwaitingLightQueue_.pop_front();
+    auto selected = GeometryAwaitingLightQueue_.begin();
+    // Two checks per four may prefer a completed field; the other two keep
+    // FIFO progress even under repeated hints and one-check drain budgets.
+    if (GeometryAwaitingLightDrainPhase_ < 2)
+    {
+      const auto hinted = std::find_if(
+          GeometryAwaitingLightQueue_.begin(),
+          GeometryAwaitingLightQueue_.end(), [this](glm::ivec3 candidate)
+          { return GeometryAwaitingLight_.at(candidate).lightReadyHint; });
+      if (hinted != GeometryAwaitingLightQueue_.end())
+        selected = hinted;
+    }
+    GeometryAwaitingLightDrainPhase_ =
+        (GeometryAwaitingLightDrainPhase_ + 1) % 4;
+    const glm::ivec3 coord = *selected;
+    GeometryAwaitingLightQueue_.erase(selected);
     const auto found = GeometryAwaitingLight_.find(coord);
+    found->second.lightReadyHint = false;
     auto &result = found->second.result;
     const auto active = ActiveMeshSourceRevision.find(coord);
     const bool owned = active != ActiveMeshSourceRevision.end() &&

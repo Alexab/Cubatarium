@@ -109,6 +109,10 @@ def analyze(artifacts: Path, verdict: dict) -> dict:
     return {
         "schema": "mesh-publication-diagnostics.v1",
         "analyzer_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "explicit_owner_stage_bits": {
+            "12": "retained geometry awaiting compatible field",
+            "13": "published artifact field refresh",
+        },
         "log_files": len(logs), "malformed_rows": malformed,
         "sections": [sections[key] for key in sorted(sections)],
         "scope": "Selected CUBA_TRACE_CHUNK scheduling observations plus ray-repair logs. "

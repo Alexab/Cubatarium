@@ -225,6 +225,8 @@ public:
   {
     return GeometryAwaitingLight_.count(coord) != 0;
   }
+  /// Scheduling hint for an already-owned result; never a readiness proof.
+  bool NotifyGeometryLightReady(glm::ivec3 coord);
   size_t GetGeometryAwaitingLightCount() const
   {
     return GeometryAwaitingLight_.size();
@@ -1559,6 +1561,7 @@ private:
     MeshBuildResult result;
     size_t bytes{0};
     std::optional<GpuMeshProcessResult> gpu;
+    bool lightReadyHint{false};
   };
   // Completed geometry retains its result credit and GPU staging key, if any,
   // until paired or retired.
@@ -1569,6 +1572,7 @@ private:
       GeometryAwaitingLight_;
   std::deque<glm::ivec3> GeometryAwaitingLightQueue_;
   size_t GeometryAwaitingLightBytes_{0};
+  uint8_t GeometryAwaitingLightDrainPhase_{0};
   std::unique_ptr<UGpuMeshPipeline> GpuPipeline;
   UMeshCaptureStore CaptureStore;
   int CaptureRefreshBudgetLeft{4};

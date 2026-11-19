@@ -8076,6 +8076,27 @@
           "scope": "Intrusive diagnostics/captures; no controlled performance A/B."
         }
       }
+    },
+    "completed_field_services_retained_geometry": {
+      "status": "Implemented/tested: actual retained-tail field-completion regressionRED thenGREEN,13Release checksPASS29.83seconds after2negative controls and exact source restoration.31Python analyzer/runner/depth testsGREEN. Required Release app/native pending.",
+      "native_basis": "6b369f738wet FAIL15/14860. Selected(-4,-3,3) geometry retained228..270. Actual light install/settlement log12:25:37.194 precedes watch26912:25:37.267; missing-depth faults269precede resource preparation27012:25:37.584. Existing round-robin pairing can delay an installed field behind unready retained results.",
+      "implementation": [
+        "World NoteChunkSliceLightCalculationSettled signals NotifyGeometryLightReady only after its existing actual calculation/provenance check and settlement acknowledgement.",
+        "Notification coalesces a hint on the existing bounded geometry owner. It creates no work ticket, publication proof, mesh job or bytes allocation; stale/unavailable fields still fail unchanged validation.",
+        "Existing at-most4checks per drain retain the same count/byte limits. Persistent four-check cycle reserves2opportunities for hinted owners and2for ordinaryFIFO, across one-check calls too. Cancellation clears state; exact source/geometry/slot/field/settlement/resource validation remains mandatory.",
+        "Renderer voxel/opaque/section owner masks now explicitly append retained-geometry bit12and published-field-refresh bit13; aggregate mask2does not mean CPU execution."
+      ],
+      "validation": {
+        "baseline_red": "build/desktop-msvc/engine-field-completion-hint-red-test.log",
+        "green": "build/desktop-msvc/engine-field-completion-restored-thirteen-tests.log",
+        "control": "build/desktop-msvc/engine-field-completion-negative-controls.json",
+        "expected_failures": 2,
+        "exact_source_restore": true,
+        "restored_green": true,
+        "regression": "33actual CPU jobs saturate32retained owners; eviction admits34th build. Existing unhinted-ready tail still publishes through ordinary fairness. Completion hint without field proof publishes nothing and preserves result bytes/count. Real computed field at retained tail publishes in next bounded drain without another build. Repeated unready hints under one-check calls cannot starve an ordinary ready tail within64calls; all credits released on cancellation and no detached owner after completion hint.",
+        "python": "5depth-attribution tests (including extended stage masks preserving depth faults),5publication analyzer tests,21smoke-runner testsPASS."
+      },
+      "limits": "Required app/full wet native pending. Does not remove initial unknown-geometry capture churn or light-dependent merge/capture identity. FullS4/S5/S6, independentRGB/transparency, backend/persistence and performance acceptance remain open."
     }
   },
   "execution_status_review_2026_11_18": {
@@ -8113,7 +8134,7 @@
     ],
     "S5": "All main physical-field consumers and bounded CPU/GPU/synchronous awaiting-field paths implemented;12Release and21harness testsGREEN. CPUwet0/13630, GPUdry0/12838, syncdry0/9716scoped native depth faults, each19chunk0relocations24views. Sync mode independently confirmed1370/1370samples. FullRGB/transparencyUNTESTED; performanceFAIL. Light-free geometry keys and complete acceptance remain.",
     "remaining_critical_path": [
-      "Pre-focus ordinary/priorityRemesh ray witnesses now transfer toFM without age/revision/owner loss (3worker scenarios/control13GREEN). Native stillFAIL15/14860: selected geometry retained228..270awaiting field pairing, fault269before resource preparation270. Do not infer CPU work from mask2. Resolve actual light proof/settlement/resource eligibility and complete initial capture/CPU/GPU merge/light dependency separation.",
+      "Installed-field completion now hints existing retained geometry with2hint/2FIFO checks per persistent cycle, at-most4existing checks, no readiness bypass. Actual worker/field regression and2negative controls13ReleaseGREEN,31PythonGREEN; required app/native pending. Still remove light from initial capture admission and actual CPU/GPU merge/capture/dependency identity and close first-publication latency.",
       "Semantic catalog geometry vs optical identity, persisted certificates and complete CPU/GPU/backend lifecycle parity.",
       "Independent native nonzero-light RGB/transparency references; repeated original first-publication scenario, wet/dry/edit/return/eviction/radius/backend matrix.",
       "Performance without intrusive diagnostics, memory/capacity pressure and full S6 acceptance."
