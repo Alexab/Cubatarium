@@ -7410,7 +7410,7 @@
       "historical_provenance_limit": "Earlier native route git_sha is an injected requested checkout label; it is not independent evidence of embedded source identity. Preserve results tied to their measured EXE hashes and actual runtime receipts, without pretending stale HUD proves old entire binary or requested gitsha proves all embedded source. Old original287fault geometry counterexample remains valid as observed behavior. Future harness should record/validate embedded build identity in addition to requested checkout."
     },
     "cpu_mdi_physical_field_consumption": {
-      "status": "Native integration regression localized to retained GPU publication missing typed field lease. Deterministic RED reproduced, conservative atomic GPU-cohort republish implemented;9Release testsGREEN. Fixed Release app/native rerun pending. Full goal remains active.",
+      "status": "All physical draw consumers implemented and9Release testsGREEN. Retained GPU lease repair confirmed in full wet19chunk native:4/11744opaque-depth faults remain, all unpublished queued first geometry; overallFAIL. FullS5keys/lifecycle split and original first-publication defect remain open.",
       "implementation": "GreedyGpuBatch retains exact artifact-specific light lease. MDI CPU and GPU-resident command producers now set baseInstance to original pass row, preserving indices after skipped commands. Production vertex location7 carries unsigned4word light handle to fragment sampler. Per-pass SectionLightDrawTable has two fence-protected bounded stores, max65536rows/store, zero-timeout polls, no CPUwait and no geometry-buffer changes. Full row equality avoids redundant uploads; reorder checks full row membership. Failed/busy metadata update uses exact artifact ordered uniform draw; deferred atlas pages also use ordered per-artifact fallback. Direct draw clears table mode. Flat remains explicit baked policy.",
       "runtime": "Refresh each unique retained field only when authoritative incarnation/revision changes; compatible completed successor replaces field, otherwise predecessor retains own compatible field. Resident rows batch across sections normally. Geometry-buffer and light-table attributes stay distinct. Queue witnesses updated to expected actual source row. Explicit-UV CPU decor samples occupied physical cells without cube normal; instanced Cross keeps center policy.",
       "driver_validation": "Production MdiVertexPoolStore producers submit actual multi-draw and GPU-resident command table into integer FBO, with distinct unsigned high-bit metadata for3artifacts, reorder and hidden command. Real failed buffer transfer retains old storage. Production surface VS+FS read actual canonical atlas through row1 while uniform handle deliberately invalid; CPU indirect, GPU-resident indirect and direct uniform fallback checked independently. Existing six-face signed~32k/sky/emitter/zero/invalid/Flat/minimal-capacity checks extended to CPU explicit-UV decor.",
@@ -7423,7 +7423,7 @@
         "repeat": "engine-surface-direct-wet-native/cpu-mdi-repeat-observation.json:12659faults/12659checks. Requested CUBATARIUM_ANDROID_GPU0 did not affect Windows selection; actualgpu_greedy/mdi_vertex_pool/gpu_frustum, so this is repeat not direct-control.",
         "provenance": "Both EXE/config/source-world/shader checks independently true; code/version009e206 matched beforelaunch.",
         "interpretation": "Systematic draw/resource-state regression introduced by CPU/MDI integration, distinct from original sporadic missing-first-publication. Do not close either failure or call driver tests native acceptance.",
-        "next": "Capture native current program, integer sampler units/texture bindings, table incarnation, actual integer attribute7buffer/row and source handle; validate actual GPU command source. Build minimal deterministic scene-state driver regression for causal defect before full19chunk native repeat."
+        "next": "Systematic retained-lease omission repaired in full native; investigate remaining first-publication admission/geometry-awaiting-field lifecycle with exact same-hit trace."
       },
       "lease_reuse_repair": {
         "evidence": "surface-lease-layer-observation.json under engine-surface-lease-state-short-native: GPUlease0/cpu_lease1/section_lease1 for stone root(1,-3,3), while actual program27, sampler7/8, tableinc1 andinteger texture formats validate, GLerror0. Short diagnostic8289faults/8297checks; not full-route acceptance. Earlier state-only8153/8155FAIL preserved.",
@@ -7437,6 +7437,15 @@
           "regression": "engine-surface-lease-reindex-red-test.log: field admission reloads current cohort after material indices change; legacy retained index1 must republish current actual index0 with exact source lease.",
           "fix": "Compare retained root against current published geometry-compatible field and source epoch, then expand complete current pass cohort. Reject stale material/pass visibility refs; never transplant a field onto predecessor vertices.",
           "validation": "engine-surface-lease-cohort-green-tests.log:9/9 Release tests PASS,25.87seconds. Required app build/full19chunk wet native pending."
+        },
+        "full_native_followup": {
+          "source": "9908aab24",
+          "artifact": "build/desktop-msvc/engine-surface-lease-cohort-wet-native/surface-lease-cohort-observation.json",
+          "result": "app0 wrapper1 overallFAIL;1610frames298.975active seconds;19chunks1217outside0relocations;24/24inspectionviews;11744depthchecks4faults95epochs. Startup1176sectionsallready. FullRGBUNTESTED.",
+          "causal_observation": "Previously GPUlease0 CPUlease1 sectionlease1; now GPUlease1 and actual integer attribute row equals expected handle in all5observed initial frames, valid program/samplers/tableincarnation/textures GLerror0. Broad systematic holes no longer observed in sampled depth.",
+          "remaining_faults": "All4 faults are at31.15..31.16blocks, coords(-3,-3,3),(-4,-3,3),2faults each, no published geometry, queued, reportedsettled, dirtyages12/14frames owner1. Matches original first-publication failure class; do not close original287case.",
+          "provenance": "EXE/config restored/source-world/all runtime shaders/source commit independently verified true after terminal wrapper.",
+          "target_trace": "Selected(-5,-3,3):7provisional-light rejected builds frames263..283, then current physical field prepared frame311. This is adjacent diagnostic evidence, not same-hit cause of4faults."
         }
       }
     }
@@ -7460,7 +7469,7 @@
       "S2": "many demonstrated defects fixed; full cross-scenario acceptance incomplete",
       "S3": "CPU correctness/provenance largely verified; persistence and GPU parity incomplete",
       "S4": "partial lifecycle and publication ownership",
-      "S5": "Cross, packed and CPU/direct/MDI physical-field consumers implemented with scoped real GPU validation. CPU/MDI native pending; light merge keys, dependency/lifecycle split and complete acceptance remain required.",
+      "S5": "All main physical-field consumers implemented;9Release checksGREEN and full wet19chunk native retains correct GPU field handles.4/11744depth faults of unpublished-firstgeometry remain; geometry/light keys and lifecycle split incomplete.",
       "S6": "scoped references verified, full visual/performance matrix incomplete"
     },
     "latest_native_counterexample": "Original d65538f35wet sprint287/11912depth faults remains open. Latest d8f9c9cfbfix repairs deterministic proof-only cache staleness and passes10510sampled opaque-depth checks in wet sprint; no causal closure of original intermittent failure.1781camera-ready0/0 observations are not formal RGB/lighting acceptance."
