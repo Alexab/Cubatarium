@@ -373,7 +373,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(synchronous_meshing_payload(config_path.read_bytes()))
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
+        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
@@ -389,9 +389,12 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             elif fixture_scene == "open-sky-plane":
                 from engine_smoke_fixtures import prepare_open_sky_plane
                 scene = prepare_open_sky_plane(fixture, minimum_chunks)
-            elif fixture_scene == "dry-lit-negative-cave":
+            elif fixture_scene in ("dry-lit-negative-cave", "dry-rgb-negative-cave"):
                 from engine_smoke_fixtures import prepare_lit_negative_cave
                 scene = prepare_lit_negative_cave(fixture, minimum_chunks)
+                if fixture_scene == "dry-rgb-negative-cave":
+                    from engine_rgb_reference import prepare as prepare_rgb
+                    scene = prepare_rgb(scene, fixture)
             else:
                 scene = prepare_negative_cave(fixture, minimum_chunks,
                                              flooded=fixture_scene == "wet-negative-cave",
@@ -403,6 +406,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         metadata.write_bytes(fixed_day_payload(metadata.read_bytes(), 0.25))
         exe = runtime / "Cubatarium.exe"
         env = os.environ.copy()
+        env.pop("CUBA_RGB_REFERENCE", None)
         # Historical QA hooks can reposition cameras or modify worlds. Do not
         # inherit those switches into a correctness scenario.
         for key in list(env):
@@ -424,6 +428,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             env.update({"CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_FILE": str((artifacts / "round-trip-residency.log").resolve())})
+        if scene and scene.get("rgb_fixture"):
+            env["CUBA_RGB_REFERENCE"] = "1"
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
             # Exercise the normal FP viewmodel consumer. The default flight
             # benchmark hides it; no item/skin/save QA injection is needed.
@@ -652,6 +658,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 verdict["status"] = "FAIL"
             elif pressure["status"] == "UNTESTED" and verdict["status"] == "PASS":
                 verdict["status"] = "UNTESTED"
+        if scene is not None and scene.get("rgb_fixture") and not startup_only:
+            from engine_rgb_reference import evaluate as evaluate_rgb
+            rgb = evaluate_rgb(scene, perf, sorted((artifacts / "logs").glob("*.log.INFO.*")))
+            verdict["components"]["fixture_floor_rgb"] = rgb
+            (artifacts / "fixture-floor-rgb-reference.json").write_text(
+                json.dumps(rgb, indent=2)+"\n", encoding="utf-8")
+            if rgb["status"] == "FAIL":
+                verdict["status"] = "FAIL"
+            elif rgb["status"] == "UNTESTED" and verdict["status"] == "PASS":
+                verdict["status"] = "UNTESTED"
         if world_actions is not None:
             from engine_world_actions import evaluate as evaluate_world_actions
             actions = evaluate_world_actions(artifacts, fixture, world_actions,
@@ -705,7 +721,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,

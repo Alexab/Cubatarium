@@ -33,6 +33,7 @@
 #include "Render/Engine/IUFluidSurfaceProvider.h"
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Engine/RgbReferenceMaterialCapture.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
@@ -80,7 +81,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <sstream>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -88,6 +88,7 @@
 #include <iterator>
 #include <limits>
 #include <mutex>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -1631,6 +1632,7 @@ void CaptureTransparentPixelProbe(
     uint64_t frame_epoch, const OpaquePixelProbeCapture &opaque_capture,
     const std::vector<PackedOpaqueDrawTrace> &packed_draw_trace)
 {
+  CaptureRgbReferenceMaterials(world, textures, frame_epoch);
   const bool marker_mode =
       DebugTransparentFragmentMarkerEnabled(camera_position);
 
