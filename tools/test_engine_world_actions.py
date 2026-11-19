@@ -25,6 +25,7 @@ class WorldActionsTest(unittest.TestCase):
         self.cell = [24,-44,51]
         self.plan = dict(schema='engine-native-world-actions.v1', entries=[
             dict(cell=self.cell, expected='stone', replacement='glowstone')])
+        self.write_route()
         self.observation = dict(schema='engine-world-actions-observation.v1', world=self.world.name,
                                 api='UWorld::ReplaceBlockAt', started=True, failed=False,
                                 saved_world_label='World_261',world_folder=str(self.world.resolve()),
@@ -41,6 +42,11 @@ class WorldActionsTest(unittest.TestCase):
                             returned_incarnation=19)],far_tick_ms=20,return_tick_ms=40)
         self.path = self.world/'chunks/1_-3_3.cchunk'
         self.path.write_bytes(binary())
+
+    def write_route(self):
+        (self.root/'bot-route.json').write_text(json.dumps(dict(
+            schema='diagnostic-flight-route.v1',purpose='round_trip',
+            isolated_world=self.world.name,world_actions=self.plan)),encoding='utf-8')
 
     def run_evidence(self):
         (self.root/'world-actions.json').write_text(json.dumps(self.observation),encoding='utf-8')
@@ -76,10 +82,16 @@ class WorldActionsTest(unittest.TestCase):
 
     def test_read_only_cold_probe(self):
         self.plan['entries'][0] = dict(cell=self.cell, expected='glowstone')
+        self.write_route()
         for row in self.observation['observations']:
             row.update(expected_id=376,before_id=376,api_called=False,api_success=False)
         self.route=None
         self.assertEqual(self.run_evidence()['status'],'PASS')
+
+    def test_expected_names_must_match_the_executed_plan(self):
+        self.assertEqual(self.run_evidence()['status'],'PASS')
+        self.plan['entries'][0]['expected']='dirt'
+        self.assertEqual(self.run_evidence()['reason'],'native_action_plan_mismatch')
 
     def test_saved_label_is_not_storage_identity(self):
         self.assertEqual(self.run_evidence()['status'],'PASS')

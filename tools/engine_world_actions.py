@@ -130,8 +130,16 @@ def evaluate(artifacts: Path, world: Path, plan: dict, route_evidence: dict | No
     if not path.exists():
         return result("UNTESTED", "missing_native_world_actions")
     try:
+        route_path = artifacts / "bot-route.json"
+        if not route_path.exists():
+            return result("UNTESTED", "missing_native_action_plan")
+        route = json.loads(route_path.read_text(encoding="utf-8"))
         mutating = any("replacement" in e for e in plan["entries"])
         validate_plan(plan, round_trip=mutating)
+        if (route.get("schema") != "diagnostic-flight-route.v1" or
+                route.get("isolated_world") != world.name or route.get("world_actions") != plan or
+                (mutating and route.get("purpose") != "round_trip")):
+            return result("FAIL", "native_action_plan_mismatch")
         observation = json.loads(path.read_text(encoding="utf-8"))
         if (observation.get("schema") != "engine-world-actions-observation.v1" or
                 observation.get("world") != world.name or observation.get("api") != "UWorld::ReplaceBlockAt" or
