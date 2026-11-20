@@ -892,7 +892,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     for (int cy = minCy; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
-      if (!World.GetChunkManager().HasChunk(slice))
+      if (!World.GetChunkManager().HasLoadedTerrainSlice(slice))
       {
         continue;
       }
@@ -1046,7 +1046,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
     for (int cy = minCy; cy <= maxCy; ++cy)
     {
       const glm::ivec3 slice(ground.x, cy, ground.z);
-      if (!World.GetChunkManager().HasChunk(slice))
+      if (!World.GetChunkManager().HasLoadedTerrainSlice(slice))
       {
         continue;
       }

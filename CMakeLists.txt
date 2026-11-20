@@ -1109,6 +1109,7 @@ set_tests_properties(chunk_residency_trace_start_column_test PROPERTIES LABELS "
 
 cubatarium_add_test(NAME chunk_streamer_committed_column_test
     SOURCES
+        src/World/IO/BinaryChunkSerializer.cpp
         src/World/Chunks/Chunk.cpp
         src/World/Chunks/ChunkManager.cpp
         src/World/Chunks/ChunkBuffer.cpp

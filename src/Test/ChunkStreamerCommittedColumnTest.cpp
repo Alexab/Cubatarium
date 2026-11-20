@@ -1,8 +1,10 @@
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
+#include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkStreamer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/IO/BinaryChunkSerializer.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include <cstdlib>
 #include <iostream>
@@ -72,8 +74,74 @@ static void TestRetiredUnloadCandidate()
   tuning.UnloadAmortizeMode = prior;
 }
 
+static void TestAirRetiresWithTerrainColumn()
+{
+  using namespace cutum;
+  auto &tuning = URuntimeTuning::Get();
+  const int prior = tuning.UnloadAmortizeMode;
+  for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
+  {
+    tuning.UnloadAmortizeMode = mode;
+    UBlockWorld world;
+    UBlockRegistry registry(nullptr);
+    const glm::ivec3 floor(40, -4, 3), air_coord(40, -3, 3);
+    for (int x = 0; x < CHUNK_SIZE; ++x)
+      for (int z = 0; z < CHUNK_SIZE; ++z)
+        world.SetBlock(floor * CHUNK_SIZE + glm::ivec3(x, 0, z), 8);
+    UChunk legacy_air(air_coord);
+    std::array<uint8_t, CHUNK_VOLUME> pattern;
+    pattern.fill(0x53);
+    legacy_air.ReplaceLightData(pattern);
+    legacy_air.SetWeatherState(.25f, 123.125);
+    UBinaryChunkSerializer serializer;
+    const auto encoded = serializer.Serialize(air_coord, legacy_air, registry);
+    const auto decoded =
+        serializer.Deserialize(encoded.bytes, air_coord, registry);
+    const auto air = decoded.GetDecodedAirSlice(air_coord);
+    auto &manager = world.GetChunkManager();
+    Expect(air &&
+               manager.InstallLoadedAirSlice(*air, {{40, 0, 3}, 0}, 0, false),
+           "real decoded AIR belongs to the terrain column before unload");
+    const auto old_incarnation =
+        manager.GetSectionLightField(air_coord)->GetIncarnation();
+    UChunkStreamer streamer(world, registry, 1, 0, 319, -64);
+    streamer.SetMaxUnloadOpsPerFrame(1);
+    int saved = 0;
+    streamer.SetCallbacks(
+        nullptr,
+        [&](glm::ivec3)
+        {
+          auto snapshot = manager.MakeTerrainSaveSnapshot(air_coord);
+          Expect(snapshot && snapshot->IsAirOnly() &&
+                     snapshot->GetLightData() == pattern &&
+                     snapshot->GetWeatherLastUpdateSec() == 123.125,
+                 "unload save observes AIR metadata before retiring its "
+                 "authority");
+          ++saved;
+        },
+        nullptr, nullptr);
+    streamer.SetUnloadColumnCallback([](glm::ivec3, int) { return true; });
+    UFrameDeadline::Get().BeginFrame(0);
+    streamer.UnloadPass({0, -4, 0}, {8, -60, 8}, PlayerCapsule{});
+    Expect(saved == 1 && !manager.HasChunk(floor),
+           "real terrain column was saved and its geometry evicted");
+    Expect(!manager.HasLoadedAirSlice(air_coord) &&
+               !manager.GetSectionLightField(air_coord) &&
+               manager.QueryBlock(air_coord * CHUNK_SIZE).IsUnloaded(),
+           "streamer eviction must retire loaded AIR data and field ownership "
+           "too");
+    Expect(manager.InstallLoadedAirSlice(*air, {{40, 0, 3}, 1}, 1, false) &&
+               manager.GetSectionLightField(air_coord)->GetIncarnation() !=
+                   old_incarnation &&
+               !manager.HasChunk(air_coord),
+           "returned AIR starts a fresh field without a geometry holder");
+  }
+  tuning.UnloadAmortizeMode = prior;
+}
+
 int main()
 {
+  TestAirRetiresWithTerrainColumn();
   TestRetiredUnloadCandidate();
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr);
