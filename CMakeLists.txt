@@ -2108,6 +2108,9 @@ set_tests_properties(light_calculation_certificate_test PROPERTIES LABELS "unit;
 add_test(NAME section_light_geometry_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --geometry-halo)
 set_tests_properties(section_light_geometry_test PROPERTIES LABELS "unit;streaming;lighting;cpu")
+add_test(NAME section_light_job_order_test
+    COMMAND $<TARGET_FILE:relight_result_install_test> --job-order)
+set_tests_properties(section_light_job_order_test PROPERTIES LABELS "unit;streaming;lighting;cpu" TIMEOUT 120)
 add_test(NAME section_skylight_frontier_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --sky-frontier)
 set_tests_properties(section_skylight_frontier_test PROPERTIES LABELS "unit;streaming;lighting;cpu" TIMEOUT 30)

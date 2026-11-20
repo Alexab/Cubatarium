@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.02",
+  "current_package": "S3.03",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -1504,6 +1504,80 @@
       ],
       "remaining": [],
       "scope_limit": "CPU numeric solver contract only. Independent oracle/order and all original S3.03..S6 lifecycle/backend/rendered/performance requirements remain open; no real GPU claim from test host stubs."
+    },
+    {
+      "id": "S3.02",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src\\Test\\RelightResultInstallTest.cpp",
+          "sha256": "1619d8cf1dc82cfbf8c19af3da8b56fe339e834e39d0257192a1caae3f8453b0"
+        },
+        {
+          "path": "src\\World\\Lighting\\ChunkRelightSnapshot.cpp",
+          "sha256": "de49fce0dd9d0363289102ca3e4fe44f22f6e559e7180a6509958c5ed79510aa"
+        },
+        {
+          "path": "src\\World\\Lighting\\RelightResultInstall.h",
+          "sha256": "45a0f90b70ad4af8501d7140d45cc3b3e1fcf234d87ea4401791eacd4826ac7e"
+        },
+        {
+          "path": "src\\World\\Lighting\\RelightInputValidation.h",
+          "sha256": "e84967eaa4dc0dcb8f5fec714970ed4b0c3db8a401f8f0dd6359b2f923fc9b62"
+        },
+        {
+          "path": "CMakeLists.txt",
+          "sha256": "e5e5486ad665896ba193a2e9d46b29435709afe73d4c6fa8a708fc5868a8f0b7"
+        },
+        {
+          "path": "docs\\streaming\\S3_02_DENSE_ORDER_CARD_2026_11_20.json",
+          "sha256": "a3e2cc1f09ed500656c4570e0b96246687ec4448a287e5b873803f3668e67d83"
+        },
+        {
+          "path": "docs\\streaming\\S3_02_DENSE_ORACLE_ACCEPTANCE_2026_11_20.json",
+          "sha256": "e11b4729642da641bc6f3d457bb61373c653217d11ff9c90f19ef90bb818feef"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-negative-source-20261120.json",
+          "sha256": "2daab5594617076abde4db9cd75292de096d3f04b0b83c272f2db6bb95668069"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-order-build-20261120.log",
+          "sha256": "f0a523a335171eecc20f38942523eef551248a12e07f7d7068345f08aa8ffd3f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-order-validated-build-20261120.log",
+          "sha256": "da5c37c26c0a638aa11216a0582e6bd127d37646240d3589451919251440e0a5"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-order-validated-test-20261120.log",
+          "sha256": "9f46386bcf65a480802523a82d2fe68c71f67c47604896e0fd09b500a4d1add3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-negative-build-20261120.log",
+          "sha256": "bbd306d24799032074c6b2c06502a4cba51b01e3c27a2c1f11697c64ef46e717"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-negative-test-20261120.log",
+          "sha256": "2ddf5cb27f5d03118f415379b3596c765960b9ae1cf933bf251439b2bd0f9e7a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-restored-build-20261120.log",
+          "sha256": "bbd306d24799032074c6b2c06502a4cba51b01e3c27a2c1f11697c64ef46e717"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-dense-restored-test-20261120.log",
+          "sha256": "f37f7dca886ec01a7d2a545ee4f91f116c3da4a05cd9d4958f1d234e81ed0a74"
+        }
+      ],
+      "verified": [
+        "Existing independent dense block/sky halo references source-reviewed and executed PASS, including full target/padded comparisons, source removal, emission change and nontrivial sky/water/shadow cases.",
+        "New independent dense64^3 sky/block reference reaches verified fixed point in four geometry/material phases. All20 legal stage interleavings per phase pass across two adjacent jobs despite poisoned former live fields; capture/compute/install and installed output comparisons cover80 schedules.",
+        "Actual production liquid sky neighbor loss2->1 causes both independent suites to FAIL. Original source restored exactly, actual normal recompilation confirmed and both tests PASS. Production solver unchanged.",
+        "Initial preflight MSVC lambda-capture compile failure retained; no numeric test ran on it. Explicit capture correction and complete schedule enumeration preceded first executable validation."
+      ],
+      "remaining": [],
+      "scope_limit": "Independent CPU reference and job-stage ordering COMPLETE locally. Unknown/AIR, catalog/epoch/incarnation cancel/stale, persistence and true GPU/fallback/backend remain S3.03..06; full S4..S6 retained."
     }
   ],
   "completed_handoff": {

@@ -1,0 +1,48 @@
+{
+  "package": "S3.02",
+  "status": "COMPLETE",
+  "requirements": [
+    {
+      "id": "independent-block-reference",
+      "proof": "Retained dense48^3 Jacobi function derives block reference without production traversal/buckets/stamps. Eight asymmetric emitters across all six faces, source removal and emission change; all4096 interior and8000 padded cells compare."
+    },
+    {
+      "id": "independent-sky-reference",
+      "proof": "Retained dense48^3 column seed plus Jacobi relaxation compares open sky, partial roof/water, broad roof with aperture, deterministic mixed shadow/water across all six tile boundaries; all8000 padded cells compare and nontrivial light/dark coverage required."
+    },
+    {
+      "id": "mutable-scene-and-fixed-point",
+      "proof": "New64^3 dense independent sky/block reference recalculates four phases: initial roof/water/sources; source and roof removal; opaque barrier plus emission reduction; barrier and remaining source removal. Fifteen sweeps must reach an explicitly checked fixed point."
+    },
+    {
+      "id": "job-stage-order",
+      "proof": "All20 legal interleavings of two Capture->Compute->Install chains per phase (80 total), including fully sequential jobs. Previous fields poisoned0x97. Both8000-cell padded outputs and both4096 installed interiors equal literal independently packed reference. Geometry-only read inputs remain current after neighbor install."
+    },
+    {
+      "id": "negative-control",
+      "proof": "Actual production lateral liquid sky loss deliberately changed2->1 while references unchanged; both independent suites fail. Raw source restored to exact SHA256 and normal binaries recompiled; both PASS.",
+      "artifact": {
+        "path": "build\\desktop-msvc\\s3-dense-negative-source-20261120.json",
+        "sha256": "2daab5594617076abde4db9cd75292de096d3f04b0b83c272f2db6bb95668069"
+      }
+    }
+  ],
+  "positive_log": {
+    "path": "build\\desktop-msvc\\s3-dense-order-validated-test-20261120.log",
+    "sha256": "9f46386bcf65a480802523a82d2fe68c71f67c47604896e0fd09b500a4d1add3"
+  },
+  "negative_log": {
+    "path": "build\\desktop-msvc\\s3-dense-negative-test-20261120.log",
+    "sha256": "2ddf5cb27f5d03118f415379b3596c765960b9ae1cf933bf251439b2bd0f9e7a"
+  },
+  "restored_log": {
+    "path": "build\\desktop-msvc\\s3-dense-restored-test-20261120.log",
+    "sha256": "f37f7dca886ec01a7d2a545ee4f91f116c3da4a05cd9d4958f1d234e81ed0a74"
+  },
+  "scope_limits": [
+    "CPU numeric oracle and deterministic legal job stages only; no thread race/fairness or complete cancel/stale ownership acceptance.",
+    "Current-known AIR assumptions in these fixtures do not certify unknown-data/AIR lifecycle, which remains S3.03.",
+    "Real GPU/fallback/backend and rendered framebuffer, wet/transparency, frame/memory budgets and full matrix remain S3.06 and S4..S6."
+  ],
+  "next_package": "S3.03"
+}

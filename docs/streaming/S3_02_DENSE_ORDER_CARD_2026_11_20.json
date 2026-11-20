@@ -1,0 +1,15 @@
+{
+  "package": "S3.02",
+  "hypothesis": "Independent dense-grid sky/block fixed point matches each adjacent target and padded output regardless of capture, compute or install order and poisoned previous fields",
+  "inputs": "64^3 dense volume at origin-32,-48,-32; two adjacent target sections; partial roof, two-column water, three asymmetric torches. Four phases: initial; source and roof removal; barrier addition and emission14->6; barrier and remaining source removal. All20 legal interleavings of two Capture->Compute->Install chains per phase, including fully sequential jobs; live fields poisoned0x97 before each.",
+  "pass": "Dense literal six-neighbor Jacobi reaches verified fixed point in15 sweeps. Both8000-cell padded fields and both4096-cell installed interiors equal independent numeric reference for all80 schedules; geometry-only input validation remains current after adjacent installation. Existing dense halo/sky oracle suite PASS.",
+  "build": "cmake --build build/desktop-msvc --config Release --target relight_result_install_test --parallel 8",
+  "test": "ctest --test-dir build/desktop-msvc -C Release -R ^(section_light_geometry_test|section_light_job_order_test)$ --output-on-failure",
+  "artifacts": "build/desktop-msvc/s3-dense-order-validated-{build,test}-20261120.log",
+  "preflight_correction": "Initial compile log retained: MSVC required explicit capture of local constexpr width in the dense index lambda. Capture corrected; no solver validation ran on that failed build. Review also replaced eight phased orders with all20 legal interleavings before first executable validation.",
+  "timeout_seconds": 180,
+  "negative_control": "After PASS, temporarily replace actual sky liquid neighbor loss2 with1 in ChunkRelightSnapshot, leaving dense references unchanged. Require both dense geometry and job-order tests FAIL. Restore exact raw source in finally using write_bytes (fresh mtime), verify SHA256 and actual recompilation, then both tests PASS. No permanent fault hook or native run.",
+  "run_budget": "One validation, then localized correction/verification only if FAIL; no extra native flight for a pure numeric contract",
+  "scope_limit": "Independent CPU reference and deterministic job stages, not thread scheduler fairness, real GPU dispatch, rendered parity, or complete install/cancel ownership. Original S3.03..S6 remain required.",
+  "result": "Both Release independent reference tests PASS. New oracle verifies fixed point and all80 legal job schedules. Actual sky liquid loss2->1 fault rejected by both tests; source restored exactly and both normal tests PASS after confirmed recompilation."
+}

@@ -256,9 +256,15 @@
         {
           "id": "S3.02",
           "action": "Закрепить независимый finite-grid oracle: крыша, вода, швы, удаление источника и препятствия; свет не зависит от порядка jobs.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "completed_subtasks": [
+            "Independent block/sky dense references and all80 two-job stage interleavings across four mutation phases PASS. Actual water-attenuation fault rejected; exact solver source and normal binary restored."
+          ],
+          "remaining_subtasks": [],
+          "acceptance_record": "S3_02_DENSE_ORACLE_ACCEPTANCE_2026_11_20.json",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S3.03",
@@ -476,7 +482,7 @@
       ]
     }
   ],
-  "current_step": "S3.02",
+  "current_step": "S3.03",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

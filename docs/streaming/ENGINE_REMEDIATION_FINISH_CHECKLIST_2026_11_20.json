@@ -2,8 +2,8 @@
   "schema": "engine-remediation-finish-checklist.v1",
   "scope": "Полный S0..S6; дополнение существующего плана, без перезапуска аудита и без изменения полученных verdict",
   "checkpoint": "de907fce1",
-  "current_package": "S3.02",
-  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.06, S3.01; stage-wide final reconciliation still required",
+  "current_package": "S3.03",
+  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.06, S3.01..S3.02; stage-wide final reconciliation still required",
   "execution_rules": [
     "Выполнять только один пакет реализации одновременно, в указанном порядке. Подшаги внутри пакета последовательны.",
     "Перед кодом записать в карточку пакета: недостающее требование, конкретный production путь, гипотезу, неизменные входы, критерий PASS/FAIL, ожидаемые файлы результата и timeout.",
@@ -250,7 +250,7 @@
       "done": "Полный исходный объём доказан; обязательных FAIL/UNTESTED нет. Иначе цель остаётся незавершённой с точным списком зависимостей."
     }
   ],
-  "progress_checkpoint": "S3.01 CPU numeric contract complete with actual six-direction fault control and exact restoration. Production solver unchanged. Full source/backend/rendered/lifecycle/performance goal remains active.",
-  "next_action": "S3.02: reuse and inspect existing independent dense block/sky Jacobi references in RelightResultInstallTest; verify their coverage and identify the missing job-order/source-obstacle removal cases before adding or running checks.",
+  "progress_checkpoint": "S3.02 independent numeric references and all80 legal two-job stage schedules verified, including actual fault rejection and exact restoration. Full original lifecycle/backend/rendered/performance scope remains open.",
+  "next_action": "S3.03: inspect existing demanded AIR creation/retention tests and actual runtime owners; compare Unknown and known AIR before selecting one missing lifetime scenario. Reuse S2.04 absence and existing light-proof evidence; no audit restart.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

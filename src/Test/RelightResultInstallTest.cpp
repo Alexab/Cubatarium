@@ -1145,6 +1145,149 @@ void TestSkyFrontierAgainstDenseReference(bool benchmark = false)
   }
 }
 
+void TestJobOrderAgainstDenseReference()
+{
+  using namespace cutum;
+  constexpr int width = 64;
+  const auto index = [=](int x, int y, int z) { return x + width*(y + width*z); };
+  const glm::ivec3 origin(-32,-48,-32);
+  const std::array<glm::ivec3,2> targets{{{-1,-2,-1},{0,-2,-1}}};
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone, water, torch;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  water.Physics.IsLiquid = true;
+  water.Render.Style = BlockRenderStyle::Fluid;
+  torch.Physics = BlockPhysicsProfile::Solid();
+  torch.Render.Style = BlockRenderStyle::Cross;
+  torch.Lighting.Emission = 14;
+  const auto catalog = [&]
+  { definitions->ReplaceAll({{8,stone},{9,water},{50,torch}},
+                            {{"stone",8},{"water",9},{"torch",50}}); };
+  catalog();
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  std::vector<BlockId> cells(width*width*width, BLOCK_AIR);
+  const auto place = [&](int x,int y,int z,BlockId id)
+  { cells[index(x,y,z)] = id; world.SetBlock(origin+glm::ivec3(x,y,z),id); };
+  for (int x=12;x<52;++x) for (int z=12;z<40;++z) place(x,32,z,8);
+  for (int x=31;x<=32;++x) for (int y=18;y<30;++y) place(x,y,24,9);
+  place(23,23,24,50); place(40,24,25,50); place(14,25,24,50);
+  for (auto target : targets) world.GetChunkManager().EnsureChunk(target);
+  for (int phase=0;phase<4;++phase)
+  {
+    if (phase==1)
+    {
+      place(23,23,24,BLOCK_AIR);
+      for (int x=30;x<=34;++x) for (int z=22;z<=26;++z) place(x,32,z,BLOCK_AIR);
+    }
+    if (phase==2)
+    {
+      for (int y=16;y<32;++y) for (int z=16;z<32;++z) place(32,y,z,8);
+      torch.Lighting.Emission=6; catalog();
+    }
+    if (phase==3)
+    {
+      for (int y=16;y<32;++y) for (int z=16;z<32;++z) place(32,y,z,BLOCK_AIR);
+      place(40,24,25,BLOCK_AIR); place(14,25,24,BLOCK_AIR);
+    }
+    // Independent finite dense Jacobi solver. No production neighbor list,
+    // chunk traversal, snapshot computation, or packed-light helper is used.
+    std::vector<uint8_t> sky(cells.size()), block(cells.size()), next_sky, next_block;
+    for (int z=0;z<width;++z) for (int x=0;x<width;++x)
+    {
+      int level=15;
+      for (int y=width-1;y>=0;--y)
+      {
+        const int i=index(x,y,z);
+        if (cells[i]==8) level=0;
+        sky[i]=static_cast<uint8_t>(level);
+        if (cells[i]==9 && level>0) --level;
+        if (cells[i]==50) block[i]=static_cast<uint8_t>(torch.Lighting.Emission);
+      }
+    }
+    bool converged=false;
+    for (int sweep=0;sweep<15;++sweep)
+    {
+      next_sky=sky; next_block=block;
+      for (int z=1;z<width-1;++z) for (int y=1;y<width-1;++y) for (int x=1;x<width-1;++x)
+      {
+        const int i=index(x,y,z);
+        if (cells[i]==8) continue;
+        const int adjacent_sky=std::max({sky[i-1],sky[i+1],sky[i-width],sky[i+width],sky[i-width*width],sky[i+width*width]});
+        const int adjacent_block=std::max({block[i-1],block[i+1],block[i-width],block[i+width],block[i-width*width],block[i+width*width]});
+        next_sky[i]=static_cast<uint8_t>(std::max<int>(sky[i],adjacent_sky-(cells[i]==9?2:1)));
+        next_block[i]=static_cast<uint8_t>(std::max<int>(block[i],adjacent_block-1));
+      }
+      converged=next_sky==sky && next_block==block;
+      sky.swap(next_sky); block.swap(next_block);
+    }
+    Expect(converged,"independent dense oracle reaches a verified fixed point");
+    RelightJobSpec spec; spec.min_world_y=-32; spec.max_world_y=-17;
+    int schedules=0;
+    // All20 legal interleavings of two Capture->Compute->Install chains,
+    // including an entire job finishing before its neighbor is captured.
+    for (int schedule=0;schedule<64;++schedule)
+    {
+      int ones=0;
+      for (int event=0;event<6;++event) ones+=(schedule>>event)&1;
+      if (ones!=3) continue;
+      ++schedules;
+      std::vector<glm::ivec3> resident;
+      world.GetChunkManager().ForEachChunk([&](const UChunk &c){resident.push_back(c.GetCoord());});
+      std::array<uint8_t,CHUNK_VOLUME> poison; poison.fill(0x97);
+      for (auto coord : resident) world.GetChunkManager().GetChunk(coord)->ReplaceLightData(poison);
+      std::array<UChunkRelightSnapshot,2> snapshots;
+      std::array<RelightComputeResult,2> results;
+      std::array<int,2> stages{{0,0}};
+      for (int event=0;event<6;++event)
+      {
+        const int j=(schedule>>event)&1;
+        const int stage=stages[j]++;
+        if (stage==0)
+        {
+          snapshots[j]=UChunkRelightSnapshot::CaptureSections(world,spec,{targets[j]});
+          continue;
+        }
+        if (stage==2)
+        {
+          Expect(ValidateRelightInputs(results[j],world,definitions->GetCatalogSnapshot(),true)==RelightInputValidation::Current,
+                 "another job field install cannot invalidate geometry-only inputs");
+          InstallComputedLight(world,results[j].chunks[0],true,true);
+          continue;
+        }
+        Expect(stage==1,"job ordering never skips a required stage");
+        results[j]=snapshots[j].Compute(registry);
+        Expect(results[j].inputs_complete && results[j].chunks.size()==1 && results[j].chunks[0].padded_light,
+               "ordered job owns exactly one complete padded section");
+        for (const auto &stamp : results[j].read_set)
+          Expect(!stamp.readsLight,"ordered calculation never depends on poisoned live neighbor fields");
+        const auto offset=targets[j]*CHUNK_SIZE-origin;
+        for (int z=-2;z<18;++z) for (int y=-2;y<18;++y) for (int x=-2;x<18;++x)
+        {
+          const int i=index(offset.x+x,offset.y+y,offset.z+z);
+          const uint8_t expected=static_cast<uint8_t>((block[i]<<4)|sky[i]);
+          Expect(results[j].chunks[0].padded_light->cells[SectionLightVolume::Index(x,y,z)]==expected,
+                 "each job padded field matches independent oracle in every capture/compute order");
+        }
+      }
+      Expect(stages[0]==3 && stages[1]==3,"both jobs complete in every schedule");
+      for (int j=0;j<2;++j)
+      {
+        const auto offset=targets[j]*CHUNK_SIZE-origin;
+        const auto *chunk=world.GetChunkManager().GetChunk(targets[j]);
+        for (int z=0;z<16;++z) for (int y=0;y<16;++y) for (int x=0;x<16;++x)
+        {
+          const int i=index(offset.x+x,offset.y+y,offset.z+z);
+          Expect(chunk->GetLightData()[UChunk::LocalIndex({x,y,z})]==static_cast<uint8_t>((block[i]<<4)|sky[i]),
+                 "installed adjacent fields match oracle in every install order");
+        }
+      }
+    }
+    Expect(schedules==20,"all legal two-job stage interleavings are covered");
+  }
+}
+
 void TestUnknownGeometryAndPinnedCatalog()
 {
   using namespace cutum;
@@ -2422,6 +2565,12 @@ void TestPendingCoverageRequiresCurrentKnownProof()
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--job-order")
+  {
+    TestJobOrderAgainstDenseReference();
+    std::cout << "section_light_job_order_test: OK\n";
+    return 0;
+  }
   if (argc == 2 && std::string(argv[1]) == "--sky-frontier")
   {
     TestSkyFrontierAgainstDenseReference(true);
