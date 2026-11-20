@@ -77,9 +77,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                 "rendering or autosave scheduler acceptance"},
       {"status", "FAIL"},
       {"cases", Json::array()}};
-  const auto require = [](bool value, const char *message)
+  const auto require = [&](bool value, const char *message)
   {
-    if (!value) throw std::runtime_error(message);
+    if (!value) {
+      report["error"]=message;
+      std::ofstream(root/"report.json") << report.dump(2) << '\n';
+      throw std::runtime_error(message);
+    }
   };
   const auto capture = [](const fs::path &folder)
   {
@@ -108,6 +112,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     const char *variant=std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT");
     if(variant && std::string(variant)=="flat_publication")
     {
+
       report["variant"]="flat_publication";
       report["scope"]="Actual CPU/Flat UWorld section publication/input readiness; no Full solver or framebuffer acceptance";
       const auto &caps=GetActiveRenderBackendCaps();
@@ -359,6 +364,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         mesh.SetMeshRebuildFocus({0,0,0},4,1);
         mesh.SetMeshSnapshotBudgetMs(1000);
         mesh.SetMeshEmergeTotalBudgetMs(1000);
+        MeshWorkAdmission admission;
+        admission.enforce_schedule_lanes=true;
+        admission.max_schedule=1;
+        admission.first_mesh_schedule=0;
+        admission.remesh_schedule=1;
+        mesh.SetMeshWorkAdmission(admission);
+        mesh.SetMaxOutsideFocusMeshPerFrame(0);
         cache.SetMeshCompletedCapacity(1);
         const auto progress=[&](const char *phase) {
           Json state={{"phase",phase},{"completed",cache.GetMeshCompletedSize()},
@@ -367,8 +379,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           std::ofstream(root/"mesh-overflow-progress.json") << state.dump(2) << '\n';
         };
         progress("initialized");
-        world.BlockWorld.SetBlock({4,-40,4},8);
         world.BlockWorld.SetBlock({24,-40,8},8);
+        mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{1,-3,0});
+        world.BlockWorld.SetBlock({4,-40,4},8);
+        world.BlockWorld.SetBlock({25,-40,8},8);
         const auto schedule=[&](glm::ivec3 target) {
           progress("before_capture");
           cache.MarkDirtyPriority(target);
@@ -378,7 +392,15 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           progress("captured");
           const auto stats=cache.RebuildDirtyChunksWithStats(world.BlockWorld,*world.BlockRegistry,
                                                            0,1,false,0,1000,true);
-          require(stats.Scheduled==1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+          report["mesh_overflow_schedule_steps"].push_back({{"target_x",target.x},
+              {"scheduled",stats.Scheduled},{"skip_other",cache.GetLastMeshDirtyScheduleSkipOtherN()},
+              {"skip_pipeline",cache.GetLastMeshDirtyScheduleSkipPipelineN()},
+              {"skip_snapshot",cache.GetLastMeshDirtyScheduleSkipSnapshotN()}});
+          progress("scheduling_returned");
+          const bool idle=cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5));
+          const bool target_owned=cache.HasCpuMeshBuildInFlight(target);
+          report["mesh_overflow_schedule_steps"].back()["target_owned"]=target_owned;
+          require(stats.Scheduled==1 && idle && target_owned,
                   "overflow fixture completes one real worker job");
           progress("worker_complete");
         };
@@ -400,6 +422,20 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,1);
         schedule(coord);
         mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,1);
+        report["mesh_overflow_successor"]={{"publications_before",publications_before},
+            {"publications_after",cache.GetPublishCount(coord)},
+            {"inputs_current",cache.IsPublishedMeshCurrentForInputs(coord,world.BlockWorld)},
+            {"section_current",world.HasCurrentChunkSlicePublication(coord)},
+            {"dirty",mesh.IsChunkMeshDirty(coord)},
+            {"cpu_inflight",cache.HasCpuMeshBuildInFlight(coord)},
+            {"inflight",mesh.HasInflightMeshBuild(coord)},
+            {"awaiting_field",cache.IsGeometryAwaitingLight(coord)},
+            {"gpu_pending",mesh.IsPendingGpuApply(coord)},
+            {"preview",cache.HasProvisionalLightPreview(coord)},
+            {"stale_geom",cache.GetMeshApplyStaleGeomCount()},
+            {"stale_light",cache.GetMeshApplyStaleLightCount()},
+            {"stale_revision",cache.GetMeshApplyStaleRevCount()},
+            {"drop_no_active",cache.GetMeshApplyDropNoActiveCount()}};
         require(cache.GetPublishCount(coord)>publications_before &&
                     world.HasCurrentChunkSlicePublication(coord),
                 "overflow successor actually publishes current mesh");
@@ -411,6 +447,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       report["status"]="PASS";
       std::ofstream(root/"report.json") << report.dump(2) << '\n';
       return;
+
+
     }
     // S4.01: section physical truth versus surviving coarse column state.
     {

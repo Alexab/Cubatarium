@@ -3,6 +3,27 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-completed-overflow-drain-orphan-owner",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Exact target-owned remesh jobs with completed capacity1: dropped target's builder ownership ended but separate DrainAsyncMeshResults retained Active/RAA; dirtyfalse and orphan_inflighttrue prevented its executable retry.",
+      "fix": "Match the existing main tick orphan-retirement guards before MarkDirtyPriority in the separate completion drain; preserve newer CPU/GPU owners.",
+      "negative_control": "build/desktop-msvc/s4-mesh-overflow-exact-target-20261121-native/terrain-save-probe/report.json",
+      "evidence": "build/desktop-msvc/s4-mesh-overflow-acceptance-20261121.json",
+      "verification": "Dropped1, dirtytrue, orphanfalse; actual target-owned successor publishes current inputs, publications2->3, final dirtyfalse. API PASS.",
+      "next_action": "Q04 cancellation, eviction, same-key newer and field-owner cases remain OPEN; no package-wide closure."
+    },
+    {
+      "id": "camera-band-peak-schedule-absent-chunk-dereference",
+      "stage": "S4.02",
+      "status": "RESOLVED_GUARD_PACKAGE_OPEN",
+      "observed": "Actual Windows debugger records AV0xc0000005 in capture_peak_schedule callback on a globally watched coord absent from this UBlockWorld; field_light_rev dereferenced null despite other resident fields being guarded.",
+      "fix": "Record field_light_rev0 for absent chunk, retaining renderer_target_resident0; do not skip the diagnostic row or fabricate readiness.",
+      "evidence": "build/desktop-msvc/s4-mesh-overflow-debug-map-20261121/symbolized-stack.json",
+      "verification": "build/desktop-msvc/s4-mesh-overflow-null-guard-20261121-native/terrain-save-probe/report.json: three scheduling returns and worker completions, no AV. Report remains FAIL for separate successor-publication obligation.",
+      "next_action": "Keep S4.02 OPEN; localize successor install using current publication/owner counters. Temporary stack/abort/substage experiments removed."
+    },
+    {
       "id": "disk-cache-relight-noop-without-physical-coverage",
       "stage": "S3.05",
       "status": "RESOLVED_S3_05",

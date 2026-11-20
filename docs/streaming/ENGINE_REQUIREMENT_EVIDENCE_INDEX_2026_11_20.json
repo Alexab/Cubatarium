@@ -4,6 +4,22 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.completed-overflow-current-successor",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-mesh-overflow-exact-target-20261121-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-mesh-overflow-acceptance-20261121.json",
+      "scope": "Actual exact-target CPU remesh workers with capacity1 reproduce orphan Active/RAA after overflow. Fixed drain returns executable dirty and actual successor publishes current section, publication2->3. Other Q04/S4.02 lifecycle outcomes OPEN."
+    },
+    {
+      "id": "S4.02.blocker.absent-camera-watch-diagnostic",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-mesh-overflow-debug-map-20261121/symbolized-stack.json",
+      "receipt": "build/desktop-msvc/s4-mesh-overflow-null-guard-20261121-native/terrain-save-probe/report.json",
+      "scope": "Debugger/map identifies real null chunk dereference in end-of-tick CameraBandPeak diagnostics. Null revision guard allows ticks and worker returns to complete; separate overflow assertion still FAIL in that historical receipt. Temporary diagnostics removed."
+    },
+    {
       "id": "S4.02.terrain-arrival-fluid-map.partial-disk",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

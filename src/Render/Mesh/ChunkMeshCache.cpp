@@ -12881,7 +12881,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         trace.published_geom_rev = published.geom_rev;
         trace.published_light_rev = published.light_rev;
         trace.meshed_light_rev = cache.GetMeshedLightRevision(coord);
-        trace.field_light_rev = chunk->GetLightFieldRevision();
+        trace.field_light_rev = chunk ? chunk->GetLightFieldRevision() : 0;
         trace.mesh_dirty_queue_kind = cache.GetDirtyQueueTrace(
             coord, trace.mesh_dirty_queue_index, trace.mesh_dirty_queue_size);
         trace.mesh_dirty_queue_age_frames =
@@ -13257,6 +13257,15 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
   {
+    // The dropped completed job no longer owns this coordinate. Preserve a
+    // newer CPU/GPU owner, but retire orphan tracking before MarkDirtyPriority
+    // can mistake it for active work and park the retry in RemeshAfterApply.
+    if (!AsyncBuilder->IsInFlight(coord) && !IsPendingGpuApply(coord) &&
+        GpuExtractInFlight.count(coord) == 0)
+    {
+      ActiveMeshSourceRevision.erase(coord);
+      RemeshAfterApply.erase(coord);
+    }
     MarkDirtyPriority(coord);
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
