@@ -19913,5 +19913,776 @@
     "fixture-floor-rgb-reference.json": "024770400e5e69404dd79d62090011e2fa48936e4e11fba593dacb2a3798abef",
     "surface-lease-cohort-observation.json": "9d2bd61cd7665350424c59dac61ce911177d597bfa369b501297585bf3bd028e"
   }
+},
+"packed_depth_owner_recovery_native_2026_11_20": {
+  "assessment": "build\\desktop-msvc\\depth-owner-recovery-native-assessment-20261120.json",
+  "schema": "packed-depth-owner-recovery.v1",
+  "source_commit": "1e3dc1c8c284694c72335f82830c2b60cbe89868",
+  "goal_status": "active; full original S0..S6 preserved",
+  "artifacts": "build\\desktop-msvc\\engine-positive-air-border-depth-owner-20261120-native",
+  "problem": "All14 retained positive RGB refusals selected cy-3 rather than actual floor cy-4: reconstructed y near-48.4991 and grazing ray made the0.002 ray-length bias too small in the face normal direction. This was coordinate ownership, not proven readback-cap pressure.",
+  "retained_counterexample": {
+    "artifacts": "build/desktop-msvc/engine-positive-air-border-io-cutover-20261120-native",
+    "rgb": "FAIL14/5581",
+    "all14_wrong_y_owner_proved": true,
+    "rows": [
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -18,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -18,
+          -3,
+          2
+        ],
+        "point": [
+          -276.074,
+          -48.4991,
+          42.277
+        ],
+        "ray": [
+          -0.864437,
+          -0.322949,
+          -0.385296
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -18,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -18,
+          -3,
+          2
+        ],
+        "point": [
+          -276.074,
+          -48.4991,
+          45.7551
+        ],
+        "ray": [
+          -0.908574,
+          -0.339445,
+          -0.243455
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -18,
+          -4,
+          3
+        ],
+        "reported_chunk": [
+          -18,
+          -3,
+          3
+        ],
+        "point": [
+          -276.074,
+          -48.4991,
+          49.2332
+        ],
+        "ray": [
+          -0.933432,
+          -0.348738,
+          -0.0841784
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -18,
+          -4,
+          3
+        ],
+        "reported_chunk": [
+          -18,
+          -3,
+          3
+        ],
+        "point": [
+          -276.074,
+          -48.4992,
+          52.7113
+        ],
+        "ray": [
+          -0.933617,
+          -0.348813,
+          0.0817813
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -268.231,
+          -48.499,
+          41.6057
+        ],
+        "ray": [
+          -0.701723,
+          -0.437569,
+          -0.562243
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -268.231,
+          -48.499,
+          43.6894
+        ],
+        "ray": [
+          -0.750044,
+          -0.467708,
+          -0.467636
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -268.231,
+          -48.499,
+          45.7731
+        ],
+        "ray": [
+          -0.79367,
+          -0.49492,
+          -0.353754
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          3
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          3
+        ],
+        "point": [
+          -268.23,
+          -48.4989,
+          47.8569
+        ],
+        "ray": [
+          -0.827416,
+          -0.515973,
+          -0.221709
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -264.877,
+          -48.499,
+          39.8311
+        ],
+        "ray": [
+          -0.531211,
+          -0.464012,
+          -0.708878
+        ]
+      },
+      {
+        "frame": 2607,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -264.877,
+          -48.499,
+          41.3185
+        ],
+        "ray": [
+          -0.567867,
+          -0.49604,
+          -0.656864
+        ]
+      },
+      {
+        "frame": 2534,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -260.174,
+          -48.4993,
+          42.2754
+        ],
+        "ray": [
+          -0.864437,
+          -0.322949,
+          -0.385296
+        ]
+      },
+      {
+        "frame": 2534,
+        "expected_chunk": [
+          -17,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          2
+        ],
+        "point": [
+          -260.173,
+          -48.4993,
+          45.7535
+        ],
+        "ray": [
+          -0.908574,
+          -0.339445,
+          -0.243455
+        ]
+      },
+      {
+        "frame": 2534,
+        "expected_chunk": [
+          -17,
+          -4,
+          3
+        ],
+        "reported_chunk": [
+          -17,
+          -3,
+          3
+        ],
+        "point": [
+          -260.173,
+          -48.4992,
+          49.2317
+        ],
+        "ray": [
+          -0.933432,
+          -0.348738,
+          -0.0841784
+        ]
+      },
+      {
+        "frame": 2440,
+        "expected_chunk": [
+          -16,
+          -4,
+          2
+        ],
+        "reported_chunk": [
+          -16,
+          -3,
+          2
+        ],
+        "point": [
+          -244.073,
+          -48.4993,
+          42.274
+        ],
+        "ray": [
+          -0.864435,
+          -0.322949,
+          -0.385299
+        ]
+      }
+    ]
+  },
+  "changes": [
+    "FramebufferSurfaceCandidateCells retains the original cell first and at most8 candidates in a fixed0.002-per-axis uncertainty neighborhood. It grants no geometry/material authority by itself.",
+    "Only an unproven packed source or primary without CPU references can use neighbor recovery. Unique candidate chunks remain bounded by8 and share the unchanged16unique-chunk GPU readback budget.",
+    "Neighbor source must be a current-generation in-bounds GPU quad range from actual opaque draw trace, and its decoded triangle must intersect the original pixel ray. Normal reconstruction error is bounded by0.002; the existing0.25 overall match limit is unchanged. No geometry/material is inferred from the analytic fixture.",
+    "Accept a single proven neighbor; multiple plausible neighbor chunks remain refused. Use the actual ray-triangle hit point for physical-field sampling. Preserve measured framebuffer point/depth and same-draw field/table identity proof.",
+    "Serialize candidate-chunk count, valid neighbor count and recovery flag into both existing pixel-record streams. No shader, RGB oracle, cap or normal acceptance tolerance changed."
+  ],
+  "tests": {
+    "release_desktop_build": "PASS",
+    "release_tests": 5,
+    "test_names": [
+      "framebuffer_surface_cell_test",
+      "packed_quad_parity_test",
+      "section_light_atlas_driver_test",
+      "section_light_atlas_gles_driver_test",
+      "bound_section_light_probe_driver_test"
+    ],
+    "test_log": "build\\desktop-msvc\\depth-owner-five-tests-v2-20261120.log",
+    "negative_control": {
+      "schema": "depth-owner-candidates-control.v1",
+      "source_sha256": "42908737ad9d3b5189b60ad50d9b918e1509ac1cd56730a29352ec0168ecee25",
+      "control_build": {
+        "exit": 0,
+        "log": "build/desktop-msvc/depth-owner-candidates-v2-20261120-red-build.log"
+      },
+      "control_test": {
+        "exit": 8,
+        "log": "build/desktop-msvc/depth-owner-candidates-v2-20261120-red-test.log"
+      },
+      "expected_failure": true,
+      "exact_restore": true,
+      "restored_build": {
+        "exit": 0,
+        "log": "build/desktop-msvc/depth-owner-candidates-v2-20261120-restored-build.log"
+      },
+      "restored_test": {
+        "exit": 0,
+        "log": "build/desktop-msvc/depth-owner-candidates-v2-20261120-restored-test.log"
+      }
+    },
+    "harness_notes": [
+      "First negative control reached expected RED but source restoration write raised transient Windows OSError22. Removed the known mutation before further build/run. V2 stored original bytes durably, used atomic replacement and proved exact restoration plus GREEN; first RED logs retained.",
+      "Initial five-test build incorrectly named the GLES test as a separate build target. CMake defines it as section_light_atlas_driver_test --gles; corrected build/test logs retained under-v2. All5tests PASS, no skip.",
+      "Previous18IO/lifecycle tests were not rerun for diagnostic-only edits; prior evidence retained without a new full-matrix claim."
+    ]
+  },
+  "native": {
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "route": {
+      "status": "PASS",
+      "reason": "frontier_route_covered",
+      "displacement_chunks": 19,
+      "outside_initial_resident_samples": 3317
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 224,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 736,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 440,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "inspection": {
+      "status": "PASS",
+      "reason": "inspection_capture_coverage",
+      "requested": 26,
+      "queued": 26,
+      "verified": 26
+    },
+    "overall": "UNTESTED",
+    "camera": {
+      "schema": "engine-camera-light-reference.v1",
+      "status": "PASS",
+      "reason": "camera_canonical_field_at_paint",
+      "samples": 5098,
+      "ready_samples": 5098,
+      "air_samples": 5098,
+      "frame_epochs": 5098,
+      "distinct_air_sections": 20,
+      "expected_game_frames": 5098,
+      "observed_paint_frames": 5098,
+      "unsupported_mode_samples": 0,
+      "skipped_unscoped": 0,
+      "faults": 0,
+      "examples": [],
+      "missing_coverage": [],
+      "expected_block_levels": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "scope": "roofed AIR section, sky0 and independent emitter Manhattan blocklight at every paint; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+    },
+    "gpu_field": {
+      "status": "PASS",
+      "reason": "analytic_floor_draw_source_light",
+      "checked": 6149,
+      "positive_expected": 4983,
+      "faults": 0,
+      "source_counts": {
+        "cpu": 0,
+        "packed_gpu": 6149,
+        "bound_gpu": 6149
+      },
+      "missing_bound_fields": 0,
+      "positive_bound_with_baked_zero": 4983,
+      "frame_epochs": 95,
+      "observed_emitter_cells": 2,
+      "distinct_floor_cells": 2272,
+      "distinct_expected_levels": 15,
+      "skipped": 8597,
+      "skip_reasons": {
+        "unscoped_floor_cell": 988,
+        "not_joined_floor_depth": 2195,
+        "not_downward_valid_ray": 5414
+      },
+      "missing_coverage": [],
+      "examples": [],
+      "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+    },
+    "rgb": {
+      "schema": "engine-floor-rgb-reference.v1",
+      "status": "PASS",
+      "reason": "analytic_positive_floor_normal_rgb",
+      "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+      "checked": 4983,
+      "faults": 0,
+      "frame_epochs": 95,
+      "distinct_cells": 1733,
+      "expected_levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14
+      ],
+      "draw_sources": [
+        2
+      ],
+      "unwitnessed": 0,
+      "skipped": 9763,
+      "examples": [],
+      "missing_coverage": []
+    },
+    "depth": {
+      "status": "PASS",
+      "reason": "analytic_near_cave_opaque_depth",
+      "checked": 12466,
+      "faults": 0,
+      "frame_epochs": 110,
+      "skipped_unscoped_or_occluded": 2280,
+      "examples": [],
+      "fault_attribution": {
+        "schema": "engine-depth-fault-attribution.v1",
+        "section_count": 0,
+        "sections": [],
+        "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+      },
+      "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+    }
+  },
+  "recovery": {
+    "total_probe_rows": 14746,
+    "recovered_rows": 158,
+    "recovered_candidate_counts": {
+      "2": 158
+    },
+    "ambiguous_rows": 0,
+    "maximum_candidate_chunks": 2,
+    "positive_floor_counts": {
+      "scoped_positive_rows": 22,
+      "independently_proved": 22
+    },
+    "positive_floor_examples": [
+      {
+        "frame": 2704,
+        "cell": [
+          -276,
+          -49,
+          42
+        ],
+        "reconstructed_surface_y": -48.499,
+        "selected_chunk_y": -4,
+        "expected_light": 1,
+        "rgb_error_bytes": 0.30138334342700546,
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 16,
+          "program": 30,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            62,
+            2,
+            1,
+            0
+          ],
+          "frame_epoch": 2704,
+          "world_epoch": 4,
+          "field_incarnation": 9649,
+          "field_revision": 1,
+          "geometry_incarnation": 4278,
+          "geometry_content": 4096
+        }
+      },
+      {
+        "frame": 2704,
+        "cell": [
+          -276,
+          -49,
+          46
+        ],
+        "reconstructed_surface_y": -48.499,
+        "selected_chunk_y": -4,
+        "expected_light": 5,
+        "rgb_error_bytes": 0.48708423073940565,
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 80,
+          "program": 30,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            62,
+            2,
+            1,
+            0
+          ],
+          "frame_epoch": 2704,
+          "world_epoch": 4,
+          "field_incarnation": 9649,
+          "field_revision": 1,
+          "geometry_incarnation": 4278,
+          "geometry_content": 4096
+        }
+      },
+      {
+        "frame": 2704,
+        "cell": [
+          -276,
+          -49,
+          49
+        ],
+        "reconstructed_surface_y": -48.4989,
+        "selected_chunk_y": -4,
+        "expected_light": 8,
+        "rgb_error_bytes": 0.3701897235473979,
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 128,
+          "program": 30,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            135,
+            2,
+            1,
+            0
+          ],
+          "frame_epoch": 2704,
+          "world_epoch": 4,
+          "field_incarnation": 9922,
+          "field_revision": 1,
+          "geometry_incarnation": 4355,
+          "geometry_content": 4096
+        }
+      },
+      {
+        "frame": 2704,
+        "cell": [
+          -276,
+          -49,
+          53
+        ],
+        "reconstructed_surface_y": -48.4991,
+        "selected_chunk_y": -4,
+        "expected_light": 8,
+        "rgb_error_bytes": 0.3957220273708657,
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 128,
+          "program": 30,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            135,
+            2,
+            1,
+            0
+          ],
+          "frame_epoch": 2704,
+          "world_epoch": 4,
+          "field_incarnation": 9922,
+          "field_revision": 1,
+          "geometry_incarnation": 4355,
+          "geometry_content": 4096
+        }
+      },
+      {
+        "frame": 2704,
+        "cell": [
+          -268,
+          -49,
+          42
+        ],
+        "reconstructed_surface_y": -48.4989,
+        "selected_chunk_y": -4,
+        "expected_light": 1,
+        "rgb_error_bytes": 0.20498426265600145,
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 16,
+          "program": 30,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            449,
+            1,
+            1,
+            0
+          ],
+          "frame_epoch": 2704,
+          "world_epoch": 4,
+          "field_incarnation": 9023,
+          "field_revision": 1,
+          "geometry_incarnation": 4087,
+          "geometry_content": 4096
+        }
+      }
+    ],
+    "maximum_positive_rgb_error_bytes": 0.5493017970744773,
+    "caveat": "Total recovery includes unscoped/distant rays which need not have GPU field capture. Positive scoped recovery is independently checked for actual same-frame bound field, expected Manhattan light, material/face and RGB."
+  },
+  "performance": {
+    "legacy_pass": false,
+    "metrics": {
+      "wall_ms_med": 22.4867,
+      "wall_ms_fly_med": 31.2702,
+      "wall_ms_no_holes_med": 35.1802,
+      "post_stop_readiness_debt_max": 0.0,
+      "post_stop_visual_holes_max": 0.0
+    }
+  },
+  "limits": [
+    "Native overall UNTESTED retained. RGB4983samples is a positive floor-ray domain, not a general visual reference or full-screen/wet/transparency acceptance.",
+    "New recovery is packed-path forensic logic only. CPU/MDI/GLES native consumers and full backend parity remain separate obligations; GL/GLES driver tests do not substitute for those native routes.",
+    "No increased GPU budget or RGB tolerance, no recategorization of failed historical reports. This native route is outbound only; edited-material save/evict/return/cold proof for current AIR IO still needs rerun.",
+    "Legacy performance gate remains failed. Source-removal timeline, procedural/provider/catalog/cancellation lifecycle and all remaining full seed/R8/performance/memory S0..S6 requirements remain open."
+  ],
+  "next": [
+    "Run current native edited-material save/evict/return and cold reload with explicit AIR and fresh owner evidence.",
+    "Continue source-removal action/publication/field-generation timeline and full original S0..S6 scope."
+  ],
+  "artifact_sha256": {
+    "route.json": "64d62b67304817b421746ab34d57e7a35909bfcee5469e5ef9b133a4353c5f2c",
+    "flight_sim_report.json": "18a424b6d5b7d542278c5d808004b2aa3a1ad9b9fe6b6437d233ad1e4aa97d7b",
+    "smoke-verdict.json": "5c1b0e7f98dc0c9f175e038fa801631f9924fbb369decb4792b36eaf8717184a",
+    "fixture-camera-light-reference.json": "9459ec3d6d756788c19295d46b3985b6011627e763b72f09fb2f2189195d035b",
+    "fixture-floor-light-reference.json": "0f485e14e593259e158578dbc9c63555ef1479cdc3ddc5d352c7dae223e49ed7",
+    "fixture-floor-rgb-reference.json": "b397c6f60911b0b4894d06205fae7394d46ba2663f8598e6ac132ae78eff011b",
+    "surface-lease-cohort-observation.json": "db38a428f35e5521c45a0519ace4af05d4e4bb43de53edc0375dba5197ca6713"
+  }
 }
 }
