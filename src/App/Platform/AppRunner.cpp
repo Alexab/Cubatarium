@@ -1655,6 +1655,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   std::vector<DiagnosticWorldAction> world_actions;
   unsigned world_actions_after_waypoints = 0;
   bool startup_observation = false;
+  bool diagnostic_walking = false;
   if (!options.DiagnosticRoutePath.empty())
   {
     if (!options.StrictNoRelocation || !options.Fly || options.BreakStandMode ||
@@ -1680,6 +1681,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           route.at("waypoints").size() > 256)
         throw std::runtime_error(
             "invalid diagnostic route schema or waypoint count");
+      const auto movement_mode = route.value("movement_mode", "fly");
+      if (movement_mode != "fly" && movement_mode != "walk")
+        throw std::runtime_error("diagnostic movement_mode must be fly or walk");
+      diagnostic_walking = movement_mode == "walk";
       startup_observation = route.value("purpose", "") == "startup_observation";
       if (startup_observation && !route.at("waypoints").empty())
         throw std::runtime_error("startup observation must have no waypoints");
@@ -1722,7 +1727,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         waypoints.push_back(waypoint);
       }
       diagnostic_bot.SetRoute(std::move(waypoints),
-                              route.value("relative", false));
+                              route.value("relative", false), !diagnostic_walking);
     }
     catch (const std::exception &error)
     {
@@ -3033,8 +3038,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                           if (!it->second)
                             return DiagnosticSegmentState::Unknown;
                         }
+                    const bool supported = world->HasGroundSupport(at, capsule);
                     if (world->CheckCollision(at, capsule) ||
-                        world->HasGroundSupport(at, capsule))
+                        (diagnostic_walking ? !supported : supported))
                       return DiagnosticSegmentState::Blocked;
                   }
                   return DiagnosticSegmentState::Clear;
@@ -3087,6 +3093,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << diagnostic_bot.VisitedWaypoints()
                       << ",\"forward\":" << action.forward
                       << ",\"up\":" << action.up << ",\"down\":" << action.down
+                      << ",\"flying\":" << camera->GetFreeMove()
                       << ",\"grounded\":"
                       << (observation.grounded ? "true" : "false")
                       << ",\"walking_ready\":"

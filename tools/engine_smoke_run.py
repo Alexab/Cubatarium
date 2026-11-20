@@ -424,7 +424,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         probe_partial_air_cancellation: bool = False,
         probe_disk_read_failure: bool = False,
         prepare_read_failure_air: bool = False,
-        probe_terrain_save_failure: bool = False) -> dict:
+        probe_terrain_save_failure: bool = False, walking: bool = False) -> dict:
+    if type(walking) is not bool or (walking and (
+            fixture_scene != "open-sky-plane" or startup_only or round_trip)):
+        raise ValueError("walking requires a moving one-way open-sky-plane fixture")
     if type(probe_terrain_save_failure) is not bool or (probe_terrain_save_failure and not startup_only):
         raise ValueError("terrain save probe requires an explicit startup-only scenario")
     if type(probe_disk_read_failure) is not bool or (probe_disk_read_failure and (
@@ -601,8 +604,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         import math
         distance = minimum_chunks * 16 + 48
         angle = math.radians(yaw)
-        rise = scene.get("route_rise", 6) if scene else 6
+        rise = 0 if walking else scene.get("route_rise", 6) if scene else 6
         bot_route = {"schema": "diagnostic-flight-route.v1", "relative": True,
+                     "movement_mode": "walk" if walking else "fly",
                      "waypoints": [{"position": [0, rise, 0], "inspect": True},
                                    {"position": [distance * math.cos(angle), rise,
                                                  distance * math.sin(angle)], "inspect": True}]}
@@ -688,6 +692,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "synchronous_meshing": synchronous_meshing,
                  "unpacked_meshing_requested": unpacked_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
+                 "walking": walking,
                  "secondary_residency_column": secondary_residency_column,
                  "probe_partial_air_cancellation": probe_partial_air_cancellation,
                  "probe_disk_read_failure": probe_disk_read_failure,
@@ -728,6 +733,12 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             statuses = [part["status"] for part in verdict["components"].values()]
             verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
             verdict["scope"] = "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance"
+        if walking:
+            from engine_surface_route_evidence import evaluate as evaluate_surface
+            surface = evaluate_surface(artifacts, report, minimum_chunks=minimum_chunks)
+            (artifacts / "surface-route-evidence.json").write_text(
+                json.dumps(surface, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["surface_route"] = surface
         if probe_disk_read_failure:
             from engine_disk_read_failure_evidence import evaluate as evaluate_read_failure
             fault = evaluate_read_failure(artifacts, report, bot_route,
@@ -896,7 +907,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             terrain_save_failure=probe_terrain_save_failure,
             world_actions=world_actions is not None,
             synchronous_meshing=synchronous_meshing,
-            capture_backpressure=capture_encode_delay_ms > 0)
+            capture_backpressure=capture_encode_delay_ms > 0, walking=walking)
         finalize(verdict, required)
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
@@ -916,6 +927,8 @@ def main() -> int:
     parser.add_argument("--fly-seconds", type=float, default=300,
                         help="maximum in-game route budget; completion ends the run early")
     parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
+    parser.add_argument("--walking", action="store_true",
+                        help="Use the normal walking motor on an open-sky-plane fixture")
     parser.add_argument("--round-trip", action="store_true",
                         help="motor return with initial-cohort eviction/fresh disk reload evidence")
     parser.add_argument("--secondary-residency-column", nargs=2, type=int, metavar=("X", "Z"),
@@ -971,7 +984,7 @@ def main() -> int:
                   synchronous_meshing=args.synchronous_meshing,
                   unpacked_meshing=args.no_packed_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
-                  round_trip=args.round_trip,
+                  round_trip=args.round_trip, walking=args.walking,
                   secondary_residency_column=args.secondary_residency_column,
                   probe_partial_air_cancellation=args.probe_partial_air_cancellation,
                   probe_disk_read_failure=args.probe_disk_read_failure,

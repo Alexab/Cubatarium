@@ -6,7 +6,7 @@ STATUSES = {"PASS", "FAIL", "UNTESTED"}
 
 def required_for_options(*, read_failure=False, air_cancellation=False,
                          terrain_save_failure=False, world_actions=False,
-                         synchronous_meshing=False, capture_backpressure=False):
+                         synchronous_meshing=False, capture_backpressure=False, walking=False):
     requirements = []
     for enabled, names in (
         (read_failure, ("disk_read_failure",)),
@@ -15,6 +15,7 @@ def required_for_options(*, read_failure=False, air_cancellation=False,
         (world_actions, ("world_actions",)),
         (synchronous_meshing, ("synchronous_meshing",)),
         (capture_backpressure, ("capture_backpressure",)),
+        (walking, ("surface_route",)),
     ):
         if enabled:
             requirements.extend(names)

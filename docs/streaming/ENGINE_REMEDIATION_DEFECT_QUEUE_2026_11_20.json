@@ -1,0 +1,193 @@
+{
+  "schema": "engine-remediation-defect-queue.v1",
+  "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
+  "defects": [
+    {
+      "id": "surface-first-paint-unready",
+      "stage": "S4",
+      "status": "OPEN",
+      "discovered_by": "S1.04 flat walking native run",
+      "evidence": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\smoke-verdict.json",
+      "evidence_sha256": "9cc07639b0545eddb25733d3e98affb1e3520fb95308a30960f4d2795450d615",
+      "observed": {
+        "status": "FAIL",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 249,
+          "columns": 81,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 81,
+          "expected_sections": 1944,
+          "focus": [
+            1,
+            -4,
+            3
+          ],
+          "known_air_sections": 1372,
+          "light_unready_sections": 13,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 13,
+          "radius": 4,
+          "ready": false,
+          "render_distance_chunks": 4,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1944,
+          "surface_sections": 572,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "blocks_surface_motor_proof": false,
+      "blocks_overall_acceptance": true,
+      "next_action": "Inspect first-paint admission versus required presentation witness for the 13 named unready sections; identify the authority mismatch before one targeted fix/verification."
+    },
+    {
+      "id": "surface-packed-floor-sky-zero",
+      "stage": "S5",
+      "status": "OPEN",
+      "discovered_by": "S1.04 flat walking native run",
+      "evidence": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\smoke-verdict.json",
+      "evidence_sha256": "9cc07639b0545eddb25733d3e98affb1e3520fb95308a30960f4d2795450d615",
+      "observed": {
+        "status": "FAIL",
+        "reason": "analytic_direct_sky_floor_draw_source_light",
+        "checked": 3223,
+        "positive_expected": 3223,
+        "faults": 3223,
+        "source_counts": {
+          "cpu": 0,
+          "packed_gpu": 3223
+        },
+        "missing_bound_fields": 0,
+        "positive_bound_with_baked_zero": 0,
+        "frame_epochs": 65,
+        "observed_emitter_cells": 0,
+        "distinct_floor_cells": 930,
+        "distinct_expected_levels": 1,
+        "skipped": 6083,
+        "skip_reasons": {
+          "not_joined_floor_depth": 328,
+          "unscoped_floor_cell": 2339,
+          "not_downward_valid_ray": 3416
+        },
+        "missing_coverage": [],
+        "examples": [
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -124,
+              -61,
+              61
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -124,
+              -61,
+              57
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -124,
+              -61,
+              53
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -124,
+              -61,
+              49
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -146,
+              -61,
+              62
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -146,
+              -61,
+              61
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -146,
+              -61,
+              60
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          },
+          {
+            "frame_epoch": 3300,
+            "floor_cell": [
+              -146,
+              -61,
+              58
+            ],
+            "expected_block_level": 0,
+            "source_block_light": 0,
+            "expected_sky_level": 15,
+            "source_sky_light": 0,
+            "source_material_id": 560
+          }
+        ],
+        "scope": "unobstructed constant direct-skylight floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+      },
+      "blocks_surface_motor_proof": false,
+      "blocks_overall_acceptance": true,
+      "next_action": "Join sampled packed draw-source sky0 to current bound field values and the intended physical-light consumer contract; establish engine fault versus stale oracle before changing code or rerunning."
+    }
+  ]
+}

@@ -37,11 +37,12 @@ int Key(glm::ivec3 p)
 } // namespace
 
 void DiagnosticFlightController::SetRoute(
-    std::vector<DiagnosticFlightWaypoint> route, bool relative)
+    std::vector<DiagnosticFlightWaypoint> route, bool relative, bool flying)
 {
   *this = DiagnosticFlightController{};
   Route_ = std::move(route);
   Relative_ = relative;
+  Flying_ = flying;
 }
 
 bool DiagnosticFlightController::Plan(glm::vec3 from, glm::vec3 target,
@@ -95,6 +96,8 @@ bool DiagnosticFlightController::Plan(glm::vec3 from, glm::vec3 target,
     }
     for (glm::ivec3 step : steps)
     {
+      if (!Flying_ && step.y != 0)
+        continue;
       const glm::ivec3 next = node.p + step;
       if (std::max({std::abs(next.x), std::abs(next.y), std::abs(next.z)}) >
           kGridRadius)
@@ -122,6 +125,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
                                  const SegmentProbe &probe)
 {
   DiagnosticFlightCommand command;
+  command.flying = Flying_;
   command.yaw = o.yaw;
   command.pitch = o.pitch;
   if (State_ == DiagnosticFlightState::Idle)
@@ -138,7 +142,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     TakeoffY_ = o.position.y;
     const bool needs_departure =
         !Route_.empty() && !Arrived(Route_.front(), o.position);
-    State_ = o.grounded && needs_departure ? DiagnosticFlightState::Takeoff
+    State_ = Flying_ && o.grounded && needs_departure ? DiagnosticFlightState::Takeoff
                                            : DiagnosticFlightState::Travel;
   }
   const float dt =
@@ -262,7 +266,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     LastProgress_ = o.time;
     return command;
   }
-  if (o.grounded && target.y > o.position.y + kArrive)
+  if (Flying_ && o.grounded && target.y > o.position.y + kArrive)
   {
     State_ = DiagnosticFlightState::Takeoff;
     TakeoffY_ = o.position.y;
@@ -321,8 +325,8 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   const bool level = std::abs(o.pitch) < 5.0f;
   command.forward = level && horizontal > kHorizontalMotorDeadZone &&
                     std::abs(std::remainder(o.yaw - yaw, 360.0f)) < 10.0f;
-  command.up = level && delta.y > 0.35f;
-  command.down = level && delta.y < -0.35f;
+  command.up = Flying_ && level && delta.y > 0.35f;
+  command.down = Flying_ && level && delta.y < -0.35f;
   return command;
 }
 

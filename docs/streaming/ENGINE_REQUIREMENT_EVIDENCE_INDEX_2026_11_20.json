@@ -266,6 +266,63 @@
         "Current-source Release build provenance, runtime, startup, route and inspection PASS; 11 chunks crossed, 1297 outside-initial samples, zero diagnostic relocations, config restored and lease released."
       ],
       "scope_limit": "FNV is an accidental-corruption checksum, not authentication. Legacy artifacts retain explicit weaker request/filename strength. General visual reference and performance remain UNTESTED; no broad S6 acceptance claimed."
+    },
+    {
+      "id": "S1.04",
+      "status": "OPEN",
+      "evidence": [
+        {
+          "path": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\route.json",
+          "sha256": "0103c1cdc8fecff4669979ac93d70050ad6e4573cf918e46eb31799be79d5a6b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "9cc07639b0545eddb25733d3e98affb1e3520fb95308a30960f4d2795450d615"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\surface-route-evidence.json",
+          "sha256": "49282374de7e77a4d6401fd21d2fb675310854b0796a435ad4620b87cb774100"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-native-plan-20261120.json",
+          "sha256": "5eb1adf5c37d4296329b57fdbf506489fb40957e9997a3733cee361d609d2ab3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-release-build-20261120.log",
+          "sha256": "bfe5a0041090212f38a6df5071bc28e3382aec5270bc84e9b4e2e7ca9aece994"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-controller-test-20261120.log",
+          "sha256": "e02a421ef0dd2e2289bcf70533c9a143f96e99603c1df5f2a7c03dd30581d34e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-evidence-test-20261120.log",
+          "sha256": "373e280e5b91c07ce885c6b0a5fb001f8853341ef047f046f8d6584395ba96a7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-harness-test-20261120.log",
+          "sha256": "3cdc81a715ad099a7d52f5b0659d89a70eac716e39779ec07f6f07d198cfe06e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-surface-verdict-contract-test-20261120.log",
+          "sha256": "6ce19fe5c6e39322ca0b13f5b467573e2eeec70d41fbf64d3e414ddbe59845d6"
+        }
+      ],
+      "verified": [
+        "Explicit route movement_mode walk uses normal motor, never requests vertical movement or vertical planner edges; runtime segment query requires ground support.",
+        "Native flat saved surface: 175.654 blocks, 11 chunk displacement, 220/220 grounded samples, height span 0, zero relocations, 26/26 receipt-bound inspections.",
+        "Runtime, route, inspection, surface_route, fixture, opaque depth and build provenance PASS; config restored byte-for-byte.",
+        "Release controller tests plus 34 harness, 5 verdict-contract and surface evidence negative controls PASS."
+      ],
+      "remaining": [
+        "Reconcile all required route scenarios and source/version limitations before closing S1.04.",
+        "Native overall FAIL retained: first paint has 13 unready sections; packed floor draw-source sky reference has 3223/3223 faults. Queue S4/S5 diagnosis; do not rerun without new hypothesis."
+      ],
+      "historical_route_evidence": {
+        "out_and_back": "build/desktop-msvc/physical-current-roundtrip-rd4-20261120-native/smoke-verdict.json",
+        "wet_cave": "build/desktop-msvc/physical-current-wet-rd4-20261120-native/smoke-verdict.json"
+      },
+      "scope_limit": "Flat walking is proven; arbitrary terrain navigation and full current-version route matrix are not. No stage-wide or overall acceptance."
     }
   ],
   "completed_handoff": {

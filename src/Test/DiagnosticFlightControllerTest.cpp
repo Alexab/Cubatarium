@@ -410,5 +410,47 @@ int main()
     Expect(bot.State() == DiagnosticFlightState::Complete,
            "progressing recovery must retain a usable route");
   }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{8, 2, 0}, true}}, false, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, true, true};
+    for (int tick = 0; tick < 1200 &&
+                       bot.State() != DiagnosticFlightState::Complete; ++tick)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, Clear);
+      Expect(!action.flying && !action.up && !action.down,
+             "surface route must retain walking motor without jump or vertical input");
+      o.yaw = action.yaw;
+      o.pitch = action.pitch;
+      if (action.forward)
+        o.position += glm::vec3(std::cos(glm::radians(action.yaw)), 0,
+                                std::sin(glm::radians(action.yaw))) * 0.15f;
+    }
+    Expect(bot.State() == DiagnosticFlightState::Complete &&
+               bot.InspectionCaptureCount() == 12 && o.position.y == 2,
+           "walking route must reach the point and complete its panorama");
+  }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{8, 2, 0}, false}}, false, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, true, true};
+    // A wall with no horizontal way around can be flown over, but the walking
+    // planner must never fabricate a vertical detour or free-move transition.
+    const auto enclosure = [](glm::vec3 from, glm::vec3 to)
+    { return std::abs(to.y - from.y) > .001f
+                 ? DiagnosticSegmentState::Clear
+                 : DiagnosticSegmentState::Blocked; };
+    for (int tick = 0; tick < 140; ++tick)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, enclosure);
+      Expect(!action.flying && !action.up && !action.down && !action.forward,
+             "walking enclosure cannot be bypassed by switching to flight");
+    }
+    Expect(bot.State() == DiagnosticFlightState::Blocked &&
+               bot.FailureReason() == "no_safe_local_path",
+           "walking planner must report a bounded horizontal enclosure");
+  }
   return EXIT_SUCCESS;
 }

@@ -68,7 +68,8 @@ class DiagnosticFlightController
 public:
   using SegmentProbe =
       std::function<DiagnosticSegmentState(glm::vec3, glm::vec3)>;
-  void SetRoute(std::vector<DiagnosticFlightWaypoint> route, bool relative);
+  void SetRoute(std::vector<DiagnosticFlightWaypoint> route, bool relative,
+                bool flying = true);
   DiagnosticFlightCommand Tick(const DiagnosticFlightObservation &observation,
                                const SegmentProbe &probe);
   DiagnosticFlightState State() const { return State_; }
@@ -87,6 +88,7 @@ private:
   size_t Waypoint_{0}, DetourIndex_{0};
   DiagnosticFlightState State_{DiagnosticFlightState::Idle};
   bool Relative_{true};
+  bool Flying_{true};
   double LastTick_{0.0}, StageStarted_{0.0}, LastProgress_{0.0};
   double NextPlan_{0.0}, InspectPoseStarted_{-1.0};
   // Availability transitions are not motor progress. Retain one recovery
