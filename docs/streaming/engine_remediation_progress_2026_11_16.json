@@ -29045,5 +29045,153 @@
     "Continue explicit procedural/profile/absence completion certificates and persisted content/algorithm/catalog proof.",
     "Preserve full S0..S6 startup/R8/first-publication, actual CPU construction/GPU solver/backend parity, independent wet/transparency/whole-screen references, lifetime/slot pressure and long native performance/memory matrices."
   ]
+},
+"partial_air_disk_demand_cancellation_ownership_foundation_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "source_commit": "ee50f87559beae753a5686414dc68aa564a4ecf1",
+  "full_goal": "Full original S0..S6 remains active; no new audit or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\partial-air-cancellation-assessment-20261120.json",
+    "sha256": "5f62d4bd152e1dd1be1ecc895c97f20a26708ab3e0e3da12385282920ed9923a"
+  },
+  "problem": "Disk cancellation erased the pending demand and rejected late worker results, but already committed geometry-free AIR data remained resident. AIR-only partial columns correctly lack whole-column save/purge authority, so normal unload could not retire them.",
+  "changes": [
+    "TerrainSliceLoadOwnership records only AIR actually installed by that ApplyTerrainSliceLoad call. Duplicate completions, pre-existing AIR/geometry and invalid/cancelled results cannot claim ownership.",
+    "Receipt authority is tied to weak manager identity plus exact live field incarnation. No world/manager pointer, geometry chunk, light snapshot or filesystem authority retained.",
+    "Cancellation retires matching AIR-only data, decoded authority and canonical field ownership with existing manager counters/revision invalidation. Externally retained immutable field snapshots remain valid objects.",
+    "Materialized edits, newer field incarnations and other managers remain intact. A column containing geometry keeps its AIR through normal save/eviction so cancellation cannot make that save incomplete.",
+    "Actual async load state owns receipts. Out-of-radius cancellation, explicit cancellation and abort cancel the real atomic owner before retirement and invalidate pending light restores, column-light completion and dependent meshes when data was removed.",
+    "Abort APIs now require the UWorld context; all save/quit/quiesce callsites updated, preventing data ownership from being lost without access to the current manager.",
+    "Normal unload cancels workers before saving the resident column; its explicit retain_for_column_save path leaves AIR present until the existing serialization and eviction steps.",
+    "Move finalized/cancelled request state instead of copying newly retained receipt vectors."
+  ],
+  "verification": {
+    "release_application_build": "PASS",
+    "targeted_release_tests": 4,
+    "targeted_release_seconds": 2.78,
+    "final_storage_test": "PASS",
+    "final_storage_seconds": 0.54,
+    "regression_red": "New partial-demand ownership regression failed with no retirement implementation; raw failing receipt retained.",
+    "headless": {
+      "status": "PASS",
+      "actual_binary_and_json_partial_slice_counts": [
+        1,
+        12,
+        23
+      ],
+      "cold_disk_reload_after_cancel": "PASS; all24 saved frames/weather remain",
+      "red": "air-partial-cancel-red-test-20261120.log failed until owner retirement implemented",
+      "controls": [
+        "duplicate/pre-existing AIR cannot be claimed",
+        "newer field incarnation retained",
+        "different manager retained",
+        "materialized edits back to AIR retained with weather",
+        "geometry-bearing column keeps AIR through normal save/evict",
+        "late cancelled decoded results cannot publish",
+        "indexed absent AIR data retires without decoded-profile authority",
+        "field-only allocation does not claim data",
+        "external retained field immutable; resident data/field counters return to zero"
+      ]
+    },
+    "native_full_column_regression": {
+      "status": "PASS",
+      "wall_elapsed_sec": 320.429,
+      "ingame_frames": 10435,
+      "maximum_excursion_blocks": 303.662,
+      "primary_disk_demand_id": 62724,
+      "secondary_disk_demand_id": 62735,
+      "source_components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "air_data_column": "PASS",
+        "draw": "PASS",
+        "cpu_vertex_draw": "PASS"
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "native_saved_air_weather_status": "PASS",
+      "general_smoke_status": "UNTESTED"
+    },
+    "native_partial_cancel": {
+      "status": "UNTESTED",
+      "reason": "no cancellation with owned AIR occurred in this ordinary motor run",
+      "cancellation_rows_n": 0,
+      "nonzero_retirement_rows_n": 0,
+      "nonzero_rows": [],
+      "cancellation_examples": []
+    }
+  },
+  "receipts": {
+    "air-partial-cancel-red-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-red-build-20261120.log",
+      "sha256": "10dd82c2ecb96194f4fd6382ca0d02bb29f79b5bf73ee2c8a9d61fc7312f735a"
+    },
+    "air-partial-cancel-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-red-test-20261120.log",
+      "sha256": "e498299fde54b557066604324cd47d510bea1e54387cc3d06178a51ba108291e"
+    },
+    "air-partial-cancel-targeted-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-targeted-build-20261120.log",
+      "sha256": "d6daf0b7bab2bedb39f286f3b294d9dff6d2b3e827cd3531e4dedfc8868fd66e"
+    },
+    "air-partial-cancel-targeted-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-targeted-tests-20261120.log",
+      "sha256": "4b98b453115e1a6e5e6b5da3a9b511cfb5e5739ac9ef7de60d583e87f1794b7f"
+    },
+    "air-partial-cancel-final-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-final-build-20261120.log",
+      "sha256": "10dd82c2ecb96194f4fd6382ca0d02bb29f79b5bf73ee2c8a9d61fc7312f735a"
+    },
+    "air-partial-cancel-final-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-final-test-20261120.log",
+      "sha256": "48cc9d7ac3d39f345c59245e70361f8b119870f49d5d022305ed830d35e25ef5"
+    },
+    "air-partial-cancel-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-partial-cancel-release-build-20261120.log",
+      "sha256": "0a497958c0637d62826b4ca01e252014db3b58cc1e42c922d867adc116a77c8a"
+    },
+    "air-cancel-corridor-fixture-20261120.json": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-corridor-fixture-20261120.json",
+      "sha256": "c536f114c5ea2e834d8070c93341ce208f7ba64aea00fecca2ad9b166c55ab93"
+    },
+    "prepare_air_cancel_corridor_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\prepare_air_cancel_corridor_20261120.py",
+      "sha256": "14ed389591d12ff5a1232642f7627ac854468db65cce11bfa7996efff1a6d1cb"
+    },
+    "run_air_cancel_corridor_native_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_air_cancel_corridor_native_20261120.py",
+      "sha256": "ac90c08f62f8f5a1ff792e66746d3406ae17e9bc8f264892ab53498f45fc3779"
+    },
+    "assess_air_cancel_corridor_column_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_air_cancel_corridor_column_20261120.py",
+      "sha256": "07bb15647f1ae8a2a6677616af78a1839f630a6e469d1e28ccfe99534a554474"
+    }
+  },
+  "native_assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-corridor-column-assessment-20261120.json",
+    "sha256": "058dd5d4bb2bc3c5bd7a07cf6c41b2fa05a709abb49cde1ae04b2514bfd067e3"
+  },
+  "limits": [
+    "Deterministically cancel an actual returning disk demand after some AIR installs; join exact cancelled demand, installed fields, removals, late-result rejection and subsequent fresh demand in native traces.",
+    "Mixed/geometry partial producers remain on existing save/eviction path; no bounded cancellation/ownership proof for them is claimed.",
+    "Existing disk retry/incomplete finalization still clears whole columns and can remove saved data after failed reads; owned geometry/edit-safe retry and nondestructive failure policy remain to fix.",
+    "Procedural empty completion/profile/absence and persisted content/algorithm/catalog certificates remain.",
+    "No physical-light certificate, CPU-construction/GPU-solver/backend/GLES parity, independent wet/transparency/whole-screen or S6 long performance/memory acceptance."
+  ],
+  "next": [
+    "Add bounded opt-in native diagnostic that cancels an actual returning disk demand after a controlled number of successful AIR installs, without teleporting or faking ownership events.",
+    "Join queued demand, exact installed fields, cancellation, removals, rejected late results and subsequent fresh disk demand; preserve strict primary/full AIR return and RGB/light evidence.",
+    "Fix ownership/edit-safe disk retries and nondestructive read/incomplete failure behavior; existing whole-column clear/purge is not covered by the new cancellation receipts.",
+    "Continue mixed/procedural/profile/absence producer certificates, persisted content/algorithm/catalog proof and the entire original S0..S6 backend/reference/startup/lifetime/performance/memory matrix."
+  ]
 }
 }
