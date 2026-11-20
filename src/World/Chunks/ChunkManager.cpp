@@ -88,6 +88,10 @@ void UChunkManager::ClearFluidState(glm::ivec3 worldPos)
 
 void UChunkManager::Clear()
 {
+  for (const auto &entry : LoadedAirSlices)
+    if (const auto field = GetSectionLightField(entry.first))
+      TraceChunkResidency("air_clear", entry.first, entry.first,
+                          field->GetIncarnation(), this);
   NoteInputMutation();
   Chunks.clear();
   LightFields.clear();
@@ -176,6 +180,8 @@ bool UChunkManager::InstallLoadedAirSlice(const LoadedAirSlice &slice,
   LoadedAirSlices.emplace(coord, std::move(metadata));
   AbsentLightFieldScan.emplace_back(coord, field->GetIncarnation());
   NoteInputMutation();
+  TraceChunkResidency("air_install", coord, coord, field->GetIncarnation(),
+                      this);
   return true;
 }
 
@@ -295,6 +301,9 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
   if (LoadedAirSlices.erase(chunkCoord))
   {
+    if (const auto field = GetSectionLightField(chunkCoord))
+      TraceChunkResidency("air_remove", chunkCoord, chunkCoord,
+                          field->GetIncarnation(), this);
     LightFields.erase(chunkCoord);
     NoteInputMutation();
   }
@@ -365,6 +374,8 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   if (const auto air = LoadedAirSlices.find(chunkCoord);
       air != LoadedAirSlices.end())
   {
+    TraceChunkResidency("air_materialize", chunkCoord, chunkCoord,
+                        field_it->second->GetIncarnation(), this);
     if (air->second.HasWeather)
       chunk->SetWeatherState(air->second.Wetness,
                              air->second.WeatherLastUpdateSec);

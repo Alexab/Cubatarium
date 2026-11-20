@@ -19,8 +19,10 @@ def vector(value):
             all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in value))
 
 
-def evaluate(artifacts: Path, report: dict, route: dict, *, minimum_chunks: int = 16) -> dict:
+def evaluate(artifacts: Path, report: dict, route: dict, *, minimum_chunks: int = 16, require_air: bool = False) -> dict:
     scope = "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance"
+    if require_air:
+        scope += "; includes explicit loaded AIR field retirement and fresh disk reload"
     def result(status, reason, **evidence):
         return dict(schema="engine-round-trip-evidence.v1", status=status, reason=reason, scope=scope, **evidence)
     if not isinstance(report, dict) or not isinstance(route, dict):
@@ -112,6 +114,30 @@ def evaluate(artifacts: Path, report: dict, route: dict, *, minimum_chunks: int 
                             e["value"] == entry["value"] and entry["tick"] <= e["tick"] <= far["steady_tick_ms"]), None)
             if removal is None: return result("FAIL", "initial_cohort_not_evicted", coord=list(coord))
             retired[coord] = removal
+        air_initial = {}
+        air_final = {}
+        if require_air:
+            starts = [e for e in runtime if e["source"] == "runtime_air_initial"]
+            ends = [e for e in runtime if e["source"] == "runtime_air_final"]
+            air_initial = {e["coord"]: e for e in starts}
+            air_final = {e["coord"]: e for e in ends}
+            if (not starts or not ends or len(starts) != len(air_initial) or
+                    len(ends) != len(air_final) or any(e["value"] == 0 for e in starts+ends)):
+                return result("UNTESTED", "missing_initial_or_final_air_cohort")
+            if set(air_initial) & set(initial) or set(air_final) & set(final):
+                return result("FAIL", "air_cohort_has_geometry")
+            for coord, entry in air_initial.items():
+                removal = next((e for e in runtime if e["source"] in ("air_remove", "air_clear") and
+                                e["coord"] == coord and e["value"] == entry["value"] and
+                                entry["seq"] < e["seq"] and
+                                entry["tick"] <= e["tick"] <= far["steady_tick_ms"]), None)
+                if removal is None:
+                    return result("FAIL", "initial_air_cohort_not_evicted", coord=list(coord))
+                if any(e["source"] in ("create", "air_materialize") and e["coord"] == coord and
+                       entry["tick"] <= e["tick"] <= max(x["tick"] for x in ends) for e in runtime):
+                    return result("FAIL", "air_cohort_materialized_geometry", coord=list(coord))
+                if coord in air_final and air_final[coord]["value"] == entry["value"]:
+                    return result("FAIL", "returned_air_reuses_retired_owner", coord=list(coord))
         queues = [e for e in runtime if e["source"] == "disk_column_queued" and e["value"] > 0 and
                   e["tick"] >= far["steady_tick_ms"]]
         for queued in queues:
@@ -127,7 +153,23 @@ def evaluate(artifacts: Path, report: dict, route: dict, *, minimum_chunks: int 
                         returned["tick"] < completed["tick"] or retired[coord]["tick"] >= created["tick"]): break
                 joined.append(dict(coord=list(coord), retired_incarnation=entry["value"], returned_incarnation=created["value"]))
             if len(joined) == len(initial):
+                air_joined = []
+                for coord, entry in air_initial.items():
+                    returned = air_final.get(coord)
+                    installed = next((e for e in runtime if e["source"] == "air_install" and
+                                      e["coord"] == coord and e["value"] != entry["value"] and
+                                      queued["seq"] < e["seq"] < completed["seq"] and
+                                      queued["tick"] <= e["tick"] <= completed["tick"]), None)
+                    if (installed is None or returned is None or returned["value"] != installed["value"] or
+                            returned["seq"] <= completed["seq"] or returned["tick"] < completed["tick"]):
+                        break
+                    air_joined.append(dict(coord=list(coord), retired_field_incarnation=entry["value"],
+                                           returned_field_incarnation=installed["value"]))
+                if require_air and len(air_joined) != len(air_initial):
+                    continue
+                extra = dict(air_sections=air_joined) if require_air else {}
                 return result("PASS", "motor_return_with_fresh_disk_cohort", column=column, sections=joined,
+                              **extra,
                               maximum_excursion_blocks=excursion, disk_demand_id=queued["value"],
                               far_tick_ms=far["steady_tick_ms"], return_tick_ms=returns[0]["steady_tick_ms"])
         return result("UNTESTED", "missing_fresh_return_disk_cohort")

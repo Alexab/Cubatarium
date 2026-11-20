@@ -15,6 +15,7 @@
 #include "World/Chunks/KnownAirTerrainSlice.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
 #include <fstream>
+#include <string_view>
 #include <unordered_set>
 #if !defined(__ANDROID__)
 #include "App/Platform/HumanMotionQa.h"
@@ -1976,6 +1977,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         if (const auto *chunk = manager.GetChunk(coord))
           TraceChunkResidency(phase, coord, {column->x, 0, column->y},
                               chunk->GetIncarnation(), &manager);
+        else if (manager.HasLoadedAirSlice(coord))
+          if (const auto field = manager.GetSectionLightField(coord))
+            TraceChunkResidency(std::string_view(phase) == "runtime_initial"
+                                    ? "runtime_air_initial"
+                                    : "runtime_air_final",
+                                coord, {column->x, 0, column->y},
+                                field->GetIncarnation(), &manager);
       }
     };
     const bool route_line_tracking_enabled =
