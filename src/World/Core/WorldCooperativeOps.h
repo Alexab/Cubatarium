@@ -136,6 +136,8 @@ private:
   void HandlePrepareViewCreate(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePrepareViewLoad(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseDrainAsyncIo(UWorld &world, IUProgressSink &sink, int budget);
+  void FailSave(UWorld &world, IUProgressSink &sink, const std::string &message);
+  void ReportSaveIoWait(UWorld &world, IUProgressSink &sink);
   void HandlePhaseSaveChunks(UWorld &world, IUProgressSink &sink, int budget);
   void HandlePhaseGenerateColumns(UWorld &world, IUProgressSink &sink,
                                   int budget);
@@ -262,6 +264,7 @@ private:
     size_t SaveChunkIndex{0};
     bool SaveUsesTerrainColumns{false};
     int SaveDrainIoFrames{0};
+    std::chrono::steady_clock::time_point IoWaitStartedAt{};
   };
   FSaveState Save;
   struct FRelightState

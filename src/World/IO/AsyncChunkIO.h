@@ -65,6 +65,7 @@ struct AsyncChunkLoadQueuePushMetrics
 struct AsyncSaveWriteProbeGate
 {
   std::atomic<bool> entered{false}, released{false};
+  std::chrono::milliseconds limit{5000};
 };
 
 struct AsyncChunkSaveRequest

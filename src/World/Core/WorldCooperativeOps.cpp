@@ -1690,6 +1690,10 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
       // Never finish a save or clear ModifiedChunks after skipping terrain.
       if (!world.ProceduralTemplate.AsyncChunkIo && world.BlockRegistry)
       {
+        // A runtime switch to synchronous reads must still consume older
+        // async write ACKs, otherwise their pending-save flag blocks recovery.
+        if (world.Persistence)
+          world.Persistence->TickAsyncChunkIo(world, 10, 6.0);
         world.GetChunkStorage().LoadTerrainColumn(
             *blocked, world.BlockWorld, world.GetWorldFolderPath(),
             *world.BlockRegistry, world.ProceduralTemplate.MaxHeight,
@@ -1712,9 +1716,15 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     }
     if (world.Persistence)
     {
-      // Cancel pending IO only — do not WaitIdle (can stick on late disk IO).
-      (void)world.Persistence->AbortAsyncChunkIoFor(
-          world, std::chrono::milliseconds(0));
+      // Poll cancellation of reads, but preserve and finish older writes
+      // before changing the folder/catalog or issuing newer synchronous ones.
+      if (!world.Persistence->AbortAsyncChunkIoFor(
+              world, std::chrono::milliseconds(0)))
+      {
+        ReportSaveIoWait(world, sink);
+        return;
+      }
+      Save.IoWaitStartedAt = {};
     }
     // Quit-save: skip catalog reload (unchanged after quiesce).
     if (ResumeStreamingAfterSave)
@@ -3131,46 +3141,50 @@ void UWorldCooperativeSession::HandlePhaseDrainAsyncIo(UWorld &world,
                                                        IUProgressSink &sink,
                                                        int budget)
 {
-  // First frame: hard-cancel leftover gen + stale pending IO maps so drain
-  // cannot wait forever on cancelled jobs.
   if (Save.SaveDrainIoFrames == 0)
   {
     if (world.Streaming)
-    {
       world.Streaming->CancelChunkGeneration();
-    }
-    if (world.Persistence)
-    {
-      (void)world.Persistence->AbortAsyncChunkIoFor(
-          world, std::chrono::milliseconds(0));
-    }
     CubatariumLogInfo("Save", "drain_async_io begin");
   }
-  bool drained = true;
-  if (world.Persistence)
-  {
-    drained = world.Persistence->TickDrainAsyncChunkIo(world,
-                                                       std::max(budget * 2, 8));
-  }
+  const bool drained = !world.Persistence || world.Persistence->TickDrainAsyncChunkIo(
+      world, std::max(budget * 2, 8));
   ++Save.SaveDrainIoFrames;
-  const int max_drain_frames = world.BackgroundQuiesceFinished ? 4 : 24;
-  const float frac =
-      std::min(0.04f, 0.04f * static_cast<float>(Save.SaveDrainIoFrames) /
-                          static_cast<float>(std::max(1, max_drain_frames)));
-  Report(sink, "init", frac, "Flushing pending terrain IO...");
-  if (drained || Save.SaveDrainIoFrames >= max_drain_frames)
+  if (!drained)
   {
-    if (!drained && world.Persistence)
-    {
-      (void)world.Persistence->AbortAsyncChunkIoFor(
-          world, std::chrono::milliseconds(0));
-    }
-    CubatariumLogInfo("Save", std::string("drain_async_io end frames=") +
-                                  std::to_string(Save.SaveDrainIoFrames) +
-                                  " drained=" + (drained ? "1" : "0"));
-    CurrentPhase = Phase::ScanSaveChunks;
+    ReportSaveIoWait(world, sink);
+    return; // A frame count cannot authorize writes over an active worker.
   }
-  return;
+  Save.IoWaitStartedAt = {};
+  CubatariumLogInfo("Save", "drain_async_io end drained=1 frames=" +
+                                  std::to_string(Save.SaveDrainIoFrames));
+  CurrentPhase = Phase::ScanSaveChunks;
+}
+
+void UWorldCooperativeSession::FailSave(UWorld &world, IUProgressSink &sink,
+                                      const std::string &message)
+{
+  Failed = true;
+  Active = false;
+  CurrentPhase = Phase::Done;
+  ErrorMessage = message;
+  if (ResumeStreamingAfterSave)
+    world.EnsureStreamingActiveAfterBackgroundQuiesce();
+  Report(sink, "save_failed", -1.f, ErrorMessage);
+}
+
+void UWorldCooperativeSession::ReportSaveIoWait(UWorld &world, IUProgressSink &sink)
+{
+  const auto now = std::chrono::steady_clock::now();
+  if (Save.IoWaitStartedAt == std::chrono::steady_clock::time_point{})
+    Save.IoWaitStartedAt = now;
+  if (now - Save.IoWaitStartedAt >= std::chrono::seconds(10))
+  {
+    FailSave(world, sink,
+             "World files are still busy. Local edits remain in memory; retry saving before leaving.");
+    return;
+  }
+  Report(sink, "save_waiting_for_io", -1.f, "Finishing pending world writes...");
 }
 
 void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
@@ -3207,15 +3221,9 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
       if (!written)
       {
         --Save.SaveChunkIndex;
-        Failed = true;
-        Active = false;
-        CurrentPhase = Phase::Done;
-        ErrorMessage = complete
+        FailSave(world, sink, complete
             ? "Terrain save failed. Local edits remain in memory; retry saving before leaving."
-            : "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.";
-        if (ResumeStreamingAfterSave)
-          world.EnsureStreamingActiveAfterBackgroundQuiesce();
-        Report(sink, "save_failed", -1.f, ErrorMessage);
+            : "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.");
         return;
       }
     }

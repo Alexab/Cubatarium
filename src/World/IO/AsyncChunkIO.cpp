@@ -488,7 +488,7 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
           if (probe_gate)
           {
             probe_gate->entered.store(true, std::memory_order_release);
-            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            const auto deadline = std::chrono::steady_clock::now() + probe_gate->limit;
             while (!probe_gate->released.load(std::memory_order_acquire))
             {
               if (std::chrono::steady_clock::now() >= deadline)

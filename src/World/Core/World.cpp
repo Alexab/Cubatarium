@@ -15105,7 +15105,7 @@ void UWorld::SaveSessionSnapshotMetadataOnly(
   SaveOwnershipBundle(world_folder_path);
   SaveWorldData(world_folder_path + "/world_data.json");
   SaveMovementDiagnostics(world_folder_path + "/movement_diagnostics.json");
-  ModifiedChunks.clear();
+  // Metadata-only writes cannot acknowledge or clear unsaved terrain edits.
 }
 
 void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
@@ -15130,6 +15130,9 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   if (BlockWorld.GetChunkManager().GetUnresolvedTerrainColumnRead())
     throw std::runtime_error("Cannot save unread terrain; saved files and "
                              "local edits were preserved");
+  if (Persistence && !Persistence->IsAsyncChunkIoQuiescent())
+    throw std::runtime_error(
+        "Pending terrain I/O must finish before saving a session snapshot");
   RefreshBlockRegistry();
   std::filesystem::create_directories(world_folder_path);
   std::filesystem::create_directories(world_folder_path + "/chunks");

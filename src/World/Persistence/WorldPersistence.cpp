@@ -5443,25 +5443,18 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
     (void)AsyncChunkIo->DiscardCancelledLoads();
   }
   PendingAsyncColumnLoadSlices.clear();
-  PendingAsyncColumnSaveSlices.clear();
-  UnloadSaveReceipts.clear();
   if (!AsyncChunkIo)
   {
     return true;
   }
+  // Cancelling a terrain read never cancels an immutable save. Dropping
+  // queued save jobs/results loses their completion owners and can let a
+  // newer synchronous save race an older active writer to the same files.
   (void)AsyncChunkIo->DiscardCancelledLoads();
-  (void)AsyncChunkIo->DrainLoads();
-  (void)AsyncChunkIo->DrainSaves();
-  AsyncChunkIo->CancelPending();
-  if (timeout.count() <= 0)
-  {
-    return true;
-  }
-  const bool idle = AsyncChunkIo->WaitIdleFor(timeout);
-  (void)AsyncChunkIo->DiscardCancelledLoads();
-  (void)AsyncChunkIo->DrainLoads();
-  (void)AsyncChunkIo->DrainSaves();
-  return idle;
+  if (timeout.count() > 0)
+    (void)AsyncChunkIo->WaitIdleFor(timeout);
+  TickAsyncChunkIo(world);
+  return IsAsyncChunkIoQuiescent();
 }
 
 void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,

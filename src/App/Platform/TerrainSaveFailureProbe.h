@@ -61,6 +61,7 @@ inline void RunTerrainSaveFailureProbe()
   {
     for (bool io_failure : {false, true})
     {
+      Json fence_evidence = Json::object();
       const auto folder = root / (io_failure ? "write-failure" : "incomplete");
       fs::create_directories(folder);
       UWorld world(nullptr, nullptr);
@@ -126,6 +127,9 @@ inline void RunTerrainSaveFailureProbe()
               "failed save lost RAM edit or owner");
       for (const auto &phase : failed.phases)
         require(phase != "done" && phase != "save_metadata", "failure claimed completion");
+      world.SaveSessionSnapshotMetadataOnly(folder.string());
+      require(world.ModifiedChunks == dirty,
+              "metadata-only refresh must not acknowledge terrain edits");
       if (io_failure)
       {
         require(fs::remove(blocker / "fixture-blocker"), "remove only fixture blocker file");
@@ -255,6 +259,14 @@ inline void RunTerrainSaveFailureProbe()
         }
         world.BlockWorld.SetBlock(during, BLOCK_AIR);
         world.ModifiedChunks.insert(floor);
+        bool snapshot_refused = false;
+        try { world.SaveSessionSnapshot(switched.string(), true); }
+        catch (const std::runtime_error &error)
+        {
+          snapshot_refused = std::string(error.what()).find("Pending terrain I/O") != std::string::npos;
+        }
+        require(snapshot_refused && world.ModifiedChunks.count(floor) == 1,
+                "full snapshot cannot bypass a held older writer");
         Progress fenced;
         world.BeginCooperativeSave(switched.string(), false);
         const bool terminal = world.TickCooperativeSave(fenced, 1);
@@ -278,13 +290,77 @@ inline void RunTerrainSaveFailureProbe()
                                          *world.BlockRegistry, 15, -64) > 0 &&
                     final_cold.GetBlock(during) == BLOCK_AIR,
                 "old writer cannot overwrite the newer cooperative edit");
+        auto slow_gate = std::make_shared<AsyncSaveWriteProbeGate>();
+        slow_gate->limit = std::chrono::seconds(20);
+        ReleaseGate release_slow{slow_gate};
+        world.Persistence->AsyncChunkIo->SaveWriteProbeGate = slow_gate;
+        world.BlockWorld.SetBlock(during, 8);
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column),
+                "timeout probe queues its own older snapshot");
+        const auto slow_entered_by = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!slow_gate->entered.load(std::memory_order_acquire))
+        {
+          require(std::chrono::steady_clock::now() < slow_entered_by, "slow gate not entered");
+          std::this_thread::yield();
+        }
+        world.BlockWorld.SetBlock(during, BLOCK_AIR);
+        world.ModifiedChunks.insert(floor);
+        Progress timeout_progress;
+        world.BeginCooperativeSave(switched.string(), false);
+        const auto timed_at = std::chrono::steady_clock::now();
+        while (!world.TickCooperativeSave(timeout_progress, 1))
+        {
+          require(std::chrono::steady_clock::now() - timed_at < std::chrono::seconds(13),
+                  "save I/O wait must have a bounded error result");
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+        const double waited_seconds = std::chrono::duration<double>(
+            std::chrono::steady_clock::now() - timed_at).count();
+        require(waited_seconds >= 9.99 && waited_seconds < 13.0,
+                "native timeout must respect the actual ten-second wait bound");
+        fence_evidence["timeout_seconds"] = waited_seconds;
+        fence_evidence["timeout_phases"] = timeout_progress.phases;
+        fence_evidence["fenced_save_phases"] = fenced.phases;
+        require(!world.GetCooperativeSaveError().empty() &&
+                    world.GetCooperativeSaveError().find("World files are still busy") != std::string::npos &&
+                    world.ModifiedChunks.count(floor) == 1 &&
+                    !world.Persistence->IsAsyncChunkIoQuiescent(),
+                "I/O timeout cannot clear edits or pretend the writer stopped");
+        for (const auto &phase : timeout_progress.phases)
+          require(phase != "done" && phase != "save_metadata" && phase != "scan",
+                  "I/O timeout cannot enter a synchronous save phase");
+        slow_gate->released.store(true, std::memory_order_release);
+        world.Persistence->AsyncChunkIo->SaveWriteProbeGate.reset();
+        const auto drain_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.Persistence->TickDrainAsyncChunkIo(world, 8))
+        {
+          require(std::chrono::steady_clock::now() < drain_by, "timeout recovery drain");
+          std::this_thread::yield();
+        }
+        Progress retried;
+        world.BeginCooperativeSave(switched.string(), false);
+        const auto retry_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.TickCooperativeSave(retried, 1))
+        {
+          require(std::chrono::steady_clock::now() < retry_by, "timeout recovery save");
+          std::this_thread::yield();
+        }
+        UBlockWorld retry_cold;
+        require(world.GetCooperativeSaveError().empty() && world.ModifiedChunks.empty() &&
+                    world.Persistence->IsAsyncChunkIoQuiescent() &&
+                    storage.LoadTerrainColumn(column, retry_cold, switched.string(),
+                                              *world.BlockRegistry, 15, -64) > 0 &&
+                    retry_cold.GetBlock(during) == BLOCK_AIR,
+                "retry after I/O timeout must persist the newer edit");
       }
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
           {"recovery_phases", recovered.phases}, {"files_preserved", before.size()},
           {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}, {"unload_waited_for_ack", true},
           {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
-          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}, {"cooperative_write_fence_checked", io_failure}});
+          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}, {"cooperative_write_fence_checked", io_failure},
+          {"metadata_only_preserved_dirty", true}, {"snapshot_fence_checked", io_failure},
+          {"io_timeout_and_retry_checked", io_failure}, {"write_fence_evidence", fence_evidence}});
     }
     report["status"] = "PASS";
   }
