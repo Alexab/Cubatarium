@@ -28165,5 +28165,348 @@
     "Continue full S0..S6 AIR-only/procedural producer and data-column ownership. Current ForEachColumn/ResidentColumnChunkCounts and streamer HasResidentTerrainSlice preflight still count geometry; TerrainColumnNeedsFill/IsTerrainChunkComplete still treat all-air subcolumns as needing terrain. Changes must preserve incomplete-save and stale-unload protections.",
     "Continue persisted certificates, cancellation/catalog lifecycle, solver/backend/GLES parity, wet/transparency, seeds/R8/performance/memory requirements."
   ]
+},
+"cpu_mdi_depth_seam_source_recovery_partial_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "scope": "Partial diagnostic source recovery; original full S0..S6 goal stays active and native source FAIL is retained",
+  "commit": "fd1e74266",
+  "finding": "Existing neighbor recovery enumerated packed draw triangles only. An AIR primary caused by grazing framebuffer-depth reconstruction could not recover a neighboring CPU/MDI floor source.",
+  "changes": [
+    "Extracted common bounded section candidate enumeration with deduplication and unique-owner requirement. Zero or multiple submitted sources cannot recover a source.",
+    "Added CPU/MDI source probe: original ray must intersect an actual batch triangle, match the framebuffer surface under the existing0.002 normal /0.25 spatial limits, and have a captured valid CPU-matching GPU field with the exact batch binding, same frame and current world epoch.",
+    "Reuses existing actual draw-time GPU snapshots and MDI command/row validation; no extra readback quota, reference tolerance or expected RGB/light was changed.",
+    "Preserved primary-source behavior and existing packed source logic outside generalized recovery. All limitations and remaining native failures below remain explicit."
+  ],
+  "verification": {
+    "release_build": "PASS",
+    "release_tests": 5,
+    "seconds": 6.32,
+    "names": [
+      "framebuffer_surface_cell_test",
+      "decor_mesh_integration_test",
+      "gpu_material_visibility_driver_test",
+      "gpu_material_visibility_gles_driver_test",
+      "section_render_light_bindings_driver_test"
+    ],
+    "tests_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cpu-surface-recovery-release-tests-20261120.log",
+    "build_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cpu-surface-recovery-release-build-20261120.log",
+    "unit_cases": "Native signed AIR/floor seam candidate; zero/one/multiple owners; section-corner ambiguity; candidate coordinate deduplication. Actual retained native FAIL is the before evidence; no claim that these policy unit cases execute a full native GL pixel probe."
+  },
+  "native": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-unpacked-recovered-20261120-native",
+    "status": "FAIL",
+    "component_statuses": {
+      "material": "PASS",
+      "camera": "PASS",
+      "startup": "PASS",
+      "air_return": "PASS",
+      "draw": "FAIL",
+      "cpu_vertex_draw": "PASS"
+    },
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "original_smoke": "UNTESTED",
+    "draw": {
+      "schema": "engine-source-hole-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_hole_transport",
+      "scope": "One verified glowstone-to-AIR action: declared-voxel light transport, ordinary floor and five new hole faces, same-frame GPU binding and independently witnessed constant opaque normal-color RGB; no roof/wall/whole-screen/wet/transparency/backend/latency acceptance",
+      "action_frame": 1157,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1940,
+          "field_checked": 845,
+          "field_faults": 0,
+          "field_unjoined": 0,
+          "missing_bound": 0,
+          "source_effect": 251,
+          "rgb_checked": 800,
+          "rgb_faults": 0,
+          "unwitnessed": 0,
+          "geometry_faults": 0
+        },
+        "after": {
+          "rows": 25160,
+          "field_checked": 8554,
+          "field_faults": 0,
+          "field_unjoined": 4,
+          "missing_bound": 135,
+          "source_effect": 443,
+          "rgb_checked": 7511,
+          "rgb_faults": 64,
+          "unwitnessed": 0,
+          "geometry_faults": 139
+        }
+      },
+      "unordered_action_rows": 0,
+      "field_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rgb_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "draw_sources": {
+        "before": {
+          "1": 845
+        },
+        "after": {
+          "1": 8554
+        }
+      },
+      "missing_coverage": [
+        "after_requested_bound_fields",
+        "after_joined_gpu_surfaces"
+      ],
+      "examples": [
+        {
+          "frame": 4980,
+          "solid": [
+            -263,
+            -49,
+            67
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 25.730990035233955,
+          "actual_depth": 25.7286,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 4980,
+          "solid": [
+            -263,
+            -49,
+            46
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 20.824526119679355,
+          "actual_depth": 20.8224,
+          "expected_packed": 128,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4980,
+          "solid": [
+            -263,
+            -49,
+            42
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 21.999127281481822,
+          "actual_depth": 21.9968,
+          "expected_packed": 64,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4980,
+          "solid": [
+            -263,
+            -49,
+            39
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 23.654007319275067,
+          "actual_depth": 23.6515,
+          "expected_packed": 16,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4980,
+          "solid": [
+            -263,
+            -49,
+            35
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 25.69652913013829,
+          "actual_depth": 25.6938,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -253,
+            -49,
+            58
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 30.153734464651805,
+          "actual_depth": 30.1451,
+          "expected_packed": 64,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -253,
+            -49,
+            49
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 29.343973410511364,
+          "actual_depth": 29.3355,
+          "expected_packed": 144,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -253,
+            -49,
+            44
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 30.135337354016638,
+          "actual_depth": 30.1266,
+          "expected_packed": 64,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -253,
+            -49,
+            39
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 31.664666923673355,
+          "actual_depth": 31.6556,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -267,
+            -49,
+            67
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 23.42134520067796,
+          "actual_depth": 23.4153,
+          "expected_packed": 0,
+          "actual_packed": 0,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -267,
+            -49,
+            65
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 21.72970884175795,
+          "actual_depth": 21.7241,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 4680,
+          "solid": [
+            -267,
+            -49,
+            47
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 17.131782219055836,
+          "actual_depth": 17.1272,
+          "expected_packed": 112,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        }
+      ]
+    },
+    "recovered_after_cpu_rays": 162,
+    "recovered_scoped": 66,
+    "recovered_scoped_faults": 0
+  },
+  "remaining": {
+    "failures": {
+      "missing_source": 135,
+      "wrong_face_or_material": 4
+    },
+    "minimum_floor_normal_error": 0.0005000000000023874,
+    "maximum_floor_normal_error": 0.0024999999999977263,
+    "interpretation": [
+      "Some reconstructed floor points are displaced by up to0.0025 along the normal, beyond the fixed0.002 candidate/normal interval. The candidate set may therefore exclude the actual floor section before either draw probe runs.",
+      "Four remaining matches select nearby cave wall faces0/2 in primary AIR sections: source distances0.058..0.134 are below the legacy nearest-triangle0.25 limit. Recovery currently does not run when that primary section has CPU refs, even if the actual original ray does not hit that wall.",
+      "Do not infer a native visual light fault from missing attribution, or promote numerical RGB matches to complete draw proof. Retain the original source FAIL and all missing-bound evidence.",
+      "Raw failure counts differ across moving native trajectories;75 before versus139 after is not a controlled regression/performance rate comparison."
+    ]
+  },
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cpu-surface-recovery-assessment-20261120.json",
+    "sha256": "510d1011e2d2f1b19f52a731523cc50b2c29f099079d86184f0863c1e0ddcac3"
+  },
+  "next": [
+    "Inspect World/View/ViewRayMath.cpp ScreenNdcDepthToCameraSpacePoint and actual depth storage/quantization. Derive and test uncertainty from projection/depth precision or improve reconstruction precision; do not arbitrarily enlarge the2mm band.",
+    "Require actual ray ownership for a primary CPU source before allowing it to suppress neighboring candidates. Retain strict same-frame GPU binding proof and ambiguity rejection.",
+    "Repeat isolated native AIR source deletion after both corrections; preserve current and earlier failures.",
+    "Continue remaining full S0..S6 actual CPU construction, solver/backend parity, AIR-only/procedural data ownership, persisted certificates, cancellation/catalog, wet/transparency, seeds/R8/performance/memory gates."
+  ]
 }
 }
