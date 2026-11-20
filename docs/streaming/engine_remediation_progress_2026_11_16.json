@@ -28762,5 +28762,91 @@
     "Resolve AIR-only/procedural producer/data-column ownership without weakening save completeness and stale unload protection; current geometry-only column enumeration and all-air completeness heuristic remain unresolved.",
     "Continue persisted certificates, cancellation/catalog semantics, unknown/first-publication delivery bounds, wet/transparency, seeds/R8 and controlled performance/memory matrix."
   ]
+},
+"decoded_air_data_column_save_eviction_foundation_2026_11_20": {
+  "schema": "decoded-air-column-lifecycle-assessment.v1",
+  "status": "IN_PROGRESS",
+  "source": "ca227867e",
+  "evidence": {
+    "air-only-column-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-only-column-red-test-20261120.log",
+      "sha256": "88c47018d4a946ec204d232f986c3cf68be05b769c25a73b874d54c438ffc184"
+    },
+    "air-only-partial-save-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-only-partial-save-red-test-20261120.log",
+      "sha256": "f2d14c937b7ac2ea2af96de752537e226c7272bac54fa63e200086ed9fa2ff85"
+    },
+    "air-data-incarnation-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-data-incarnation-red-test-20261120.log",
+      "sha256": "15a9704c65830e00ce5d4628d131525fe3934427eda3e6eb8519b540aec3a17f"
+    },
+    "air-data-render-light-regression-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-data-render-light-regression-test-20261120.log",
+      "sha256": "378d568cddecb91d36e9718210ab8b28b7f5656be6f674d82d2074d46e634b67"
+    },
+    "air-data-column-final-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-data-column-final-tests-20261120.log",
+      "sha256": "78402835a472a2ebdf840bf9770f372f9c341fb00757e1f057ee1030d4ba3724"
+    },
+    "air-data-column-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-data-column-release-build-20261120.log",
+      "sha256": "e48b01485bda6d0055ff156e28a8358e71e112f747143a071d7668e39039dff8"
+    }
+  },
+  "changes": [
+    "Separate O(1) terrain-data column accounting/enumeration from geometry column accounting. Loaded AIR is actual resident data; field-only allocation is not. Materialization transfers ownership without incrementing data count twice.",
+    "Maintain explicit decoded slice authority, distinct from indexed absent AIR. AIR authority belongs to its resident data record; materialized/non-AIR authority is tied to current UChunk incarnation. Local voxel edits retain authority; remove/clear/replacement cannot inherit it.",
+    "Only sealed valid codec frames can mint decoded authority. A fresh geometry target or geometry-free AIR base can accept validated non-AIR data; applying an unvalidated sparse overlay to existing geometry cannot mint full-frame authority.",
+    "A whole vertical profile of explicit decoded frames can be complete even with no non-air blocks. Allocation, one missing slice, indexed absences and out-of-profile data do not replace explicit completeness. Existing legacy geometry completeness remains.",
+    "Unload cursor includes terrain-data columns. Newly eligible AIR-only save/unload requires the entire profile decoded; a partial AIR load cannot authorize the whole-column save/purge contract and retains its data owner.",
+    "Synchronous and asynchronous terrain save ceilings include decoded AIR metadata when whole-column completeness is proved. Existing Binary/JSON formats unchanged.",
+    "Normal and cooperative world-save enumeration includes eligible AIR-only columns. Cooperative Save As retains unmodified resident data alongside modified coordinates instead of enumerating only modified coordinates."
+  ],
+  "regressions": {
+    "full_air_red": "Full decoded AIR column originally failed completeness before geometry-free eviction.",
+    "partial_save_red": "A naive terrain-data unload preflight incorrectly authorized save/purge after one AIR slice became unknown; guard regression failed before correction.",
+    "incarnation_red": "A coordinate-only authority set wrongly survived UChunk replacement; explicit incarnation regression failed before correction.",
+    "runtime_matrix": "Signed column(40,0,-3), 24 slices(-4..19), all three unload modes U0/UB/UD, with and without materialization/editing. Snapshot light/weather survives until save; all owners retire after eviction; stale candidates do not save twice.",
+    "storage_matrix": "Actual unique temporary worlds, Binary and JSON, explicit all-AIR profile save and cold load, weather retention, materialized block edit and another cold load. One top frame plus23 indexed absences stays incomplete.",
+    "allocation_controls": "EnsureChunk and EnsureSectionLightField alone cannot mint decoded terrain authority or whole-profile completion."
+  },
+  "verification": {
+    "release_build": "PASS",
+    "broad_release_tests": 10,
+    "broad_seconds": 7.85,
+    "final_targeted_release_tests": 3,
+    "final_seconds": 0.81,
+    "broad_test_names": [
+      "chunk_streamer_committed_column_test",
+      "terrain_column_util_test",
+      "negative_height_storage_test",
+      "decor_mesh_integration_test",
+      "gpu_material_visibility_driver_test",
+      "gpu_material_visibility_gles_driver_test",
+      "section_render_light_bindings_driver_test",
+      "chunk_input_stamp_test",
+      "chunk_lighting_propagation_test",
+      "known_air_terrain_slice_policy_test"
+    ],
+    "native_air_only_column": "UNTESTED: no new native run launched for this data-owner change"
+  },
+  "limits": [
+    "This is headless/lifecycle/storage plus driver regression evidence, not native all-AIR column retirement/return or whole S0..S6 acceptance.",
+    "Partial AIR-only data is retained conservatively until producer completion or explicit owner cancellation. Its bounded cancellation/retirement contract and memory behavior still need implementation/evidence; no eviction/save authority is inferred from partial data.",
+    "Indexed absent slices alone cannot establish full-profile generation completion. Legitimate sparse AIR/procedural producers need explicit completion/profile ownership proof, not a relaxed non-air heuristic.",
+    "Terrain-data completeness does not certify open sky or computed physical light. Persisted light certificates, catalog/profile changes and solver/backend parity remain separate.",
+    "New data-column index/decoded-owner metadata requires S6 memory/performance measurement. No performance claim or world-format migration is made."
+  ],
+  "next": [
+    "Prepare a native pure-AIR column lifecycle fixture and actual demand/residency tracing. Verify loaded data, save, retirement, fresh disk demand/incarnations, weather and no geometry materialization.",
+    "Extend native AIR-only cohort/secondary-column evidence as needed without weakening the existing initial geometry cohort verifier or dropping unknown/missing observations.",
+    "Complete procedural/partial/cancellation/profile data-owner contracts and explicit saved sparse-column completion certificates.",
+    "Continue full S0..S6 CPU construction/solver/backend parity, independent wet/transparency, seed/R8 and controlled performance/memory gates."
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\decoded-air-column-lifecycle-assessment-20261120.json",
+    "sha256": "270c33725e8a62616bf68aea1648fdfc9d26ea10dd13bc60e9e4d18fec34c6fa"
+  },
+  "full_goal": "Full original S0..S6 remains active; no new audit and no scope reduction"
 }
 }
