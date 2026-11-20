@@ -3208,24 +3208,100 @@ bool UChunkMeshCache::CanRefreshPublishedLight(
       found == GreedyCache.end())
     return false;
   const auto &mesh = found->second;
-  if (!mesh.RenderGeometryInputs.valid || !mesh.RenderLight ||
-      mesh.RenderGeometryInputs.catalog != catalog ||
-      MeshRevisions.Current(coord) != mesh.PublishRevs.geom_rev ||
-      ActiveMeshSourceRevision.count(coord) || IsPendingGpuApply(coord) ||
-      (mesh.BoundaryOverlay.active &&
-       mesh.BoundaryOverlay.missingNeighborFaces != 0) ||
-      !mesh.RenderGeometryInputs.Matches(
-          world.CaptureGeometryRenderInputs(coord, catalog)))
+  const auto trace = [&](const char *reason,
+                         const SectionGeometryRenderInputs *current = nullptr)
+  {
+    if (!IsPublicationTraceChunk(coord))
+      return;
+    // One selected section only. Repeat a stable state at most every120 paints;
+    // transitions retain the exact first refusal without logging every probe.
+    const auto field = world.GetChunkManager().GetSectionLightField(coord);
+    const auto revision = MeshRevisions.Current(coord);
+    const auto field_revision = field ? field->GetRevision() : 0;
+    static thread_local const UChunkMeshCache *last_cache = nullptr;
+    static thread_local std::string last_state;
+    static thread_local uint64_t last_frame = 0;
+    std::ostringstream state;
+    state << CaptureStore.WorldEpoch() << ':' << reason << ':' << revision
+          << ':' << mesh.PublishRevs.geom_rev << ':' << field_revision;
+    if (last_cache == this && last_state == state.str() &&
+        MeshFocusFrameEpoch >= last_frame &&
+        MeshFocusFrameEpoch - last_frame < 120)
+      return;
+    last_cache = this;
+    last_state = state.str();
+    last_frame = MeshFocusFrameEpoch;
+    std::ostringstream message;
+    message << "refresh_admission coord=(" << coord.x << ',' << coord.y << ','
+            << coord.z << ") frame_epoch=" << MeshFocusFrameEpoch
+            << " decision=" << reason
+            << " world_epoch=" << CaptureStore.WorldEpoch()
+            << " geometry_revision=" << revision
+            << " published_geometry_revision=" << mesh.PublishRevs.geom_rev
+            << " publication=" << mesh.PublishCount
+            << " source_owner=" << ActiveMeshSourceRevision.count(coord)
+            << " pending_gpu=" << IsPendingGpuApply(coord)
+            << " bound_field_incarnation="
+            << (mesh.RenderLight ? mesh.RenderLight->FieldIncarnation() : 0)
+            << " bound_field_revision="
+            << (mesh.RenderLight ? mesh.RenderLight->FieldRevision() : 0)
+            << " live_field_incarnation="
+            << (field ? field->GetIncarnation() : 0)
+            << " live_field_revision=" << field_revision;
+    if (current)
+      for (size_t n = 0; n < current->stamps.size(); ++n)
+      {
+        const auto &old = mesh.RenderGeometryInputs.stamps[n];
+        const auto &now = current->stamps[n];
+        if (old.incarnation == now.incarnation && old.content == now.content &&
+            old.missingEvidence == now.missingEvidence)
+          continue;
+        message << " changed_stamp=" << n << " input_coord=(" << now.coord.x
+                << ',' << now.coord.y << ',' << now.coord.z
+                << ") saved_incarnation=" << old.incarnation
+                << " current_incarnation=" << now.incarnation
+                << " saved_content=" << old.content
+                << " current_content=" << now.content;
+        break;
+      }
+    CubatariumLogInfo("ChunkPublication", message.str());
+  };
+  const auto reject = [&](const char *reason)
+  {
+    trace(reason);
     return false;
+  };
+  if (!mesh.RenderGeometryInputs.valid || !mesh.RenderLight)
+    return reject("missing_publication_proof");
+  if (mesh.RenderGeometryInputs.catalog != catalog)
+    return reject("catalog");
+  if (MeshRevisions.Current(coord) != mesh.PublishRevs.geom_rev)
+    return reject("geometry_revision");
+  if (ActiveMeshSourceRevision.count(coord) || IsPendingGpuApply(coord))
+    return reject("active_geometry_owner");
+  if (mesh.BoundaryOverlay.active &&
+      mesh.BoundaryOverlay.missingNeighborFaces != 0)
+    return reject("missing_neighbor_overlay");
+  const auto current_geometry =
+      world.CaptureGeometryRenderInputs(coord, catalog);
+  if (!mesh.RenderGeometryInputs.Matches(current_geometry))
+  {
+    trace("geometry_inputs", &current_geometry);
+    return false;
+  }
   const auto compatible = [&](const auto &binding)
   {
     return binding && binding->SupportsLightRefresh() && binding->IsLive() &&
            binding->WorldEpoch() == CaptureStore.WorldEpoch() &&
            binding->GeometryInputs().Matches(mesh.RenderGeometryInputs);
   };
-  return compatible(mesh.RenderLightBinding) &&
-         (!(mesh.GpuResident && mesh.GpuQuadCount > 0) ||
-          compatible(mesh.GpuRenderLightBinding));
+  if (!compatible(mesh.RenderLightBinding))
+    return reject("cpu_binding");
+  if (mesh.GpuResident && mesh.GpuQuadCount > 0 &&
+      !compatible(mesh.GpuRenderLightBinding))
+    return reject("gpu_binding");
+  trace("eligible");
+  return true;
 }
 
 bool UChunkMeshCache::QueuePublishedLightRefresh(
