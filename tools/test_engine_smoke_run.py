@@ -81,6 +81,33 @@ class IsolatedFixtureTest(unittest.TestCase):
                 path.write_text(json.dumps({"samples": samples}), encoding="utf-8")
                 self.assertEqual(engine_smoke_run.synchronous_meshing_evidence(path)["status"], expected)
 
+    def test_cpu_meshing_request_reaches_child_and_restores_config_on_failure(self):
+        original=b'{"render":{"gpu_packed_meshing":true,"async_meshing":true},"other":7}\r\n'
+        self.config.write_bytes(original)
+        (self.runtime/'Cubatarium.exe').write_bytes(b'test executable identity')
+        fingerprint=world_fingerprint(self.world)
+        def fail_launch(*args,**kwargs):
+            config=json.loads(self.config.read_bytes())
+            self.assertIs(config['render']['gpu_packed_meshing'],False)
+            self.assertIs(config['render']['async_meshing'],True)
+            self.assertEqual(config['other'],7)
+            raise RuntimeError('controlled child launch failure')
+        with patch.object(engine_smoke_run,'ROOT',self.root), \
+             patch('flight_sim_run.exe_writable',return_value=True), \
+             patch.object(engine_smoke_run.subprocess,'check_output',return_value='test-sha'), \
+             patch.object(engine_smoke_run.subprocess,'Popen',side_effect=fail_launch):
+            with self.assertRaisesRegex(RuntimeError,'controlled child launch failure'):
+                engine_smoke_run.run('Saved',self.artifacts,cpu_meshing=True)
+        self.assertEqual(self.config.read_bytes(),original)
+        self.assertEqual(world_fingerprint(self.world),fingerprint)
+        manifest=json.loads((self.artifacts/'route.json').read_text(encoding='utf-8'))
+        self.assertIs(manifest['cpu_meshing_requested'],True)
+        self.assertEqual((self.artifacts/'config.cpu-meshing.json').read_bytes(),
+                         engine_smoke_run.cpu_meshing_payload(original))
+        self.assertFalse((self.runtime/'.engine-smoke.lock').exists())
+        with self.assertRaises(ValueError):
+            engine_smoke_run.run('Saved',self.root/'invalid',cpu_meshing=1)
+
     def test_second_runner_cannot_take_live_lease(self):
         with isolated_fixture(self.runtime, "Saved", self.artifacts):
             with self.assertRaises(FileExistsError):

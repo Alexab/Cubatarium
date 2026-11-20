@@ -273,6 +273,12 @@ def synchronous_meshing_payload(payload: bytes) -> bytes:
     return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
+def cpu_meshing_payload(payload: bytes) -> bytes:
+    config = json.loads(payload)
+    config.setdefault("render", {})["gpu_packed_meshing"] = False
+    return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
 def synchronous_meshing_evidence(path: Path) -> dict:
     """Require runtime observations; config intent alone is not mode evidence."""
     if not path.is_file():
@@ -346,7 +352,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
         synchronous_meshing: bool = False, round_trip: bool = False,
         world_actions: dict | None = None, observe_bound_light: bool = False,
-        source_observation_scene: dict | None = None) -> dict:
+        source_observation_scene: dict | None = None, cpu_meshing: bool = False) -> dict:
+    if type(cpu_meshing) is not bool:
+        raise ValueError("CPU meshing request must be boolean")
     if type(observe_bound_light) is not bool:
         raise ValueError("bound light observation must be boolean")
     if not isinstance(round_trip, bool) or (round_trip and startup_only):
@@ -378,6 +386,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if synchronous_meshing:
             config_path = runtime / "config.json"
             config_path.write_bytes(synchronous_meshing_payload(config_path.read_bytes()))
+        if cpu_meshing:
+            config_path = runtime / "config.json"
+            config_path.write_bytes(cpu_meshing_payload(config_path.read_bytes()))
+            (artifacts / "config.cpu-meshing.json").write_bytes(config_path.read_bytes())
         scene = None
         if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
@@ -527,6 +539,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "bot_route_sha256": digest(bot_path),
                  "render_distance_override": render_distance,
                  "synchronous_meshing": synchronous_meshing,
+                 "cpu_meshing_requested": cpu_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
@@ -735,6 +748,8 @@ def main() -> int:
                         help="explicit bounded edit/probe plan for the isolated world copy")
     parser.add_argument("--synchronous-meshing", action="store_true",
                         help="disable async meshing in isolated config and verify native runtime mode")
+    parser.add_argument("--cpu-meshing", action="store_true",
+                        help="request CPU terrain mesh construction; actual draw/backend evidence is still required")
     parser.add_argument("--stop-seconds", type=float, default=20)
     parser.add_argument("--idle-seconds", type=float, default=5)
     parser.add_argument("--yaw", type=float, default=180)
@@ -768,6 +783,7 @@ def main() -> int:
                   render_distance=args.render_distance, sprint=args.sprint,
                   startup_only=args.startup_only,
                   synchronous_meshing=args.synchronous_meshing,
+                  cpu_meshing=args.cpu_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
                   round_trip=args.round_trip,
                   observe_bound_light=args.observe_bound_light,
