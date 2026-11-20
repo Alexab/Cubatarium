@@ -3,6 +3,7 @@
   "scope": "Полный S0..S6; дополнение существующего плана, без перезапуска аудита и без изменения полученных verdict",
   "checkpoint": "de907fce1",
   "current_package": "S3.04",
+  "execution_contract": "ENGINE_REMEDIATION_EXECUTION_CONTRACT_2026_11_20.md",
   "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.06, S3.01..S3.03; stage-wide final reconciliation still required",
   "execution_rules": [
     "Выполнять только один пакет реализации одновременно, в указанном порядке. Подшаги внутри пакета последовательны.",
