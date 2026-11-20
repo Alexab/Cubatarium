@@ -147,17 +147,17 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
     (void)StampChunkRenderDemandTrace(stage_trace, *RenderDemandStore, coord);
   }
   const auto retry_allowed = std::make_shared<std::atomic<bool>>(true);
-  {
-    std::lock_guard<std::mutex> lock(InFlightMutex);
-    const auto old = InFlight.find(coord);
-    if (old != InFlight.end())
-      old->second.retry_allowed->store(false, std::memory_order_relaxed);
-    InFlight[coord] = {jobId, retry_allowed};
-  }
-
   // Keep the definitions catalog alive for the whole job even if Reload swaps
   // Active mid-flight. Registry maps are separately mutex-protected.
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
+  // The queued closure may start immediately. Publish its tentative owner while
+  // holding the same lock through pool admission; a refusal restores the exact
+  // previous owner without revoking that accepted job's retry permission.
+  std::unique_lock<std::mutex> submission_lock(InFlightMutex);
+  const auto previous_it = InFlight.find(coord);
+  const bool had_previous = previous_it != InFlight.end();
+  const TrackedJob previous = had_previous ? previous_it->second : TrackedJob{};
+  InFlight[coord] = {jobId, retry_allowed};
 
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
@@ -334,18 +334,18 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         }
           }, jobId))
   {
-    {
-      std::lock_guard<std::mutex> lock(InFlightMutex);
-      const auto it = InFlight.find(coord);
-      if (it != InFlight.end() && it->second.id == jobId)
-      {
-        InFlight.erase(it);
-      }
-    }
+    if (had_previous)
+      InFlight[coord] = previous;
+    else
+      InFlight.erase(coord);
+    submission_lock.unlock();
     UJobStageTrace::NoteTerminal(stage_trace, JobStage::Cancelled,
                                  JobTerminalReason::WorkerPoolRejected);
     return MeshEnqueueResult::WorkerPoolRejected;
   }
+  if (had_previous)
+    previous.retry_allowed->store(false, std::memory_order_relaxed);
+  submission_lock.unlock();
   return MeshEnqueueResult::Accepted;
 }
 

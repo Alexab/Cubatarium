@@ -10824,8 +10824,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         ActiveMeshSourceRevision.erase(coord);
         RemeshAfterApply.erase(coord);
+        ScheduledThisFrame_.erase(coord);
+        RequeueDirtyPriority(coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
       }
-      MarkDirtyPriority(coord);
+      else
+        MarkDirtyPriority(coord);
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
     {
@@ -13266,8 +13269,14 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
     {
       ActiveMeshSourceRevision.erase(coord);
       RemeshAfterApply.erase(coord);
+      // The failed attempt consumed the same-frame scheduling marker. Restore
+      // its existing request, without dropping it as duplicate ingress or
+      // advancing the geometry revision for an unchanged input.
+      ScheduledThisFrame_.erase(coord);
+      RequeueDirtyPriority(coord, MeshRevisionBumpReason::PriorityWorldCoreRepair);
     }
-    MarkDirtyPriority(coord);
+    else
+      MarkDirtyPriority(coord);
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeDiscardedCoords())
   {

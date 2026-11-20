@@ -104,6 +104,11 @@ struct CrossGpuBackendDriverTestAccess
   }
 };
 #endif
+struct MeshBuilderAdmissionTestAccess
+{
+  static void LimitPool(UAsyncMeshBuilder &builder) { builder.Pool.SetMaxPendingJobCount(1); }
+};
+
 struct ChunkMeshCaptureAdmissionTestAccess
 {
   static std::optional<ChunkMeshSnapshot>
@@ -3612,6 +3617,150 @@ static void TestCacheMeshCancellationLifetime(
     }
   Expect(retired_all, "cache cancellation preserves only the explicitly transferred dirty obligation");
   Expect(published_all, "cache cancellation successor publishes current geometry without invented debt");
+}
+
+static bool TestMeshAdmissionOwnerLifetime(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  auto &credits = UPipelineAdmission::Get();
+  const auto reset = [&]() {
+    credits.SetWorkSlotCap(8);
+    credits.SetSnapshotCap(96 * 1024 * 1024);
+    credits.SetResultCap(128 * 1024 * 1024);
+  };
+  reset();
+  bool all = true;
+  for (int mode = 0; mode < 4; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 target(2, 0, 0), other(3, 0, 0);
+    for (auto coord : {target, other}) world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(8), kStone);
+    GatedPhysicalMesher mesher;
+    if (mode != 2) mesher.Release();
+    UAsyncMeshBuilder builder(1);
+    builder.SetMesher(&mesher);
+    builder.SetCompletedCapacity(4);
+    MeshBuilderAdmissionTestAccess::LimitPool(builder);
+    const auto submit = [&](glm::ivec3 coord, uint64_t revision) {
+      return builder.EnqueueDetailed(ChunkMeshSnapshot::Capture(world, coord, revision,
+          nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
+    };
+    if (mode == 2)
+    {
+      Expect(submit(target, 930) == MeshEnqueueResult::Accepted && mesher.WaitEntered() &&
+                 submit(other, 932) == MeshEnqueueResult::Accepted,
+             "worker refusal fixture has exact running owner and full queued slot");
+    }
+    const auto snapshots = credits.SnapshotPendingBytes();
+    const auto slots = credits.WorkSlotsInUse();
+    const auto results = credits.ResultPendingBytes();
+    if (mode == 0) credits.SetWorkSlotCap(0);
+    if (mode == 1) credits.SetSnapshotCap(0);
+    if (mode == 3) credits.SetResultCap(0);
+    const auto outcome = submit(target, 931);
+    const auto expected = mode == 0 ? MeshEnqueueResult::WorkSlotRejected :
+        mode == 1 ? MeshEnqueueResult::SnapshotBudgetRejected :
+        mode == 2 ? MeshEnqueueResult::WorkerPoolRejected : MeshEnqueueResult::Accepted;
+    bool good = outcome == expected;
+    if (mode != 3)
+      good = good && credits.SnapshotPendingBytes() == snapshots &&
+          credits.WorkSlotsInUse() == slots && credits.ResultPendingBytes() == results &&
+          builder.IsInFlight(target) == (mode == 2);
+    mesher.Release();
+    Expect(builder.WaitIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+           "admission fixture workers retire behind bounded barrier");
+    reset();
+    auto completed = builder.DrainCompleted(4);
+    if (mode == 2)
+      good = good && std::any_of(completed.begin(), completed.end(), [](const auto &r) {
+        return r.sourceRevision == 930;
+      });
+    const auto retry = builder.TakeOverflowCoords();
+    good = good && (mode == 3 ? retry.size() == 1 && retry[0] == target : retry.empty());
+    completed.clear();
+    good = good && credits.SnapshotPendingBytes() == 0 && credits.WorkSlotsInUse() == 0 &&
+        credits.ResultPendingBytes() == 0;
+    world.SetBlock(target * CHUNK_SIZE + glm::ivec3(12, 8, 8), kStone);
+    Expect(submit(target, 933) == MeshEnqueueResult::Accepted &&
+               builder.WaitIdleFor(std::chrono::seconds(5)),
+           "post-refusal current demand reaches actual worker");
+    auto current = builder.DrainCompleted(1);
+    std::size_t indices = 0;
+    if (current.size() == 1)
+      for (const auto &batch : current[0].batches) indices += batch.indices.size();
+    good = good && current.size() == 1 && current[0].sourceRevision == 933 && indices > 36;
+    std::cout << "mesh_admission_owner mode=" << mode << " outcome=" << static_cast<int>(outcome)
+              << " good=" << good << '\n';
+    all = all && good;
+  }
+  reset();
+  return all;
+}
+
+static bool TestCacheMeshAdmissionDebt(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  auto &credits = UPipelineAdmission::Get();
+  bool all = true;
+  for (int mode = 0; mode < 3; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 root(0);
+    world.SetBlock({8, 8, 8}, kStone);
+    GatedPhysicalMesher mesher;
+    mesher.Release();
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    settings.Lighting = LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    UFlatLightingPipeline flat;
+    flat.FillAllLoadedChunks(world);
+    cache.MarkDirtyPriority(root);
+    const auto revision = cache.GetChunkMeshRevision(root);
+    const auto *chunk = world.GetChunkManager().GetChunk(root);
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+        0, 1.0, epoch, chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+        chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+               cache, world, root, revision).has_value(), "cache refusal fixture starts with valid capture");
+    if (mode == 0) credits.SetWorkSlotCap(0);
+    if (mode == 1) credits.SetSnapshotCap(0);
+    if (mode == 2) credits.SetResultCap(0);
+    const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "cache refusal worker phase finishes");
+    credits.SetWorkSlotCap(8);
+    credits.SetSnapshotCap(96 * 1024 * 1024);
+    credits.SetResultCap(128 * 1024 * 1024);
+    cache.DrainAsyncMeshResults(world, registry, 0);
+    const bool retained = cache.IsChunkMeshDirty(root) && !cache.HasCpuMeshBuildInFlight(root) &&
+        !cache.HasInflightMeshBuild(root) && cache.GetChunkMeshRevision(root) == revision;
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+               cache, world, root, cache.GetChunkMeshRevision(root)).has_value(),
+           "retained admission debt can recapture current input without fresh MarkDirty");
+    const auto retry = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "cache refusal successor worker finishes");
+    cache.DrainAsyncMeshResults(world, registry, 8);
+    const bool current = retry.Scheduled == 1 && cache.IsPublishedMeshCurrentForInputs(root, world);
+    std::cout << "cache_admission_debt mode=" << mode << " scheduled=" << tick.Scheduled
+              << " retained=" << retained << " successor=" << current << '\n';
+    all = all && retained && current;
+  }
+  return all;
 }
 
 static void TestOutsideRadiusCpuMeshLifetime(
@@ -7664,6 +7813,9 @@ int main(int argc, char **argv)
   TestMeshSameKeySupersession(registry, definitions.get());
   TestCancelledMeshRetryReceipts(registry, definitions.get());
   TestOutsideRadiusCpuMeshLifetime(registry, definitions.get());
+  const bool admission_owner_ok = TestMeshAdmissionOwnerLifetime(registry, definitions.get());
+  const bool admission_debt_ok = TestCacheMeshAdmissionDebt(registry, definitions.get());
+  Expect(admission_owner_ok && admission_debt_ok, "mesh admission rejects preserve credits owner and executable current debt");
   TestForgottenMeshJobLifetime(registry, definitions.get());
   TestCacheMeshRemovalLifetime(registry, definitions.get());
   TestCacheMeshCancellationLifetime(registry, definitions.get());

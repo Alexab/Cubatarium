@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-refused-replacement-owner-and-same-frame-retry-loss",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Forced WorkerPoolRejected destroys prior accepted same-key owner/result. Actual result-budget refusal followed by same-frame public drain clears orphan but ScheduledThisFrame suppresses dirty: retainedfalse/successorfalse. Work/snapshot envelope cases already preserve debt.",
+      "fix": "Pool submission holds owner lock through tentative registration and TryEnqueue; rejection restores old TrackedJob, success alone revokes old retry. Both overflow drains remove consumed ScheduledThisFrame on orphan, requeue without revision bump, preserve newer executable owner branch.",
+      "evidence": "build/desktop-msvc/s4-admission-owner-debt-acceptance-20261121.json",
+      "next_action": "Q02-C2 dirty/deferred coalescing/eviction; mixed GPU/field Q06, numeric caps/cost remain OPEN."
+    },
+    {
       "id": "outside-radius-drops-active-but-keeps-cpu-job",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

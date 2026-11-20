@@ -5,8 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q04-C3",
-    "Q02-C1",
     "Q02-C2",
     "Q03-C1",
     "Q05-C1",
@@ -46,8 +44,10 @@
     {
       "id": "Q02-C1",
       "queue": "Q02",
-      "status": "CHECK",
-      "required_result": "Work-slot, snapshot-byte and result-byte refusal retain exact dirty obligation, remove no newer owner, then publish without fresh ingress."
+      "status": "REUSE",
+      "required_result": "Work-slot, snapshot-byte and result-byte refusal retain exact dirty obligation, remove no newer owner, then publish without fresh ingress.",
+      "evidence": "build/desktop-msvc/s4-admission-owner-debt-acceptance-20261121.json",
+      "coverage_note": "Typed builder outcomes tested directly; cache runtime scenes exercise work/snapshot/result envelopes. Cache handles every synchronous Enqueue false identically by retaining its dirty iterator; no separate WorkerPoolRejected cache scene claimed. Exact newer-ID checks retain executable owners during orphan cleanup; mixed owner/coalescing remains separate Q02-C2/Q06."
     },
     {
       "id": "Q02-C2",
@@ -142,8 +142,10 @@
     {
       "id": "Q04-C3",
       "queue": "Q04",
-      "status": "CHECK",
-      "required_result": "WorkSlotRejected/SnapshotBudgetRejected/WorkerPoolRejected/ResultMemoryBudgetRejected return credits and exact debt; no overwritten newer owner. Share downstream evidence with Q02-C1."
+      "status": "REUSE",
+      "required_result": "WorkSlotRejected/SnapshotBudgetRejected/WorkerPoolRejected/ResultMemoryBudgetRejected return credits and exact debt; no overwritten newer owner. Share downstream evidence with Q02-C1.",
+      "evidence": "build/desktop-msvc/s4-admission-owner-debt-acceptance-20261121.json",
+      "coverage_note": "Typed builder outcomes tested directly; cache runtime scenes exercise work/snapshot/result envelopes. Cache handles every synchronous Enqueue false identically by retaining its dirty iterator; no separate WorkerPoolRejected cache scene claimed. Exact newer-ID checks retain executable owners during orphan cleanup; mixed owner/coalescing remains separate Q02-C2/Q06."
     },
     {
       "id": "Q05-C1",
@@ -328,5 +330,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q04-C2 CPU cancellation/eviction lifecycle accepted via all4 subcase receipts; exact current Release decor/native regression PASS (overall smoke UNTESTED). 16 CHECK groups/14 REUSE groups/1 disabled production path. Next Q04-C3 admission reject/credit/current-successor evidence. Full S0..S6 OPEN."
+  "checkpoint": "Q04-C3/Q02-C1 accepted: exact builder admission/credit owner rollback and cache budget refusal→same-request current publication. 14 CHECK groups/16 REUSE groups/1 disabled production path. Next Q02-C2 dirty/deferred coalescing/eviction, reuse accepted lifecycle; full S0..S6 OPEN."
 }

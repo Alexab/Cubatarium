@@ -142,6 +142,7 @@ public:
   std::vector<glm::ivec3> TakeDiscardedCoords();
 
 private:
+  friend struct MeshBuilderAdmissionTestAccess;
   void NoteObsoleteJob(glm::ivec3 coord, const JobStageSpan &span,
                        JobTerminalReason reason,
                        const std::shared_ptr<std::atomic<bool>> &retry_allowed);
