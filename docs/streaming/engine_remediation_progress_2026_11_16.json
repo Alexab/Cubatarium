@@ -25173,5 +25173,1749 @@
     "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cpu-mdi-bound-coverage-assessment-20261120.json",
     "sha256": "ce5e1d435b68f74fe294cde6b0c7bf1df3de191bf9eaffbab840c03a5bba9b4f"
   }
+},
+"preinspection_native_source_add_remove_gpu_rgb_2026_11_20": {
+  "status": "in_progress_full_S0_S6",
+  "implementation_commits": [
+    "2eed69267",
+    "5cdd737c6",
+    "2dc2826c6"
+  ],
+  "implementation": "Explicit declared-scene source observation adds two emitter and six control targets per waypoint, preserves dense grid and three-waypoint motor return, and delays the native API until actual waypoint1 completion. Cohort ownership still captured at2s. Default plans retain2s action timing. Native observations export visited-waypoint identity and material verifier refuses early/missing scheduled identity.",
+  "controller_regression": {
+    "before": "RED: grounded observation tried takeoff",
+    "after": "GREEN: stationary inspection then ordinary walking takeoff",
+    "files": [
+      "source-grounded-inspection-red-build-20261120.log",
+      "source-grounded-inspection-red-test-20261120.log",
+      "source-preinspection-green-build-20261120.log"
+    ]
+  },
+  "verification": {
+    "python_count": 177,
+    "python_status": "PASS",
+    "python_elapsed_seconds": 8.088,
+    "release_tests": [
+      "diagnostic_world_actions_test",
+      "diagnostic_flight_controller_test"
+    ],
+    "release_status": "PASS",
+    "release_elapsed_seconds": 0.1,
+    "source_files": [
+      "src/App/Diagnostics/DiagnosticFlightController.cpp",
+      "src/App/Diagnostics/DiagnosticWorldActions.h",
+      "src/App/Platform/AppRunner.cpp",
+      "tools/engine_source_observation.py",
+      "tools/engine_smoke_run.py",
+      "tools/engine_world_actions.py"
+    ],
+    "app_build_command": "cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8"
+  },
+  "retained_failed_attempts": {
+    "nine_targets": "Native parser rejected9 targets before load; unchanged maximum8 retained; no native report or action proof.",
+    "ground_return": "Source action executed after inspection, but zero-height return target put the motor at floor; bot blocked no_safe_local_path with2waypoints. Failure retained.",
+    "correction": "Two-block departure/return hover with ordinary motor input stays above floor and inside unchanged6-block API reach. Far waypoint and303-block excursion retained."
+  },
+  "native": {
+    "engine-source-preinspect-add-20261120-native": {
+      "source_commit": "2eed692679a2b619c1b3e186899c7864894c66cf",
+      "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+      "private_world": "EngineSmoke_d046c5cdc9a9457a8550404d6eb960c9",
+      "exe_sha256": "6962a903fbe27c8de10e29356564edd98b931f60c6dd698453326fc092d4e37f",
+      "source_status": "UNTESTED",
+      "original_smoke_status": "FAIL",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "components": {
+        "material": {
+          "schema": "engine-world-actions-evidence.v1",
+          "status": "UNTESTED",
+          "reason": "missing_native_world_actions",
+          "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance"
+        },
+        "camera": {
+          "status": "UNTESTED",
+          "reason": "missing_source_camera_artifacts"
+        },
+        "startup": {
+          "status": "UNTESTED",
+          "reason": "missing_first_frame_ring_witness"
+        },
+        "air_return": {
+          "schema": "engine-round-trip-evidence.v1",
+          "status": "UNTESTED",
+          "reason": "missing_round_trip_native_audit",
+          "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload"
+        },
+        "draw": {
+          "schema": "engine-source-draw-reference.v1",
+          "status": "UNTESTED",
+          "reason": "missing_verified_source_camera_contract",
+          "camera": {
+            "status": "UNTESTED",
+            "reason": "missing_source_camera_artifacts"
+          }
+        }
+      },
+      "artifact_sha256": {
+        "air-round-trip-evidence.json": "b4034908d83c5a3989d2a0ba45764f1a7df358a052e8416007935b0aee82858b",
+        "bot-route.json": "afc128c38d909e3e126e5543980e00402d625eab781e65872312f7459c4104cb",
+        "config.original.json": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+        "evidence-report.json": "67df62563129b8c54abf37bf770b183e77573aef85060f2cb61582e9b4e1c78d",
+        "mesh-publication-diagnostics.json": "734d5c7d98b18042d26359a84a0c9ebe81063c69f9949dc91b3573fc218e796f",
+        "round-trip-evidence.json": "e8d0bb98da0089c59241016fb1da054c496f29c51f154f2125a0dc10431dafc7",
+        "route.json": "afeb9c0a2009ea08cc664e5d5add5b1450826e718ed00dc4e7fa27039cc8adb5",
+        "smoke-verdict.json": "c653c59f38f000f231eb40755b88f6ae758be35bf414d2b7e856771d1f367c38",
+        "source-acceptance.json": "905e44f8cb9b20a3dbee7cb14d59aa98409e0d22e41478e02b807494b2a144c0",
+        "source-camera-reference.json": "0f628e4a97def61b8a7ccb22f6832810c7c1b8108f86cba5e05c13a3b6c59722",
+        "source-draw-reference.json": "b336470f2e59409cfd3c028bdd8d1f970be956f6130a15cd5e6dda12d498b3ec",
+        "source-observation-scene.json": "d280fd20dba375780a8904813878bfc03bd8ca65b08ae9459dcbaedd30e5a25f",
+        "surface-lease-cohort-observation.json": "d989fc819fef1635ae7d4b7f2dabe7503fd0504d083f58f32b53432f3ce63db3",
+        "world-actions-evidence.json": "32826537539d204908aa1c4d646358139ffa76aa6deae132a481ee40a0eefc9d",
+        "wrapper-process-result.json": "2c388fdcd249860153e081501c3aac4b2f9cecc7d8eef57d44aad4f529212bfd"
+      },
+      "pre_edit_inspection": null
+    },
+    "engine-source-preinspect-eight-add-20261120-native": {
+      "source_commit": "5cdd737c6de31445df4de581968dff343fe5719d",
+      "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+      "private_world": "EngineSmoke_a6c3f52c4c684afc9bbf1b125cb2dd7e",
+      "exe_sha256": "3068275bd262c5e0ecc2f49bb8b171cb68fb1fca0867458c19c46831a6f4702a",
+      "source_status": "FAIL",
+      "original_smoke_status": "FAIL",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "components": {
+        "material": {
+          "schema": "engine-world-actions-evidence.v1",
+          "status": "FAIL",
+          "reason": "native_action_failed_or_world_mismatch",
+          "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance"
+        },
+        "camera": {
+          "schema": "engine-source-camera-reference.v1",
+          "status": "UNTESTED",
+          "reason": "missing_verified_material_action",
+          "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance"
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 224,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 736,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 440,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "air_return": {
+          "schema": "engine-round-trip-evidence.v1",
+          "status": "FAIL",
+          "reason": "round_trip_bot_incomplete",
+          "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload"
+        },
+        "draw": {
+          "schema": "engine-source-draw-reference.v1",
+          "status": "UNTESTED",
+          "reason": "missing_verified_source_camera_contract",
+          "camera": {
+            "schema": "engine-source-camera-reference.v1",
+            "status": "UNTESTED",
+            "reason": "missing_verified_material_action",
+            "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance"
+          }
+        }
+      },
+      "artifact_sha256": {
+        "air-round-trip-evidence.json": "7016177c3d898d1ee6219cc857e2f5bcad63d1a4515c572bc9bc5c9bb4f64713",
+        "bot-route.json": "28667d07ffe794b5f9e40a30f577a2864e7489d52a184718fc758eb020f5899b",
+        "config.original.json": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+        "evidence-report.json": "8aead93a5be730fac14168bccee497f52ee6af081f03ed4f1d35ce097053c85c",
+        "flight_sim_report.json": "62398551daa3720c4cc646e6f807fff1d7158cf7a210ffae9dacec0ab9f49870",
+        "legacy-gates.json": "aae4851bcb3bbbd1553dc08ea5b391c1dd8c42ae95c89899f8244086631d4811",
+        "mesh-publication-diagnostics.json": "564b5844b82ad3aea17161037d1dc6e6002d9ac389f86a31e80a57ed879298d1",
+        "movement_diagnostics.json": "0c9e0353f771d3fe4a798efe18e8265020f1e3568fb57f07108f8c313f0d7727",
+        "round-trip-evidence.json": "5b1d8595205d8832711a48f831274c1de7306c451e5c83ef5b299c2eab7457c9",
+        "route.json": "ffe132da0eae691325dd9c1895ed08a8e60c49c7aa97458f8f4ce6580f9afa13",
+        "smoke-verdict.json": "41f3847e77aeeb0adda7903b84625d0e7747a426956d9355d511c597c505b913",
+        "source-acceptance.json": "ed1d44c2b6a979afa67273376e8df4c0a35c5038860b70a869a860e0d608f1df",
+        "source-camera-reference.json": "a9995d035f9af5e61933c3e06b734e541038aacab2c127a1bfbfa2f21059f2c5",
+        "source-draw-reference.json": "621315931ed8a632d84748f789de4e43ac523924dd46b3a0050c0bd9700c5e35",
+        "source-observation-scene.json": "d280fd20dba375780a8904813878bfc03bd8ca65b08ae9459dcbaedd30e5a25f",
+        "surface-lease-cohort-observation.json": "0a6b5813739073fbeed3b0a9e19e8ae40289ff12b1e9d9999ea03560ea18d4ae",
+        "world-actions-evidence.json": "e7213d672868171c3b287f2aa042a2bda07fc9420e47647928579bdfa4379d81",
+        "world-actions.json": "5f2bb8d78364146c5d660fef81eeacb3fb445440c9027e16ecbfe1f71dce68ee",
+        "wrapper-process-result.json": "d7698d565049cc40e010c0284b63adee8aaf0f9d32f4577e3a468a054a8405ee"
+      },
+      "pre_edit_inspection": null
+    },
+    "engine-source-preinspect-hover-add-20261120-native": {
+      "source_commit": "2dc2826c6f5837a590b89551681a7c7616590405",
+      "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+      "private_world": "EngineSmoke_64fa31ebf1b448f8ae28369da1860604",
+      "exe_sha256": "d9f9b5d6c916520a45417f491f86642cf17ad52fe2af08ddab7ce5b7d899e668",
+      "source_status": "PASS",
+      "original_smoke_status": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "components": {
+        "material": {
+          "schema": "engine-world-actions-evidence.v1",
+          "status": "PASS",
+          "reason": "edited_material_survived_fresh_disk_return",
+          "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+          "cells": [
+            {
+              "cell": [
+                22,
+                -49,
+                51
+              ],
+              "before_id": 560,
+              "after_id": 376,
+              "initial_incarnation": 2,
+              "final_incarnation": 5999,
+              "disk": {
+                "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_64fa31ebf1b448f8ae28369da1860604\\chunks\\1_-4_3.cchunk",
+                "sha256": "4a2d0d35001b213ca4199cda6f1d712ba68d27e32791e1ca337738c4413564b9",
+                "section": [
+                  1,
+                  -4,
+                  3
+                ],
+                "local": [
+                  6,
+                  15,
+                  3
+                ],
+                "id": 376
+              }
+            }
+          ]
+        },
+        "camera": {
+          "schema": "engine-source-camera-reference.v1",
+          "status": "PASS",
+          "reason": "frame_bound_declared_source_transport",
+          "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance",
+          "action_frame": 1176,
+          "counts": {
+            "before_samples": 1175,
+            "before_ready": 1175,
+            "before_source_effect_samples": 1175,
+            "unordered_action_frame": 1,
+            "after_samples": 6726,
+            "after_ready": 6726,
+            "after_source_effect_samples": 2551
+          },
+          "faults": 0,
+          "expected_paints": 7902,
+          "world_epoch": 4,
+          "observed_paints": 7902,
+          "transitions": [
+            {
+              "cell": [
+                22,
+                -45,
+                51
+              ],
+              "before": [
+                9
+              ],
+              "after": [
+                11
+              ]
+            }
+          ],
+          "examples": [],
+          "missing_coverage": []
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 224,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 736,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 440,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "air_return": {
+          "schema": "engine-round-trip-evidence.v1",
+          "status": "PASS",
+          "reason": "motor_return_with_fresh_disk_cohort",
+          "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+          "column": [
+            1,
+            3
+          ],
+          "sections": [
+            {
+              "coord": [
+                1,
+                -4,
+                3
+              ],
+              "retired_incarnation": 2,
+              "returned_incarnation": 5999
+            },
+            {
+              "coord": [
+                1,
+                -1,
+                3
+              ],
+              "retired_incarnation": 3,
+              "returned_incarnation": 6000
+            },
+            {
+              "coord": [
+                1,
+                0,
+                3
+              ],
+              "retired_incarnation": 4,
+              "returned_incarnation": 6001
+            },
+            {
+              "coord": [
+                1,
+                1,
+                3
+              ],
+              "retired_incarnation": 5,
+              "returned_incarnation": 6002
+            },
+            {
+              "coord": [
+                1,
+                2,
+                3
+              ],
+              "retired_incarnation": 6,
+              "returned_incarnation": 6003
+            },
+            {
+              "coord": [
+                1,
+                3,
+                3
+              ],
+              "retired_incarnation": 1,
+              "returned_incarnation": 5998
+            },
+            {
+              "coord": [
+                1,
+                4,
+                3
+              ],
+              "retired_incarnation": 7,
+              "returned_incarnation": 6004
+            }
+          ],
+          "air_sections": [
+            {
+              "coord": [
+                1,
+                -3,
+                3
+              ],
+              "retired_field_incarnation": 11,
+              "returned_field_incarnation": 19318
+            },
+            {
+              "coord": [
+                1,
+                -2,
+                3
+              ],
+              "retired_field_incarnation": 3,
+              "returned_field_incarnation": 19325
+            }
+          ],
+          "maximum_excursion_blocks": 303.61,
+          "disk_demand_id": 46063,
+          "far_tick_ms": 744867635,
+          "return_tick_ms": 744939622
+        },
+        "draw": {
+          "schema": "engine-source-draw-reference.v1",
+          "status": "PASS",
+          "reason": "frame_bound_source_draw_transport",
+          "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+          "action_frame": 1176,
+          "world_epoch": 4,
+          "counts": {
+            "before": {
+              "rows": 1620,
+              "source_effect": 253,
+              "field_checked": 765,
+              "field_faults": 0,
+              "field_unjoined": 0
+            },
+            "after": {
+              "rows": 19240,
+              "source_effect": 717,
+              "field_checked": 6974,
+              "field_faults": 0,
+              "field_unjoined": 0
+            }
+          },
+          "unordered_action_rows": 0,
+          "components": {
+            "before": {
+              "field": {
+                "status": "PASS",
+                "reason": "analytic_floor_draw_source_light",
+                "checked": 765,
+                "positive_expected": 724,
+                "faults": 0,
+                "source_counts": {
+                  "cpu": 0,
+                  "packed_gpu": 765,
+                  "bound_gpu": 765
+                },
+                "missing_bound_fields": 0,
+                "positive_bound_with_baked_zero": 724,
+                "frame_epochs": 21,
+                "observed_emitter_cells": 2,
+                "distinct_floor_cells": 304,
+                "distinct_expected_levels": 15,
+                "skipped": 855,
+                "skip_reasons": {
+                  "unscoped_floor_cell": 166,
+                  "not_downward_valid_ray": 588,
+                  "not_joined_floor_depth": 101
+                },
+                "missing_coverage": [],
+                "examples": [],
+                "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+              },
+              "rgb": {
+                "schema": "engine-floor-rgb-reference.v1",
+                "status": "PASS",
+                "reason": "analytic_positive_floor_normal_rgb",
+                "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+                "checked": 724,
+                "faults": 0,
+                "frame_epochs": 21,
+                "distinct_cells": 273,
+                "expected_levels": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ],
+                "draw_sources": [
+                  2
+                ],
+                "unwitnessed": 0,
+                "skipped": 896,
+                "examples": [],
+                "missing_coverage": []
+              }
+            },
+            "after": {
+              "field": {
+                "status": "PASS",
+                "reason": "analytic_floor_draw_source_light",
+                "checked": 6974,
+                "positive_expected": 6065,
+                "faults": 0,
+                "source_counts": {
+                  "cpu": 107,
+                  "packed_gpu": 6867,
+                  "bound_gpu": 6974
+                },
+                "missing_bound_fields": 0,
+                "positive_bound_with_baked_zero": 6065,
+                "frame_epochs": 139,
+                "observed_emitter_cells": 8,
+                "distinct_floor_cells": 4039,
+                "distinct_expected_levels": 15,
+                "skipped": 12266,
+                "skip_reasons": {
+                  "unscoped_floor_cell": 1599,
+                  "not_downward_valid_ray": 7794,
+                  "not_joined_floor_depth": 2873
+                },
+                "missing_coverage": [],
+                "examples": [],
+                "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+              },
+              "rgb": {
+                "schema": "engine-floor-rgb-reference.v1",
+                "status": "PASS",
+                "reason": "analytic_positive_floor_normal_rgb",
+                "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+                "checked": 6065,
+                "faults": 0,
+                "frame_epochs": 139,
+                "distinct_cells": 3249,
+                "expected_levels": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ],
+                "draw_sources": [
+                  1,
+                  2
+                ],
+                "unwitnessed": 0,
+                "skipped": 13175,
+                "examples": [],
+                "missing_coverage": []
+              }
+            }
+          },
+          "missing_coverage": [],
+          "examples": []
+        }
+      },
+      "artifact_sha256": {
+        "air-round-trip-evidence.json": "660b021e1f371edea14625e8c0add0fd0172c86003d2452df8efdaaad3d43c10",
+        "bot-route.json": "762acadb77ee1b2a2895cc202356f90c83bf82659800be21be55a231c9598b7f",
+        "config.original.json": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+        "evidence-report.json": "5be9a7677def1ff223c012986530f65ad90dd62514460053b58f803931726ac9",
+        "flight_sim_report.json": "2145292dbf3a57146982127c6f9069ee775e518ac4aba245bd3049a86eeccc88",
+        "legacy-gates.json": "90d066766b396ba9ffc3459bfd1349d10353656a61bc7047cec0da60b7de4a04",
+        "mesh-publication-diagnostics.json": "4c0bc887be3d25155cc87073130b450bf7926512e2dd5dabc86469c57d10d843",
+        "movement_diagnostics.json": "2fc2c786b30b051c707c46beb25a372b7bc2a7a27fc51a1e67970285ff1abbd5",
+        "round-trip-evidence.json": "34f56556bbdbc28e3e514882e9e858ab4a9b993a3144f47f2b4ed0af3a35db15",
+        "route.json": "08a99c12d83a772c2265ac1b48dc483e4b8e9e18dd9ef84571f611286d35dbaa",
+        "smoke-verdict.json": "04fd7602ee6050681f8fe81f5e856979e2e66045191d2551af5098bbe0c9ec09",
+        "source-acceptance.json": "c01e24e70bd3ac8d394036e5dc857c0aa8b8fd5b4b2ab7075d3eb08828eafca1",
+        "source-camera-reference.json": "67e7c263334f98feee1e4aa503d0e97e66ca6969c6b2bcae2d649f1d31435445",
+        "source-draw-reference.json": "87c444d993e8a9de6cfbec5b576b9c5856058ef7eb43173ca8f16f57efe28f51",
+        "source-observation-scene.json": "d280fd20dba375780a8904813878bfc03bd8ca65b08ae9459dcbaedd30e5a25f",
+        "surface-lease-cohort-observation.json": "e10710b19f8acb029776b5a24e87f614184476b689952b45d3380165182e2de3",
+        "world-actions-evidence.json": "2304743a4b27ec262075ce1cccc1765422ff1c7c5560e4784dd0743ec6c1aa85",
+        "world-actions.json": "6abd96dc3be6cdf52c78a980063577ff4c3f5d0dd8230c4a1981df6610f2b0e1",
+        "wrapper-process-result.json": "3c2f2c554bff7b5d960c329afa80f9c8d6b976e0d92f98f5a680b91c70ad7e93"
+      },
+      "pre_edit_inspection": {
+        "first_completed_pose": {
+          "schema": "diagnostic-bot-trace.v1",
+          "time": 24.9057,
+          "steady_tick_ms": 744813362,
+          "position": [
+            22,
+            -45.4896,
+            51
+          ],
+          "state": "travel",
+          "waypoints_visited": 1,
+          "forward": 0,
+          "up": 0,
+          "down": 0,
+          "grounded": false,
+          "walking_ready": false,
+          "yaw": 0,
+          "pitch": -89,
+          "eye_in_fluid": false,
+          "eye_fluid_id": 0,
+          "capture_ready": 1,
+          "capture_request": 0,
+          "capture_id": 0,
+          "plan_expansions": 0,
+          "reason": ""
+        },
+        "action": {
+          "after_id": 376,
+          "api_called": true,
+          "api_success": true,
+          "before_id": 560,
+          "cell": [
+            22,
+            -49,
+            51
+          ],
+          "expected_id": 560,
+          "frame_epoch": 1176,
+          "incarnation": 2,
+          "phase": "initial",
+          "reach_blocks": 3.0923590660095215,
+          "resident": true,
+          "section": [
+            1,
+            -4,
+            3
+          ],
+          "steady_tick_ms": 744813375,
+          "success": true,
+          "target_id": 376,
+          "waypoints_visited": 1
+        },
+        "capture_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      }
+    },
+    "engine-source-preinspect-hover-remove-stone-20261120-native": {
+      "source_commit": "2dc2826c6f5837a590b89551681a7c7616590405",
+      "source_world": "EngineSmoke_64fa31ebf1b448f8ae28369da1860604",
+      "private_world": "EngineSmoke_8a0b20384fd34616a285176c866d068c",
+      "exe_sha256": "d9f9b5d6c916520a45417f491f86642cf17ad52fe2af08ddab7ce5b7d899e668",
+      "source_status": "PASS",
+      "original_smoke_status": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "components": {
+        "material": {
+          "schema": "engine-world-actions-evidence.v1",
+          "status": "PASS",
+          "reason": "edited_material_survived_fresh_disk_return",
+          "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+          "cells": [
+            {
+              "cell": [
+                22,
+                -49,
+                51
+              ],
+              "before_id": 376,
+              "after_id": 560,
+              "initial_incarnation": 2,
+              "final_incarnation": 4821,
+              "disk": {
+                "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_8a0b20384fd34616a285176c866d068c\\chunks\\1_-4_3.cchunk",
+                "sha256": "0e29f0deb59b0e9140cdda81fcac5f11bf2adad5aaeebf9e838b9cf31fff5d52",
+                "section": [
+                  1,
+                  -4,
+                  3
+                ],
+                "local": [
+                  6,
+                  15,
+                  3
+                ],
+                "id": 560
+              }
+            }
+          ]
+        },
+        "camera": {
+          "schema": "engine-source-camera-reference.v1",
+          "status": "PASS",
+          "reason": "frame_bound_declared_source_transport",
+          "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance",
+          "action_frame": 1040,
+          "counts": {
+            "before_samples": 1039,
+            "before_ready": 1039,
+            "before_source_effect_samples": 1039,
+            "unordered_action_frame": 1,
+            "after_samples": 7407,
+            "after_ready": 7407,
+            "after_source_effect_samples": 2496
+          },
+          "faults": 0,
+          "expected_paints": 8447,
+          "world_epoch": 4,
+          "observed_paints": 8447,
+          "transitions": [
+            {
+              "cell": [
+                22,
+                -46,
+                51
+              ],
+              "before": [
+                12
+              ],
+              "after": [
+                10
+              ]
+            }
+          ],
+          "examples": [],
+          "missing_coverage": []
+        },
+        "startup": {
+          "status": "PASS",
+          "reason": "first_world_paint_required_ring_census",
+          "evidence": {
+            "certified_no_surface_sections": 224,
+            "columns": 49,
+            "domain": "configured-render-ring.v1",
+            "expected_columns": 49,
+            "expected_sections": 1176,
+            "focus": [
+              1,
+              -3,
+              3
+            ],
+            "known_air_sections": 736,
+            "light_unready_sections": 0,
+            "max_y": 319,
+            "min_y": -64,
+            "missing_data_columns": 0,
+            "phase": "first_world_paint",
+            "publication_unready_sections": 0,
+            "radius": 3,
+            "ready": true,
+            "render_distance_chunks": 3,
+            "render_pass_complete": true,
+            "resident_air_sections": 0,
+            "schema": "required-presentation-witness.v2",
+            "sections": 1176,
+            "surface_sections": 440,
+            "unknown_sections": 0,
+            "world_epoch": 4
+          },
+          "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+        },
+        "air_return": {
+          "schema": "engine-round-trip-evidence.v1",
+          "status": "PASS",
+          "reason": "motor_return_with_fresh_disk_cohort",
+          "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+          "column": [
+            1,
+            3
+          ],
+          "sections": [
+            {
+              "coord": [
+                1,
+                -4,
+                3
+              ],
+              "retired_incarnation": 2,
+              "returned_incarnation": 4821
+            },
+            {
+              "coord": [
+                1,
+                -1,
+                3
+              ],
+              "retired_incarnation": 3,
+              "returned_incarnation": 4822
+            },
+            {
+              "coord": [
+                1,
+                0,
+                3
+              ],
+              "retired_incarnation": 4,
+              "returned_incarnation": 4823
+            },
+            {
+              "coord": [
+                1,
+                1,
+                3
+              ],
+              "retired_incarnation": 5,
+              "returned_incarnation": 4824
+            },
+            {
+              "coord": [
+                1,
+                2,
+                3
+              ],
+              "retired_incarnation": 6,
+              "returned_incarnation": 4825
+            },
+            {
+              "coord": [
+                1,
+                3,
+                3
+              ],
+              "retired_incarnation": 1,
+              "returned_incarnation": 4820
+            },
+            {
+              "coord": [
+                1,
+                4,
+                3
+              ],
+              "retired_incarnation": 7,
+              "returned_incarnation": 4826
+            }
+          ],
+          "air_sections": [
+            {
+              "coord": [
+                1,
+                -3,
+                3
+              ],
+              "retired_field_incarnation": 11,
+              "returned_field_incarnation": 18116
+            },
+            {
+              "coord": [
+                1,
+                -2,
+                3
+              ],
+              "retired_field_incarnation": 3,
+              "returned_field_incarnation": 18123
+            }
+          ],
+          "maximum_excursion_blocks": 303.511,
+          "disk_demand_id": 51384,
+          "far_tick_ms": 745329675,
+          "return_tick_ms": 745401586
+        },
+        "draw": {
+          "schema": "engine-source-draw-reference.v1",
+          "status": "PASS",
+          "reason": "frame_bound_source_draw_transport",
+          "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+          "action_frame": 1040,
+          "world_epoch": 4,
+          "counts": {
+            "before": {
+              "rows": 1460,
+              "source_effect": 197,
+              "field_checked": 868,
+              "field_faults": 0,
+              "field_unjoined": 0
+            },
+            "after": {
+              "rows": 21160,
+              "source_effect": 720,
+              "field_checked": 7718,
+              "field_faults": 0,
+              "field_unjoined": 0
+            }
+          },
+          "unordered_action_rows": 0,
+          "components": {
+            "before": {
+              "field": {
+                "status": "PASS",
+                "reason": "analytic_floor_draw_source_light",
+                "checked": 868,
+                "positive_expected": 805,
+                "faults": 0,
+                "source_counts": {
+                  "cpu": 0,
+                  "packed_gpu": 868,
+                  "bound_gpu": 868
+                },
+                "missing_bound_fields": 0,
+                "positive_bound_with_baked_zero": 805,
+                "frame_epochs": 21,
+                "observed_emitter_cells": 3,
+                "distinct_floor_cells": 319,
+                "distinct_expected_levels": 15,
+                "skipped": 592,
+                "skip_reasons": {
+                  "unscoped_floor_cell": 151,
+                  "not_downward_valid_ray": 328,
+                  "not_joined_floor_depth": 113
+                },
+                "missing_coverage": [],
+                "examples": [],
+                "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+              },
+              "rgb": {
+                "schema": "engine-floor-rgb-reference.v1",
+                "status": "PASS",
+                "reason": "analytic_positive_floor_normal_rgb",
+                "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+                "checked": 805,
+                "faults": 0,
+                "frame_epochs": 21,
+                "distinct_cells": 265,
+                "expected_levels": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ],
+                "draw_sources": [
+                  2
+                ],
+                "unwitnessed": 0,
+                "skipped": 655,
+                "examples": [],
+                "missing_coverage": []
+              }
+            },
+            "after": {
+              "field": {
+                "status": "PASS",
+                "reason": "analytic_floor_draw_source_light",
+                "checked": 7718,
+                "positive_expected": 6653,
+                "faults": 0,
+                "source_counts": {
+                  "cpu": 52,
+                  "packed_gpu": 7666,
+                  "bound_gpu": 7718
+                },
+                "missing_bound_fields": 0,
+                "positive_bound_with_baked_zero": 6653,
+                "frame_epochs": 145,
+                "observed_emitter_cells": 5,
+                "distinct_floor_cells": 4107,
+                "distinct_expected_levels": 15,
+                "skipped": 13442,
+                "skip_reasons": {
+                  "unscoped_floor_cell": 1640,
+                  "not_downward_valid_ray": 8572,
+                  "not_joined_floor_depth": 3230
+                },
+                "missing_coverage": [],
+                "examples": [],
+                "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+              },
+              "rgb": {
+                "schema": "engine-floor-rgb-reference.v1",
+                "status": "PASS",
+                "reason": "analytic_positive_floor_normal_rgb",
+                "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+                "checked": 6653,
+                "faults": 0,
+                "frame_epochs": 145,
+                "distinct_cells": 3228,
+                "expected_levels": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14
+                ],
+                "draw_sources": [
+                  1,
+                  2
+                ],
+                "unwitnessed": 0,
+                "skipped": 14507,
+                "examples": [],
+                "missing_coverage": []
+              }
+            }
+          },
+          "missing_coverage": [],
+          "examples": []
+        }
+      },
+      "artifact_sha256": {
+        "air-round-trip-evidence.json": "b115a15a5e6c62e8a90fcb90a3ca413e14c19ee4f81c507c59b4573d844c4ce2",
+        "bot-route.json": "17548fd5107d88eb8c6c84e85fa07a36ad90684de5935e37a82018c665725ff0",
+        "config.original.json": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+        "evidence-report.json": "e26e5109c7c9a2b49b76d8abdee8782aa806e3a72b913a37079538b170b9da2f",
+        "flight_sim_report.json": "71c7cf6d2d6282f4df72128cc433f2277c8131203dadca4e93ab42f5ef32babb",
+        "legacy-gates.json": "e484432fd48478ecc3a3ae3287c34168f93e58c05de8b1afa1e17c43edd05a66",
+        "mesh-publication-diagnostics.json": "85b03f81c03d2615db9b773aa3e5e39594eb882b07600741e08c96cf450548d3",
+        "movement_diagnostics.json": "39500e057cefbd7adb6321f79202433744e2a3356224b348aa6bf9069c4480be",
+        "round-trip-evidence.json": "9341db0948b45c39cfc153fdc271e2c813c28caf5d6ab09326c821955b96fa0c",
+        "route.json": "4353c312b918660fbccc3c37ae1abdeeb0889dbdae483d880b5181375a7846dc",
+        "smoke-verdict.json": "2c76b85122a06ad8abdbf9bd6a9bc6671c8da79d082c1c8f1c5fa20761cd9634",
+        "source-acceptance.json": "04b4f2f4289176920b1a6169ffe72d23af8b650753d8b7e60263c580bae7fda2",
+        "source-camera-reference.json": "43532b53c4bfced99aefd4d27c52e32fe29b6dcae09597363dae8f4c92845c91",
+        "source-draw-reference.json": "beeb7444e2f56333940fea063912458d5f588f45f858732fac248f59225f6ae6",
+        "source-observation-scene.json": "d280fd20dba375780a8904813878bfc03bd8ca65b08ae9459dcbaedd30e5a25f",
+        "surface-lease-cohort-observation.json": "81272bd53c545204fea788bf67a79ad068798fb935bb2d09ec2673e980847530",
+        "world-actions-evidence.json": "beda8156a3d590a9f0799a9151b36cb138b9ee715a7db5bee0d5ab08443ddcea",
+        "world-actions.json": "5a676153a6802c83dd53e18f34e3bdef091af2c48e21feb5630ba83bd0db55d9",
+        "wrapper-process-result.json": "8f64fbc20e51fe0909b5f99db1eb5a60ea1ee61b0150357cfd590e2efc89dd22"
+      },
+      "pre_edit_inspection": {
+        "first_completed_pose": {
+          "schema": "diagnostic-bot-trace.v1",
+          "time": 24.9067,
+          "steady_tick_ms": 745276046,
+          "position": [
+            22,
+            -45.5106,
+            51
+          ],
+          "state": "travel",
+          "waypoints_visited": 1,
+          "forward": 0,
+          "up": 0,
+          "down": 0,
+          "grounded": false,
+          "walking_ready": false,
+          "yaw": 0,
+          "pitch": -89,
+          "eye_in_fluid": false,
+          "eye_fluid_id": 0,
+          "capture_ready": 1,
+          "capture_request": 0,
+          "capture_id": 0,
+          "plan_expansions": 0,
+          "reason": ""
+        },
+        "action": {
+          "after_id": 560,
+          "api_called": true,
+          "api_success": true,
+          "before_id": 376,
+          "cell": [
+            22,
+            -49,
+            51
+          ],
+          "expected_id": 376,
+          "frame_epoch": 1040,
+          "incarnation": 2,
+          "phase": "initial",
+          "reach_blocks": 3.0718822479248047,
+          "resident": true,
+          "section": [
+            1,
+            -4,
+            3
+          ],
+          "steady_tick_ms": 745276060,
+          "success": true,
+          "target_id": 560,
+          "waypoints_visited": 1
+        },
+        "capture_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      }
+    }
+  },
+  "negative_trace_controls": {
+    "stale_removed_source_gpu": {
+      "schema": "engine-source-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_draw_transport",
+      "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+      "action_frame": 1040,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1460,
+          "source_effect": 197,
+          "field_checked": 868,
+          "field_faults": 0,
+          "field_unjoined": 0
+        },
+        "after": {
+          "rows": 21160,
+          "source_effect": 719,
+          "field_checked": 7718,
+          "field_faults": 1,
+          "field_unjoined": 0
+        }
+      },
+      "unordered_action_rows": 0,
+      "components": {
+        "before": {
+          "field": {
+            "status": "PASS",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 868,
+            "positive_expected": 805,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 868,
+              "bound_gpu": 868
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 805,
+            "frame_epochs": 21,
+            "observed_emitter_cells": 3,
+            "distinct_floor_cells": 319,
+            "distinct_expected_levels": 15,
+            "skipped": 592,
+            "skip_reasons": {
+              "unscoped_floor_cell": 151,
+              "not_downward_valid_ray": 328,
+              "not_joined_floor_depth": 113
+            },
+            "missing_coverage": [],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "PASS",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 805,
+            "faults": 0,
+            "frame_epochs": 21,
+            "distinct_cells": 265,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 655,
+            "examples": [],
+            "missing_coverage": []
+          }
+        },
+        "after": {
+          "field": {
+            "status": "FAIL",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 7718,
+            "positive_expected": 6653,
+            "faults": 1,
+            "source_counts": {
+              "cpu": 52,
+              "packed_gpu": 7666,
+              "bound_gpu": 7718
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 6653,
+            "frame_epochs": 145,
+            "observed_emitter_cells": 5,
+            "distinct_floor_cells": 4107,
+            "distinct_expected_levels": 15,
+            "skipped": 13442,
+            "skip_reasons": {
+              "unscoped_floor_cell": 1640,
+              "not_downward_valid_ray": 8572,
+              "not_joined_floor_depth": 3230
+            },
+            "missing_coverage": [],
+            "examples": [
+              {
+                "frame_epoch": 8400,
+                "floor_cell": [
+                  21,
+                  -49,
+                  47
+                ],
+                "expected_block_level": 7,
+                "source_block_light": 0.6,
+                "expected_sky_level": 0,
+                "source_sky_light": 0.0,
+                "source_material_id": 560
+              }
+            ],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "PASS",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 6653,
+            "faults": 0,
+            "frame_epochs": 145,
+            "distinct_cells": 3228,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              1,
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 14507,
+            "examples": [],
+            "missing_coverage": []
+          }
+        }
+      },
+      "missing_coverage": [],
+      "examples": [
+        {
+          "frame": 8400,
+          "cell": [
+            21,
+            -49,
+            47
+          ],
+          "expected": 112,
+          "actual": 144,
+          "surface_ok": true,
+          "bound": {
+            "schema": "bound-section-light-pixel.v1",
+            "requested": true,
+            "captured": true,
+            "valid": true,
+            "cpu_matches": true,
+            "packed": 144,
+            "program": 30,
+            "atlas_texture": 2059,
+            "table_texture": 2066,
+            "handle": [
+              90,
+              4,
+              1,
+              0
+            ],
+            "frame_epoch": 8400,
+            "world_epoch": 4,
+            "field_incarnation": 18097,
+            "field_revision": 1,
+            "geometry_incarnation": 4813,
+            "geometry_content": 4096,
+            "draw_table": false,
+            "draw_table_buffer": 0,
+            "draw_table_row": 0,
+            "indirect_buffer": 0,
+            "indirect_command": [
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "geometry_command": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    "zero_framebuffer": {
+      "schema": "engine-source-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_draw_transport",
+      "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+      "action_frame": 1040,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1460,
+          "source_effect": 197,
+          "field_checked": 868,
+          "field_faults": 0,
+          "field_unjoined": 0
+        },
+        "after": {
+          "rows": 21160,
+          "source_effect": 720,
+          "field_checked": 7718,
+          "field_faults": 0,
+          "field_unjoined": 0
+        }
+      },
+      "unordered_action_rows": 0,
+      "components": {
+        "before": {
+          "field": {
+            "status": "PASS",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 868,
+            "positive_expected": 805,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 868,
+              "bound_gpu": 868
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 805,
+            "frame_epochs": 21,
+            "observed_emitter_cells": 3,
+            "distinct_floor_cells": 319,
+            "distinct_expected_levels": 15,
+            "skipped": 592,
+            "skip_reasons": {
+              "unscoped_floor_cell": 151,
+              "not_downward_valid_ray": 328,
+              "not_joined_floor_depth": 113
+            },
+            "missing_coverage": [],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "PASS",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 805,
+            "faults": 0,
+            "frame_epochs": 21,
+            "distinct_cells": 265,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 655,
+            "examples": [],
+            "missing_coverage": []
+          }
+        },
+        "after": {
+          "field": {
+            "status": "PASS",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 7718,
+            "positive_expected": 6653,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 52,
+              "packed_gpu": 7666,
+              "bound_gpu": 7718
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 6653,
+            "frame_epochs": 145,
+            "observed_emitter_cells": 5,
+            "distinct_floor_cells": 4107,
+            "distinct_expected_levels": 15,
+            "skipped": 13442,
+            "skip_reasons": {
+              "unscoped_floor_cell": 1640,
+              "not_downward_valid_ray": 8572,
+              "not_joined_floor_depth": 3230
+            },
+            "missing_coverage": [],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "FAIL",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 6653,
+            "faults": 1,
+            "frame_epochs": 145,
+            "distinct_cells": 3228,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              1,
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 14507,
+            "examples": [
+              {
+                "frame_epoch": 8400,
+                "cell": [
+                  21,
+                  -49,
+                  47
+                ],
+                "expected_light": 7,
+                "predicted_rgba": [
+                  33.251839999999994,
+                  22.167893333333332,
+                  11.083946666666666,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    33,
+                    22,
+                    11,
+                    255
+                  ],
+                  [
+                    0,
+                    0,
+                    0,
+                    255
+                  ]
+                ],
+                "error_bytes": 33.251839999999994,
+                "intensity": 0.17318666666666666,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              }
+            ],
+            "missing_coverage": []
+          }
+        }
+      },
+      "missing_coverage": [],
+      "examples": []
+    },
+    "missing_gpu_capture": {
+      "schema": "engine-source-draw-reference.v1",
+      "status": "UNTESTED",
+      "reason": "frame_bound_source_draw_transport",
+      "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+      "action_frame": 1040,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1460,
+          "source_effect": 197,
+          "field_checked": 868,
+          "field_faults": 0,
+          "field_unjoined": 0
+        },
+        "after": {
+          "rows": 21160,
+          "source_effect": 719,
+          "field_checked": 7717,
+          "field_faults": 0,
+          "field_unjoined": 0
+        }
+      },
+      "unordered_action_rows": 0,
+      "components": {
+        "before": {
+          "field": {
+            "status": "PASS",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 868,
+            "positive_expected": 805,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 868,
+              "bound_gpu": 868
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 805,
+            "frame_epochs": 21,
+            "observed_emitter_cells": 3,
+            "distinct_floor_cells": 319,
+            "distinct_expected_levels": 15,
+            "skipped": 592,
+            "skip_reasons": {
+              "unscoped_floor_cell": 151,
+              "not_downward_valid_ray": 328,
+              "not_joined_floor_depth": 113
+            },
+            "missing_coverage": [],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "PASS",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 805,
+            "faults": 0,
+            "frame_epochs": 21,
+            "distinct_cells": 265,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 655,
+            "examples": [],
+            "missing_coverage": []
+          }
+        },
+        "after": {
+          "field": {
+            "status": "UNTESTED",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 7717,
+            "positive_expected": 6652,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 52,
+              "packed_gpu": 7665,
+              "bound_gpu": 7717
+            },
+            "missing_bound_fields": 1,
+            "positive_bound_with_baked_zero": 6652,
+            "frame_epochs": 145,
+            "observed_emitter_cells": 5,
+            "distinct_floor_cells": 4107,
+            "distinct_expected_levels": 15,
+            "skipped": 13443,
+            "skip_reasons": {
+              "unscoped_floor_cell": 1640,
+              "missing_draw_time_bound_field": 1,
+              "not_downward_valid_ray": 8572,
+              "not_joined_floor_depth": 3230
+            },
+            "missing_coverage": [
+              "requested_bound_fields"
+            ],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "PASS",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 6653,
+            "faults": 0,
+            "frame_epochs": 145,
+            "distinct_cells": 3228,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14
+            ],
+            "draw_sources": [
+              1,
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 14507,
+            "examples": [],
+            "missing_coverage": []
+          }
+        }
+      },
+      "missing_coverage": [],
+      "examples": []
+    }
+  },
+  "limits": [
+    "Both source-acceptance PASS values are scoped declared opaque floor source transport. Original general smoke statuses remain UNTESTED; no whole-screen/full-world acceptance is implied.",
+    "Actual GPU source removal here replaces glowstone with stone, preserving floor topology. Earlier removal-to-AIR CPU/disk/cold results remain, but GPU/shader AIR-hole geometry still needs its independent reference.",
+    "Negative controls are in-memory mutations of one actual native trace row, not faulty native executions. Existing earlier real stale-pair counterexamples and static zero-shader controls remain retained.",
+    "No universal action-to-publication latency, full backend/GPU-solver parity, wet/transparency, AIR-only/procedural/provider/cancellation/catalog lifecycle or seed/R8/performance/memory acceptance. Full original S0..S6 remains active."
+  ],
+  "next": [
+    "Extend independent source-removal geometry/light/RGB reference to actual AIR holes and verify native consumers.",
+    "Continue remaining full S0..S6 producer/data-column ownership, cancellation/catalog/backend, wet/transparency and controlled performance/memory gates."
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-preinspection-add-remove-assessment-20261120.json",
+    "sha256": "5921cfd0759e75923d171648d2f485081ea6e0a201c571ed4c32ad155e4b32ac"
+  }
 }
 }
