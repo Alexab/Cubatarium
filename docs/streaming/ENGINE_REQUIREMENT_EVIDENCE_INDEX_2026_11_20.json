@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S0.02",
+  "current_package": "S0.03",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -48,6 +48,27 @@
       "next_change": null,
       "assessment": "build/desktop-msvc/build-provenance-assessment-20261120.json",
       "scope_limit": "Declared source and tool inputs; dependency/compiler parity remains in later stages"
+    },
+    {
+      "id": "S0.02",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "build/desktop-msvc/process-isolation-timeout-test-20261120.log",
+          "sha256": "33999df7bced9ac27ca68f90f85402d117f3f5637b1e4017ec7b351c8cac2d0f"
+        },
+        {
+          "path": "build/desktop-msvc/s0-isolation-regression-20261120.log",
+          "sha256": "de1e163aa366548819a1b976d0fc60a2c74f0a705cce47bf5e06a58078f4ec3f"
+        }
+      ],
+      "verified": [
+        "Real child timeout preserves unrelated process",
+        "Config byte restoration and source fingerprint unchanged after timeout",
+        "Exception/interrupt cleanup, exclusive lease, artifact/source isolation",
+        "Exercised clone retained for reproduction"
+      ],
+      "scope_limit": "Cooperative exception/timeout/interrupt cleanup; abrupt host power loss is outside this harness claim"
     }
   ],
   "completed_handoff": {
