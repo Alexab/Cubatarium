@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.protected-completed-cancel",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-mesh-protected-cancel-isolated-20261121-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-mesh-protected-cancel-acceptance-20261121.json",
+      "scope": "Exact protected completed CPU job survives selective cancellation and publishes without recapture/reschedule; outside completed job cancels and returned debt publishes current successor. Tagged queued-credit and decor dependent tests2/2 PASS. Actual builder queued/running/late protected variants and full S4.02 OPEN; overall smoke UNTESTED."
+    },
+    {
       "id": "S4.02.Q04.completed-cancel-retained-draw-current-successor",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

@@ -110,6 +110,8 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  /// Preserve exact jobs inside the lease; cancel queued/completed work outside.
+  void CancelPendingOutsideHorizontalRadius(glm::ivec3 focus, int keep_radius);
   /// Drop in-flight tracking for a coord (e.g. chunk unloaded); late results are ignored.
   void ForgetInflight(glm::ivec3 coord);
   uint64_t GetDiscardedLateCount() const
@@ -137,6 +139,8 @@ public:
   std::vector<glm::ivec3> TakeDiscardedCoords();
 
 private:
+  void NoteObsoleteJob(glm::ivec3 coord, const JobStageSpan &span,
+                       JobTerminalReason reason);
   std::shared_ptr<const UChunkRenderDemandStore> RenderDemandStore;
 
   static constexpr int kPipelineSlotsPerWorker = 6;

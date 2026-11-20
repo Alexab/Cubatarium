@@ -108,5 +108,34 @@ int main()
         "shrinking reports every evicted result for token cleanup/retry");
   check(completed.DrainAll() == std::vector<int>({30}),
         "shrinking retains newest completion");
+  // Selective mesh cancellation must release only the cancelled queued lease;
+  // the protected queued closure and running worker remain executable.
+  {
+    UJobThreadPool selective(1);
+    admission.SetSnapshotCap(64);
+    std::promise<void> entered, release;
+    auto unblock_selective = release.get_future().share();
+    selective.Enqueue([&] { entered.set_value(); unblock_selective.wait(); });
+    entered.get_future().wait();
+    int ran_mask = 0;
+    const auto enqueue_tagged = [&](uint64_t id, int bit) {
+      check(admission.TryAcquireSnapshotBytes(16), "selective snapshot reserve");
+      auto credit = std::make_shared<UPipelineCreditGuard>(
+          PipelineCreditKind::Snapshot, 16, true);
+      check(selective.TryEnqueue([&, credit, bit] { ran_mask |= bit; }, id),
+            "selective tagged job accepted");
+    };
+    enqueue_tagged(701, 1);
+    enqueue_tagged(702, 2);
+    check(selective.CancelPendingJobsIf([](uint64_t id) { return id == 701; }) == 1,
+          "cancel exactly the outside tag");
+    check(selective.GetPendingJobCount() == 1 &&
+              admission.SnapshotPendingBytes() == 16,
+          "cancel releases outside credit and preserves protected credit");
+    release.set_value();
+    selective.WaitIdle();
+    check(ran_mask == 2 && admission.SnapshotPendingBytes() == 0,
+          "protected job executes; idle includes closure credit release");
+  }
   return failures ? 1 : 0;
 }

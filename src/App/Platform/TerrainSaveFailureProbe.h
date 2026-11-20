@@ -447,6 +447,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           ~CancelDeadlineRestore() { UFrameDeadline::Get()=previous; }
         } restore;
         UFrameDeadline::Get().BeginFrame(5000);
+        for(bool protected_case : {false,true}) {
         UWorld cancelled(nullptr,nullptr);
         cancelled.SetSpawnPoint({8,-40,8});
         cancelled.ProceduralTemplate.MinHeight=-48;
@@ -457,13 +458,15 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         cancelled.BlockWorld.SetFluidDefinitions(definitions.get());
         cancelled.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
         cancelled.SetRenderSettings(settings);
-        for(int x=0;x<16;++x) for(int z=0;z<16;++z) cancelled.BlockWorld.SetBlock({x,-48,z},8);
+        for(int x=0;x<(protected_case?32:16);++x) for(int z=0;z<16;++z) cancelled.BlockWorld.SetBlock({x,-48,z},8);
         cancelled.BlockWorld.SetBlock({8,-40,8},8);
+        if(protected_case) cancelled.BlockWorld.SetBlock({24,-40,8},8);
         cancelled.GetLightingPipeline().FillAllLoadedChunks(cancelled.BlockWorld);
         auto &cancel_mesh=cancelled.GetMeshService();
         auto &cancel_cache=cancel_mesh.GetCache();
         cancel_mesh.RebuildChunkImmediate(cancelled.BlockWorld,*cancelled.BlockRegistry,coord);
         require(cancelled.HasCurrentChunkSlicePublication(coord),"cancel fixture starts with actual current predecessor");
+        if(protected_case) cancel_mesh.RebuildChunkImmediate(cancelled.BlockWorld,*cancelled.BlockRegistry,{1,-3,0});
         cancel_mesh.SetMeshRebuildFocus({0,0,0},1,1);
         cancel_mesh.SetMeshSnapshotBudgetMs(1000);
         cancel_mesh.SetMeshEmergeTotalBudgetMs(1000);
@@ -472,19 +475,22 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         admission.first_mesh_schedule=1; admission.remesh_schedule=1;
         cancel_mesh.SetMeshWorkAdmission(admission);
         cancel_mesh.SetMaxOutsideFocusMeshPerFrame(0);
-        const auto schedule_cancel=[&](bool new_request) {
-          if(new_request) cancel_cache.MarkDirtyPriority(coord);
+        const auto schedule_cancel=[&](bool new_request,glm::ivec3 target) {
+          if(new_request) cancel_cache.MarkDirtyPriority(target);
           require(WaitForProbeMeshCapture(cancel_cache,cancelled.BlockWorld,*cancelled.BlockRegistry,
-                      coord,cancel_cache.GetChunkMeshRevision(coord)),"cancel fixture actual capture");
+                      target,cancel_cache.GetChunkMeshRevision(target)),"cancel fixture actual capture");
           const auto stats=cancel_cache.RebuildDirtyChunksWithStats(cancelled.BlockWorld,
               *cancelled.BlockRegistry,0,1,false,0,1000,true);
           const bool idle=cancel_cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5));
-          require(stats.Scheduled==1 && idle && cancel_cache.HasCpuMeshBuildInFlight(coord),
+          report["mesh_cancel_schedule_steps"].push_back({{"protected_case",protected_case},{"target_x",target.x},
+              {"scheduled",stats.Scheduled},{"target_owned",cancel_cache.HasCpuMeshBuildInFlight(target)}});
+          require(stats.Scheduled==1 && idle && cancel_cache.HasCpuMeshBuildInFlight(target),
                   "cancel fixture completes exact target worker");
         };
+        if(!protected_case) {
         const auto before=cancel_cache.GetPublishCount(coord);
         cancelled.BlockWorld.SetBlock({5,-40,5},8);
-        schedule_cancel(true);
+        schedule_cancel(true,coord);
         const bool completed=cancel_cache.GetMeshCompletedSize()==1;
         const auto requested_revision=cancel_cache.GetInflightSourceRevision(coord);
         report["mesh_cancel_revision_witness"]={{"active",cancel_mesh.HasInflightMeshBuild(coord)},
@@ -501,7 +507,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                     cancel_mesh.HasDrawableGreedyMesh(coord) && !cancel_mesh.HasInflightMeshBuild(coord) &&
                     !cancelled.HasCurrentChunkSlicePublication(coord),
                 "cancel keeps executable current mesh debt while retaining predecessor draw");
-        schedule_cancel(false);
+        schedule_cancel(false,coord);
         cancel_mesh.DrainAsyncMeshResults(cancelled.BlockWorld,*cancelled.BlockRegistry,1);
         const bool successor=cancel_cache.GetPublishCount(coord)>before &&
             cancelled.HasCurrentChunkSlicePublication(coord);
@@ -509,6 +515,43 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["mesh_completed_cancel"]["same_requested_revision"]=
             cancel_mesh.GetChunkMeshRevision(coord)==requested_revision;
         require(successor,"cancelled mesh successor actually publishes current inputs");
+        } else {
+        const glm::ivec3 outside(1,-3,0);
+        cancelled.BlockWorld.SetBlock({6,-40,6},8);
+        cancelled.BlockWorld.SetBlock({25,-40,8},8);
+        cancel_cache.SetMeshCompletedCapacity(4);
+        const auto lease_before=cancel_cache.GetPublishCount(coord);
+        const auto outside_before=cancel_cache.GetPublishCount(outside);
+        schedule_cancel(true,coord);
+        schedule_cancel(true,outside);
+        require(cancel_cache.GetMeshCompletedSize()==2,"lease fixture has two exact completed jobs");
+        cancel_cache.CancelAsyncInFlightKeepDirty({0,0,0},0);
+        const bool protected_cpu=cancel_cache.HasCpuMeshBuildInFlight(coord);
+        const bool protected_dirty=cancel_mesh.IsChunkMeshDirty(coord);
+        const bool outside_dirty=cancel_mesh.IsChunkMeshDirty(outside);
+        report["mesh_protected_cancel"]={{"protected_cpu",protected_cpu},
+            {"protected_active",cancel_mesh.HasInflightMeshBuild(coord)},
+            {"protected_dirty",protected_dirty},{"completed",cancel_cache.GetMeshCompletedSize()},
+            {"outside_cpu",cancel_cache.HasCpuMeshBuildInFlight(outside)},
+            {"outside_active",cancel_mesh.HasInflightMeshBuild(outside)},
+            {"outside_dirty",outside_dirty}};
+        require(protected_cpu && !protected_dirty && cancel_cache.GetMeshCompletedSize()==1 &&
+                    !cancel_cache.HasCpuMeshBuildInFlight(outside) &&
+                    !cancel_mesh.HasInflightMeshBuild(outside) && outside_dirty,
+                "protected lease preserves real completed CPU job while cancelling outside debt");
+        cancel_mesh.DrainAsyncMeshResults(cancelled.BlockWorld,*cancelled.BlockRegistry,1);
+        const bool protected_published=cancel_cache.GetPublishCount(coord)>lease_before &&
+            cancelled.HasCurrentChunkSlicePublication(coord);
+        report["mesh_protected_cancel"]["protected_published_without_reschedule"]=protected_published;
+        require(protected_published,"protected original job publishes without recapture or reschedule");
+        schedule_cancel(false,outside);
+        cancel_mesh.DrainAsyncMeshResults(cancelled.BlockWorld,*cancelled.BlockRegistry,1);
+        const bool outside_published=cancel_cache.GetPublishCount(outside)>outside_before &&
+            cancelled.HasCurrentChunkSlicePublication(outside);
+        report["mesh_protected_cancel"]["outside_successor_published"]=outside_published;
+        require(outside_published,"outside cancelled debt returns to actual current publication");
+        }
+        }
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

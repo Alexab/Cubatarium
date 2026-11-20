@@ -816,7 +816,8 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
     Dirty.MarkDirtyPriority(entry.first);
   }
   if (AsyncBuilder)
-    AsyncBuilder->CancelPending();
+    AsyncBuilder->CancelPendingOutsideHorizontalRadius(focus_ground_chunk,
+                                                       keep_horiz_lease);
   // Builder InFlight was cleared; Active/RemeshAfterApply must follow or
   // HasInflightMeshBuild stays true and RemeshAfterApply loops forever while
   // async count (builder-only) looks drained.

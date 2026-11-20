@@ -255,6 +255,6 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02: reuse existing source map and S3.04/H7 ownership receipts; freeze the finite queue registry (key/owner/cap/outcomes), then test only missing reject/overflow/cancel/eviction/coalescing and exact successor outcomes. Include terrain-arrival/fluid-map suspicion. Do not restart audit.",
+  "next_action": "S4.02 Q04: completed overflow, full completed cancellation and protected completed cancellation have scoped receipts in S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md. Next: actual builder barrier for running outside job with protected queued/completed work and late-result exclusion; then remaining Q01..Q12 limits/outcomes. Preserve full S0..S6, reuse closed S3.04 relight proof, do not restart audit or repeat accepted cases without dependent changes.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

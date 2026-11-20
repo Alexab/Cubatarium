@@ -14,6 +14,7 @@
 #include "World/Streaming/ChunkRenderDemand.h"
 #include <algorithm>
 #include <memory>
+#include <unordered_set>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
@@ -162,6 +163,26 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
            work_slot = std::move(work_slot)]() mutable
           {
         (void)work_slot;
+        const auto job_coord = snapshot.coord;
+        const auto obsolete_locked = [&]() {
+          if (Epoch.load(std::memory_order_acquire) != submitEpoch)
+            return JobTerminalReason::SubmissionEpochChanged;
+          const auto it = InFlight.find(job_coord);
+          return it == InFlight.end() || it->second != jobId
+                     ? JobTerminalReason::JobIdentityReplaced
+                     : JobTerminalReason::None;
+        };
+        const auto reject_obsolete = [&]() {
+          JobTerminalReason reason;
+          {
+            std::lock_guard<std::mutex> lock(InFlightMutex);
+            reason = obsolete_locked();
+          }
+          if (reason == JobTerminalReason::None) return false;
+          NoteObsoleteJob(job_coord, stage_trace, reason);
+          return true;
+        };
+        if (reject_obsolete()) return;
         const auto worker_started = std::chrono::steady_clock::now();
         stage_trace.stage = JobStage::Started;
         stage_trace.elapsed_ms = std::chrono::duration<double, std::milli>(
@@ -251,6 +272,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         result.stageTrace = stage_trace;
         UJobStageTrace::Note(stage_trace);
         const std::size_t result_bytes = EstimateMeshResultBytes(result);
+        if (reject_obsolete()) return;
         auto &pipe_adm = UPipelineAdmission::Get();
         if (!pipe_adm.TryAcquireResultBytes(result_bytes))
         {
@@ -271,7 +293,22 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
             PipelineCreditKind::Result, result_bytes, true);
 
         MeshBuildResult dropped;
-        if (Completed.PushDropOldest(std::move(result), &dropped))
+        bool overflow = false;
+        JobTerminalReason obsolete;
+        {
+          // Cancel and completion publication share ownership locking. A late
+          // cancelled result cannot displace a protected completed job.
+          std::lock_guard<std::mutex> lock(InFlightMutex);
+          obsolete = obsolete_locked();
+          if (obsolete == JobTerminalReason::None)
+            overflow = Completed.PushDropOldest(std::move(result), &dropped);
+        }
+        if (obsolete != JobTerminalReason::None)
+        {
+          NoteObsoleteJob(job_coord, stage_trace, obsolete);
+          return;
+        }
+        if (overflow)
         {
           UJobStageTrace::NoteTerminal(
               dropped.stageTrace, JobStage::Retired,
@@ -287,7 +324,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
           std::lock_guard<std::mutex> olock(OverflowMutex);
           OverflowCoords.push_back(dropped.coord);
         }
-          }))
+          }, jobId))
   {
     {
       std::lock_guard<std::mutex> lock(InFlightMutex);
@@ -525,6 +562,50 @@ void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
 {
   std::lock_guard<std::mutex> lock(InFlightMutex);
   InFlight.erase(coord);
+}
+
+void UAsyncMeshBuilder::NoteObsoleteJob(glm::ivec3 coord,
+                                       const JobStageSpan &span,
+                                       JobTerminalReason reason)
+{
+  DiscardedLate.fetch_add(1, std::memory_order_relaxed);
+  if (reason == JobTerminalReason::SubmissionEpochChanged)
+    DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
+  else
+    DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
+  {
+    std::lock_guard<std::mutex> lock(DiscardedMutex);
+    DiscardedCoords.push_back(coord);
+  }
+  UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
+}
+
+void UAsyncMeshBuilder::CancelPendingOutsideHorizontalRadius(glm::ivec3 focus,
+                                                            int keep_radius)
+{
+  if (keep_radius < 0) { CancelPending(); return; }
+  std::unordered_set<uint64_t> protected_jobs;
+  {
+    std::lock_guard<std::mutex> lock(InFlightMutex);
+    for (auto it = InFlight.begin(); it != InFlight.end();)
+    {
+      const int horizontal = std::max(std::abs(it->first.x-focus.x),
+                                       std::abs(it->first.z-focus.z));
+      if (horizontal <= keep_radius)
+      {
+        protected_jobs.insert(it->second);
+        ++it;
+      }
+      else it = InFlight.erase(it);
+    }
+  }
+  Pool.CancelPendingJobsIf([&](uint64_t id) { return !protected_jobs.count(id); });
+  Completed.EraseIf([&](const MeshBuildResult &result) {
+    if (protected_jobs.count(result.jobId)) return false;
+    UJobStageTrace::NoteTerminal(result.stageTrace, JobStage::Cancelled,
+                                 JobTerminalReason::JobIdentityReplaced);
+    return true;
+  });
 }
 
 std::vector<glm::ivec3> UAsyncMeshBuilder::TakeOverflowCoords()

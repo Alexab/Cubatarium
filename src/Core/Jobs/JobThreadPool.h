@@ -43,10 +43,12 @@ public:
   /// handle TryEnqueue(false) without discarding their demand.
   void Enqueue(std::function<void()> job);
   /// Returns false if the pending queue is at MaxPendingJobs (job not queued).
-  bool TryEnqueue(std::function<void()> job);
+  bool TryEnqueue(std::function<void()> job, uint64_t tag = 0);
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPendingJobs();
+  /// Cancel selected queued jobs; running closures retain their normal owner.
+  std::size_t CancelPendingJobsIf(const std::function<bool(uint64_t)> &cancel);
   /// Stop workers for process exit: wait up to timeout, then detach leftovers
   /// so destructors never block forever on late ChunkPopulate/carve.
   void ShutdownForProcessExit(std::chrono::milliseconds timeout);
@@ -71,7 +73,12 @@ private:
   std::vector<std::thread> Workers;
   mutable std::mutex QueueMutex;
   std::condition_variable QueueCv;
-  std::deque<std::function<void()>> Jobs;
+  struct QueuedJob
+  {
+    std::function<void()> run;
+    uint64_t tag{0};
+  };
+  std::deque<QueuedJob> Jobs;
   std::size_t ActiveJobs{0};
   std::size_t MaxPendingJobs{kDefaultMaxPendingJobsPerPool};
   std::atomic<uint64_t> RejectedEnqueues{0};

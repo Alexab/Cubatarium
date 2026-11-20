@@ -1,6 +1,7 @@
 #include "Core/Jobs/JobThreadPool.h"
 #include "App/Platform/Log.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include <algorithm>
 #include <thread>
 
 namespace cutum
@@ -81,12 +82,12 @@ void UJobThreadPool::Enqueue(std::function<void()> job)
   // their lossless contract; bounded producers must use TryEnqueue explicitly.
   {
     std::lock_guard<std::mutex> lock(QueueMutex);
-    Jobs.push_back(std::move(job));
+    Jobs.push_back({std::move(job), 0});
   }
   QueueCv.notify_one();
 }
 
-bool UJobThreadPool::TryEnqueue(std::function<void()> job)
+bool UJobThreadPool::TryEnqueue(std::function<void()> job, uint64_t tag)
 {
   {
     std::lock_guard<std::mutex> lock(QueueMutex);
@@ -95,7 +96,7 @@ bool UJobThreadPool::TryEnqueue(std::function<void()> job)
       RejectedEnqueues.fetch_add(1, std::memory_order_relaxed);
       return false;
     }
-    Jobs.push_back(std::move(job));
+    Jobs.push_back({std::move(job), tag});
   }
   QueueCv.notify_one();
   return true;
@@ -120,6 +121,18 @@ void UJobThreadPool::CancelPendingJobs()
   Jobs.clear();
 }
 
+std::size_t UJobThreadPool::CancelPendingJobsIf(
+    const std::function<bool(uint64_t)> &cancel)
+{
+  std::lock_guard<std::mutex> lock(QueueMutex);
+  const auto before = Jobs.size();
+  Jobs.erase(std::remove_if(Jobs.begin(), Jobs.end(),
+                            [&](const QueuedJob &job) { return cancel(job.tag); }),
+             Jobs.end());
+  if (Jobs.empty() && ActiveJobs == 0) QueueCv.notify_all();
+  return before - Jobs.size();
+}
+
 std::size_t UJobThreadPool::GetPendingJobCount() const
 {
   std::lock_guard<std::mutex> lock(QueueMutex);
@@ -137,7 +150,7 @@ void UJobThreadPool::WorkerLoop()
   CubatariumSetWorkerJobKind(WorkerJobKind.c_str());
   for (;;)
   {
-    std::function<void()> job;
+    QueuedJob job;
     {
       std::unique_lock<std::mutex> lock(QueueMutex);
       QueueCv.wait(lock, [this] { return Stop || !Jobs.empty(); });
@@ -149,7 +162,9 @@ void UJobThreadPool::WorkerLoop()
       Jobs.pop_front();
       ++ActiveJobs;
     }
-    job();
+    job.run();
+    // Idle includes release of closure-owned snapshot/work-slot credits.
+    job.run = {};
     {
       std::lock_guard<std::mutex> lock(QueueMutex);
       --ActiveJobs;
