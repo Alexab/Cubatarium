@@ -16,6 +16,10 @@ struct BoundFieldPixelEvidence
   uint64_t frame_epoch{0}, world_epoch{0}, field_incarnation{0},
       field_revision{0};
   uint64_t geometry_incarnation{0}, geometry_content{0};
+  bool draw_table{false};
+  uint32_t draw_table_buffer{0}, draw_table_row{0}, indirect_buffer{0};
+  std::array<uint32_t, 5> indirect_command{};
+  std::array<uint32_t, 3> geometry_command{};
 };
 inline std::ostream &operator<<(std::ostream &out,
                                 const BoundFieldPixelEvidence &e)
@@ -35,6 +39,15 @@ inline std::ostream &operator<<(std::ostream &out,
              << ",\"field_incarnation\":" << e.field_incarnation
              << ",\"field_revision\":" << e.field_revision
              << ",\"geometry_incarnation\":" << e.geometry_incarnation
-             << ",\"geometry_content\":" << e.geometry_content << '}';
+             << ",\"geometry_content\":" << e.geometry_content
+             << ",\"draw_table\":" << (e.draw_table ? "true" : "false")
+             << ",\"draw_table_buffer\":" << e.draw_table_buffer
+             << ",\"draw_table_row\":" << e.draw_table_row
+             << ",\"indirect_buffer\":" << e.indirect_buffer
+             << ",\"indirect_command\":[" << e.indirect_command[0] << ','
+             << e.indirect_command[1] << ',' << e.indirect_command[2] << ','
+             << e.indirect_command[3] << ',' << e.indirect_command[4]
+             << "],\"geometry_command\":[" << e.geometry_command[0] << ','
+             << e.geometry_command[1] << ',' << e.geometry_command[2] << "]}";
 }
 } // namespace cutum

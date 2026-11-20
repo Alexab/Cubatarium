@@ -99,6 +99,19 @@ class SourceDrawTest(unittest.TestCase):
     def test_air_hole_requires_another_geometry_model(self):
         self.target='air';self.check('UNTESTED')
 
+    def test_mdi_field_requires_actual_command_geometry_and_instanced_row(self):
+        e=self.rows[34]['renderer_pixel_opaque_bound_field']
+        e.update(draw_table=True,draw_table_buffer=4,draw_table_row=2,
+                 indirect_buffer=5,indirect_command=[6,1,0,0,2],geometry_command=[6,0,0])
+        self.check('PASS')
+        original=copy.deepcopy(e)
+        for change in (dict(draw_table_buffer=0),dict(indirect_buffer=0),
+                       dict(draw_table_row=3),dict(indirect_command=[6,0,0,0,2]),
+                       dict(indirect_command=[6,1,0,1,2]),dict(geometry_command=[7,0,0]),
+                       dict(draw_table=1)):
+            with self.subTest(change=change):
+                e.update(change);self.check('FAIL');e.clear();e.update(copy.deepcopy(original))
+
     def test_missing_before_effect_cannot_pass_from_after_only(self):
         self.rows=self.rows[30:]
         self.check('UNTESTED')

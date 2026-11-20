@@ -3446,6 +3446,7 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(bound_section_light_probe_driver_test
     src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Lighting/SectionLightBindingTable.cpp
+    src/Render/Lighting/SectionLightDrawTable.cpp
     src/Test/BoundSectionLightProbeDriverTest.cpp)
   target_include_directories(bound_section_light_probe_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(bound_section_light_probe_driver_test PRIVATE

@@ -39,4 +39,20 @@ def read_bound_field(row):
         raise ValueError("bound field from another world")
     if evidence["frame_epoch"] != row.get("frame_epoch"):
         raise ValueError("bound field from another frame")
+    if 'draw_table' in evidence:
+        if type(evidence['draw_table']) is not bool:
+            raise ValueError('invalid draw-table mode')
+        if evidence['draw_table']:
+            command=evidence.get('indirect_command')
+            geometry=evidence.get('geometry_command')
+            if (not uint(evidence.get('draw_table_buffer'),32,positive=True) or
+                    not uint(evidence.get('indirect_buffer'),32,positive=True) or
+                    not uint(evidence.get('draw_table_row'),32) or
+                    not isinstance(command,list) or len(command)!=5 or
+                    any(not uint(v,32) for v in command) or command[0]==0 or
+                    command[1]!=1 or command[4]!=evidence['draw_table_row'] or
+                    not isinstance(geometry,list) or len(geometry)!=3 or
+                    any(not uint(v,32) for v in geometry) or
+                    [command[0],command[2],command[3]]!=geometry):
+                raise ValueError('missing GPU draw-table command identity')
     return evidence

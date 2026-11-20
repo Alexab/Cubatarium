@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Render/Lighting/SectionLightBindingTable.h"
+#include "Render/Lighting/SectionLightDrawTable.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -26,6 +27,10 @@ struct BoundSectionLightCapture
   uint64_t frame_epoch{0}, world_epoch{0}, field_incarnation{0},
       field_revision{0};
   uint64_t geometry_incarnation{0}, geometry_content{0};
+  bool draw_table{false};
+  uint32_t draw_table_buffer{0}, draw_table_row{0}, indirect_buffer{0};
+  std::array<uint32_t, 5> indirect_command{};
+  std::array<uint32_t, 3> geometry_command{};
   glm::ivec3 origin{0};
   SectionLightVolume data;
 
@@ -79,7 +84,8 @@ public:
   BoundSectionLightCapture
   Capture(uint32_t expected_program,
           const std::array<uint32_t, 4> &expected_handle, glm::ivec3 origin,
-          const SectionLightVolume &expected)
+          const SectionLightVolume &expected,
+          std::optional<uint32_t> draw_row = std::nullopt)
   {
     BoundSectionLightCapture result;
     result.origin = origin;
@@ -103,7 +109,8 @@ public:
     if (uint32_t(state.program) != expected_program || !state.program ||
         !integer("uUseSurfaceSectionLight", enabled) || enabled != 1 ||
         !integer("uUseSurfaceSectionLightDrawTable", table_mode) ||
-        table_mode != 0 || !integer("uSectionLightAtlas", atlas_unit) ||
+        table_mode != int(draw_row.has_value()) ||
+        !integer("uSectionLightAtlas", atlas_unit) ||
         !integer("uSectionLightBindings", table_unit) || atlas_unit < 0 ||
         table_unit < 0 || atlas_unit >= max_units || table_unit >= max_units)
       return result;
@@ -112,7 +119,42 @@ public:
     if (handle_at < 0 || incarnation_at < 0)
       return result;
     std::array<GLuint, 2> incarnation{};
-    glGetUniformuiv(state.program, handle_at, result.handle.data());
+    if (draw_row)
+    {
+      result.draw_table = true;
+      result.draw_table_row = *draw_row;
+      GLint enabled_attr = 0, integer_attr = 0, size = 0, type = 0, stride = 0,
+            divisor = 0, buffer = 0;
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_ENABLED, &enabled_attr);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_INTEGER, &integer_attr);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_SIZE, &size);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_TYPE, &type);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &stride);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_DIVISOR, &divisor);
+      glGetVertexAttribiv(7, GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING, &buffer);
+      void *pointer = nullptr;
+      glGetVertexAttribPointerv(7, GL_VERTEX_ATTRIB_ARRAY_POINTER, &pointer);
+      if (!enabled_attr || !integer_attr || size != 4 ||
+          type != GL_UNSIGNED_INT || divisor != 1 || stride != 16 ||
+          buffer <= 0 || pointer != nullptr ||
+          *draw_row >= SectionLightDrawTable::MaxRows)
+        return result;
+      result.draw_table_buffer = uint32_t(buffer);
+      GLint previous = 0;
+      glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previous);
+      glBindBuffer(GL_COPY_READ_BUFFER, GLuint(buffer));
+      GLint64 bytes = 0;
+      glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &bytes);
+      const auto offset = GLintptr(*draw_row) * 16;
+      if (bytes >= offset + 16)
+        glGetBufferSubData(GL_COPY_READ_BUFFER, offset, 16,
+                           result.handle.data());
+      glBindBuffer(GL_COPY_READ_BUFFER, GLuint(previous));
+      if (bytes < offset + 16)
+        return result;
+    }
+    else
+      glGetUniformuiv(state.program, handle_at, result.handle.data());
     glGetUniformuiv(state.program, incarnation_at, incarnation.data());
     if (result.handle != expected_handle ||
         !incarnation[0] && !incarnation[1] ||

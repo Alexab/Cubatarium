@@ -31,18 +31,22 @@ static void Run()
 {
   const auto vertex =
       Compile(GL_VERTEX_SHADER,
-              "#version 330 core\nvoid main(){gl_Position=vec4(0,0,0,1);}");
-  const auto fragment = Compile(
-      GL_FRAGMENT_SHADER,
-      std::string("#version 330 core\n") +
-          SectionLightBindingTable::ShaderInterface() +
-          "uniform bool "
-          "uUseSurfaceSectionLight,uUseSurfaceSectionLightDrawTable;"
-          "uniform uvec4 uSurfaceSectionLightHandle;out vec4 color;"
-          "void main(){uint "
-          "p=0u;if(uUseSurfaceSectionLight&&!uUseSurfaceSectionLightDrawTable)"
-          "sectionLightFetch(uSurfaceSectionLightHandle,ivec3(ivec2(gl_FragCoord.xy),0),"
-          "p);color=vec4(float(p)/255.0);}");
+              "#version 330 core\nlayout(location=7) in uvec4 aHandle;"
+              "flat out uvec4 vHandle;"
+              "void main(){vHandle=aHandle;gl_Position=vec4(0,0,0,1);}");
+  const auto fragment =
+      Compile(GL_FRAGMENT_SHADER,
+              std::string("#version 330 core\n") +
+                  SectionLightBindingTable::ShaderInterface() +
+                  "uniform bool "
+                  "uUseSurfaceSectionLight,uUseSurfaceSectionLightDrawTable;"
+                  "uniform uvec4 uSurfaceSectionLightHandle;flat in uvec4 "
+                  "vHandle;out vec4 color;"
+                  "void main(){uint "
+                  "p=0u;if(uUseSurfaceSectionLight)"
+                  "sectionLightFetch(uUseSurfaceSectionLightDrawTable?vHandle:"
+                  "uSurfaceSectionLightHandle,ivec3(ivec2(gl_FragCoord.xy),0),"
+                  "p);color=vec4(float(p)/255.0);}");
   const auto source = glCreateProgram();
   glAttachShader(source, vertex);
   glAttachShader(source, fragment);
@@ -60,6 +64,7 @@ static void Run()
   const auto next = Pattern(19);
   const auto resident = table.Create({7, 41, 3}, original, origin);
   Expect(bool(resident), "resident source");
+  BoundSectionLightProbe probe;
   const auto bind = [&](SectionLightBindingTable::Handle handle)
   {
     Expect(table.Bind(4, 5), "source binding");
@@ -77,6 +82,41 @@ static void Run()
                   words.data());
   };
   bind(*resident);
+  GLuint draw_vao = 0;
+  glGenVertexArrays(1, &draw_vao);
+  glBindVertexArray(draw_vao);
+  SectionLightDrawTable draw_rows;
+  const std::vector<SectionLightDrawTable::Words> rows{{0, 0, 0, 0},
+                                                       resident->ShaderWords()};
+  Expect(draw_rows.Prepare(rows) && draw_rows.BindAttribute(),
+         "actual instanced draw-table buffer bound");
+  glUniform1i(glGetUniformLocation(source, "uUseSurfaceSectionLightDrawTable"),
+              1);
+  const auto table_capture =
+      probe.Capture(source, resident->ShaderWords(), origin, *original, 1);
+  Expect(table_capture.valid && table_capture.draw_table &&
+             table_capture.draw_table_buffer == draw_rows.Buffer() &&
+             table_capture.draw_table_row == 1 &&
+             table_capture.data.cells == original->cells,
+         "actual GPU instanced row selects the captured full field");
+  Expect(!probe.Capture(source, resident->ShaderWords(), origin, *original, 0)
+              .valid,
+         "wrong GPU row cannot inherit expected uniform handle");
+  Expect(!probe.Capture(source, resident->ShaderWords(), origin, *original, 2)
+              .valid,
+         "out-of-buffer GPU row rejected");
+  glVertexAttribDivisor(7, 2);
+  Expect(!probe.Capture(source, resident->ShaderWords(), origin, *original, 1)
+              .valid,
+         "wrong instanced row divisor rejected");
+  glVertexAttribDivisor(7, 1);
+  SectionLightDrawTable::DisableAttribute();
+  Expect(!probe.Capture(source, resident->ShaderWords(), origin, *original, 1)
+              .valid,
+         "disabled draw-table attribute rejected");
+  glBindVertexArray(0);
+  glDeleteVertexArrays(1, &draw_vao);
+  bind(*resident);
   glViewport(3, 4, 31, 29);
   glEnable(GL_SCISSOR_TEST);
   glScissor(2, 3, 1, 1);
@@ -93,7 +133,6 @@ static void Run()
   glBindBuffer(GL_PIXEL_PACK_BUFFER, pack);
   glBufferData(GL_PIXEL_PACK_BUFFER, 1, nullptr, GL_STREAM_READ);
   glActiveTexture(GL_TEXTURE3);
-  BoundSectionLightProbe probe;
   const auto capture =
       probe.Capture(source, resident->ShaderWords(), origin, *original);
   Expect(capture.captured && capture.valid && capture.cpu_matches,

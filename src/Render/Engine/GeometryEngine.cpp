@@ -1,4 +1,6 @@
 #include "Render/Engine/GeometryEngine.h"
+#include <map>
+#include <tuple>
 #include "App/Platform/Log.h"
 #include "App/Settings/GraphicsQualityProfile.h"
 #include "Blocks/BlockCatalogQueries.h"
@@ -360,6 +362,13 @@ struct GreedyVertexLightMatch
   BlockId block_id{BLOCK_AIR};
   std::shared_ptr<const BoundSectionLightCapture> bound_light;
 };
+
+using CpuBoundLightKey = std::tuple<int, int, int, uint16_t, BlockId>;
+thread_local std::map<
+    CpuBoundLightKey,
+    std::pair<std::shared_ptr<SectionRenderLightBinding>,
+              std::shared_ptr<const BoundSectionLightCapture>>>
+    g_cpu_bound_light_witnesses;
 
 struct ClosestTrianglePoint
 {
@@ -2126,6 +2135,14 @@ void CaptureTransparentPixelProbe(
               }
               record.renderer_pixel_opaque_source_index_count +=
                   static_cast<uint32_t>(batch->indices.size());
+              const auto captured = g_cpu_bound_light_witnesses.find(
+                  {ref.chunkCoord.x, ref.chunkCoord.y, ref.chunkCoord.z,
+                   ref.batchIndex, batch->blockId});
+              const auto bound =
+                  captured != g_cpu_bound_light_witnesses.end() &&
+                          captured->second.first == batch->renderLightBinding
+                      ? captured->second.second
+                      : nullptr;
               for (size_t index = 0; index + 2u < batch->indices.size();
                    index += 3u)
               {
@@ -2138,10 +2155,13 @@ void CaptureTransparentPixelProbe(
                 {
                   continue;
                 }
+                const auto previous_distance = opaque_vertex_light.distance;
                 ConsiderGreedyVertexLightTriangle(
                     opaque_surface, *batch, batch->vertices[ia],
                     batch->vertices[ib], batch->vertices[ic],
                     opaque_vertex_light);
+                if (opaque_vertex_light.distance < previous_distance)
+                  opaque_vertex_light.bound_light = bound;
               }
             }
           };
@@ -2197,6 +2217,12 @@ void CaptureTransparentPixelProbe(
               e.field_revision = bound->field_revision;
               e.geometry_incarnation = bound->geometry_incarnation;
               e.geometry_content = bound->geometry_content;
+              e.draw_table = bound->draw_table;
+              e.draw_table_buffer = bound->draw_table_buffer;
+              e.draw_table_row = bound->draw_table_row;
+              e.indirect_buffer = bound->indirect_buffer;
+              e.indirect_command = bound->indirect_command;
+              e.geometry_command = bound->geometry_command;
               if (const auto value =
                       bound->SampleSurface(opaque_vertex_light.surface,
                                            opaque_vertex_light.face_index))
@@ -4405,6 +4431,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyGreedyMeshBuffers();
   if (SectionLightOwner)
     SectionLightOwner->Reset();
+  g_cpu_bound_light_witnesses.clear();
   BoundLightProbe_.reset();
   FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
@@ -5258,6 +5285,7 @@ void UGeometryEngine::DrawCubeGeometry()
       CaptureBoundLight_ = pixel_probe_capture.probe_id != 0 &&
                            BoundSectionLightProbeRequested();
       BoundLightCaptures_ = 0;
+      g_cpu_bound_light_witnesses.clear();
       DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
                               camera->GetRenderPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
@@ -6266,6 +6294,76 @@ void UGeometryEngine::DrawGreedyGpuBatches(
               std::to_string(batch.chunkCoord.y) + "," +
               std::to_string(batch.chunkCoord.z) + ")");
   };
+  const auto capture_cpu_light = [&](const GreedyGpuBatch &batch,
+                                     std::optional<uint32_t> row,
+                                     uint32_t command_buffer = 0)
+  {
+    if (!CaptureBoundLight_ || !physical_light || BoundLightCaptures_ >= 512 ||
+        (batch.blockId != 560 && batch.blockId != 376))
+      return;
+    const auto origin = batch.chunkCoord * CHUNK_SIZE;
+    const auto delta = glm::max(
+        glm::max(glm::vec3(origin) - glm::vec3(.5f) - camera_position,
+                 camera_position - (glm::vec3(origin) + glm::vec3(15.5f))),
+        glm::vec3(0.0f));
+    if (glm::dot(delta, delta) > 32.0f * 32.0f)
+      return;
+    const auto &binding = batch.renderLightBinding;
+    if (!binding || !binding->IsLive() || !binding->LightSnapshot().Volume())
+      return;
+    std::array<uint32_t, 5> command{};
+    if (row)
+    {
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      if (!command_buffer)
+        return;
+      GLint previous = 0;
+      glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &previous);
+      glBindBuffer(GL_COPY_READ_BUFFER, command_buffer);
+      GLint64 size = 0;
+      glGetBufferParameteri64v(GL_COPY_READ_BUFFER, GL_BUFFER_SIZE, &size);
+      const auto offset = GLintptr(*row) * sizeof(command);
+      if (size >= offset + sizeof(command))
+        glGetBufferSubData(GL_COPY_READ_BUFFER, offset, sizeof(command),
+                           command.data());
+      glBindBuffer(GL_COPY_READ_BUFFER, GLuint(previous));
+      // Match the GPU-consumed command to this exact indexed geometry and
+      // its instanced handle row. Culled commands cannot manufacture a draw.
+      if (size < offset + sizeof(command) ||
+          command[0] != uint32_t(batch.indexCountGl) || command[1] != 1 ||
+          command[2] != batch.eboByteOffset / sizeof(uint32_t) ||
+          command[3] != batch.vboByteOffset / sizeof(GreedyMeshVertex) ||
+          command[4] != *row)
+        return;
+#else
+      return;
+#endif
+    }
+    ++BoundLightCaptures_;
+    if (!BoundLightProbe_)
+      BoundLightProbe_ = std::make_unique<BoundSectionLightProbe>();
+    const auto &snapshot = binding->LightSnapshot();
+    auto capture =
+        std::make_shared<BoundSectionLightCapture>(BoundLightProbe_->Capture(
+            greedyShader->GetProgramID(), binding->ShaderWords(), origin,
+            *snapshot.Volume(), row));
+    capture->frame_epoch = WorldInstance->GetStreamingFrameEpoch();
+    capture->world_epoch = binding->WorldEpoch();
+    capture->field_incarnation = snapshot.FieldIncarnation();
+    capture->field_revision = snapshot.FieldRevision();
+    capture->geometry_incarnation =
+        binding->GeometryInputs().stamps[0].incarnation;
+    capture->geometry_content = binding->GeometryInputs().stamps[0].content;
+    capture->indirect_buffer = command_buffer;
+    capture->indirect_command = command;
+    capture->geometry_command = {
+        uint32_t(batch.indexCountGl),
+        uint32_t(batch.eboByteOffset / sizeof(uint32_t)),
+        uint32_t(batch.vboByteOffset / sizeof(GreedyMeshVertex))};
+    g_cpu_bound_light_witnesses[{batch.chunkCoord.x, batch.chunkCoord.y,
+                                 batch.chunkCoord.z, batch.batchIndex,
+                                 batch.blockId}] = {binding, capture};
+  };
   const bool regional_weather =
       WorldInstance && WorldInstance->HasRegionalWeather();
   const auto is_fluid_block = [&](BlockId block_id)
@@ -6537,6 +6635,10 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       }
       if (gpu_range_submitted)
       {
+        if (table_light)
+          for (size_t n = i; n < j; ++n)
+            capture_cpu_light(cache.batches[n], uint32_t(n),
+                              cache.IndirectCmdsBuffer);
         note_surface_submit(table_light ? 0u : 1u, head);
         if (capture_generic_draw_state)
         {
@@ -6616,6 +6718,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             glDrawElementsBaseVertex(
                 GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
                 reinterpret_cast<void *>(gpu.eboByteOffset), base_vertex);
+            capture_cpu_light(gpu, std::nullopt);
             note_surface_submit(2, gpu);
             if (capture_generic_draw_state)
             {
@@ -6708,6 +6811,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       if (!prepare_direct_surface_light(gpu))
         continue;
       glDrawElements(GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT, nullptr);
+      capture_cpu_light(gpu, std::nullopt);
       note_surface_submit(2, gpu);
       note_fluid_single_submit(gpu, 4u);
       if (witness_target)
@@ -6805,6 +6909,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       glDrawElements(
           GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
           reinterpret_cast<void *>(gpu.pooled ? gpu.eboByteOffset : 0));
+      capture_cpu_light(gpu, std::nullopt);
       note_surface_submit(2, gpu);
       note_fluid_single_submit(gpu, 5u);
       if (witness_target)
