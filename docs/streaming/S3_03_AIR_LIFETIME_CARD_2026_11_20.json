@@ -1,0 +1,18 @@
+{
+  "package": "S3.03",
+  "hypothesis": "Actual demand leases retain independent known-AIR fields without geometry; Unknown never gains readiness, evidence revocation invalidates authority immediately, expiration/renewal cannot reuse retired identity",
+  "inputs": "Real UChunkRenderDemandStore and UBlockWorld/ChunkManager at negative target1,-3,0; emitter at15,-40,8. Epoch9, lease frame0..4. Unknown -> Known AIR compute/install/receipt; proof revoke at2, recover at3; retirement at5; renewed lease/field at6. Retain prior render volume.",
+  "pass": "No Unknown field or readiness; complete known AIR receipt; same field identity while leased, missing readiness while proof revoked; expiration retires field; renewal fresh identity; retained bytes immutable; geometry/resident counts unchanged. Existing demand, field ownership and light-proof suites PASS.",
+  "build": "cmake --build build/desktop-msvc --config Release --target relight_result_install_test section_light_field_ownership_test chunk_render_demand_test --parallel 8",
+  "test": "ctest --test-dir build/desktop-msvc -C Release -R ^(demanded_air_lifetime_test|light_calculation_certificate_test|section_light_field_ownership_test|chunk_render_demand_test)$ --output-on-failure",
+  "artifacts": "build/desktop-msvc/s3-air-lifetime-{build,test}-20261120.log",
+  "native_reuse": "Join actual s2-air-pocket-rd4-20261120-native job_submit source=light_sample_consumer with air_requested>0, worker_done known complete and calculation_certificate air_complete>0 by exact job ID. Verify source-bound runtime owner/field files unchanged before relying on it. No extra native flight if this evidence is sufficient.",
+  "timeout_seconds": 180,
+  "negative_control": "After four-test PASS, temporarily remove keep(entry.first) lease predicate from actual ChunkManager absent-field retirement. Demand lifetime must FAIL. Restore raw source bytes in finally with fresh mtime, verify SHA256 and actual recompilation, then four normal tests PASS. No fault hook/native run retained.",
+  "localized_setup_findings": "Existing render-input test expected whole neighbor content revision invalidation, contrary to explicit two-facing-plane geometry contract; corrected to assert unrelated interior remains compatible and actual boundary change invalidates. New fixture initially omitted BlockWorld material catalog binding: complete receipt existed but SampleSceneLight lacked its internal catalog. Binding added; no production readiness criterion weakened.",
+  "run_budget": "One validation; localized correction/verification only after a concrete failure. Native proof is automatic creation; unit controls certify lease lifetime, not a synthetic claim that manual installation exercises the runtime scheduler.",
+  "scope_limit": "CPU demand/field lifetime and known-vs-unknown readiness. Complete scheduler/cancel/eviction and persisted/backend/rendered matrix retain original S3.04..S6 requirements.",
+  "result": "Four Release suites PASS, including joined lease/field lifecycle. Actual retirement lease-ignore fault rejected; exact source bytes restored and normal suites PASS after confirmed recompilation. Five complete automatic native foreground AIR cohorts joined, with unchanged runtime sources and same current bin EXE.",
+  "native_cohorts": "build\\desktop-msvc\\s3-automatic-air-native-cohorts-20261120.json",
+  "native_source_reuse": "build\\desktop-msvc\\s3-air-native-source-reuse-20261120.json"
+}

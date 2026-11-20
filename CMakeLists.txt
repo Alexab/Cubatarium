@@ -2095,6 +2095,8 @@ cubatarium_add_test(NAME relight_result_install_test
         src/Blocks/BlockDefinitionStorage.cpp
         src/World/Lighting/LightUtil.cpp
         src/World/Lighting/ChunkRelightSnapshot.cpp
+        src/World/Streaming/ChunkRenderDemand.cpp
+        src/World/Diagnostics/JobStageTrace.cpp
         src/Test/RelightResultInstallTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
@@ -2111,6 +2113,9 @@ set_tests_properties(section_light_geometry_test PROPERTIES LABELS "unit;streami
 add_test(NAME section_light_job_order_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --job-order)
 set_tests_properties(section_light_job_order_test PROPERTIES LABELS "unit;streaming;lighting;cpu" TIMEOUT 120)
+add_test(NAME demanded_air_lifetime_test
+    COMMAND $<TARGET_FILE:relight_result_install_test> --demand-air)
+set_tests_properties(demanded_air_lifetime_test PROPERTIES LABELS "unit;streaming;lighting;cpu" TIMEOUT 30)
 add_test(NAME section_skylight_frontier_test
     COMMAND $<TARGET_FILE:relight_result_install_test> --sky-frontier)
 set_tests_properties(section_skylight_frontier_test PROPERTIES LABELS "unit;streaming;lighting;cpu" TIMEOUT 30)

@@ -10,6 +10,7 @@
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/SceneLightRefresh.h"
 #include "World/Streaming/MeshLitGate.h"
+#include "World/Streaming/ChunkRenderDemand.h"
 
 #include <algorithm>
 #include <chrono>
@@ -1288,6 +1289,87 @@ void TestJobOrderAgainstDenseReference()
   }
 }
 
+void TestDemandedAirLeaseAndFieldLifetime()
+{
+  using namespace cutum;
+  auto definitions=std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition emitter; emitter.Physics=BlockPhysicsProfile::Solid(); emitter.Lighting.Emission=15;
+  definitions->ReplaceAll({{50,emitter}},{{"emitter",50}});
+  UBlockRegistry registry(nullptr,definitions);
+  const auto catalog=definitions->GetCatalogSnapshot();
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions.get()); // sampler's material catalog binding
+  const auto known=[&](bool value)
+  { world.SetKnownOpenSkyAbsentQuery([value](glm::ivec3){return value;}); };
+  known(false);
+  world.SetBlock({15,-40,8},50);
+  const glm::ivec3 target(1,-3,0), sample(16,-40,8);
+  auto &manager=world.GetChunkManager();
+  const auto geometry_revision=manager.GetGeometryInputRevision();
+  const auto resident=manager.GetResidentChunkCount();
+  UChunkRenderDemandStore demands;
+  demands.RequestLightSample(target,9,0,4);
+  RelightJobSpec spec; spec.min_world_y=-64; spec.max_world_y=319;
+  spec.include_known_air_outputs=true;
+  const auto solve=[&]
+  { return UChunkRelightSnapshot::CaptureSections(world,spec,{target}).Compute(registry); };
+  auto unknown=solve();
+  Expect(unknown.chunks.empty() && world.RecordLightCalculation(unknown,catalog)==0 &&
+             !manager.GetSectionLightField(target) && !world.SampleSceneLight(sample).IsReady() &&
+             demands.HasLightSampleDemand(target,9,0),
+         "Unknown demand neither allocates an AIR field nor certifies readiness");
+  known(true);
+  const auto install=[&]
+  {
+    auto result=solve();
+    Expect(result.inputs_complete && result.chunks.size()==1 &&
+               ValidateRelightInputs(result,world,catalog,true)==RelightInputValidation::Current,
+           "known AIR demand computes a current complete output");
+    InstallComputedLight(world,result.chunks[0],true,true);
+    const int recorded=world.RecordLightCalculation(result,catalog);
+    const auto sampled=world.SampleSceneLight(sample);
+    if (recorded!=1 || !sampled.IsReady())
+      std::cerr << "AIR install recorded=" << recorded << " state=" << static_cast<int>(sampled.state)
+                << " complete=" << world.HasCompleteLightSamplingCalculation(target,catalog) << '\n';
+    Expect(recorded==1 && sampled.IsReady(),
+           "installed AIR field needs an actual current calculation receipt");
+  };
+  install();
+  const auto field=manager.GetSectionLightField(target);
+  const auto identity=field->GetIncarnation();
+  const auto retained=world.CaptureRenderLightSnapshot(target);
+  Expect(retained && !manager.HasChunk(target),"AIR render resource exists without a geometry adapter");
+  const auto old_byte=retained->Volume()->cells[SectionLightVolume::Index(0,8,8)];
+  const auto retire=[&](uint64_t frame)
+  { manager.RetireAbsentSectionLightFields(256,[&](glm::ivec3 c){return demands.HasLightSampleDemand(c,9,frame);}); };
+  for (uint64_t frame=0;frame<=4;++frame)
+  {
+    if (frame==2)
+    {
+      known(false);
+      Expect(!world.SampleSceneLight(sample).IsReady(),"revoked AIR evidence immediately removes current readiness");
+      auto incomplete=solve();
+      Expect(incomplete.chunks.empty() && world.RecordLightCalculation(incomplete,catalog)==0,
+             "retained bytes cannot turn Unknown into a complete AIR output");
+    }
+    if (frame==3) { known(true); install(); }
+    retire(frame);
+    Expect(manager.GetSectionLightField(target)==field && field->GetIncarnation()==identity,
+           "live lease retains the canonical absent field through bounded retirement");
+  }
+  retire(5);
+  Expect(!manager.GetSectionLightField(target) && !world.SampleSceneLight(sample).IsReady(),
+         "expired absent lease retires its field and cannot leave a ready sample");
+  demands.RequestLightSample(target,9,6,2);
+  install();
+  Expect(manager.GetSectionLightField(target)->GetIncarnation()!=identity &&
+             retained->Volume()->cells[SectionLightVolume::Index(0,8,8)]==old_byte,
+         "renewed demand creates a fresh identity without mutating retained render bytes");
+  Expect(manager.GetResidentChunkCount()==resident && manager.GetGeometryInputRevision()==geometry_revision &&
+             !manager.HasChunk(target),
+         "demanded AIR lifetime never fabricates terrain or advances the geometry clock");
+}
+
 void TestUnknownGeometryAndPinnedCatalog()
 {
   using namespace cutum;
@@ -1509,9 +1591,16 @@ void TestKnownAirLightResourceCalculation()
   for (size_t n = 0; n < geometry.stamps.size(); ++n)
   {
     auto changed = geometry;
+    const bool boundary=n && changed.stamps[n].incarnation && changed.stamps[n].hasBoundaryContent;
     ++changed.stamps[n].content;
+    if (boundary)
+    {
+      Expect(render->MatchesGeometry(changed),
+             "unread neighbor interior revision does not invalidate geometry compatibility");
+      ++changed.stamps[n].boundaryContent[(n-1)^1];
+    }
     Expect(!render->MatchesGeometry(changed),
-           "every geometry content input participates in light compatibility");
+           "every sampled geometry input participates in light compatibility");
     changed = geometry;
     ++changed.stamps[n].incarnation;
     Expect(!render->MatchesGeometry(changed),
@@ -2565,6 +2654,12 @@ void TestPendingCoverageRequiresCurrentKnownProof()
 
 int main(int argc, char **argv)
 {
+  if (argc == 2 && std::string(argv[1]) == "--demand-air")
+  {
+    TestDemandedAirLeaseAndFieldLifetime();
+    std::cout << "demanded_air_lifetime_test: OK\n";
+    return 0;
+  }
   if (argc == 2 && std::string(argv[1]) == "--job-order")
   {
     TestJobOrderAgainstDenseReference();

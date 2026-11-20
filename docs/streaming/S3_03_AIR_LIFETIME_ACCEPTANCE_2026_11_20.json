@@ -1,0 +1,54 @@
+{
+  "package": "S3.03",
+  "status": "COMPLETE",
+  "requirements": [
+    {
+      "id": "automatic-air-creation",
+      "proof": "Five actual native source=light_sample_consumer jobs join by exact ID with air_requested>0, known complete worker/no frontier and fully complete installed AIR certificates. Runtime sources unchanged and same bin EXE; no new native run.",
+      "artifacts": [
+        {
+          "path": "build\\desktop-msvc\\s3-automatic-air-native-cohorts-20261120.json",
+          "sha256": "86b6b1d198d7a9df42f5e43dd0ed0b23fae01fc40d0fa8714db4fe4eda02d9b3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-native-source-reuse-20261120.json",
+          "sha256": "f7d21754ba7a47e0e305bed83156e08773887a8ebe78391a5f7cd7f70bb5da4f"
+        }
+      ]
+    },
+    {
+      "id": "unknown-not-ready",
+      "proof": "Real demand can exist while Unknown has no output/field/ready sample. Revoking AIR proof makes retained bytes non-ready; complete calculation count cannot be inferred from a lease."
+    },
+    {
+      "id": "live-lease-retention",
+      "proof": "Real demand store and manager retirement preserve exact field identity throughout frame0..4, including proof revoke/recovery. No geometry is materialized and geometry revision stays unchanged."
+    },
+    {
+      "id": "expiry-renewal",
+      "proof": "Frame5 expiry retires field and ready sample; frame6 renewed demand recomputes a fresh field identity. Retained render volume remains immutable."
+    },
+    {
+      "id": "existing-domain-controls",
+      "proof": "Current field ownership, demand queue/epoch/fairness and light calculation certificate suites PASS. Existing geometry compatibility test corrected to sampled facing boundary clocks, explicitly retaining compatibility for unread neighbor interior revision."
+    },
+    {
+      "id": "negative-controls",
+      "proof": "Actual keep-predicate removal in absent-field retirement makes lifecycle test FAIL. Raw source restored exactly and four normal suites PASS. Native reader rejects incomplete, mismatched-job, Unknown, missing-stage and non-consumer cohorts."
+    }
+  ],
+  "test_log": {
+    "path": "build\\desktop-msvc\\s3-air-restored-test-20261120.log",
+    "sha256": "fc14675a5ec0cfc5c246e419525368721a4bda73c17d2b5d399c302e3136581a"
+  },
+  "negative_log": {
+    "path": "build\\desktop-msvc\\s3-air-negative-test-20261120.log",
+    "sha256": "5e15e0ad30ae0e997b470530ed6724c56bcb1e2b91bd27aac99e0e669d93fc0d"
+  },
+  "scope_limits": [
+    "Native reuse proves actual automatic creation cohorts, not all-job terminal outcomes or retention duration. Joined real CPU demand/field tests prove lease lifetime; runtime policy sources unchanged.",
+    "No thread-race/cancel/eviction/persisted or GPU/framebuffer acceptance; these remain S3.04..S6.",
+    "Initial failed tests were localized to obsolete whole-neighbor geometry assertion and missing fixture sampler catalog binding; production readiness/geometry contracts were not weakened."
+  ],
+  "next_package": "S3.04"
+}

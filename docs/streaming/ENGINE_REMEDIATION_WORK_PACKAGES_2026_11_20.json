@@ -269,9 +269,15 @@
         {
           "id": "S3.03",
           "action": "Завершить автоматическое создание и удержание полей demanded AIR; Unknown не получает готовое поле.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "completed_subtasks": [
+            "Actual automatic native AIR cohorts source-bound and joined; real CPU demand/field retention, Unknown, expiry/renewal and immutable predecessor controls PASS. Actual lease-ignore fault rejected, source and normal binary restored."
+          ],
+          "remaining_subtasks": [],
+          "acceptance_record": "S3_03_AIR_LIFETIME_ACCEPTANCE_2026_11_20.json",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S3.04",
@@ -482,7 +488,7 @@
       ]
     }
   ],
-  "current_step": "S3.03",
+  "current_step": "S3.04",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

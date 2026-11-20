@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.03",
+  "current_package": "S3.04",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -1578,6 +1578,128 @@
       ],
       "remaining": [],
       "scope_limit": "Independent CPU reference and job-stage ordering COMPLETE locally. Unknown/AIR, catalog/epoch/incarnation cancel/stale, persistence and true GPU/fallback/backend remain S3.03..06; full S4..S6 retained."
+    },
+    {
+      "id": "S3.03",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "CMakeLists.txt",
+          "sha256": "e4097f4a9167fe1a4689d51e3dc0ce5562683c6267db5a1e3ee59e320bc11043"
+        },
+        {
+          "path": "src\\Test\\RelightResultInstallTest.cpp",
+          "sha256": "199bc00cbec9d4eccb66f781ddc222a65d85da5a54752cff33866a7dfb7b78e6"
+        },
+        {
+          "path": "src\\World\\Core\\World.cpp",
+          "sha256": "ccefce180dca35359f630e3011647d0b812e0a255a61c2eaed4c7b091cd928b9"
+        },
+        {
+          "path": "src\\World\\Core\\BlockWorld.cpp",
+          "sha256": "22a8335815ea77b2e9d0646084841147d2baf689557f75b9058cd77a8379d068"
+        },
+        {
+          "path": "src\\World\\Chunks\\ChunkManager.cpp",
+          "sha256": "6510c2f37677eaef0e9234daaff0f2a97061d3312c1c30945d2b16729eda35e3"
+        },
+        {
+          "path": "src\\World\\Streaming\\ChunkRenderDemand.cpp",
+          "sha256": "de05ce63ad13b6fa75c823545f5c7134612af431dc653159d336b328fe9fa878"
+        },
+        {
+          "path": "src\\World\\Lighting\\SectionRenderLightSnapshot.h",
+          "sha256": "5611eb8fadbb11082f6561215073303e96c020436fa4c5b2f67083ad700a7a8a"
+        },
+        {
+          "path": "tools\\engine_air_field_evidence.py",
+          "sha256": "c2840ce0e0a8640da371c953818ce8996475d1d4b0f8ce7b36e0a6605c83eecb"
+        },
+        {
+          "path": "tools\\test_engine_air_field_evidence.py",
+          "sha256": "4ac565468d431a6443c51a500c6a69af8d6571972aa2b2e4c1385cafb0d4cdb0"
+        },
+        {
+          "path": "docs\\streaming\\S3_03_AIR_LIFETIME_CARD_2026_11_20.json",
+          "sha256": "1dec300dc2627d73ad97d359fb4a07f68e2eb4c481f2f5d92d600c37193509c3"
+        },
+        {
+          "path": "docs\\streaming\\S3_03_AIR_LIFETIME_ACCEPTANCE_2026_11_20.json",
+          "sha256": "c9adf26c0e959b581992b343cefa419cb2694396cacb874c0081698fef6bb631"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-automatic-air-native-cohorts-20261120.json",
+          "sha256": "86b6b1d198d7a9df42f5e43dd0ed0b23fae01fc40d0fa8714db4fe4eda02d9b3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-native-source-reuse-20261120.json",
+          "sha256": "f7d21754ba7a47e0e305bed83156e08773887a8ebe78391a5f7cd7f70bb5da4f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-negative-source-20261120.json",
+          "sha256": "e63a14dd6bd3463861d597b1b45ab81037c8644a69d11fb42d205f24dceebceb"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\route.json",
+          "sha256": "22f323d62497af763bd52315bc1d5e4f3ca6acd288d1087d2d7e7746a086fdb7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "bf8453e091439eb2c6ec80deb7d26a03820470b89360207efd2f855100c75b8b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-build-20261120.log",
+          "sha256": "ead4b3a4782a6bb9a2f9f52df600ba9256475ff2341244abc03e1da65162721e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-test-20261120.log",
+          "sha256": "e3f238d58812de87802f41cc28dd9a18a573cb3cfaab18c6647521b6caf25711"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-localized-build-20261120.log",
+          "sha256": "da5c37c26c0a638aa11216a0582e6bd127d37646240d3589451919251440e0a5"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-localized-test-20261120.log",
+          "sha256": "c5aa4f8c2d2854865a12ac9b6bc9a2db6203a01c5c02ef724137da00e7080aec"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-verified-build-20261120.log",
+          "sha256": "da5c37c26c0a638aa11216a0582e6bd127d37646240d3589451919251440e0a5"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-lifetime-verified-test-20261120.log",
+          "sha256": "53cbf1ef9b58204623357f8d988a3bedbae49e45e962ff11e083b716b48d1c59"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-native-reader-test-20261120.log",
+          "sha256": "223e06d17dfb6c32bd67ca7c62b915cb03e0a1189bad193f723662e346b75b55"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-negative-build-20261120.log",
+          "sha256": "39882498f1bc447c8924cf34cb5739df2c7c7092124ad7083c9e58ab2dfaa934"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-negative-test-20261120.log",
+          "sha256": "5e15e0ad30ae0e997b470530ed6724c56bcb1e2b91bd27aac99e0e669d93fc0d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-restored-build-20261120.log",
+          "sha256": "d10173b498ee6952ffd8f0119dbbf93d19320a222f506acf38c45a524d3b3b69"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-air-restored-test-20261120.log",
+          "sha256": "fc14675a5ec0cfc5c246e419525368721a4bda73c17d2b5d399c302e3136581a"
+        }
+      ],
+      "verified": [
+        "Actual native foreground AIR demands join request/worker/complete installed certificates for jobs589,590,630,632,663. Selective source comparison and same current bin EXE verify source-bound reuse; no new flight.",
+        "Joined real store/BlockWorld/manager test proves Unknown rejection, complete AIR resource creation, lease retention while proof readiness changes, expiry retirement, fresh renewal identity and retained bytes without invented geometry. Four Release suites PASS.",
+        "Old light-proof geometry assertion expected full neighbor revision equality, contrary to explicit sampled two-boundary-plane contract. Test now rejects changed sampled boundary and accepts unread interior clock; missing sampler catalog fixture binding localized independently. Production contracts unchanged.",
+        "Actual retirement lease-ignore fault causes test failure; exact source restoration and actual normal recompilation confirmed, four suites PASS. Native reader positive/negative controls PASS."
+      ],
+      "remaining": [],
+      "scope_limit": "Automatic native creation plus real CPU lease lifetime locally COMPLETE. Native cohort evidence does not certify all jobs or duration; scheduler/cancel/stale/eviction/persistence/backend/rendered matrix remains original S3.04..S6. No product logic change required."
     }
   ],
   "completed_handoff": {
