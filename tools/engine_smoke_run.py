@@ -345,7 +345,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         render_distance: int | None = None, sprint: bool = False,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
         synchronous_meshing: bool = False, round_trip: bool = False,
-        world_actions: dict | None = None) -> dict:
+        world_actions: dict | None = None, observe_bound_light: bool = False) -> dict:
+    if type(observe_bound_light) is not bool:
+        raise ValueError("bound light observation must be boolean")
     if not isinstance(round_trip, bool) or (round_trip and startup_only):
         raise ValueError("round trip requires a moving scenario")
     if world_actions is not None:
@@ -428,7 +430,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             env.update({"CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_FILE": str((artifacts / "round-trip-residency.log").resolve())})
-        if scene and scene.get("rgb_fixture"):
+        if observe_bound_light or (scene and scene.get("rgb_fixture")):
             env["CUBA_RGB_REFERENCE"] = "1"
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
             # Exercise the normal FP viewmodel consumer. The default flight
@@ -508,6 +510,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "fixture_world": fixture.name, "source_world_sha256": source_hash,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
                  "git_sha": git_sha,
+                 "observe_bound_light": observe_bound_light,
                  "fixture_scene": scene,
                  "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
@@ -733,6 +736,8 @@ def main() -> int:
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
     parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--observe-bound-light", action="store_true",
+                        help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,
@@ -752,6 +757,7 @@ def main() -> int:
                   synchronous_meshing=args.synchronous_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
                   round_trip=args.round_trip,
+                  observe_bound_light=args.observe_bound_light,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]

@@ -151,6 +151,30 @@ class IsolatedFixtureTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             engine_smoke_run.run("Saved", self.artifacts, round_trip=True, startup_only=True)
 
+    def test_bound_observation_is_explicit_and_never_inherits_acceptance(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        fingerprint = world_fingerprint(self.world)
+        for enabled in (False, True):
+            artifacts = self.root / ("bound" if enabled else "ordinary")
+            child = Mock(pid=123, returncode=0)
+            with patch.object(engine_smoke_run, "ROOT", self.root), \
+                 patch("flight_sim_run.exe_writable", return_value=True), \
+                 patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+                 patch.dict(engine_smoke_run.os.environ, {"CUBA_RGB_REFERENCE": "1"}), \
+                 patch.object(engine_smoke_run.subprocess, "Popen", return_value=child) as launch:
+                verdict = engine_smoke_run.run("Saved", artifacts, startup_only=True,
+                                               observe_bound_light=enabled)
+            manifest = json.loads((artifacts / "route.json").read_text(encoding="utf-8"))
+            self.assertIs(manifest["observe_bound_light"], enabled)
+            self.assertIsNone(manifest["fixture_scene"])
+            self.assertEqual(launch.call_args.kwargs["env"].get("CUBA_RGB_REFERENCE"),
+                             "1" if enabled else None)
+            self.assertNotEqual(verdict["status"], "PASS")
+            self.assertEqual(world_fingerprint(self.world), fingerprint)
+            self.assertEqual(self.config.read_bytes(), self.original)
+        with self.assertRaises(ValueError):
+            engine_smoke_run.run("Saved", self.artifacts, observe_bound_light=1)
+
     def test_startup_runner_records_scope_and_native_sprint_but_requires_report(self):
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         child = Mock(pid=123, returncode=0)
