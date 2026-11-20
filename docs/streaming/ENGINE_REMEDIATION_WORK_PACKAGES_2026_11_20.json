@@ -4,7 +4,7 @@
   "stage_status_policy": "OPEN означает не закрыт весь этап; уже полученные доказательства переиспользуются, работа не начинается заново",
   "evidence_checkpoint": "save_failure_recovery_wip_2026_11_20.json",
   "execution_order": [
-    "P0: дождаться и разобрать текущий sync/unpacked прогон",
+    "P0: завершён; scoped sync/CPU RGB PASS, общий visual UNTESTED",
     "P1: S0 — индекс требований/доказательств, отрицательные контроли и замороженная матрица",
     "P2: S1/S2 — закрыть оставшиеся конкретные маршруты и локальные инварианты",
     "P3: S3/S4 — persisted certificates, ownership/lifecycle и recovery сохранений",
@@ -37,9 +37,10 @@
         {
           "id": "S0.01",
           "action": "Закрепить единый манифест: source tree hash, EXE hash, config, seed, fixture, route, диагностические флаги.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S0.02",
@@ -421,5 +422,7 @@
         }
       ]
     }
-  ]
+  ],
+  "current_step": "S0.02",
+  "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
 }

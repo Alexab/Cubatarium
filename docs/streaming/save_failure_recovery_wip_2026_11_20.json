@@ -246,13 +246,31 @@
     "evidence_sha256": "9d60b9cf8e8512606f47e4d50fbe6fff8b180bea35058dc2e442a2df200ad7bb"
   },
   "sync_unpacked_followup": {
-    "status": "RUNNING",
+    "status": "scoped_reference_PASS_overall_UNTESTED",
     "artifacts": "build/desktop-msvc/physical-current-rgb-air-sync-rd4-20261120-native",
     "fixture": "dry-rgb-air-border",
     "requested_modes": [
       "synchronous_meshing",
       "no_packed_meshing"
     ],
-    "scope_limit": "Actual construction/draw sources and independent RGB/bound-field evidence pending; no general backend parity yet"
+    "scope_limit": "Actual construction/draw sources and independent RGB/bound-field evidence pending; no general backend parity yet",
+    "config_restored": true,
+    "cpu_draw_samples": 3309,
+    "rgb_checked": 2673,
+    "rgb_faults": 0,
+    "components": {
+      "runtime": "PASS",
+      "route": "PASS",
+      "startup": "PASS",
+      "visual": "UNTESTED",
+      "inspection": "PASS",
+      "synchronous_meshing": "PASS",
+      "fixture": "PASS",
+      "fixture_opaque_depth": "PASS",
+      "fixture_floor_draw_source_light": "PASS",
+      "fixture_air_light_service": "PASS",
+      "fixture_camera_field_light": "PASS",
+      "fixture_floor_rgb": "PASS"
+    }
   }
 }

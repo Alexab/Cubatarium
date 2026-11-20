@@ -1,0 +1,57 @@
+{
+  "schema": "engine-requirement-evidence-index.v1",
+  "current_package": "S0.02",
+  "rule": "Existing evidence retained; missing provenance is not retroactively invented",
+  "entries": [
+    {
+      "id": "S0.01",
+      "status": "COMPLETE",
+      "evidence": {
+        "manifest": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native\\route.json",
+        "sha256": "f6a5c0471b1cd41b7aca018a095c476159816d6dfa17d851f82893f5c17f13d9",
+        "available_keys": [
+          "schema",
+          "world_source",
+          "fixture_world",
+          "source_world_sha256",
+          "exe_sha256",
+          "config_sha256",
+          "git_sha",
+          "observe_bound_light",
+          "source_observation_scene",
+          "fixture_scene",
+          "prepared_world_sha256",
+          "bot_route_sha256",
+          "render_distance_override",
+          "synchronous_meshing",
+          "unpacked_meshing_requested",
+          "sprint",
+          "startup_only",
+          "round_trip",
+          "secondary_residency_column",
+          "probe_partial_air_cancellation",
+          "probe_disk_read_failure",
+          "probe_terrain_save_failure",
+          "capture_encode_delay_ms",
+          "duration_semantics",
+          "fly_seconds",
+          "stop_seconds",
+          "idle_seconds",
+          "yaw",
+          "pitch",
+          "minimum_chunks",
+          "command",
+          "diagnostic_environment"
+        ]
+      },
+      "missing": [],
+      "next_change": null,
+      "assessment": "build/desktop-msvc/build-provenance-assessment-20261120.json",
+      "scope_limit": "Declared source and tool inputs; dependency/compiler parity remains in later stages"
+    }
+  ],
+  "completed_handoff": {
+    "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
+    "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
+  }
+}

@@ -409,6 +409,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
     import flight_sim_run
     if not flight_sim_run.exe_writable(0.5):
         raise RuntimeError("Release executable is in use; the running session was left intact")
+    from engine_build_provenance import inspect_build
+    build_provenance = inspect_build(ROOT, runtime / "Cubatarium.exe")
     with isolated_fixture(runtime, world, artifacts) as (fixture, source_hash):
         if prepare_read_failure_air:
             if not probe_disk_read_failure:
@@ -613,6 +615,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if process_timeout is not None:
             command.extend(["--process-timeout", str(process_timeout)])
         route = {"schema": "engine-smoke-route.v1", "world_source": world,
+                 "build_provenance": build_provenance,
+                 "world_seed": json.loads(metadata.read_text(encoding="utf-8")).get("world_seed"),
+                 "world_profile": json.loads(metadata.read_text(encoding="utf-8")).get("procedural"),
                  "fixture_world": fixture.name, "source_world_sha256": source_hash,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
                  "git_sha": git_sha,
@@ -820,6 +825,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if not report_path.exists():
             verdict["status"] = "FAIL"
             verdict["components"]["runtime"] = {"status": "FAIL", "reason": "missing_native_report"}
+        verdict["components"]["build_provenance"] = {
+            k: v for k, v in build_provenance.items() if k != "record"}
+        statuses = [part["status"] for part in verdict["components"].values()]
+        verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
             json.dumps(publication, indent=2) + "\n", encoding="utf-8")
