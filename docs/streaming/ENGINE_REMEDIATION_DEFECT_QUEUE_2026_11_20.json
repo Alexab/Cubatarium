@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "outside-radius-drops-active-but-keeps-cpu-job",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Outside-radius API removes Active but leaves CPU builder owner; late first mesh triggers NoActiveOwner and recreates dirty. Explicit Forget also leaves pre-existing overflow retry if job already absent from InFlight.",
+      "fix": "Outside-radius retires exact unprotected CPU job via Forget; Forget clears coord retry receipts even without a map entry. Explicit keep_horiz and bounded stale-light leases preserved.",
+      "evidence": "build/desktop-msvc/s4-outside-cpu-acceptance-20261121.json",
+      "next_action": "Q04-C3 exact admission refusal/current successor; Q06 mixed GPU/field and LIMIT-C1 bounds remain OPEN."
+    },
+    {
       "id": "mesh-cancel-leaves-retry-permission-and-abandoned-receipts",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

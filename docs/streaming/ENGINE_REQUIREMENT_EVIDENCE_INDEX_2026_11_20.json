@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.outside-radius-cpu-terminal-and-leases",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "ledger_subcase": "Q04-C2.4",
+      "receipt": "build/desktop-msvc/s4-outside-cpu-acceptance-20261121.json",
+      "scope": "CPU outside-radius execution/lease boundary; durable section demand may remain parked until return. Current EXE native overflow/cancel/protected publication regression PASS; native fixture itself does not directly exercise outside-radius API. Mixed GPU/field and cost/queue-vector bounds remain Q06/LIMIT-C1/S6.04, full S4.02 OPEN."
+    },
+    {
       "id": "S4.02.Q04.full-selective-cancellation-retry-boundary",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

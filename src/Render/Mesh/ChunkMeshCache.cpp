@@ -907,9 +907,11 @@ void UChunkMeshCache::CancelInFlightOutsideHorizontalRadius(
       PendingStaleLightRemeshes_.insert(coord);
     DropPublishedLightRefresh(coord);
     DropGeometryAwaitingLight(coord);
-    // Drop Active tracking only. Do not MarkDirty — that re-fed the remesh
-    // storm while standing. InFlight stays until Drain; result applies or
-    // discards without another Capture cycle.
+    // Retire the exact CPU job too. Leaving it accepted after dropping Active
+    // makes a late first mesh re-create dirty demand through NoActiveOwner.
+    // Protected leases were excluded above; returning demand gets a fresh job.
+    if (AsyncBuilder)
+      AsyncBuilder->ForgetInflight(coord);
     ActiveMeshSourceRevision.erase(coord);
     RemeshAfterApply.erase(coord);
   }

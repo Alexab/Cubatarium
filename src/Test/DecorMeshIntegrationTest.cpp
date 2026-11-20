@@ -3614,13 +3614,114 @@ static void TestCacheMeshCancellationLifetime(
   Expect(published_all, "cache cancellation successor publishes current geometry without invented debt");
 }
 
+static void TestOutsideRadiusCpuMeshLifetime(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool boundaries = true;
+  // no predecessor; retained predecessor; explicit lease; stale-light lease;
+  // stale-light debt beyond its bounded protection ring.
+  for (int mode = 0; mode < 5; ++mode)
+    for (const bool completed : {false, true})
+    {
+      const bool predecessor = mode == 1 || mode == 3 || mode == 4;
+      const bool protected_job = mode == 2 || mode == 3;
+      const glm::ivec3 root(0), focus(mode == 4 ? 32 : 2, 0, 0);
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      world.SetBlock({8, 8, 8}, kStone);
+      GatedPhysicalMesher mesher;
+      if (completed) mesher.Release();
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = true;
+      settings.FrustumCulling = false;
+      settings.Lighting = LightingMode::Flat;
+      cache.SetRenderSettings(settings);
+      cache.SetMeshRebuildFocus(root, 4, 1);
+      UFlatLightingPipeline flat;
+      if (predecessor)
+      {
+        flat.FillAllLoadedChunks(world);
+        cache.RebuildChunkImmediate(world, registry, root);
+        Expect(cache.HasDrawableGreedyMesh(root), "outside-radius fixture retains actual predecessor");
+        world.SetBlock({12, 8, 8}, kStone);
+      }
+      const auto initial_publications = cache.GetPublishCount(root);
+      cache.SetMesherBackend(&mesher);
+      const auto schedule = [&]() {
+        flat.FillAllLoadedChunks(world);
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        const auto revision = cache.GetChunkMeshRevision(root);
+        const auto epoch = cache.GetCaptureStore().WorldEpoch();
+        cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+            0, 1.0, epoch, chunk->GetIncarnation());
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+            chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                   cache, world, root, revision).has_value(), "outside-radius captures exact target");
+        const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(tick.Scheduled == 1 && cache.HasCpuMeshBuildInFlight(root),
+               "outside-radius fixture owns exact actual CPU job");
+      };
+      cache.MarkDirtyPriority(root);
+      schedule();
+      Expect(mesher.WaitEntered(), "outside-radius actual worker reaches barrier");
+      if (completed)
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "outside-radius completed result awaits consumption");
+      if (mode >= 3)
+      {
+        cache.QueueStaleLightRemesh(root, "outside-radius-lifecycle-test");
+        Expect(cache.HasPendingStaleLightRemesh(root), "actual stale-light repair debt acquires lease candidate");
+      }
+      cache.SetMeshRebuildFocus(focus, 4, 1);
+      cache.CancelInFlightOutsideHorizontalRadius(focus, 0, mode == 2 ? 2 : -1);
+      const bool cpu_owner = cache.HasCpuMeshBuildInFlight(root);
+      const bool cache_owner = cache.HasInflightMeshBuild(root);
+      if (!protected_job)
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
+      mesher.Release();
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+             "outside-radius worker retires after bounded barrier");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      const bool terminal = protected_job
+          ? cpu_owner && cache_owner && cache.IsPublishedMeshCurrentForInputs(root, world) &&
+                cache.GetPublishCount(root) == initial_publications + 1 && mesher.builds == 1
+          : !cpu_owner && !cache_owner && !cache.IsChunkMeshDirty(root) &&
+                cache.HasDrawableGreedyMesh(root) == predecessor &&
+                cache.GetPublishCount(root) == initial_publications;
+      boundaries = boundaries && terminal;
+      std::cout << "outside_cpu_case mode=" << mode << " completed=" << completed
+                << " protected=" << protected_job << " cpu_owner=" << cpu_owner
+                << " cache_owner=" << cache_owner << " dirty=" << cache.IsChunkMeshDirty(root)
+                << " terminal=" << terminal << '\n';
+      if (!protected_job)
+      {
+        cache.SetMeshRebuildFocus(root, 4, 1);
+        cache.MarkDirtyPriority(root);
+        schedule();
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "returning demand after radius cancellation computes current geometry");
+        cache.DrainAsyncMeshResults(world, registry, 8);
+      }
+      Expect(cache.IsPublishedMeshCurrentForInputs(root, world),
+             "protected original job or returning demand publishes current inputs");
+    }
+  Expect(boundaries, "outside-radius cancellation retires only unprotected CPU work without resurrection");
+}
+
 static void TestCancelledMeshRetryReceipts(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
   bool outcomes = true;
-  for (int mode = 0; mode < 3; ++mode)
+  for (int mode = 0; mode < 4; ++mode)
   {
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
@@ -3641,7 +3742,12 @@ static void TestCancelledMeshRetryReceipts(
                submit(newer, 922) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
                builder.GetCompletedDiscardedOverflow() == 1,
            "cancel receipt fixture produces a real overflow retry before cancellation");
-    if (mode == 0) builder.CancelPending();
+    if (mode == 3)
+    {
+      builder.ForgetInflight(victim);
+      builder.ForgetInflight(newer);
+    }
+    else if (mode == 0) builder.CancelPending();
     else builder.CancelPendingOutsideHorizontalRadius(mode == 2 ? victim : glm::ivec3(0), 0);
     const auto retry = builder.TakeOverflowCoords();
     const bool expected_retry = mode == 2;
@@ -7557,6 +7663,7 @@ int main(int argc, char **argv)
   TestSelectiveMeshLeaseWorkerLifecycle(registry, definitions.get());
   TestMeshSameKeySupersession(registry, definitions.get());
   TestCancelledMeshRetryReceipts(registry, definitions.get());
+  TestOutsideRadiusCpuMeshLifetime(registry, definitions.get());
   TestForgottenMeshJobLifetime(registry, definitions.get());
   TestCacheMeshRemovalLifetime(registry, definitions.get());
   TestCacheMeshCancellationLifetime(registry, definitions.get());

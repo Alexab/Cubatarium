@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q04-C2",
     "Q04-C3",
     "Q02-C1",
     "Q02-C2",
@@ -107,7 +106,7 @@
     {
       "id": "Q04-C2",
       "queue": "Q04",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "ForgetInflight/eviction of queued/running/completed job rejects late result; valid current demand completes, abandoned demand retires explicitly; include late arrival after successor drained.",
       "subcases": [
         {
@@ -131,10 +130,14 @@
         },
         {
           "id": "Q04-C2.4",
-          "status": "CHECK",
-          "scope": "Outside-radius CPU abandonment/lease policy: valid retained demand completes, explicitly abandoned demand does not resurrect. Mixed GPU/field owners remain Q06-C2."
+          "status": "REUSE",
+          "scope": "Outside-radius CPU abandonment/lease policy: valid retained demand completes, explicitly abandoned demand does not resurrect. Mixed GPU/field owners remain Q06-C2.",
+          "evidence": "build/desktop-msvc/s4-outside-cpu-acceptance-20261121.json",
+          "coverage_note": "Exact queued Forget mechanism reused and rerun in current complete decor test; outside-radius cache predicate is stage-independent. Actual radius-specific cache scenes cover running/completed, not a separately gated queued cache scene."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-outside-cpu-acceptance-20261121.json",
+      "scope_note": "CPU lifecycle composed with .1/.2/.3 receipts; complete current decor test reruns all dependent cases. Mixed GPU/field resource queues remain Q06."
     },
     {
       "id": "Q04-C3",
@@ -248,7 +251,7 @@
       "id": "LIMIT-C1",
       "queue": "Q01..Q12",
       "status": "CHECK",
-      "required_result": "Resolve production caps/admission envelope at actual producers for Q02/Q06/Q08/Q09/Q10/Q11/Q12. Explicitly distinguish uncapped storage from frame drain budgets; implement required bound where original contract requires it."
+      "required_result": "Resolve production caps/admission envelope at actual producers for Q02/Q06/Q08/Q09/Q10/Q11/Q12. Explicitly distinguish uncapped storage from frame drain budgets; implement required bound where original contract requires it. Include Q04 OverflowCoords/DiscardedCoords retry-vector envelope and per-coordinate Forget filtering cost; no bounded-cost claim follows from pool/completed caps alone."
     }
   ],
   "source_limits": [
@@ -316,7 +319,14 @@
       ],
       "source": "src/World/IO/AsyncChunkIO.h",
       "observed": "Legacy Enqueue for background IO; completed load/save queues and separate light-flags pool. Must inspect producer envelope before claiming bounded memory."
+    },
+    {
+      "queues": [
+        "Q04"
+      ],
+      "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
+      "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q04-C2.1/.2/.3 accepted: explicit retirement, cache removal, full/selective builder cancellation and cache KeepDirty transfer. Q04-C2 remains CHECK only for .4 outside-radius CPU abandonment/lease policy. 17 CHECK groups/13 REUSE groups/1 disabled production path; full S0..S6 OPEN."
+  "checkpoint": "Q04-C2 CPU cancellation/eviction lifecycle accepted via all4 subcase receipts; exact current Release decor/native regression PASS (overall smoke UNTESTED). 16 CHECK groups/14 REUSE groups/1 disabled production path. Next Q04-C3 admission reject/credit/current-successor evidence. Full S0..S6 OPEN."
 }

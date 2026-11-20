@@ -594,11 +594,22 @@ void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
     const auto current = InFlight.find(coord);
-    if (current == InFlight.end()) return;
-    retired_id = current->second.id;
-    current->second.retry_allowed->store(false, std::memory_order_relaxed);
-    InFlight.erase(current);
+    if (current != InFlight.end())
+    {
+      retired_id = current->second.id;
+      current->second.retry_allowed->store(false, std::memory_order_relaxed);
+      InFlight.erase(current);
+    }
+    // Overflow may have retired the job before its owner abandons the coord.
+    // Its already-produced retry must be retired even without an InFlight entry.
+    std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+    OverflowCoords.erase(std::remove(OverflowCoords.begin(), OverflowCoords.end(), coord),
+                         OverflowCoords.end());
+    std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
+    DiscardedCoords.erase(std::remove(DiscardedCoords.begin(), DiscardedCoords.end(), coord),
+                          DiscardedCoords.end());
   }
+  if (retired_id == 0) return;
   Pool.CancelPendingJobsIf([&](uint64_t id) { return id == retired_id; });
   Completed.EraseIf([&](const MeshBuildResult &result) {
     if (result.jobId != retired_id) return false;
