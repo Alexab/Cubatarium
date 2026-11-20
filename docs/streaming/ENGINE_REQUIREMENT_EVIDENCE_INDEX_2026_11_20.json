@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.01.flat-publication",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h6-receipt-20261120.json",
+      "receipt_sha256": "0f94c848e07eb792c0440e083e4f5b59e84cca87cb59dc3f9d598b05e9bdf926",
+      "scope": "H6 complete: actual CPU/Flat app session, physical certificate always absent, missing/stale reject and current publications recover. Native1/1, backend2/2, runner36/36 PASS; source/config retained. S4.01 OPEN only for GPU pending. No framebuffer/backend parity closure."
+    },
+    {
       "id": "S4.01.cross-retirement-completion",
       "status": "PARTIAL_OPEN",
       "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",

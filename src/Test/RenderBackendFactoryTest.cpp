@@ -3,11 +3,28 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <string>
 
 namespace
 {
 
 int gFails = 0;
+
+struct CpuOverrideScope
+{
+  bool present{std::getenv("CUBATARIUM_FORCE_CPU") != nullptr};
+  std::string previous{present ? std::getenv("CUBATARIUM_FORCE_CPU") : ""};
+  static void Set(const char *value)
+  {
+#if defined(_WIN32)
+    _putenv_s("CUBATARIUM_FORCE_CPU", value ? value : "");
+#else
+    if (value) setenv("CUBATARIUM_FORCE_CPU", value, 1);
+    else unsetenv("CUBATARIUM_FORCE_CPU");
+#endif
+  }
+  ~CpuOverrideScope() { Set(present ? previous.c_str() : nullptr); }
+};
 
 void Expect(bool cond, const char *msg)
 {
@@ -29,6 +46,26 @@ int main()
   using cutum::RenderBackendSelection;
   using cutum::RenderPlatformKind;
   using cutum::URenderBackendFactory;
+
+  {
+    CpuOverrideScope restore;
+    const auto hardware_defaults=cutum::DetectRenderBackendCaps();
+    CpuOverrideScope::Set("1");
+    const auto forced=cutum::DetectRenderBackendCaps();
+    const auto selected=URenderBackendFactory::Select(forced);
+    Expect(forced.ForceCpuBackends && forced.HasCompute==hardware_defaults.HasCompute &&
+               forced.HasSsbo==hardware_defaults.HasSsbo,
+           "CPU override selects policy without inventing missing hardware capabilities");
+    Expect(selected.Mesher==MesherBackendKind::CpuGreedy &&
+               selected.Store==MeshStoreBackendKind::CpuStaging && selected.Cull==CullBackendKind::CpuFrustum,
+           "documented CPU environment override reaches all backend selections");
+    for(const char *value : {"0", "1invalid", ""})
+    {
+      CpuOverrideScope::Set(value);
+      Expect(!cutum::DetectRenderBackendCaps().ForceCpuBackends,
+             "only explicit CPU override value 1 enables the policy");
+    }
+  }
 
   {
     RenderBackendCaps caps;

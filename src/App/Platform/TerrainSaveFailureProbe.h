@@ -24,6 +24,7 @@
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Lighting/SectionRenderLightBindings.h"
 #include "Render/Camera/Frustum.h"
+#include "Render/Backend/RenderBackendFactory.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -80,6 +81,70 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    const char *variant=std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT");
+    if(variant && std::string(variant)=="flat_publication")
+    {
+      report["variant"]="flat_publication";
+      report["scope"]="Actual CPU/Flat UWorld section publication/input readiness; no Full solver or framebuffer acceptance";
+      const auto &caps=GetActiveRenderBackendCaps();
+      require(caps.ForceCpuBackends &&
+                  URenderBackendFactory::Select(caps).Mesher==MesherBackendKind::CpuGreedy,
+              "Flat probe requires an actually CPU-selected application session");
+      UWorld world(nullptr,nullptr);
+      world.ProceduralTemplate.MinHeight=-48;
+      world.ProceduralTemplate.MaxHeight=-33;
+      world.ProceduralTemplate.SeaLevel=-40;
+      world.BlockWorld.SetVerticalProfile({-48,-33,-40});
+      auto definitions=std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone; stone.Name="stone"; stone.Physics=BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{8,stone}},{{"stone",8}});
+      world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+      RenderSettings settings;
+      settings.Lighting=LightingMode::Flat; settings.LightingModeExplicit=true;
+      settings.AsyncMeshing=false; settings.GpuPackedMeshing=false; settings.FrustumCulling=false;
+      world.SetRenderSettings(settings);
+      require(world.GetLightingPipeline().GetMode()==LightingMode::Flat && !world.RequiresLightingLitGate(),
+              "Flat probe uses actual factory Flat pipeline");
+      const glm::ivec3 coord(0,-3,0);
+      for(int x=0;x<16;++x) for(int z=0;z<16;++z) world.BlockWorld.SetBlock({x,-48,z},8);
+      world.BlockWorld.SetBlock({8,-40,8},8);
+      world.GetLightingPipeline().FillAllLoadedChunks(world.BlockWorld);
+      auto &mesh=world.GetMeshService(); auto &cache=mesh.GetCache();
+      const auto physical=[&] {return world.BlockWorld.HasCompleteLightSamplingCalculation(
+          coord,world.BlockRegistry->GetDefinitionsCatalogSnapshot());};
+      const auto checkpoint=[&](const char *phase) {
+        report["flat_publication_steps"].push_back({{"phase",phase},{"physical",physical()},
+            {"complete",world.IsColumnRenderReady({0,0,0})},
+            {"section_current",world.HasCurrentChunkSlicePublication(coord)},
+            {"inputs_current",cache.IsPublishedMeshCurrentForInputs(coord,world.BlockWorld)},
+            {"publications",cache.GetPublishCount(coord)},
+            {"drawable",mesh.HasDrawableGreedyMesh(coord)},
+            {"presentation_debt",world.SampleRequiredPresentationCoverage().publication_unready_sections}});
+      };
+      checkpoint("unpublished");
+      require(!physical() && !world.IsColumnRenderReady({0,0,0}),"Flat still needs geometry publication");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      checkpoint("published");
+      require(!physical() && mesh.HasDrawableGreedyMesh(coord) && world.IsColumnRenderReady({0,0,0}),
+              "Flat actual publication completes without a physical light certificate");
+      const auto previous=cache.GetPublishCount(coord);
+      world.BlockWorld.SetBlock({3,-40,3},8);
+      checkpoint("stale_geometry");
+      require(!physical() && !world.IsColumnRenderReady({0,0,0}),"Flat geometry mutation invalidates completion");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      checkpoint("replacement");
+      require(!physical() && cache.GetPublishCount(coord)>previous && world.IsColumnRenderReady({0,0,0}) &&
+                  world.SampleRequiredPresentationCoverage().publication_unready_sections==0,
+              "Flat geometry replacement restores completion without relight");
+      report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
+          {"physical_certificate_absent",true},{"actual_publication_recovers",true},
+          {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
+      report["status"]="PASS";
+      std::ofstream(root/"report.json") << report.dump(2) << '\n';
+      return;
+    }
     // S4.01: section physical truth versus surviving coarse column state.
     {
       UWorld world(nullptr,nullptr);

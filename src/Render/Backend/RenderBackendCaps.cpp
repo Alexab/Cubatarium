@@ -1,4 +1,5 @@
 #include "Render/Backend/RenderBackendCaps.h"
+#include <cstdlib>
 
 namespace cutum
 {
@@ -13,7 +14,8 @@ bool gActiveInitialized = false;
 RenderBackendCaps DetectRenderBackendCaps()
 {
   RenderBackendCaps caps;
-  caps.ForceCpuBackends = false;
+  const char *force_cpu = std::getenv("CUBATARIUM_FORCE_CPU");
+  caps.ForceCpuBackends = force_cpu && force_cpu[0] == '1' && force_cpu[1] == '\0';
   caps.AllowAndroidGpu = false;
   caps.ProbeCompleted = false;
   caps.AndroidGpuDenyReason = "n/a";

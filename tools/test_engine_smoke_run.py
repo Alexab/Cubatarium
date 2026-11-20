@@ -232,6 +232,36 @@ class IsolatedFixtureTest(unittest.TestCase):
                 raise RuntimeError("after sync override")
         self.assertEqual(self.config.read_bytes(), original)
 
+    def test_flat_publication_reaches_child_and_restores_config_after_failure(self):
+        original=b'{"render":{"lighting_mode":"full","async_meshing":true},"other":7}\r\n'
+        self.config.write_bytes(original)
+        (self.runtime/'Cubatarium.exe').write_bytes(b'test executable identity')
+        fingerprint=world_fingerprint(self.world)
+        def fail_launch(*args, **kwargs):
+            render=json.loads(self.config.read_bytes())['render']
+            self.assertEqual(render['lighting_mode'],'flat')
+            self.assertIs(render['async_meshing'],False)
+            self.assertIs(render['gpu_packed_meshing'],False)
+            self.assertEqual(kwargs['env']['CUBATARIUM_FORCE_CPU'],'1')
+            self.assertEqual(kwargs['env']['CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT'],'flat_publication')
+            raise RuntimeError('controlled Flat launch failure')
+        with patch.object(engine_smoke_run,'ROOT',self.root), \
+             patch('flight_sim_run.exe_writable',return_value=True), \
+             patch.object(engine_smoke_run.subprocess,'check_output',return_value='test-sha'), \
+             patch.object(engine_smoke_run.subprocess,'Popen',side_effect=fail_launch):
+            with self.assertRaisesRegex(RuntimeError,'controlled Flat launch failure'):
+                engine_smoke_run.run('Saved',self.artifacts,startup_only=True,
+                                     probe_terrain_save_failure=True,flat_publication=True)
+        self.assertEqual(self.config.read_bytes(),original)
+        self.assertEqual(world_fingerprint(self.world),fingerprint)
+        self.assertFalse((self.runtime/'.engine-smoke.lock').exists())
+        manifest=json.loads((self.artifacts/'route.json').read_text())
+        self.assertIs(manifest['flat_publication_requested'],True)
+        for options in ({'flat_publication':1},{'flat_publication':True},
+                        {'flat_publication':True,'startup_only':True}):
+            with self.assertRaises(ValueError):
+                engine_smoke_run.run('Saved',self.root/'invalid',**options)
+
     def test_synchronous_meshing_requires_actual_runtime_observations(self):
         path = self.root / "mode.json"
         self.assertEqual(engine_smoke_run.synchronous_meshing_evidence(path)["status"], "UNTESTED")

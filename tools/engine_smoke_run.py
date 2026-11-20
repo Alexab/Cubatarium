@@ -324,6 +324,13 @@ def render_distance_payload(payload: bytes, radius: int) -> bytes:
     return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
 
 
+def flat_publication_payload(payload: bytes) -> bytes:
+    config = json.loads(payload)
+    render = config.setdefault("render", {})
+    render.update(lighting_mode="flat", async_meshing=False, gpu_packed_meshing=False)
+    return (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
 def synchronous_meshing_payload(payload: bytes) -> bytes:
     config = json.loads(payload)
     config.setdefault("render", {})["async_meshing"] = False
@@ -425,7 +432,11 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         probe_disk_read_failure: bool = False,
         prepare_read_failure_air: bool = False,
         probe_terrain_save_failure: bool = False, walking: bool = False,
-        record_replay: bool = False, debt_target: dict | None = None) -> dict:
+        record_replay: bool = False, debt_target: dict | None = None,
+        flat_publication: bool = False) -> dict:
+    if type(flat_publication) is not bool or (flat_publication and (
+            not startup_only or not probe_terrain_save_failure or fixture_scene is not None)):
+        raise ValueError("Flat publication requires the standalone startup terrain API probe")
     if fixture_scene == "air-pocket-negative-cave" and not startup_only:
         raise ValueError("static air-pocket fixture requires startup-only observation")
     if debt_target is not None:
@@ -530,6 +541,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path = runtime / "config.json"
             config_path.write_bytes(unpacked_meshing_payload(config_path.read_bytes()))
             (artifacts / "config.unpacked-meshing.json").write_bytes(config_path.read_bytes())
+        if flat_publication:
+            config_path = runtime / "config.json"
+            config_path.write_bytes(flat_publication_payload(config_path.read_bytes()))
+            (artifacts / "config.flat-publication.json").write_bytes(config_path.read_bytes())
         scene = None
         if fixture_scene == "air-pocket-negative-cave":
             from engine_air_pocket import prepare as prepare_pocket, static_config
@@ -572,6 +587,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         metadata.write_bytes(fixed_day_payload(metadata.read_bytes(), 0.25))
         exe = runtime / "Cubatarium.exe"
         env = os.environ.copy()
+        env.pop("CUBATARIUM_FORCE_CPU", None)
         env.pop("CUBA_RGB_REFERENCE", None)
         # Secondary evidence is opt-in for this run, never an inherited trace.
         env.pop("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", None)
@@ -609,6 +625,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             env["CUBA_DISK_AIR_CANCEL_PROBE"] = ",".join(map(str, secondary_residency_column))
         if probe_terrain_save_failure:
             env["CUBA_FLIGHT_QA_TERRAIN_SAVE"] = str((artifacts / "terrain-save-probe").resolve())
+            if flat_publication:
+                env["CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT"] = "flat_publication"
+                env["CUBATARIUM_FORCE_CPU"] = "1"
         if probe_disk_read_failure:
             env["CUBA_DISK_READ_FAILURE_PROBE"] = ",".join(map(str, secondary_residency_column))
             env["CUBA_DISK_READ_FAILURE_ARTIFACTS"] = str((artifacts / "disk-read-save").resolve())
@@ -726,6 +745,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "probe_partial_air_cancellation": probe_partial_air_cancellation,
                  "probe_disk_read_failure": probe_disk_read_failure,
                  "probe_terrain_save_failure": probe_terrain_save_failure,
+                 "flat_publication_requested": flat_publication,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -1017,6 +1037,8 @@ def main() -> int:
                         help="explicitly prepare stone cy=-4 and AIR cy=-3..19 in isolated probe column")
     parser.add_argument("--probe-terrain-save-failure", action="store_true",
                         help="startup-only isolated UWorld save failure/retry API probe")
+    parser.add_argument("--flat-publication", action="store_true",
+                        help="standalone CPU/Flat publication variant of the startup API probe")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -1067,6 +1089,7 @@ def main() -> int:
                   probe_disk_read_failure=args.probe_disk_read_failure,
                   prepare_read_failure_air=args.prepare_read_failure_air,
                   probe_terrain_save_failure=args.probe_terrain_save_failure,
+                  flat_publication=args.flat_publication,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
