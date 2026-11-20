@@ -467,8 +467,9 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
   const ChunkStorageSettings settings = storage.GetSettings();
   const glm::ivec3 ground(coord.x, 0, coord.z);
   (void)token;
+  const auto probe_gate = SaveWriteProbeGate;
   EnqueueBackgroundIo(
-      [this, snapshot, settings, worldFolder, coord, ground, saveBatchId]()
+      [this, snapshot, settings, worldFolder, coord, ground, saveBatchId, probe_gate]()
       {
         AsyncChunkSaveRequest done;
         done.saveBatchId = saveBatchId;
@@ -484,6 +485,20 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
 
         try
         {
+          if (probe_gate)
+          {
+            probe_gate->entered.store(true, std::memory_order_release);
+            const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+            while (!probe_gate->released.load(std::memory_order_acquire))
+            {
+              if (std::chrono::steady_clock::now() >= deadline)
+              {
+                finish("save_probe_gate_timeout");
+                return;
+              }
+              std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
+          }
           UChunkStorageService worker_storage(settings);
           // Current CCHK4/JSON4 serialization writes numeric block IDs and
           // does not consult registry/catalog state. Do not retain a mutable

@@ -249,6 +249,7 @@ public:
                                    uint64_t *saved_revision = nullptr);
 
 private:
+  friend void RunTerrainSaveFailureProbe();
   DiskAirCancellationProbe AirCancellationProbe;
   DiskReadFailureProbe ReadFailureProbe;
   std::optional<glm::ivec3> ReadFailureEditCell;

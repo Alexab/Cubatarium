@@ -234,13 +234,57 @@ inline void RunTerrainSaveFailureProbe()
         drain();
         require(world.Persistence->TrySaveTerrainColumnForUnload(world, column),
                 "new folder requires its own complete save");
+        // Hold an older immutable terrain write while requesting a newer
+        // cooperative save to the same folder. No synchronous phase may pass
+        // this active write. RAII releases the worker on every assertion exit.
+        auto gate = std::make_shared<AsyncSaveWriteProbeGate>();
+        struct ReleaseGate
+        {
+          std::shared_ptr<AsyncSaveWriteProbeGate> value;
+          ~ReleaseGate() { value->released.store(true, std::memory_order_release); }
+        } release{gate};
+        world.Persistence->AsyncChunkIo->SaveWriteProbeGate = gate;
+        world.BlockWorld.SetBlock(during, 8);
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column),
+                "old snapshot is queued before the newer edit");
+        const auto entered_by = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!gate->entered.load(std::memory_order_acquire))
+        {
+          require(std::chrono::steady_clock::now() < entered_by, "writer did not enter probe gate");
+          std::this_thread::yield();
+        }
+        world.BlockWorld.SetBlock(during, BLOCK_AIR);
+        world.ModifiedChunks.insert(floor);
+        Progress fenced;
+        world.BeginCooperativeSave(switched.string(), false);
+        const bool terminal = world.TickCooperativeSave(fenced, 1);
+        require(!terminal && !fenced.phases.empty() &&
+                    fenced.phases.back() == "save_waiting_for_io" &&
+                    world.ModifiedChunks.count(floor) == 1,
+                "cooperative save must wait for active writes");
+        gate->released.store(true, std::memory_order_release);
+        world.Persistence->AsyncChunkIo->SaveWriteProbeGate.reset();
+        const auto saved_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.TickCooperativeSave(fenced, 1))
+        {
+          require(std::chrono::steady_clock::now() < saved_by, "fenced save did not finish");
+          std::this_thread::yield();
+        }
+        require(world.GetCooperativeSaveError().empty() && world.ModifiedChunks.empty() &&
+                    world.Persistence->IsAsyncChunkIoQuiescent(),
+                "new cooperative save must finish after the old batch");
+        UBlockWorld final_cold;
+        require(storage.LoadTerrainColumn(column, final_cold, switched.string(),
+                                         *world.BlockRegistry, 15, -64) > 0 &&
+                    final_cold.GetBlock(during) == BLOCK_AIR,
+                "old writer cannot overwrite the newer cooperative edit");
       }
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
           {"recovery_phases", recovered.phases}, {"files_preserved", before.size()},
           {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}, {"unload_waited_for_ack", true},
           {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
-          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}});
+          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}, {"cooperative_write_fence_checked", io_failure}});
     }
     report["status"] = "PASS";
   }

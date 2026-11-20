@@ -60,6 +60,13 @@ struct AsyncChunkLoadQueuePushMetrics
   uint64_t push_count{0};
 };
 
+// Only the explicit native save probe installs this gate. Normal writes do
+// not wait; a probe timeout yields an ordinary failed ACK, never a lost task.
+struct AsyncSaveWriteProbeGate
+{
+  std::atomic<bool> entered{false}, released{false};
+};
+
 struct AsyncChunkSaveRequest
 {
   uint64_t saveBatchId{0};
@@ -89,6 +96,8 @@ struct AsyncColumnLightFlagsSaveResult
 class UAsyncChunkIO
 {
 private:
+  friend void RunTerrainSaveFailureProbe();
+  std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
   static std::size_t ChunkIoWorkerBudget()
   {
     return ComputeWorkerThreadCount(JobPoolKind::ChunkIo);
