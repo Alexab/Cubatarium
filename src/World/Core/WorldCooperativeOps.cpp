@@ -1688,7 +1688,14 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     {
       // Keep the original world/folder and local edits alive while retrying.
       // Never finish a save or clear ModifiedChunks after skipping terrain.
-      if (world.Persistence)
+      if (!world.ProceduralTemplate.AsyncChunkIo && world.BlockRegistry)
+      {
+        world.GetChunkStorage().LoadTerrainColumn(
+            *blocked, world.BlockWorld, world.GetWorldFolderPath(),
+            *world.BlockRegistry, world.ProceduralTemplate.MaxHeight,
+            world.ProceduralTemplate.MinHeight);
+      }
+      else if (world.Persistence)
       {
         world.Persistence->RequestAsyncTerrainColumnLoad(world, *blocked);
         world.Persistence->TickAsyncChunkIo(world, 10, 6.0);

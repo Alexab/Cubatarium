@@ -866,6 +866,8 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   {
     return -1;
   }
+  const bool was_blocked =
+      world.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord);
 
   int total = 0;
   const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
@@ -902,6 +904,12 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   }
   if (!ResolveTerrainColumnRead(world, worldFolder, groundCoord, maxWorldY,
                                 minWorldY))
+  {
+    world.GetChunkManager().MarkTerrainColumnReadUnresolved(groundCoord);
+    return -1;
+  }
+  if (was_blocked && !IsTerrainChunkComplete(world, groundCoord, maxWorldY,
+                                             kNoTerrainChunkSlice, minWorldY))
   {
     world.GetChunkManager().MarkTerrainColumnReadUnresolved(groundCoord);
     return -1;

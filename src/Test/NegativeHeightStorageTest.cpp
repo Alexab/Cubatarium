@@ -429,6 +429,12 @@ static void TestAirOnlyColumnStorage(const std::filesystem::path &root_folder)
             !IsTerrainChunkComplete(sparse, column, 319, kNoTerrainChunkSlice,
                                     -64),
         "indexed absent AIR does not mint explicit whole-profile completeness");
+    sparse.GetChunkManager().MarkTerrainColumnReadUnresolved(column);
+    Expect(storage.LoadTerrainColumn(column, sparse, folder, registry, 319,
+                                     -64) < 0 &&
+               sparse.GetChunkManager().HasUnresolvedTerrainColumnRead(column),
+           "a valid but still incomplete sparse profile cannot release the "
+           "synchronous save barrier");
     const auto normalized = std::filesystem::weakly_canonical(folder);
     Expect(normalized.parent_path() ==
                std::filesystem::weakly_canonical(
