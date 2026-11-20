@@ -3442,6 +3442,63 @@ static void TestSelectiveMeshLeaseWorkerLifecycle(
   }
 }
 
+static void TestMeshSameKeySupersession(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (const bool running_old : {false, true})
+  {
+    std::cout << "mesh_same_key_case running_old=" << running_old << " START\n";
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 coord(2, 0, 0), origin = coord * CHUNK_SIZE;
+    world.SetBlock(origin + glm::ivec3(8), kStone);
+    GatedPhysicalMesher mesher;
+    if (!running_old) mesher.Release();
+    UAsyncMeshBuilder builder(2);
+    builder.SetMesher(&mesher);
+    builder.SetCompletedCapacity(2);
+    const auto submit = [&](uint64_t revision) {
+      return builder.Enqueue(ChunkMeshSnapshot::Capture(world, coord, revision,
+          nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
+    };
+    Expect(submit(901) && mesher.WaitEntered(), "same-key predecessor reaches worker barrier");
+    if (running_old)
+      builder.CancelPendingOutsideHorizontalRadius({0, 0, 0}, 0);
+    else
+      Expect(builder.WaitIdleFor(std::chrono::seconds(5)), "same-key old completion ready");
+    world.SetBlock(origin + glm::ivec3(12, 8, 8), kStone);
+    Expect(submit(902), "same-key newer input request accepted");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    const auto ready_count = running_old ? 1u : 2u;
+    while (builder.GetCompletedSize() < ready_count && std::chrono::steady_clock::now() < deadline)
+      std::this_thread::yield();
+    Expect(builder.GetCompletedSize() == ready_count && builder.IsInFlight(coord),
+           "newer same-key completion owns the coordinate before old retirement");
+    mesher.Release();
+    Expect(builder.WaitIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+           "same-key workers retire after barrier release");
+    if (!running_old)
+      Expect(builder.DrainCompleted(1).empty(), "superseded old completion rejected");
+    Expect(builder.IsInFlight(coord) && builder.GetCompletedDiscardedOverflow() == 0,
+           "old retirement preserves newer same-key owner and result");
+    Expect(builder.TakeDiscardedCoords().empty(),
+           "superseded same-key result does not return duplicate executable debt");
+    auto results = builder.DrainCompleted(1);
+    std::size_t indices = 0;
+    if (results.size() == 1)
+      for (const auto &batch : results[0].batches) indices += batch.indices.size();
+    Expect(results.size() == 1 && results[0].coord == coord &&
+               results[0].sourceRevision == 902 && indices > 36 && !builder.IsInFlight(coord),
+           "same-key current result preserves newer two-cube inputs and retires owner once");
+    Expect(builder.DrainCompleted(1).empty() && builder.TakeDiscardedCoords().empty(),
+           "same-key terminal result and retry debt drain exactly once");
+    std::cout << "mesh_same_key_supersession running_old=" << running_old << " PASS\n";
+  }
+}
+
 static void TestCertifiedGeometrySurvivesInflightLight(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false)
@@ -7159,6 +7216,7 @@ int main(int argc, char **argv)
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestSelectiveMeshLeaseWorkerLifecycle(registry, definitions.get());
+  TestMeshSameKeySupersession(registry, definitions.get());
   TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get(), 1);

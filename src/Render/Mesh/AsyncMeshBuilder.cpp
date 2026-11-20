@@ -386,11 +386,14 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
         const auto it = InFlight.find(result.coord);
+        const bool newer_owned =
+            it != InFlight.end() && it->second != result.jobId;
         if (it != InFlight.end() && it->second == result.jobId)
         {
           InFlight.erase(it);
         }
-        discarded_now.push_back(result.coord);
+        if (!newer_owned)
+          discarded_now.push_back(result.coord);
         terminal_events.push_back(
             {result.stageTrace, JobTerminalReason::SubmissionEpochChanged});
         continue;
@@ -400,7 +403,10 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
-        discarded_now.push_back(result.coord);
+        // A replacement already owns this obligation. Retiring its predecessor
+        // must not create a second executable request for the same coordinate.
+        if (it == InFlight.end())
+          discarded_now.push_back(result.coord);
         terminal_events.push_back(
             {result.stageTrace, JobTerminalReason::JobIdentityReplaced});
         continue;
@@ -574,8 +580,13 @@ void UAsyncMeshBuilder::NoteObsoleteJob(glm::ivec3 coord,
   else
     DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
   {
-    std::lock_guard<std::mutex> lock(DiscardedMutex);
-    DiscardedCoords.push_back(coord);
+    std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+    const auto current = InFlight.find(coord);
+    if (current == InFlight.end() || current->second == span.job_id)
+    {
+      std::lock_guard<std::mutex> debt_lock(DiscardedMutex);
+      DiscardedCoords.push_back(coord);
+    }
   }
   UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
 }

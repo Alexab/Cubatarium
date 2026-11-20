@@ -38,6 +38,16 @@
 
 ## Критерий закрытия
 
+### Q04 same-key late/superseded result / H1, 2026-11-21
+
+Finite real-builder cases reuse GatedPhysicalMesher, two workers, capacity2, one coordinate. Running case: hold request901, selectively cancel it, mutate a second detached cube, enqueue request902 and wait for its actual completion before releasing901. Completed case:901 completes,902 is admitted/completed before draining old901. PASS: old result rejected, current owner/result902 preserved, two-cube geometry returned, no retry coordinate for already-owned newer work, terminal result/debt drain once. Deadline5s/no sleeps. This checks executable retry debt at the producer boundary, not merely payload rejection.
+
+Repro: Release decor_mesh_integration_test build and ctest; logs=`s4-mesh-same-key-repro-build/test-20261121.log`. No production change before reproduction. Source suspicion: NoteObsoleteJob and DrainCompleted always append discarded coords even while a newer job owns the same key; cache consumes those as remesh requests.
+
+Both pre-fix reproductions CONFIRMED the same duplicate-debt assertion: running-old in `s4-mesh-same-key-repro-test-20261121.log`, completed-old in `s4-mesh-same-key-completed-repro-test-20261121.log`. No further reproduction needed. Fix checks exact current job ownership before emitting retry coordinates from NoteObsoleteJob and stale/mismatched DrainCompleted. A newer live owner suppresses predecessor retry; unowned obligations keep the retry path. No numeric revision comparison.
+
+Release decor integration PASS (2.49s), both same-key cases and previous selective worker cases PASS in `s4-mesh-same-key-fixed-output-20261121.log`. Newer source902 two-cube geometry survives; old result rejects, owner retires once, retry drain remains empty. Scope is supersession while newer owner is still live, not a claim about all post-publication late arrivals. Production changed: current-EXE native publication regression PASS at `s4-mesh-same-key-fixed-20261121-native`; provenance copied to `s4-mesh-same-key-provenance-20261121.json`. Runtime exit0/startup/provenance PASS; original config byte-restored. Overall smoke UNTESTED retained. Final receipt: `s4-mesh-same-key-acceptance-20261121.json`. Next: finite outstanding outcome/cap ledger for Q01..Q12, then remaining uncovered cases; no repetition of accepted supersession/protected/relight proofs without changed dependencies.
+
 ### Q04 selective builder worker barriers, 2026-11-21
 
 Finite test-only extension in DecorMeshIntegrationTest reuses GatedPhysicalMesher and actual UAsyncMeshBuilder. Case workers1: outside job is running behind an explicit promise barrier, protected job queued, third outside job queued; selective cancel must release exactly the third job's snapshot/work-slot credits, preserve protected identity, reject running outside result and produce protected geometry. Case workers2: protected completion becomes ready before outside gate release; capacity1 and overflow0 prove late cancelled outside completion cannot displace it. Both require actual geometry/sourceRevision802, mesher builds2, eventual worker and result credits back to baseline. Deadline5s, no sleeps.

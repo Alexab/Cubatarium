@@ -255,6 +255,6 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q04: completed overflow/cancel and actual protected queued/running worker barriers have scoped receipts in S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md. Next: late cancelled same-key result after newer job reissue, proving no owner/result loss or duplicated executable debt; then remaining eviction/coalescing and Q01..Q12 limits/outcomes. Preserve full S0..S6, reuse S3.04 relight proof, do not restart audit or repeat accepted cases without dependent changes.",
+  "next_action": "S4.02: same-key old running/completed result versus live newer owner verified in s4-mesh-same-key-acceptance-20261121.json. Next: finite outstanding Q01..Q12 outcome/cap ledger (REUSE/CHECK/BLOCKED/inapplicable with reason), then remaining Q04 eviction/coalescing and other uncovered owners. Reuse accepted receipts; preserve full S0..S6; no new audit.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.same-key-supersession-live-owner",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-mesh-same-key-acceptance-20261121.json",
+      "scope": "Exact CPU builder same-key supersession while newer owner is live: old rejection preserves source902 two-cube result, no duplicate executable retry. Native current-EXE overflow/cancel/protected publication regression PASS. Does not prove late arrival after successor fully retired, mixed GPU/field, eviction/coalescing or whole S4.02."
+    },
+    {
       "id": "S4.02.Q04.selective-queued-running-worker-barriers",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

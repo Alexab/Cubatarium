@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-old-result-duplicates-new-owner-retry",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Running cancelled predecessor and completed superseded predecessor both emitted discarded-coordinate retry while a newer same-key owner/result existed. Both negative repro logs retained.",
+      "fix": "Gate obsolete-worker and completed-drain retry notification on exact current ownership; preserve retry for unowned obligations.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-acceptance-20261121.json",
+      "next_action": "Finish finite outstanding Q01..Q12 outcomes ledger; remaining eviction/coalescing and mixed GPU/field cases remain OPEN."
+    },
+    {
       "id": "mesh-completed-cancel-drops-replacement-behind-drawable",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
