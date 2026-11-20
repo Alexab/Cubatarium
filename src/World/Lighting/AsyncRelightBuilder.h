@@ -85,6 +85,7 @@ public:
   }
 
 private:
+  friend struct AsyncRelightLifecycleTestAccess;
   void NoteCompletedOverflow(RelightComputeResult &&dropped);
 
   static constexpr int kPipelineSlotsPerWorker = 8;

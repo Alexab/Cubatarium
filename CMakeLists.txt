@@ -2089,6 +2089,25 @@ cubatarium_add_test(NAME chunk_render_demand_test
         src/World/Diagnostics/JobStageTrace.cpp
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME async_relight_lifecycle_test
+    SOURCES
+        ${PHYSICS_MATERIAL_UNIT_SOURCES}
+        src/Blocks/BlockDefinitionStorage.cpp
+        src/World/Lighting/LightUtil.cpp
+        src/World/Lighting/ChunkRelightSnapshot.cpp
+        src/World/Lighting/AsyncRelightBuilder.cpp
+        src/World/Diagnostics/JobStageTrace.cpp
+        src/Core/Jobs/JobThreadPool.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/App/Platform/WorkerJobKind.cpp
+        src/Test/AsyncRelightLifecycleTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME async_relight_lifecycle_test
+    COMMAND $<TARGET_FILE:async_relight_lifecycle_test>)
+set_tests_properties(async_relight_lifecycle_test PROPERTIES TIMEOUT 20)
+
 cubatarium_add_test(NAME relight_result_install_test
     SOURCES
         ${PHYSICS_MATERIAL_UNIT_SOURCES}

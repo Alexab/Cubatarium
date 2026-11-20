@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "async-relight-queued-cancel-loses-obligation",
+      "stage": "S3.04",
+      "status": "CONFIRMED_OPEN",
+      "evidence": "build/desktop-msvc/s3-cancel-repro-test-20261120.log",
+      "observed": "Real single-worker queue held by promise barrier; queued job 9101 cancelled before compute; expected_sources=1 recovered_sources=0; Release CTest FAIL in 0.08 s.",
+      "blocks_overall_acceptance": true,
+      "next_action": "Retain full retry specification across cancellation/overflow; hand it once to deferred world recovery; verify successor and late completion without duplicate debt. Do not restart reproduction before fix."
+    },
+    {
       "id": "surface-first-paint-unready",
       "stage": "S4",
       "status": "OPEN",
