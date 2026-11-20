@@ -35,6 +35,7 @@ namespace cutum
 std::filesystem::path GetExecutableDirectory();
 
 class UWorld;
+class UApplication;
 class UTextureBaseStorage;
 class UTextureCubeStorage;
 class UCreatureTextureStorage;
@@ -52,6 +53,7 @@ class UCore : public IUGameContent
 {
   friend class UWorldLifecycleFacade;
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
   friend class UResourcePackBootstrap;
 
 public:

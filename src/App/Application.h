@@ -75,6 +75,7 @@ class UApplication : public IUGuiMenuHost
 {
   friend class UScreenNavigator;
   friend class UInputRouter;
+  friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
 
 public:
   UApplication(std::shared_ptr<UCore> core, std::shared_ptr<UWorld> world,

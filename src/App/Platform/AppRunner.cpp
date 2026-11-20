@@ -21,6 +21,7 @@
 #include "App/Platform/HumanMotionQa.h"
 #endif
 #include "App/Platform/CreatureQaWorldUserProbe.h"
+#include "App/Platform/SaveErrorUiProbe.h"
 #include "App/Platform/TerrainSaveFailureProbe.h"
 #include "Game/CreatureVisualQaPlacement.h"
 
@@ -2387,6 +2388,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                                      geometry_engine->GetShaderManager());
               RunCreatureQaWorldUserProbe(*core, *world);
               RunTerrainSaveFailureProbe(*core);
+              RunSaveErrorUiProbe(*application, *core);
             }
             // Behavior QA: CUBA_FLIGHT_QA_BEHAVIOR=wasp,sheep,... spawns the
             // listed species in front of the camera and logs position and

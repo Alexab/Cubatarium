@@ -72,6 +72,7 @@ namespace cutum
 
 struct RuntimeOverlayFlushResult;
 class UCore;
+class UApplication;
 class UChunkRenderDemandStore;
 
 /// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from
@@ -1666,6 +1667,7 @@ private:
 
   friend class UWorldCooperativeSession;
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
   friend class UWorldStreaming;
   friend class UWorldPersistence;
   friend class UChunkEmergeCoordinator;
