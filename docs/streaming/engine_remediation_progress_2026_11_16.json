@@ -30869,5 +30869,393 @@
     ]
   },
   "next_work": "Fence abort/cancel and same-folder cooperative save against active async writes; verify actual menu/quit recovery and memory/backpressure bounds; continue every remaining original S0..S6 requirement."
+},
+"cooperative_save_waits_for_active_writer_and_retains_dirty_metadata_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no restart or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cooperative-active-writer-fence-assessment-20261120.json",
+    "sha256": "7b32601a44cfb45eac1aeece1c4ac19f8029d8bc4e31d3942fbfc8c9131282a3"
+  },
+  "validation": {
+    "schema": "engine-cooperative-active-writer-fence-assessment.v1",
+    "status": "PASS",
+    "scope": "Cancel read demand without losing immutable saves; wait for old IO before new cooperative/session snapshot writes; timeout preserves data and permits retry",
+    "full_goal_status": "IN_PROGRESS",
+    "source_commits": [
+      "2603a3734",
+      "82ff5050f",
+      "3038fa497",
+      "60fc71aa165e96b88457aaa8265dea008dcedbd1"
+    ],
+    "changes": [
+      "AbortAsyncChunkIoFor cancels read demands only, preserves pending save batches/ACKs/receipts and returns actual quiescence; zero timeout is a poll, not unconditional success.",
+      "Cooperative save Init waits before folder/catalog changes and synchronous writes. Drain cannot advance based on a frame-count cap.",
+      "A10-second pending-IO wait returns terminal failure without clearing edits or pretending to stop the writer; later retry uses the normal save path.",
+      "Full session snapshot rejects pending IO even when skip_quiesce=true. Metadata-only refresh no longer clears terrain ModifiedChunks.",
+      "Synchronous read recovery still consumes older asynchronous write ACKs before retrying a read blocked by a pending-save flag.",
+      "Default-off native worker gate holds immutable older bytes; RAII and bounded gate timeout avoid a stuck diagnostic worker."
+    ],
+    "verification": {
+      "related_release_tests": "3 PASS /0.98sec total; production source82ff5050f",
+      "latest_release_build": "PASS",
+      "native": {
+        "schema": "terrain-save-api-native-assessment.v1",
+        "status": "PASS",
+        "source_commit": "60fc71aa165e96b88457aaa8265dea008dcedbd1",
+        "probe": {
+          "cases": [
+            {
+              "async_cold_edit_preserved": true,
+              "async_failure_retained": false,
+              "cold_edit_preserved": true,
+              "cooperative_write_fence_checked": false,
+              "dirty_preserved": 1,
+              "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+              "failure_phases": [
+                "scan",
+                "save_failed"
+              ],
+              "files_preserved": 7,
+              "folder_switch_checked": false,
+              "io_timeout_and_retry_checked": false,
+              "kind": "incomplete",
+              "metadata_only_preserved_dirty": true,
+              "newer_edit_invalidated_ack": true,
+              "recovery_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "snapshot_fence_checked": false,
+              "status": "PASS",
+              "unload_waited_for_ack": true,
+              "write_fence_evidence": {}
+            },
+            {
+              "async_cold_edit_preserved": true,
+              "async_failure_retained": true,
+              "cold_edit_preserved": true,
+              "cooperative_write_fence_checked": true,
+              "dirty_preserved": 1,
+              "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+              "failure_phases": [
+                "scan",
+                "save_failed"
+              ],
+              "files_preserved": 8,
+              "folder_switch_checked": true,
+              "io_timeout_and_retry_checked": true,
+              "kind": "write_failure",
+              "metadata_only_preserved_dirty": true,
+              "newer_edit_invalidated_ack": true,
+              "recovery_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "snapshot_fence_checked": true,
+              "status": "PASS",
+              "unload_waited_for_ack": true,
+              "write_fence_evidence": {
+                "fenced_save_phases": [
+                  "save_waiting_for_io",
+                  "scan",
+                  "chunks",
+                  "save_metadata",
+                  "done"
+                ],
+                "timeout_phases": [
+                  "save_waiting_for_io",
+                  "save_failed"
+                ],
+                "timeout_seconds": 10.004453
+              }
+            }
+          ],
+          "schema": "terrain-save-failure-native.v1",
+          "scope": "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance",
+          "status": "PASS"
+        },
+        "cold_independent": {
+          "incomplete": {
+            "deleted": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+              "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 0
+            },
+            "added": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+              "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                2,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "upper": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+              "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+              "section": [
+                0,
+                -2,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "during": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+              "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                3,
+                2,
+                3
+              ],
+              "id": 8
+            }
+          },
+          "write-failure": {
+            "deleted": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 0
+            },
+            "added": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                2,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "upper": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+              "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+              "section": [
+                0,
+                -2,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "during": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                3,
+                2,
+                3
+              ],
+              "id": 0
+            }
+          },
+          "late_old_folder_top": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_0_0.cchunk",
+            "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+            "section": [
+              0,
+              0,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "new_folder_top": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_0_0.cchunk",
+            "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+            "section": [
+              0,
+              0,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "new_folder_last_edit": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 0
+          }
+        },
+        "provenance": {
+          "source": true,
+          "exe": true,
+          "config": true,
+          "head": true,
+          "clean": true
+        },
+        "startup_smoke_status": "PASS",
+        "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 131.407,
+        "ingame_frames": 1473,
+        "diagnostic_relocations_after_start": 0
+      },
+      "actual_timeout_seconds": 10.004453
+    },
+    "preserved_baseline_failure": {
+      "evidence": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-before-20261120-native\\save-api-assessment.json",
+        "sha256": "1a24f38a7aa6659d0382fb79a4df396376ec67e70ef508b346efec887bd2baaa"
+      },
+      "stale_old_snapshot_cell": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-before-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_-4_0.cchunk",
+        "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+        "section": [
+          0,
+          -4,
+          0
+        ],
+        "local": [
+          3,
+          2,
+          3
+        ],
+        "id": 8
+      },
+      "reason": "With a real writer held, the old cooperative Init advanced to scan instead of waiting. The assertion stopped the attempted newer save; after gate release the older snapshot wrote8 while the intended newest edit was AIR0. This is not a claim that the baseline newer save reached its done phase."
+    },
+    "preserved_fixture_failures": [
+      {
+        "evidence": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-fixed-20261120-native\\save-api-assessment.json",
+          "sha256": "01accd837f0ea243cb3bae54bc5b8c8c22362618c060b7de3563b7f3c22622d8"
+        },
+        "reason": "A64-poll assertion expired before background fixture/index work ran; changed the diagnostic to elapsed deadlines plus yield."
+      },
+      {
+        "evidence": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-wall-bound-20261120-native\\save-api-assessment.json",
+          "sha256": "969adbcd3f95255d8e77dfb4b2da59079a8fe18ae315ca4def9c71583511235f"
+        },
+        "reason": "The new fence finished pre-existing signature metadata work, creating column_light.json after the before snapshot. Final fixture settles prior work before snapshot; full byte comparison remains strict and includes that file."
+      }
+    ],
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-before-release-build-20261120.log",
+        "sha256": "0a9d8bd2ccdc720a1fe8a06ba066b5ed21b2cb74f6ceb902e41c690f77ddb111"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-regression-build-20261120.log",
+        "sha256": "7f1b170dac10e6db091b65191bc61e206415bad03e04be858cd4787017784586"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-regression-test-20261120.log",
+        "sha256": "d0527c5320998979340dce183a482287d7c44d1e1c445f1c06ca05026c5c0cca"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-committed-release-build-20261120.log",
+        "sha256": "6134671ee100631141b18b13170c0646d6c26a15cce8d6b6bd46843cd40cdc02"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-release-build-20261120.log",
+        "sha256": "ce2b310b0bc283ef47f3a1f82d519bf3feda871026e3b6081f85ed3c4ebc36c0"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\save-api-assessment.json",
+        "sha256": "e7db697d1a8020919d3217b126f9440f679d3254aadaf8ba2781b94168ac3b92"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\terrain-save-probe\\report.json",
+        "sha256": "8a2972bd6418115f6b909007ccc9015b88e3b3608288cb01065c0a100e861e94"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\route.json",
+        "sha256": "8d12b54eb41ab1b595c68c81c12d8742aeaccd3c0055ba08987df612f31f9411"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\coop-write-fence-settled-20261120-native\\flight_sim_report.json",
+        "sha256": "236bf6b3ea11d709e082ddc4c2496f973892c0a77380052b63df2853d617ce94"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_coop_write_fence_settled_native_20261120.py",
+        "sha256": "5795368c9999137280847f7e15fc6e2f14d94b9273efeebe398706cf5135803b"
+      }
+    ],
+    "limits": [
+      "Native probe exercises isolated actual UWorld save APIs with resume_streaming_after_save=false, real held IO workers, actual file writes and independent cold parsing. Actual application autosave scheduler, regular resume=true, menu/quit cancellation/error rendering and user retry still need native UI coverage.",
+      "Ten-second wait timeout preserves outstanding write ownership and dirty data; it does not forcibly stop an OS write or guarantee bounded worker destruction after an indefinitely stuck filesystem call.",
+      "Legacy WorldLifecycleFacade::SaveWorld still selects metadata-only refresh for streamed persisted worlds; preserving dirty tracking is not a certificate that this facade saved terrain. Its budgeted UI integration remains open.",
+      "Concurrent gameplay edits while an already admitted budgeted save scans/writes columns, per-revision dirty acknowledgement and new-column capture still need a complete autosave contract.",
+      "World replacement/path aliasing, procedural/mixed producer ownership, generic Ensure clearing, queue/backpressure/memory bounds, filesystem atomicity/forced-exit durability and complete failure matrices remain open.",
+      "Full original S0..S6 remains active, including persisted catalog/profile/content/algorithm certificates, CPU/GPU/backend/GLES parity, independent wet/transparency/whole-screen and complete native lifetime/performance/memory acceptance."
+    ]
+  },
+  "next_work": "Verify actual application menu/quit error and retry, replace metadata-only legacy save bypass with proper budgeted save semantics, and handle live edits/dirty acknowledgements during autosave; continue all other original S0..S6 requirements."
 }
 }
