@@ -5165,13 +5165,16 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         ++metrics.saves_processed_n;
       }
+      // A successful old-folder job still changed that folder's disk index.
+      // This is independent of permission to ACK/retire current-world data.
+      if (save.success && !save.cleanupOnly)
+        ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
       auto pending_it = PendingAsyncColumnSaveSlices.find(save.groundCoord);
       if (save.worldFolder != WorldFolderPath ||
           pending_it == PendingAsyncColumnSaveSlices.end() ||
           !pending_it->second.Consume(save))
         continue; // Late, duplicate or foreign ACK cannot complete this save.
-      if (save.success && !save.cleanupOnly)
-        ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
+
       if (pending_it->second.Complete())
       {
         if (auto receipt = UnloadSaveReceipts.find(save.groundCoord);

@@ -198,12 +198,49 @@ inline void RunTerrainSaveFailureProbe()
                                        *world.BlockRegistry, -17, -64) > 0 &&
                   async_cold.GetBlock(during) == (io_failure ? BLOCK_AIR : 8),
               "actual async recovery persisted the newest edit");
+      if (io_failure)
+      {
+        // A late write to the old folder must update its physical index but
+        // cannot acknowledge a save or grant retirement in the new folder.
+        world.ProceduralTemplate.MaxHeight = 15;
+        for (int cy = -1; cy <= 0; ++cy)
+        {
+          const glm::ivec3 extra(0, cy, 0);
+          UChunk frame(extra);
+          if (cy == 0) frame.SetBlockLocal({1, 2, 3}, 8);
+          const auto decoded = codec.Deserialize(
+              codec.Serialize(extra, frame, *world.BlockRegistry).bytes,
+              extra, *world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(world.BlockWorld, extra, &decoded, nullptr,
+                                       {column, 1}, 1, false), "expanded save fixture");
+        }
+        require(storage.GetHighestChunkSliceOnDisk(folder.string(), column) == -2,
+                "old folder index starts below the new queued ceiling");
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                    storage.IsColumnSavePending(column), "old-folder save is pending");
+        const auto switched = root / "switched-folder";
+        world.SetWorldFolderPath(switched.string());
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.Persistence->TickDrainAsyncChunkIo(world, 32))
+        {
+          require(std::chrono::steady_clock::now() < deadline, "old-folder ACK drain timeout");
+          std::this_thread::yield();
+        }
+        require(storage.GetHighestChunkSliceOnDisk(folder.string(), column) == 0,
+                "late successful old-folder write updates its own index");
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                    storage.IsColumnSavePending(column),
+                "old-folder ACK cannot grant new-folder retirement");
+        drain();
+        require(world.Persistence->TrySaveTerrainColumnForUnload(world, column),
+                "new folder requires its own complete save");
+      }
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
           {"recovery_phases", recovered.phases}, {"files_preserved", before.size()},
           {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}, {"unload_waited_for_ack", true},
           {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
-          {"async_cold_edit_preserved", true}});
+          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}});
     }
     report["status"] = "PASS";
   }
