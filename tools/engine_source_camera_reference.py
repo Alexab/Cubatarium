@@ -96,6 +96,7 @@ def evaluate_records(scene, lines, action, plan, material, *, expected_frames,
     counts = Counter()
     frames, values = set(), [dict(), dict()]
     epoch, pending, examples, last_frame = None, [], [], 0
+    model_levels = {}
     def observe(line):
         nonlocal last_frame
         pairs = re.findall(r"\b(\w+)=([^\s]+)", line)
@@ -135,8 +136,11 @@ def evaluate_records(scene, lines, action, plan, material, *, expected_frames,
         if not ready:
             counts[name+"_pending"] += 1
             return
-        expected = max((max(0, 15-sum(abs(a-b) for a,b in zip(sample, source)))
-                        for source in (after if phase else before)), default=0)
+        if sample not in model_levels:
+            model_levels[sample] = tuple(max((max(0, 15-sum(abs(a-b) for a,b in zip(sample, source)))
+                                             for source in sources), default=0)
+                                         for sources in (before, after))
+        expected = model_levels[sample][phase]
         counts[name+"_ready"] += 1
         if sky != 0 or block != expected or incarnation == 0:
             counts["faults"] += 1
@@ -144,6 +148,8 @@ def evaluate_records(scene, lines, action, plan, material, *, expected_frames,
                 examples.append(dict(frame=frame, cell=sample, expected=expected, actual=block, sky=sky))
         else:
             values[phase].setdefault(sample, set()).add(block)
+            if model_levels[sample][0] != model_levels[sample][1]:
+                counts[name+"_source_effect_samples"] += 1
     try:
         for line in lines:
             if "[CameraLightSample]" in line:
@@ -170,7 +176,8 @@ def evaluate_records(scene, lines, action, plan, material, *, expected_frames,
                     no_pending_fields=counts["before_pending"]+counts["after_pending"] == 0,
                     after_samples=counts["after_ready"] >= 8,
                     before_samples=not mutating or counts["before_ready"] >= 8,
-                    causal_same_cell_change=not mutating or bool(transitions))
+                    source_contribution_before=not mutating or counts["before_source_effect_samples"] >= 8,
+                    source_contribution_after=not mutating or counts["after_source_effect_samples"] >= 8)
     return result("FAIL" if counts["faults"] else "PASS" if all(coverage.values()) else "UNTESTED",
                   "frame_bound_declared_source_transport", action_frame=pivot, counts=dict(counts),
                   faults=counts["faults"], expected_paints=expected_frames, world_epoch=epoch,

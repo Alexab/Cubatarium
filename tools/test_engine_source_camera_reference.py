@@ -58,6 +58,16 @@ class SourceCameraReferenceTest(unittest.TestCase):
         self.removal()
         self.check('PASS')
 
+    def test_moving_observer_needs_counterfactual_source_effect_in_each_phase(self):
+        self.removal()
+        for frame in range(21,41):
+            self.changes[frame]=dict(cell='(22,-48,51)')
+            self.lights[frame-1]=12
+        r=self.check('PASS')
+        self.assertEqual(r['transitions'],[])
+        self.assertEqual(r['counts']['before_source_effect_samples'],19)
+        self.assertEqual(r['counts']['after_source_effect_samples'],20)
+
     def test_old_source_light_after_removal_is_failure(self):
         self.removal();self.lights[24]=13
         self.check('FAIL')
