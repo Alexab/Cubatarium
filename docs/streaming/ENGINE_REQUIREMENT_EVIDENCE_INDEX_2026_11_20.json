@@ -9,6 +9,9 @@
       "card": "S3_05_PERSISTED_CERTIFICATE_CARD_2026_11_20.md",
       "matrix_tests": "build/desktop-msvc/s3-persisted-matrix-test-20261120.log",
       "fluid_matrix": "build/desktop-msvc/s3-persisted-fluid-test-20261120.log",
+      "upper_initial_fail": "build/desktop-msvc/s3-persisted-world-load-20261120-native/terrain-save-probe/report.json",
+      "upper_floor_checkpoint": "build/desktop-msvc/s3-persisted-world-load-floor-20261120-native/terrain-save-probe/report.json",
+      "upper_state": "Compatible restore PASS and material rejection proven. Upper fallback assertion FAIL: isolated fixture lacks streamer and uses out-of-profile sea level; source owner map saved before further run. Legacy/successor not executed.",
       "scope": "Real storage cold read, typed restore queue and physical recalculate: compatible/algorithm/material/profile/configuration/input/legacy, preserving terrain and exact fluid state. Upper UWorld load owner reconciliation remains."
     },
     {

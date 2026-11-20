@@ -242,6 +242,130 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"stale_applied", old_applied}, {"successor_job", 9401},
           {"certified_air_successor", true}});
     }
+    // S3.05: upper async persistence owner, with actual disk worker results.
+    for (const std::string cache_case : {"compatible", "materials", "legacy"})
+    {
+      const auto folder = root / ("persisted-load-" + cache_case);
+      fs::create_directories(folder);
+      UWorld world(nullptr, nullptr);
+      world.ProceduralTemplate.MinHeight = -48;
+      world.ProceduralTemplate.MaxHeight = -17;
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -17;
+      world.BlockWorld.SetVerticalProfile(profile);
+      world.BlockWorld.SetLightingConfigurationIdentity(1);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone, torch, water;
+      stone.Name = "stone";
+      stone.Physics = BlockPhysicsProfile::Solid();
+      torch.Name = "torch";
+      torch.Render.Style = BlockRenderStyle::Cross;
+      torch.Lighting.Emission = 14;
+      water.Name = "water";
+      water.Physics.IsLiquid = true;
+      water.Physics.FluidKindPreset = FluidKind::Water;
+      water.Render.Style = BlockRenderStyle::Fluid;
+      const auto bind = [&] {
+        definitions->ReplaceAll({{8, stone}, {50, torch}, {9, water}},
+            {{"stone", 8}, {"torch", 50}, {"water", 9}});
+      };
+      bind();
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      world.SetWorldFolderPath(folder.string());
+      auto &storage = world.GetChunkStorage();
+      UBlockWorld original;
+      original.SetVerticalProfile(profile);
+      original.SetLightingConfigurationIdentity(1);
+      original.SetFluidDefinitions(definitions.get());
+      original.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      // A procedural column without decoded AIR slices is complete only when
+      // every XZ cell has terrain. Keep a real floor across both columns.
+      for (int x = 0; x < 32; ++x)
+        for (int z = 0; z < 16; ++z)
+          original.SetBlock({x, -48, z}, 8);
+      original.SetBlock({16, -24, 4}, 50);
+      original.SetBlock({2, -47, 2}, 9);
+      const auto fluid = FluidCellState::Flowing(3, true).WithKind(FluidKind::Water);
+      original.SetFluidState({2, -47, 2}, fluid);
+      RelightJobSpec spec;
+      spec.min_world_y = -48;
+      spec.max_world_y = -17;
+      spec.include_known_air_outputs = true;
+      const auto computed = UChunkRelightSnapshot::CaptureSections(
+          original, spec, {{0, -2, 0}}).Compute(*world.BlockRegistry);
+      require(IsTerrainChunkComplete(original, {0, 0, 0}, -17,
+                  kNoTerrainChunkSlice, -48) &&
+                  IsTerrainChunkComplete(original, {1, 0, 0}, -17,
+                  kNoTerrainChunkSlice, -48),
+              "upper persistence source columns must satisfy terrain completeness");
+      require(computed.inputs_complete && computed.chunks.size() == 1,
+              "upper persistence fixture requires complete actual calculation");
+      original.GetChunkManager().ReplaceComputedSectionLightVolume(
+          {0, -2, 0}, *computed.chunks[0].padded_light, true, true);
+      require(original.RecordLightCalculation(computed,
+                  world.BlockRegistry->GetDefinitionsCatalogSnapshot()) == 1 &&
+                  storage.SaveTerrainColumn({0, 0, 0}, original, folder.string(),
+                      *world.BlockRegistry, -17, -48) &&
+                  storage.SaveTerrainColumn({1, 0, 0}, original, folder.string(),
+                      *world.BlockRegistry, -17, -48),
+              "upper persistence fixture saves terrain and certified AIR cache");
+      if (cache_case == "legacy")
+        fs::remove(UChunkStorageService::ColumnLightFilePath(folder.string(), {0, 0, 0}));
+      if (cache_case == "materials")
+      {
+        torch.Lighting.Emission = 6;
+        bind();
+      }
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord) {
+        return storage.IsChunkSliceAbsentOnDisk(folder.string(), coord);
+      });
+      world.Persistence->RequestAsyncTerrainColumnLoad(world, {1, 0, 0}, 9501);
+      world.Persistence->RequestAsyncTerrainColumnLoad(world, {0, 0, 0}, 9502);
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+      while (!world.Persistence->TickDrainAsyncChunkIo(world, 4))
+      {
+        require(std::chrono::steady_clock::now() < deadline,
+                "upper persistence load worker/drain deadline");
+        std::this_thread::yield();
+      }
+      const auto catalog = world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+      require(world.BlockWorld.GetBlock({16, -24, 4}) == 50 &&
+                  world.BlockWorld.GetBlock({0, -48, 0}) == 8 &&
+                  world.BlockWorld.GetBlock({2, -47, 2}) == 9 &&
+                  PackFluidCellState(world.BlockWorld.GetFluidState({2, -47, 2})) == PackFluidCellState(fluid),
+              "upper persistence preserves terrain and packed fluid state");
+      if (cache_case == "compatible")
+        require(world.BlockWorld.HasCompleteLightSamplingCalculation({0, -2, 0}, catalog) &&
+                    world.BlockWorld.GetChunkManager().GetSectionLightField({0, -2, 0})->GetPaddedData()->cells ==
+                        computed.chunks[0].padded_light->cells,
+                "upper persistence restores compatible AIR cache exactly");
+      else
+      {
+        require(!world.BlockWorld.HasCompleteLightSamplingCalculation({0, -2, 0}, catalog) &&
+                    world.IsTerrainColumnRelightQueued({0, 0}),
+                "upper persistence incompatible/legacy cache retains ordinary relight obligation");
+        world.AsyncRelight = std::make_unique<UAsyncRelightBuilder>(1);
+        spec.block_positions = {{4, -24, 4}};
+        spec.light_sample_output_sections = {{0, -2, 0}};
+        spec.column_center_only = true;
+        spec.finalize_pending_gate = false;
+        world.AsyncRelight->EnqueueJob(world.BlockWorld, spec, *world.BlockRegistry);
+        require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)) &&
+                    world.DrainAsyncRelightResults(1, false, false) == 1 &&
+                    world.BlockWorld.HasCompleteLightSamplingCalculation({0, -2, 0}, catalog),
+                "upper persistence cache fallback installs physical certified successor");
+      }
+      const auto field = world.BlockWorld.GetChunkManager().GetSectionLightField({0, -2, 0});
+      require(field && field->GetPaddedData() &&
+                  UnpackBlock(field->GetPaddedData()->cells[SectionLightVolume::Index(15, 8, 4)]) ==
+                      (cache_case == "materials" ? 5 : 13),
+              "upper persistence field reflects actual current emission");
+      report["cases"].push_back({{"kind", "persisted_world_load_" + cache_case},
+          {"status", "PASS"}, {"real_async_load_owner", true},
+          {"terrain_fluid_preserved", true}, {"certified_field", true}});
+    }
     // Test receipt delivery, not the shore-sealing algorithm or GPU scan.
     // A dry cached slice is the correct initial value even when the normal
     // CPU hitch gate returns empty; no backend result is fabricated here.
