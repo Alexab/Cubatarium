@@ -108,7 +108,7 @@ class SourceDrawTest(unittest.TestCase):
         for change in (dict(draw_table_buffer=0),dict(indirect_buffer=0),
                        dict(draw_table_row=3),dict(indirect_command=[6,0,0,0,2]),
                        dict(indirect_command=[6,1,0,1,2]),dict(geometry_command=[7,0,0]),
-                       dict(draw_table=1)):
+                       dict(draw_table=1),dict(draw_table=False)):
             with self.subTest(change=change):
                 e.update(change);self.check('FAIL');e.clear();e.update(copy.deepcopy(original))
 

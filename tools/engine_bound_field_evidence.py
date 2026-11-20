@@ -42,6 +42,9 @@ def read_bound_field(row):
     if 'draw_table' in evidence:
         if type(evidence['draw_table']) is not bool:
             raise ValueError('invalid draw-table mode')
+        if not evidence['draw_table'] and any(evidence.get(k,0) != 0 for k in
+                ('draw_table_buffer','draw_table_row','indirect_buffer')):
+            raise ValueError('uniform evidence contains a draw-table identity')
         if evidence['draw_table']:
             command=evidence.get('indirect_command')
             geometry=evidence.get('geometry_command')
