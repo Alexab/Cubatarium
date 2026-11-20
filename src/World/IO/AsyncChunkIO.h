@@ -241,6 +241,15 @@ public:
   {
     return BackgroundIoPool ? BackgroundIoPool->GetWorkerCount() : 0;
   }
+  bool HasOutstandingJobs() const
+  {
+    const auto load = LoadPool.GetSnapshot();
+    const auto background = BackgroundIoPool ? BackgroundIoPool->GetSnapshot()
+                                              : JobThreadPoolSnapshot{};
+    const auto flags = ColumnLightFlagsPool.GetSnapshot();
+    return load.pending || load.active || background.pending || background.active ||
+           flags.pending || flags.active;
+  }
   std::size_t GetLoadResultQueueDepth() const { return CompletedLoads.Size(); }
   std::size_t GetSaveResultQueueDepth() const { return CompletedSaves.Size(); }
   AsyncChunkLoadQueuePushMetrics TakeLoadResultPushMetrics()

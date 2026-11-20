@@ -5334,7 +5334,8 @@ bool UWorldPersistence::IsAsyncChunkIoQuiescent() const
   {
     return true;
   }
-  return AsyncChunkIo->CompletedLoadsEmpty() &&
+  return !AsyncChunkIo->HasOutstandingJobs() &&
+         AsyncChunkIo->CompletedLoadsEmpty() &&
          AsyncChunkIo->CompletedSavesEmpty() &&
          AsyncChunkIo->CompletedColumnLightFlagsSavesEmpty();
 }
@@ -5372,15 +5373,8 @@ bool UWorldPersistence::TickDrainAsyncChunkIo(UWorld &world, int max_iterations)
   {
     TickAsyncChunkIo(world);
   }
-  if (!IsAsyncChunkIoQuiescent())
-  {
-    return false;
-  }
-  if (AsyncChunkIo)
-  {
-    (void)AsyncChunkIo->DrainLoads();
-    (void)AsyncChunkIo->DrainSaves();
-  }
+  // Only TickAsyncChunkIo may consume results: even a late old-folder ACK
+  // must update its disk index, while current batches retain exact ownership.
   return IsAsyncChunkIoQuiescent();
 }
 
