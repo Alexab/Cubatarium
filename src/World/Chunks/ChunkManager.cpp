@@ -191,6 +191,32 @@ bool UChunkManager::InstallLoadedAirSlice(const LoadedAirSlice &slice,
   return true;
 }
 
+UChunkManager::TerrainSaveState
+UChunkManager::CaptureTerrainSaveState(glm::ivec3 coord) const
+{
+  TerrainSaveState state;
+  if (const auto *chunk = GetChunk(coord))
+  {
+    state.terrain = true;
+    state.geometry = chunk->GetIncarnation();
+    state.content = chunk->GetContentRevision();
+    state.wetness = chunk->GetSurfaceWetness();
+    state.weatherTime = chunk->GetWeatherLastUpdateSec();
+  }
+  else if (const auto air = LoadedAirSlices.find(coord); air != LoadedAirSlices.end())
+  {
+    state.terrain = true;
+    state.wetness = air->second.Wetness;
+    state.weatherTime = air->second.WeatherLastUpdateSec;
+  }
+  if (const auto field = GetSectionLightField(coord))
+  {
+    state.field = field->GetIncarnation();
+    state.light = field->LightFieldRevision;
+  }
+  return state;
+}
+
 std::unique_ptr<UChunk>
 UChunkManager::MakeTerrainSaveSnapshot(glm::ivec3 coord) const
 {

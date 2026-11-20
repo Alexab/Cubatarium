@@ -6,6 +6,8 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
+#include "World/Persistence/WorldPersistence.h"
+#include <thread>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -143,10 +145,65 @@ inline void RunTerrainSaveFailureProbe()
                                        *world.BlockRegistry, -17, -64) > 0 &&
               cold.GetBlock(deleted) == BLOCK_AIR && cold.GetBlock(added) == 8,
               "successful retry lost persisted edit");
+      // The unload path must wait for real ACKs and reject an ACK for a
+      // snapshot which changed while the worker owned its immutable bytes.
+      world.ProceduralTemplate.AsyncChunkIo = true;
+      world.Persistence->EnsureChunkIoInitialized();
+      const auto drain = [&]()
+      {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (storage.IsColumnSavePending(column))
+        {
+          require(std::chrono::steady_clock::now() < deadline, "async save ACK timeout");
+          world.Persistence->TickAsyncChunkIo(world, 32, 6.0);
+          std::this_thread::yield();
+        }
+      };
+      const auto during = deleted + glm::ivec3(2, 0, 0);
+      require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                  storage.IsColumnSavePending(column), "enqueue cannot admit retirement");
+      world.BlockWorld.SetBlock(during, 8);
+      drain();
+      require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                  storage.IsColumnSavePending(column), "new local edit must invalidate old ACK");
+      drain();
+      require(world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                  world.BlockWorld.GetChunkManager().HasChunk(floor),
+              "only the current completed save admits retirement");
+      if (io_failure)
+      {
+        require(fs::create_directory(blocker), "async temp blocker is owned");
+        std::ofstream(blocker / "fixture-blocker") << "keep this file";
+        world.BlockWorld.SetBlock(during, BLOCK_AIR);
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                    storage.IsColumnSavePending(column), "failed async save starts with RAM retained");
+        drain();
+        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                    !storage.IsColumnSavePending(column) &&
+                    world.BlockWorld.GetBlock(during) == BLOCK_AIR &&
+                    world.BlockWorld.GetChunkManager().HasChunk(floor),
+                "failed completed batch cannot authorize retirement");
+        require(fs::remove(blocker / "fixture-blocker") && fs::remove(blocker),
+                "remove only the owned async blocker");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.Persistence->TrySaveTerrainColumnForUnload(world, column))
+        {
+          require(std::chrono::steady_clock::now() < deadline, "async recovery timeout");
+          world.Persistence->TickAsyncChunkIo(world, 32, 6.0);
+          std::this_thread::yield();
+        }
+      }
+      UBlockWorld async_cold;
+      require(storage.LoadTerrainColumn(column, async_cold, folder.string(),
+                                       *world.BlockRegistry, -17, -64) > 0 &&
+                  async_cold.GetBlock(during) == (io_failure ? BLOCK_AIR : 8),
+              "actual async recovery persisted the newest edit");
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
           {"recovery_phases", recovered.phases}, {"files_preserved", before.size()},
-          {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}});
+          {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}, {"unload_waited_for_ack", true},
+          {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
+          {"async_cold_edit_preserved", true}});
     }
     report["status"] = "PASS";
   }

@@ -183,6 +183,7 @@ public:
   {
     OnUnloadColumn = std::move(fn);
   }
+  void NoteColumnSaveQueued() { ++LastFrameStats.savesThisFrame; }
   void NoteUnloadActiveWorkInvalidated()
   {
     ++LastFrameStats.unloadActiveWorkInvalidatedThisFrame;

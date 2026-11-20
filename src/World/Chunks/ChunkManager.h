@@ -85,6 +85,21 @@ public:
     return *UnresolvedTerrainColumnReads.begin();
   }
   /// Legacy serialization carrier only; never inserts geometry into the world.
+  struct TerrainSaveState
+  {
+    bool terrain{false};
+    uint64_t geometry{0}, content{0}, field{0}, light{0};
+    float wetness{0};
+    double weatherTime{0};
+    bool operator==(const TerrainSaveState &other) const
+    {
+      return terrain == other.terrain && geometry == other.geometry &&
+             content == other.content && field == other.field && light == other.light &&
+             wetness == other.wetness && weatherTime == other.weatherTime;
+    }
+    bool operator!=(const TerrainSaveState &other) const { return !(*this == other); }
+  };
+  TerrainSaveState CaptureTerrainSaveState(glm::ivec3 coord) const;
   std::unique_ptr<UChunk> MakeTerrainSaveSnapshot(glm::ivec3 coord) const;
   /// Light ownership may exist without allocating a geometry chunk. Allocation
   /// alone is not evidence of known AIR or a completed physical calculation.

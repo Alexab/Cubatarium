@@ -8,6 +8,7 @@
 #include "World/IO/DiskAirCancellationProbe.h"
 #include "World/IO/DiskReadFailureProbe.h"
 #include "World/IO/TerrainSliceLoad.h"
+#include "World/IO/ColumnSaveReceipt.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
 #include <atomic>
 #include <chrono>
@@ -208,7 +209,8 @@ public:
   void ClearPendingRelights(const char *reason = nullptr);
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                      uint64_t demand_id = 0);
-  void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
+  bool RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
+  bool TrySaveTerrainColumnForUnload(UWorld &world, glm::ivec3 ground_coord);
   // Unload cancels workers before serializing the still-resident column.
   // Retain its data until that save/eviction has completed.
   void CancelAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
@@ -221,7 +223,7 @@ public:
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
                         UBlockRegistry &registry, int max_height,
                         int min_height = 0);
-  void SaveTerrainColumn(glm::ivec3 ground_coord, UBlockWorld &block_world,
+  bool SaveTerrainColumn(glm::ivec3 ground_coord, UBlockWorld &block_world,
                          UBlockRegistry &registry, int max_height,
                          int min_height = 0);
   /// Remove all disk slices for a ground column (used when incomplete in RAM
@@ -325,7 +327,18 @@ private:
                      IVec3Hash>
       FailedColumnRetryAfter;
   bool PreferFieldInputLoadNext_{true};
-  std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
+  std::unordered_map<glm::ivec3, ColumnSaveCompletion, IVec3Hash> PendingAsyncColumnSaveSlices;
+  struct UnloadSaveReceipt
+  {
+    TerrainColumnSaveStamp stamp;
+    std::shared_ptr<const BlockDefinitionCatalog> catalog;
+    std::string folder;
+    int minY{0}, maxY{0};
+    uint64_t batch{0};
+    bool complete{false}, success{false};
+    std::chrono::steady_clock::time_point retryAfter{};
+  };
+  std::unordered_map<glm::ivec3, UnloadSaveReceipt, IVec3Hash> UnloadSaveReceipts;
   struct PlayerRelightRequest
   {
     std::vector<glm::ivec3> block_positions;

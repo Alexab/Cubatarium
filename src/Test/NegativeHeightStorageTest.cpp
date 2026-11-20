@@ -7,6 +7,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/IO/ColumnSaveReceipt.h"
 #include "World/IO/DiskAirCancellationProbe.h"
 #include "World/IO/DiskReadFailureProbe.h"
 #include "World/IO/JsonChunkSerializer.h"
@@ -1067,6 +1068,113 @@ static void TestUnmarkedPartialSavePreservesDisk()
   }
 }
 
+static void TestColumnSaveReceipts()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  const glm::ivec3 column(4, 0, -2), coord(4, -4, -2);
+  const auto cell = coord * CHUNK_SIZE;
+  world.SetBlock(cell, 8);
+  auto &manager = world.GetChunkManager();
+  TerrainColumnSaveStamp stamp(manager, column, -64, -17);
+  Expect(stamp.Matches(manager), "new save stamp matches its actual terrain owner");
+  world.SetBlock({900, 0, 900}, 8);
+  Expect(stamp.Matches(manager), "unrelated columns cannot starve save completion");
+  world.SetBlock(cell, BLOCK_AIR);
+  Expect(!stamp.Matches(manager), "save ACK cannot retire a newer local deletion");
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  manager.GetChunk(coord)->SetWeatherState(.75f, 456.125);
+  Expect(!stamp.Matches(manager), "weather mutation requires a new saved snapshot");
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  manager.GetChunk(coord)->SetLightLocal({0, 0, 0}, 5, 7);
+  Expect(!stamp.Matches(manager), "light bytes cannot change under a save receipt");
+  world.SetBlock(cell, 8);
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  manager.GetChunk(coord)->SetFluidLocal({0, 0, 0},
+      FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+  Expect(!stamp.Matches(manager), "fluid mutation requires a fresh save receipt");
+  UBlockWorld foreign;
+  Expect(!stamp.Matches(foreign.GetChunkManager()), "foreign manager cannot consume save authority");
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  manager.RemoveChunk(coord);
+  world.SetBlock(cell, 8);
+  Expect(!stamp.Matches(manager), "same coordinate replacement is a new save obligation");
+
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UChunkStorageService storage;
+  UBinaryChunkSerializer codec;
+  for (int cy = -3; cy <= -2; ++cy)
+  {
+    const glm::ivec3 slice(column.x, cy, column.z);
+    UChunk empty(slice);
+    const auto decoded = codec.Deserialize(codec.Serialize(slice, empty, registry).bytes,
+                                            slice, registry);
+    Expect(ApplyTerrainSliceLoad(world, slice, &decoded, nullptr, {column, 1}, 1, false),
+           "save batch has actual geometry-free decoded AIR");
+  }
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  world.SetBlock(glm::ivec3(column.x, -3, column.z) * CHUNK_SIZE, 8);
+  Expect(!stamp.Matches(manager), "AIR materialization invalidates the old save stamp");
+  const auto folder = std::filesystem::temp_directory_path() /
+      ("cubatarium_save_receipts_" + std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count()));
+  Expect(!std::filesystem::exists(folder), "save receipt fixture must be fresh");
+  UAsyncChunkIO io;
+  constexpr uint64_t batch = 101;
+  ColumnSaveCompletion completion(batch, folder.string(), column, -4, -2, true);
+  io.RequestSaveColumnLight(column, std::make_shared<const PersistedColumnLight>(),
+                            storage, folder.string(), batch);
+  for (int cy = -4; cy <= -2; ++cy)
+    io.RequestSave({column.x, cy, column.z}, storage, folder.string(), world,
+                    registry, {column, 1}, batch);
+  io.RequestRemoveChunkSlices(column, -1, 0, storage, folder.string(), batch);
+  Expect(!completion.Complete() && io.WaitIdleFor(std::chrono::seconds(5)),
+         "enqueue alone grants no completed-save authority");
+  auto done = io.DrainSaves();
+  Expect(done.size() == 5, "save batch includes terrain, metadata and cleanup ACKs");
+  for (const auto &result : done)
+    Expect(result.saveBatchId == batch && result.success,
+           "actual worker preserves batch identity across every operation");
+  auto bad = done.front();
+  ++bad.saveBatchId;
+  Expect(!completion.Consume(bad), "foreign batch cannot advance this save");
+  bad = done.front(); bad.worldFolder += "foreign";
+  Expect(!completion.Consume(bad), "foreign folder cannot advance this save");
+  bad = done.front(); ++bad.groundCoord.x;
+  Expect(!completion.Consume(bad), "foreign column cannot advance this save");
+  bad = done.front(); bad.cleanupOnly = false; bad.coord.y = ColumnSaveCompletion::Light;
+  Expect(!completion.Consume(bad), "terrain ACK cannot impersonate metadata completion");
+  std::reverse(done.begin(), done.end());
+  for (const auto &result : done)
+  {
+    Expect(completion.Consume(result), "each real expected operation is accepted once");
+    Expect(!completion.Consume(result), "duplicate ACK cannot decrement a newer obligation");
+  }
+  Expect(completion.Succeeded(), "all actual successful writes complete their exact batch");
+  ColumnSaveCompletion newer(batch + 1, folder.string(), column, -4, -2, true);
+  for (const auto &result : done)
+    Expect(!newer.Consume(result), "late old results cannot finish a newer save");
+  Expect(!newer.Complete(), "late old ACKs grant no new retirement authority");
+  const auto blocked = folder / "file-blocker";
+  std::ofstream(blocked) << "not a directory";
+  io.RequestSaveColumnLight(column, std::make_shared<const PersistedColumnLight>(),
+                            storage, blocked.string(), batch + 2);
+  Expect(io.WaitIdleFor(std::chrono::seconds(5)), "failed real metadata write is bounded");
+  auto failed = io.DrainSaves();
+  ColumnSaveCompletion failure(batch + 2, blocked.string(), column, 0, -1, false);
+  Expect(failed.size() == 1 && !failed[0].success && failure.Consume(failed[0]) &&
+             failure.Complete() && !failure.Succeeded(),
+         "completed failed batch must never authorize terrain retirement");
+  const auto resolved = std::filesystem::weakly_canonical(folder);
+  Expect(resolved.parent_path() == std::filesystem::weakly_canonical(
+             std::filesystem::temp_directory_path()), "save receipt cleanup is confined");
+  std::filesystem::remove_all(resolved);
+}
+
 static void TestLoadedAirSlice()
 {
   using namespace cutum;
@@ -1311,6 +1419,7 @@ int main()
   TestLoadedAirSlice();
   TestDiskRetryReadSafety();
   TestDiskRetryStorage();
+  TestColumnSaveReceipts();
   TestUnmarkedPartialSavePreservesDisk();
   using namespace cutum;
   constexpr int kMinY = -64;

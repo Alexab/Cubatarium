@@ -62,6 +62,7 @@ struct AsyncChunkLoadQueuePushMetrics
 
 struct AsyncChunkSaveRequest
 {
+  uint64_t saveBatchId{0};
   glm::ivec3 coord;
   glm::ivec3 groundCoord;
   std::string worldFolder;
@@ -127,15 +128,18 @@ public:
                    bool injectInvalidFrame = false);
   void RequestSaveColumnLight(
       glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
-      UChunkStorageService &storage, const std::string &worldFolder);
+      UChunkStorageService &storage, const std::string &worldFolder,
+      uint64_t saveBatchId = 0);
   void RequestDiskIndexWarmup(UChunkStorageService &storage,
                               const std::string &worldFolder);
   void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
-                   UBlockRegistry &registry, ChunkGenerationToken token);
+                   UBlockRegistry &registry, ChunkGenerationToken token,
+                   uint64_t saveBatchId = 0);
   void RequestRemoveChunkSlices(glm::ivec3 groundCoord, int firstCy,
                                 int lastCy, UChunkStorageService &storage,
-                                const std::string &worldFolder);
+                                const std::string &worldFolder,
+                                uint64_t saveBatchId = 0);
   void RequestRemoveTerrainColumn(glm::ivec3 groundCoord, int maxWorldY,
                                   int minWorldY,
                                   UChunkStorageService &storage,
@@ -273,7 +277,7 @@ private:
                              const std::string &worldFolder,
                              std::string cleanupOperation,
                              int cleanupSliceCount,
-                             StorageCleanupJob cleanup);
+                             StorageCleanupJob cleanup, uint64_t saveBatchId = 0);
 
   static void AccumulateMaximum(std::atomic<uint64_t> &target,
                                 uint64_t value)

@@ -5783,27 +5783,7 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                 .count();
         return loaded;
       },
-      [this, &world](glm::ivec3 coord)
-      {
-        UWorldPersistence &persistence = *world.Persistence;
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        const ProceduralSettings &settings = world.GetProceduralSettings();
-        if (settings.AsyncChunkIo)
-        {
-          persistence.RequestAsyncTerrainColumnSave(world, ground);
-        }
-        else
-        {
-          persistence.SaveTerrainColumn(ground, world.BlockWorld,
-                                        *world.BlockRegistry,
-                                        settings.MaxHeight, settings.MinHeight);
-        }
-        FrameStreamingIoMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-      },
+      nullptr, // Save admission/completion is owned by the unload callback.
       [&world](glm::ivec3 coord)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
@@ -5980,6 +5960,15 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             std::chrono::duration<double, std::milli>(
                 std::chrono::steady_clock::now() - light_flags_started)
                 .count();
+
+        // Preserve data and visual owners while any write is pending/failed.
+        // Light flags above are invalidated before taking the save snapshot.
+        const auto save_started = std::chrono::high_resolution_clock::now();
+        const bool saved = world.Persistence->TrySaveTerrainColumnForUnload(world, ground);
+        FrameStreamingIoMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - save_started).count();
+        if (!saved)
+          return false;
 
         const auto invalidation_started = std::chrono::steady_clock::now();
         flow.ForgetColumnWork(col);

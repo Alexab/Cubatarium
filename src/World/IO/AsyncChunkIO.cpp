@@ -405,14 +405,15 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
 
 void UAsyncChunkIO::RequestSaveColumnLight(
     glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
-    UChunkStorageService &storage, const std::string &worldFolder)
+    UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
   const auto settings = storage.GetSettings();
   column.y = 0;
   EnqueueBackgroundIo(
-      [this, column, receipts = std::move(receipts), settings, worldFolder]()
+      [this, column, receipts = std::move(receipts), settings, worldFolder, saveBatchId]()
       {
         AsyncChunkSaveRequest done;
+        done.saveBatchId = saveBatchId;
         done.coord = done.groundCoord = column;
         done.worldFolder = worldFolder;
         done.filePath =
@@ -441,13 +442,14 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                                 const std::string &worldFolder,
                                 const UBlockWorld &world,
                                 UBlockRegistry &registry,
-                                ChunkGenerationToken token)
+                                ChunkGenerationToken token, uint64_t saveBatchId)
 {
   auto terrain_snapshot =
       world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
   if (!terrain_snapshot)
   {
     AsyncChunkSaveRequest failed;
+    failed.saveBatchId = saveBatchId;
     failed.coord = coord;
     failed.groundCoord = glm::ivec3(coord.x, 0, coord.z);
     failed.worldFolder = worldFolder;
@@ -466,9 +468,10 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
   const glm::ivec3 ground(coord.x, 0, coord.z);
   (void)token;
   EnqueueBackgroundIo(
-      [this, snapshot, settings, worldFolder, coord, ground, &registry]()
+      [this, snapshot, settings, worldFolder, coord, ground, saveBatchId]()
       {
         AsyncChunkSaveRequest done;
+        done.saveBatchId = saveBatchId;
         done.coord = coord;
         done.groundCoord = ground;
         done.worldFolder = worldFolder;
@@ -482,8 +485,12 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
         try
         {
           UChunkStorageService worker_storage(settings);
+          // Current CCHK4/JSON4 serialization writes numeric block IDs and
+          // does not consult registry/catalog state. Do not retain a mutable
+          // main-thread registry reference across a reload/world switch.
+          UBlockRegistry numeric_registry(nullptr);
           const SerializedChunk serialized =
-              worker_storage.SerializeChunk(coord, *snapshot, registry);
+              worker_storage.SerializeChunk(coord, *snapshot, numeric_registry);
           done.format = serialized.format;
           done.filePath = worker_storage.ChunkFilePath(
               worldFolder, coord, serialized.format);
@@ -556,7 +563,7 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
 
 void UAsyncChunkIO::RequestRemoveChunkSlices(
     glm::ivec3 groundCoord, const int firstCy, const int lastCy,
-    UChunkStorageService &storage, const std::string &worldFolder)
+    UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
   if (groundCoord.y != 0)
   {
@@ -592,7 +599,7 @@ void UAsyncChunkIO::RequestRemoveChunkSlices(
           }
         }
         return success;
-      });
+      }, saveBatchId);
 }
 
 void UAsyncChunkIO::RequestRemoveTerrainColumn(
@@ -617,7 +624,7 @@ void UAsyncChunkIO::EnqueueStorageCleanup(
     glm::ivec3 groundCoord, glm::ivec3 resultCoord,
     UChunkStorageService &storage, const std::string &worldFolder,
     std::string cleanupOperation, const int cleanupSliceCount,
-    StorageCleanupJob cleanup)
+    StorageCleanupJob cleanup, uint64_t saveBatchId)
 {
   if (groundCoord.y != 0)
   {
@@ -626,9 +633,10 @@ void UAsyncChunkIO::EnqueueStorageCleanup(
   EnqueueBackgroundIo(
       [this, &storage, groundCoord, resultCoord, worldFolder,
        cleanupOperation = std::move(cleanupOperation), cleanupSliceCount,
-       cleanup = std::move(cleanup)]() mutable
+       cleanup = std::move(cleanup), saveBatchId]() mutable
       {
         AsyncChunkSaveRequest done;
+        done.saveBatchId = saveBatchId;
         done.coord = resultCoord;
         done.groundCoord = groundCoord;
         done.worldFolder = worldFolder;
