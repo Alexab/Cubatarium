@@ -1175,6 +1175,14 @@ bool UChunkMeshCache::HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const
   return false;
 }
 
+bool UChunkMeshCache::HasPublishedSectionDraw(glm::ivec3 chunk_coord) const
+{
+  if (HasDrawableGreedyMesh(chunk_coord) || HasLiveGpuDraw(chunk_coord))
+    return true;
+  const auto it = GreedyCache.find(chunk_coord);
+  return it != GreedyCache.end() && HasCrossInstances(it->second.crossCenters);
+}
+
 bool UChunkMeshCache::HasActiveBoundaryOverlay(glm::ivec3 chunk_coord) const
 {
   const auto it = GreedyCache.find(chunk_coord);

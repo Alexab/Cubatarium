@@ -44,7 +44,9 @@ struct RequiredPresentationCoverage
       ++surface_sections;
     if (!light_current)
       ++light_unready_sections;
-    if (!air && !publication_current)
+    // AIR needs no new mesh, but may still own a predecessor draw awaiting
+    // retirement. The publication owner supplies that absence/retirement proof.
+    if (!publication_current)
       ++publication_unready_sections;
   }
   bool Ready() const

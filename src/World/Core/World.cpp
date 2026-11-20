@@ -3540,14 +3540,24 @@ void UWorld::UpdateMotionState(float speed, float dt_sec)
   }
 }
 
+bool UWorld::HasCurrentChunkSlicePublication(glm::ivec3 coord) const
+{
+  if (!MeshService || !BlockRegistry)
+    return false;
+  const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+  if (!chunk)
+    return false;
+  if (chunk->IsAirOnly() || HasCurrentNoSurfaceProof(coord))
+    return !MeshService->GetCache().HasPublishedSectionDraw(coord);
+  return CurrentSlicePublicationReadyForWarmup(*this, coord);
+}
+
 bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
 {
   ground.y = 0;
   if (!MeshService || !BlockRegistry || !IsColumnLitReady(ground) ||
       !IsTerrainColumnCompleteFast(ground))
     return false;
-  const auto &mesh = *MeshService;
-  const auto &cache = mesh.GetCache();
   UBlockWorld::InputStampValidationBatch absence;
   const int min_cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
   const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
@@ -3561,15 +3571,7 @@ bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
         return false;
       continue;
     }
-    if (chunk->IsAirOnly() || HasCurrentNoSurfaceProof(coord))
-    {
-      // A current no-surface proof does not retire an old drawable. Until
-      // the publication owner removes it, this column is not complete.
-      if (mesh.HasDrawableGreedyMesh(coord) || cache.HasLiveGpuDraw(coord))
-        return false;
-      continue;
-    }
-    if (!CurrentSlicePublicationReadyForWarmup(*this, coord))
+    if (!HasCurrentChunkSlicePublication(coord))
       return false;
   }
   return true;
@@ -12163,9 +12165,7 @@ RequiredPresentationCoverage UWorld::SampleRequiredPresentationCoverage(
         const bool light =
             !RequiresLightingLitGate() || (no_surface && !sample_required) ||
             BlockWorld.HasCompleteLightSamplingCalculation(coord, catalog);
-        const bool publication =
-            no_surface || chunk->IsAirOnly() ||
-            CurrentSlicePublicationReadyForWarmup(*this, coord);
+        const bool publication = HasCurrentChunkSlicePublication(coord);
         out.ObserveResident(chunk->IsAirOnly(), light, publication);
         if (stop_on_debt && (!light || !publication))
           return out;
@@ -12190,8 +12190,10 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
       [&](glm::ivec3 coord)
       {
         const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-        if (!chunk || HasCurrentNoSurfaceProof(coord) || chunk->IsAirOnly() ||
-            CurrentSlicePublicationReadyForWarmup(*this, coord) ||
+        if (!chunk || HasCurrentChunkSlicePublication(coord))
+          return;
+        const bool no_surface = chunk->IsAirOnly() || HasCurrentNoSurfaceProof(coord);
+        if (RequiresLightingLitGate() && !no_surface &&
             !ChunkSliceHasCurrentLightSettlement(*this, coord))
           return;
         if (mesh.IsChunkMeshDirty(coord))
@@ -12241,7 +12243,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         {
           GetRenderDemandStore().NotePublishedRevs(coord, published.geom_rev,
                                                    published.light_rev);
-          if (CurrentSlicePublicationReadyForWarmup(*this, coord))
+          if (HasCurrentChunkSlicePublication(coord))
             return;
         }
         if (admitted < 4 && !HasStablePublishedFaceDebt(coord))
@@ -12316,9 +12318,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         {
           const glm::ivec3 coord(x, cy, z);
           const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
-          if (!chunk || chunk->IsAirOnly() ||
-              HasCurrentNoSurfaceProof(coord) ||
-              CurrentSlicePublicationReadyForWarmup(*this, coord))
+          if (!chunk || HasCurrentChunkSlicePublication(coord))
             continue;
           const auto *demand = GetRenderDemandStore().Find(coord);
           const auto published = cache.GetMeshPublishRevs(coord);
@@ -12332,6 +12332,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
               {"dirty_queue_size", queue_size},
               {"dirty_queue_age_frames", cache.GetDirtyQueueAgeFrames(coord)},
               {"drawable", mesh.HasDrawableGreedyMesh(coord)},
+              {"published_draw", cache.HasPublishedSectionDraw(coord)},
               {"satisfies", mesh.HasMeshSatisfyingColumnReady(coord)},
               {"settled", ChunkSliceHasCurrentLightSettlement(*this, coord)},
               {"inputs_current",

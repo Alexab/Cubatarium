@@ -121,6 +121,19 @@ class EngineSmokeVerdictTest(unittest.TestCase):
             self.trace()
             self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "FAIL")
 
+    def test_first_frame_air_retirement_debt_is_a_valid_failure_witness(self):
+        old = self.report["startup_warmup_evidence"]["first_frame_witnesses"][0]
+        row = dict(old, known_air_sections=0, surface_sections=0,
+                   resident_air_sections=old["sections"],
+                   publication_unready_sections=1, ready=False)
+        self.report["startup_warmup_evidence"] = dict(first_frame_witnesses=[row])
+        self.trace()
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "FAIL")
+        row.update(publication_unready_sections=0, ready=True)
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "PASS")
+        row.update(publication_unready_sections=row["sections"] + 1, ready=False)
+        self.assertEqual(classify(self.report, self.perf)["components"]["startup"]["status"], "UNTESTED")
+
     def trace(self, **extra):
         self.perf.write_text("\n".join(json.dumps(dict(
             kind="renderer_pixel_probe", frame_epoch=i,

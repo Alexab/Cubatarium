@@ -1531,6 +1531,9 @@ public:
   /// Completed current section publications and light inputs across the full
   /// profile. Draw permission/retained predecessors use GetColumnRenderableState.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
+  /// Canonical resident-section publication completion. AIR/no-surface needs
+  /// retirement of all old cube/packed/Cross draws; field demand is separate.
+  bool HasCurrentChunkSlicePublication(glm::ivec3 chunk_coord) const;
   /// R4.6.1: Streamer TerrainCompleteCache on ring probes (fallback raw
   /// complete).
   bool IsTerrainColumnCompleteFast(glm::ivec3 ground) const;

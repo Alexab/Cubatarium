@@ -23,6 +23,7 @@
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Lighting/SectionRenderLightBindings.h"
+#include "Render/Camera/Frustum.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -245,6 +246,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           const auto published=cache.GetMeshPublishRevs(c);
           sections.push_back({{"cy",c.y},{"publications",cache.GetPublishCount(c)},
               {"drawable",mesh.HasDrawableGreedyMesh(c)},
+              {"published_draw",cache.HasPublishedSectionDraw(c)},
+              {"publication_current",world.HasCurrentChunkSlicePublication(c)},
               {"satisfying",mesh.HasMeshSatisfyingColumnReady(c)},
               {"inputs_current",cache.IsPublishedMeshCurrentForInputs(c,world.BlockWorld)},
               {"no_surface",world.HasCurrentNoSurfaceProof(c)},
@@ -258,6 +261,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"terrain_complete",world.IsTerrainColumnCompleteFast({0,0,0})},
             {"light_current",world.IsColumnLitReady({0,0,0})},
             {"complete",world.IsColumnRenderReady({0,0,0})},
+            {"presentation_publication_debt",world.SampleRequiredPresentationCoverage().publication_unready_sections},
             {"draw_permission",world.GetColumnRenderableState({0,0}).draw_ok},
             {"callbacks",callbacks},{"promotions",promotions},{"sections",sections}});
       };
@@ -316,6 +320,45 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(!mesh.HasDrawableGreedyMesh({0,-2,0}) && world.IsColumnRenderReady({0,0,0}) &&
                   !world.IsColumnRenderReady({7,0,7}),
               "actual no-surface retirement completes column while Unknown stays incomplete");
+      const auto upper_cross_count=[&] {
+        cache.UpdateVisibleInstances(Frustum{},glm::mat4(1),glm::vec3(8,-24,8));
+        size_t count=0;
+        for(const auto &batch:cache.GetCrossBatches())
+          for(const auto &instance:batch.instances)
+            if(UChunkManager::WorldToChunk(glm::ivec3(glm::floor(instance.center)))==glm::ivec3(0,-2,0))
+              ++count;
+        return count;
+      };
+      world.BlockWorld.SetBlock({4,-24,4},50);
+      settle_all();
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{0,-2,0});
+      checkpoint("cross_published");
+      require(upper_cross_count()==1 && cache.GetPublishedRenderLightBinding({0,-2,0}) &&
+                  world.IsColumnRenderReady({0,0,0}),
+              "cross retirement fixture owns one actual current published instance");
+      world.BlockWorld.SetBlock({4,-24,4},BLOCK_AIR);
+      settle_all();
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      const auto retained_cross=upper_cross_count();
+      checkpoint("cross_retained_after_air");
+      report["section_owner_cross_checkpoint"]={
+          {"retained_cross",retained_cross},
+          {"no_surface",world.HasCurrentNoSurfaceProof({0,-2,0})},
+          {"greedy_drawable",mesh.HasDrawableGreedyMesh({0,-2,0})},
+          {"presentation_publication_debt",world.SampleRequiredPresentationCoverage().publication_unready_sections},
+          {"column_complete",world.IsColumnRenderReady({0,0,0})}};
+      require(retained_cross==1 && world.HasCurrentNoSurfaceProof({0,-2,0}) &&
+                  cache.HasPublishedSectionDraw({0,-2,0}) &&
+                  world.SampleRequiredPresentationCoverage().publication_unready_sections==1 &&
+                  !world.HasCurrentChunkSlicePublication({0,-2,0}) && !world.IsColumnRenderReady({0,0,0}),
+              "no-surface completion cannot ignore retained cross instances");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{0,-2,0});
+      checkpoint("cross_retired");
+      require(upper_cross_count()==0 && !cache.HasPublishedSectionDraw({0,-2,0}) &&
+                  world.SampleRequiredPresentationCoverage().publication_unready_sections==0 &&
+                  world.HasCurrentChunkSlicePublication({0,-2,0}) && world.IsColumnRenderReady({0,0,0}),
+              "actual cross retirement restores completion");
       mesh.SetOnLitDrawableCommittedFn({});
       cache.SetPrepareRenderLightFn({});
       report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
@@ -325,7 +368,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"publication_rejects_uncertified_sibling",true},
           {"publication_current_light_recovers",true},
           {"partial_draw_not_complete",true},{"actual_publication_recovers",true},
-          {"retained_geometry_not_complete",true},{"no_surface_requires_retirement",true}});
+          {"retained_geometry_not_complete",true},{"no_surface_requires_retirement",true},
+          {"retained_cross_not_complete",true},{"actual_cross_retirement_recovers",true}});
     }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {

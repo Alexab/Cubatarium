@@ -97,7 +97,7 @@ bool UChunkEmergeCoordinator::TryPromoteLitColumn(
       }
     }
     // A slice notification cannot certify its siblings. Coarse scheduling
-    // labels must not bypass the current section calculation aggregate.
+    // labels must not bypass the current section publication/input aggregate.
     if (!sibling_fully_dark && world.IsColumnRenderReady(ground))
     {
       world.SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);

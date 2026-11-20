@@ -636,6 +636,9 @@ public:
   /// Empty placeholders must NOT clear missing-mesh / SoftDefer holes
   /// (manual 215919: place-block remesh instantly fills "invisible" chunk).
   bool HasDrawableGreedyMesh(glm::ivec3 chunk_coord) const;
+  /// Published cube/packed/Cross representations, including retained
+  /// predecessors. A no-surface proof does not retire these resources.
+  bool HasPublishedSectionDraw(glm::ivec3 chunk_coord) const;
   /// True for an explicitly provisional drawable preview; never light-ready.
   bool HasProvisionalLightPreview(glm::ivec3 chunk_coord) const
   {

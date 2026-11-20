@@ -293,12 +293,19 @@ int main()
   proof.expected_columns = proof.columns = 1;
   proof.expected_sections = 3;
   proof.ObserveAbsent(true);
-  proof.ObserveResident(true, true, false);
+  proof.ObserveResident(true, true, true);
   Expect(!proof.Ready(),
          "omitting a required section cannot shrink the census");
   proof.ObserveResident(false, true, true);
   Expect(proof.Ready(),
          "known AIR needs no mesh; resident fields and surfaces do");
+  cutum::RequiredPresentationCoverage retained_air;
+  retained_air.expected_columns = retained_air.columns = 1;
+  retained_air.expected_sections = 1;
+  retained_air.ObserveResident(true, true, false);
+  Expect(retained_air.resident_air_sections == 1 &&
+             retained_air.publication_unready_sections == 1 && !retained_air.Ready(),
+         "AIR with an unretired predecessor blocks the presentation gate");
   ++proof.publication_unready_sections;
   Expect(!proof.Ready(),
          "a stale or uncommitted publication blocks first frame");

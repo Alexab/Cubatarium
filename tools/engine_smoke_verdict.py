@@ -47,7 +47,7 @@ def validate_first_frame_witness(row):
             sum(row[k] for k in ("unknown_sections", "known_air_sections",
                 "resident_air_sections", "surface_sections")) != sections or
             row["light_unready_sections"] > row["resident_air_sections"] + row["surface_sections"] or
-            row["publication_unready_sections"] > row["surface_sections"] or
+            row["publication_unready_sections"] > row["resident_air_sections"] + row["surface_sections"] or
             row["missing_data_columns"] > columns):
         return None
     ready = all(row[k] == 0 for k in ("missing_data_columns", "unknown_sections",

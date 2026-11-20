@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.01.cross-retirement-completion",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h5-receipt-20261120.json",
+      "receipt_sha256": "24c90a4f586b72d5ff14448624ce9d999054a4f8b60e6e61486cbbfb098bbce5",
+      "scope": "H5 complete: retained Cross prevents section/column completion and appears as AIR publication debt; actual empty publication retires it. Native20/20, census C++1/1, Python reader31/31 PASS. Source/config retained. Step3/S4.01 remain OPEN for GPU pending and Flat; no framebuffer proof."
+    },
+    {
       "id": "S4.01.publication-completion",
       "status": "PARTIAL_OPEN",
       "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
