@@ -20684,5 +20684,871 @@
     "fixture-floor-rgb-reference.json": "b397c6f60911b0b4894d06205fae7394d46ba2663f8598e6ac132ae78eff011b",
     "surface-lease-cohort-observation.json": "db38a428f35e5521c45a0519ace4af05d4e4bb43de53edc0375dba5197ca6713"
   }
+},
+"air_data_lifecycle_native_remediation_2026_11_20": {
+  "assessment": "build\\desktop-msvc\\air-lifecycle-remediation-native-assessment-20261120.json",
+  "schema": "air-data-lifecycle-remediation.v1",
+  "goal_status": "active; full original S0..S6 preserved",
+  "code_commits": {
+    "tracing_verifier": "1aa615f24",
+    "dense_air_mesh_capture": "d2e313244",
+    "action_frame_epoch": "8f2fc8361",
+    "retire_air_with_column": "9602e29a3"
+  },
+  "findings_and_fixes": [
+    "Old round-trip proof covered only resident UChunk geometry. Added separately typed AIR install/remove/clear/materialize trace events and initial/final AIR field snapshots; optional strict verifier requires initial AIR retirement before far point, fresh installation under actual return disk demand, no temporary geometry and complete bounded trace export.",
+    "Dense saved AIR startup exposed immediate mesh capture self-invalidation: capture marked loaded AIR Unknown through open-sky predicate while world validation knew AIR. Single geometry predicate now shares world absence evidence; skylight predicate remains unchanged. Real binary decoded AIR fixture reproduces RED then GREEN, including cache commit/re-read, negative/positive coordinates, signed faces, retirement and unknown/field-only refusal.",
+    "After startup correction, material and geometry returned but both AIR fields remained installed. Native strict verifier correctly FAILed. Actual streamer removal loops skipped them via HasChunk. Both ordinary and deferred removal loops now use HasLoadedTerrainSlice after save; real decoded AIR regression reproduces RED then GREEN under U0/U-B/U-D normal admission.",
+    "Native action records include frame epoch. Final mutation deliberately moved from preliminary blocked-plan cell26 to cell22 beneath initial eye so source addition has distinct expected canonical AIR value11to13. Preliminary startup failure occurred before any action, so plan target did not cause that failure."
+  ],
+  "startup_counterexample": {
+    "schema": "dense-loaded-air-startup-refusal.v1",
+    "source_commit": "1aa615f249ca632b906c2eb92622d7a12134b48b",
+    "artifacts": "build\\desktop-msvc\\engine-edited-air-material-return-20261120-native",
+    "termination": "Agent deliberately stopped verified owned PID4840 after minutes of stable pre-paint DependencyChanged. This was not an observation timeout, successful route, action, return or cold proof. Parent session94936 subsequently observed terminal exit1 before any source mutation.",
+    "wrapper_failure": "After underlying smoke reported missing_native_report, extra AIR analysis attempted absent native report and raised FileNotFoundError. Raw failure artifacts retained. No synthetic native report created.",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true
+    },
+    "witness_count": 216,
+    "first": {
+      "phase": "enter_gate",
+      "ready": false,
+      "elapsed_ms": 141.6431,
+      "light_unready_sections": 76,
+      "publication_unready_sections": 167,
+      "missing_data_columns": 0,
+      "resident_air_sections": 0,
+      "known_air_sections": 736,
+      "mesh_schedule_observation": {
+        "emerge_budget_ms": 28.0,
+        "first_mesh_cap": 13,
+        "first_mesh_lane": 13,
+        "first_mesh_scheduled": 13,
+        "lane_starve_reason": 0,
+        "remesh_lane": 1,
+        "remesh_scheduled": 1,
+        "scheduled": 14,
+        "skip_locked": 0,
+        "skip_orphan": 0,
+        "skip_other": 0,
+        "skip_outside_focus": 0,
+        "skip_pipeline": 0,
+        "skip_remesh_starve": 0,
+        "skip_snapshot": 14,
+        "skip_soft_defer": 0,
+        "snapshot_budget_ms": 22.253459999999997
+      }
+    },
+    "last": {
+      "phase": "enter_gate",
+      "ready": false,
+      "elapsed_ms": 436502.74210000015,
+      "light_unready_sections": 0,
+      "publication_unready_sections": 41,
+      "missing_data_columns": 0,
+      "resident_air_sections": 0,
+      "known_air_sections": 736,
+      "mesh_schedule_observation": {
+        "emerge_budget_ms": 28.0,
+        "first_mesh_cap": 12,
+        "first_mesh_lane": 12,
+        "first_mesh_scheduled": 0,
+        "lane_starve_reason": 0,
+        "remesh_lane": 1,
+        "remesh_scheduled": 0,
+        "scheduled": 0,
+        "skip_locked": 0,
+        "skip_orphan": 0,
+        "skip_other": 0,
+        "skip_outside_focus": 0,
+        "skip_pipeline": 0,
+        "skip_remesh_starve": 0,
+        "skip_snapshot": 96,
+        "skip_soft_defer": 0,
+        "snapshot_budget_ms": 18.0
+      }
+    },
+    "selected_section_dependency_changed_refusals": 9862,
+    "verdict": {
+      "schema": "engine-smoke-verdict.v1",
+      "status": "FAIL",
+      "components": {
+        "runtime": {
+          "status": "FAIL",
+          "reason": "missing_native_report"
+        },
+        "route": {
+          "schema": "engine-round-trip-evidence.v1",
+          "status": "UNTESTED",
+          "reason": "missing_round_trip_native_audit",
+          "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance"
+        },
+        "startup": {
+          "status": "UNTESTED",
+          "reason": "missing_first_frame_ring_witness"
+        },
+        "visual": {
+          "status": "UNTESTED",
+          "reason": "missing_visual_reference",
+          "samples": 0,
+          "captures": 0,
+          "attributed_samples": 0,
+          "faults": 0
+        },
+        "world_actions": {
+          "schema": "engine-world-actions-evidence.v1",
+          "status": "UNTESTED",
+          "reason": "missing_native_world_actions",
+          "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance"
+        }
+      },
+      "malformed_trace_rows": 0,
+      "backend_observations": {
+        "maxima": {},
+        "positive_records": {},
+        "records_by_kind": {},
+        "invalid_counter_rows": 0,
+        "scope": "observed CPU/GPU sky counters; not per-job correctness or compute parity"
+      },
+      "scope": "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance",
+      "runner_exit_code": 4294967295,
+      "inspection_evidence": {
+        "verified": 0,
+        "reason": "missing_or_invalid_capture_count"
+      },
+      "publication_diagnostics": {
+        "artifact": "mesh-publication-diagnostics.json",
+        "scope": "diagnostics only; does not alter acceptance"
+      }
+    },
+    "source_hypothesis": "ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor uses IsAbsentOpenSkyChunk rather than explicit loaded AIR. Dense imported AIR is KnownAir to world stamp validation but Unknown to mesh capture, so a freshly committed capture is immediately evicted. Preserve open-sky light logic independently; prove with real decoded-AIR mesh fixture before correction."
+  },
+  "verification": {
+    "python_engine_tests": 145,
+    "python_tests_passed": true,
+    "release_diagnostic_tests": 6,
+    "release_mesh_tests_including_gl_gles": 6,
+    "release_streamer_air_retirement_test": "PASS; U0/U-B/U-D cases",
+    "release_desktop_build": "PASS at9602e29a3",
+    "red_green_logs": [
+      "dense-air-mesh-red-v2-test-20261120.log",
+      "dense-air-mesh-green-test-20261120.log",
+      "streamer-air-retirement-red-test-20261120.log",
+      "streamer-air-retirement-green-test-20261120.log"
+    ],
+    "caveats": [
+      "145Python and6diagnostic tests ran at1aa;6mesh/GL/GLES tests afterd2e; streamer regression after9602implementation. Not a rerun of the full previous engine matrix at finalHEAD.",
+      "First dense AIR test attempted private CaptureGeometry API and did not compile. Corrected fixture to public Capture(...PhysicalField); retained first build log, then meaningful RED and GREEN.",
+      "First extra AIR wrapper could not analyze absent native report after deliberately stopped startup repro. Raw failure retained; V2 passes missing report as empty diagnostic input, not a synthetic report."
+    ]
+  },
+  "cases": {
+    "held_air": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-air-source-return-fixed-20261120-native",
+      "world": "EngineSmoke_7c6aa67fd62c4712ba9daa00a4fcfe18",
+      "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+      "source_commit": "8f2fc8361f8b835f5cc720bc50c42a553a978883",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "overall": "UNTESTED",
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 224,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 736,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 440,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "material": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "PASS",
+        "reason": "edited_material_survived_fresh_disk_return",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+        "cells": [
+          {
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "before_id": 560,
+            "after_id": 376,
+            "initial_incarnation": 2,
+            "final_incarnation": 5999,
+            "disk": {
+              "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_7c6aa67fd62c4712ba9daa00a4fcfe18\\chunks\\1_-4_3.cchunk",
+              "sha256": "f3bac1cadf1ab5b2313f67ecfd6df472d7a37592c0717154356706cd9b0e2d21",
+              "section": [
+                1,
+                -4,
+                3
+              ],
+              "local": [
+                6,
+                15,
+                3
+              ],
+              "id": 376
+            }
+          }
+        ]
+      },
+      "air_return": {
+        "schema": "engine-round-trip-evidence.v1",
+        "status": "FAIL",
+        "reason": "initial_air_cohort_not_evicted",
+        "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+        "coord": [
+          1,
+          -3,
+          3
+        ]
+      },
+      "cold_air": null,
+      "saved_air_carriers": [
+        {
+          "coord": [
+            1,
+            -3,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_7c6aa67fd62c4712ba9daa00a4fcfe18\\chunks\\1_-3_3.cchunk",
+          "sha256": "a6b7d78121b72895280890c34c28f3c8d7e68f097ac8360272d8d18e1b7c2fb9",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 1830,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        },
+        {
+          "coord": [
+            1,
+            -2,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_7c6aa67fd62c4712ba9daa00a4fcfe18\\chunks\\1_-2_3.cchunk",
+          "sha256": "2e71754223171692441562b719ca7a5013f90f4a0e2503e5a1fd1c4d85eca7c2",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 0,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        }
+      ],
+      "camera": {
+        "schema": "air-source-addition-camera-diagnostic.v1",
+        "status": "PASS",
+        "action_frame": 65,
+        "counts": {
+          "paint_samples": 6941,
+          "before_ready": 64,
+          "faults": 0,
+          "action_frame_unordered": 1,
+          "after_ready": 6876
+        },
+        "causal_same_cell_transitions": [
+          {
+            "cell": [
+              22,
+              -47,
+              51
+            ],
+            "before": [
+              11
+            ],
+            "after": [
+              13
+            ]
+          }
+        ],
+        "examples": [],
+        "scope": "Independent declared emitter Manhattan canonical AIR camera values across source-addition action and retained disk reload. Not a GPU/shader, removal, general optics or lifetime acceptance; same action frame excluded as unordered."
+      },
+      "native_process_ids": [
+        "9912"
+      ],
+      "no_relocation": {
+        "teleport_cruise": false,
+        "after_start": 0
+      },
+      "legacy_performance": {
+        "pass_": false,
+        "metrics": {
+          "wall_ms_med": 27.4206,
+          "wall_ms_fly_med": 31.0221,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "route.json": "fc0637d191e76e9bbb2b87123ad635e6a1ad76d343882d2eeb001dc604905a00",
+        "flight_sim_report.json": "07cdf2eafa8e69e7fcadf7adc3c758d06a364464a2315ce37d50042ef7ec9a35",
+        "smoke-verdict.json": "2e72f2953984af9b68591315208bb110971d8847c9f6e46da037527b7055c5f6",
+        "world-actions.json": "affa4b90fb393e219a2d68bba3cb1a16a16019ed0e68c9aad376da9f3eb847bf",
+        "world-actions-evidence.json": "edd0b96a306c594d2077627b10f8abe9823fef1d25c32f672e0acefa0c6d8215",
+        "source-addition-camera-diagnostic.json": "3fad1272392a475103a68fb48a431429f5a9869247e761ee51b2f1048fd16df3",
+        "surface-lease-cohort-observation.json": "99a1f963967e090c2f69084b7a6f7a002e5727359996c3721763bfd3b9b14856"
+      }
+    },
+    "fresh_return": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-air-source-return-owned-20261120-native",
+      "world": "EngineSmoke_155577fd9b054afb933ea18c186ba61f",
+      "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+      "source_commit": "9602e29a3e46c701c903713a0b9e3f336d92e2e7",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "overall": "UNTESTED",
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 224,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 736,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 440,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "material": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "PASS",
+        "reason": "edited_material_survived_fresh_disk_return",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+        "cells": [
+          {
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "before_id": 560,
+            "after_id": 376,
+            "initial_incarnation": 2,
+            "final_incarnation": 5999,
+            "disk": {
+              "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_155577fd9b054afb933ea18c186ba61f\\chunks\\1_-4_3.cchunk",
+              "sha256": "6f482521c359fc6015fe908c4dc7dcde32a40992ade3cd7c0a5f4f314a8547d4",
+              "section": [
+                1,
+                -4,
+                3
+              ],
+              "local": [
+                6,
+                15,
+                3
+              ],
+              "id": 376
+            }
+          }
+        ]
+      },
+      "air_return": {
+        "schema": "engine-round-trip-evidence.v1",
+        "status": "PASS",
+        "reason": "motor_return_with_fresh_disk_cohort",
+        "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+        "column": [
+          1,
+          3
+        ],
+        "sections": [
+          {
+            "coord": [
+              1,
+              -4,
+              3
+            ],
+            "retired_incarnation": 2,
+            "returned_incarnation": 5999
+          },
+          {
+            "coord": [
+              1,
+              -1,
+              3
+            ],
+            "retired_incarnation": 3,
+            "returned_incarnation": 6000
+          },
+          {
+            "coord": [
+              1,
+              0,
+              3
+            ],
+            "retired_incarnation": 4,
+            "returned_incarnation": 6001
+          },
+          {
+            "coord": [
+              1,
+              1,
+              3
+            ],
+            "retired_incarnation": 5,
+            "returned_incarnation": 6002
+          },
+          {
+            "coord": [
+              1,
+              2,
+              3
+            ],
+            "retired_incarnation": 6,
+            "returned_incarnation": 6003
+          },
+          {
+            "coord": [
+              1,
+              3,
+              3
+            ],
+            "retired_incarnation": 1,
+            "returned_incarnation": 5998
+          },
+          {
+            "coord": [
+              1,
+              4,
+              3
+            ],
+            "retired_incarnation": 7,
+            "returned_incarnation": 6004
+          }
+        ],
+        "air_sections": [
+          {
+            "coord": [
+              1,
+              -3,
+              3
+            ],
+            "retired_field_incarnation": 11,
+            "returned_field_incarnation": 19286
+          },
+          {
+            "coord": [
+              1,
+              -2,
+              3
+            ],
+            "retired_field_incarnation": 3,
+            "returned_field_incarnation": 19293
+          }
+        ],
+        "maximum_excursion_blocks": 303.569,
+        "disk_demand_id": 39205,
+        "far_tick_ms": 736536274,
+        "return_tick_ms": 736599176
+      },
+      "cold_air": null,
+      "saved_air_carriers": [
+        {
+          "coord": [
+            1,
+            -3,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_155577fd9b054afb933ea18c186ba61f\\chunks\\1_-3_3.cchunk",
+          "sha256": "a6b7d78121b72895280890c34c28f3c8d7e68f097ac8360272d8d18e1b7c2fb9",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 1830,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        },
+        {
+          "coord": [
+            1,
+            -2,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_155577fd9b054afb933ea18c186ba61f\\chunks\\1_-2_3.cchunk",
+          "sha256": "2e71754223171692441562b719ca7a5013f90f4a0e2503e5a1fd1c4d85eca7c2",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 0,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        }
+      ],
+      "camera": {
+        "schema": "air-source-addition-camera-diagnostic.v1",
+        "status": "PASS",
+        "action_frame": 65,
+        "counts": {
+          "paint_samples": 6942,
+          "before_ready": 64,
+          "faults": 0,
+          "action_frame_unordered": 1,
+          "after_ready": 6877
+        },
+        "causal_same_cell_transitions": [
+          {
+            "cell": [
+              22,
+              -47,
+              51
+            ],
+            "before": [
+              11
+            ],
+            "after": [
+              13
+            ]
+          }
+        ],
+        "examples": [],
+        "scope": "Independent declared emitter Manhattan canonical AIR camera values across source-addition action and retained disk reload. Not a GPU/shader, removal, general optics or lifetime acceptance; same action frame excluded as unordered."
+      },
+      "native_process_ids": [
+        "19572"
+      ],
+      "no_relocation": {
+        "teleport_cruise": false,
+        "after_start": 0
+      },
+      "legacy_performance": {
+        "pass_": false,
+        "metrics": {
+          "wall_ms_med": 31.2592,
+          "wall_ms_fly_med": 33.3981,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "route.json": "850b367e7f76eb55e19f90511c2a6014b75db58792b965f5cab9824a762b3a36",
+        "flight_sim_report.json": "7969b80327b18225a7e0ecc0c527a10a316a878fca35df1b415d8328d3de0e9d",
+        "smoke-verdict.json": "44f5f0d11700dadff697e3c366a99e306bd8ff1083a03d132bb917187e16d045",
+        "world-actions.json": "a1e14f9446f37ed6a818879bcf4d7d03298e6d24e78eb8aed72f9c598cee7cbd",
+        "world-actions-evidence.json": "6185b1803eac91b7613c03ce0bc22d7f0a7f997bafb173ee93df811f23b38023",
+        "source-addition-camera-diagnostic.json": "d3398568a9f69d18742c60f1161802c7fe3cad93778198943d3b6d3acdb4babe",
+        "surface-lease-cohort-observation.json": "b7463079f8d952907462165c30ec9059fa898f3d84c33fbb0524b4665df3e05c"
+      }
+    },
+    "cold": {
+      "artifacts": "build\\desktop-msvc\\engine-edited-air-source-cold-owned-20261120-native",
+      "world": "EngineSmoke_4c88584c97d04f8dae0ccf02843a44dc",
+      "source_world": "EngineSmoke_155577fd9b054afb933ea18c186ba61f",
+      "source_commit": "9602e29a3e46c701c903713a0b9e3f336d92e2e7",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true
+      },
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process",
+        "exit_code": 0
+      },
+      "overall": "PASS",
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census",
+        "evidence": {
+          "certified_no_surface_sections": 224,
+          "columns": 49,
+          "domain": "configured-render-ring.v1",
+          "expected_columns": 49,
+          "expected_sections": 1176,
+          "focus": [
+            1,
+            -3,
+            3
+          ],
+          "known_air_sections": 736,
+          "light_unready_sections": 0,
+          "max_y": 319,
+          "min_y": -64,
+          "missing_data_columns": 0,
+          "phase": "first_world_paint",
+          "publication_unready_sections": 0,
+          "radius": 3,
+          "ready": true,
+          "render_distance_chunks": 3,
+          "render_pass_complete": true,
+          "resident_air_sections": 0,
+          "schema": "required-presentation-witness.v2",
+          "sections": 1176,
+          "surface_sections": 440,
+          "unknown_sections": 0,
+          "world_epoch": 4
+        },
+        "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+      },
+      "material": {
+        "schema": "engine-world-actions-evidence.v1",
+        "status": "PASS",
+        "reason": "cold_material_probe_and_disk_agree",
+        "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+        "cells": [
+          {
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "before_id": 376,
+            "after_id": 376,
+            "initial_incarnation": 2,
+            "final_incarnation": 2,
+            "disk": {
+              "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_4c88584c97d04f8dae0ccf02843a44dc\\chunks\\1_-4_3.cchunk",
+              "sha256": "6f482521c359fc6015fe908c4dc7dcde32a40992ade3cd7c0a5f4f314a8547d4",
+              "section": [
+                1,
+                -4,
+                3
+              ],
+              "local": [
+                6,
+                15,
+                3
+              ],
+              "id": 376
+            }
+          }
+        ]
+      },
+      "air_return": null,
+      "cold_air": {
+        "summary": "[ChunkResidencySummary] buffered=1 reserved=19 published=19 dropped=0 unpublished=0 complete=1",
+        "fields": {
+          "initial": [
+            {
+              "coord": [
+                1,
+                -3,
+                3
+              ],
+              "field_incarnation": 11,
+              "manager": "00000171CF1D79B8"
+            },
+            {
+              "coord": [
+                1,
+                -2,
+                3
+              ],
+              "field_incarnation": 3,
+              "manager": "00000171CF1D79B8"
+            }
+          ],
+          "final": [
+            {
+              "coord": [
+                1,
+                -3,
+                3
+              ],
+              "field_incarnation": 11,
+              "manager": "00000171CF1D79B8"
+            },
+            {
+              "coord": [
+                1,
+                -2,
+                3
+              ],
+              "field_incarnation": 3,
+              "manager": "00000171CF1D79B8"
+            }
+          ]
+        },
+        "scope": "Stable explicit AIR data in a separate cold process. Incarnation integers are run-local, not comparable across processes."
+      },
+      "saved_air_carriers": [
+        {
+          "coord": [
+            1,
+            -3,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_4c88584c97d04f8dae0ccf02843a44dc\\chunks\\1_-3_3.cchunk",
+          "sha256": "a6b7d78121b72895280890c34c28f3c8d7e68f097ac8360272d8d18e1b7c2fb9",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 1830,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        },
+        {
+          "coord": [
+            1,
+            -2,
+            3
+          ],
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_4c88584c97d04f8dae0ccf02843a44dc\\chunks\\1_-2_3.cchunk",
+          "sha256": "2e71754223171692441562b719ca7a5013f90f4a0e2503e5a1fd1c4d85eca7c2",
+          "all4096_cells_air": true,
+          "fluid_all_zero": true,
+          "legacy_light_bytes": 4096,
+          "nonzero_light_cells": 0,
+          "weather": {
+            "wetness_u16": 0,
+            "last_update_ms": 0
+          }
+        }
+      ],
+      "camera": {
+        "schema": "air-source-addition-camera-diagnostic.v1",
+        "status": "PASS",
+        "action_frame": 66,
+        "counts": {
+          "paint_samples": 1127,
+          "after_ready": 1127,
+          "faults": 0
+        },
+        "causal_same_cell_transitions": [],
+        "examples": [],
+        "scope": "Independent declared emitter Manhattan canonical AIR camera values across source-addition action and retained disk reload. Not a GPU/shader, removal, general optics or lifetime acceptance; same action frame excluded as unordered."
+      },
+      "native_process_ids": [
+        "12716"
+      ],
+      "no_relocation": {
+        "teleport_cruise": false,
+        "after_start": 0
+      },
+      "legacy_performance": {
+        "pass_": false,
+        "metrics": {
+          "wall_ms_med": 20.2262,
+          "wall_ms_fly_med": 20.2262,
+          "post_stop_readiness_debt_max": 0.0,
+          "post_stop_visual_holes_max": 0.0
+        }
+      },
+      "artifact_sha256": {
+        "route.json": "1d561da3f048f93b5302a21bb8dc88652729932d800344bc01cfd57d5c92a3a1",
+        "flight_sim_report.json": "ef0d73de0c7855974f941c49052ac9f2276bf3faf0797bef1be34550e6971f27",
+        "smoke-verdict.json": "bf651f82675f7a054b76f915aa3a76c8f1057a1492f147eefa03175a8e0a29b5",
+        "world-actions.json": "a9e918114d35794cbb48cb53dd86335a81f5bd021021f5cfb94b6f9742e9bd99",
+        "world-actions-evidence.json": "d2a9f1304d589cb350bdd093bb67ca3110aca687714121ba5fd2b69da4490029",
+        "source-addition-camera-diagnostic.json": "d300d824587928879332cc8ae919512d81ead83438965b4eaaefc7467a0588f0",
+        "surface-lease-cohort-observation.json": "1b2f835108b17d581a9227b97ddbb3f10f7ae725cc6a4db7a758bb62372e112d"
+      }
+    }
+  },
+  "protected_original_cell": {
+    "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_653fd326296d470292b820582e3b44f9\\chunks\\1_-4_3.cchunk",
+    "sha256": "7f59ed1c4bc361796291d7e681f06c8df743dc8e898b40adf3d00462a517513d",
+    "section": [
+      1,
+      -4,
+      3
+    ],
+    "local": [
+      6,
+      15,
+      3
+    ],
+    "id": 560
+  },
+  "limits": [
+    "Final hot overall UNTESTED is retained. Cold overall PASS is startup/material scope only. Source addition diagnostic proves canonical CPU AIR values, not actual GPU binding/shader RGB during edits, source removal, arbitrary geometry, wetness or transparency.",
+    "Strict AIR lifetime proof covers2explicitly loaded AIR slices above a geometry-bearing column plus7resident geometry slices, not every producer/resource/backend or allAIR-only terrain columns.",
+    "AIR-only column data census and producer-completion authority remain unresolved: streamer column enumeration/preflight is geometry based and terrain completeness still assumes non-air content. Do not broaden eviction/save authority or purge legitimate AIR-only data without that ownership contract.",
+    "Deferred removal predicate changed alongside normal removal. Unit modes cover ordinary admitted U0/U-B/U-D paths, not a separately forced deferred-queue drain; full queue/cancellation/provider stress remains open.",
+    "CPU source diagnostic is retained forensic analysis, not yet a general production source-removal oracle with its own regression suite. Same action frame is excluded as unordered; before/after causal comparison uses independent emitter positions and verified actual material edit.",
+    "Prior static GPU/RGB acceptance predates these mesh/lifecycle edits. No new full native GPU/backend/RGB, seed/R8, performance or memory acceptance is claimed. Legacy performance remains unfinished; full original S0..S6 remains active."
+  ],
+  "next": [
+    "Formalize action/publication/field-generation source-addition/removal oracle and verify actual GPU/shader consumers, including negative controls.",
+    "Complete explicit producer/data-column ownership for AIR-only terrain and procedural AIR discovery, then lifecycle/cancellation/catalog/backend and full seed/R8/performance/memory gates."
+  ]
 }
 }
