@@ -22457,5 +22457,1299 @@
     "sha256": "eb41d08fefc34c6eea71e7cef98aa23be9a0e7d364cc763d8e33bb4030f5fc0d"
   },
   "goal_status": "active_full_original_S0_S6"
+},
+"action_bound_gpu_and_rgb_source_addition_counterexample_2026_11_20": {
+  "status": "in_progress_full_S0_S6",
+  "source_commit": "ef99537ad3ae4761bdb610955b025a6f974be66e",
+  "native_commit": "d6ee867f173750abbcd5052448327e085e40d34e",
+  "implementation_commits": [
+    "307257b7a",
+    "d6ee867f1",
+    "ef99537ad"
+  ],
+  "implementation": "Explicit --observe-bound-light enables actual GPU binding/atlas witnesses without preparing geometry. Production reference revalidates native CPU/action/disk proof, separates before/after action frames, requires causal source influence, actual same-frame/world GPU readback and independent constant-texture RGB. AIR holes are unsupported rather than silently treated as intact floors.",
+  "tests": {
+    "command": "python -B -X utf8 -m unittest discover -s tools -p 'test_engine_*.py'",
+    "status": "PASS",
+    "count": 171,
+    "elapsed_seconds": 7.432,
+    "controls": [
+      "stale GPU with correct RGB fails",
+      "black RGB with correct GPU fails",
+      "missing capture incomplete",
+      "foreign frame/world fails",
+      "missing before influence incomplete",
+      "AIR-hole action incomplete",
+      "baked vertex proximity cannot hide stale bound field",
+      "provisional surfaces cannot grant GPU acceptance"
+    ]
+  },
+  "native": {
+    "artifacts": "engine-source-add-bound-20261120-native",
+    "exe_sha256": "b3c13178e64ee9145b466f21186be4fd507c20f00e0a3485a08aa14bb598a594",
+    "source_world": "EngineSmoke_653fd326296d470292b820582e3b44f9",
+    "private_world": "EngineSmoke_54bff63a3f50465495952f79b6a01b67",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "original_smoke_status": "UNTESTED",
+    "source_status": "FAIL",
+    "camera": {
+      "schema": "engine-source-camera-reference.v1",
+      "status": "PASS",
+      "reason": "frame_bound_declared_source_transport",
+      "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance",
+      "action_frame": 64,
+      "counts": {
+        "before_samples": 63,
+        "before_ready": 63,
+        "before_source_effect_samples": 63,
+        "unordered_action_frame": 1,
+        "after_samples": 6664,
+        "after_ready": 6664,
+        "after_source_effect_samples": 3110
+      },
+      "faults": 0,
+      "expected_paints": 6728,
+      "world_epoch": 4,
+      "observed_paints": 6728,
+      "transitions": [
+        {
+          "cell": [
+            22,
+            -47,
+            51
+          ],
+          "before": [
+            11
+          ],
+          "after": [
+            13
+          ]
+        }
+      ],
+      "examples": [],
+      "missing_coverage": []
+    },
+    "air_return": {
+      "schema": "engine-round-trip-evidence.v1",
+      "status": "PASS",
+      "reason": "motor_return_with_fresh_disk_cohort",
+      "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+      "column": [
+        1,
+        3
+      ],
+      "sections": [
+        {
+          "coord": [
+            1,
+            -4,
+            3
+          ],
+          "retired_incarnation": 2,
+          "returned_incarnation": 5999
+        },
+        {
+          "coord": [
+            1,
+            -1,
+            3
+          ],
+          "retired_incarnation": 3,
+          "returned_incarnation": 6000
+        },
+        {
+          "coord": [
+            1,
+            0,
+            3
+          ],
+          "retired_incarnation": 4,
+          "returned_incarnation": 6001
+        },
+        {
+          "coord": [
+            1,
+            1,
+            3
+          ],
+          "retired_incarnation": 5,
+          "returned_incarnation": 6002
+        },
+        {
+          "coord": [
+            1,
+            2,
+            3
+          ],
+          "retired_incarnation": 6,
+          "returned_incarnation": 6003
+        },
+        {
+          "coord": [
+            1,
+            3,
+            3
+          ],
+          "retired_incarnation": 1,
+          "returned_incarnation": 5998
+        },
+        {
+          "coord": [
+            1,
+            4,
+            3
+          ],
+          "retired_incarnation": 7,
+          "returned_incarnation": 6004
+        }
+      ],
+      "air_sections": [
+        {
+          "coord": [
+            1,
+            -3,
+            3
+          ],
+          "retired_field_incarnation": 11,
+          "returned_field_incarnation": 19316
+        },
+        {
+          "coord": [
+            1,
+            -2,
+            3
+          ],
+          "retired_field_incarnation": 3,
+          "returned_field_incarnation": 19323
+        }
+      ],
+      "maximum_excursion_blocks": 303.47,
+      "disk_demand_id": 39853,
+      "far_tick_ms": 739963333,
+      "return_tick_ms": 740027274
+    },
+    "material": {
+      "schema": "engine-world-actions-evidence.v1",
+      "status": "PASS",
+      "reason": "edited_material_survived_fresh_disk_return",
+      "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+      "cells": [
+        {
+          "cell": [
+            22,
+            -49,
+            51
+          ],
+          "before_id": 560,
+          "after_id": 376,
+          "initial_incarnation": 2,
+          "final_incarnation": 5999,
+          "disk": {
+            "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_54bff63a3f50465495952f79b6a01b67\\chunks\\1_-4_3.cchunk",
+            "sha256": "445c29385d4c6b327f62461e638bf402ec0f77589fc6f63411d164ed777dd257",
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "local": [
+              6,
+              15,
+              3
+            ],
+            "id": 376
+          }
+        }
+      ]
+    },
+    "original_draw": {
+      "schema": "engine-source-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_draw_transport",
+      "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+      "action_frame": 64,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 320,
+          "source_effect": 32
+        },
+        "after": {
+          "rows": 19556,
+          "source_effect": 22
+        }
+      },
+      "unordered_action_rows": 0,
+      "components": {
+        "before": {
+          "field": {
+            "status": "UNTESTED",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 103,
+            "positive_expected": 95,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 103,
+              "bound_gpu": 103
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 95,
+            "frame_epochs": 2,
+            "observed_emitter_cells": 0,
+            "distinct_floor_cells": 45,
+            "distinct_expected_levels": 9,
+            "skipped": 217,
+            "skip_reasons": {
+              "not_downward_valid_ray": 160,
+              "not_joined_floor_depth": 12,
+              "unscoped_floor_cell": 45
+            },
+            "missing_coverage": [
+              "frame_epochs",
+              "emitter_surface"
+            ],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "UNTESTED",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 95,
+            "faults": 0,
+            "frame_epochs": 2,
+            "distinct_cells": 41,
+            "expected_levels": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "draw_sources": [
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 225,
+            "examples": [],
+            "missing_coverage": [
+              "epochs"
+            ]
+          }
+        },
+        "after": {
+          "field": {
+            "status": "FAIL",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 4085,
+            "positive_expected": 3077,
+            "faults": 1,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 4085,
+              "bound_gpu": 4085
+            },
+            "missing_bound_fields": 211,
+            "positive_bound_with_baked_zero": 3077,
+            "frame_epochs": 108,
+            "observed_emitter_cells": 0,
+            "distinct_floor_cells": 3421,
+            "distinct_expected_levels": 14,
+            "skipped": 15471,
+            "skip_reasons": {
+              "not_downward_valid_ray": 10799,
+              "not_joined_floor_depth": 3664,
+              "unscoped_floor_cell": 721,
+              "missing_draw_time_bound_field": 211,
+              "missing_or_provisional_source_match": 76
+            },
+            "missing_coverage": [
+              "requested_bound_fields",
+              "emitter_surface"
+            ],
+            "examples": [
+              {
+                "frame_epoch": 67,
+                "floor_cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_block_level": 8,
+                "source_block_light": 0.4,
+                "expected_sky_level": 0,
+                "source_sky_light": 0.0,
+                "source_material_id": 560
+              }
+            ],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "FAIL",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 3351,
+            "faults": 6,
+            "frame_epochs": 113,
+            "distinct_cells": 2657,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ],
+            "draw_sources": [
+              1,
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 16205,
+            "examples": [
+              {
+                "frame_epoch": 511,
+                "cell": [
+                  22,
+                  -49,
+                  44
+                ],
+                "expected_light": 7,
+                "predicted_rgba": [
+                  33.251839999999994,
+                  22.167893333333332,
+                  11.083946666666666,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    24,
+                    16,
+                    8,
+                    255
+                  ],
+                  [
+                    24,
+                    16,
+                    8,
+                    255
+                  ]
+                ],
+                "error_bytes": 9.251839999999994,
+                "intensity": 0.17318666666666666,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 480,
+                "cell": [
+                  21,
+                  -49,
+                  44
+                ],
+                "expected_light": 6,
+                "predicted_rgba": [
+                  28.63872,
+                  19.09248,
+                  9.54624,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    19,
+                    13,
+                    6,
+                    255
+                  ],
+                  [
+                    19,
+                    13,
+                    6,
+                    255
+                  ]
+                ],
+                "error_bytes": 9.63872,
+                "intensity": 0.14916,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 480,
+                "cell": [
+                  20,
+                  -49,
+                  44
+                ],
+                "expected_light": 5,
+                "predicted_rgba": [
+                  24.02559999999999,
+                  16.01706666666666,
+                  8.00853333333333,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    18,
+                    12,
+                    6,
+                    255
+                  ],
+                  [
+                    18,
+                    12,
+                    6,
+                    255
+                  ]
+                ],
+                "error_bytes": 6.02559999999999,
+                "intensity": 0.1251333333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 240,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 83,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 67,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              }
+            ],
+            "missing_coverage": []
+          }
+        }
+      },
+      "missing_coverage": []
+    },
+    "latest_draw": {
+      "schema": "engine-source-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_draw_transport",
+      "scope": "One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance",
+      "action_frame": 64,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 320,
+          "source_effect": 32,
+          "field_checked": 103,
+          "field_faults": 0,
+          "field_unjoined": 0
+        },
+        "after": {
+          "rows": 19556,
+          "source_effect": 22,
+          "field_checked": 4085,
+          "field_faults": 1,
+          "field_unjoined": 76
+        }
+      },
+      "unordered_action_rows": 0,
+      "components": {
+        "before": {
+          "field": {
+            "status": "UNTESTED",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 103,
+            "positive_expected": 95,
+            "faults": 0,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 103,
+              "bound_gpu": 103
+            },
+            "missing_bound_fields": 0,
+            "positive_bound_with_baked_zero": 95,
+            "frame_epochs": 2,
+            "observed_emitter_cells": 0,
+            "distinct_floor_cells": 45,
+            "distinct_expected_levels": 9,
+            "skipped": 217,
+            "skip_reasons": {
+              "not_downward_valid_ray": 160,
+              "not_joined_floor_depth": 12,
+              "unscoped_floor_cell": 45
+            },
+            "missing_coverage": [
+              "frame_epochs",
+              "emitter_surface"
+            ],
+            "examples": [],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "UNTESTED",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 95,
+            "faults": 0,
+            "frame_epochs": 2,
+            "distinct_cells": 41,
+            "expected_levels": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "draw_sources": [
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 225,
+            "examples": [],
+            "missing_coverage": [
+              "epochs"
+            ]
+          }
+        },
+        "after": {
+          "field": {
+            "status": "FAIL",
+            "reason": "analytic_floor_draw_source_light",
+            "checked": 4085,
+            "positive_expected": 3077,
+            "faults": 1,
+            "source_counts": {
+              "cpu": 0,
+              "packed_gpu": 4085,
+              "bound_gpu": 4085
+            },
+            "missing_bound_fields": 211,
+            "positive_bound_with_baked_zero": 3077,
+            "frame_epochs": 108,
+            "observed_emitter_cells": 0,
+            "distinct_floor_cells": 3421,
+            "distinct_expected_levels": 14,
+            "skipped": 15471,
+            "skip_reasons": {
+              "not_downward_valid_ray": 10799,
+              "not_joined_floor_depth": 3664,
+              "unscoped_floor_cell": 721,
+              "missing_draw_time_bound_field": 211,
+              "missing_or_provisional_source_match": 76
+            },
+            "missing_coverage": [
+              "requested_bound_fields",
+              "emitter_surface"
+            ],
+            "examples": [
+              {
+                "frame_epoch": 67,
+                "floor_cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_block_level": 8,
+                "source_block_light": 0.4,
+                "expected_sky_level": 0,
+                "source_sky_light": 0.0,
+                "source_material_id": 560
+              }
+            ],
+            "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+          },
+          "rgb": {
+            "schema": "engine-floor-rgb-reference.v1",
+            "status": "FAIL",
+            "reason": "analytic_positive_floor_normal_rgb",
+            "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+            "checked": 3351,
+            "faults": 6,
+            "frame_epochs": 113,
+            "distinct_cells": 2657,
+            "expected_levels": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13
+            ],
+            "draw_sources": [
+              1,
+              2
+            ],
+            "unwitnessed": 0,
+            "skipped": 16205,
+            "examples": [
+              {
+                "frame_epoch": 511,
+                "cell": [
+                  22,
+                  -49,
+                  44
+                ],
+                "expected_light": 7,
+                "predicted_rgba": [
+                  33.251839999999994,
+                  22.167893333333332,
+                  11.083946666666666,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    24,
+                    16,
+                    8,
+                    255
+                  ],
+                  [
+                    24,
+                    16,
+                    8,
+                    255
+                  ]
+                ],
+                "error_bytes": 9.251839999999994,
+                "intensity": 0.17318666666666666,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 480,
+                "cell": [
+                  21,
+                  -49,
+                  44
+                ],
+                "expected_light": 6,
+                "predicted_rgba": [
+                  28.63872,
+                  19.09248,
+                  9.54624,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    19,
+                    13,
+                    6,
+                    255
+                  ],
+                  [
+                    19,
+                    13,
+                    6,
+                    255
+                  ]
+                ],
+                "error_bytes": 9.63872,
+                "intensity": 0.14916,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 480,
+                "cell": [
+                  20,
+                  -49,
+                  44
+                ],
+                "expected_light": 5,
+                "predicted_rgba": [
+                  24.02559999999999,
+                  16.01706666666666,
+                  8.00853333333333,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    18,
+                    12,
+                    6,
+                    255
+                  ],
+                  [
+                    18,
+                    12,
+                    6,
+                    255
+                  ]
+                ],
+                "error_bytes": 6.02559999999999,
+                "intensity": 0.1251333333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 240,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 83,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              },
+              {
+                "frame_epoch": 67,
+                "cell": [
+                  20,
+                  -49,
+                  47
+                ],
+                "expected_light": 8,
+                "predicted_rgba": [
+                  37.86495999999999,
+                  25.243306666666662,
+                  12.621653333333331,
+                  255.0
+                ],
+                "actual_rgba": [
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ],
+                  [
+                    29,
+                    19,
+                    10,
+                    255
+                  ]
+                ],
+                "error_bytes": 8.86495999999999,
+                "intensity": 0.1972133333333333,
+                "fog_factor": 0.0,
+                "valid_material": true,
+                "surface_ok": true
+              }
+            ],
+            "missing_coverage": []
+          }
+        }
+      },
+      "missing_coverage": [
+        "after_joined_gpu_surfaces"
+      ],
+      "examples": [
+        {
+          "frame": 67,
+          "cell": [
+            20,
+            -49,
+            47
+          ],
+          "expected": 128,
+          "actual": 96,
+          "surface_ok": true,
+          "bound": {
+            "schema": "bound-section-light-pixel.v1",
+            "requested": true,
+            "captured": true,
+            "valid": true,
+            "cpu_matches": true,
+            "packed": 96,
+            "program": 30,
+            "atlas_texture": 2059,
+            "table_texture": 2066,
+            "handle": [
+              34,
+              0,
+              1,
+              0
+            ],
+            "frame_epoch": 67,
+            "world_epoch": 4,
+            "field_incarnation": 39,
+            "field_revision": 1,
+            "geometry_incarnation": 35,
+            "geometry_content": 4096
+          }
+        }
+      ]
+    },
+    "no_relocation": {
+      "teleport_cruise": false,
+      "after_start": 0
+    }
+  },
+  "stale_bound_observations": [
+    {
+      "frame": 511,
+      "cell": [
+        22,
+        -49,
+        44
+      ],
+      "perf_line": 64703,
+      "packed_before": 80,
+      "packed_after": 112,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 80,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 511,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 112,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 1,
+      "vertex_proximity": 7.62939e-06
+    },
+    {
+      "frame": 480,
+      "cell": [
+        21,
+        -49,
+        44
+      ],
+      "perf_line": 64854,
+      "packed_before": 64,
+      "packed_after": 96,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 64,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 480,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 96,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 1,
+      "vertex_proximity": 7.62939e-06
+    },
+    {
+      "frame": 480,
+      "cell": [
+        20,
+        -49,
+        44
+      ],
+      "perf_line": 64855,
+      "packed_before": 48,
+      "packed_after": 80,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 48,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 480,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 80,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 1,
+      "vertex_proximity": 7.62939e-06
+    },
+    {
+      "frame": 240,
+      "cell": [
+        20,
+        -49,
+        47
+      ],
+      "perf_line": 65167,
+      "packed_before": 96,
+      "packed_after": 128,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 96,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 240,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 128,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 1,
+      "vertex_proximity": 7.62939e-06
+    },
+    {
+      "frame": 83,
+      "cell": [
+        20,
+        -49,
+        47
+      ],
+      "perf_line": 65487,
+      "packed_before": 96,
+      "packed_after": 128,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 96,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 83,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 128,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 1,
+      "vertex_proximity": 3.8147e-06
+    },
+    {
+      "frame": 67,
+      "cell": [
+        20,
+        -49,
+        47
+      ],
+      "perf_line": 65647,
+      "packed_before": 96,
+      "packed_after": 128,
+      "bound": {
+        "schema": "bound-section-light-pixel.v1",
+        "requested": true,
+        "captured": true,
+        "valid": true,
+        "cpu_matches": true,
+        "packed": 96,
+        "program": 30,
+        "atlas_texture": 2059,
+        "table_texture": 2066,
+        "handle": [
+          34,
+          0,
+          1,
+          0
+        ],
+        "frame_epoch": 67,
+        "world_epoch": 4,
+        "field_incarnation": 39,
+        "field_revision": 1,
+        "geometry_incarnation": 35,
+        "geometry_content": 4096
+      },
+      "live_face_packed": 128,
+      "source_chunk": [
+        1,
+        -4,
+        2
+      ],
+      "preview_override": 0,
+      "vertex_proximity": 3.8147e-06
+    }
+  ],
+  "interpretation": {
+    "observed": "Six RGB failures match old source-set light. Each has actual GPU-bound field39 revision1 and geometry35/content4096, world4. GPU readback matches retained CPU binding snapshot, while separately sampled live face matches new independent emitter model. One normal nonpreview readback mismatch is sufficient FAIL; provisional joins and absent captures remain incomplete.",
+    "inference": "Investigate stale published render-light selection/refresh for neighboring section(1,-4,2), not upload-byte corruption. Exact refresh refusal predicate is not yet traced.",
+    "source_leads": [
+      "src/Render/Mesh/ChunkMeshCache.cpp:3199 CanRefreshPublishedLight checks current geometry/source revision, active owners and exact captured geometry stamps before refresh.",
+      "src/World/Lighting/SectionRenderLightSnapshot.h:84 Matches compares own and six full-neighbor content revisions.",
+      "src/World/Core/BlockWorld.cpp:330 captures seven geometry input stamps.",
+      "src/World/Lighting/ChunkLighting.cpp:25 edit relight computes/installs current physical outputs; raw live face alone is not a publication certificate."
+    ]
+  },
+  "limits": [
+    "Before phase has two observed epochs and no emitter-surface coverage; no full source-draw PASS is possible even absent faults.",
+    "After phase includes211 absent bound captures and provisional surfaces; no missing proof is promoted to PASS.",
+    "One actual normal-field mismatch and six framebuffer RGB mismatches are retained. Replays do not overwrite native verdicts; v2 mixed unjoined-surface refusals with field faults, v3 separately classifies them.",
+    "No source-removal GPU/AIR-hole/wet/transparency/backend matrix, generation/latency, AIR-only/procedural lifecycle, full seed/R8/performance/memory acceptance; all S0..S6 remain active."
+  ],
+  "release_build_logs": [
+    "build/desktop-msvc/source-bound-observation-desktop-build-20261120.log",
+    "build/desktop-msvc/source-draw-reference-desktop-build-20261120.log"
+  ],
+  "preserved_native_artifact_sha256": {
+    "source-acceptance.json": "e41fbaf8177df2ac8ef4b9a89eb993e9ad64ba2cfb2d575a8980fd10ad4bbbc5",
+    "source-camera-reference.json": "ffd1b28ce119bbbd043e7e57e9012c053159dd2832d0970e1f329204901b1bc3",
+    "source-draw-reference.json": "aac175c1eabf8e35f36b9a1abba86ff00fd695fb200c87bdf13d2e1aabd033dc",
+    "source-draw-reference-replay-v2.json": "a9cd98d993c4d8c8ffd48db580bfbc231cf6ee0e53148f75007a3c89827c05c7",
+    "smoke-verdict.json": "3f3e49b82ce52a9a2926d2f5ccbf7e93425887769c50fa4400a3abe5732664dd",
+    "route.json": "9edd35f0fa2fd2393eee732c1ecd8183cc24987fe4434efdb3654a5adb4f35a9",
+    "world-actions.json": "cc4b4e6cd745912c37ab9c54ae358baf6dcedd727f976480c779ef0b99b2c88b",
+    "world-actions-evidence.json": "584aae6bdad64638e80a81b8d651fcdeb2fb03c3b78ffc17f8f036ac1f618d65",
+    "air-round-trip-evidence.json": "0e7c8eca03f6ff99f27faffa623f2b439da5da0c8e19cda108d9355ff2b8bff5"
+  },
+  "next": [
+    "Trace actual neighbor(1,-4,2) refresh admission/refusal and publication source/field generations; regress the stale-pair case without weakening compatibility/readiness.",
+    "Collect sufficient pre-edit GPU epochs/emitter surfaces with an explicit observation schedule; do not lower reference coverage thresholds.",
+    "Rebuild Release before next native because ef99537ad changes verification source; preserve prior FAIL/UNTESTED and all remaining S0..S6 scope."
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-bound-counterexample-assessment-20261120.json",
+    "sha256": "aafabb6a0eddb4bcb18df421f8f7860600a857ae32da57854a6e012da5967c54"
+  }
 }
 }
