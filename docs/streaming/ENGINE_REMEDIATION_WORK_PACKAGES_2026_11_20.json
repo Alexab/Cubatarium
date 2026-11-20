@@ -116,16 +116,20 @@
         {
           "id": "S1.04",
           "action": "Закрыть четыре маршрута: frontier, out-and-back, сухая пещера, мокрая пещера; каждый с утверждёнными точками.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S1.05",
           "action": "Добавить маршрут по поверхности, воспроизводимый replay и исследование конкретной области долга.",
           "status": "OPEN",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "completed_subtasks": [
+            "Explicit ordinary walking motor and flat-surface native proof; remaining replay and debt targeting stay open."
+          ]
         }
       ]
     },
@@ -431,7 +435,7 @@
       ]
     }
   ],
-  "current_step": "S1.04",
+  "current_step": "S1.05",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [

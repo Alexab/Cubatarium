@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S1.04",
+  "current_package": "S1.05",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -269,6 +269,38 @@
     },
     {
       "id": "S1.04",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "build\\desktop-msvc\\s1-route-coverage-input-20261120.json",
+          "sha256": "799104ce8fc751df7b1e0ec6236b45c2b0cdb12822d0b7e863c566249e63178d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-route-coverage-20261120.json",
+          "sha256": "eb832ae16e76c2e190f9298d19046c1631830f87e3ad6c3343a0d2d8f692a626"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-route-path-negative-controls-20261120.log",
+          "sha256": "a1959a11b2563a4965f2250f496a5387e9546bee5bf06cad9a30201805693e75"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-route-path-harness-test-20261120.log",
+          "sha256": "5d8fe6e71084097f7ed2cb4983e3aa7b00e3fff4b2e752478fc73762ce0a5384"
+        }
+      ],
+      "verified": [
+        "Four declared route kinds PASS: frontier, out-and-back, dry cave, wet cave. Authored bot-route hash matches each original manifest.",
+        "Every required waypoint observed within 0.7 blocks in order, during its indexed inspection; terminal report and trace confirm every point complete and zero diagnostic relocations.",
+        "All samples remain within authored cave X/Y/Z bounds and match the dry/wet observation.",
+        "Out-and-back freshly re-evaluated: initial section cohort retired and returned through a new disk demand.",
+        "Inspection PNG coverage freshly re-evaluated for every route. No new native run required.",
+        "Negative controls reject skipped/wrong points, wrong order, leaving cave during transit, wrong fluid, time reversal, incomplete route and relocation; 34 harness tests PASS.",
+        "Future moving smoke runs require the ordered route_path gate."
+      ],
+      "scope_limit": "Retained native coverage for each recorded executable, not a new current-EXE matrix. Three historical cases retain legacy request/filename PNG joins; frontier has readback receipts. Original overall UNTESTED verdicts remain unchanged. Full current-version reference/performance matrix remains S6."
+    },
+    {
+      "id": "S1.05",
       "status": "OPEN",
       "evidence": [
         {
@@ -315,14 +347,14 @@
         "Release controller tests plus 34 harness, 5 verdict-contract and surface evidence negative controls PASS."
       ],
       "remaining": [
-        "Reconcile all required route scenarios and source/version limitations before closing S1.04.",
-        "Native overall FAIL retained: first paint has 13 unready sections; packed floor draw-source sky reference has 3223/3223 faults. Queue S4/S5 diagnosis; do not rerun without new hypothesis."
+        "Deterministic observation/probe replay and targeted exploration of a concrete debt region remain open.",
+        "Surface native overall FAIL retained in the S4/S5 defect queue; scoped walking PASS does not erase it."
       ],
       "historical_route_evidence": {
         "out_and_back": "build/desktop-msvc/physical-current-roundtrip-rd4-20261120-native/smoke-verdict.json",
         "wet_cave": "build/desktop-msvc/physical-current-wet-rd4-20261120-native/smoke-verdict.json"
       },
-      "scope_limit": "Flat walking is proven; arbitrary terrain navigation and full current-version route matrix are not. No stage-wide or overall acceptance."
+      "scope_limit": "Surface subtask only. Flat walking proven; arbitrary terrain and complete S1.05 are not. Startup/draw-source failures remain open."
     }
   ],
   "completed_handoff": {

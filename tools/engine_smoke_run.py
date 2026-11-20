@@ -725,6 +725,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             json.dumps(report, indent=2) + "\n", encoding="utf-8")
         perf = Path(report["perf_jsonl"]) if report.get("perf_jsonl") else None
         verdict = classify(report, perf, minimum_chunks=minimum_chunks)
+        if not startup_only:
+            from engine_route_path_evidence import evaluate as evaluate_route_path
+            path_evidence = evaluate_route_path(artifacts / "diagnostic_bot.jsonl", report,
+                bot_route, minimum_chunks=minimum_chunks,
+                scene=scene if scene and "cave_bounds" in scene else None)
+            (artifacts / "ordered-route-path-evidence.json").write_text(
+                json.dumps(path_evidence, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["route_path"] = path_evidence
         if round_trip:
             from engine_round_trip_evidence import evaluate as evaluate_round_trip
             returned = evaluate_round_trip(artifacts, report, bot_route, minimum_chunks=minimum_chunks)
@@ -908,6 +916,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             world_actions=world_actions is not None,
             synchronous_meshing=synchronous_meshing,
             capture_backpressure=capture_encode_delay_ms > 0, walking=walking)
+        if not startup_only:
+            required.append("route_path")
         finalize(verdict, required)
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
