@@ -10,7 +10,8 @@
       "observed": "Real single-worker queue held by promise barrier; queued job 9101 cancelled before compute; expected_sources=1 recovered_sources=0; Release CTest FAIL in 0.08 s.",
       "blocks_overall_acceptance": true,
       "builder_verification": "s3-cancel-late-cached-flag-test-20261120.log: Release PASS for exact queued/running/completed cancel, overflow, successor AIR install and late same-ID epoch control.",
-      "next_action": "Wire exact builder retry APIs into deferred UWorld recovery; verify quiesce/resume and world replacement. Existing World position adapters still lose exact semantics, so S3.04 remains open."
+      "world_integration": "Exact deferred queue wired into UWorld; Release policy/builder test and full app builds PASS. All three BlockWorld.Clear sites retire old deferred requests. Native UWorld lifecycle proof pending.",
+      "next_action": "Run one targeted isolated UWorld API probe for cancel/quiesce/resume and replacement; reconcile remaining stale validation controls. S3.04 remains open."
     },
     {
       "id": "surface-first-paint-unready",

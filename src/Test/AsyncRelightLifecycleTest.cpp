@@ -4,6 +4,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/RelightResultInstall.h"
 #include "World/Lighting/RelightInputValidation.h"
+#include "World/Lighting/RelightRetryQueue.h"
 #include <chrono>
 #include <cstdlib>
 #include <future>
@@ -110,7 +111,23 @@ int main()
   }
   // Recapture and run the real successor, then validate and install its output.
   recovered.front().job_id = 9102;
-  builder.EnqueueJob(world, recovered.front(), registry);
+  RelightRetryQueue deferred;
+  deferred.Append(recovered);
+  deferred.Suspend();
+  int submissions = 0;
+  auto submit = [&](const RelightJobSpec &request) {
+    builder.EnqueueJob(world, request, registry);
+    ++submissions;
+    return true;
+  };
+  deferred.Drain(8, submit);
+  if (submissions || deferred.Size() != 1 || builder.HasPendingWork()) return 1;
+  deferred.Resume();
+  deferred.Drain(0, submit);
+  deferred.Drain(1, [](const RelightJobSpec &) { return false; });
+  if (submissions || deferred.Size() != 1) return 1;
+  deferred.Drain(1, submit);
+  if (submissions != 1 || !deferred.Empty()) return 1;
   if (!builder.WaitIdleFor(5s)) return 2;
   auto results = builder.DrainCompleted(1);
   if (results.size() != 1 || !results.front().inputs_complete ||
@@ -191,6 +208,13 @@ int main()
     std::cerr << "FAIL: late completion duplicated debt or retired successor\n";
     return 1;
   }
+  deferred.Append({spec, second});
+  deferred.Drain(1, [](const RelightJobSpec &) { return true; });
+  if (deferred.Size() != 1) return 1;
+  // Replacement world retires old obligations instead of replaying them.
+  deferred.Clear();
+  deferred.Drain(8, submit);
+  if (!deferred.Empty() || submissions != 1) return 1;
   std::cout << "PASS: queued/completed cancel and overflow retain exact requests; "
                "successor validates and installs AIR field; running cancel "
                "late completion does not retire same-ID successor\n";

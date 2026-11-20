@@ -30,6 +30,7 @@
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/Interaction/BlockBreakService.h"
 #include "World/Lighting/PendingLightCoverage.h"
+#include "World/Lighting/RelightRetryQueue.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include "World/Physics/PhysicsProfile.h"
@@ -1823,6 +1824,7 @@ private:
   std::unique_ptr<UWorldStreaming> Streaming;
   std::unique_ptr<UWorldPersistence> Persistence;
   std::unique_ptr<UAsyncRelightBuilder> AsyncRelight;
+  RelightRetryQueue DeferredRelightRetries;
   std::unique_ptr<IULightingPipeline> LightingPipeline;
   uint64_t NextAsyncRelightJobId{1};
   bool StepUpEnabled{true};

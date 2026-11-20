@@ -31,3 +31,15 @@ Release test PASS (`s3-cancel-late-cached-flag-test-20261120.log`, 0.07 s): queu
 Промежуточные неуспехи сохранены: `s3-cancel-ledger-build-20261120.log` — неверное имя getter в тесте, исправлено на `GetSectionLightField`; `s3-cancel-late-test-20261120.log` — timeout тестового барьера, потому что environment flag был закеширован выключенным до его установки. Локализация: `Core/Environment.h` задаёт process-constant flags. Фикстура теперь включает audit до первого enqueue; одноразовый atomic claim ограничивает барьер старым worker. Это не engine deadlock.
 
 Остаётся обязательная работа: перевести UWorld с позиции на точные deferred jobs; проверить resume/quiesce и очистку при замене мира; проверить остальные stale/read-set/catalog/profile/incarnation переходы. Полный S3.04 не закрыт. Native app и весь S0..S6 этим unit результатом не сертифицированы.
+
+## Интеграция deferred owner в UWorld
+
+UWorld теперь получает полные jobs из builder, удерживает их в `RelightRetryQueue` и подаёт через штатный drain с бюджетом min(apply cap, свободные pipeline slots). Callback подтверждает удаление из deferred queue только после enqueue. Диапазоны, domains, AIR/sample targets и finalize flags не заменяются generic terrain request. HasPending учитывает deferred долг в Full; Flat не ожидает Full-задания, которые сохраняются для последующего recapture.
+
+BeginBackgroundQuiesce и синхронный Quiesce приостанавливают очередь; Drain во время suspend не запускает ни retry, ни stale successor. EnsureStreamingActiveAfterBackgroundQuiesce возобновляет её. Все три найденных `BlockWorld.Clear` пути очищают долг старого мира; cooperative load/create возобновляют пустой owner для нового мира.
+
+Проверка используемого production queue с реальным builder PASS: `s3-world-retry-policy-test-20261120.log` (Release, 0.07 s): suspend не запускает worker; resume завершает точный AIR successor; limit 0 и admission reject удерживают запрос; limit 1 сохраняет хвост; Clear исключает повтор старых запросов. Это unit-проверка owner и builder, не вызов UWorld lifecycle.
+
+Полные сборки приложения PASS: `s3-world-retry-app-build-20261120.log` и после уточнения Flat pending `s3-world-retry-mode-app-build-20261120.log`; используется обязательная Release команда и provenance wrapper. Итоговый provenance: `s3-world-retry-mode-release-provenance-20261120.json`.
+
+Следующий шаг: один адресный native API probe изолированного UWorld для cancel → quiesce → resume → точный AIR successor, включая очистку при замене мира. Затем сверка оставшихся sync/async stale controls. До этого интеграция lifecycle считается непроверенной, S3.04 остаётся OPEN.

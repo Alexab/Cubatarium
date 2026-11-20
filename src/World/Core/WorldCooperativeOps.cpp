@@ -1744,6 +1744,8 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     ResetFluidSurfacePackReuseCache();
     world.ResetPhysicsRuntimeState();
     world.CancelAsyncRelightWork();
+    world.DeferredRelightRetries.Clear();
+    world.DeferredRelightRetries.Resume();
     world.ModifiedChunks.clear();
     world.MovementDiagHistory.clear();
     ChunksFileName = FolderPath + "/chunks.json";
@@ -1852,6 +1854,8 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     world.RebuildWorldGenPipeline();
     world.BlockWorld.Clear();
     world.CancelAsyncRelightWork();
+    world.DeferredRelightRetries.Clear();
+    world.DeferredRelightRetries.Resume();
     world.ModifiedChunks.clear();
     FolderPath = world.GetWorldFolderPath();
     if (!FolderPath.empty())

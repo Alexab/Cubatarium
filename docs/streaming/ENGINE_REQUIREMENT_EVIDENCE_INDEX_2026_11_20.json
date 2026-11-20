@@ -4,6 +4,17 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S3.04.cancel-debt-checkpoint",
+      "status": "PARTIAL_OPEN",
+      "card": "S3_04_CANCEL_DEBT_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s3-cancel-repro-test-20261120.log",
+      "builder_verification": "build/desktop-msvc/s3-cancel-late-cached-flag-test-20261120.log",
+      "deferred_policy_verification": "build/desktop-msvc/s3-world-retry-policy-test-20261120.log",
+      "app_build": "build/desktop-msvc/s3-world-retry-mode-app-build-20261120.log",
+      "provenance": "build/desktop-msvc/s3-world-retry-mode-release-provenance-20261120.json",
+      "remaining": "Native UWorld lifecycle, world replacement behavior and remaining immutable sync/async validation controls; no package closure claimed."
+    },
+    {
       "id": "S0.01",
       "status": "COMPLETE",
       "evidence": {

@@ -9703,7 +9703,8 @@ void UWorld::TraceRelightWatchdog()
 int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
                                      bool enqueue_background_frontier)
 {
-  if (!AsyncRelight || !BlockRegistry)
+  if (!AsyncRelight || !BlockRegistry || ShutdownPrepared ||
+      DeferredRelightRetries.IsSuspended())
   {
     return 0;
   }
@@ -9728,16 +9729,26 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   TraceRelightWatchdog();
   const auto t0 = std::chrono::high_resolution_clock::now();
   int applied = 0;
-  if (Persistence)
+  DeferredRelightRetries.Append(AsyncRelight->TakeOverflowJobs());
+  DeferredRelightRetries.Append(AsyncRelight->TakeDiscardedJobs());
+  if (!LightingPipeline || LightingPipeline->RequiresLitGate())
   {
-    for (const glm::ivec3 &pos : AsyncRelight->TakeOverflowSourcePositions())
-    {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false,
-                                               ProceduralTemplate.MinHeight, -1,
-                                               __FUNCTION__, this);
-      const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
-      ReleaseInactiveAsyncRelightColumn(glm::ivec2(chunk.x, chunk.z));
-    }
+    const int free_slots = std::max(
+        0, AsyncRelight->GetMaxPipelineDepth() - AsyncRelight->GetInFlightCount());
+    DeferredRelightRetries.Drain(
+        static_cast<size_t>(std::max(0, std::min(max_per_frame, free_slots))),
+        [&](const RelightJobSpec &original)
+        {
+          auto retry = original;
+          retry.job_id = ++NextAsyncRelightJobId;
+          AsyncRelight->EnqueueJob(BlockWorld, retry, *BlockRegistry);
+          if (retry.column_center_only && !retry.block_positions.empty())
+          {
+            const auto center = UChunkManager::WorldToChunk(retry.block_positions.front());
+            AsyncRelightColumnsInFlight[{center.x, center.z}] = retry.job_id;
+          }
+          return true;
+        });
   }
   const double miss_reserved_ms =
       static_cast<double>(URuntimeTuning::Get().MissReservedMs);
@@ -10783,17 +10794,7 @@ int UWorld::DrainAsyncRelightResults(int max_per_frame, bool priority_mesh,
   }
   PhysicsTelemetryData.RelightDiscardedLate =
       AsyncRelight->GetDiscardedLateCount();
-  if (Persistence)
-  {
-    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
-    {
-      const glm::ivec3 chunk = UChunkManager::WorldToChunk(pos);
-      ReleaseInactiveAsyncRelightColumn(glm::ivec2(chunk.x, chunk.z));
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false,
-                                               ProceduralTemplate.MinHeight, -1,
-                                               __FUNCTION__, this);
-    }
-  }
+  DeferredRelightRetries.Append(AsyncRelight->TakeDiscardedJobs());
   return applied;
 }
 
@@ -10804,7 +10805,11 @@ void UWorld::DrainAsyncRelightResults()
 
 bool UWorld::HasPendingAsyncRelightWork() const
 {
-  return AsyncRelight && AsyncRelight->HasPendingWork();
+  // Flat mode does not wait for full-light obligations. Keep them deferred so
+  // a later return to Full can recapture their exact AIR/sample targets.
+  return ((!LightingPipeline || LightingPipeline->RequiresLitGate()) &&
+          !DeferredRelightRetries.Empty()) ||
+         (AsyncRelight && AsyncRelight->HasPendingWork());
 }
 
 int UWorld::GetAsyncRelightInFlightCount() const
@@ -11535,22 +11540,15 @@ void UWorld::CancelAsyncRelightWork()
   }
   AsyncRelight->CancelPending();
   AsyncRelightColumnsInFlight.clear();
-  // During shutdown / quiesce Persistence may clear queues next; still re-queue
-  // discarded sources when Persistence is alive so mid-game cancels recover.
-  if (Persistence && !ShutdownPrepared)
-  {
-    for (const glm::ivec3 &pos : AsyncRelight->TakeDiscardedSourcePositions())
-    {
-      Persistence->EnqueueTerrainColumnRelight(pos.x, pos.z, false,
-                                               ProceduralTemplate.MinHeight, -1,
-                                               __FUNCTION__, this);
-    }
-  }
+  // Preserve exact requests without starting workers during quiesce.
+  DeferredRelightRetries.Append(AsyncRelight->TakeDiscardedJobs());
+  DeferredRelightRetries.Append(AsyncRelight->TakeOverflowJobs());
 }
 
 void UWorld::QuiesceBackgroundWork(
     const std::chrono::milliseconds async_timeout)
 {
+  DeferredRelightRetries.Suspend();
   if (BackgroundQuiesceFinished)
   {
     return;
@@ -11778,6 +11776,8 @@ void UWorld::AbandonTerrainForWorldReplace()
   }
   CancelAsyncRelightWork();
 
+  // Outstanding requests belong to the retired world, not its replacement.
+  DeferredRelightRetries.Clear();
   BlockWorld.Clear();
   if (MeshService)
   {
@@ -14777,6 +14777,7 @@ void UWorld::RefreshPersistedTerrainAfterSave()
 
 void UWorld::EnsureStreamingActiveAfterBackgroundQuiesce()
 {
+  DeferredRelightRetries.Resume();
   AllowProceduralFill = IsStreamingEnabled();
   if (Streaming)
   {
@@ -15309,6 +15310,7 @@ bool UWorld::BlocksAsyncRelightDrain() const
 
 void UWorld::BeginBackgroundQuiesce(UBackgroundQuiesceState &state)
 {
+  DeferredRelightRetries.Suspend();
   state = UBackgroundQuiesceState{};
   BackgroundQuiesceFinished = false;
 }
