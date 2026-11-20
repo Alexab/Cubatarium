@@ -28508,5 +28508,259 @@
     "Repeat isolated native AIR source deletion after both corrections; preserve current and earlier failures.",
     "Continue remaining full S0..S6 actual CPU construction, solver/backend parity, AIR-only/procedural data ownership, persisted certificates, cancellation/catalog, wet/transparency, seeds/R8/performance/memory gates."
   ]
+},
+"precise_depth_primary_ray_native_mdi_source_2026_11_20": {
+  "status": "SCOPED_PASS",
+  "scope": "Declared AIR source deletion, ordinary vertex/MDI draw fields and independent sampled RGB; full original S0..S6 remains active",
+  "commit": "8402b0cfb",
+  "corrections": [
+    "ScreenRayTransform retains double-precision inverses of the actual float view/projection draw matrices for depth reconstruction. Keep reciprocal, homogeneous division and view-to-world transform in double until final public float outputs. Existing camera ray float matrices and draw matrices remain unchanged.",
+    "New analytic regression inverts perspective A/B coefficients directly for the actual float draw matrix and quantized float depth sample. Eight negative-cave cases, distances12/20/28/32 and far512/2000, failed the20micron output precision expectation before the correction and passed afterward.",
+    "Primary CPU source must pass the same original-ray and actual same-frame GPU draw proof when bound-light observation is requested. Nearby wall triangles cannot suppress neighboring source candidates merely because a primary section has CPU refs.",
+    "Candidate uncertainty0.002, strict normal match0.002, spatial match0.25, reference tolerances, readback quotas, authored materials, source plans and three-waypoint route were not widened or replaced."
+  ],
+  "verification": {
+    "release_build": "PASS",
+    "release_ctests": 6,
+    "seconds": 6.23,
+    "tests": [
+      "view_ray_math_test",
+      "framebuffer_surface_cell_test",
+      "decor_mesh_integration_test",
+      "gpu_material_visibility_driver_test",
+      "gpu_material_visibility_gles_driver_test",
+      "section_render_light_bindings_driver_test"
+    ],
+    "red": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cave-depth-precision-red-test-20261120.log",
+    "green": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cave-depth-precision-green-test-20261120.log",
+    "test_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cave-depth-precise-source-release-tests-20261120.log",
+    "build_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cave-depth-precise-source-release-build-20261120.log"
+  },
+  "native": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-unpacked-precise-20261120-native",
+    "source": "8402b0cfb2cffb8dab6486188aece9705f7a657f",
+    "world": "EngineSmoke_12112c24d0904b78b6783e27dea1d15e",
+    "status": "PASS",
+    "component_statuses": {
+      "material": "PASS",
+      "camera": "PASS",
+      "startup": "PASS",
+      "air_return": "PASS",
+      "draw": "PASS",
+      "cpu_vertex_draw": "PASS"
+    },
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "original_smoke": "UNTESTED",
+    "draw": {
+      "schema": "engine-source-hole-draw-reference.v1",
+      "status": "PASS",
+      "reason": "frame_bound_source_hole_transport",
+      "scope": "One verified glowstone-to-AIR action: declared-voxel light transport, ordinary floor and five new hole faces, same-frame GPU binding and independently witnessed constant opaque normal-color RGB; no roof/wall/whole-screen/wet/transparency/backend/latency acceptance",
+      "action_frame": 1144,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1940,
+          "field_checked": 790,
+          "field_faults": 0,
+          "field_unjoined": 0,
+          "missing_bound": 0,
+          "source_effect": 272,
+          "rgb_checked": 768,
+          "rgb_faults": 0,
+          "unwitnessed": 0,
+          "geometry_faults": 0
+        },
+        "after": {
+          "rows": 25800,
+          "field_checked": 8739,
+          "field_faults": 0,
+          "field_unjoined": 0,
+          "missing_bound": 0,
+          "source_effect": 467,
+          "rgb_checked": 7626,
+          "rgb_faults": 0,
+          "unwitnessed": 0,
+          "geometry_faults": 0
+        }
+      },
+      "unordered_action_rows": 0,
+      "field_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rgb_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "draw_sources": {
+        "before": {
+          "1": 790
+        },
+        "after": {
+          "1": 8739
+        }
+      },
+      "missing_coverage": [],
+      "examples": []
+    },
+    "air_return": {
+      "schema": "engine-round-trip-evidence.v1",
+      "status": "PASS",
+      "reason": "motor_return_with_fresh_disk_cohort",
+      "scope": "observed motor excursion, return and initial resident-section retirement/fresh disk reload; no pixel/light/performance acceptance; includes explicit loaded AIR field retirement and fresh disk reload",
+      "column": [
+        1,
+        3
+      ],
+      "sections": [
+        {
+          "coord": [
+            1,
+            -4,
+            3
+          ],
+          "retired_incarnation": 2,
+          "returned_incarnation": 4821
+        },
+        {
+          "coord": [
+            1,
+            -1,
+            3
+          ],
+          "retired_incarnation": 3,
+          "returned_incarnation": 4822
+        },
+        {
+          "coord": [
+            1,
+            0,
+            3
+          ],
+          "retired_incarnation": 4,
+          "returned_incarnation": 4823
+        },
+        {
+          "coord": [
+            1,
+            1,
+            3
+          ],
+          "retired_incarnation": 5,
+          "returned_incarnation": 4824
+        },
+        {
+          "coord": [
+            1,
+            2,
+            3
+          ],
+          "retired_incarnation": 6,
+          "returned_incarnation": 4825
+        },
+        {
+          "coord": [
+            1,
+            3,
+            3
+          ],
+          "retired_incarnation": 1,
+          "returned_incarnation": 4820
+        },
+        {
+          "coord": [
+            1,
+            4,
+            3
+          ],
+          "retired_incarnation": 7,
+          "returned_incarnation": 4826
+        }
+      ],
+      "air_sections": [
+        {
+          "coord": [
+            1,
+            -3,
+            3
+          ],
+          "retired_field_incarnation": 11,
+          "returned_field_incarnation": 18243
+        },
+        {
+          "coord": [
+            1,
+            -2,
+            3
+          ],
+          "retired_field_incarnation": 3,
+          "returned_field_incarnation": 18250
+        }
+      ],
+      "maximum_excursion_blocks": 303.65,
+      "disk_demand_id": 66702,
+      "far_tick_ms": 750490884,
+      "return_tick_ms": 750584375
+    },
+    "actual_gpu_capture_modes": {
+      "draw_table": 24566
+    },
+    "maximum_scoped_after_floor_normal_error": 0.0009000000000014552
+  },
+  "actual_trace_controls": {
+    "baseline": "PASS",
+    "stale_source_field": "FAIL",
+    "zero_final_rgb": "FAIL",
+    "foreign_mdi_row": "FAIL",
+    "wrong_primary_face": "FAIL",
+    "missing_capture": "UNTESTED",
+    "drop_hole_face_1": "UNTESTED"
+  },
+  "controls_scope": "Mutations/dropped records in copied actual native trace, not faulty native executions. Baseline recomputation exactly matched cached draw result; stale field, black RGB, mismatched actual MDI row and wrong primary face failed; missing capture and missing hole face remained UNTESTED.",
+  "retained_previous_failures": [
+    {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-unpacked-paired-20261120-native",
+      "status": "FAIL",
+      "acceptance_sha256": "f439da33bd1c68bcde7d3edcf26a0c718e9f65f1428f08b0e2eb832b39f25e47"
+    },
+    {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-unpacked-recovered-20261120-native",
+      "status": "FAIL",
+      "acceptance_sha256": "b8dcd32743729cce47d5bebb3a7f9f11264acd8e96b74a10cc521c7c1a10d2d4"
+    }
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\precise-mdi-source-assessment-20261120.json",
+    "sha256": "6a9e03e8bb102dc19dfd819cdece1720442f8b7359f2fc32c205d0681993006f"
+  },
+  "limits": [
+    "Trace controls mutate/drop copied native records; not faulty native executions.",
+    "Ordinary CPU vertex/MDI draw evidence does not certify CPU mesh construction. Runtime mesher may use GPU readback.",
+    "General smoke stays UNTESTED; full S0..S6 AIR-only/procedural ownership, certificates, cancellation/catalog, solver/backend, wet/transparency and performance/memory/seed/R8 requirements remain.",
+    "Successful run checked790 before and8739 after actual CPU vertex GPU-bound samples, and768 before/7626 after independent positive RGB samples; all field/geometry/RGB/unjoined/missing-bound/material counters zero; all five hole faces observed.",
+    "24566 actual GPU captures use draw-table mode. This validates ordinary vertex/MDI consumers in this native scope, not a CPU construction backend or GPU light solver.",
+    "Observed maximum scoped floor normal reconstruction error0.0009 in this run is not a universal numerical error bound. Different moving trajectories do not support failure-rate/performance comparisons to earlier FAIL traces.",
+    "Protected source world/config/EXE/shader/reference invariants all seven true. Prior failed/UNTESTED artifacts and all previous journal entries retained."
+  ],
+  "next": [
+    "Continue full S0..S6 actual CPU mesh construction and independent solver/backend parity coverage separately from CPU vertex output.",
+    "Resolve AIR-only/procedural producer/data-column ownership without weakening save completeness and stale unload protection; current geometry-only column enumeration and all-air completeness heuristic remain unresolved.",
+    "Continue persisted certificates, cancellation/catalog semantics, unknown/first-publication delivery bounds, wet/transparency, seeds/R8 and controlled performance/memory matrix."
+  ]
 }
 }
