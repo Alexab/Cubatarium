@@ -429,5 +429,30 @@
     }
   ],
   "current_step": "S1.01",
-  "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
+  "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
+  "package_execution_contract": {
+    "before_work": [
+      "requirement ID and exact missing evidence",
+      "one falsifiable hypothesis",
+      "fixed inputs and expected output",
+      "PASS/FAIL criterion and timeout"
+    ],
+    "allowed_outcomes": [
+      "COMPLETE with evidence",
+      "FAIL with localized cause and next fix",
+      "BLOCKED with concrete dependency; no identical rerun"
+    ],
+    "run_budget": "One reproduction and one verification per hypothesis. A further run requires new diagnostic evidence or a different explicit hypothesis.",
+    "completion_rule": "Stop package work when its acceptance is met. Do not expand tests without a new defect or uncovered requirement.",
+    "scope_rule": "Reuse existing evidence with its source and executable limitations. OPEN is evidence debt, not an instruction to rewrite working code."
+  },
+  "stage_exit_gates": {
+    "S0": "All five harness packages complete; final requirement reconciliation still required. Matrix orchestration unit evidence does not mean the full matrix has run.",
+    "S1": "Read-only observation/input boundary, bounded blocked behavior, complete pose/frame/PNG joins, required routes and deterministic decision replay proven.",
+    "S2": "Height limits, boundary mutations, zero-mesh lifetime, Unknown/AIR distinction, fluid dirty propagation and crash-safe local persistence proven.",
+    "S3": "Independent solver oracle; AIR and Unknown semantics; stale/cancel rejection; persisted certificates; actual CPU/GPU/fallback paths proven.",
+    "S4": "Every admitted job reaches an explicit terminal outcome; geometry/field publication and presentation validity proven; transient save failures recover silently; fatal save failures stop gameplay in menu with save-location decision and verified full-world relocation.",
+    "S5": "All listed draw consumers and backend paths validated before cutover; emission-only updates produce zero mesh jobs and zero vertex uploads; removal, halo, reuse and reload verified.",
+    "S6": "Independent visual references including wet RGB and transparency; negative controls; fixed seeds/backends matrix; approved performance thresholds; requirement-to-evidence review with no unacknowledged UNTESTED."
+  }
 }
