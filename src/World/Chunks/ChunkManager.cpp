@@ -97,6 +97,7 @@ void UChunkManager::Clear()
   LightFields.clear();
   LoadedAirSlices.clear();
   DecodedTerrainSlices.clear();
+  UnresolvedTerrainColumnReads.clear();
   AbsentLightFieldScan.clear();
   ResidentColumnChunkCounts.clear();
   ResidentColumnTerrainCounts.clear();

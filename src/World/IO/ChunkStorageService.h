@@ -142,6 +142,13 @@ public:
   const IUChunkSerializer &GetWriteSerializer() const;
 
 private:
+  friend class UWorldPersistence;
+  /// Caller has just completed all reads without failure. Each indexed frame
+  /// must also have a complete resident base; allocations cannot clear a fault.
+  bool ResolveTerrainColumnRead(UBlockWorld &world,
+                                const std::string &worldFolder,
+                                glm::ivec3 column, int maxWorldY,
+                                int minWorldY);
   struct DiskTerrainColumnKey
   {
     int x{0};

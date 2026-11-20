@@ -132,6 +132,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -15086,6 +15087,9 @@ void UWorld::Save(const std::string &world_folder_path)
 void UWorld::SaveSessionSnapshotMetadataOnly(
     const std::string &world_folder_path)
 {
+  if (BlockWorld.GetChunkManager().GetUnresolvedTerrainColumnRead())
+    throw std::runtime_error("Cannot save unread terrain; saved files and "
+                             "local edits were preserved");
   if (world_folder_path.empty())
   {
     return;
@@ -15105,6 +15109,9 @@ void UWorld::SaveSessionSnapshotMetadataOnly(
 void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
                                  const bool skip_quiesce)
 {
+  if (BlockWorld.GetChunkManager().GetUnresolvedTerrainColumnRead())
+    throw std::runtime_error("Cannot save unread terrain; saved files and "
+                             "local edits were preserved");
   if (world_folder_path.empty())
   {
     return;
@@ -15139,6 +15146,12 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
     }
     for (const glm::ivec3 &ground : grounds)
     {
+      if (BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(ground))
+      {
+        CubatariumLogError("Save",
+                           "unresolved_disk_read: terrain column preserved");
+        continue;
+      }
       if (IsTerrainChunkComplete(
               BlockWorld, ground, ProceduralTemplate.MaxHeight,
               kNoTerrainChunkSlice, ProceduralTemplate.MinHeight))

@@ -227,10 +227,9 @@ public:
   /// must not leave a stale complete ocean/land file behind).
   void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height,
                                    int min_height = 0);
-  /// Clear in-memory column and delete its disk slices (load repair).
-  void PurgeIncompleteTerrainColumn(UBlockWorld &block_world,
-                                    glm::ivec3 ground_coord, int max_height,
-                                    int min_height = 0);
+  /// Preserve an incompletely read saved column until its data can be read.
+  void PreserveIncompleteTerrainColumn(UBlockWorld &block_world,
+                                       glm::ivec3 ground_coord);
   void LoadInitialTerrainColumns(UWorld &world, glm::vec3 spawn_point,
                                  int render_distance_chunks);
 
@@ -259,6 +258,7 @@ private:
     int highest_cy_on_disk{kNoChunkSliceOnDisk};
     std::shared_ptr<std::atomic<bool>> cancellation;
     TerrainSliceLoadOwnership installed_terrain;
+    std::unordered_set<glm::ivec3, IVec3Hash> consumed_slices;
     std::chrono::steady_clock::time_point requested_at{};
     double disk_discovery_ms{0.0};
     int timing_slice_count{0};
@@ -315,6 +315,9 @@ private:
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
   std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
       PendingAsyncColumnLoadSlices;
+  std::unordered_map<glm::ivec3, std::chrono::steady_clock::time_point,
+                     IVec3Hash>
+      FailedColumnRetryAfter;
   bool PreferFieldInputLoadNext_{true};
   std::unordered_map<glm::ivec3, int, IVec3Hash> PendingAsyncColumnSaveSlices;
   struct PlayerRelightRequest

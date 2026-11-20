@@ -5765,9 +5765,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                       settings.MaxHeight, kNoTerrainChunkSlice,
                                       settings.MinHeight))
           {
-            persistence.PurgeIncompleteTerrainColumn(world.BlockWorld, coord,
-                                                     settings.MaxHeight,
-                                                     settings.MinHeight);
+            persistence.PreserveIncompleteTerrainColumn(world.BlockWorld,
+                                                        coord);
             FrameStreamingIoMs +=
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
@@ -5825,6 +5824,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         {
           return;
         }
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                {FloorDiv(x, CHUNK_SIZE), 0, FloorDiv(z, CHUNK_SIZE)}))
+          return;
         // Same CoarseHeightCache as async Populate (D: unify sampling entry).
         if (auto *composable =
                 dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
@@ -5864,6 +5866,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetUnloadColumnCallback(
       [this, &world](glm::ivec3 ground, int max_cy) -> bool
       {
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                ground))
+          return false; // A failed read cannot authorize saving/purging local
+                        // edits.
         const auto unload_started = std::chrono::steady_clock::now();
         const bool trace_unload = IsStreamerUnloadTraceEnabled();
         const glm::ivec2 col(ground.x, ground.z);
@@ -6110,6 +6116,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             return;
           }
         }
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                ground))
+          return;
         if (ChunkScheduler)
         {
           glm::ivec2 column_origin(0);

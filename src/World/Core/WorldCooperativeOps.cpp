@@ -1683,6 +1683,20 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
   }
   else if (Kind == WorldCoopKind::Save)
   {
+    if (const auto blocked =
+            world.BlockWorld.GetChunkManager().GetUnresolvedTerrainColumnRead())
+    {
+      // Keep the original world/folder and local edits alive while retrying.
+      // Never finish a save or clear ModifiedChunks after skipping terrain.
+      if (world.Persistence)
+      {
+        world.Persistence->RequestAsyncTerrainColumnLoad(world, *blocked);
+        world.Persistence->TickAsyncChunkIo(world, 10, 6.0);
+      }
+      Report(sink, "save_waiting_for_terrain", -1.f,
+             "Cannot save unread terrain. Retrying the saved data...");
+      return;
+    }
     // Never QuiesceBackgroundWork here: it latches BackgroundQuiesceFinished
     // and disables the streamer mid-autosave. Quit already budget-quiesced.
     if (world.Streaming)
@@ -1860,7 +1874,7 @@ void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
           ground, world.BlockWorld, FolderPath, *world.BlockRegistry,
           world.ProceduralTemplate.MaxHeight,
           world.ProceduralTemplate.MinHeight);
-      bool purged_incomplete_column = false;
+      bool preserved_incomplete_column = false;
       // LoadTerrainColumn returns -1 when a save still owns this column.
       // That is a deferred read, not an absent or torn disk column. Keep the
       // in-memory/save owner intact instead of clearing its chunks and files.
@@ -1869,14 +1883,12 @@ void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
               world.BlockWorld, ground, world.ProceduralTemplate.MaxHeight,
               kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight))
       {
-        // Stale/torn column: drop disk + RAM so streaming regenerates.
-        ClearTerrainColumnChunks(world.BlockWorld, ground,
-                                 world.ProceduralTemplate.MaxHeight,
-                                 world.ProceduralTemplate.MinHeight);
-        world.GetChunkStorage().RemoveTerrainColumnFromDisk(
-            FolderPath, ground, world.ProceduralTemplate.MaxHeight, nullptr,
-            world.ProceduralTemplate.MinHeight);
-        purged_incomplete_column = loaded_slices > 0;
+        if (loaded_slices > 0)
+        {
+          world.BlockWorld.GetChunkManager().MarkTerrainColumnReadUnresolved(
+              ground);
+          preserved_incomplete_column = true;
+        }
       }
       if (IsWorldColumnSourceTraceEnabled())
       {
@@ -1894,9 +1906,9 @@ void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
         {
           outcome = "absent";
         }
-        else if (purged_incomplete_column)
+        else if (preserved_incomplete_column)
         {
-          outcome = "purged_incomplete";
+          outcome = "incomplete_preserved";
         }
         const std::string message =
             "source=" + source + " outcome=" + outcome + " coord=(" +
@@ -3168,6 +3180,15 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
   while (Save.SaveChunkIndex < Save.SaveChunkCoords.size() && saved < budget)
   {
     const glm::ivec3 coord = Save.SaveChunkCoords[Save.SaveChunkIndex++];
+    if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+            coord))
+    {
+      --Save.SaveChunkIndex;
+      CurrentPhase = Phase::Init;
+      Report(sink, "save_waiting_for_terrain", -1.f,
+             "Cannot save unread terrain. Retrying the saved data...");
+      return;
+    }
     if (save_by_ground_column)
     {
       if (IsTerrainChunkComplete(

@@ -48,6 +48,8 @@ void LogStreamerUnloadPhase(const char *phase, glm::ivec3 ground,
 bool HasTerrainUnloadAuthority(const UBlockWorld &world, glm::ivec3 ground,
                                int min_cy, int max_cy)
 {
+  if (world.GetChunkManager().HasUnresolvedTerrainColumnRead(ground))
+    return false;
   bool decoded_profile = true;
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {

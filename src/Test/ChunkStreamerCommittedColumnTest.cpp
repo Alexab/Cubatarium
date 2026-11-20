@@ -146,6 +146,34 @@ static void TestAirOnlyColumnLifecycle()
   auto &tuning = URuntimeTuning::Get();
   const int prior = tuning.UnloadAmortizeMode;
   for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
+  {
+    tuning.UnloadAmortizeMode = mode;
+    UBlockWorld faulted;
+    UBlockRegistry registry(nullptr);
+    const glm::ivec3 column(40, 0, -3);
+    const auto cell = glm::ivec3(40, -4, -3) * CHUNK_SIZE;
+    faulted.SetBlock(cell, 8);
+    faulted.GetChunkManager().MarkTerrainColumnReadUnresolved(column);
+    UChunkStreamer streamer(faulted, registry, 1, 0, 319, -64);
+    streamer.SetMaxUnloadOpsPerFrame(1);
+    int saves = 0, unloads = 0;
+    streamer.SetCallbacks(
+        nullptr, [&](glm::ivec3) { ++saves; }, nullptr, nullptr);
+    streamer.SetUnloadColumnCallback(
+        [&](glm::ivec3, int)
+        {
+          ++unloads;
+          return true;
+        });
+    UFrameDeadline::Get().BeginFrame(0);
+    streamer.UnloadPass({0, -4, 0}, {8, -60, 8}, PlayerCapsule{});
+    streamer.DrainDeferredUnloadSaves({0, -4, 0}, {8, -60, 8}, PlayerCapsule{},
+                                      8);
+    Expect(saves == 0 && unloads == 0 && faulted.GetBlock(cell) == 8,
+           "unresolved disk reads cannot authorize geometry save/purge or "
+           "retirement in any unload mode");
+  }
+  for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
     for (bool edit : {false, true})
     {
       tuning.UnloadAmortizeMode = mode;

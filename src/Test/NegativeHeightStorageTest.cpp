@@ -728,6 +728,202 @@ static void TestAirTerrainIo(const std::filesystem::path &folder)
   std::filesystem::remove_all(normalized);
 }
 
+static void TestDiskRetryReadSafety()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBinaryChunkSerializer binary;
+  UJsonChunkSerializer json;
+  const glm::ivec3 coord(-7, -3, 5), column(-7, 0, 5);
+  const auto cell = coord * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  UChunk saved(coord);
+  saved.SetBlockLocal({1, 2, 3}, 8);
+  saved.SetWeatherState(.25f, 123.125);
+  auto bytes = binary.Serialize(coord, saved, registry).bytes;
+  bytes.push_back(
+      0); // A complete-looking geometry payload with invalid framing.
+  const auto invalid = binary.Deserialize(bytes, coord, registry);
+  Expect(invalid.HasGeometryPayload(),
+         "invalid binary regression retains parsed geometry");
+  UBlockWorld rejected;
+  Expect(!ApplyTerrainSliceLoad(rejected, coord, &invalid, nullptr, {column, 1},
+                                1, false) &&
+             !rejected.GetChunkManager().HasLoadedTerrainSlice(coord),
+         "unsealed non-AIR disk frame must not mutate the world or become a "
+         "successful load");
+  const auto valid = binary.Deserialize(
+      binary.Serialize(coord, saved, registry).bytes, coord, registry);
+  UBlockWorld edited;
+  Expect(ApplyTerrainSliceLoad(edited, coord, &valid, nullptr, {column, 1}, 1,
+                               false),
+         "valid disk frame establishes a complete base before edit");
+  edited.SetBlock(cell, BLOCK_AIR);
+  const auto incarnation =
+      edited.GetChunkManager().GetChunk(coord)->GetIncarnation();
+  edited.GetChunkManager().GetChunk(coord)->SetWeatherState(.75f, 456.125);
+  Expect(
+      ApplyTerrainSliceLoad(edited, coord, &valid, nullptr, {column, 2}, 2,
+                            false) &&
+          edited.GetBlock(cell) == BLOCK_AIR &&
+          edited.GetChunkManager().GetChunk(coord)->GetIncarnation() ==
+              incarnation &&
+          edited.GetChunkManager().GetChunk(coord)->GetWeatherLastUpdateSec() ==
+              456.125 &&
+          edited.GetChunkManager().HasDecodedTerrainSlice(coord),
+      "retry cannot replay stale non-AIR geometry/weather over local edits");
+}
+
+static void TestDiskRetryStorage()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBinaryChunkSerializer binary;
+  const glm::ivec3 coord(-7, -3, 5), column(-7, 0, 5), prior(-7, -4, 5);
+  const auto cell = coord * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  const auto edited_cell = prior * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  const auto read_file = [](const std::filesystem::path &path)
+  {
+    std::ifstream input(path, std::ios::binary);
+    return std::vector<uint8_t>(std::istreambuf_iterator<char>(input), {});
+  };
+  const auto capture = [&](const std::filesystem::path &folder)
+  {
+    std::unordered_map<std::string, std::vector<uint8_t>> files;
+    for (const auto &entry :
+         std::filesystem::recursive_directory_iterator(folder))
+      if (entry.is_regular_file())
+        files.emplace(entry.path().lexically_relative(folder).generic_string(),
+                      read_file(entry.path()));
+    return files;
+  };
+  for (auto format : {ChunkWriteFormat::Binary, ChunkWriteFormat::Json})
+  {
+    const auto folder =
+        std::filesystem::temp_directory_path() /
+        ("cubatarium_disk_retry_safety_" +
+         std::to_string(
+             std::chrono::steady_clock::now().time_since_epoch().count()));
+    Expect(!std::filesystem::exists(folder),
+           "disk retry fixture must be fresh");
+    UChunkStorageService storage({format, true});
+    UBlockWorld source;
+    for (int cy = -4; cy <= 19; ++cy)
+    {
+      const glm::ivec3 slice(column.x, cy, column.z);
+      UChunk frame(slice);
+      frame.SetWeatherState(.25f, 123.125);
+      if (cy == -4 || cy == -3)
+        frame.SetBlockLocal({1, 2, 3}, 8);
+      const auto buffer = binary.Deserialize(
+          binary.Serialize(slice, frame, registry).bytes, slice, registry);
+      Expect(ApplyTerrainSliceLoad(source, slice, &buffer, nullptr, {column, 1},
+                                   1, false),
+             "retry fixture has24 explicit decoded frames");
+    }
+    storage.SaveTerrainColumn(column, source, folder.string(), registry, 319,
+                              -64);
+    const auto disk_format = format == ChunkWriteFormat::Binary
+                                 ? ChunkDiskFormat::Binary
+                                 : ChunkDiskFormat::Json;
+    const auto damaged_path =
+        storage.ChunkFilePath(folder.string(), coord, disk_format);
+    const auto original = read_file(damaged_path);
+    Expect(!original.empty(), "retry fixture has a real non-AIR frame");
+    auto damaged = original;
+    if (format == ChunkWriteFormat::Binary)
+      damaged.push_back(0);
+    else
+    {
+      std::string text(damaged.begin(), damaged.end());
+      const std::string version = "\"format_version\":4";
+      const auto offset = text.find(version);
+      Expect(offset != std::string::npos, "JSON fixture version is explicit");
+      text.replace(offset, version.size(), "\"format_version\":99");
+      damaged.assign(text.begin(), text.end());
+    }
+    Expect(storage.WriteBytesAtomically(damaged_path, damaged),
+           "inject one malformed complete-looking frame");
+    const auto disk_before = capture(folder);
+    UBlockWorld retry;
+    Expect(storage.LoadTerrainColumn(column, retry, folder.string(), registry,
+                                     319, -64) < 0 &&
+               retry.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+               !retry.GetChunkManager().HasLoadedTerrainSlice(coord),
+           "failed full-column read preserves valid earlier data and records "
+           "unresolved status");
+    retry.SetBlock(edited_cell, BLOCK_AIR);
+    auto *edited_chunk = retry.GetChunkManager().GetChunk(prior);
+    const auto edited_incarnation = edited_chunk->GetIncarnation();
+    edited_chunk->SetWeatherState(.75f, 456.125);
+    for (int attempt = 0; attempt < 5; ++attempt)
+    {
+      Expect(storage.LoadTerrainColumn(column, retry, folder.string(), registry,
+                                       319, -64) < 0 &&
+                 retry.GetBlock(edited_cell) == BLOCK_AIR &&
+                 retry.GetChunkManager().GetChunk(prior)->GetIncarnation() ==
+                     edited_incarnation &&
+                 !IsTerrainChunkComplete(retry, column, 319,
+                                         kNoTerrainChunkSlice, -64),
+             "five failed retries cannot clear or overwrite local edits or "
+             "claim completion");
+      storage.SaveTerrainColumn(column, retry, folder.string(), registry, 319,
+                                -64);
+      Expect(capture(folder) == disk_before,
+             "blocked save preserves every original/corrupt frame and light "
+             "file byte-for-byte");
+    }
+    Expect(storage.WriteBytesAtomically(damaged_path, original),
+           "restore the failed frame for real recovery");
+    retry.GetChunkManager().EnsureChunk(coord);
+    Expect(storage.LoadTerrainColumn(column, retry, folder.string(), registry,
+                                     319, -64) < 0 &&
+               retry.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+               !retry.GetChunkManager().HasDecodedTerrainSlice(coord),
+           "allocated unvalidated data cannot be promoted to a recovered disk "
+           "base");
+    retry.GetChunkManager().RemoveChunk(coord);
+    Expect(
+        storage.LoadTerrainColumn(column, retry, folder.string(), registry, 319,
+                                  -64) > 0 &&
+            !retry.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+            IsTerrainChunkComplete(retry, column, 319, kNoTerrainChunkSlice,
+                                   -64) &&
+            retry.GetBlock(edited_cell) == BLOCK_AIR &&
+            retry.GetChunkManager().GetChunk(prior)->GetIncarnation() ==
+                edited_incarnation &&
+            retry.GetChunkManager()
+                    .GetChunk(prior)
+                    ->GetWeatherLastUpdateSec() == 456.125,
+        "recovery validates every frame and releases the barrier while "
+        "retaining edits and weather");
+    storage.SaveTerrainColumn(column, retry, folder.string(), registry, 319,
+                              -64);
+    UBlockWorld cold;
+    Expect(storage.LoadTerrainColumn(column, cold, folder.string(), registry,
+                                     319, -64) > 0 &&
+               cold.GetBlock(edited_cell) == BLOCK_AIR &&
+               cold.GetBlock(cell) == 8 &&
+               cold.GetChunkManager()
+                       .MakeTerrainSaveSnapshot(prior)
+                       ->GetWeatherLastUpdateSec() == 456.125,
+           "recovered edits survive save and cold disk reload in both formats");
+    const auto resolved = std::filesystem::weakly_canonical(folder);
+    Expect(resolved.parent_path() ==
+               std::filesystem::weakly_canonical(
+                   std::filesystem::temp_directory_path()),
+           "retry fixture cleanup stays in its unique system-temp world");
+    std::filesystem::remove_all(resolved);
+  }
+}
+
 static void TestLoadedAirSlice()
 {
   using namespace cutum;
@@ -952,6 +1148,8 @@ int main()
            "AIR install");
   }
   TestLoadedAirSlice();
+  TestDiskRetryReadSafety();
+  TestDiskRetryStorage();
   using namespace cutum;
   constexpr int kMinY = -64;
   constexpr int kMaxY = 319;

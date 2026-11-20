@@ -64,6 +64,10 @@ public:
   void Clear();
   /// Refuses unvalidated, subsequently edited, nonempty or foreign buffers.
   std::optional<LoadedAirSlice> GetDecodedAirSlice(glm::ivec3 coord) const;
+  bool HasDecodedTerrainFrame(glm::ivec3 coord) const
+  {
+    return DecodedFrameValid && DecodedCoord == coord && !HasWorldGenOwnerChunk;
+  }
 
 private:
   friend class UBinaryChunkSerializer;

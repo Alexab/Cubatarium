@@ -205,7 +205,8 @@ bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
                             int maxWorldY, int minimumSliceCy,
                             int minWorldY)
 {
-  if (groundCoord.y != 0)
+  if (groundCoord.y != 0 ||
+      world.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord))
   {
     return false;
   }

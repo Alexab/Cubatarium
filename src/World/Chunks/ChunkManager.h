@@ -9,7 +9,9 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
+#include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -66,6 +68,21 @@ public:
   bool HasLoadedTerrainSlice(glm::ivec3 coord) const
   {
     return HasChunk(coord) || HasLoadedAirSlice(coord);
+  }
+  bool HasUnresolvedTerrainColumnRead(glm::ivec3 column) const
+  {
+    return UnresolvedTerrainColumnReads.count({column.x, 0, column.z}) != 0;
+  }
+  void MarkTerrainColumnReadUnresolved(glm::ivec3 column)
+  {
+    if (UnresolvedTerrainColumnReads.insert({column.x, 0, column.z}).second)
+      NoteInputMutation();
+  }
+  std::optional<glm::ivec3> GetUnresolvedTerrainColumnRead() const
+  {
+    if (UnresolvedTerrainColumnReads.empty())
+      return {};
+    return *UnresolvedTerrainColumnReads.begin();
   }
   /// Legacy serialization carrier only; never inserts geometry into the world.
   std::unique_ptr<UChunk> MakeTerrainSaveSnapshot(glm::ivec3 coord) const;
@@ -146,6 +163,12 @@ public:
 private:
   friend class UBlockWorld;
   friend class UChunkBuffer;
+  friend class UChunkStorageService;
+  void ResolveTerrainColumnRead(glm::ivec3 column)
+  {
+    if (UnresolvedTerrainColumnReads.erase({column.x, 0, column.z}))
+      NoteInputMutation();
+  }
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
   void NoteTerrainSliceRemoved(glm::ivec3 coord);
   void NoteDecodedTerrainSlice(glm::ivec3 coord);
@@ -177,6 +200,7 @@ private:
   };
   std::unordered_map<glm::ivec3, DecodedTerrainOwner, IVec3Hash>
       DecodedTerrainSlices;
+  std::unordered_set<glm::ivec3, IVec3Hash> UnresolvedTerrainColumnReads;
   std::deque<std::pair<glm::ivec3, uint64_t>> AbsentLightFieldScan;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnTerrainCounts;

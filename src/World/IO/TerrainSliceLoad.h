@@ -101,10 +101,17 @@ ApplyTerrainSliceLoad(UBlockWorld &world, glm::ivec3 coord,
   };
   if (decoded)
   {
+    if (!decoded->HasDecodedTerrainFrame(coord))
+      return false;
     if (const auto air = decoded->GetDecodedAirSlice(coord))
       return install_air(*air);
     if (!decoded->HasGeometryPayload())
       return false;
+    // A retry reads an immutable disk base. It cannot replay that base over
+    // a newer in-memory edit or a different resident producer. Existing
+    // decoded data already has a complete base; unvalidated data stays unknown.
+    if (manager.HasLoadedTerrainSlice(coord))
+      return manager.HasDecodedTerrainSlice(coord);
     decoded->ApplyToChunk(world, coord);
     return true;
   }

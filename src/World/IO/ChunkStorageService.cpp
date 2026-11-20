@@ -403,6 +403,7 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
   if (!ReadBytesFromFile(filePath, bytes))
   {
+    world.GetChunkManager().MarkTerrainColumnReadUnresolved(chunkCoord);
     return -1;
   }
 
@@ -411,9 +412,39 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   const size_t before = world.CountNonAir();
   if (!ApplyTerrainSliceLoad(world, chunkCoord, &buffer, nullptr,
                              {{chunkCoord.x, 0, chunkCoord.z}, 0}, 0, false))
+  {
+    world.GetChunkManager().MarkTerrainColumnReadUnresolved(chunkCoord);
     return -1;
+  }
   const size_t after = world.CountNonAir();
   return static_cast<int>(after > before ? after - before : 0);
+}
+
+bool UChunkStorageService::ResolveTerrainColumnRead(
+    UBlockWorld &world, const std::string &worldFolder, glm::ivec3 column,
+    int maxWorldY, int minWorldY)
+{
+  column.y = 0;
+  const int highest = GetHighestChunkSliceOnDisk(worldFolder, column);
+  if (highest == kNoChunkSliceOnDisk || maxWorldY < minWorldY ||
+      highest < FloorDiv(minWorldY, CHUNK_SIZE) ||
+      highest > FloorDiv(maxWorldY, CHUNK_SIZE))
+    return false;
+  auto &manager = world.GetChunkManager();
+  for (int cy = FloorDiv(minWorldY, CHUNK_SIZE); cy <= highest; ++cy)
+  {
+    const glm::ivec3 coord(column.x, cy, column.z);
+    if (IsChunkSliceAbsentOnDisk(worldFolder, coord))
+    {
+      if (!manager.HasLoadedAirSlice(coord) &&
+          !manager.HasDecodedTerrainSlice(coord))
+        return false;
+    }
+    else if (!manager.HasDecodedTerrainSlice(coord))
+      return false;
+  }
+  manager.ResolveTerrainColumnRead(column);
+  return true;
 }
 
 void UChunkStorageService::RefreshDiskColumnIndex(
@@ -772,6 +803,8 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              UBlockRegistry &registry,
                                              int maxWorldY, int minWorldY)
 {
+  if (world.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord))
+    return; // Unknown disk data is not permission to overwrite or truncate it.
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
@@ -851,7 +884,10 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
       const auto air = ReadKnownAbsentTerrainSlice(worldFolder, slice);
       if (!air || !ApplyTerrainSliceLoad(world, slice, nullptr, &*air,
                                          {groundCoord, 0}, 0, false))
+      {
+        world.GetChunkManager().MarkTerrainColumnReadUnresolved(groundCoord);
         return -1;
+      }
     }
     else
     {
@@ -863,6 +899,12 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
     {
       total += placed;
     }
+  }
+  if (!ResolveTerrainColumnRead(world, worldFolder, groundCoord, maxWorldY,
+                                minWorldY))
+  {
+    world.GetChunkManager().MarkTerrainColumnReadUnresolved(groundCoord);
+    return -1;
   }
   if (const auto receipts = ReadColumnLight(worldFolder, groundCoord))
     for (const auto &receipt : *receipts)
