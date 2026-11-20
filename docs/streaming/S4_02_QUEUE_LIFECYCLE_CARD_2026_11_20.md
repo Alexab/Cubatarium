@@ -1,0 +1,36 @@
+# S4.02 — конечный реестр lifecycle очередей
+
+Статус: OPEN. Продолжение после S4.01 (`3b84e6581`). Это список обязательств для адресных проверок, а не новый общий аудит. Наличие API или тестового файла не считается доказательством исполнения. REUSE требует сохранённого receipt; CHECK остаётся открытым до проверки actual owner и актуального преемника. Пустая очередь сама по себе не terminal outcome.
+
+## Реестр
+
+| ID | Ключ и production owner | Лимит / coalescing | Требуемые исходы и доказательства |
+|---|---|---|---|
+| Q01 | ColumnWorkItem: XZ, kind, CY, generation; ColumnFlowScheduler → ColumnFlowExecutor | Один live ticket на XZ; heap содержит tombstones; жёсткий cap не объявлен | CHECK: upgrade/replace/remove не теряют нужный band; отказ admission не создаёт фиктивный running token; повторный demand завершается. ColumnFlowSchedulerTest проверяет структуру, не весь UWorld lifecycle. |
+| Q02 | Dirty/deferred remesh: coord/revision; UChunkMeshCache | ChunkDirtySet и deferred ownership; численные настройки уточнить по producer | CHECK: отказ work/snapshot/result admission сохраняет dirty; cancel/eviction сохраняет актуальный долг либо законно завершает demand; повторный mesh реально публикуется. |
+| Q03 | Capture: coord + WorkToken/DependencyStamp; cache → UMeshCaptureWorker | Production kWorkerCaptureEnabled=false; main-thread capture; optional worker maps/vectors без объявленного cap | CHECK: production capture refusal/retry и stale input. Optional worker не подменяет production путь. MeshScheduleRetryTest при disabled возвращает SKIP: не evidence PASS lifecycle. |
+| Q04 | Async mesh: coord/jobId/epoch; UAsyncMeshBuilder → cache | Pipeline depth workers*6; work slots default8; snapshot96MiB/result128MiB; completed configurable | CHECK: WorkSlotRejected/SnapshotBudgetRejected/WorkerPoolRejected, completed overflow, CancelPending/ForgetInflight, late result; TakeOverflowCoords/TakeDiscardedCoords должны приводить к актуальному successor publication. |
+| Q05 | Общие worker/completed containers и credit guards; JobThreadPool/PipelineAdmission | TryEnqueue bounded; legacy Enqueue unbounded; completed cap configurable; GPU credits256MiB default | CHECK receipt: JobAdmissionLifetimeTest и CompletedJobQueueTest покрывают механизмы reject/cancel/drop и release; они не заменяют Q02/Q04/Q08 downstream proof. |
+| Q06 | Pending GPU/extract: coord + immutable source identity; cache/GpuMeshPipeline | Default GPU slots2048 плюс byte credits Q05; фактический pending cap уточнить | REUSE S4.01 acceptance для CPU→GPU ownership и конечной actual GPU publication. CHECK отдельно overflow/cancel/eviction и поздний completion; resource ABA относится также S5.02, pair permutations S4.03. |
+| Q07 | Full relight job spec/epoch; AsyncRelightBuilder → WorldRelightRetryQueue → UWorld | Completed configurable; exact-spec retry ledger; quiesce suspends retry | REUSE S3_04_CANCEL_DEBT_CARD, S3_04_STALE_INSTALL_MATRIX и s3-world-relight-lifecycle/s3-stale-install-matrix receipts: queued/running/completed cancel, overflow, stale rejection, exact successor, world retirement. Не повторять без изменения зависимого кода. |
+| Q08 | Column/player/boundary relight + section restore; WorldPersistence | XZ key и Y-band maps, priority/normal FIFO; PendingSectionLightRestores; точные admission caps уточнить | REUSE S3.05 persisted compatibility/no-op physical proof; CHECK оставшиеся FIFO admission/promotion/coalescing/eviction переходы, включая band сохранность. Q07 не доказывает весь persistence FIFO. |
+| Q09 | Terrain generation/ready commit; WorldStreaming и generation owner | Signed coord, generation/epoch; commit/load frame budgets не являются queue capacity | CHECK cancel/reset/eviction/stale completion и actual current arrival. Обязательная находка terrain-arrival-fluid-map: тёплый map → generated/loaded fluid arrival → invalidation до readiness, включая отрицательную высоту. |
+| Q10 | Async load/save slices/completion; WorldPersistence | coord + request/snapshot identity; async load retry max4; pending maps; I/O queue caps уточнить | REUSE существующие save/reload receipts только по точному покрытию. CHECK stale completion/reject/cancel и сохранность dirty-save. Политика fatal/menu/полный перенос остаётся S4.06. |
+| Q11 | DeferredPhysicsSeed/DeferredShoreSeal; WorldStreaming | coord; shore seal dedupe set; drain budget не hard cap | CHECK coalescing, eviction/reset, terrain-arrival cache invalidation; fluid/local-edit доказательства S2.05 переиспользовать только для совпадающих путей. |
+| Q12 | Face-debt repair и required-presentation demand; ChunkEmergeCoordinator/repair owner | PendingFaceDebtRepairs deque+set; demand identity/lifetime | REUSE S4.01 current publication/debt assertions. CHECK cancel/eviction/repeated demand terminal ownership, не закрывать по исчезновению queue entry. |
+
+Список Q01–Q12 фиксирован. Внутренние контейнеры каждой строки перечисляются в её evidence, а не становятся поводом для неограниченного добавления пакетов. До закрытия необходимо уточнить помеченные caps и сверить список с исходной картой очередей. Реальное отсутствие cap записывается явно; frame budget не выдаётся за memory cap. Исходное требование имеет приоритет при обнаружении пропущенного обязательного owner.
+
+## Первый непокрытый переход: Q01 admission → record
+
+- Статус: SOURCE SUSPICION, не воспроизведённый дефект.
+- Source: ColumnFlowExecutor::AdvanceColumn stamps rec.inflight_job и rec.pending.stage=Meshing для FirstMesh/RemeshSeam до AdmitFocusVisibleMissing/RemeshColumnSeamTicket. Relight tickets уже исключены предыдущим исправлением.
+- Утверждение: отказ/no-op admission без actual dirty/capture/CPU/GPU owner не оставляет запись с фиктивным running token, мешающим повторному законному demand.
+- Фикстура: один signed-height resident column, явное управление admission и проверяемая потребность в mesh; без GL, если actual owner доступен локально. Сначала выбрать существующий UWorld harness и зафиксировать команду до запуска.
+- Проверка: отказ → отсутствие фиктивного owner при сохранённом обязательстве; снятие отказа → actual successor → current publication. Изолированный scheduler test недостаточен.
+- Timeout: 30s для локального детерминированного процесса; native только если публикацию невозможно доказать локально, отдельная карточка до запуска.
+- До repro production код не менять. После двух неудачных гипотез — карта producer → queue → owner → install → consumer, без обзорного полёта.
+
+## Критерий закрытия
+
+Каждая строка имеет проверенные source limits, допустимые terminal outcomes и receipt, который доказывает сохранение обязательства и завершение актуального преемника. REUSE привязан к совместимому коду и точному свойству. CHECK/SKIP/UNTESTED не считаются PASS. Затем обновить основной evidence index, сохранить commit и перейти к S4.03. S4 и полная цель остаются OPEN.
