@@ -22,6 +22,7 @@
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Lighting/SectionRenderLightBindings.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -196,17 +197,135 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               "publication aggregate records both section certificates");
       world.NoteChunkSliceLightCalculationSettled(coord);
       world.NoteChunkSliceLightCalculationSettled({0,-2,0});
-      require(world.IsColumnLitReady({0,0,0}) &&
-                  UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor) &&
-                  world.GetColumnEmergeState({0,0,0})==ColumnEmergeState::RenderReady &&
-                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
-              "current column light aggregate permits publication notification promotion");
+      require(world.IsColumnLitReady({0,0,0}),
+              "full calculation restores the current column light aggregate");
+      world.ClearColumnEmergeState({0,0});
+      require(world.GetColumnEmergeState({0,0,0})==ColumnEmergeState::Empty,
+              "completion fixture starts without surviving column metadata");
+      report["section_owner_completion_checkpoint"]={
+          {"coarse_state",static_cast<int>(world.GetColumnEmergeState({0,0,0}))},
+          {"draw_permission",world.GetColumnRenderableState({0,0}).draw_ok},
+          {"column_complete",world.IsColumnRenderReady({0,0,0})},
+          {"light_current",world.IsColumnLitReady({0,0,0})},
+          {"lower_publications",world.GetMeshService().GetCache().GetPublishCount(coord)},
+          {"upper_publications",world.GetMeshService().GetCache().GetPublishCount({0,-2,0})}};
+      require(!world.IsColumnRenderReady({0,0,0}),
+              "draw permission cannot certify missing section publications");
+      require(!UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor),
+              "light-ready notification alone cannot certify missing geometry");
+      auto &mesh=world.GetMeshService();
+      auto &cache=mesh.GetCache();
+      SectionRenderLightBindings bindings;
+      const auto source_light=world.BlockWorld.CaptureRenderLightSnapshot(coord);
+      require(source_light && bindings.BeginWorld(cache.GetCaptureStore().WorldEpoch(),
+                  source_light->GeometryInputs().world_geometry_identity,16,
+                  8u*SectionLightVolume::CellCount,8),
+              "completion fixture initializes actual GPU light resource owner");
+      RenderSettings settings;
+      settings.AsyncMeshing=false; settings.GpuPackedMeshing=false;
+      settings.FrustumCulling=false;
+      mesh.SetRenderSettings(settings);
+      cache.SetPrepareRenderLightFn([&](uint64_t epoch,
+          const SectionGeometryRenderInputs &geometry,const SectionRenderLightSnapshot &light) {
+        return bindings.Prepare(epoch,geometry,light);
+      });
+      int callbacks=0, promotions=0;
+      mesh.SetOnLitDrawableCommittedFn([&](glm::ivec3) {
+        ++callbacks;
+        // Same event bookkeeping as the registered emerge callback, before
+        // its production promotion owner checks the complete column.
+        world.GetColumnRecords().GetOrCreate({0,0}).visual_obligation=
+            VisualObligation::LitDrawable;
+        if(UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor))
+          ++promotions;
+      });
+      const auto checkpoint=[&](const char *phase) {
+        Json sections=Json::array();
+        for(const auto c:std::array<glm::ivec3,2>{coord,glm::ivec3(0,-2,0)}) {
+          const auto published=cache.GetMeshPublishRevs(c);
+          sections.push_back({{"cy",c.y},{"publications",cache.GetPublishCount(c)},
+              {"drawable",mesh.HasDrawableGreedyMesh(c)},
+              {"satisfying",mesh.HasMeshSatisfyingColumnReady(c)},
+              {"inputs_current",cache.IsPublishedMeshCurrentForInputs(c,world.BlockWorld)},
+              {"no_surface",world.HasCurrentNoSurfaceProof(c)},
+              {"dirty",mesh.IsChunkMeshDirty(c)},{"inflight",mesh.HasInflightMeshBuild(c)},
+              {"gpu_pending",mesh.IsPendingGpuApply(c)},{"extract",mesh.IsGpuExtractInFlight(c)},
+              {"capture",cache.HasPendingCaptureWork(c)},
+              {"mesh_revision",mesh.GetChunkMeshRevision(c)},
+              {"published_geometry",published.geom_rev},{"published_light",published.light_rev}});
+        }
+        report["section_owner_completion_steps"].push_back({{"phase",phase},
+            {"terrain_complete",world.IsTerrainColumnCompleteFast({0,0,0})},
+            {"light_current",world.IsColumnLitReady({0,0,0})},
+            {"complete",world.IsColumnRenderReady({0,0,0})},
+            {"draw_permission",world.GetColumnRenderableState({0,0}).draw_ok},
+            {"callbacks",callbacks},{"promotions",promotions},{"sections",sections}});
+      };
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      checkpoint("lower_only");
+      require(cache.GetPublishCount(coord)>0 && mesh.HasDrawableGreedyMesh(coord) &&
+                  cache.GetPublishedRenderLightBinding(coord) && callbacks==1 && promotions==0 &&
+                  world.GetColumnRenderableState({0,0}).draw_ok && !world.IsColumnRenderReady({0,0,0}),
+              "actual partial publication may draw but cannot complete column");
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      require(section_executor.GetColumnJobStage({0,0})!=ColumnJobStage::RenderReady,
+              "executor cannot credit partial draw permission as completion");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{0,-2,0});
+      checkpoint("both_published");
+      require(cache.GetPublishCount({0,-2,0})>0 && mesh.HasDrawableGreedyMesh({0,-2,0}) &&
+                  callbacks==2 && promotions==1 && world.IsColumnRenderReady({0,0,0}),
+              "actual complete publications promote through real cache callback");
+      const auto predecessor=cache.GetPublishedRenderLightBinding(coord);
+      const auto old_publication=cache.GetPublishCount(coord);
+      world.BlockWorld.SetBlock({3,-40,3},8);
+      checkpoint("retained_stale");
+      require(cache.GetPublishCount(coord)==old_publication &&
+                  cache.GetPublishedRenderLightBinding(coord)==predecessor && predecessor->IsLive() &&
+                  world.GetColumnRenderableState({0,0}).draw_ok && !world.IsColumnRenderReady({0,0,0}),
+              "retained drawable cannot certify current completion after geometry mutation");
+      const auto settle_all=[&] {
+        auto current=UChunkRelightSnapshot::CaptureSections(world.BlockWorld,all_bands,{coord,{0,-2,0}});
+        current.SetInputCatalog(world.BlockRegistry->GetDefinitionsCatalogSnapshot());
+        const auto result=current.Compute(*world.BlockRegistry);
+        require(result.inputs_complete && result.chunks.size()==2,"completion successor calculation");
+        for(const auto &chunk:result.chunks) InstallComputedLight(world.BlockWorld,chunk,true,true);
+        require(world.BlockWorld.RecordLightCalculation(result,
+                    world.BlockRegistry->GetDefinitionsCatalogSnapshot())==2,
+                "completion successor physical certificates");
+        world.NoteChunkSliceLightCalculationSettled(coord);
+        world.NoteChunkSliceLightCalculationSettled({0,-2,0});
+      };
+      settle_all();
+      checkpoint("light_only_successor");
+      require(world.IsColumnLitReady({0,0,0}) && !world.IsColumnRenderReady({0,0,0}),
+              "current light alone cannot certify old geometry publication");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{0,-2,0});
+      checkpoint("current_successor");
+      require(world.IsColumnRenderReady({0,0,0}) && cache.GetPublishCount(coord)>old_publication,
+              "current replacement publications restore completion");
+      world.BlockWorld.SetBlock({4,-24,4},BLOCK_AIR);
+      settle_all();
+      checkpoint("no_surface_with_old_drawable");
+      require(world.HasCurrentNoSurfaceProof({0,-2,0}) &&
+                  mesh.HasDrawableGreedyMesh({0,-2,0}) && !world.IsColumnRenderReady({0,0,0}),
+              "no-surface proof cannot retire old drawable publication");
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,{0,-2,0});
+      checkpoint("no_surface_retired");
+      require(!mesh.HasDrawableGreedyMesh({0,-2,0}) && world.IsColumnRenderReady({0,0,0}) &&
+                  !world.IsColumnRenderReady({7,0,7}),
+              "actual no-surface retirement completes column while Unknown stays incomplete");
+      mesh.SetOnLitDrawableCommittedFn({});
+      cache.SetPrepareRenderLightFn({});
       report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
           {"stale_geometry_rejected",true},{"replacement_rejected",true},
           {"recompute_recovers",true},{"repeat_idempotent",true},{"band_local_noop",true},
           {"executor_retains_physical_debt",true},{"executor_settle_clears_debt",true},
           {"publication_rejects_uncertified_sibling",true},
-          {"publication_current_light_recovers",true}});
+          {"publication_current_light_recovers",true},
+          {"partial_draw_not_complete",true},{"actual_publication_recovers",true},
+          {"retained_geometry_not_complete",true},{"no_surface_requires_retirement",true}});
     }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {

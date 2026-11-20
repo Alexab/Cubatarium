@@ -1523,13 +1523,13 @@ public:
   /// Run the bounded demand-store upkeep independently of telemetry census.
   void MaintainChunkRenderDemandStore();
   void MaintainChunkRenderDemandStore(double now_ms);
-  /// True when column has left the light gate (LitReady / Meshing /
-  /// RenderReady).
+  /// Current section calculation/no-surface/known-AIR aggregate; coarse emerge
+  /// labels cannot certify light readiness.
   bool IsColumnLitReady(glm::ivec3 ground) const;
   /// True when column may unlock outer streaming rings (LitReady+).
   bool IsColumnVisualReadyForRing(glm::ivec3 ground) const;
-  /// Strict visible contract: no pending light, stable mesh, render-safe
-  /// column.
+  /// Completed current section publications and light inputs across the full
+  /// profile. Draw permission/retained predecessors use GetColumnRenderableState.
   bool IsColumnRenderReady(glm::ivec3 ground) const;
   /// R4.6.1: Streamer TerrainCompleteCache on ring probes (fallback raw
   /// complete).

@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.01.publication-completion",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h4-receipt-20261120.json",
+      "receipt_sha256": "cba15336973c5fdec25244a26c80c410724a78e241a406d64479b5c9799e3fe7",
+      "scope": "Real CPU publication + real GPU light leases: missing/partial/stale/light-only reject completion; both current and retired cube/AIR recover. Native API 20/20, runtime/startup PASS, source/config retained. Step3 remains OPEN for actual GPU pending, Flat and old Cross no-surface retirement/shared predicate. Not framebuffer proof."
+    },
+    {
       "id": "S4.01.publication-light-aggregate",
       "status": "PARTIAL_OPEN",
       "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",

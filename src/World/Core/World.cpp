@@ -286,12 +286,18 @@ bool CurrentSlicePublicationInputsReadyForWarmup(const UWorld &world,
   const auto &cache = mesh.GetCache();
   const auto *chunk = world.GetBlockWorld().GetChunkManager().GetChunk(coord);
   const auto *demand = world.GetRenderDemandStore().Find(coord);
-  if (!chunk || !demand || !mesh.HasMeshSatisfyingColumnReady(coord) ||
+  if (!chunk || !mesh.HasMeshSatisfyingColumnReady(coord) ||
       cache.HasProvisionalLightPreview(coord) ||
-      !ChunkSliceHasCurrentLightSettlement(world, coord) ||
       mesh.IsRemeshAfterApplyPending(coord) ||
       mesh.HasInflightMeshBuild(coord) || mesh.IsPendingGpuApply(coord) ||
       mesh.IsGpuExtractInFlight(coord) || cache.HasPendingCaptureWork(coord))
+    return false;
+  // Flat publications have geometry/input provenance, but no physical light
+  // calculation obligation. Full lighting additionally needs its current
+  // calculation and demand/publication witnesses.
+  if (!world.RequiresLightingLitGate())
+    return cache.IsPublishedMeshCurrentForInputs(coord, world.GetBlockWorld());
+  if (!demand || !ChunkSliceHasCurrentLightSettlement(world, coord))
     return false;
   const auto published = cache.GetMeshPublishRevs(coord);
   return published.light_rev == chunk->GetLightFieldRevision() &&
@@ -3536,11 +3542,37 @@ void UWorld::UpdateMotionState(float speed, float dt_sec)
 
 bool UWorld::IsColumnRenderReady(glm::ivec3 ground) const
 {
-  if (ground.y != 0)
+  ground.y = 0;
+  if (!MeshService || !BlockRegistry || !IsColumnLitReady(ground) ||
+      !IsTerrainColumnCompleteFast(ground))
+    return false;
+  const auto &mesh = *MeshService;
+  const auto &cache = mesh.GetCache();
+  UBlockWorld::InputStampValidationBatch absence;
+  const int min_cy = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
+  const int max_cy = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+  for (int cy = min_cy; cy <= max_cy; ++cy)
   {
-    ground.y = 0;
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
+    if (!chunk)
+    {
+      if (!BlockWorld.IsKnownAbsentAirChunk(coord, &absence))
+        return false;
+      continue;
+    }
+    if (chunk->IsAirOnly() || HasCurrentNoSurfaceProof(coord))
+    {
+      // A current no-surface proof does not retire an old drawable. Until
+      // the publication owner removes it, this column is not complete.
+      if (mesh.HasDrawableGreedyMesh(coord) || cache.HasLiveGpuDraw(coord))
+        return false;
+      continue;
+    }
+    if (!CurrentSlicePublicationReadyForWarmup(*this, coord))
+      return false;
   }
-  return GetColumnRenderableState(glm::ivec2(ground.x, ground.z)).draw_ok;
+  return true;
 }
 
 void UWorld::InvalidateChunkSliceRenderReadyMemo() const

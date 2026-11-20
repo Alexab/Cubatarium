@@ -98,7 +98,7 @@ bool UChunkEmergeCoordinator::TryPromoteLitColumn(
     }
     // A slice notification cannot certify its siblings. Coarse scheduling
     // labels must not bypass the current section calculation aggregate.
-    if (!sibling_fully_dark && world.IsColumnLitReady(ground))
+    if (!sibling_fully_dark && world.IsColumnRenderReady(ground))
     {
       world.SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
       executor.SetColumnJobStage(col, ColumnJobStage::RenderReady);

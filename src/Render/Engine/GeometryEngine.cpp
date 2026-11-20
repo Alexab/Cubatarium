@@ -5410,7 +5410,8 @@ void UGeometryEngine::DrawCubeGeometry()
                                  static_cast<int>(std::floor(world_pos.y)),
                                  static_cast<int>(std::floor(world_pos.z))));
                          const glm::ivec3 ground(chunk.x, 0, chunk.z);
-                         return !WorldInstance->IsColumnRenderReady(ground);
+                         return !WorldInstance->GetColumnRenderableState(
+                             {ground.x, ground.z}).draw_ok;
                        }),
         blockInstances.end());
     if (!useBatchCache || !BlockBatchesValid ||
