@@ -4,6 +4,7 @@
 #include "World/Chunks/ChunkInputStamp.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Lighting/LightUtil.h"
+#include "World/Lighting/GpuLightTransport.h"
 #include "World/Lighting/RelightContentCertificate.h"
 #include "World/Lighting/SectionLightVolume.h"
 #include "World/Math/BlockTypes.h"
@@ -94,6 +95,10 @@ struct RelightFloodWork
 
 struct RelightComputeResult
 {
+  enum class Transport { Cpu, Gpu, CpuFallback };
+  Transport transport{Transport::Cpu};
+  GpuLightTransportWork transport_work;
+  std::string transport_fallback_reason;
   uint64_t job_id{0};
   uint64_t submitEpoch{0};
   WorkToken work_token{};
@@ -134,7 +139,10 @@ public:
   CaptureSections(const UBlockWorld &world, const RelightJobSpec &spec,
                   const std::vector<glm::ivec3> &sections);
 
-  RelightComputeResult Compute(const UBlockRegistry &registry);
+  /// GPU executor is explicit and caller-thread-owned; async workers omit it.
+  /// Failure leaves scratch seeds intact and runs the normal CPU flood.
+  RelightComputeResult Compute(const UBlockRegistry &registry,
+                              GpuLightTransportExecutor gpu = nullptr);
   void SetInputCatalog(std::shared_ptr<const BlockDefinitionCatalog> catalog)
   {
     InputCatalog = std::move(catalog);

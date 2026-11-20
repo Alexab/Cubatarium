@@ -17,6 +17,8 @@ struct GpuLightTransportWork
 {
   uint64_t dispatches{0}, readbacks{0}, scratch_bytes{0};
 };
+using GpuLightTransportExecutor = bool (*)(const LightTransportInput &,
+    std::vector<uint8_t> &, GpuLightTransportWork &, std::string &);
 /// Current desktop GL 4.3 context only. Never performs CPU fallback or modifies
 /// output on failure. Per-call resources retire before return; no global GL
 /// objects may survive a context. Caller owns snapshot validation/publication.

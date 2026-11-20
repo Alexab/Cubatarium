@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <chrono>
 #include <deque>
+#include <exception>
 #include <limits>
 #include <tuple>
 
@@ -308,7 +309,8 @@ UChunkRelightSnapshot::CaptureImpl(const UBlockWorld &world,
 }
 
 RelightComputeResult
-UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
+UChunkRelightSnapshot::Compute(const UBlockRegistry &registry,
+                               GpuLightTransportExecutor gpu)
 {
   RelightComputeResult result;
   result.read_set = ReadSet;
@@ -397,6 +399,85 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
                 WriteBlockLight(c * CHUNK_SIZE + glm::ivec3(x, y, z),
                                 info.emission);
             }
+  bool gpu_complete = false;
+  if (gpu && !Light.empty())
+  {
+    result.transport = RelightComputeResult::Transport::CpuFallback;
+    auto low = Light.begin()->first, high = low;
+    for (const auto &entry : Light)
+    {
+      low = glm::min(low, entry.first);
+      high = glm::max(high, entry.first);
+    }
+    const uint64_t width = (int64_t(high.x) - low.x + 1) * CHUNK_SIZE;
+    const uint64_t height = (int64_t(high.y) - low.y + 1) * CHUNK_SIZE;
+    const uint64_t depth = (int64_t(high.z) - low.z + 1) * CHUNK_SIZE;
+    constexpr uint64_t max_cells = 1u << 20;
+    if (width > max_cells || height > max_cells || depth > max_cells ||
+        width * height > max_cells || width * height * depth > max_cells)
+      result.transport_fallback_reason = "snapshot_dense_domain_over_budget";
+    else
+    {
+      LightTransportInput input;
+      input.width = static_cast<uint32_t>(width);
+      input.height = static_cast<uint32_t>(height);
+      input.depth = static_cast<uint32_t>(depth);
+      input.seeds.resize(static_cast<size_t>(width * height * depth));
+      // Holes in the sparse compute topology and out-of-profile cells must not
+      // become transparent shortcuts in the bounding box.
+      input.transmission.resize(input.seeds.size(), 0);
+      const auto dense_index = [&](glm::ivec3 coord, int x, int y, int z)
+      {
+        const auto offset = (coord - low) * CHUNK_SIZE;
+        return size_t(offset.x + x) + size_t(width) *
+            (size_t(offset.y + y) + size_t(height) * size_t(offset.z + z));
+      };
+      for (const auto &entry : Light)
+      {
+        const auto *geometry = GeometryData(entry.first);
+        for (int z = 0; z < CHUNK_SIZE; ++z)
+          for (int y = 0; y < CHUNK_SIZE; ++y)
+            if (InputProfile.ContainsY(entry.first.y * CHUNK_SIZE + y))
+              for (int x = 0; x < CHUNK_SIZE; ++x)
+              {
+                const auto local = UChunk::LocalIndex({x, y, z});
+                const auto index = dense_index(entry.first, x, y, z);
+                const auto &info = materials.Get(geometry ? (*geometry)[local] : BLOCK_AIR);
+                input.seeds[index] = entry.second[local];
+                input.transmission[index] = !info.transparent ? 0 : info.liquid ? 2 : 1;
+              }
+      }
+      std::vector<uint8_t> transported;
+      bool transported_ok = false;
+      try
+      {
+        transported_ok = gpu(input, transported, result.transport_work,
+                             result.transport_fallback_reason);
+      }
+      catch (const std::exception &)
+      {
+        result.transport_fallback_reason = "gpu_transport_exception";
+      }
+      if (transported_ok &&
+          transported.size() == input.seeds.size() &&
+          result.transport_work.dispatches && result.transport_work.readbacks)
+      {
+        // Commit only a complete successful readback; partial/error output is
+        // discarded before touching the original CPU scratch seeds.
+        for (auto &entry : Light)
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            for (int y = 0; y < CHUNK_SIZE; ++y)
+              for (int x = 0; x < CHUNK_SIZE; ++x)
+                entry.second[UChunk::LocalIndex({x, y, z})] =
+                    transported[dense_index(entry.first, x, y, z)];
+        gpu_complete = true;
+        result.transport = RelightComputeResult::Transport::Gpu;
+        result.transport_fallback_reason.clear();
+      }
+      else if (result.transport_fallback_reason.empty())
+        result.transport_fallback_reason = "invalid_or_incomplete_gpu_readback";
+    }
+  }
   // Resolve topology once per computation. The flood touches millions of
   // neighbors in a tall band; world-coordinate hashes in that inner loop can
   // otherwise dominate the bounded solver. No map is mutated below.
@@ -549,9 +630,9 @@ UChunkRelightSnapshot::Compute(const UBlockRegistry &registry)
         }
       }
   };
-  if (Spec.include_skylight)
+  if (!gpu_complete && Spec.include_skylight)
     flood(true);
-  if (Spec.include_block_light)
+  if (!gpu_complete && Spec.include_block_light)
     flood(false);
   result.inputs_complete = InputContextCaptured && !ReadSet.empty() &&
                            result.unknown_input_chunks == 0 &&

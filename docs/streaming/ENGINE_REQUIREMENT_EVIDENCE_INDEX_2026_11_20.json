@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S3.06.snapshot-transport",
+      "status": "PARTIAL_OPEN",
+      "card": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s3-gpu-snapshot-receipt-20261120.json",
+      "scope": "Real GPU snapshot fields/certificates match CPU; no-context/partial/exception/cap fallback verified; app Release build PASS. Desktop main-thread runtime GPU dispatch not yet wired; S3.06 remains OPEN."
+    },
+    {
       "id": "S3.06.gpu-transport-primitive",
       "status": "PARTIAL_OPEN",
       "card": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md",

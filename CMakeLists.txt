@@ -3473,6 +3473,23 @@ cubatarium_add_test(NAME inputs_still_valid_visual_test
         src/Test/InputsStillValidVisualTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  add_executable(gpu_relight_snapshot_driver_test
+    ${PHYSICS_MATERIAL_UNIT_SOURCES}
+    src/Blocks/BlockDefinitionStorage.cpp
+    src/World/Lighting/LightUtil.cpp
+    src/World/Lighting/ChunkRelightSnapshot.cpp
+    src/World/Lighting/GpuLightTransport.cpp
+    src/Test/GpuRelightSnapshotDriverTest.cpp)
+  target_include_directories(gpu_relight_snapshot_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_compile_definitions(gpu_relight_snapshot_driver_test PRIVATE ${PHYSICS_LIGHT_REGISTRY_DEF})
+  target_link_libraries(gpu_relight_snapshot_driver_test PRIVATE
+    glm::glm nlohmann_json::nlohmann_json GLEW::GLEW OpenGL::GL glfw)
+  if(WIN32)
+    target_compile_definitions(gpu_relight_snapshot_driver_test PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME gpu_relight_snapshot_driver_test COMMAND $<TARGET_FILE:gpu_relight_snapshot_driver_test>)
+  set_tests_properties(gpu_relight_snapshot_driver_test PROPERTIES
+    LABELS "gpu;integration;lighting;streaming" SKIP_RETURN_CODE 77 TIMEOUT 30)
   add_executable(gpu_light_transport_driver_test
     src/World/Lighting/GpuLightTransport.cpp
     src/Test/GpuLightTransportDriverTest.cpp)
