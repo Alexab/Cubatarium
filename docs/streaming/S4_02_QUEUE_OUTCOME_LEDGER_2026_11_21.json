@@ -108,7 +108,31 @@
       "id": "Q04-C2",
       "queue": "Q04",
       "status": "CHECK",
-      "required_result": "ForgetInflight/eviction of queued/running/completed job rejects late result; valid current demand completes, abandoned demand retires explicitly; include late arrival after successor drained."
+      "required_result": "ForgetInflight/eviction of queued/running/completed job rejects late result; valid current demand completes, abandoned demand retires explicitly; include late arrival after successor drained.",
+      "subcases": [
+        {
+          "id": "Q04-C2.1",
+          "status": "REUSE",
+          "scope": "Explicit Forget queued/running/completed and directly superseded old worker after newer owner fully drained: no old result/retry, fresh913 geometry completes.",
+          "evidence": "build/desktop-msvc/s4-mesh-retirement-acceptance-20261121.json"
+        },
+        {
+          "id": "Q04-C2.2",
+          "status": "REUSE",
+          "scope": "Actual cache RemoveColumn/RemoveChunk running/completed: owner retires, no dirty resurrection, same-frame new demand publishes current Flat geometry using actual light fill/settlement.",
+          "evidence": "build/desktop-msvc/s4-mesh-retirement-acceptance-20261121.json"
+        },
+        {
+          "id": "Q04-C2.3",
+          "status": "CHECK",
+          "scope": "Whole-builder/whole-cache cancellation queued/running/completed and cancelled predecessor released after a fully drained new successor; verify explicit abandonment vs KeepDirty owner transfer."
+        },
+        {
+          "id": "Q04-C2.4",
+          "status": "CHECK",
+          "scope": "Outside-radius CPU abandonment/lease policy: valid retained demand completes, explicitly abandoned demand does not resurrect. Mixed GPU/field owners remain Q06-C2."
+        }
+      ]
     },
     {
       "id": "Q04-C3",
@@ -292,5 +316,5 @@
       "observed": "Legacy Enqueue for background IO; completed load/save queues and separate light-flags pool. Must inspect producer envelope before claiming bounded memory."
     }
   ],
-  "checkpoint": "Q04-C1 actual capacity reduction/drop-oldest exact-owner proof accepted. 17 CHECK groups, 13 REUSE, 1 production-disabled INAPPLICABLE. Current native receipt preserves overall UNTESTED."
+  "checkpoint": "Q04-C1 accepted; Q04-C2.1/.2 explicit Forget and cache removal accepted with current-EXE native regression. Q04-C2 remains CHECK for .3 full cancellation and .4 outside-radius abandonment. 17 CHECK groups/13 REUSE groups/1 disabled production path; full S0..S6 OPEN."
 }

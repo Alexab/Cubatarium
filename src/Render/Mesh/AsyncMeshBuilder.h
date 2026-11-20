@@ -44,6 +44,8 @@ struct MeshBuildResult
   uint64_t jobId{0};
   uint64_t submitEpoch{0};
   JobStageSpan stageTrace{};
+  /// Shared with the exact job owner; explicit retirement/supersession revokes retry.
+  std::shared_ptr<std::atomic<bool>> RetryAllowed;
   /// P5: worker deferred eligible opaque extract to main (GL) thread.
   bool GpuExtractPending{false};
   bool ProvisionalLightPreview{false};
@@ -112,7 +114,8 @@ public:
   void CancelPending();
   /// Preserve exact jobs inside the lease; cancel queued/completed work outside.
   void CancelPendingOutsideHorizontalRadius(glm::ivec3 focus, int keep_radius);
-  /// Drop in-flight tracking for a coord (e.g. chunk unloaded); late results are ignored.
+  /// Retire this coord: cancel its queued/completed job and ignore late running results.
+  /// A later demand must enqueue its own job; the retired job cannot create retry debt.
   void ForgetInflight(glm::ivec3 coord);
   uint64_t GetDiscardedLateCount() const
   {
@@ -140,7 +143,8 @@ public:
 
 private:
   void NoteObsoleteJob(glm::ivec3 coord, const JobStageSpan &span,
-                       JobTerminalReason reason);
+                       JobTerminalReason reason,
+                       const std::shared_ptr<std::atomic<bool>> &retry_allowed);
   std::shared_ptr<const UChunkRenderDemandStore> RenderDemandStore;
 
   static constexpr int kPipelineSlotsPerWorker = 6;
@@ -150,7 +154,12 @@ private:
   // Completed before Pool — pool joins first while completed queue stays valid (M08).
   UCompletedJobQueue<MeshBuildResult> Completed;
   mutable std::mutex InFlightMutex;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> InFlight;
+  struct TrackedJob
+  {
+    uint64_t id{0};
+    std::shared_ptr<std::atomic<bool>> retry_allowed;
+  };
+  std::unordered_map<glm::ivec3, TrackedJob, IVec3Hash> InFlight;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};

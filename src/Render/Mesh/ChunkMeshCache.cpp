@@ -5161,6 +5161,9 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
     GreedyVertexCountByChunk.erase(vIt);
   }
   Dirty.Erase(chunkCoord);
+  ScheduledThisFrame_.erase(chunkCoord);
+  if (AsyncBuilder)
+    AsyncBuilder->ForgetInflight(chunkCoord);
   MeshRevisions.Erase(chunkCoord);
   ActiveMeshSourceRevision.erase(chunkCoord);
   CaptureStore.Invalidate(chunkCoord);
@@ -5208,6 +5211,7 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
       GreedyVertexCountByChunk.erase(vIt);
     }
     Dirty.Erase(slice);
+    ScheduledThisFrame_.erase(slice);
     MeshRevisions.Erase(slice);
     ActiveMeshSourceRevision.erase(slice);
     CaptureStore.Invalidate(slice);

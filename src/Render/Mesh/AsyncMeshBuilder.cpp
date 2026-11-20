@@ -146,9 +146,13 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
     stage_trace.attempt_id = demand->active_attempt_id;
     (void)StampChunkRenderDemandTrace(stage_trace, *RenderDemandStore, coord);
   }
+  const auto retry_allowed = std::make_shared<std::atomic<bool>>(true);
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight[coord] = jobId;
+    const auto old = InFlight.find(coord);
+    if (old != InFlight.end())
+      old->second.retry_allowed->store(false, std::memory_order_relaxed);
+    InFlight[coord] = {jobId, retry_allowed};
   }
 
   // Keep the definitions catalog alive for the whole job even if Reload swaps
@@ -158,7 +162,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
   if (!Pool.TryEnqueue(
           [this, snapshot = std::move(snapshot), registryPtr = &registry,
            catalogKeep = std::move(catalogKeep), jobId, submitEpoch, force_cpu,
-           stage_trace,
+           stage_trace, retry_allowed,
            snapshot_credit = std::move(snapshot_credit),
            work_slot = std::move(work_slot)]() mutable
           {
@@ -168,7 +172,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
           if (Epoch.load(std::memory_order_acquire) != submitEpoch)
             return JobTerminalReason::SubmissionEpochChanged;
           const auto it = InFlight.find(job_coord);
-          return it == InFlight.end() || it->second != jobId
+          return it == InFlight.end() || it->second.id != jobId
                      ? JobTerminalReason::JobIdentityReplaced
                      : JobTerminalReason::None;
         };
@@ -179,7 +183,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
             reason = obsolete_locked();
           }
           if (reason == JobTerminalReason::None) return false;
-          NoteObsoleteJob(job_coord, stage_trace, reason);
+          NoteObsoleteJob(job_coord, stage_trace, reason, retry_allowed);
           return true;
         };
         if (reject_obsolete()) return;
@@ -198,6 +202,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         result.lightInputs = snapshot.lightInputs;
         result.jobId = jobId;
         result.submitEpoch = submitEpoch;
+        result.RetryAllowed = retry_allowed;
         result.InputStamps = snapshot.inputStamps;
         result.InputLightHaloSignatures = snapshot.lightHaloSignatures;
         result.CertifiedPaddedLight = snapshot.certifiedPaddedLight;
@@ -276,17 +281,19 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         auto &pipe_adm = UPipelineAdmission::Get();
         if (!pipe_adm.TryAcquireResultBytes(result_bytes))
         {
-          {
-            std::lock_guard<std::mutex> lock(InFlightMutex);
-            const auto it = InFlight.find(result.coord);
-            if (it != InFlight.end() && it->second == jobId)
-              InFlight.erase(it);
-          }
           UJobStageTrace::NoteTerminal(
               result.stageTrace, JobStage::Retired,
               JobTerminalReason::ResultMemoryBudgetRejected);
-          std::lock_guard<std::mutex> lock(OverflowMutex);
-          OverflowCoords.push_back(result.coord); // Unconditional demand retry.
+          std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+          const auto it = InFlight.find(result.coord);
+          if (retry_allowed->load(std::memory_order_relaxed) &&
+              (it == InFlight.end() || it->second.id == jobId))
+          {
+            if (it != InFlight.end())
+              InFlight.erase(it);
+            std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+            OverflowCoords.push_back(result.coord);
+          }
           return;
         }
         result.ResultCredit = std::make_unique<UPipelineCreditGuard>(
@@ -305,7 +312,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
         }
         if (obsolete != JobTerminalReason::None)
         {
-          NoteObsoleteJob(job_coord, stage_trace, obsolete);
+          NoteObsoleteJob(job_coord, stage_trace, obsolete, retry_allowed);
           return;
         }
         if (overflow)
@@ -315,7 +322,9 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
               JobTerminalReason::CompletedQueueOverflow);
           std::lock_guard<std::mutex> owner_lock(InFlightMutex);
           const auto it = InFlight.find(dropped.coord);
-          if (it == InFlight.end() || it->second == dropped.jobId)
+          if ((!dropped.RetryAllowed ||
+         dropped.RetryAllowed->load(std::memory_order_relaxed)) &&
+        (it == InFlight.end() || it->second.id == dropped.jobId))
           {
             if (it != InFlight.end())
               InFlight.erase(it);
@@ -328,7 +337,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
     {
       std::lock_guard<std::mutex> lock(InFlightMutex);
       const auto it = InFlight.find(coord);
-      if (it != InFlight.end() && it->second == jobId)
+      if (it != InFlight.end() && it->second.id == jobId)
       {
         InFlight.erase(it);
       }
@@ -350,7 +359,9 @@ void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)
     std::lock_guard<std::mutex> owner_lock(InFlightMutex);
     const auto it = InFlight.find(dropped.coord);
     // Shrinking the queue retires the victim, not a newer job with its key.
-    if (it == InFlight.end() || it->second == dropped.jobId)
+    if ((!dropped.RetryAllowed ||
+         dropped.RetryAllowed->load(std::memory_order_relaxed)) &&
+        (it == InFlight.end() || it->second.id == dropped.jobId))
     {
       if (it != InFlight.end())
         InFlight.erase(it);
@@ -388,25 +399,29 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
         DiscardedLateEpoch.fetch_add(1, std::memory_order_relaxed);
         const auto it = InFlight.find(result.coord);
         const bool newer_owned =
-            it != InFlight.end() && it->second != result.jobId;
-        if (it != InFlight.end() && it->second == result.jobId)
+            it != InFlight.end() && it->second.id != result.jobId;
+        if (it != InFlight.end() && it->second.id == result.jobId)
         {
           InFlight.erase(it);
         }
-        if (!newer_owned)
+        if (!newer_owned &&
+            (!result.RetryAllowed ||
+             result.RetryAllowed->load(std::memory_order_relaxed)))
           discarded_now.push_back(result.coord);
         terminal_events.push_back(
             {result.stageTrace, JobTerminalReason::SubmissionEpochChanged});
         continue;
       }
       const auto it = InFlight.find(result.coord);
-      if (it == InFlight.end() || it->second != result.jobId)
+      if (it == InFlight.end() || it->second.id != result.jobId)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
         DiscardedLateJobMismatch.fetch_add(1, std::memory_order_relaxed);
         // A replacement already owns this obligation. Retiring its predecessor
         // must not create a second executable request for the same coordinate.
-        if (it == InFlight.end())
+        if (it == InFlight.end() &&
+            (!result.RetryAllowed ||
+             result.RetryAllowed->load(std::memory_order_relaxed)))
           discarded_now.push_back(result.coord);
         terminal_events.push_back(
             {result.stageTrace, JobTerminalReason::JobIdentityReplaced});
@@ -567,13 +582,28 @@ void UAsyncMeshBuilder::CancelPending()
 
 void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
 {
-  std::lock_guard<std::mutex> lock(InFlightMutex);
-  InFlight.erase(coord);
+  uint64_t retired_id = 0;
+  {
+    std::lock_guard<std::mutex> lock(InFlightMutex);
+    const auto current = InFlight.find(coord);
+    if (current == InFlight.end()) return;
+    retired_id = current->second.id;
+    current->second.retry_allowed->store(false, std::memory_order_relaxed);
+    InFlight.erase(current);
+  }
+  Pool.CancelPendingJobsIf([&](uint64_t id) { return id == retired_id; });
+  Completed.EraseIf([&](const MeshBuildResult &result) {
+    if (result.jobId != retired_id) return false;
+    UJobStageTrace::NoteTerminal(result.stageTrace, JobStage::Retired,
+                                JobTerminalReason::JobIdentityReplaced);
+    return true;
+  });
 }
 
 void UAsyncMeshBuilder::NoteObsoleteJob(glm::ivec3 coord,
                                        const JobStageSpan &span,
-                                       JobTerminalReason reason)
+                                       JobTerminalReason reason,
+                                       const std::shared_ptr<std::atomic<bool>> &retry_allowed)
 {
   DiscardedLate.fetch_add(1, std::memory_order_relaxed);
   if (reason == JobTerminalReason::SubmissionEpochChanged)
@@ -583,7 +613,8 @@ void UAsyncMeshBuilder::NoteObsoleteJob(glm::ivec3 coord,
   {
     std::lock_guard<std::mutex> owner_lock(InFlightMutex);
     const auto current = InFlight.find(coord);
-    if (current == InFlight.end() || current->second == span.job_id)
+    if (retry_allowed->load(std::memory_order_relaxed) &&
+        (current == InFlight.end() || current->second.id == span.job_id))
     {
       std::lock_guard<std::mutex> debt_lock(DiscardedMutex);
       DiscardedCoords.push_back(coord);
@@ -605,7 +636,7 @@ void UAsyncMeshBuilder::CancelPendingOutsideHorizontalRadius(glm::ivec3 focus,
                                        std::abs(it->first.z-focus.z));
       if (horizontal <= keep_radius)
       {
-        protected_jobs.insert(it->second);
+        protected_jobs.insert(it->second.id);
         ++it;
       }
       else it = InFlight.erase(it);

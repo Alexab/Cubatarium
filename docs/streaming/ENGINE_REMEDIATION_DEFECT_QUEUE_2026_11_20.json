@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-explicit-retirement-resurrects-debt",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Forgotten queued/running/completed jobs and directly superseded old worker after newer drain emit retry_count1; RemoveChunk retains CPU job and late result creates dirty/no-active; RemoveColumn same-frame new demand silently deduped by stale ScheduledThisFrame.",
+      "fix": "Exact shared per-job retry permission revoked on explicit Forget or direct replacement; lifetime bounded by tracked job/worker/result, no permanent tombstone set. Exact queued/completed Forget removes only retired ID. Cache RemoveChunk calls Forget; both removal APIs clear ScheduledThisFrame for fresh same-frame demand.",
+      "evidence": "build/desktop-msvc/s4-mesh-retirement-acceptance-20261121.json",
+      "next_action": "Q04-C2.3 full cancellation and .4 outside-radius abandonment remain open; mixed GPU/field Q06-C2."
+    },
+    {
       "id": "mesh-capacity-victim-duplicates-new-owner-retry",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
