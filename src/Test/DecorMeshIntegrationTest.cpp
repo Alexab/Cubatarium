@@ -3368,6 +3368,80 @@ private:
   bool released{false};
 };
 
+static void TestSelectiveMeshLeaseWorkerLifecycle(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  // One worker: protected job queued behind a running outside job, with an
+  // additional outside queued closure. Two workers: protected completion is
+  // already ready when the cancelled outside worker is released late.
+  for (const std::size_t workers : {1u, 2u})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 protected_coord(0), running_outside(2, 0, 0),
+        queued_outside(3, 0, 0);
+    for (const auto coord : {protected_coord, running_outside, queued_outside})
+      world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(8), kStone);
+    auto &admission = UPipelineAdmission::Get();
+    const auto snapshot_base = admission.SnapshotPendingBytes();
+    const auto result_base = admission.ResultPendingBytes();
+    const auto slots_base = admission.WorkSlotsInUse();
+    GatedPhysicalMesher mesher;
+    UAsyncMeshBuilder builder(workers);
+    builder.SetMesher(&mesher);
+    builder.SetCompletedCapacity(1);
+    const auto submit = [&](glm::ivec3 coord, uint64_t revision) {
+      return builder.Enqueue(ChunkMeshSnapshot::Capture(
+          world, coord, revision, nullptr, nullptr,
+          MeshLightInputs::PhysicalField), registry);
+    };
+    Expect(submit(running_outside, 801) && mesher.WaitEntered(),
+           "selective lease barrier holds actual outside worker");
+    Expect(submit(protected_coord, 802), "protected mesh job accepted");
+    if (workers == 1)
+      Expect(submit(queued_outside, 803), "outside queued mesh accepted");
+    else
+    {
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (builder.GetCompletedSize() != 1 && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::yield();
+      Expect(builder.GetCompletedSize() == 1,
+             "protected actual completion precedes outside release");
+    }
+    // Test-only negative control recreates the original whole-builder cancel.
+    if (std::getenv("CUBA_TEST_FORCE_GLOBAL_MESH_CANCEL")) builder.CancelPending();
+    else builder.CancelPendingOutsideHorizontalRadius({0, 0, 0}, 0);
+    Expect(builder.IsInFlight(protected_coord) &&
+               !builder.IsInFlight(running_outside) && !builder.IsInFlight(queued_outside),
+           "selective cancellation preserves exact protected builder owner");
+    if (workers == 1)
+      Expect(admission.SnapshotPendingBytes() == snapshot_base + 2 * sizeof(ChunkMeshSnapshot) &&
+                 admission.WorkSlotsInUse() == slots_base + 2,
+             "outside queued cancellation releases exact snapshot and work-slot credits");
+    mesher.Release();
+    Expect(builder.WaitIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+           "selective workers finish after explicit barrier release");
+    Expect(mesher.builds == 2 && builder.GetCompletedDiscardedOverflow() == 0 &&
+               builder.GetCompletedSize() == 1 && builder.GetDiscardedLateJobMismatchCount() >= 1,
+           "late outside result never displaces protected completion or computes queued outside job");
+    auto results = builder.DrainCompleted(4);
+    Expect(results.size() == 1 && results[0].coord == protected_coord &&
+               results[0].sourceRevision == 802 && !results[0].batches.empty(),
+           "original protected job yields real geometry with unchanged request identity");
+    Expect(!builder.IsInFlight(protected_coord) &&
+               admission.SnapshotPendingBytes() == snapshot_base &&
+               admission.WorkSlotsInUse() == slots_base,
+           "selective lifecycle retires worker owners and closure credits");
+    results.clear();
+    Expect(admission.ResultPendingBytes() == result_base,
+           "selective completion releases its exact result credits");
+    std::cout << "selective_mesh_lease_worker_case workers=" << workers << " PASS\n";
+  }
+}
+
 static void TestCertifiedGeometrySurvivesInflightLight(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false)
@@ -7084,6 +7158,7 @@ int main(int argc, char **argv)
   TestPublicationRefreshesDrawRefs(registry);
   TestNoDrawPhysicalResourceAdmission(registry, definitions.get());
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
+  TestSelectiveMeshLeaseWorkerLifecycle(registry, definitions.get());
   TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get(), 1);

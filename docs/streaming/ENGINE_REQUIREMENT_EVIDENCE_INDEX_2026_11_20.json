@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.selective-queued-running-worker-barriers",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-mesh-lease-worker-acceptance-20261121.json",
+      "scope": "Actual CPU builder barriers: protected queued job survives, cancelled outside queued credits release exactly, late running outside result cannot displace protected completion at capacity1. Real protected source802 geometry and all credits retire. Old global cancel negative control fails exact owner assertion. Current Release EXE native publication PASS; overall smoke UNTESTED. Same-key supersession and other queue/backend outcomes OPEN."
+    },
+    {
       "id": "S4.02.Q04.protected-completed-cancel",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

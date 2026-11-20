@@ -21,7 +21,7 @@
       "negative_control": "build/desktop-msvc/s4-mesh-protected-cancel-isolated-20261121-native/terrain-save-probe/report.json: protected_active=true, protected_cpu=false, completed0.",
       "fix": "Selective exact-job-ID cancellation preserves the lease epoch/jobs, removes outside queued/completed jobs, rejects late outside completion before publication.",
       "evidence": "build/desktop-msvc/s4-mesh-protected-cancel-acceptance-20261121.json",
-      "next_action": "Actual completed protected result publishes without reschedule and outside successor publishes. Tagged queued-credit unit and dependent decor PASS; actual builder queued/running/late protected permutations remain OPEN."
+      "next_action": "Completed protected publication and actual builder queued/running/late barriers verified in s4-mesh-lease-worker-acceptance-20261121.json. Same-key supersession, mixed GPU/field owners and remaining eviction/coalescing cases stay OPEN."
     },
     {
       "id": "mesh-publication-revision-clock-domain-review",
