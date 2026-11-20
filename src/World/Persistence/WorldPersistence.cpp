@@ -5047,6 +5047,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       }
       if (chunk_input_changed && world.MeshService)
       {
+        // Query caches must observe each installed slice, even while the
+        // remaining column results postpone all finalize/visual dirty work.
+        world.MeshService->InvalidateFluidSurfaceForColumn(ground, true);
         // Disk slices are applied incrementally, before column finalization.
         // Invalidate dependent drawable meshes at each successful slice so
         // neighbors cannot keep a mesh captured against the old halo while

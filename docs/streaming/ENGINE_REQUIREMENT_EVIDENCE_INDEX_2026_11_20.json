@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.terrain-arrival-fluid-map.partial-disk",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-fluid-disk-repro-20261121-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-fluid-disk-fixed-20261121-native/terrain-save-probe/report.json",
+      "scope": "Real SaveTerrainColumn and async load, one slice per apply: stale warm fluid map reproduced before finalize, fixed per-successful-slice invalidation. Pending column remains unready; final actual desktop CPU packed scan matches direct fluid query. Whole Flat API PASS; other S4.02 outcomes OPEN."
+    },
+    {
       "id": "S4.02.terrain-arrival-fluid-map.surface-successor",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

@@ -123,6 +123,67 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       world.GetLightingPipeline().FillAllLoadedChunks(world.BlockWorld);
       auto &mesh=world.GetMeshService(); auto &cache=mesh.GetCache();
       {
+        struct DiskScanRestore {
+          bool previous=PreferGpuFluidColumnScan();
+          UFrameDeadline deadline=UFrameDeadline::Get();
+          ~DiskScanRestore() { SetPreferGpuFluidColumnScan(previous); UFrameDeadline::Get()=deadline; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld disk(nullptr,nullptr);
+        disk.SetSpawnPoint({8,-40,8});
+        disk.ProceduralTemplate.MinHeight=-48; disk.ProceduralTemplate.MaxHeight=-17;
+        disk.ProceduralTemplate.SeaLevel=-40;
+        disk.BlockWorld.SetVerticalProfile({-48,-17,-40});
+        disk.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        disk.BlockWorld.SetFluidDefinitions(definitions.get());
+        disk.SetRenderSettings(settings);
+        const auto folder=root/"fluid-partial-disk";
+        fs::create_directories(folder);
+        disk.SetWorldFolderPath(folder.string());
+        disk.Streaming->EnsureStreamer(disk.BlockWorld,*disk.BlockRegistry,42,disk.ProceduralTemplate);
+        UBlockWorld source;
+        source.SetVerticalProfile({-48,-17,-40});
+        source.SetFluidDefinitions(definitions.get());
+        for(int x=0;x<16;++x) for(int z=0;z<16;++z) source.SetBlock({x,-48,z},8);
+        source.SetBlock({8,-40,8},9);
+        source.SetFluidState({8,-40,8},FluidCellState::Source().WithKind(FluidKind::Water));
+        source.SetBlock({8,-24,8},8);
+        require(disk.GetChunkStorage().SaveTerrainColumn({0,0,0},source,folder.string(),
+                    *disk.BlockRegistry,-17,-48),"partial fluid fixture saves two real disk slices");
+        auto &disk_cache=disk.GetMeshService().GetCache();
+        SetPreferGpuFluidColumnScan(false);
+        const auto *dry=disk_cache.GetFluidSurfaceSlice(disk.BlockWorld,*disk.BlockRegistry,{0,0,0},-40);
+        require(dry && !dry->HasSurface(8,8) &&
+                    !disk_cache.GetFluidSurfaceDirtyGroundChunks().count({0,0,0}),
+                "partial disk fixture has settled warm dry map");
+        disk.Persistence->RequestAsyncTerrainColumnLoad(disk,{0,0,0},9601);
+        const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+        std::size_t applied=0;
+        while(applied==0) {
+          applied=disk.Persistence->TickAsyncChunkIo(disk,1,1000).applied_slices_n;
+          require(std::chrono::steady_clock::now()<deadline,"partial disk first-slice deadline");
+          std::this_thread::yield();
+        }
+        const bool pending=disk.Persistence->IsTerrainColumnDiskLoadPending({0,0,0});
+        const bool invalidated=disk_cache.GetFluidSurfaceDirtyGroundChunks().count({0,0,0})!=0;
+        const bool premature_ready=disk.IsColumnRenderReady({0,0,0});
+        while(!disk.Persistence->TickDrainAsyncChunkIo(disk,1)) {
+          require(std::chrono::steady_clock::now()<deadline,"partial disk completion deadline");
+          std::this_thread::yield();
+        }
+        SetPreferGpuFluidColumnScan(true);
+        const auto *current=disk_cache.GetFluidSurfaceSlice(disk.BlockWorld,*disk.BlockRegistry,{0,0,0},-40);
+        const auto direct=FindFluidColumnSurfaceAt(disk.BlockWorld,*disk.BlockRegistry,8,8,-40);
+        const bool final_current=current && direct.valid && current->HasSurface(8,8) &&
+            current->SurfaceBlockY[8][8]==-40 && current->SurfaceBlockY[8][8]==direct.surfaceBlockY &&
+            current->BottomBlockY[8][8]==direct.bottomBlockY && current->FluidId[8][8]==9;
+        report["fluid_partial_disk_arrival"]={{"first_applied",applied},
+            {"still_pending",pending},{"invalidated_before_finalize",invalidated},
+            {"premature_render_ready",premature_ready},{"final_surface_current",final_current}};
+        require(applied==1 && pending && invalidated && !premature_ready && final_current,
+                "disk slice arrival invalidates warm fluid map before column finalize");
+      }
+      {
         struct ScanRestore {
           bool previous=PreferGpuFluidColumnScan();
           UFrameDeadline deadline=UFrameDeadline::Get();
