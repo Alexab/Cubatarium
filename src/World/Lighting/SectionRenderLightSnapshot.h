@@ -96,8 +96,18 @@ struct SectionGeometryRenderInputs
       const auto &a = stamps[n];
       const auto &b = other.stamps[n];
       if (!a.readsContent || !b.readsContent || a.coord != b.coord ||
-          a.incarnation != b.incarnation || a.content != b.content ||
+          a.incarnation != b.incarnation ||
           a.missingEvidence != b.missingEvidence)
+        return false;
+      // A section's geometry reads its own cells and one boundary plane from
+      // each face neighbor. An interior neighbor edit may change transported
+      // light without changing any geometry input. Keep full revision matching
+      // for legacy stamps without captured boundary clocks.
+      const bool boundary =
+          n && a.incarnation && a.hasBoundaryContent && b.hasBoundaryContent;
+      if (boundary
+              ? a.boundaryContent[(n - 1) ^ 1] != b.boundaryContent[(n - 1) ^ 1]
+              : a.content != b.content)
         return false;
     }
     return true;

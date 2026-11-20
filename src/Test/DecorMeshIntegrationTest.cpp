@@ -3480,14 +3480,70 @@ static void TestCertifiedGeometrySurvivesInflightLight(
   }
 }
 
+static void TestNeighborBoundaryGeometryInputs(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (const glm::ivec3 root : {glm::ivec3(0), glm::ivec3(-2, -4, 3)})
+    for (int axis = 0; axis < 3; ++axis)
+      for (int sign : {-1, 1})
+      {
+        UBlockWorld world;
+        world.SetFluidDefinitions(definitions);
+        world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+        world.SetBlock(root * CHUNK_SIZE + glm::ivec3(8), kStone);
+        auto neighbor = root;
+        neighbor[axis] += sign;
+        world.SetBlock(neighbor * CHUNK_SIZE + glm::ivec3(8), kStone);
+        const auto catalog = registry.GetDefinitionsCatalogSnapshot();
+        const auto before = world.CaptureGeometryRenderInputs(root, catalog);
+        const auto full = world.CaptureInputStamp(neighbor, false, true);
+        world.SetBlock(neighbor * CHUNK_SIZE + glm::ivec3(7), kFire);
+        const auto interior = world.CaptureGeometryRenderInputs(root, catalog);
+        Expect(before.Matches(interior),
+               "neighbor interior edit preserves exact face geometry inputs");
+        Expect(!world.InputStampStillMatches(full),
+               "full calculation input still rejects neighbor interior edits");
+        auto legacy = before;
+        for (auto &stamp : legacy.stamps)
+          stamp.hasBoundaryContent = false;
+        Expect(!legacy.Matches(interior), "legacy stamps without boundary "
+                                          "evidence retain full-content guard");
+        auto boundary = glm::ivec3(7);
+        boundary[axis] = sign > 0 ? 0 : CHUNK_SIZE - 1;
+        world.SetBlock(neighbor * CHUNK_SIZE + boundary, kStone);
+        const auto changed = world.CaptureGeometryRenderInputs(root, catalog);
+        Expect(!interior.Matches(changed),
+               "actual neighboring boundary edit rejects retained geometry");
+        auto *chunk = world.GetChunkManager().GetChunk(neighbor);
+        chunk->SetFluidLocal(boundary, FluidCellState::Flowing(3));
+        Expect(
+            !changed.Matches(world.CaptureGeometryRenderInputs(root, catalog)),
+            "boundary fluid geometry participates in the same content proof");
+        const auto fluid = world.CaptureGeometryRenderInputs(root, catalog);
+        chunk->ClearFluidLocal(boundary);
+        Expect(!fluid.Matches(world.CaptureGeometryRenderInputs(root, catalog)),
+               "clearing boundary fluid also invalidates retained geometry");
+        const auto resident = world.CaptureGeometryRenderInputs(root, catalog);
+        world.GetChunkManager().RemoveChunk(neighbor);
+        world.SetBlock(neighbor * CHUNK_SIZE + glm::ivec3(8), kStone);
+        Expect(
+            !resident.Matches(world.CaptureGeometryRenderInputs(root, catalog)),
+            "neighbor reincarnation cannot reuse matching boundary clock "
+            "values");
+      }
+}
+
 static void TestPublishedLightRefreshLifecycle(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
+  TestNeighborBoundaryGeometryInputs(registry, definitions);
   const glm::ivec3 root(0);
   for (bool asynchronous : {false, true})
-    for (int lifecycle = 0; lifecycle < 18; ++lifecycle)
+    for (int lifecycle = 0; lifecycle < 19; ++lifecycle)
     {
       UBlockWorld world;
       world.SetFluidDefinitions(definitions);
@@ -3495,6 +3551,8 @@ static void TestPublishedLightRefreshLifecycle(
           static_cast<uint64_t>(LightingMode::Full));
       world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
       world.SetBlock({14, 8, 14}, kStone);
+      if (lifecycle == 18)
+        world.SetBlock({8, 0, 31}, kStone);
       CountingPhysicalMesher mesher;
       UChunkMeshCache cache;
       auto settings = MakeFrustumMeshSettings();
@@ -3576,8 +3634,9 @@ static void TestPublishedLightRefreshLifecycle(
                  mesher.builds == 1 && cache.GetPublishCount(root) == published,
              "current physical publication does not acquire a new work owner "
              "for repair hints");
-      world.SetBlock(lifecycle == 17 ? glm::ivec3(18, 8, 18)
-                                     : glm::ivec3(16, 8, 16),
+      world.SetBlock(lifecycle == 18   ? glm::ivec3(8, 8, 18)
+                     : lifecycle == 17 ? glm::ivec3(18, 8, 18)
+                                       : glm::ivec3(16, 8, 16),
                      lifecycle == 17 ? kStone : kFire);
       cache.MarkDirtyPriority(
           root, MeshRevisionBumpReason::PriorityRelitInstallRepair);
@@ -3688,7 +3747,8 @@ static void TestPublishedLightRefreshLifecycle(
         cache.ConsumeGpuApplyBacklog(world, registry, 8, 0, 0);
       }
       const bool updated = lifecycle == 0 || lifecycle == 11 ||
-                           lifecycle == 16 || lifecycle == 17;
+                           lifecycle == 16 || lifecycle == 17 ||
+                           lifecycle == 18;
       if (cache.GetPublishedLightRefreshCount() != uint64_t(updated))
         std::cerr << "field-refresh lifecycle=" << lifecycle
                   << " async=" << asynchronous << '\n';

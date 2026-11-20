@@ -30,6 +30,7 @@ UChunk &UChunk::operator=(const UChunk &other)
   SurfaceWetness = other.SurfaceWetness;
   WeatherLastUpdateSec = other.WeatherLastUpdateSec;
   ContentRevision = other.ContentRevision;
+  BoundaryContentRevisions = other.BoundaryContentRevisions;
   Dirty = other.Dirty;
   NonAirCount = other.NonAirCount;
   Incarnation = managed
@@ -48,6 +49,7 @@ void UChunk::ResetForReuse(glm::ivec3 chunkCoord)
   SurfaceWetness = 0.0f;
   WeatherLastUpdateSec = 0.0;
   ContentRevision = 0;
+  BoundaryContentRevisions.fill(0);
   Incarnation = NextIncarnation.fetch_add(1, std::memory_order_relaxed);
   Dirty = true;
   NonAirCount = 0;
@@ -85,6 +87,19 @@ BlockId UChunk::GetBlockLocal(glm::ivec3 local) const
   return Data[static_cast<size_t>(LocalIndex(local))];
 }
 
+void UChunk::NoteContentMutation(glm::ivec3 local)
+{
+  ++ContentRevision;
+  for (int axis = 0; axis < 3; ++axis)
+  {
+    if (local[axis] == 0)
+      ++BoundaryContentRevisions[2 * axis];
+    if (local[axis] == CHUNK_SIZE - 1)
+      ++BoundaryContentRevisions[2 * axis + 1];
+  }
+  InputRevision.NoteGeometryMutation();
+}
+
 void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
 {
   if (local.x < 0 || local.x >= CHUNK_SIZE || local.y < 0 ||
@@ -99,8 +114,7 @@ void UChunk::SetBlockLocal(glm::ivec3 local, BlockId Id)
     return;
   }
   Data[idx] = Id;
-  ++ContentRevision;
-  InputRevision.NoteGeometryMutation();
+  NoteContentMutation(local);
   if (prev == BLOCK_AIR && Id != BLOCK_AIR)
   {
     ++NonAirCount;
@@ -146,8 +160,7 @@ void UChunk::SetFluidLocal(glm::ivec3 local, FluidCellState state)
   if (packed != next)
   {
     packed = next;
-    ++ContentRevision;
-    InputRevision.NoteGeometryMutation();
+    NoteContentMutation(local);
   }
   Dirty = true;
 }
@@ -163,8 +176,7 @@ void UChunk::ClearFluidLocal(glm::ivec3 local)
   if (packed != 0)
   {
     packed = 0;
-    ++ContentRevision;
-    InputRevision.NoteGeometryMutation();
+    NoteContentMutation(local);
   }
   Dirty = true;
 }

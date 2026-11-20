@@ -75,6 +75,10 @@ public:
   }
   uint64_t GetIncarnation() const { return Incarnation; }
   uint64_t GetContentRevision() const { return ContentRevision; }
+  const std::array<uint64_t, 6> &GetBoundaryContentRevisions() const
+  {
+    return BoundaryContentRevisions;
+  }
   void BumpLightFieldRevision()
   {
     ++Light.field->LightFieldRevision;
@@ -165,6 +169,11 @@ private:
   inline static std::atomic<uint64_t> NextIncarnation{1};
   uint64_t Incarnation{NextIncarnation.fetch_add(1, std::memory_order_relaxed)};
   uint64_t ContentRevision{0};
+  // Runtime-only clocks for the six voxel/fluid boundary planes (-X,+X,...).
+  // Incarnation still protects replacement/reuse; own geometry uses full
+  // content.
+  std::array<uint64_t, 6> BoundaryContentRevisions{};
+  void NoteContentMutation(glm::ivec3 local);
   bool Dirty{true};
   /// Count of non-air blocks; IsAirOnly() when zero (avoids 4096-voxel scans).
   int NonAirCount{0};

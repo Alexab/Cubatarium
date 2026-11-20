@@ -130,6 +130,8 @@ struct ChunkInputStamp
   uint64_t blockLight{0};
   // Independent field lifetime, including computed AIR without a UChunk.
   uint64_t lightIncarnation{0};
+  std::array<uint64_t, 6> boundaryContent{};
+  bool hasBoundaryContent{false};
   static ChunkInputStamp
   Capture(glm::ivec3 coord, const UChunk *chunk, bool reads_light = true,
           bool reads_content = true,
@@ -145,6 +147,11 @@ struct ChunkInputStamp
     stamp.skyLight = field ? field->GetSkyRevision() : 0;
     stamp.blockLight = field ? field->GetBlockRevision() : 0;
     stamp.lightIncarnation = field ? field->GetIncarnation() : 0;
+    if (chunk)
+    {
+      stamp.boundaryContent = chunk->GetBoundaryContentRevisions();
+      stamp.hasBoundaryContent = true;
+    }
     return stamp;
   }
   bool Matches(const UChunk *chunk,
