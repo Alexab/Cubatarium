@@ -380,21 +380,10 @@ void UWorldLifecycleFacade::SaveWorld(UCore &core,
       core.WorldInstance->SetCatalogFingerprint(
           core.BlockMergeRegistryInstance->ComputeCatalogFingerprint());
     }
-    if (core.WorldInstance && core.WorldInstance->IsStreamingEnabled() &&
-        UWorld::HasPersistedTerrainOnDisk(core.ActiveWorldFolder.string()))
-    {
-      // UX U5: the streaming+persisted snapshot blocked the caller for the
-      // whole world dump (historically 8-12s on quit: 2s pool joins + every
-      // terrain column re-written synchronously). Terrain is already
-      // persisted by the streaming layer and budgeted coop saves, so a
-      // metadata-only refresh here is lossless for the session state.
-      core.WorldInstance->SaveSessionSnapshotMetadataOnly(
-          core.ActiveWorldFolder.string());
-    }
-    else
-    {
-      core.WorldInstance->Save(core.ActiveWorldFolder.string());
-    }
+    // Existing disk terrain is not proof that resident edits were saved.
+    // Full-save callers require terrain persistence and failure propagation;
+    // interactive autosave/shutdown use budgeted operations directly.
+    core.WorldInstance->Save(core.ActiveWorldFolder.string());
     const double ms = std::chrono::duration<double, std::milli>(
                           std::chrono::steady_clock::now() - begin)
                           .count();

@@ -30,9 +30,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   if (fs::exists(root))
     throw std::runtime_error("Terrain save probe refuses existing output");
   fs::create_directories(root);
-  Json report = {{"schema", "terrain-save-failure-native.v1"},
-                 {"scope", "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance"},
-                 {"status", "FAIL"}, {"cases", Json::array()}};
+  Json report = {
+      {"schema", "terrain-save-failure-native.v1"},
+      {"scope", "Actual isolated UWorld cooperative saves, Core full-save "
+                "facade and WorldOperationRunner; no application menu/error "
+                "rendering or autosave scheduler acceptance"},
+      {"status", "FAIL"},
+      {"cases", Json::array()}};
   const auto require = [](bool value, const char *message)
   {
     if (!value) throw std::runtime_error(message);
@@ -172,6 +176,58 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                              "instead of metadata-only success");
       require(capture(folder) == before && world.ModifiedChunks == dirty,
               "failed full Core SaveWorld preserves files and dirty edits");
+      Json runner_failures = Json::array();
+      for (auto op : {WorldRunnerOp::SaveThenLoad,
+                      WorldRunnerOp::SaveThenCreate, WorldRunnerOp::Shutdown})
+      {
+        Progress runner_progress;
+        with_fixture_core(
+            [&]()
+            {
+              UWorldOperationRunner runner(core, world);
+              WorldRunnerRequest request;
+              request.op = op;
+              request.worldName = "must-not-replace-current-world";
+              request.saveConfigAfter = false;
+              request.shutdownSaveSession = true;
+              request.shutdownCloseApplication = true;
+              runner.Start(request);
+              const auto runner_by =
+                  std::chrono::steady_clock::now() + std::chrono::seconds(12);
+              while (!runner.Tick(runner_progress, 1))
+              {
+                require(std::chrono::steady_clock::now() < runner_by,
+                        "failed save runner bound");
+                require(
+                    std::find(runner_progress.phases.begin(),
+                              runner_progress.phases.end(),
+                              "teardown") == runner_progress.phases.end(),
+                    "save failure must stop runner before replacing terrain");
+                std::this_thread::yield();
+              }
+              require(!runner.Succeeded() && runner.HasSaveFailure() &&
+                          !runner.ShouldCloseApplication() &&
+                          !runner.ErrorMessage().empty() &&
+                          core.GetActiveWorldFolder() == folder &&
+                          capture(folder) == before &&
+                          world.ModifiedChunks == dirty &&
+                          world.BlockWorld.GetBlock(deleted) == BLOCK_AIR &&
+                          world.BlockWorld.GetBlock(added) == 8 &&
+                          world.BlockWorld.GetChunkManager()
+                                  .GetChunk(floor)
+                                  ->GetIncarnation() == incarnation,
+                      "failed save runner preserves current world and denies "
+                      "close");
+            });
+        runner_failures.push_back(
+            {{"operation", op == WorldRunnerOp::Shutdown ? "shutdown"
+                           : op == WorldRunnerOp::SaveThenLoad
+                               ? "save_then_load"
+                               : "save_then_create"},
+             {"phases", runner_progress.phases},
+             {"status", "PASS"}});
+        world.ResumeAfterSessionSave();
+      }
       Progress failed;
       world.BeginCooperativeSave(folder.string(), false);
       size_t ticks = 0;
@@ -232,6 +288,37 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                                         *world.BlockRegistry, -17, -64) > 0 &&
               facade_cold.GetBlock(facade_cell) == 8,
           "full Core SaveWorld persists edits in an existing streaming world");
+      const auto runner_cell = deleted + glm::ivec3(5, 0, 0);
+      world.BlockWorld.SetBlock(runner_cell, 8);
+      world.ModifiedChunks.insert(floor);
+      Progress runner_retry;
+      with_fixture_core(
+          [&]()
+          {
+            UWorldOperationRunner runner(core, world);
+            WorldRunnerRequest request;
+            request.op = WorldRunnerOp::Save;
+            request.saveConfigAfter = false;
+            runner.Start(request);
+            const auto runner_by =
+                std::chrono::steady_clock::now() + std::chrono::seconds(12);
+            while (!runner.Tick(runner_retry, 1))
+            {
+              require(std::chrono::steady_clock::now() < runner_by,
+                      "successful save runner bound");
+              std::this_thread::yield();
+            }
+            require(runner.Succeeded() && !runner.HasSaveFailure() &&
+                        !runner.ShouldCloseApplication(),
+                    "runner retry reports successful save");
+          });
+      UBlockWorld runner_cold;
+      require(
+          world.ModifiedChunks.empty() &&
+              storage.LoadTerrainColumn(column, runner_cold, folder.string(),
+                                        *world.BlockRegistry, -17, -64) > 0 &&
+              runner_cold.GetBlock(runner_cell) == 8,
+          "runner retry persists resident edit");
       // The unload path must wait for real ACKs and reject an ACK for a
       // snapshot which changed while the worker owned its immutable bytes.
       world.ProceduralTemplate.AsyncChunkIo = true;
@@ -585,6 +672,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
            {"folder_switch_checked", io_failure},
            {"cooperative_write_fence_checked", io_failure},
            {"full_core_save_failure_and_retry_checked", true},
+           {"runner_failure_gates", runner_failures},
+           {"runner_retry_checked", true},
            {"metadata_only_preserved_dirty", true},
            {"snapshot_fence_checked", io_failure},
            {"io_timeout_and_retry_checked", io_failure},

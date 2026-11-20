@@ -71,6 +71,7 @@ namespace cutum
 {
 
 struct RuntimeOverlayFlushResult;
+class UCore;
 class UChunkRenderDemandStore;
 
 /// Draw readiness SoT (TD-ARCH-028). Telemetry unfinished/holes derive from
