@@ -23,7 +23,12 @@
 
 ## Первый непокрытый переход: Q01 admission → record
 
-- Статус: SOURCE SUSPICION, не воспроизведённый дефект.
+- Статус: CONFIRMED → FIXED для FirstMesh no-op admission. `s4-q01-refusal-fixed-20261120-native/terrain-save-probe/report.json`: PASS; dispatched=1, inflight_job=0, pending_token=0, stage=RenderReady; actual geometry replacement publication count 1→2, presentation debt 1→0. Общий smoke остаётся UNTESTED, это scoped API proof.
+- Зависимые проверки: `s4-q01-policy-test-20261120.log`, Release 3/3 PASS (scheduler, cruise SoT, job-stage). Первый ctest не нашёл scheduler EXE; после сборки именно этой цели выполнен повтор. Это setup failure, не падение гипотезы.
+- Репродукция: `build/desktop-msvc/s4-q01-refusal-repro-20261120-native/terrain-save-probe/report.json`: FAIL; dispatched=1, dirty=false, actual_inflight=false, render_ready=true, но inflight_job=1 и pending_token=1, stage=Meshing. Native process exit0 не подменяет FAIL API; общий smoke UNTESTED.
+- Фиксированные входы: существующая CPU/Flat native фикстура, профиль -48..-33, опубликованный coord=(0,-3,0), FirstMesh через реальный Scheduler/DrainBudget, admit_batch=0. После отказа штатная проверка mutation/replacement подтверждает актуальную CPU publication. Это no-op/admission refusal; отдельный отказ при незавершённом demand остаётся открытым.
+- Команда: `python tools/engine_smoke_run.py --world World_261 --artifacts build/desktop-msvc/s4-q01-refusal-fixed-20261120-native --startup-only --probe-terrain-save-failure --flat-publication`. Release build через `tools/release_build_with_provenance.py`, native на копии мира. Локальный 30s timeout неприменим к этому harness: startup использует штатный bounded timeout runner, аналогично существующей Flat строке S4.01.
+- Исправление: AdvanceColumn больше не присваивает synthetic inflight token ни FirstMesh, ни seam admission request. Actual pending продолжает выводиться из dirty/capture/CPU/GPU owners; relight исключение обобщено на все flow tickets.
 - Source: ColumnFlowExecutor::AdvanceColumn stamps rec.inflight_job и rec.pending.stage=Meshing для FirstMesh/RemeshSeam до AdmitFocusVisibleMissing/RemeshColumnSeamTicket. Relight tickets уже исключены предыдущим исправлением.
 - Утверждение: отказ/no-op admission без actual dirty/capture/CPU/GPU owner не оставляет запись с фиктивным running token, мешающим повторному законному demand.
 - Фикстура: один signed-height resident column, явное управление admission и проверяемая потребность в mesh; без GL, если actual owner доступен локально. Сначала выбрать существующий UWorld harness и зафиксировать команду до запуска.

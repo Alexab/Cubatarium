@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q01.firstmesh-noop-admission",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-q01-refusal-repro-20261120-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-q01-refusal-fixed-20261120-native/terrain-save-probe/report.json",
+      "scope": "Actual Scheduler/DrainBudget FirstMesh admission budget zero: ghost inflight/pending token reproduced then removed; current Flat publication and subsequent geometry replacement PASS. Release policy3/3 PASS. Overall native smoke UNTESTED; outstanding demand refusal, seam and other Q01-Q12 obligations remain OPEN."
+    },
+    {
       "id": "S4.01",
       "status": "COMPLETE",
       "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",

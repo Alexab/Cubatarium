@@ -520,20 +520,11 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
         ticket, world.GetColumnEmergeState(ground), missing, pending, dark);
     auto &rec = world.GetColumnRecords().GetOrCreate(work.column);
     rec.desired = desired;
-    // Flow relight tickets only request admission into the persistence queue;
-    // they are not the light job itself. Persistence/async state owns that
-    // work. Marking the ticket as an in-flight job here made PendingLight debt
-    // look permanently owned after a FIFO admission refusal.
-    const bool record_tracks_job =
-        !pending && !world.IsPendingLightBeforeMesh(work.column);
-    if (record_tracks_job)
-    {
-      rec.inflight_job = frame_counter_ == 0 ? 1 : frame_counter_;
-      // Q6: stamp pending immediately so RecordWants* / Decide* see in-flight
-      // before the next SyncFocusRing (stops legacy re-feed mismatch spam).
-      rec.pending.token = rec.inflight_job;
-      rec.pending.stage = ColumnJobStage::Meshing;
-    }
+    // Every flow ticket requests admission, including FirstMesh and seam
+    // repair. It is not a worker job. A refused/no-op admission must not
+    // manufacture a token which survives the next world-truth sync and
+    // suppresses recovery. Dirty/capture/CPU/GPU owners supply actual pending
+    // state through SyncColumnJobStageFromWorld after admission.
   }
   const glm::ivec2 *only = work.scan_full_focus ? nullptr : &work.column;
   glm::vec2 forward_xz = world.GetLastMovementDirXz();

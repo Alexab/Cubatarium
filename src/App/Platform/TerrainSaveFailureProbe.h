@@ -133,6 +133,29 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(!physical() && mesh.HasDrawableGreedyMesh(coord) && world.IsColumnRenderReady({0,0,0}),
               "Flat actual publication completes without a physical light certificate");
       const auto previous=cache.GetPublishCount(coord);
+      // S4.02: a flow ticket requests admission; a zero admission budget
+      // cannot manufacture a running mesh owner in an already settled column.
+      {
+        struct AdmissionDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~AdmissionDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UColumnFlowExecutor executor;
+        executor.Scheduler().Enqueue({0,0},ColumnWorkKind::FirstMesh,100);
+        const int dispatched=executor.DrainBudget(world,1,{0,0,0},1,0);
+        executor.SyncColumnJobStageFromWorld(world,{0,0});
+        const auto &record=world.GetColumnRecords().GetOrCreate({0,0});
+        report["flow_admission_refusal"]={{"dispatched",dispatched},
+            {"inflight_job",record.inflight_job},{"pending_token",record.pending.token},
+            {"dirty",mesh.IsChunkMeshDirty(coord)},
+            {"actual_inflight",mesh.HasInflightMeshBuild(coord)},
+            {"render_ready",world.IsColumnRenderReady({0,0,0})},
+            {"stage",static_cast<int>(executor.GetColumnJobStage({0,0}))}};
+        require(dispatched==1 && record.inflight_job==0 && record.pending.token==0 &&
+                    executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+                "refused FirstMesh admission leaves no fictitious running owner");
+      }
       world.BlockWorld.SetBlock({3,-40,3},8);
       checkpoint("stale_geometry");
       require(!physical() && !world.IsColumnRenderReady({0,0,0}),"Flat geometry mutation invalidates completion");
