@@ -19,6 +19,9 @@ def validate_plan(plan, *, round_trip=False):
     if (not isinstance(plan, dict) or plan.get("schema") != "engine-native-world-actions.v1" or
             not isinstance(plan.get("entries"), list) or not 1 <= len(plan["entries"]) <= 8):
         raise ValueError("invalid bounded native world action plan")
+    required=plan.get('after_waypoints',0)
+    if not integer(required) or not 0 <= required <= 2 or (required and not round_trip):
+        raise ValueError('invalid action waypoint gate')
     seen = set()
     for entry in plan["entries"]:
         if not isinstance(entry, dict):
@@ -159,6 +162,14 @@ def evaluate(artifacts: Path, world: Path, plan: dict, route_evidence: dict | No
             if len(initial) != 1 or len(final) != 1:
                 raise ValueError("ambiguous action observation")
             initial, final = initial[0], final[0]
+            required=plan.get('after_waypoints',0)
+            if required:
+                if any('waypoints_visited' not in r for r in (initial,final)):
+                    return result('UNTESTED','missing_action_waypoint_identity')
+                if any(not integer(r['waypoints_visited']) or r['waypoints_visited']<0 for r in (initial,final)):
+                    raise ValueError('invalid action waypoint identity')
+                if initial['waypoints_visited']<required or final['waypoints_visited']<initial['waypoints_visited']:
+                    return result('FAIL','scheduled_action_started_too_early')
             for row in (initial, final):
                 if (row.get("resident") is not True or row.get("success") is not True or
                         any(not integer(row.get(k)) or not 0 <= row[k] <= 65535

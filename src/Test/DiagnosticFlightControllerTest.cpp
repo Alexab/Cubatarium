@@ -46,6 +46,28 @@ int main()
 {
   {
     DiagnosticFlightController bot;
+    bot.SetRoute({{{0, 0, 0}, true}, {{3, 5, 0}, false}}, true);
+    DiagnosticFlightObservation o{{22, -46.88f, 51}, 180, 0, 0, true, true};
+    for (int tick = 0; tick < 800 && bot.VisitedWaypoints() == 0; ++tick)
+    {
+      o.time += .05;
+      const auto action = bot.Tick(o, Clear);
+      Expect(!action.up && !action.down && !action.forward,
+             "grounded observation must not jump or move before inspection "
+             "completes");
+      o.yaw = action.yaw;
+      o.pitch = action.pitch;
+    }
+    Expect(bot.VisitedWaypoints() == 1 && bot.InspectionCaptureCount() == 12,
+           "grounded first waypoint completes its actual stable panorama");
+    o.time += .05;
+    const auto depart = bot.Tick(o, Clear);
+    Expect(
+        bot.State() == DiagnosticFlightState::Takeoff && !depart.flying,
+        "departing the grounded inspection starts the normal walking takeoff");
+  }
+  {
+    DiagnosticFlightController bot;
     bot.SetRoute({}, true);
     DiagnosticFlightObservation o{{0, -48, 0}, 0, 0, 0, true};
     const auto action = bot.Tick(o, Clear);

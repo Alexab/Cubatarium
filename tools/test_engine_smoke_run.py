@@ -196,6 +196,33 @@ class IsolatedFixtureTest(unittest.TestCase):
         self.assertIn("--no-hold-forward", manifest["command"])
         self.assertEqual(self.config.read_bytes(), self.original)
 
+    def test_source_inspection_retains_dense_probes_and_original_saved_world(self):
+        import test_engine_source_observation as observations
+        fixture=observations.SourceObservationTest();fixture.setUp()
+        scene=fixture.scene
+        (self.runtime/'Cubatarium.exe').write_bytes(b'test executable identity')
+        (self.world/'users.json').write_text(json.dumps({'Username':{'position':scene['starting_eye']}}),encoding='utf-8')
+        fingerprint=world_fingerprint(self.world)
+        plan=dict(schema='engine-native-world-actions.v1',**fixture.plan)
+        child=Mock(pid=123,returncode=0)
+        with patch.object(engine_smoke_run,'ROOT',self.root), \
+             patch('flight_sim_run.exe_writable',return_value=True), \
+             patch.object(engine_smoke_run.subprocess,'check_output',return_value='test-sha'), \
+             patch.object(engine_smoke_run.subprocess,'Popen',return_value=child) as launch:
+            verdict=engine_smoke_run.run('Saved',self.artifacts,round_trip=True,
+                observe_bound_light=True,world_actions=plan,source_observation_scene=scene)
+        route=json.loads((self.artifacts/'bot-route.json').read_text(encoding='utf-8'))
+        self.assertEqual(route['waypoints'][0]['position'],[0,0,0])
+        self.assertEqual(len(route['waypoints'][0]['inspection_targets']),9)
+        self.assertEqual(route['world_actions']['after_waypoints'],1)
+        env=launch.call_args.kwargs['env']
+        self.assertEqual(env['CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS'],'1')
+        self.assertEqual(env['CUBA_RGB_REFERENCE'],'1')
+        self.assertNotIn('CUBA_VISUAL_BLACK_TRACE_CENTER_EVERY_FRAME',env)
+        self.assertEqual(world_fingerprint(self.world),fingerprint)
+        self.assertEqual(self.config.read_bytes(),self.original)
+        self.assertNotEqual(verdict['status'],'PASS')
+
     def test_open_plane_enables_normal_viewmodel_without_qa_injection(self):
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         child = Mock(pid=123, returncode=0)

@@ -43,6 +43,13 @@ int main()
   const auto parse = [](const json &r)
   { return ParseDiagnosticWorldActions(r, "EngineSmoke_test"); };
   Expect(parse(route).at(0).cell.y == -44, "negative cell lost");
+  Expect(DiagnosticWorldActionAfterWaypoints(route.at("world_actions")) == 0,
+         "legacy action start gate changed");
+  Expect(!DiagnosticWorldActionMayStart(false, false, 1, 1) &&
+             !DiagnosticWorldActionMayStart(true, false, 0, 1) &&
+             DiagnosticWorldActionMayStart(true, false, 1, 1) &&
+             !DiagnosticWorldActionMayStart(true, true, 1, 1),
+         "action must await actual completed waypoint and execute once");
   Expect(ParseDiagnosticWorldActions(json::object(), "World_261").empty(),
          "default changed");
   const auto reject = [&](const json &r)
@@ -64,6 +71,18 @@ int main()
     r["world_actions"]["entries"][0]["cell"][0] = bad;
     reject(r);
   }
+  for (const auto &bad :
+       {json(true), json(1.5), json(-1), json(3), json(uint64_t(1) << 63)})
+  {
+    auto gated = route;
+    gated["world_actions"]["after_waypoints"] = bad;
+    reject(gated);
+  }
+  auto gated = route;
+  gated["world_actions"]["after_waypoints"] = 1;
+  Expect(parse(gated).size() == 1 && DiagnosticWorldActionAfterWaypoints(
+                                         gated.at("world_actions")) == 1,
+         "explicit post-inspection action rejected");
   auto r = route;
   r["isolated_world"] = "World_261";
   reject(r);

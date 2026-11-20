@@ -124,8 +124,11 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     LastTick_ = StageStarted_ = LastProgress_ = o.time;
     ProgressPosition_ = o.position;
     TakeoffY_ = o.position.y;
-    State_ = o.grounded ? DiagnosticFlightState::Takeoff
-                        : DiagnosticFlightState::Travel;
+    const bool needs_departure =
+        !Route_.empty() &&
+        glm::length(Route_.front().position - o.position) >= kArrive;
+    State_ = o.grounded && needs_departure ? DiagnosticFlightState::Takeoff
+                                           : DiagnosticFlightState::Travel;
   }
   const float dt =
       static_cast<float>(std::clamp(o.time - LastTick_, 0.0, 0.25));
@@ -235,6 +238,14 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     else
       ++Waypoint_;
     LastProgress_ = o.time;
+    return command;
+  }
+  if (o.grounded && target.y > o.position.y + kArrive)
+  {
+    State_ = DiagnosticFlightState::Takeoff;
+    TakeoffY_ = o.position.y;
+    StageStarted_ = o.time;
+    command.flying = false;
     return command;
   }
   while (DetourIndex_ < Detour_.size() &&

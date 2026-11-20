@@ -1651,6 +1651,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
   DiagnosticFlightController diagnostic_bot;
   std::vector<DiagnosticWorldAction> world_actions;
+  unsigned world_actions_after_waypoints = 0;
   bool startup_observation = false;
   if (!options.DiagnosticRoutePath.empty())
   {
@@ -1667,6 +1668,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       std::ifstream input(options.DiagnosticRoutePath);
       const auto route = nlohmann::json::parse(input);
       world_actions = ParseDiagnosticWorldActions(route, options.WorldName);
+      if (!world_actions.empty())
+        world_actions_after_waypoints =
+            DiagnosticWorldActionAfterWaypoints(route.at("world_actions"));
       if (route.value("schema", "") != "diagnostic-flight-route.v1" ||
           !route.at("waypoints").is_array() ||
           (route.at("waypoints").empty() &&
@@ -1945,6 +1949,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         world_action_observations.push_back(
             {{"phase", initial ? "initial" : "final"},
              {"frame_epoch", world->GetStreamingFrameEpoch()},
+             {"waypoints_visited", diagnostic_bot.VisitedWaypoints()},
              {"cell", {action.cell.x, action.cell.y, action.cell.z}},
              {"section", {coord.x, coord.y, coord.z}},
              {"expected_id", expected},
@@ -3093,13 +3098,18 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                 TraceChunkResidencyRuntimeOwner(
                     &world->GetBlockWorld().GetChunkManager(), focus_chunk);
                 trace_residency_snapshot("runtime_initial");
-                observe_world_actions(true, camera->GetPosition());
                 if (route_line_tracking_enabled)
                 {
                   route_line_origin = camera->GetPosition();
                   route_line_origin_captured = true;
                 }
               }
+              if (!world_actions.empty() &&
+                  DiagnosticWorldActionMayStart(
+                      start_focus_captured, world_actions_started,
+                      diagnostic_bot.VisitedWaypoints(),
+                      world_actions_after_waypoints))
+                observe_world_actions(true, camera->GetPosition());
               if (route_line_tracking_enabled && route_line_origin_captured)
               {
                 constexpr float kDegreesToRadians = 0.01745329251994329577f;

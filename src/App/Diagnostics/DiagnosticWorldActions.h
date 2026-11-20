@@ -28,6 +28,22 @@ struct DiagnosticWorldAction
   std::optional<std::string> replacement;
 };
 
+inline unsigned DiagnosticWorldActionAfterWaypoints(const nlohmann::json &plan)
+{
+  if (!plan.contains("after_waypoints"))
+    return 0;
+  const auto &count = plan.at("after_waypoints");
+  if (!count.is_number_integer() || count < 0 || count > 2)
+    throw std::runtime_error("invalid action waypoint gate");
+  return count.get<unsigned>();
+}
+
+inline bool DiagnosticWorldActionMayStart(bool cohort_ready, bool started,
+                                          size_t visited, unsigned required)
+{
+  return cohort_ready && !started && visited >= required;
+}
+
 // Separate from the movement controller. Admission is bounded and requires an
 // explicitly named isolated world; mutations additionally require a return
 // route.
@@ -39,6 +55,9 @@ ParseDiagnosticWorldActions(const nlohmann::json &route,
   if (!route.contains("world_actions"))
     return result;
   const auto &plan = route.at("world_actions");
+  if (DiagnosticWorldActionAfterWaypoints(plan) &&
+      route.value("purpose", "") != "round_trip")
+    throw std::runtime_error("scheduled action requires a moving return route");
   if (plan.at("schema") != "engine-native-world-actions.v1" ||
       route.at("isolated_world") != world ||
       world.rfind("EngineSmoke_", 0) != 0 ||

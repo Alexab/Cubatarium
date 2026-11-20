@@ -57,6 +57,18 @@ class WorldActionsTest(unittest.TestCase):
         self.path.write_bytes(binary(material=560))
         self.assertEqual(self.run_evidence()['reason'],'persisted_material_mismatch')
 
+    def test_scheduled_action_requires_actual_completed_waypoint_identity(self):
+        self.plan['after_waypoints']=1;self.write_route()
+        self.assertEqual(self.run_evidence()['status'],'UNTESTED')
+        self.observation['observations'][0]['waypoints_visited']=0
+        self.observation['observations'][1]['waypoints_visited']=3
+        self.assertEqual(self.run_evidence()['status'],'FAIL')
+        self.observation['observations'][0]['waypoints_visited']=1
+        self.assertEqual(self.run_evidence()['status'],'PASS')
+        for value in (True,-1,3,1.5):
+            self.plan['after_waypoints']=value
+            with self.assertRaises(ValueError):validate_plan(self.plan,round_trip=True)
+
     def test_forged_api_or_held_section_cannot_pass(self):
         for field, value in [('api_called',False),('api_success',False),('reach_blocks',7),
                              ('before_id',376),('incarnation',19),('resident',False)]:

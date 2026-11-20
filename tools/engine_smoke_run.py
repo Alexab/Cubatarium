@@ -345,7 +345,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         render_distance: int | None = None, sprint: bool = False,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
         synchronous_meshing: bool = False, round_trip: bool = False,
-        world_actions: dict | None = None, observe_bound_light: bool = False) -> dict:
+        world_actions: dict | None = None, observe_bound_light: bool = False,
+        source_observation_scene: dict | None = None) -> dict:
     if type(observe_bound_light) is not bool:
         raise ValueError("bound light observation must be boolean")
     if not isinstance(round_trip, bool) or (round_trip and startup_only):
@@ -353,6 +354,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
     if world_actions is not None:
         from engine_world_actions import validate_plan
         validate_plan(world_actions, round_trip=round_trip)
+    if source_observation_scene is not None and (
+            not observe_bound_light or not round_trip or fixture_scene is not None or world_actions is None):
+        raise ValueError('source observation requires retained world, bound observation and return action')
     if (isinstance(capture_encode_delay_ms, bool) or
             not isinstance(capture_encode_delay_ms, int) or
             not 0 <= capture_encode_delay_ms <= 10000):
@@ -487,6 +491,12 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if world_actions is not None:
             bot_route["isolated_world"] = fixture.name
             bot_route["world_actions"] = world_actions
+        if source_observation_scene is not None:
+            from engine_source_observation import build_route
+            users=json.loads((fixture/'users.json').read_text(encoding='utf-8'))
+            bot_route=build_route(bot_route,source_observation_scene,world_actions,users['Username']['position'])
+            (artifacts/'source-observation-scene.json').write_text(
+                json.dumps(source_observation_scene,indent=2)+'\n',encoding='utf-8')
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -511,6 +521,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "exe_sha256": digest(exe), "config_sha256": digest(runtime / "config.json"),
                  "git_sha": git_sha,
                  "observe_bound_light": observe_bound_light,
+                 "source_observation_scene": source_observation_scene,
                  "fixture_scene": scene,
                  "prepared_world_sha256": world_fingerprint(fixture),
                  "bot_route_sha256": digest(bot_path),
@@ -738,6 +749,8 @@ def main() -> int:
     parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     parser.add_argument("--observe-bound-light", action="store_true",
                         help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
+    parser.add_argument('--source-observation-scene',type=Path,
+                        help='declared saved RGB cave: inspect emitters before a waypoint-gated source edit; no world preparation')
     args = parser.parse_args()
     import math
     if (not all(math.isfinite(v) for v in [args.fly_seconds, args.stop_seconds,
@@ -758,6 +771,7 @@ def main() -> int:
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
                   round_trip=args.round_trip,
                   observe_bound_light=args.observe_bound_light,
+                  source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
     print(json.dumps(verdict, ensure_ascii=False))
     return {"PASS": 0, "FAIL": 1, "UNTESTED": 2}[verdict["status"]]
