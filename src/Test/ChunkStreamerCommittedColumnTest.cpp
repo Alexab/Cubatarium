@@ -152,9 +152,15 @@ static void TestAirOnlyColumnLifecycle()
     UBlockRegistry registry(nullptr);
     const glm::ivec3 column(40, 0, -3);
     const auto cell = glm::ivec3(40, -4, -3) * CHUNK_SIZE;
-    faulted.SetBlock(cell, 8);
-    faulted.GetChunkManager().MarkTerrainColumnReadUnresolved(column);
+    for (int x = 0; x < CHUNK_SIZE; ++x)
+      for (int z = 0; z < CHUNK_SIZE; ++z)
+        faulted.SetBlock(cell + glm::ivec3(x, 0, z), 8);
     UChunkStreamer streamer(faulted, registry, 1, 0, 319, -64);
+    Expect(streamer.IsTerrainChunkCompleteCached(column),
+           "cache fixture is complete before failed read");
+    faulted.GetChunkManager().MarkTerrainColumnReadUnresolved(column);
+    Expect(!streamer.IsTerrainChunkCompleteCached(column),
+           "unresolved read overrides an earlier complete cache entry");
     streamer.SetMaxUnloadOpsPerFrame(1);
     int saves = 0, unloads = 0;
     streamer.SetCallbacks(
@@ -172,6 +178,27 @@ static void TestAirOnlyColumnLifecycle()
     Expect(saves == 0 && unloads == 0 && faulted.GetBlock(cell) == 8,
            "unresolved disk reads cannot authorize geometry save/purge or "
            "retirement in any unload mode");
+    int generated = 0, requested = 0;
+    streamer.SetCallbacks(nullptr, nullptr, nullptr,
+                          [&](int x, int z)
+                          {
+                            if (UChunkManager::WorldToChunk({x, 0, z}) ==
+                                column)
+                              ++generated;
+                          });
+    streamer.SetAsyncGeneration(true);
+    streamer.SetAsyncCallbacks(
+        [&](glm::ivec3 key, int, uint64_t)
+        {
+          if (key == column)
+            ++requested;
+        },
+        [](glm::ivec3) { return true; });
+    UFrameDeadline::Get().BeginFrame(0);
+    streamer.EnsureCollisionChunks(cell);
+    Expect(faulted.GetBlock(cell) == 8 && generated == 0 && requested > 0,
+           "generic ensure retries disk ownership without clearing edits or "
+           "generating over a failed read");
   }
   for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
     for (bool edit : {false, true})

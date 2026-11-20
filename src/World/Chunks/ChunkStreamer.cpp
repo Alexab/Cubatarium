@@ -187,6 +187,12 @@ bool UChunkStreamer::IsTerrainChunkCompleteCached(glm::ivec3 groundCoord) const
   {
     groundCoord.y = 0;
   }
+  if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord))
+  {
+    if (TerrainCompleteCache.erase(groundCoord))
+      ++TerrainEvidenceRevision;
+    return false;
+  }
   const auto cached = TerrainCompleteCache.find(groundCoord);
   if (cached != TerrainCompleteCache.end())
   {
@@ -345,6 +351,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
                                                     int max_sub_columns,
                                                     bool only_empty_columns)
 {
+  if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(chunkCoord))
+    return false;
   if (!OnGenerateColumn || max_sub_columns <= 0)
   {
     return IsTerrainChunkCompleteCached(chunkCoord);
@@ -462,6 +470,23 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
     return false;
   }
 
+  if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(chunkCoord))
+  {
+    ProcedurallyGenerated.erase(chunkCoord);
+    InvalidateTerrainCompleteCache(chunkCoord);
+    if (forceSync && OnLoadChunk)
+      OnLoadChunk(chunkCoord, demand_id);
+    else if (OnRequestAsyncChunk)
+    {
+      OnRequestAsyncChunk(chunkCoord, ChunkLoadPriorityFor(chunkCoord),
+                          demand_id);
+      note_queued();
+    }
+    else if (OnLoadChunk)
+      OnLoadChunk(chunkCoord, demand_id);
+    return IsTerrainChunkCompleteCached(chunkCoord);
+  }
+
   // Hole / NearLoad path: skip IsTerrainChunkComplete column scans — one miss
   // was 80ms+ and blew the load budget (CB spike streamer≈83). Async enqueue
   // only outside underfeet; underfeet keeps full Ensure for F2 cold mesh.
@@ -547,7 +572,10 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   if (existing == nullptr)
   {
-    if (OnLoadChunk && OnLoadChunk(chunkCoord, demand_id))
+    const bool loaded = OnLoadChunk && OnLoadChunk(chunkCoord, demand_id);
+    if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(chunkCoord))
+      return false;
+    if (loaded)
     {
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
@@ -1117,7 +1145,8 @@ void UChunkStreamer::Update(glm::ivec3 cameraBlockPos, const glm::vec3 &eyePos,
       const glm::ivec3 coord(cx, 0, cz);
       // Trust ProcedurallyGenerated — IsTerrainChunkCompleteCached here caused
       // full-column scans on cache misses across the whole RD (CB streamer spikes).
-      if (ProcedurallyGenerated.count(coord))
+      if (ProcedurallyGenerated.count(coord) &&
+          !World.GetChunkManager().HasUnresolvedTerrainColumnRead(coord))
       {
         continue;
       }
