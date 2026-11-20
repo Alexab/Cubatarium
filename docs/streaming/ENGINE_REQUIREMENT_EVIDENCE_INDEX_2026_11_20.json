@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.04",
+  "current_package": "S2.05",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -750,6 +750,62 @@
         "Full decor mesh integration Release test PASS and prescribed Cubatarium Release build/source provenance PASS."
       ],
       "scope_limit": "Zero-mesh dependency/certificate and local repair behavior. Packed admission tests are not actual GPU dispatch/backend parity. Native hole/visual reference matrix and complete eviction/cancel/ABA/performance lifecycle remain in S4..S6; no general light/visual acceptance inferred."
+    },
+    {
+      "id": "S2.04",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src\\Test\\NegativeHeightStorageTest.cpp",
+          "sha256": "2e678d359d8d8b0c4d3a4906470413149831eab509b70c46b911064dcfd69302"
+        },
+        {
+          "path": "src\\Test\\KnownAirTerrainSlicePolicyTest.cpp",
+          "sha256": "a123af53b1d18f53d4986482689469b9852974950b0f6621ecbd27936c5099e2"
+        },
+        {
+          "path": "src\\World\\Chunks\\KnownAirTerrainSlice.h",
+          "sha256": "07cc38dc922f87c6b10a018f8037acebb985c976f1c4f1be453bb5edf7054e1b"
+        },
+        {
+          "path": "src\\World\\Core\\BlockWorld.cpp",
+          "sha256": "22a8335815ea77b2e9d0646084841147d2baf689557f75b9058cd77a8379d068"
+        },
+        {
+          "path": "src\\World\\Core\\World.cpp",
+          "sha256": "c38c06ec84e88aaf520d467ab063e4a996acf72b3f2c5ac67a0c6dbf9ae6f75a"
+        },
+        {
+          "path": "src\\Test\\DecorMeshIntegrationTest.cpp",
+          "sha256": "6dc592e67cff6cf5decfaaad91ff11d26dc7c6fe16f87656ae2073b8246a8456"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-authority-build-20261120.log",
+          "sha256": "3d058b4b5729ed35e40e17f9d0f8cd5ffaa54d20011cc8cb5859904664488a3f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-authority-test-20261120.log",
+          "sha256": "c88110d7a8f52cef79ee939ea06883286780db9fab41dd9f9729cbeb4af4a6c6"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-generation-test-20261120.log",
+          "sha256": "5bdfb229dea1f3771b6f6a23f316691968c23028b638115676443003e769a055"
+        },
+        {
+          "path": "build\\desktop-msvc\\physical-current-read-failure-stone-rd4-20261120-native\\disk-read-failure-evidence.json",
+          "sha256": "9d60b9cf8e8512606f47e4d50fbe6fff8b180bea35058dc2e442a2df200ad7bb"
+        }
+      ],
+      "verified": [
+        "Actual BlockWorld regression: one lower resident solid section leaves upper data QueryBlock Unloaded and its input stamp Unknown. No air inference from residency alone.",
+        "Declared producer completion changes knowledge without voxel writes and invalidates the retained Unknown stamp; pending save immediately invalidates the KnownAir stamp, completion restores the same fact.",
+        "Existing real serializer/load tests distinguish field allocation/raw metadata from owned decoded AIR; malformed/truncated/ambiguous frames, stale/cancelled/wrong-column commits cannot mint AIR authority.",
+        "Actual storage membership regressions cover incomplete producer, pending writes, unloaded saved internal data, signed removal, cold complete index and independent internal absence surviving an upper island.",
+        "UWorld evidence callbacks include terrain/disk producer identity/revision, folder and profile; missing input stamps are revalidated. InputStampValidationBatch is explicitly one read-only call, not a retained cross-update cache.",
+        "Existing physical unknown-neighbor integration keeps unresolved geometry deferred across sync/async, reserved and neighbor-pressure variants; prior full integration PASS retained.",
+        "Current two Release policy/storage tests PASS. Historical native decode-failure preservation/recovery PASS retained as supplementary evidence for actual stored holders, with original executable scope."
+      ],
+      "scope_limit": "Unknown versus computed/decoded/producer-proven AIR knowledge. Test-only addition; no new native run or full EXE rebuild needed. Does not certify physical light merely from AIR, arbitrary external save edits, all cancellation/lifecycle/backend cases or S3..S6 completion."
     }
   ],
   "completed_handoff": {

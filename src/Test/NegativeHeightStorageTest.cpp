@@ -1311,6 +1311,35 @@ static void TestLoadedAirSlice()
     Expect(!decode_json(bad).GetDecodedAirSlice(coord),
            "malformed or ambiguous sparse JSON never proves AIR");
 
+  {
+    UBlockWorld lower_only;
+    const glm::ivec3 lower(coord.x, coord.y-1, coord.z);
+    lower_only.GetChunkManager().EnsureChunk(lower);
+    lower_only.GetChunkManager().GetChunk(lower)->SetBlockLocal({1, 1, 1}, 8);
+    const auto unknown = lower_only.CaptureInputStamp(coord, false, true);
+    Expect(lower_only.QueryBlock(cell).IsUnloaded() &&
+               !lower_only.IsKnownAbsentAirChunk(coord) &&
+               unknown.missingEvidence == MissingChunkEvidence::Unknown,
+           "one lower resident section cannot prove an unloaded upper section is AIR");
+    bool complete = false, pending = false;
+    lower_only.SetKnownAirColumnFloorQuery(
+        [&](glm::ivec3) -> std::optional<int>
+        { return complete && !pending ? std::optional<int>(coord.y) : std::nullopt; });
+    Expect(!lower_only.IsKnownAbsentAirChunk(coord),
+           "an incomplete declared producer retains unknown geometry");
+    complete = true;
+    Expect(lower_only.IsKnownAbsentAirChunk(coord) &&
+               !lower_only.InputStampStillMatches(unknown),
+           "producer completion changes absence knowledge without a voxel write");
+    const auto known = lower_only.CaptureInputStamp(coord, false, true);
+    pending = true;
+    Expect(!lower_only.IsKnownAbsentAirChunk(coord) &&
+               !lower_only.InputStampStillMatches(known),
+           "pending persistence immediately revokes the retained AIR stamp");
+    pending = false;
+    Expect(lower_only.InputStampStillMatches(known),
+           "current completed producer evidence restores the same absence fact");
+  }
   UBlockWorld world;
   auto &manager = world.GetChunkManager();
   manager.EnsureSectionLightField(coord);
