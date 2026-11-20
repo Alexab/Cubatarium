@@ -3473,6 +3473,17 @@ cubatarium_add_test(NAME inputs_still_valid_visual_test
         src/Test/InputsStillValidVisualTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
+  add_executable(gpu_light_transport_driver_test
+    src/World/Lighting/GpuLightTransport.cpp
+    src/Test/GpuLightTransportDriverTest.cpp)
+  target_include_directories(gpu_light_transport_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+  target_link_libraries(gpu_light_transport_driver_test PRIVATE GLEW::GLEW OpenGL::GL glfw)
+  if(WIN32)
+    target_compile_definitions(gpu_light_transport_driver_test PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME gpu_light_transport_driver_test COMMAND $<TARGET_FILE:gpu_light_transport_driver_test>)
+  set_tests_properties(gpu_light_transport_driver_test PROPERTIES
+    LABELS "gpu;integration;lighting" SKIP_RETURN_CODE 77 TIMEOUT 30)
   add_executable(section_light_atlas_driver_test
     src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Lighting/SectionLightBindingTable.cpp

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S3.06.gpu-transport-primitive",
+      "status": "PARTIAL_OPEN",
+      "card": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s3-gpu-transport-receipt-20261120.json",
+      "scope": "Real GL4.3 shader transport/readback matches independent oracle over 180180 packed cells; actual shader fault detected; source/binary restored. Snapshot/World integration and real CPU fallback remain open."
+    },
+    {
       "id": "S3.05",
       "status": "COMPLETE",
       "card": "S3_05_PERSISTED_CERTIFICATE_CARD_2026_11_20.md",
