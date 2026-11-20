@@ -39,6 +39,24 @@
 
 namespace cutum
 {
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+inline bool WaitForProbeMeshCapture(UChunkMeshCache &cache,UBlockWorld &world,
+                                    UBlockRegistry &registry,glm::ivec3 target,
+                                    uint64_t revision)
+{
+  cache.PrefetchMeshCapture(world,target,&registry);
+  const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+  do {
+    cache.PumpCaptureWorkerCommits(&world,&registry);
+    if(cache.GetCaptureStore().TryGet(world,target,revision).has_value()) return true;
+    std::this_thread::yield();
+  } while(std::chrono::steady_clock::now()<deadline);
+  return false;
+}
 // Opt-in native API probe. All fixtures are new subdirectories of a previously
 // nonexistent output directory; no live world, config or source save is edited.
 inline void RunTerrainSaveFailureProbe(UCore &core)
@@ -330,6 +348,63 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(!physical() && cache.GetPublishCount(coord)>previous && world.IsColumnRenderReady({0,0,0}) &&
                   world.SampleRequiredPresentationCoverage().publication_unready_sections==0,
               "Flat geometry replacement restores completion without relight");
+      {
+        struct OverflowDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~OverflowDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        settings.AsyncMeshing=true;
+        mesh.SetRenderSettings(settings);
+        mesh.SetMeshRebuildFocus({0,0,0},4,1);
+        mesh.SetMeshSnapshotBudgetMs(1000);
+        mesh.SetMeshEmergeTotalBudgetMs(1000);
+        cache.SetMeshCompletedCapacity(1);
+        const auto progress=[&](const char *phase) {
+          Json state={{"phase",phase},{"completed",cache.GetMeshCompletedSize()},
+              {"overflow",cache.GetMeshCompletedDiscardedOverflow()},
+              {"inflight",cache.GetAsyncBuilderInFlightCount()}};
+          std::ofstream(root/"mesh-overflow-progress.json") << state.dump(2) << '\n';
+        };
+        progress("initialized");
+        world.BlockWorld.SetBlock({4,-40,4},8);
+        world.BlockWorld.SetBlock({24,-40,8},8);
+        const auto schedule=[&](glm::ivec3 target) {
+          progress("before_capture");
+          cache.MarkDirtyPriority(target);
+          const auto revision=cache.GetChunkMeshRevision(target);
+          require(WaitForProbeMeshCapture(cache,world.BlockWorld,*world.BlockRegistry,target,revision),
+                  "overflow fixture captures actual current inputs");
+          progress("captured");
+          const auto stats=cache.RebuildDirtyChunksWithStats(world.BlockWorld,*world.BlockRegistry,
+                                                           0,1,false,0,1000,true);
+          require(stats.Scheduled==1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+                  "overflow fixture completes one real worker job");
+          progress("worker_complete");
+        };
+        const auto overflow_before=cache.GetMeshCompletedDiscardedOverflow();
+        const auto publications_before=cache.GetPublishCount(coord);
+        schedule(coord);
+        schedule({1,-3,0});
+        const auto dropped=cache.GetMeshCompletedDiscardedOverflow()-overflow_before;
+        progress("before_overflow_drain");
+        mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,0);
+        progress("after_overflow_drain");
+        const bool dirty=mesh.IsChunkMeshDirty(coord);
+        const bool orphan=mesh.HasInflightMeshBuild(coord) && !cache.HasCpuMeshBuildInFlight(coord) &&
+            !mesh.IsPendingGpuApply(coord) && !mesh.IsGpuExtractInFlight(coord);
+        report["mesh_completed_overflow"]={{"dropped",dropped},{"dirty",dirty},
+            {"orphan_inflight",orphan},{"completed",cache.GetMeshCompletedSize()}};
+        require(dropped==1 && dirty && !orphan,
+                "overflow drain returns dropped mesh debt without orphan inflight owner");
+        mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,1);
+        schedule(coord);
+        mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,1);
+        require(cache.GetPublishCount(coord)>publications_before &&
+                    world.HasCurrentChunkSlicePublication(coord),
+                "overflow successor actually publishes current mesh");
+        report["mesh_completed_overflow"]["actual_successor_published"]=true;
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
