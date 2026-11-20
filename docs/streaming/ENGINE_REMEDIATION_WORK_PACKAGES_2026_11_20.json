@@ -108,9 +108,10 @@
         {
           "id": "S1.03",
           "action": "Закрепить 12 направлений осмотра и joins request/pose/frame/PNG; отрицательный контроль повреждённого кадра.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S1.04",
@@ -430,7 +431,7 @@
       ]
     }
   ],
-  "current_step": "S1.03",
+  "current_step": "S1.04",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [

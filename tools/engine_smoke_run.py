@@ -80,6 +80,45 @@ def valid_png(path: Path) -> bool:
     return False
 
 
+def capture_receipt_matches(path: Path, pose: dict, capture_id: int,
+                            previous_frame: int, previous_index: int) -> tuple[int, int]:
+    """Validate encoder bytes and the pose sampled at GL_BACK readback."""
+    import math
+    receipt = json.loads(Path(str(path) + ".json").read_text(encoding="utf-8"))
+    if (receipt.get("schema") != "diagnostic-capture-receipt.v1" or
+            receipt.get("source") != "GL_BACK" or
+            type(receipt.get("capture_id")) is not int or
+            receipt["capture_id"] != capture_id or receipt.get("png") != path.name):
+        raise ValueError("capture receipt identity mismatch")
+    frame, index = receipt.get("frame_sequence"), receipt.get("capture_index")
+    if (type(frame) is not int or type(index) is not int or
+            frame <= previous_frame or index <= previous_index):
+        raise ValueError("capture frame order mismatch")
+    for value in (pose.get("position"), receipt.get("position")):
+        if (not isinstance(value, list) or len(value) != 3 or
+                any(type(v) not in (int, float) or not math.isfinite(v) for v in value)):
+            raise ValueError("invalid readback position")
+    if math.dist(pose["position"], receipt["position"]) > .05:
+        raise ValueError("readback moved from requested pose")
+    for key in ("yaw", "pitch"):
+        a, b = pose.get(key), receipt.get(key)
+        if (type(a) not in (int, float) or type(b) not in (int, float) or
+                not math.isfinite(a) or not math.isfinite(b) or
+                abs(math.remainder(a - b, 360)) > 2):
+            raise ValueError("readback orientation mismatch")
+    payload = path.read_bytes()
+    width, height = struct.unpack(">II", payload[16:24])
+    if (type(receipt.get("width")) is not int or type(receipt.get("height")) is not int or
+            (receipt["width"], receipt["height"]) != (width, height)):
+        raise ValueError("capture dimensions mismatch")
+    checksum = 14695981039346656037
+    for byte in payload:
+        checksum = ((checksum ^ byte) * 1099511628211) & ((1 << 64) - 1)
+    if receipt.get("png_fnv1a64") != f"{checksum:016x}":
+        raise ValueError("capture content mismatch")
+    return frame, index
+
+
 def inspection_evidence(artifacts: Path, report: dict) -> dict:
     """Join stable view requests to the corresponding PNGs, never RGB guesses."""
     import math
@@ -148,7 +187,16 @@ def inspection_evidence(artifacts: Path, report: dict) -> dict:
                         "reason": "inspection_route_capture_count_mismatch"}
         except (OSError, ValueError, TypeError, KeyError):
             return {"verified": 0, "reason": "invalid_inspection_route_evidence"}
+    required_receipts = False
+    manifest_path = artifacts / "route.json"
+    if manifest_path.exists():
+        try:
+            required_receipts = json.loads(manifest_path.read_text(encoding="utf-8")).get(
+                "inspection_receipt_schema") == "diagnostic-capture-receipt.v1"
+        except (OSError, ValueError, TypeError, AttributeError):
+            return {"verified": 0, "reason": "invalid_capture_manifest"}
     verified = 0
+    last_frame = last_index = -1
     for capture_id in range(requested):
         pose = poses.get(capture_id)
         waypoint, first_id, local, target = (layout[capture_id] if layout is not None
@@ -178,10 +226,19 @@ def inspection_evidence(artifacts: Path, report: dict) -> dict:
                        abs(pitch - expected_pitch) <= 2)
         except (KeyError, TypeError, ValueError):
             aligned = False
-        if aligned and valid_png(artifacts / "captures" / f"inspection_{capture_id:04}.png"):
+        png = artifacts / "captures" / f"inspection_{capture_id:04}.png"
+        if aligned and valid_png(png):
+            if required_receipts:
+                try:
+                    last_frame, last_index = capture_receipt_matches(
+                        png, pose, capture_id, last_frame, last_index)
+                except (OSError, ValueError, TypeError, KeyError, AttributeError, struct.error):
+                    continue
             verified += 1
     return {"verified": verified, "requested": requested,
-            "reason": "inspection_views_joined_to_png"}
+            "reason": "inspection_views_joined_to_png",
+            "join_strength": "request_readback_frame_pose_png" if required_receipts
+                             else "legacy_request_filename_png"}
 
 
 def capture_backpressure_evidence(artifacts: Path, inspection: dict) -> dict:
@@ -615,6 +672,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         if process_timeout is not None:
             command.extend(["--process-timeout", str(process_timeout)])
         route = {"schema": "engine-smoke-route.v1", "world_source": world,
+                 "inspection_receipt_schema": "diagnostic-capture-receipt.v1",
                  "build_provenance": build_provenance,
                  "world_seed": json.loads(metadata.read_text(encoding="utf-8")).get("world_seed"),
                  "world_profile": json.loads(metadata.read_text(encoding="utf-8")).get("procedural"),

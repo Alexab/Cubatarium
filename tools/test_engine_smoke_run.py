@@ -471,12 +471,12 @@ class IsolatedFixtureTest(unittest.TestCase):
         write([row, dict(row, position=[1, float("nan"), 3], time=1)])
         self.assertEqual(observe(trace)["status"], "FAIL")
 
-    def png(self):
+    def png(self, red=0):
         def chunk(kind, data):
             return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
         return (b"\x89PNG\r\n\x1a\n" +
                 chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0)) +
-                chunk(b"IDAT", zlib.compress(b"\0\0\0\0\xff")) + chunk(b"IEND", b""))
+                chunk(b"IDAT", zlib.compress(bytes([0, red, 0, 0, 255]))) + chunk(b"IEND", b""))
 
     def test_truncated_and_corrupt_png_are_not_evidence(self):
         path = self.root / "capture.png"
@@ -508,6 +508,53 @@ class IsolatedFixtureTest(unittest.TestCase):
         trace.write_text("\n".join(json.dumps(row) for row in rows))
         self.assertLess(inspection_evidence(self.artifacts, report)["verified"], 12)
 
+
+    def test_inspection_requires_readback_receipt_and_exact_png(self):
+        captures = self.artifacts / "captures"
+        captures.mkdir(parents=True)
+        (self.artifacts / "route.json").write_text(json.dumps(dict(
+            inspection_receipt_schema="diagnostic-capture-receipt.v1")))
+        rows = []
+        receipts = []
+        for i in range(12):
+            row = dict(capture_request=1, capture_id=i, yaw=90 * (i // 3),
+                       pitch=-45 + 45 * (i % 3), position=[22, -36, 51])
+            rows.append(row)
+            png = captures / f"inspection_{i:04}.png"
+            payload = self.png(red=i)
+            png.write_bytes(payload)
+            checksum = 14695981039346656037
+            for byte in payload:
+                checksum = ((checksum ^ byte) * 1099511628211) & ((1 << 64) - 1)
+            receipt = dict(schema="diagnostic-capture-receipt.v1", capture_id=i,
+                frame_sequence=100+i*3, capture_index=i+5, source="GL_BACK",
+                position=row["position"], yaw=row["yaw"], pitch=row["pitch"],
+                width=1, height=1, png=png.name, png_fnv1a64=f"{checksum:016x}")
+            receipts.append(receipt)
+            Path(str(png)+".json").write_text(json.dumps(receipt))
+        (self.artifacts / "diagnostic_bot.jsonl").write_text(
+            "\n".join(json.dumps(row) for row in rows))
+        report = dict(diagnostic_bot=dict(inspection_capture_requested_n=12))
+        check = lambda: inspection_evidence(self.artifacts, report)
+        self.assertEqual(check()["verified"], 12)
+        self.assertEqual(check()["join_strength"], "request_readback_frame_pose_png")
+        png = captures / "inspection_0005.png"
+        sidecar = Path(str(png)+".json")
+        for key, value in (("capture_id", 4), ("frame_sequence", 100),
+                           ("capture_index", 5), ("position", [23, -36, 51]),
+                           ("yaw", 0), ("width", 2), ("source", "GL_FRONT"),
+                           ("png_fnv1a64", "0"*16), ("capture_id", True)):
+            with self.subTest(key=key):
+                sidecar.write_text(json.dumps(dict(receipts[5], **{key: value})))
+                self.assertLess(check()["verified"], 12)
+        sidecar.unlink()
+        self.assertEqual(check()["verified"], 11)
+        sidecar.write_text(json.dumps(receipts[5]))
+        png.write_bytes((captures / "inspection_0004.png").read_bytes())
+        self.assertTrue(valid_png(png))
+        self.assertEqual(check()["verified"], 11)
+        png.write_bytes(self.png(red=5))
+        self.assertEqual(check()["verified"], 12)
 
     def test_inspection_joins_variable_route_layout_and_relative_targets(self):
         import math

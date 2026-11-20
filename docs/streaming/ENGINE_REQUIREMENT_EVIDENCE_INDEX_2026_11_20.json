@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S1.03",
+  "current_package": "S1.04",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -228,6 +228,44 @@
         "Actual observed progress permits a fresh bounded recovery interval, followed by normal motor completion."
       ],
       "scope_limit": "Controller and simulated motor contract. Native route acceptance remains S1.04; no new current-EXE native proof claimed."
+    },
+    {
+      "id": "S1.03",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-frontier-rd4-20261120-native\\route.json",
+          "sha256": "7501fddf5c0ab19be100ac46b8c43faeb5042072a6f434758bbacf274c484731"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-frontier-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "31c30e7a73b9c09359dc1bf012a5816f5b73169eea4a5231376a19a97d42516f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-frontier-rd4-20261120-native\\inspection-receipt-index.json",
+          "sha256": "59f29baa1169eb49855bab6c5697794558b5d18ddd8b68d81fb71b3c0814d597"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-test-20261120.log",
+          "sha256": "c0804e178f467b68b37c341349e9f8bb127d06a9550ce3aa888390a91732c677"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-release-build-20261120.log",
+          "sha256": "8c42e2d7a955a332babda9b9986923a3f990a705e82e89aa223e3b7098159efd"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-capture-receipt-native-plan-20261120.json",
+          "sha256": "63b18f68caa57f2833312ee6f55abd57589030363183bbf12594667d837d4924"
+        }
+      ],
+      "verified": [
+        "12 panoramic viewpoints per waypoint; current Release frontier completed both waypoints with 24 requested/queued/verified PNGs.",
+        "Readback receipt captures render-frame sequence, complete camera position/yaw/pitch, request ID and GL_BACK source; immutable payload follows PBO and encoder ownership.",
+        "Completed PNG dimensions and FNV-1a64 checksum bind receipt to bytes. Independent SHA256 receipt/PNG index retained.",
+        "New native manifests require receipts; missing receipt, wrong ID/frame order/pose/dimensions/source/checksum and replacement by another valid PNG are rejected by unit controls (34 tests PASS).",
+        "Current-source Release build provenance, runtime, startup, route and inspection PASS; 11 chunks crossed, 1297 outside-initial samples, zero diagnostic relocations, config restored and lease released."
+      ],
+      "scope_limit": "FNV is an accidental-corruption checksum, not authentication. Legacy artifacts retain explicit weaker request/filename strength. General visual reference and performance remain UNTESTED; no broad S6 acceptance claimed."
     }
   ],
   "completed_handoff": {

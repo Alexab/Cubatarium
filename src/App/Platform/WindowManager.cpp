@@ -43,6 +43,8 @@
 #include <cstring>
 #include <deque>
 #include <filesystem>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -222,7 +224,8 @@ public:
 
   bool QueueCapture(GLFWwindow *window, const std::filesystem::path &path,
                     uint32_t index, float camera_x, float camera_y,
-                    GLenum source_buffer)
+                    GLenum source_buffer,
+                    nlohmann::json receipt = nullptr)
   {
     if (!window || !EnsurePboBuffers())
     {
@@ -294,7 +297,7 @@ public:
     }
 
     slot->Payload = Frame{width,    height,   path,          index,
-                          camera_x, camera_y, source_buffer, {}};
+                          camera_x, camera_y, source_buffer, {}, std::move(receipt)};
     slot->Fence = fence;
     slot->Busy = true;
     return true;
@@ -349,6 +352,7 @@ private:
     float CameraY{};
     GLenum SourceBuffer{GL_BACK};
     std::vector<unsigned char> Pixels;
+    nlohmann::json Receipt;
   };
 
   struct PboSlot
@@ -527,6 +531,33 @@ private:
             stbi_write_png(frame.Path.string().c_str(), frame.Width,
                            frame.Height, 4, frame.Pixels.data(),
                            static_cast<int>(row_bytes)) != 0;
+        if (saved && !frame.Receipt.is_null())
+        {
+          // Bind the completed encoder output to the immutable readback pose.
+          // FNV-1a detects accidental replacement; it is not an authenticity hash.
+          std::ifstream png(frame.Path, std::ios::binary);
+          uint64_t checksum = 14695981039346656037ull;
+          char byte{};
+          while (png.get(byte))
+          {
+            checksum ^= static_cast<unsigned char>(byte);
+            checksum *= 1099511628211ull;
+          }
+          if (!png.eof() || png.bad())
+            throw std::runtime_error("capture checksum read failed");
+          std::ostringstream hex;
+          hex << std::hex << std::setw(16) << std::setfill('0') << checksum;
+          frame.Receipt["png_fnv1a64"] = hex.str();
+          frame.Receipt["width"] = frame.Width;
+          frame.Receipt["height"] = frame.Height;
+          frame.Receipt["capture_index"] = frame.Index;
+          frame.Receipt["png"] = frame.Path.filename().string();
+          std::ofstream receipt(frame.Path.string() + ".json",
+                                std::ios::binary | std::ios::trunc);
+          receipt << frame.Receipt.dump() << '\n';
+          receipt.close();
+          saved = !receipt.fail();
+        }
       }
       catch (...)
       {
@@ -800,6 +831,7 @@ void UWindowManager::Run()
   ApplyPresentSettings();
   UFramePerfMonitor::EnsureSession();
 
+  uint64_t rendered_frame_sequence = 0;
   while ((!glfwWindowShouldClose(Window) &&
           !(Application && Application->IsQuitRequested())) &&
          IsRunning)
@@ -894,6 +926,7 @@ void UWindowManager::Run()
     {
       UFrameStageWatchdog::Scope stage("window.render");
       Render();
+      ++rendered_frame_sequence;
     }
     if (World)
     {
@@ -1030,8 +1063,20 @@ void UWindowManager::Run()
             const float camera_y =
                 camera ? camera->GetPosition().y
                        : std::numeric_limits<float>::quiet_NaN();
+            nlohmann::json receipt = nullptr;
+            if (PendingDiagnosticCapture && camera)
+            {
+              const auto position = camera->GetPosition();
+              receipt = {{"schema", "diagnostic-capture-receipt.v1"},
+                         {"capture_id", *PendingDiagnosticCapture},
+                         {"frame_sequence", rendered_frame_sequence},
+                         {"source", "GL_BACK"},
+                         {"position", {position.x, position.y, position.z}},
+                         {"yaw", camera->GetYaw()}, {"pitch", camera->GetPitch()}};
+            }
             if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
-                                             camera_x, camera_y, GL_BACK))
+                                             camera_x, camera_y, GL_BACK,
+                                             std::move(receipt)))
             {
               CubatariumLogInfo("FlightCapture",
                                 "Unable to queue framebuffer capture index=" +
