@@ -810,16 +810,10 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
         continue;
       }
     }
-    // Phase 5.7.1 / 5.7R2: drawable keep; SoftDeferHeld silent only while
-    // young.
-    const bool drawable = HasDrawableGreedyMesh(entry.first);
-    const bool soft_held = IsSoftDeferHeld(entry.first);
-    const bool dark_face = ChunkHasFullyDarkFace(entry.first);
-    const int soft_age = soft_held ? GetSoftDeferHeldAge(entry.first) : 0;
-    if (ShouldRequeueAfterMeshDiscard(drawable, soft_held, dark_face, soft_age))
-    {
-      Dirty.MarkDirtyPriority(entry.first);
-    }
+    // KeepDirty returns accepted work to its executable queue. A drawable
+    // predecessor cannot settle the cancelled request, and request revisions
+    // cannot be ordered against geometry-input publication revisions.
+    Dirty.MarkDirtyPriority(entry.first);
   }
   if (AsyncBuilder)
     AsyncBuilder->CancelPending();

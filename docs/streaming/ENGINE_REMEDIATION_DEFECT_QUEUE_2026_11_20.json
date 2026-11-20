@@ -3,6 +3,32 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-completed-cancel-drops-replacement-behind-drawable",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Real completed target-owned remesh is cancelled; drawable predecessor remains, publication is stale, but no dirty or executable owner survives. A scalar revision guard also failed because submitted request2 and sync publication259 are different clocks.",
+      "fix": "KeepDirty returns cancelled accepted Active work directly to dirty instead of applying silent visual-drop policy or cross-domain counter comparisons; protected lease branch remains separate.",
+      "negative_control": "build/desktop-msvc/s4-mesh-cancel-isolated-20261121-native/terrain-save-probe/report.json",
+      "evidence": "build/desktop-msvc/s4-mesh-cancel-acceptance-20261121.json",
+      "verification": "Old draw retained, dirtytrue, no fictitious inflight; actual same-key successor consumes returned queue without MarkDirty, keeps request revision and publishes current inputs. Release API/overflow regression PASS; overall smoke UNTESTED.",
+      "next_action": "Protected lease, queued/running and late-result variants remain OPEN."
+    },
+    {
+      "id": "mesh-protected-cancel-active-without-builder-owner",
+      "stage": "S4.02",
+      "status": "SOURCE_SUSPICION",
+      "observed": "CancelAsyncInFlightKeepDirty preserves keep_active within a lease, but AsyncBuilder::CancelPending clears all queued/completed builder ownership. GPU/field owners can legitimately survive; a protected CPU job may not.",
+      "next_action": "Use isolated completed CPU target with keep_horiz_lease; require actual remaining owner or executable returned debt and current successor. Do not declare a defect before actual reproduction."
+    },
+    {
+      "id": "mesh-publication-revision-clock-domain-review",
+      "stage": "S4.03",
+      "status": "SOURCE_SUSPICION",
+      "observed": "Cancellation witness records request/local revision2 against initial synchronous published.geom_rev259. Immediate sync_rev and async submitted_revision producers need explicit domain mapping before numeric comparisons can certify publication.",
+      "evidence": "build/desktop-msvc/s4-mesh-cancel-revision-witness-20261121-native/terrain-save-probe/report.json",
+      "next_action": "During existing S4.03 publication permutations, map sync/async publication and consumer counter domains, then reproduce any wrong acceptance/rejection. Do not restart the audit or reopen S4.01 without contradictory functional evidence."
+    },
+    {
       "id": "mesh-completed-overflow-drain-orphan-owner",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

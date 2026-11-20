@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.completed-cancel-retained-draw-current-successor",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-mesh-cancel-isolated-20261121-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-mesh-cancel-acceptance-20261121.json",
+      "scope": "Actual exact completed CPU worker cancelled behind retained predecessor: dirty debt preserved; same-key successor consumes returned queue without new MarkDirty, same request revision, actual current publication. Overflow regression PASS. Protected lease/queued/running/late and complete S4.02 OPEN; overall smoke UNTESTED."
+    },
+    {
       "id": "S4.02.Q04.completed-overflow-current-successor",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

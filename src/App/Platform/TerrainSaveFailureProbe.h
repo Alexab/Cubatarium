@@ -441,6 +441,75 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                 "overflow successor actually publishes current mesh");
         report["mesh_completed_overflow"]["actual_successor_published"]=true;
       }
+      {
+        struct CancelDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~CancelDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld cancelled(nullptr,nullptr);
+        cancelled.SetSpawnPoint({8,-40,8});
+        cancelled.ProceduralTemplate.MinHeight=-48;
+        cancelled.ProceduralTemplate.MaxHeight=-33;
+        cancelled.ProceduralTemplate.SeaLevel=-40;
+        cancelled.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        cancelled.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        cancelled.BlockWorld.SetFluidDefinitions(definitions.get());
+        cancelled.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        cancelled.SetRenderSettings(settings);
+        for(int x=0;x<16;++x) for(int z=0;z<16;++z) cancelled.BlockWorld.SetBlock({x,-48,z},8);
+        cancelled.BlockWorld.SetBlock({8,-40,8},8);
+        cancelled.GetLightingPipeline().FillAllLoadedChunks(cancelled.BlockWorld);
+        auto &cancel_mesh=cancelled.GetMeshService();
+        auto &cancel_cache=cancel_mesh.GetCache();
+        cancel_mesh.RebuildChunkImmediate(cancelled.BlockWorld,*cancelled.BlockRegistry,coord);
+        require(cancelled.HasCurrentChunkSlicePublication(coord),"cancel fixture starts with actual current predecessor");
+        cancel_mesh.SetMeshRebuildFocus({0,0,0},1,1);
+        cancel_mesh.SetMeshSnapshotBudgetMs(1000);
+        cancel_mesh.SetMeshEmergeTotalBudgetMs(1000);
+        MeshWorkAdmission admission;
+        admission.enforce_schedule_lanes=true; admission.max_schedule=1;
+        admission.first_mesh_schedule=1; admission.remesh_schedule=1;
+        cancel_mesh.SetMeshWorkAdmission(admission);
+        cancel_mesh.SetMaxOutsideFocusMeshPerFrame(0);
+        const auto schedule_cancel=[&](bool new_request) {
+          if(new_request) cancel_cache.MarkDirtyPriority(coord);
+          require(WaitForProbeMeshCapture(cancel_cache,cancelled.BlockWorld,*cancelled.BlockRegistry,
+                      coord,cancel_cache.GetChunkMeshRevision(coord)),"cancel fixture actual capture");
+          const auto stats=cancel_cache.RebuildDirtyChunksWithStats(cancelled.BlockWorld,
+              *cancelled.BlockRegistry,0,1,false,0,1000,true);
+          const bool idle=cancel_cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5));
+          require(stats.Scheduled==1 && idle && cancel_cache.HasCpuMeshBuildInFlight(coord),
+                  "cancel fixture completes exact target worker");
+        };
+        const auto before=cancel_cache.GetPublishCount(coord);
+        cancelled.BlockWorld.SetBlock({5,-40,5},8);
+        schedule_cancel(true);
+        const bool completed=cancel_cache.GetMeshCompletedSize()==1;
+        const auto requested_revision=cancel_cache.GetInflightSourceRevision(coord);
+        report["mesh_cancel_revision_witness"]={{"active",cancel_mesh.HasInflightMeshBuild(coord)},
+            {"submitted",requested_revision},{"desired",cancel_mesh.GetChunkMeshRevision(coord)},
+            {"published",cancel_cache.GetMeshPublishRevs(coord).geom_rev},
+            {"inputs_current",cancel_cache.IsPublishedMeshCurrentForInputs(coord,cancelled.BlockWorld)}};
+        cancel_cache.CancelAsyncInFlightKeepDirty();
+        report["mesh_completed_cancel"]={{"completed_before_cancel",completed},
+            {"dirty",cancel_mesh.IsChunkMeshDirty(coord)},
+            {"retained_draw",cancel_mesh.HasDrawableGreedyMesh(coord)},
+            {"inflight",cancel_mesh.HasInflightMeshBuild(coord)},
+            {"current",cancelled.HasCurrentChunkSlicePublication(coord)}};
+        require(completed && cancel_mesh.IsChunkMeshDirty(coord) &&
+                    cancel_mesh.HasDrawableGreedyMesh(coord) && !cancel_mesh.HasInflightMeshBuild(coord) &&
+                    !cancelled.HasCurrentChunkSlicePublication(coord),
+                "cancel keeps executable current mesh debt while retaining predecessor draw");
+        schedule_cancel(false);
+        cancel_mesh.DrainAsyncMeshResults(cancelled.BlockWorld,*cancelled.BlockRegistry,1);
+        const bool successor=cancel_cache.GetPublishCount(coord)>before &&
+            cancelled.HasCurrentChunkSlicePublication(coord);
+        report["mesh_completed_cancel"]["actual_successor_published"]=successor;
+        report["mesh_completed_cancel"]["same_requested_revision"]=
+            cancel_mesh.GetChunkMeshRevision(coord)==requested_revision;
+        require(successor,"cancelled mesh successor actually publishes current inputs");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
