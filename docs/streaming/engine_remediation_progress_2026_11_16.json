@@ -32254,5 +32254,1013 @@
     ]
   },
   "next": "Verify actual UApplication save-error UI/callback/quit cancellation and WindowManager autosave scheduler; continue full original S0..S6 graphics/streaming/producer/certificate/backend/performance requirements."
+},
+"native_save_error_remains_visible_and_mouse_retry_preserves_session_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no audit restart or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-retry-assessment-20261120.json",
+    "sha256": "bda78dc282f341b2b1a353bb5676dcd7d326a1305a7307b206cfb5e8e7c55c13"
+  },
+  "validation": {
+    "schema": "engine-save-error-ui-retry-native-assessment.v1",
+    "status": "PASS",
+    "full_goal_status": "IN_PROGRESS",
+    "scope": "Actual UApplication Update/operation completion, real GUI renderer and routed mouse retry on an isolated save-write failure; app close interception during active operation",
+    "source_commits": [
+      "0622c701822c21006bb1cb28a402da8561b2baaa",
+      "22b1fe3f62f0c16d7db556e5e2d7c9bb949a456b"
+    ],
+    "changes": [
+      "Save failure retains the progress screen with error text, a safe save-only retry and return-to-menu action; error wraps at current card width.",
+      "Shutdown/replacement completion callback is cleared on save failure. Retry is deferred past the button input dispatch before replacing its screen and never repeats the failed close/replacement action.",
+      "Repeated close while Loading is consumed instead of calling RequestQuit; direct BeginShutdownOperation while Loading does not bypass the active operation.",
+      "Main-menu pointer is cleared when progress screen takes ownership; Escape from retained failure screen defers return to menu.",
+      "Opt-in UI probe temporarily isolates application World/GUI/runner/callback state and Core fixture pointers, restores all captured state/close flag, and does not construct another Core/Application with global shutdown side effects."
+    ],
+    "negative_control": {
+      "schema": "terrain-save-api-native-assessment.v1",
+      "status": "FAIL",
+      "source_commit": "0622c701822c21006bb1cb28a402da8561b2baaa",
+      "probe": {
+        "cases": [
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": false,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": false,
+            "dirty_preserved": 1,
+            "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 7,
+            "folder_switch_checked": false,
+            "full_core_save_failure_and_retry_checked": true,
+            "io_timeout_and_retry_checked": false,
+            "kind": "incomplete",
+            "late_edit_and_column_checked": false,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "runner_failure_gates": [
+              {
+                "operation": "save_then_load",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "save_then_create",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "shutdown",
+                "phases": [
+                  "start",
+                  "streaming",
+                  "chunk_gen",
+                  "drain_io",
+                  "cancel",
+                  "relight",
+                  "mesh",
+                  "done",
+                  "save",
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              }
+            ],
+            "runner_retry_checked": true,
+            "snapshot_fence_checked": false,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {}
+          },
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": true,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": true,
+            "dirty_preserved": 1,
+            "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 8,
+            "folder_switch_checked": true,
+            "full_core_save_failure_and_retry_checked": true,
+            "io_timeout_and_retry_checked": true,
+            "kind": "write_failure",
+            "late_edit_and_column_checked": true,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "runner_failure_gates": [
+              {
+                "operation": "save_then_load",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "save_then_create",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "shutdown",
+                "phases": [
+                  "start",
+                  "streaming",
+                  "chunk_gen",
+                  "drain_io",
+                  "cancel",
+                  "relight",
+                  "mesh",
+                  "done",
+                  "save",
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              }
+            ],
+            "runner_retry_checked": true,
+            "snapshot_fence_checked": true,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {
+              "fenced_save_phases": [
+                "save_waiting_for_io",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "late_exit_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "save_failed"
+              ],
+              "resumable_late_edit_phases": [
+                "init",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "timeout_phases": [
+                "save_waiting_for_io",
+                "save_failed"
+              ],
+              "timeout_seconds": 10.0128368
+            }
+          }
+        ],
+        "schema": "terrain-save-failure-native.v1",
+        "scope": "Actual isolated UWorld cooperative saves, Core full-save facade and WorldOperationRunner; no application menu/error rendering or autosave scheduler acceptance",
+        "status": "PASS"
+      },
+      "cold_independent": {
+        "incomplete": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_5": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              5,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_6": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              6,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "write-failure": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "facade_runner_5": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              5,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_6": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              6,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "late_old_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_last_edit": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_-4_0.cchunk",
+          "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+          "section": [
+            0,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 0
+        },
+        "new_column_19": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\1_-4_0.cchunk",
+          "sha256": "b03705ce15f9fad9976247ce47b1f66903dd90ffd7699d34dabb96a9c3a0d177",
+          "section": [
+            1,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_column_35": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\2_-4_0.cchunk",
+          "sha256": "5770dbdec04ea19d2532095a76b05d1aef5316c93fbd0eda88a7741ffcfed005",
+          "section": [
+            2,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        }
+      },
+      "provenance": {
+        "source": true,
+        "exe": true,
+        "config": true,
+        "head": true,
+        "clean": true
+      },
+      "startup_smoke_status": "PASS",
+      "scope": "Actual Core full-save facade and WorldOperationRunner failure/retry in two isolated UWorlds within native Release; no visible UI/autosave scheduler acceptance",
+      "save_error_ui": {
+        "close_callback_called": false,
+        "error": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+        "failure": "save error must remain visible instead of disappearing into main menu",
+        "failure_screen_retained": false,
+        "loading_close_intercepted": false,
+        "loading_close_requested_quit": true,
+        "schema": "save-error-ui-native.v1",
+        "status": "FAIL"
+      }
+    },
+    "fixed_native": {
+      "schema": "terrain-save-api-native-assessment.v1",
+      "status": "PASS",
+      "source_commit": "22b1fe3f62f0c16d7db556e5e2d7c9bb949a456b",
+      "probe": {
+        "cases": [
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": false,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": false,
+            "dirty_preserved": 1,
+            "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 7,
+            "folder_switch_checked": false,
+            "full_core_save_failure_and_retry_checked": true,
+            "io_timeout_and_retry_checked": false,
+            "kind": "incomplete",
+            "late_edit_and_column_checked": false,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "runner_failure_gates": [
+              {
+                "operation": "save_then_load",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "save_then_create",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "shutdown",
+                "phases": [
+                  "start",
+                  "streaming",
+                  "chunk_gen",
+                  "drain_io",
+                  "cancel",
+                  "relight",
+                  "mesh",
+                  "done",
+                  "save",
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              }
+            ],
+            "runner_retry_checked": true,
+            "snapshot_fence_checked": false,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {}
+          },
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": true,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": true,
+            "dirty_preserved": 1,
+            "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 8,
+            "folder_switch_checked": true,
+            "full_core_save_failure_and_retry_checked": true,
+            "io_timeout_and_retry_checked": true,
+            "kind": "write_failure",
+            "late_edit_and_column_checked": true,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "runner_failure_gates": [
+              {
+                "operation": "save_then_load",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "save_then_create",
+                "phases": [
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              },
+              {
+                "operation": "shutdown",
+                "phases": [
+                  "start",
+                  "streaming",
+                  "chunk_gen",
+                  "drain_io",
+                  "cancel",
+                  "relight",
+                  "mesh",
+                  "done",
+                  "save",
+                  "scan",
+                  "save_failed"
+                ],
+                "status": "PASS"
+              }
+            ],
+            "runner_retry_checked": true,
+            "snapshot_fence_checked": true,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {
+              "fenced_save_phases": [
+                "save_waiting_for_io",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "late_exit_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "save_failed"
+              ],
+              "resumable_late_edit_phases": [
+                "init",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "timeout_phases": [
+                "save_waiting_for_io",
+                "save_failed"
+              ],
+              "timeout_seconds": 10.0098141
+            }
+          }
+        ],
+        "schema": "terrain-save-failure-native.v1",
+        "scope": "Actual isolated UWorld cooperative saves, Core full-save facade and WorldOperationRunner; no application menu/error rendering or autosave scheduler acceptance",
+        "status": "PASS"
+      },
+      "cold_independent": {
+        "incomplete": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_5": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              5,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_6": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0a79b457d16552772e3666ab818c1e250ef0a0f9072e9b12bb5b588d3e0d9347",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              6,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "write-failure": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "facade_runner_5": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              5,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "facade_runner_6": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              6,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "late_old_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_last_edit": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_-4_0.cchunk",
+          "sha256": "cd4bc798ccab13a3db051919b3db847779389a8a544992fdc152ea3aba375a56",
+          "section": [
+            0,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 0
+        },
+        "new_column_19": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\1_-4_0.cchunk",
+          "sha256": "b03705ce15f9fad9976247ce47b1f66903dd90ffd7699d34dabb96a9c3a0d177",
+          "section": [
+            1,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_column_35": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\2_-4_0.cchunk",
+          "sha256": "5770dbdec04ea19d2532095a76b05d1aef5316c93fbd0eda88a7741ffcfed005",
+          "section": [
+            2,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "ui_retry_deleted": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\save-error-ui\\chunks\\0_-4_0.cchunk",
+          "sha256": "503ca6fe2ca2ee8d4e0feeed20f5af93a309a6fcc3448c0072adf9294a41071b",
+          "section": [
+            0,
+            -4,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 0
+        }
+      },
+      "provenance": {
+        "source": true,
+        "exe": true,
+        "config": true,
+        "head": true,
+        "clean": true
+      },
+      "startup_smoke_status": "PASS",
+      "scope": "Actual Core full-save facade and WorldOperationRunner failure/retry in two isolated UWorlds within native Release; no visible UI/autosave scheduler acceptance",
+      "save_error_ui": {
+        "close_callback_called": false,
+        "error": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+        "failure_screen_retained": true,
+        "loading_close_intercepted": true,
+        "loading_close_requested_quit": false,
+        "retry_via_mouse": true,
+        "schema": "save-error-ui-native.v1",
+        "status": "PASS"
+      }
+    },
+    "visual_review": {
+      "status": "PASS",
+      "reviewed": "Viewed actual PNG artifacts: RED shows plain main menu without error; GREEN 1280x720 and640x480 show Save failed, full wrapped reason, memory-retention message and both buttons without clipping. This is UI review, not independent world RGB/wet/transparency acceptance.",
+      "images": [
+        {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\terrain-save-probe\\save-error-ui\\save-failure-1280.png",
+          "sha256": "f92fc621881a57e44c7d671edd8c7a423c699f8c8d7562f3b044ebf022b42552"
+        },
+        {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\save-error-ui\\save-failure-1280.png",
+          "sha256": "6a859e0cca5f970b4f7eb6b40aa944ea09faf72c29c2f7ab352ac4019ded373b"
+        },
+        {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\terrain-save-probe\\save-error-ui\\save-failure-640.png",
+          "sha256": "a2cf95ce879f0d36f91b5078192ead9b6e5ff8cda90c36ead566026703715579"
+        }
+      ]
+    },
+    "release_validation": {
+      "required_app_build": "PASS",
+      "related_tests": "4 PASS /0.98sec",
+      "test_names": [
+        "progress_snapshot_test",
+        "negative_height_storage_test",
+        "terrain_column_util_test",
+        "chunk_streamer_committed_column_test"
+      ]
+    },
+    "native_summary": {
+      "wall_elapsed_sec": 129.433,
+      "ingame_frames": 1598,
+      "diagnostic_relocations_after_start": 0,
+      "chunks_traveled_cheb": 0
+    },
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-20261120-native\\save-api-assessment.json",
+        "sha256": "1448a435df16507aec7075683c796a2503735db6bb3133bbad6ba91b74550470"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-20261120-native\\save-api-assessment.json",
+        "sha256": "8a01b10a7da37dcd42156c8891ed9fb0a48886676860a81ee6b5fe181e903cc4"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-before-release-build-20261120.log",
+        "sha256": "378645fa5859d3e9cb228e6d230c893a48916d1acc8689d76b2641fe751f50f2"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-fixed-release-build-20261120.log",
+        "sha256": "f5c43bce13881340bc7e26d0ca10b9da813af3c18b16dd4babd49d26a63a0d0f"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-regression-build-20261120.log",
+        "sha256": "27fc16d6446d54401d6d571cf84c624f95abd8866d9ef11f12902d2c4a4b667d"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-ui-regression-test-20261120.log",
+        "sha256": "b45ea96f1db6adadfc8cb9c2714173eadad6d66318d2e1610311a14eed75fc59"
+      }
+    ],
+    "limitations": [
+      "WindowManager autosave scheduler and autosave failure notification remain UNTESTED.",
+      "Window close tested through actual application handler with real GLFW close flag; no injected native OS close event or successful final application exit acceptance.",
+      "Return-to-menu button and Escape were implemented but not driven by this native scenario; actual resumed gameplay/worker resumption after error remains separate.",
+      "UI probe uses the real application with a separate GUI context and isolated local world; it does not prove full streamed-world save performance or every partial-I/O failure combination.",
+      "All outstanding original S0..S6 lifecycle/producer/persisted certificates/CPU-GPU-backend parity/independent RGB-wet-transparency/full native-performance-memory requirements remain open."
+    ]
+  },
+  "next": "Verify WindowManager autosave scheduling, failed-save notification/retry and pending lifecycle transitions; continue every remaining original S0..S6 requirement."
 }
 }
