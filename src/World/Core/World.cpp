@@ -15124,6 +15124,10 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
     }
     QuiesceBackgroundWork(std::chrono::milliseconds(2000));
   }
+  // Draining pending reads can discover a fault after the entry check.
+  if (BlockWorld.GetChunkManager().GetUnresolvedTerrainColumnRead())
+    throw std::runtime_error("Cannot save unread terrain; saved files and "
+                             "local edits were preserved");
   RefreshBlockRegistry();
   std::filesystem::create_directories(world_folder_path);
   std::filesystem::create_directories(world_folder_path + "/chunks");
