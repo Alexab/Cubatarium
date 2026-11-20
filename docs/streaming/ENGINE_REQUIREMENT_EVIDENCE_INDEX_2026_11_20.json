@@ -487,19 +487,45 @@
         {
           "path": "build\\desktop-msvc\\s2-custom-height-test-20261120.log",
           "sha256": "ecc2ed6fae5224ecc23347bbe3b3df35961f993323c95a8aef708fec8376abff"
+        },
+        {
+          "path": "src\\Test\\ChunkLightingPropagationTest.cpp",
+          "sha256": "d52a10e953a399b6f85168c632ef0d87774d177aac8e0691fe9f7181d06a6fd6"
+        },
+        {
+          "path": "src\\World\\Lighting\\ChunkRelightSnapshot.cpp",
+          "sha256": "de49fce0dd9d0363289102ca3e4fe44f22f6e559e7180a6509958c5ed79510aa"
+        },
+        {
+          "path": "src\\World\\Core\\World.cpp",
+          "sha256": "c38c06ec84e88aaf520d467ab063e4a996acf72b3f2c5ac67a0c6dbf9ae6f75a"
+        },
+        {
+          "path": "src\\Render\\Camera\\Camera.cpp",
+          "sha256": "b28a182790804e4b61f61d00d4862e3cada88d9b84febd7d7053a720fed66640"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-async-height-build-20261120.log",
+          "sha256": "a51ea0619fc47ee56140426d654e1556e1436f05be74bcc1073c67a09997465c"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-async-height-test-20261120.log",
+          "sha256": "e594ef7d4ce8a0f6d4eaac575eafa480c0fb997424ba74bd0dc163f8be031468"
         }
       ],
       "verified": [
         "Release profile/lighting tests PASS for wholly negative -127..-17 and positive 32..79 profiles.",
         "Signed slice boundaries, partial bottom/top slices, no outside-profile slice and recovery minimum eye height checked.",
         "Public synchronous RelightChunkBlockLight and edit source-removal entry points produce 14/13 light and clear it at both configured vertical edges; no extra outside-profile geometry sections materialized.",
-        "Source inspection confirms UWorld column coverage clips to configured MinHeight/MaxHeight, approach sample requests use SliceBounds, and camera/player reasonable-position checks use profile MinimumEyeY."
+        "Source inspection confirms UWorld column coverage clips to configured MinHeight/MaxHeight, approach sample requests use SliceBounds, and camera/player reasonable-position checks use profile MinimumEyeY.",
+        "Release async snapshot compute tests PASS for broad -1024..1024 requests against wholly negative -127..-17 and positive 32..79 profiles, at both vertical edges.",
+        "Captured profile MinY/MaxY retained; only the resident in-profile section emitted with expected adjacent blocklight13; entirely disjoint requests emit no section.",
+        "Source routing traced: UWorld async player request uses configured max; terrain-column passes explicit band; single-chunk uses chunk origin and configured max. All converge through CaptureImpl, which clips both ends against the captured vertical profile. Column pending/coverage gates also clip both configured ends."
       ],
       "remaining": [
-        "Complete UWorld request-entry routing evidence, including asynchronous capture bands, for nondefault profiles.",
-        "Verify actual player recovery/position handling with nondefault profile; scalar MinimumEyeY check is not full player recovery proof."
+        "Actual nondefault-profile player load/recovery and camera movement proof. Next bounded scenario: isolated dry cave below default Y=-64, configured MinY=-128, saved eye near -106; zero relocations, completed route and required-ring min_y=-128."
       ],
-      "scope_limit": "Lower-level/profile and synchronous CPU evidence. No claim all height consumers, native nondefault-profile recovery, GPU/backend parity or S2.01 completion."
+      "scope_limit": "Profile, sync CPU and async snapshot compute evidence plus UWorld source routing inspection. No native custom-profile player recovery or actual GPU dispatch parity claimed; S2.01 remains OPEN."
     }
   ],
   "completed_handoff": {

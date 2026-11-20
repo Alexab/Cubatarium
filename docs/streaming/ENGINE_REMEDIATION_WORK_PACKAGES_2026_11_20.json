@@ -158,11 +158,11 @@
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
-            "Nondefault wholly-negative and positive profile boundaries, synchronous light/source-removal edges and no out-of-profile materialization: Release PASS."
+            "Nondefault wholly-negative and positive profile boundaries, synchronous light/source-removal edges and no out-of-profile materialization: Release PASS.",
+            "Async broad/disjoint bands and edge blocklight: Release PASS; UWorld player/terrain/chunk request routing to profile-clipped capture traced."
           ],
           "remaining_subtasks": [
-            "UWorld request routing including async capture bands.",
-            "Actual nondefault-profile player recovery handling."
+            "Actual nondefault-profile player load/recovery and camera movement below the default -64 floor, with zero relocation and min_y=-128 runtime witness."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },

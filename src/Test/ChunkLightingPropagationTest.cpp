@@ -925,6 +925,32 @@ int main(int argc, char **argv)
       Expect(BlockAt(custom, source) == 14 &&
                  BlockAt(custom, source + glm::ivec3(1, 0, 0)) == 13,
              "sync blocklight must work at both edges of a nondefault profile");
+      cutum::RelightJobSpec broad;
+      broad.block_positions = {source};
+      broad.min_world_y = -1024;
+      broad.max_world_y = 1024;
+      broad.column_center_only = true;
+      broad.include_skylight = false;
+      broad.include_block_light = true;
+      const auto computed = cutum::UChunkRelightSnapshot::Capture(custom, broad)
+                                .Compute(*registry);
+      Expect(computed.input_profile.MinY == profile.MinY &&
+                 computed.input_profile.MaxY == profile.MaxY &&
+                 computed.chunks.size() == 1 && computed.chunks[0].coord == coord,
+             "async capture clips a broad request to the configured resident domain");
+      const auto adjacent = cutum::UChunkManager::WorldToLocal(
+          source + glm::ivec3(1, 0, 0));
+      Expect((computed.chunks[0].light_packed[
+                  cutum::UChunk::LocalIndex(adjacent)] >> 4) == 13,
+             "async computation retains edge emission in a nondefault profile");
+      for (const int outside : {profile.MinY-16, profile.MaxY+16})
+      {
+        broad.min_world_y = outside;
+        broad.max_world_y = outside;
+        Expect(cutum::UChunkRelightSnapshot::Capture(custom, broad)
+                   .Compute(*registry).chunks.empty(),
+               "disjoint async requests must not publish any section");
+      }
       custom.SetBlock(source, cutum::BLOCK_AIR);
       cutum::RelightBlocksAroundEdit(custom, *registry, {source});
       Expect(BlockAt(custom, source + glm::ivec3(1, 0, 0)) == 0,
