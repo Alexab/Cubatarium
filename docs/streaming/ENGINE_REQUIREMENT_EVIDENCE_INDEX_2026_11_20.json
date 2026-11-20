@@ -338,23 +338,72 @@
         {
           "path": "build\\desktop-msvc\\s1-surface-verdict-contract-test-20261120.log",
           "sha256": "6ce19fe5c6e39322ca0b13f5b467573e2eeec70d41fbf64d3e414ddbe59845d6"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-frontier-rd4-20261120-native\\route.json",
+          "sha256": "65db0f9eec548b37610f2f8e47043b11168faf54b1bc5c13747f7eda35c38825"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-frontier-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "f0483398754f2606e75a29a216025a71e478e29aa78403062ff47c708beeaa02"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-frontier-rd4-20261120-native\\controller-replay-evidence.json",
+          "sha256": "cccce26fbd38442e443b323215b8b86fce91cd34767c18128540187fa3d37dc7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-frontier-rd4-20261120-native\\diagnostic_bot_replay.jsonl",
+          "sha256": "a0b4ffce7af6ade0e9ca6a8bffaa115a3a8f7fb16eda56bc17d34ca5a462e839"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-frontier-rd4-20261120-native\\replay-negative-controls\\results.json",
+          "sha256": "465e07928c07be4c1be3ddc6edbfa171db2f518e50b9c61a4ae0bbf1870d919a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-native-plan-20261120.json",
+          "sha256": "98e7eb92a4613d83359954de4deab77c7e220ec02ce4058bf74a620270f839d4"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-configure-20261120.log",
+          "sha256": "d1ab5386f5ab095b32f39c6b65b2b36c915fba841e2fb781ca0fc454c4e26a39"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-build-20261120.log",
+          "sha256": "bd46cfd98772e52f50dcaf183839d0f4da5cdcfd401eac9fd217e91b4416c92a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-detour-test-20261120.log",
+          "sha256": "3197088ccfe9e24151322d58ef0f65f88cb320937cc73b76356c518d4eb7c2c9"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-harness-test-20261120.log",
+          "sha256": "f3e31112cfb6f1cbc758d4ef59a05effb931852816951d554dba0cb7ea92c875"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-replay-release-build-20261120.log",
+          "sha256": "30a541d69127de5da26ad31fac61e253aa9e8cf063122a9f43096e013cd47d66"
         }
       ],
       "verified": [
         "Explicit route movement_mode walk uses normal motor, never requests vertical movement or vertical planner edges; runtime segment query requires ground support.",
         "Native flat saved surface: 175.654 blocks, 11 chunk displacement, 220/220 grounded samples, height span 0, zero relocations, 26/26 receipt-bound inspections.",
         "Runtime, route, inspection, surface_route, fixture, opaque depth and build provenance PASS; config restored byte-for-byte.",
-        "Release controller tests plus 34 harness, 5 verdict-contract and surface evidence negative controls PASS."
+        "Release controller tests plus 34 harness, 5 verdict-contract and surface evidence negative controls PASS.",
+        "Opt-in diagnostic-flight-replay.v1 records original observations on every controller tick, exact ordered probe inputs/answers and full command/controller result; standalone Release verifier has no world/camera writer.",
+        "Bounded recorder/verifier: 200000 ticks, 4096 probes per tick, 2 MiB per row, 64 MiB total; required footer, monotonic observations and exact tick/probe/result comparisons.",
+        "Release tests replay flying/walking, temporary Unknown, blocked terminal, capture backpressure, directed panorama and multi-node wall detour twice; corrupt decisions/probes/order/time/truncation/output failure rejected.",
+        "Native RD4 frontier: 1957 controller ticks exactly replayed, 11 chunks, both points completed, 24/24 receipt-bound captures; runtime/startup/route/path/inspection/provenance PASS, config restored.",
+        "Native transcript negative copies reject changed probe coordinates, changed command and missing footer. Original transcript/hash retained."
       ],
       "remaining": [
-        "Deterministic observation/probe replay and targeted exploration of a concrete debt region remain open.",
-        "Surface native overall FAIL retained in the S4/S5 defect queue; scoped walking PASS does not erase it."
+        "Targeted exploration of a concrete debt region remains open.",
+        "Surface native startup/draw-source failures remain queued for S4/S5; current frontier replay native overall UNTESTED for missing full visual/performance acceptance."
       ],
       "historical_route_evidence": {
         "out_and_back": "build/desktop-msvc/physical-current-roundtrip-rd4-20261120-native/smoke-verdict.json",
         "wet_cave": "build/desktop-msvc/physical-current-wet-rd4-20261120-native/smoke-verdict.json"
       },
-      "scope_limit": "Surface subtask only. Flat walking proven; arbitrary terrain and complete S1.05 are not. Startup/draw-source failures remain open."
+      "scope_limit": "Walking and deterministic controller replay subtasks proven. This does not prove deterministic world/physics/rendering or general terrain AI. S1.05 remains OPEN for debt-directed exploration; overall S0..S6 remains open."
     }
   ],
   "completed_handoff": {

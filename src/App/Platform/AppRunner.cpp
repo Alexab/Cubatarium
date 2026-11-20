@@ -1,5 +1,6 @@
 #include "App/Platform/AppRunner.h"
 #include "App/Diagnostics/DiagnosticFlightController.h"
+#include "App/Diagnostics/DiagnosticFlightReplay.h"
 #include "App/Diagnostics/DiagnosticWorldActions.h"
 #include "App/Platform/CreatureQaCapture.h"
 #include "App/Platform/FlightSimHarness.h"
@@ -1656,6 +1657,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   unsigned world_actions_after_waypoints = 0;
   bool startup_observation = false;
   bool diagnostic_walking = false;
+  nlohmann::json diagnostic_replay_route;
   if (!options.DiagnosticRoutePath.empty())
   {
     if (!options.StrictNoRelocation || !options.Fly || options.BreakStandMode ||
@@ -1670,6 +1672,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     {
       std::ifstream input(options.DiagnosticRoutePath);
       const auto route = nlohmann::json::parse(input);
+      if (route.value("record_replay", false))
+        diagnostic_replay_route = route;
       world_actions = ParseDiagnosticWorldActions(route, options.WorldName);
       if (!world_actions.empty())
         world_actions_after_waypoints =
@@ -1883,6 +1887,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     double bot_last_trace_time = -1.0;
     DiagnosticFlightState bot_last_trace_state = DiagnosticFlightState::Idle;
     std::ofstream bot_trace;
+    std::ofstream bot_replay_output;
+    std::unique_ptr<diagnostic_replay::Recorder> bot_replay;
     if (!options.DiagnosticRoutePath.empty())
     {
       const auto parent =
@@ -1890,6 +1896,14 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
       bot_trace.open(parent / "diagnostic_bot.jsonl");
       if (!bot_trace)
         throw std::runtime_error("cannot open diagnostic bot trace");
+      if (!diagnostic_replay_route.is_null())
+      {
+        bot_replay_output.open(parent / "diagnostic_bot_replay.jsonl", std::ios::binary);
+        if (!bot_replay_output)
+          throw std::runtime_error("cannot open diagnostic replay output");
+        bot_replay = std::make_unique<diagnostic_replay::Recorder>(
+            bot_replay_output, diagnostic_replay_route);
+      }
     }
     std::shared_ptr<UCamera> relocation_audit_camera;
     uint64_t relocation_audit_baseline = 0;
@@ -3053,7 +3067,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                     world->HasGroundSupport(camera->GetPosition(), capsule),
                     camera->IsOnGround(),
                     window.IsDiagnosticCaptureReady()};
-                const auto action = diagnostic_bot.Tick(observation, probe);
+                const auto action = bot_replay
+                    ? bot_replay->Tick(diagnostic_bot, observation, probe)
+                    : diagnostic_bot.Tick(observation, probe);
                 // SetMode(Walking) resets vertical velocity. Repeating it on
                 // every takeoff tick would cancel the normal jump impulse.
                 if (camera->GetFreeMove() != action.flying)
@@ -3166,6 +3182,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         });
 
     window.Run();
+    if (bot_replay)
+      bot_replay->Finish();
     window.ClearAutopilotKeys();
 
     if (!world_actions.empty())

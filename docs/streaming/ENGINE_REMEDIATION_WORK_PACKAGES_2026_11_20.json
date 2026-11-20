@@ -128,8 +128,13 @@
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
-            "Explicit ordinary walking motor and flat-surface native proof; remaining replay and debt targeting stay open."
-          ]
+            "Ordinary walking motor and native flat-surface proof.",
+            "Opt-in per-tick observation/probe transcript, standalone Release verifier, native 1957-tick replay and negative controls."
+          ],
+          "remaining_subtasks": [
+            "Target a concrete observed debt region through normal bounded movement and confirm actual inspection of the selected region."
+          ],
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         }
       ]
     },

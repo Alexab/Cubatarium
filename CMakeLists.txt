@@ -1020,6 +1020,18 @@ cubatarium_add_test(NAME diagnostic_flight_controller_test
 add_test(NAME diagnostic_flight_controller_test COMMAND $<TARGET_FILE:diagnostic_flight_controller_test>)
 set_tests_properties(diagnostic_flight_controller_test PROPERTIES LABELS "unit;streaming")
 
+cubatarium_add_test(NAME diagnostic_flight_replay_test
+    SOURCES src/Test/DiagnosticFlightReplayTest.cpp
+            src/App/Diagnostics/DiagnosticFlightController.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME diagnostic_flight_replay_test COMMAND $<TARGET_FILE:diagnostic_flight_replay_test>)
+set_tests_properties(diagnostic_flight_replay_test PROPERTIES LABELS "unit;streaming")
+
+cubatarium_add_test(NAME diagnostic_flight_replay
+    SOURCES src/App/Diagnostics/DiagnosticFlightReplayMain.cpp
+            src/App/Diagnostics/DiagnosticFlightController.cpp
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
 cubatarium_add_test(NAME diagnostic_world_actions_test
     SOURCES src/Test/DiagnosticWorldActionsTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
