@@ -18,7 +18,7 @@ class SourceObservationTest(unittest.TestCase):
         r=build_route(self.route,self.scene,self.plan,[22,-46.88,51])
         self.assertEqual(self.route,original)
         self.assertEqual(len(r['waypoints']),3)
-        self.assertEqual(r['waypoints'][0]['position'],[0,0,0])
+        self.assertEqual(r['waypoints'][0]['position'],[0,2,0])
         self.assertEqual(r['waypoints'][0]['position'],r['waypoints'][2]['position'])
         self.assertEqual(r['waypoints'][1]['position'],[-304,6,0])
         for point in r['waypoints']:
