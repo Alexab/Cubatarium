@@ -1,0 +1,17 @@
+{
+  "requirement": "S2.05 player fluid placement light handoff",
+  "hypothesis": "AddObject liquid branch returns through TryAddFluidObject before solid edit lighting; new water changes attenuation but field is not explicitly updated before MarkBlockChunkDirty",
+  "inputs": "Same isolated raw -48..-17 resident32x32 stone shaft fixture as retained light-delivery probe. Shaft x=z15; initially dry. Public AddObject(water, center of cell15,-33,15); sample15,-35,15. Standard profile, no physics tick or maintenance before sample. Require source Water kind and actual owner dirty-save.",
+  "pass": "Placement accepted; actual source-water state and dirty owner retained; immediate sky sample equals explicit recompute and decreases from dry baseline",
+  "fail": "Placement or state/dirty obligation missing, unchanged reference, or stale delivered sky",
+  "scope_limit": "Actual player placement API and local light delivery; production solver as delivery reference only, no independent solver or framebuffer proof",
+  "invalid_fixture_artifacts": "build/desktop-msvc/s2-fluid-player-light-repro-20261120-native: half-cell offset mapped to adjacent solid cell, AddObject correctly rejected; not an engine light reproduction",
+  "fixture_correction": "Use BlockCenter(cell), assert roundtrip WorldPosToBlock, water name ID9 and CanReceiveFluid before actual placement. No changed production code.",
+  "reproduction_artifacts": "build/desktop-msvc/s2-fluid-player-light-centered-repro-20261120-native",
+  "verification_artifacts": "build/desktop-msvc/s2-fluid-player-light-fixed-20261120-native",
+  "command_options": "--world World_261 --render-distance 4 --minimum-chunks 8 --fly-seconds 65 --idle-seconds 5 --stop-seconds 20 --process-timeout 600 --startup-only --probe-terrain-save-failure",
+  "timeout_seconds": 600,
+  "run_budget": "One reproduction; one verification only if a production defect is demonstrated and fixed. No extra native run for a source-only suspicion that already passes.",
+  "result": "Centered reproduction: accepted source water and dirty owner, sky15 stale vs14 recompute. After explicit pre-remesh relight:15->14 immediately, no physics tick; all seven native probe cases PASS.",
+  "comparison": "build\\desktop-msvc\\s2-fluid-player-light-comparison-20261120.json"
+}

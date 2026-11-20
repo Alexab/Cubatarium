@@ -1,0 +1,118 @@
+{
+  "schema": "fluid-mutation-handoff-inventory.v1",
+  "scope": "Finite remaining S2.05 handoff inventory; source trace is distinguished from executable proof. Reuse the existing evidence index, not a new engine audit.",
+  "rows": [
+    {
+      "id": "simulation",
+      "producer": "UFluidTransformSim -> FluidSpreadStats.Changes",
+      "owner": "UWorldBlockPhysicsService::ProcessFluidChange",
+      "light": "ApplyEditFastRelight before near/far mesh selection, including zero-emission water",
+      "save": "Changed owner retained before solver and visual admission",
+      "map": "Near player edit batch notification; far physics NotifyFluidSurfaceDirtyAtBlock",
+      "proof": "Existing native addition/removal and save admission/eviction fixtures; material reaction branch is source-traced only",
+      "status": "SCOPED_PROVEN"
+    },
+    {
+      "id": "player-placement",
+      "producer": "UWorld::AddObject liquid branch -> UWorldFluidFacade::TryAddFluidObject",
+      "owner": "UWorldFluidFacade::TryAddFluidObject",
+      "light": "ApplyEditFastRelight before MarkBlockChunkDirty; source edit retained before solver",
+      "save_map": "MarkBlockChunkDirty -> real edit batch owner/map notification",
+      "proof": "build\\desktop-msvc\\s2-fluid-player-light-comparison-20261120.json and retained centered native repro/fix reports; source-water state/dirty-owner/no-physics-tick assertions PASS",
+      "status": "SCOPED_PROVEN"
+    },
+    {
+      "id": "player-break-flood",
+      "producer": "ApplyBreakSiteFluidFlood appends exact flood_changed to mesh_touch_blocks",
+      "owner": "UWorld break edit path",
+      "light": "ApplyEditFastRelight(mesh_touch_blocks) before MarkBlocksChunkDirtyBatch",
+      "save_map": "Batch edit dirty owners and explicit fluid column notifications",
+      "proof": "Existing exact mutation diff and real mesh-service seam/map tests; caller source trace World.cpp near15940",
+      "status": "SCOPED_PROVEN"
+    },
+    {
+      "id": "generated-terrain",
+      "producer": "WorldGenStages flood/seal -> WorldGenContext::AccumulateDirtyColumn/FlushColumnDirty",
+      "owner": "ColumnGenerationService and ChunkStreamer completion callback",
+      "light": "Normal OnColumnMeshDirty relights; synchronous generation suppresses per-voxel work within a main-thread bracket and completion invokes OnRelightTerrainColumn. Incomplete generation retains its column cursor.",
+      "proof": "WorldGenStages.cpp, WorldGenContext.cpp, ChunkStreamer.cpp GenerateTerrainColumnBudgeted, WorldStreaming.cpp SetGenerationLightingHooks",
+      "status": "SOURCE_TRACED",
+      "scope_limit": "Async capture/install and complete generation lifetime certification remain S3/S4 requirements"
+    },
+    {
+      "id": "streaming-shore-seal",
+      "producer": "Sync completion seal and deferred intra/shore seal emit actual changed chunk coordinates",
+      "owner": "UWorldStreaming::PublishFluidSealMutations",
+      "light": "Per-column actual changed bands -> NotePendingLightBeforeMesh and EnqueueBoundaryDependencyRelight",
+      "save_mesh": "ModifiedChunks before queues; mesh dependency invalidation and near/far dirty notification",
+      "map": "No explicit fluid-surface invalidate seen in this owner. Cache MarkDirty intentionally does not invalidate fluid maps; needs one targeted warm-cache delivery check before closing S2.05.",
+      "status": "TARGETED_CHECK_REQUIRED",
+      "next_action": "After player-placement package, warm real cached fluid slice, deliver an actual changed-section receipt via this owner under deferred visual work, and inspect immediate map invalidation; one repro, one verification only if failure is demonstrated."
+    },
+    {
+      "id": "explicit-notification-wrappers",
+      "producer": "MarkFluidChangeDirty, MarkFluidRegionDirty, MarkFluidFloodMeshDirty",
+      "reachability": "Repository call-site search: wrappers/facade definitions only; MarkFluidChangeDirty additionally called by the isolated save-admission probe. No gameplay mutation producer calls these wrappers.",
+      "contract": "Geometry/save notification helpers, not independent mutations. Do not introduce extra relight work solely to make an unreachable synthetic caller pass.",
+      "status": "SOURCE_TRACED"
+    },
+    {
+      "id": "deferred-lighting-boundary",
+      "owner": "ChunkStreamer synchronous generation bracket or cooperative Load/Create",
+      "reachability": "Streamer sets true/false around synchronous generation without a physics tick inside. Cooperative Load/Create sets deferred while Application is Loading; WindowManager invokes DoMovement only in InGame. Bulk relight explicitly clears deferred before its work.",
+      "proof": "Application.cpp BeginWorldOperation; WindowManager.cpp world.do_movement gate; WorldCooperativeOps.cpp HandlePhaseInit/Begin bulk relight; ChunkStreamer.cpp generation bracket",
+      "status": "SOURCE_TRACED",
+      "scope_limit": "Exception, cancel, terminal outcome and async handoff lifetime remain S4; this trace does not certify those cases."
+    }
+  ],
+  "remaining_sequence": [
+    "One targeted streaming-shore-seal fluid-map delivery check; fix only a demonstrated lost obligation.",
+    "Reconcile S2.05 acceptance against existing producer, queue, map, save and new light evidence. Any actual uncovered requirement stays explicit; full backend, lifecycle and rendered proofs remain in original S3..S6 packages."
+  ],
+  "source_receipts": [
+    {
+      "path": "src\\World\\Core\\World.cpp",
+      "sha256": "ccefce180dca35359f630e3011647d0b812e0a255a61c2eaed4c7b091cd928b9"
+    },
+    {
+      "path": "src\\World\\Core\\WorldFluidFacade.cpp",
+      "sha256": "cc06c276a4c80f276dd20d73cf8f8d9009369accd2cf226237382d7ed0595f8b"
+    },
+    {
+      "path": "src\\World\\Physics\\WorldBlockPhysicsService.cpp",
+      "sha256": "92c002b1c3f3fe57c50fd9f5a6e5e2006a7263a808b0e516a3f307a063de81c0"
+    },
+    {
+      "path": "src\\World\\Streaming\\WorldStreaming.cpp",
+      "sha256": "e17cddc91b451edd8650e05aafad29f2c0c017b61d80fc23fbaca956b34535bb"
+    },
+    {
+      "path": "src\\World\\Chunks\\ChunkStreamer.cpp",
+      "sha256": "5487e696bc48be7a7bae075c622af3d2144a397f68867bfcf421da56d6f0ee59"
+    },
+    {
+      "path": "src\\World\\Core\\WorldCooperativeOps.cpp",
+      "sha256": "50d5c5985c545aaff0bb40ec5d4827d2cbda219b6875853433798750dcb2d36c"
+    },
+    {
+      "path": "src\\App\\Application.cpp",
+      "sha256": "7a0582b1feabbc3f0636ab5ea1776354be1b1ffe13e456de720d76e7a801f4f0"
+    },
+    {
+      "path": "src\\App\\Platform\\WindowManager.cpp",
+      "sha256": "21df7ff35cf6d5572a13d063e0893a5fbd33398934fa9ae6996fde1287e67990"
+    },
+    {
+      "path": "src\\WorldGen\\Stages\\WorldGenStages.cpp",
+      "sha256": "3502493f3f630efcf9fd3c52ce16df42a099495e9c5142c403572f50a8564515"
+    },
+    {
+      "path": "src\\WorldGen\\Core\\WorldGenContext.cpp",
+      "sha256": "895af74fc825e8b8834dc0a8ac44c886d71b5d21e77f81517d06a4c9e6d289dd"
+    },
+    {
+      "path": "src\\Render\\Mesh\\ChunkMeshCache.cpp",
+      "sha256": "e7a2d1da21ab10fb9894c001947669c77a6b11faecf959a7479522f2eb2ac8f2"
+    }
+  ]
+}

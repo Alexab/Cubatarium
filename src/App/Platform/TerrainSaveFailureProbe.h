@@ -13,6 +13,7 @@
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Lighting/IULightingPipeline.h"
+#include "World/Math/GridMath.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -151,8 +152,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     require(fluid_dirty_retained, "physics fluid dirty-save lost before visual drain");
     bool fluid_light_delivered = true;
     const bool original_drying_policy = URuntimeTuning::Get().WaterFlowingDries;
-    for (bool removal : {false, true})
+    for (int light_case = 0; light_case < 3; ++light_case)
     {
+      const bool removal = light_case == 1;
+      const bool player_placement = light_case == 2;
       struct RestoreDryingPolicy
       {
         bool Previous{URuntimeTuning::Get().WaterFlowingDries};
@@ -193,7 +196,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         // fluid. Sky enters horizontally from the adjacent open shaft.
         world.BlockWorld.SetBlock(cell + glm::ivec3(1, 0, 0), BLOCK_AIR);
       }
-      else
+      else if (!player_placement)
         world.BlockWorld.SetBlock(cell + glm::ivec3(0, 1, 0), 9);
       auto &lighting = world.GetLightingPipeline();
       lighting.RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
@@ -215,8 +218,22 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       budgets.LiquidEventsPerTickMax = 1;
       budgets.VisualRemeshPerTickMax = 0;
       world.SetPhysicsBudgets(budgets);
-      world.BlockPhysicsService->PublishFluid(cell);
-      world.BlockPhysicsService->TickBlockPhysics(world);
+      world.ModifiedChunks.clear();
+      bool accepted = true;
+      if (player_placement)
+      {
+        const auto place_position = BlockCenter(cell);
+        require(WorldPosToBlock(place_position) == cell, "player fluid fixture coordinate conversion");
+        require(world.BlockRegistry->GetIdByTypeName("water") == 9, "player fluid fixture name resolution");
+        require(UFluidSpreadSystem::CanReceiveFluid(world.BlockWorld, *world.BlockRegistry, cell),
+                "player fluid fixture must accept water");
+        accepted = world.AddObject("water", place_position);
+      }
+      else
+      {
+        world.BlockPhysicsService->PublishFluid(cell);
+        world.BlockPhysicsService->TickBlockPhysics(world);
+      }
       const bool mutated = world.BlockWorld.GetBlock(cell) == (removal ? BLOCK_AIR : 9);
       const int delivered = sky();
       // Delivery oracle only: same solver explicitly invoked after recording
@@ -224,14 +241,24 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       lighting.RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
       const int reference = sky();
       const bool changed_reference = removal ? reference > before : reference < before;
-      const bool passed = mutated && changed_reference && delivered == reference;
+      const bool dirty_owner = world.ModifiedChunks.count(UChunkManager::WorldToChunk(cell)) == 1;
+      const bool source_state = !player_placement ||
+          (world.BlockWorld.GetFluidState(cell).IsSource() &&
+           world.BlockWorld.GetFluidState(cell).GetKind() == FluidKind::Water);
+      const bool passed = accepted && mutated && dirty_owner && source_state &&
+          changed_reference && delivered == reference;
       report["cases"].push_back({
-          {"kind", removal ? "fluid_light_removal_alcove" : "fluid_light_addition"},
+          {"kind", player_placement ? "fluid_light_player_placement" :
+                   removal ? "fluid_light_removal_alcove" : "fluid_light_addition"},
           {"status", passed ? "PASS" : "FAIL"}, {"mutated", mutated},
+          {"accepted", accepted}, {"dirty_owner", dirty_owner},
+          {"source_state", source_state}, {"physics_tick_called", !player_placement},
           {"water_flowing_dries", URuntimeTuning::Get().WaterFlowingDries},
           {"sky_before", before}, {"sky_delivered", delivered},
           {"sky_explicit_recompute", reference},
-          {"scope", "Actual nonemissive fluid tick delivery before maintenance; not independent solver or framebuffer correctness"}});
+          {"scope", player_placement
+               ? "Actual player AddObject light delivery before any physics tick; not independent solver or framebuffer correctness"
+               : "Actual nonemissive fluid tick delivery before maintenance; not independent solver or framebuffer correctness"}});
       fluid_light_delivered &= passed;
     }
     report["fluid_drying_policy_restored"] =

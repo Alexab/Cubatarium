@@ -250,7 +250,7 @@
       "done": "Полный исходный объём доказан; обязательных FAIL/UNTESTED нет. Иначе цель остаётся незавершённой с точным списком зависимостей."
     }
   ],
-  "progress_checkpoint": "S2.05 save rejection/eviction and physics nonemissive light addition/removal verified. Invalid fixtures retained separately; drying policy restored. Source trace identifies remaining player fluid placement lighting omission. S2.05 stays OPEN, full S0..S6 retained.",
-  "next_action": "S2.05: one targeted player fluid placement TryAddFluidObject card and reproduction; then finish the finite light handoff inventory. Do not repeat simulation native cases without a dependent change.",
+  "progress_checkpoint": "S2.05 save admission/eviction and simulation/player-placement light delivery verified. Finite handoff inventory source-traced, with source receipts. One remaining targeted streaming seal cached-map check; original S3..S6 scope unchanged.",
+  "next_action": "S2.05: one warm-cache fluid-map test at UWorldStreaming::PublishFluidSealMutations before deferred visual work. Fix only a demonstrated omission, verify once, reconcile package acceptance; no repeated player/simulation native run without a dependent change.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

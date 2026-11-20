@@ -1090,6 +1090,86 @@
         {
           "path": "build\\desktop-msvc\\s2-fluid-drying-policy-test-20261120.log",
           "sha256": "88bbc61fa8004b2fc5d574f85f95178b9eefea0f57d060cd133927601ace4648"
+        },
+        {
+          "path": "src\\App\\Platform\\TerrainSaveFailureProbe.h",
+          "sha256": "2139c18a83e7d8f2b98b3473afe07e937301fe6120f235260fedc17d503d3d48"
+        },
+        {
+          "path": "src\\World\\Core\\WorldFluidFacade.cpp",
+          "sha256": "cc06c276a4c80f276dd20d73cf8f8d9009369accd2cf226237382d7ed0595f8b"
+        },
+        {
+          "path": "docs\\streaming\\S2_FLUID_PLAYER_LIGHT_PROBE_2026_11_20.json",
+          "sha256": "283a916d1b8c4573dcb40304c6da82879f6de6dfe8e0cc9ed554dbadd9b6c6b8"
+        },
+        {
+          "path": "docs\\streaming\\S2_FLUID_HANDOFF_INVENTORY_2026_11_20.json",
+          "sha256": "254df57ca55d97b762d50c79ab889505727c8c1469592d73b098968837666ab6"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-comparison-20261120.json",
+          "sha256": "48d2537f9b396e379baf4dbbd71aa526aee478b0628f84dcc8a0059480e7ad71"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "8bacc90b5ffe35a2408b43a6e88b0c5ee3d4736ec156b391b9ec25ff25c91a4e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "f021df2b8ec9e260ccd00482a00aeb547bd8242547549114f46f46901c003918"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-repro-20261120-native\\route.json",
+          "sha256": "f3968a28f56f5492c28c7ba98bdd1d55c61417e7ed09c0015953710fd737f638"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-repro-build-20261120.log",
+          "sha256": "7f88654b6d6071ab69d345b25e892a85ab58ea198c7d68408d122ef5ba276fc3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-repro-provenance-20261120.json",
+          "sha256": "bb84f617cd47e1b97eb3887cc59b32b39026ee4db265dfc2e75df8b158d61a04"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-centered-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "66847bc57af36637b99978c6cb0168c40461993e4b98f5985e607bb6a6a6d025"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-centered-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "f9ecd38083b8f58ad0e702adfcdaf2372e9e8cf6742f7484f940200fa2304e32"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-centered-repro-20261120-native\\route.json",
+          "sha256": "d2ee0b4ec730d85b63f6d81d02c351295d4f707ecff5cccc3d42053d51a382c9"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-centered-repro-build-20261120.log",
+          "sha256": "069651164921e021291967d1d6d11ded493fc8b1d6288c441b9d0a7d3b0d27e6"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-centered-repro-provenance-20261120.json",
+          "sha256": "ef2c1e66081ace2d8b4877f9ea1696ac3d9698e78c4979251b6d74bbcdc7d2be"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "cf83a1212796ec7343fd7fddc25dbc7cbbf99426653a970a6a9e87c1ae22fa6a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-20261120-native\\smoke-verdict.json",
+          "sha256": "14ccd4f1123740cdc848605b119123b37a03df1f75047c4e05e601f806e0a659"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-20261120-native\\route.json",
+          "sha256": "7bda89f6b908b0f091e62f914bbba92703572251d1b0b99e08d8a4df5efc97f5"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-build-20261120.log",
+          "sha256": "f3fddc72f536653f4fe417d2eef1f2a30a7f0df1371916b0a1a6f34c271b15fe"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-provenance-20261120.json",
+          "sha256": "2b48d8c53c4b81332f540d41f398f510691fbf7254823f254a70473f92b70051"
         }
       ],
       "reproduced": "Two wet neighbors revisited a shared permeable decor cell. Break-site flood counted/reported an identical second waterlog write as a new mutation.",
@@ -1115,13 +1195,16 @@
         "ProcessFluidChange now retains persistence and installs local light before near/far mesh selection for every change, without emission filter. Material-reaction changed positions also retain save ownership and receive relight before visual notification; that branch is source-traced, not separately native-certified.",
         "Unchanged addition fixture after fix:14->13, matching recompute. Distinct removal-alcove fixture across X15/16 with existing opt-in drying policy:12->13, matching recompute; actual block removal required. Runtime drying policy restoration asserted PASS.",
         "First Primitive fixture and default stable-puddle removal fixtures were invalid for the intended mutation; FAIL artifacts retained and not counted as engine reproductions. Existing Release liquid_flow_scenarios_test confirms both drying policies PASS.",
-        "Final actual native report includes six PASS cases (two save-admission, two light delivery, two pre-existing save failure/retry fixtures). Prescribed Release build/provenance/runtime PASS; all four run source-world fingerprints and restored config bytes checked. Overall startup-only verdict remains UNTESTED."
+        "Final actual native report includes six PASS cases (two save-admission, two light delivery, two pre-existing save failure/retry fixtures). Prescribed Release build/provenance/runtime PASS; all four run source-world fingerprints and restored config bytes checked. Overall startup-only verdict remains UNTESTED.",
+        "Public AddObject(water, BlockCenter(cell)) reproduces player placement light omission: accepted source Water, actual save owner retained, no physics tick, sky remains15 while explicit recompute gives14.",
+        "TryAddFluidObject now retains persistence and invokes ApplyEditFastRelight before immediate MarkBlockChunkDirty, matching solid-edit ordering. Native identical centered fixture after fix immediately15->14 with correct source state and no simulation tick.",
+        "Native final probe seven cases PASS, drying policy restored; prescribed Release build/provenance/runtime PASS. Source worlds/config restored for invalid half-offset fixture, valid reproduction and verification; invalid rejection not counted as a production failure.",
+        "Finite fluid handoff inventory saved with source receipts: simulation, player place, break-site flood, generation, streaming seals, notification wrappers and deferred-lighting state boundary. Inactive notification wrappers have no live gameplay mutation callers. Deferred load/create is outside InGame physics; synchronous streamer bracket has no physics tick inside. S3/S4 lifetime certification remains separate."
       ],
       "remaining": [
-        "Target live player placement owner UWorldFluidFacade::TryAddFluidObject: it applies fluid fill then MarkBlockChunkDirty without explicit ApplyEditFastRelight; UWorld::TryAddObject returns through it before normal solid edit lighting. Reproduce and fix this concrete entry point.",
-        "Finish fluid light handoff inventory: explicit notification/flood APIs and deferred-lighting reachability. Add work only for a reachable missing obligation; keep async lifecycle/full backend and visual proof in their original S3..S6 packages."
+        "One targeted warm-cache fluid-map handoff check for UWorldStreaming::PublishFluidSealMutations. Light/save/mesh handoffs are explicit there, but no fluid-map invalidate seen before visual admission and Cache.MarkDirty intentionally does not invalidate fluid maps. Confirm or reject with one actual owner receipt test; then reconcile S2.05."
       ],
-      "scope_limit": "Physics save ownership, map delivery and nonemissive simulation light addition/removal proven within stated fixtures. Light comparison uses the same production solver to test delivery, not solver correctness. Near immediate ordering and material-reaction light calls source-traced; no native rendered/emitter/reaction parity claim. Player fluid placement handoff remains OPEN; S2.05 not closed. S3..S6 full scope retained."
+      "scope_limit": "Producer, visual suffix, explicit map delivery, physics save ownership and simulation/player placement light delivery proven within retained scopes. Same-solver light reference does not certify S3 algorithm correctness or native rendered/backend parity. Finite handoff inventory complete at source level; streaming shore-seal cached-map delivery still unproven, so S2.05 remains OPEN. Full S3..S6 scope retained."
     }
   ],
   "completed_handoff": {

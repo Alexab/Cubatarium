@@ -77,6 +77,11 @@ bool UWorldFluidFacade::TryAddFluidObject(UWorld &world, glm::ivec3 block_pos,
                                      liquid_id, place_state);
   ++world.CachedBlockCount;
   world.BlockWorldReady = true;
+  // Liquid placement returns before the solid AddObject lighting path.
+  // Retain the edit first, then update attenuation/emission before immediate
+  // geometry can sample the field; a later simulation tick is not required.
+  world.ModifiedChunks.insert(UChunkManager::WorldToChunk(block_pos));
+  world.ApplyEditFastRelight({block_pos});
   world.MarkBlockChunkDirty(block_pos, /*sync_neighbor_chunks=*/true,
                             /*sync_light_ring=*/false);
   world.PublishBlockPhysicsEvent(block_pos);

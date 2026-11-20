@@ -201,11 +201,11 @@
             "Visual time-cap suffix loss reproduced/fixed by per-item admission/acknowledgement; queue deadline/order/exception controls and Release app build PASS.",
             "Last-fluid and waterlogged removal invalidation plus batch seam fluid-map/dirty-save delivery: real mesh service/cache tests and Release app build PASS.",
             "Actual isolated UWorld dirty-save ownership survives visual capacity0 rejection and capacity1 eviction; exact cold block/fluid state and existing save probes PASS after production fix. Native repro retained.",
-            "Nonemissive physics mutation light omission reproduced:14 stale vs13 recompute; fixed before remesh. Native addition and optional decay removal PASS; drying policy restored; existing fluid policy and save probes PASS. Invalid fixture runs retained separately."
+            "Nonemissive physics mutation light omission reproduced:14 stale vs13 recompute; fixed before remesh. Native addition and optional decay removal PASS; drying policy restored; existing fluid policy and save probes PASS. Invalid fixture runs retained separately.",
+            "Public player AddObject water placement reproduced sky15 stale vs14; fixed pre-remesh light handoff, native source state/save owner/no-physics-tick assertions and all seven probe cases PASS. Finite producer/deferred handoff inventory recorded."
           ],
           "remaining_subtasks": [
-            "Player fluid placement TryAddFluidObject light handoff before remesh.",
-            "Complete bounded handoff inventory for explicit APIs and deferred-lighting reachability; reuse existing producer and lifecycle evidence."
+            "Targeted warm-cache fluid-map delivery through streaming shore-seal mutation owner, then final S2.05 evidence reconciliation."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
