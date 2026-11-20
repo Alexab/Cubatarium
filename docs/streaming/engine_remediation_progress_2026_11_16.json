@@ -28848,5 +28848,202 @@
     "sha256": "270c33725e8a62616bf68aea1648fdfc9d26ea10dd13bc60e9e4d18fec34c6fa"
   },
   "full_goal": "Full original S0..S6 remains active; no new audit and no scope reduction"
+},
+"native_decoded_air_only_column_save_eviction_return_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "source_commit": "1b51251bac04f15f731c3e3f1f5eb47f79da6038",
+  "verifier_followup_commit": "c9188d4ac",
+  "full_goal": "Full original S0..S6 remains active; no new audit, scope reduction or general acceptance",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-column-native-assessment-20261120.json",
+    "sha256": "b785583e527dc2063d80e25a9ef0a9bcfd31d83643ed7fcce32055c41a0e5462"
+  },
+  "changes": [
+    "Optional second runtime-selected residency column writes a separate file; original strict primary geometry/AIR verifier unchanged.",
+    "Both columns share original 4096-slot buffer. Shared lost/unpublished events invalidate both exports. No worker file IO, no extra per-column capacity, immutable primary selection, scratch startup excluded.",
+    "Secondary snapshots distinguish loaded AIR field identity from explicit decoded terrain ownership; neither certifies physical light.",
+    "Smoke runner accepts an explicit int32 secondary column for round trips, removes inherited secondary switches, records request/environment and preserves config/world isolation.",
+    "New full-profile verifier binds secondary runtime manager to primary runtime owner and start focus, requires every declared slice decoded in both snapshots, old-owner retirement and fresh queued/completed disk demand with matching new field owners.",
+    "Followup rejects geometry materialization between runtime ownership and final snapshot, including before initial AIR snapshots. Native evidence reevaluated with this stronger verifier; original exports/results retained."
+  ],
+  "verification": {
+    "release_application_build": "PASS",
+    "targeted_release_tests": 9,
+    "targeted_release_seconds": 3.76,
+    "python_final_tests": 59,
+    "python_breakdown": {
+      "air_column": 13,
+      "smoke_harness": 27,
+      "unchanged_primary_round_trip": 19
+    },
+    "native": {
+      "run": "engine-air-data-column-return-20261120-native",
+      "runtime_world": "EngineSmoke_de6a7d24055e438e9202eec7f088c47e",
+      "prepared_source_world": "EngineSmoke_8a9ee3fe4b004b2195fa9d8b298fb71c",
+      "protected_source_world": "EngineSmoke_64fa31ebf1b448f8ae28369da1860604",
+      "wall_elapsed_sec": 321.917,
+      "ingame_frames": 11893,
+      "maximum_excursion_blocks": 303.692,
+      "teleports": 0,
+      "primary_column": [
+        1,
+        3
+      ],
+      "primary_disk_demand_id": 72156,
+      "secondary_column": [
+        1,
+        5
+      ],
+      "secondary_disk_demand_id": 72167,
+      "secondary_slices": 24,
+      "min_chunk_y": -4,
+      "max_chunk_y": 19,
+      "primary_trace_events": 46,
+      "secondary_trace_events": 147,
+      "shared_capacity": 4096,
+      "secondary_geometry_events": 0,
+      "saved_binary_frames": 24,
+      "saved_voxel_and_fluid_payload": "all AIR, no fluid; exact full v4 frames parsed",
+      "saved_weather": "all24: quantized wetness16384/65535 (input0.25), last_update_ms123125 (input123.125 sec)",
+      "save_trace": "Actual async WorldColumnSave queued slices24 highest_cy19, no incomplete discard",
+      "source_world_and_prepared_world_preserved": true,
+      "provenance_checks": 7,
+      "source_components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "air_data_column": "PASS",
+        "draw": "PASS",
+        "cpu_vertex_draw": "PASS"
+      },
+      "source_draw": {
+        "before_field": 831,
+        "after_field": 9446,
+        "before_rgb": 786,
+        "after_rgb": 8348,
+        "field_faults": 0,
+        "field_unjoined": 0,
+        "missing_bound": 0,
+        "rgb_faults": 0,
+        "geometry_faults": 0,
+        "hole_faces": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "unmodified_smoke_status": "UNTESTED",
+      "lifecycle_and_scoped_source_status": "PASS"
+    }
+  },
+  "actual_trace_controls": [
+    {
+      "name": "baseline",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "decoded_air_column_retired_and_disk_reloaded"
+    },
+    {
+      "name": "missing_decoded",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_full_profile_decoded_air_cohort"
+    },
+    {
+      "name": "held_owner",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "air_data_column_not_retired"
+    },
+    {
+      "name": "reused_owner",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "air_data_column_reused_retired_field"
+    },
+    {
+      "name": "wrong_demand",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_fresh_air_column_disk_cohort"
+    },
+    {
+      "name": "geometry_before_snapshot",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "air_data_column_materialized_geometry"
+    },
+    {
+      "name": "scratch_reload",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_fresh_air_column_disk_cohort"
+    },
+    {
+      "name": "dropped",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "incomplete_secondary_air_export"
+    }
+  ],
+  "receipts": {
+    "air-secondary-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-release-build-20261120.log",
+      "sha256": "dd3bea52479beb7f6c8afcc68f525312b013915d4946b9e8567a242dead283e3"
+    },
+    "air-secondary-targeted-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-targeted-build-20261120.log",
+      "sha256": "bbea44c6962f99987b843b77cb384a94f155faedf66f75ac9b06007bacbe984e"
+    },
+    "air-secondary-targeted-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-targeted-tests-20261120.log",
+      "sha256": "7ef3ea64205c37c95b26b6043bfdd3a7814f93c8fe3409b8ffc0ce11faec3b23"
+    },
+    "air-secondary-evidence-final-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-evidence-final-tests-20261120.log",
+      "sha256": "01cf08e4d982daac8298bcd443d1a7324461735f464d9888eff3643c1394a126"
+    },
+    "air-secondary-harness-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-harness-tests-20261120.log",
+      "sha256": "437f2b9e18d5f6ca8ad0435a76899dd10166633792760008f22757bb78ceeb9a"
+    },
+    "air-secondary-primary-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-secondary-primary-tests-20261120.log",
+      "sha256": "5e6fd7d4da14ef6375fed3d34826d1eee3654822874a5f94e00e05f6439070fd"
+    },
+    "air-column-native-fixture-20261120.json": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-column-native-fixture-20261120.json",
+      "sha256": "22df4dfeb1801ccee7ad5e842074bb560b4c084b7decd3ba75cec63b58070df2"
+    },
+    "prepare_air_column_native_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\prepare_air_column_native_20261120.py",
+      "sha256": "1611a11581dd92dbb9f626d523f4a008c05dc01a7234e22491e8f518e8113223"
+    },
+    "run_air_column_native_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_air_column_native_20261120.py",
+      "sha256": "ac90c08f62f8f5a1ff792e66746d3406ae17e9bc8f264892ab53498f45fc3779"
+    },
+    "assess_air_column_native_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_air_column_native_20261120.py",
+      "sha256": "6b8fcdfbbf425f39d8e00b463018e4319086adb8b74b303e3ad5fab4c22f6c97"
+    }
+  },
+  "limits": [
+    "No partial/cancelled AIR producer retirement or procedural empty producer certificate proof.",
+    "No persisted physical-light certificate, solver/backend parity, wet/transparency/whole-screen acceptance.",
+    "No S6 performance/memory bound acceptance; general smoke UNTESTED preserved.",
+    "One full-profile explicit decoded AIR native cohort; no arbitrary sparse profile or absent-index completion authority.",
+    "Native AIR save/weather evidence does not prove all producer cancellation, catalog/profile migration or algorithm-version certificates.",
+    "CPU vertex draw kind1 may use GPU readback construction; no CPU construction/GPU solver/backend/GLES parity claim.",
+    "General smoke visual UNTESTED retained; no whole-screen visual/performance acceptance."
+  ],
+  "next": [
+    "Implement/test producer-owned partial AIR cancellation/retirement without whole-column incomplete save/purge or retiring newer/local-edited data.",
+    "Continue explicit procedural/profile/absence completion certificates and persisted content/algorithm/catalog proof.",
+    "Preserve full S0..S6 startup/R8/first-publication, actual CPU construction/GPU solver/backend parity, independent wet/transparency/whole-screen references, lifetime/slot pressure and long native performance/memory matrices."
+  ]
 }
 }
