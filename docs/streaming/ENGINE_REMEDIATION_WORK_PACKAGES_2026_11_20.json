@@ -61,9 +61,10 @@
         {
           "id": "S0.04",
           "action": "Зафиксировать отрицательные контроли: неполный маршрут, relocation, потерянный PNG, неверная pose, отсутствующий reference.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S0.05",
@@ -425,6 +426,6 @@
       ]
     }
   ],
-  "current_step": "S0.04",
+  "current_step": "S0.05",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
 }

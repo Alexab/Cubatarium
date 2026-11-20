@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S0.04",
+  "current_package": "S0.05",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -89,6 +89,28 @@
         "Missing evidence UNTESTED; malformed status/container FAIL; failure precedence retained"
       ],
       "scope_limit": "Contract enforcement only. Missing terrain-save/UI and cancellation evaluators remain explicitly UNTESTED; performance acceptance awaits approved S6 baseline."
+    },
+    {
+      "id": "S0.04",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "build/desktop-msvc/s0-negative-verdict-test-20261120.log",
+          "sha256": "69b29bb4e5e5603d1115cb477b6a27417e84a96b17d71ab64d0b52db5ba1ce33"
+        },
+        {
+          "path": "build/desktop-msvc/s0-negative-inspection-test-20261120.log",
+          "sha256": "2815cbfb9bd9790e1f52abb4cbfa6730ef97808d3ed676df97f6146425c458bd"
+        }
+      ],
+      "controls": {
+        "incomplete_route": "test_endpoint_travel_does_not_hide_incomplete_bot_route",
+        "relocation": "test_teleport_fails / test_unrecorded_height_correction_is_untested",
+        "missing_or_corrupt_png": "test_inspection_requires_distinct_viewpoints_and_written_images / test_truncated_and_corrupt_png_are_not_evidence",
+        "incorrect_pose": "test_inspection_joins_variable_route_layout_and_relative_targets; displaced position, wrong pitch and movement input",
+        "missing_reference": "test_legacy_pixels_do_not_grant_acceptance / test_missing_fault_result_is_untested"
+      },
+      "scope_limit": "Synthetic verifier negative controls; native hidden-face/light corruption controls remain in S6."
     }
   ],
   "completed_handoff": {

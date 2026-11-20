@@ -533,6 +533,12 @@ class IsolatedFixtureTest(unittest.TestCase):
         write()
         report = dict(diagnostic_bot=dict(inspection_capture_requested_n=26))
         self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 26)
+        rows[1]["position"][0] += 2
+        write()
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 25)
+        rows[1]["position"][0] -= 2
+        write()
+        self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 26)
         rows[12]["pitch"] = 0
         write()
         self.assertEqual(inspection_evidence(self.artifacts, report)["verified"], 25)
