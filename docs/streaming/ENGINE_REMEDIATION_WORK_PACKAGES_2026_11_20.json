@@ -199,11 +199,11 @@
           "completed_subtasks": [
             "Exact flood producer report/count across X/Z and negative-Y seams; duplicate waterlogged-decor mutation fixed; three Release tests and app build PASS.",
             "Visual time-cap suffix loss reproduced/fixed by per-item admission/acknowledgement; queue deadline/order/exception controls and Release app build PASS.",
-            "Last-fluid and waterlogged removal invalidation plus batch seam fluid-map/dirty-save delivery: real mesh service/cache tests and Release app build PASS."
+            "Last-fluid and waterlogged removal invalidation plus batch seam fluid-map/dirty-save delivery: real mesh service/cache tests and Release app build PASS.",
+            "Actual isolated UWorld dirty-save ownership survives visual capacity0 rejection and capacity1 eviction; exact cold block/fluid state and existing save probes PASS after production fix. Native repro retained."
           ],
           "remaining_subtasks": [
-            "Fluid mutation light obligations.",
-            "Physics dirty-save ownership independent of visual queue rejection/eviction."
+            "Fluid mutation light obligations."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
@@ -461,6 +461,7 @@
     }
   ],
   "current_step": "S2.05",
+  "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [

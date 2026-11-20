@@ -205,6 +205,16 @@
         "directed_capture": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\captures\\inspection_0025.png",
         "note": "Floor visibly rendered; do not infer framebuffer darkness solely from baked draw-source sky0. Diagnose oracle/physical-consumer contract."
       }
+    },
+    {
+      "id": "explicit-save-probe-component-reader-missing",
+      "stage": "S0",
+      "status": "OPEN",
+      "discovered_by": "S2.05 targeted native save-admission probe",
+      "evidence": "build/desktop-msvc/s2-fluid-save-admission-fixed-20261120-native/smoke-verdict.json",
+      "evidence_sha256": "70275ed61bd36877b23257ac8938dc04a95502cb73731d1f809c3905aa968180",
+      "observed": "Native terrain-save-probe/report.json exists and PASS, but smoke components terrain_save_failure and save_error_ui remain missing_required_component UNTESTED. No false PASS; report manually validated for this scoped evidence.",
+      "next_action": "Add strict component readers using existing retained reports and malformed/missing/negative report controls. Do not rerun native solely to wire offline report evaluation; UI evidence requires its own actual report, never infer UI from storage."
     }
   ]
 }

@@ -9,6 +9,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Persistence/WorldPersistence.h"
+#include "World/Physics/WorldChunkDirtyService.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -65,6 +66,86 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    // Physics owns persistence independently of the best-effort visual queue.
+    // These are raw API fixtures, not persisted procedural-profile fixtures.
+    bool fluid_dirty_retained = true;
+    for (bool eviction : {false, true})
+    {
+      const auto folder = root / (eviction ? "fluid-visual-eviction" : "fluid-visual-rejection");
+      fs::create_directories(folder);
+      UWorld world(nullptr, nullptr);
+      world.ProceduralTemplate.MinHeight = -48;
+      world.ProceduralTemplate.MaxHeight = -33;
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -33;
+      world.BlockWorld.SetVerticalProfile(profile);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone, water;
+      stone.Physics = BlockPhysicsProfile::Solid();
+      water.Physics.IsLiquid = true;
+      water.Physics.FluidKindPreset = FluidKind::Water;
+      definitions->ReplaceAll({{8, stone}, {9, water}}, {{"stone", 8}, {"water", 9}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      auto service = std::make_unique<UWorldChunkDirtyService>();
+      auto *dirty_service = service.get();
+      PhysicsBudgets budgets;
+      budgets.VisualRemeshPerTickMax = 0;
+      budgets.VisualRemeshQueueSoftLimit = eviction ? 1 : 0;
+      budgets.VisualRemeshQueueHardLimit = eviction ? 1 : 0;
+      dirty_service->SetBudgets(budgets);
+      world.ChunkDirtyService = std::move(service);
+      const int columns = eviction ? 2 : 1;
+      for (int cx = 0; cx < columns; ++cx)
+        for (int x = 0; x < CHUNK_SIZE; ++x)
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            world.BlockWorld.SetBlock({cx * CHUNK_SIZE + x, -48, z}, 8);
+      world.ModifiedChunks.clear();
+      bool before_drain = true;
+      for (int cx = 0; cx < columns; ++cx)
+      {
+        const glm::ivec3 cell(cx * CHUNK_SIZE + 8, -40, 8);
+        world.BlockWorld.SetBlock(cell, 9);
+        world.BlockWorld.SetFluidState(cell, FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        world.MarkFluidChangeDirty(cell);
+        before_drain &= world.ModifiedChunks.count({cx, -3, 0}) == 1;
+      }
+      dirty_service->DrainRebuildQueues(world);
+      bool after_drain = true;
+      bool cold_matches = true;
+      for (int cx = 0; cx < columns; ++cx)
+      {
+        after_drain &= world.ModifiedChunks.count({cx, -3, 0}) == 1;
+        require(world.GetChunkStorage().SaveTerrainColumn(
+                    {cx, 0, 0}, world.BlockWorld, folder.string(),
+                    *world.BlockRegistry, -33, -48), "fluid fixture cold save");
+        UBlockWorld cold;
+        cold.SetVerticalProfile(profile);
+        cold.SetFluidDefinitions(definitions.get());
+        require(world.GetChunkStorage().LoadTerrainColumn(
+                    {cx, 0, 0}, cold, folder.string(), *world.BlockRegistry,
+                    -33, -48) > 0, "fluid fixture cold load");
+        const glm::ivec3 cell(cx * CHUNK_SIZE + 8, -40, 8);
+        cold_matches &= cold.GetBlock(cell) == 9 &&
+            PackFluidCellState(cold.GetFluidState(cell)) ==
+                PackFluidCellState(world.BlockWorld.GetFluidState(cell));
+      }
+      const bool capacity_exercised = eviction
+          ? world.PhysicsTelemetryData.PurgedUpdates > 0
+          : world.PhysicsTelemetryData.DroppedUpdates > 0;
+      const bool passed = before_drain && after_drain && cold_matches && capacity_exercised;
+      report["cases"].push_back({
+          {"kind", eviction ? "fluid_visual_eviction" : "fluid_visual_rejection"},
+          {"status", passed ? "PASS" : "FAIL"},
+          {"dirty_before_drain", before_drain}, {"dirty_after_drain", after_drain},
+          {"capacity_exercised", capacity_exercised},
+          {"visual_backlog", world.PhysicsTelemetryData.VisualRemeshBacklog},
+          {"cold_block_and_fluid_state", cold_matches},
+          {"scope", "Physics mutation ownership and direct cold storage; not autosave scheduling or save acknowledgement"}});
+      fluid_dirty_retained &= passed;
+    }
+    require(fluid_dirty_retained, "physics fluid dirty-save lost before visual drain");
     for (bool io_failure : {false, true})
     {
       Json fence_evidence = Json::object();

@@ -1,0 +1,13 @@
+{
+  "requirement": "S2.05 physics dirty-save independent of visual queue admission",
+  "hypothesis": "MarkVisualRemesh retains save ownership only in drain, so zero-capacity rejection and one-entry eviction lose the mutation save obligation",
+  "inputs": "Isolated UWorld raw profile -48..-33, stone floor, water ID9 at interior positions (8,-40,8)/(24,-40,8), flowing level3; visual processing0, capacity0 rejection or capacity1 eviction",
+  "pass": "Both cases retain actual owner ModifiedChunks before/after drain; reject/evict telemetry confirms capacity path; direct cold storage preserves block and exact packed fluid state",
+  "fail": "Any missing save owner, unexercised capacity path, or cold state mismatch",
+  "scope_limit": "Not autosave scheduler, acknowledgement, full-world relocation or light-obligation delivery",
+  "command_options": "--world World_261 --render-distance 4 --minimum-chunks 8 --fly-seconds 65 --idle-seconds 5 --stop-seconds 20 --process-timeout 600 --startup-only --probe-terrain-save-failure",
+  "reproduction_artifacts": "build/desktop-msvc/s2-fluid-save-admission-repro-20261120-native",
+  "verification_artifacts": "build/desktop-msvc/s2-fluid-save-admission-fixed-20261120-native",
+  "timeout_seconds": 600,
+  "run_budget": "one reproduction then one verification after production fix; further run requires new evidence or hypothesis"
+}

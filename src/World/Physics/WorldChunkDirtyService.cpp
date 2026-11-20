@@ -56,6 +56,9 @@ void UWorldChunkDirtyService::EnqueueAffectedChunks(UWorld &world,
 
 void UWorldChunkDirtyService::MarkVisualRemesh(UWorld &world, glm::ivec3 blockPos)
 {
+  // Persistence belongs to the mutation, not to best-effort visual admission.
+  // Only the actual owner changed; adjacent sections are remesh dependencies.
+  world.ModifiedChunks.insert(UChunkManager::WorldToChunk(blockPos));
   EnqueueAffectedChunks(world, blockPos, VisualQueue);
 }
 

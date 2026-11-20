@@ -922,6 +922,70 @@
         {
           "path": "build\\desktop-msvc\\s2-fluid-map-release-provenance-20261120.json",
           "sha256": "f9d00fde75e94a0af5f1f47b35b260ae5b10ab20a3a22cd2e65905bfd0f9c0bb"
+        },
+        {
+          "path": "src\\World\\Physics\\WorldChunkDirtyService.cpp",
+          "sha256": "adda7ff714c2b213f47e87707c365dceff173cee86ff72f750ed36fbb465f22b"
+        },
+        {
+          "path": "src\\App\\Platform\\TerrainSaveFailureProbe.h",
+          "sha256": "e16f63ecc3c51c29478a02fda36032ad38f9f527b1812f74a7276583182cd513"
+        },
+        {
+          "path": "docs\\streaming\\S2_FLUID_SAVE_ADMISSION_PROBE_2026_11_20.json",
+          "sha256": "9ef8988bb2e586060f1e112b0fef599feb78412d1a77b858f02d76f8e97e1671"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "f19f632567a719799c38cab27459f5ed79e06bfd998116e4c22944d913afe987"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "020c573f482e457ca33574e88b4fa192eecddfbd9c2aaf4d75ae50f8f1e28290"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "cb274f4ff7d1c99bc2a357be40521f3b72453e8be58877087c94414208814377"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\smoke-verdict.json",
+          "sha256": "70275ed61bd36877b23257ac8938dc04a95502cb73731d1f809c3905aa968180"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-20261120-native\\evidence-report.json",
+          "sha256": "23565116de81a73101610b649d6b1193c99519fa06b4e4cdd16d344db1904ecc"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\evidence-report.json",
+          "sha256": "9a1dddb5f627706088a435356708f7464c713135c26234cf14dfa0ab59c98e5e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-build-20261120.log",
+          "sha256": "2576ab5d02f7f3fefbc9fce704ce93b7d36e169c7e7d7d539b20fc567bf07a1f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-build-20261120.log",
+          "sha256": "79406d4f9feb41bd713db9fe93ecbec16aa401d96fc5b0c30459e95fb6df790d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-provenance-20261120.json",
+          "sha256": "b53a73db6e8b3bd59c70b788c1cc5e5879b24070fa1042f4c2ab61193338d4fe"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-provenance-20261120.json",
+          "sha256": "71e4fc0607aa8c2c7596575232a4108c5a20495e8c2dbdedf3c67975207abf67"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-isolation-20261120.json",
+          "sha256": "7b9c19cdd0499e1acf1ddaa0a758910e68c88245bdee9ca943517d255f8fe951"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-repro-20261120-native\\route.json",
+          "sha256": "43fc197d2a4f0beaf665e7bb8acc53d591228ba270acab9197282843c02d1da0"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\route.json",
+          "sha256": "99a6ca6a0dfef7d10756bfe69eab1efbe99c7d527783f6eaf90e0058740d2364"
         }
       ],
       "reproduced": "Two wet neighbors revisited a shared permeable decor cell. Break-site flood counted/reported an identical second waterlog write as a new mutation.",
@@ -938,13 +1002,16 @@
         "Explicit fluid-surface mutation notification now invalidates the changed column unconditionally, including waterlogged non-liquid blocks and registry-unavailable delivery.",
         "Batch edit entry point emits per-column notifications before immediate/queued mesh selection; single edit delegates through it and no longer sends a duplicate outer UWorld notification.",
         "Real service/cache fixture verifies ordinary last-fluid slice removal before any mesh rebuild, waterlogged-state removal notification, and X/Z plus negative-Y seam batch fluid-map/dirty-save obligations without immediate meshing.",
-        "Decor integration plus fluid-surface slice/pack-reuse Release tests PASS (3); prescribed Cubatarium Release build/provenance PASS."
+        "Decor integration plus fluid-surface slice/pack-reuse Release tests PASS (3); prescribed Cubatarium Release build/provenance PASS.",
+        "Native isolated UWorld repro: capacity0 rejects visual work and capacity1 evicts; both lost actual mutation dirty-save before/after zero-budget drain, while direct cold block/fluid storage remained correct.",
+        "MarkVisualRemesh now records actual changed owner in ModifiedChunks before best-effort admission. Native verification with identical fixtures retains dirty-save in both rejection and eviction cases; backlog0/1 and dropped/purged telemetry prove capacity paths.",
+        "Native cold read preserves water ID9 and exact flowing level3 packed state at negative Y=-40 in each changed column. Existing cooperative save failure/retry/fence probes also PASS. Release app build/provenance and native runtime PASS.",
+        "Both native run source-world fingerprints match the current original; original config bytes restored. Isolation receipt and complete route/EXE/source provenance retained."
       ],
       "remaining": [
-        "Verify light-obligation delivery for fluid mutations rather than relying on later stale-field discovery.",
-        "Verify physics dirty-save ownership is retained independently of lossy visual admission/eviction, not only when VisualQueue eventually drains. Batch edit path already retains its changed owner chunks."
+        "Verify light-obligation delivery for fluid mutations rather than relying on later stale-field discovery."
       ],
-      "scope_limit": "Flood producer reports, admitted visual suffix retention and fluid-map mutation delivery proven. Surface cache tests use the existing deterministic CPU column-scan backend; camera methods fail if accidentally invoked. No actual GPU scan, camera rendering, waterlogged-surface representation policy or native wet/transparency acceptance claimed. S2.05 remains OPEN for physics save/light ownership."
+      "scope_limit": "Producer reports, visual suffix retention, fluid-map delivery and physics dirty-save ownership under rejection/eviction proven. Native direct cold storage does not prove autosave scheduling or full-world relocation. Overall startup-only smoke remains UNTESTED for route/visual/performance and missing save probe component readers. S2.05 OPEN for light obligations; GPU/wet/transparency scope retained."
     }
   ],
   "completed_handoff": {
