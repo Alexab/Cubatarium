@@ -94,6 +94,11 @@ class AirColumnEvidenceTest(unittest.TestCase):
         self.write()
         self.check("FAIL", "air_data_column_reused_retired_field")
 
+    def test_geometry_before_initial_snapshot_is_not_hidden(self):
+        self.events.insert(1, dict(self.events[0], source="create", value=900))
+        self.write()
+        self.check("FAIL", "air_data_column_materialized_geometry")
+
     def test_indexed_absence_or_stale_decoded_owner_cannot_pass(self):
         self.events[-1]["value"] += 1
         self.write()

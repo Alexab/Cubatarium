@@ -95,7 +95,7 @@ def evaluate(artifacts: Path, report: dict, route: dict, *, column,
                    for c in expected):
                 return result("FAIL", "decoded_air_field_identity_mismatch")
         initial, final = cohorts["air", "initial"], cohorts["air", "final"]
-        begin = min(e["seq"] for e in initial.values())
+        begin = owner["seq"]
         end = max(e["seq"] for e in cohorts["air_decoded", "final"].values())
         if any(e["source"] in ("runtime_initial", "runtime_final", "create", "air_materialize") and
                begin <= e["seq"] <= end for e in runtime):
