@@ -27370,5 +27370,800 @@
     "Continue unresolved full S0..S6 AIR-only/procedural producer and column lifecycle ownership, certificates and cancellation/catalog semantics.",
     "Continue independent wet/transparency references and full startup/return/edit/seed/R8/performance/memory matrix."
   ]
+},
+"unpacked_deferred_physical_pairing_and_mdi_observation_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "scope": "Full S0..S6 remains active; unpacked deferred geometry first-publication correction and actual MDI evidence, with retained source FAIL",
+  "commits": {
+    "initial_scenario": "b80c20a4a",
+    "correction": "5411ef3ea"
+  },
+  "initial_native": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-cpu-mdi-20261120-native",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "original_smoke": "FAIL",
+    "source": "UNTESTED",
+    "first_barrier": {
+      "elapsed_ms": 182.72910000000002,
+      "publication_unready_sections": 177,
+      "light_unready_sections": 86,
+      "ready": false
+    },
+    "last_barriers": [
+      {
+        "elapsed_ms": 213421.88509999987,
+        "publication_unready_sections": 106,
+        "light_unready_sections": 0,
+        "ready": false
+      },
+      {
+        "elapsed_ms": 215460.46279999986,
+        "publication_unready_sections": 106,
+        "light_unready_sections": 0,
+        "ready": false
+      },
+      {
+        "elapsed_ms": 217484.9141999998,
+        "publication_unready_sections": 106,
+        "light_unready_sections": 0,
+        "ready": false
+      }
+    ],
+    "barrier_samples": 108,
+    "backend": [
+      "I20261120 07:44:20.297373 17856 RenderBackendFactory.cpp:70] [RenderBackend] Bound mesher=gpu_greedy store=mdi_vertex_pool cull=gpu_frustum"
+    ],
+    "controlled_stop": {
+      "pid": 12052,
+      "parent_pid": 724,
+      "reason": "Repeated unchanged first-paint publication refusal; exact executable/parent revalidated before stopping owned process. Not process-timeout expiration or a spontaneous native crash."
+    }
+  },
+  "correction": [
+    "GpuExtractPending geometry skips completed-geometry field pairing before extraction. Legacy vertex fallback previously cleared pending flags and fell through without re-entering pairing, then released the executable owner.",
+    "After actual deferred extraction or CPU fallback creates vertices, clear pending flags and re-enter common ApplyMeshResult validation once, keeping ActiveMeshSourceRevision live. Current geometry pairs with current computed/settled field or retains GeometryAwaitingLight ownership.",
+    "Re-entry revalidates owner/world/capture generation/catalog/geometry after extraction; pending flags are cleared so extraction conversion cannot recurse repeatedly. Existing cancellation/reincarnation/unknown field guards remain.",
+    "Extended existing physical-light lifecycle regression with both deferred extraction-success and fallback paths across16 lifecycle cases each. Original regression failed before correction at completed geometry ownership expectation.",
+    "Renamed new smoke request to --no-packed-meshing / unpacked_meshing_requested. It requests gpu_packed_meshing=false and restores config on failure; it does not claim CPU construction. Old raw artifacts retain their original inaccurate name."
+  ],
+  "verification": {
+    "python_engine_tests": 195,
+    "python_seconds": 10.081,
+    "release_ctests": 4,
+    "ctests": [
+      "decor_mesh_integration_test",
+      "gpu_material_visibility_driver_test",
+      "gpu_material_visibility_gles_driver_test",
+      "section_render_light_bindings_driver_test"
+    ],
+    "native_process": "PASS exit0; 3 motor waypoints completed; no teleport/relocation; R3 first-paint ring ready",
+    "red": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unpacked-field-pairing-red-test-20261120.log",
+    "green": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unpacked-field-pairing-green-test-20261120.log",
+    "drivers": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unpacked-field-pairing-driver-test-20261120.log",
+    "desktop_build": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unpacked-field-pairing-release-build-20261120.log"
+  },
+  "corrected_native": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-hole-unpacked-paired-20261120-native",
+    "components": {
+      "material": "PASS",
+      "camera": "PASS",
+      "startup": "PASS",
+      "air_return": "PASS",
+      "draw": "FAIL",
+      "cpu_vertex_draw": "PASS"
+    },
+    "source_status": "FAIL",
+    "original_smoke": "UNTESTED",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "draw": {
+      "schema": "engine-source-hole-draw-reference.v1",
+      "status": "FAIL",
+      "reason": "frame_bound_source_hole_transport",
+      "scope": "One verified glowstone-to-AIR action: declared-voxel light transport, ordinary floor and five new hole faces, same-frame GPU binding and independently witnessed constant opaque normal-color RGB; no roof/wall/whole-screen/wet/transparency/backend/latency acceptance",
+      "action_frame": 1212,
+      "world_epoch": 4,
+      "counts": {
+        "before": {
+          "rows": 1780,
+          "field_checked": 876,
+          "field_faults": 0,
+          "field_unjoined": 0,
+          "missing_bound": 0,
+          "source_effect": 237,
+          "rgb_checked": 855,
+          "rgb_faults": 0,
+          "unwitnessed": 0,
+          "geometry_faults": 0
+        },
+        "after": {
+          "rows": 25960,
+          "field_checked": 9036,
+          "field_faults": 0,
+          "field_unjoined": 0,
+          "missing_bound": 75,
+          "source_effect": 443,
+          "rgb_checked": 7931,
+          "rgb_faults": 33,
+          "unwitnessed": 0,
+          "geometry_faults": 75
+        }
+      },
+      "unordered_action_rows": 0,
+      "field_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "rgb_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "draw_sources": {
+        "before": {
+          "1": 876
+        },
+        "after": {
+          "1": 9036
+        }
+      },
+      "missing_coverage": [
+        "after_requested_bound_fields"
+      ],
+      "examples": [
+        {
+          "frame": 5160,
+          "solid": [
+            -269,
+            -49,
+            64
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 19.808005904171175,
+          "actual_depth": 19.8053,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -268,
+            -49,
+            61
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 18.71886193996364,
+          "actual_depth": 18.7164,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -267,
+            -49,
+            59
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 17.955118966221168,
+          "actual_depth": 17.9528,
+          "expected_packed": 48,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -267,
+            -49,
+            56
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 17.559266100944793,
+          "actual_depth": 17.5571,
+          "expected_packed": 96,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -266,
+            -49,
+            54
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 17.55614127062762,
+          "actual_depth": 17.554,
+          "expected_packed": 144,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -265,
+            -49,
+            49
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 18.704330002562134,
+          "actual_depth": 18.7021,
+          "expected_packed": 176,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -262,
+            -49,
+            38
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 24.505627670751892,
+          "actual_depth": 24.5036,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -261,
+            -49,
+            36
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 26.4209737719276,
+          "actual_depth": 26.4184,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -274,
+            -49,
+            65
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 17.389077725983217,
+          "actual_depth": 17.3865,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -274,
+            -49,
+            63
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 16.289821957331345,
+          "actual_depth": 16.2875,
+          "expected_packed": 0,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": false
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -273,
+            -49,
+            61
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 15.31337641878895,
+          "actual_depth": 15.3111,
+          "expected_packed": 48,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        },
+        {
+          "frame": 5160,
+          "solid": [
+            -273,
+            -49,
+            60
+          ],
+          "face": 4,
+          "hole": false,
+          "expected_depth": 14.48454978710571,
+          "actual_depth": 14.4823,
+          "expected_packed": 64,
+          "actual_packed": null,
+          "geometry_ok": false,
+          "field_fault": false,
+          "rgb_fault": true
+        }
+      ]
+    },
+    "actual_gpu_capture_modes": {
+      "draw_table": 24434
+    },
+    "hole_samples": {
+      "4": {
+        "frame": 11520,
+        "surface": {
+          "distance": 4.947091675924576,
+          "solid": [
+            22,
+            -50,
+            51
+          ],
+          "face": 4,
+          "air": [
+            22,
+            -49,
+            51
+          ],
+          "material": 560,
+          "hole": true
+        },
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 176,
+          "program": 27,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            60,
+            4,
+            1,
+            0
+          ],
+          "frame_epoch": 11520,
+          "world_epoch": 4,
+          "field_incarnation": 18190,
+          "field_revision": 2,
+          "geometry_incarnation": 4821,
+          "geometry_content": 4095,
+          "draw_table": true,
+          "draw_table_buffer": 57,
+          "draw_table_row": 55,
+          "indirect_buffer": 51,
+          "indirect_command": [
+            66,
+            1,
+            117708,
+            78404,
+            55
+          ],
+          "geometry_command": [
+            66,
+            117708,
+            78404
+          ]
+        }
+      },
+      "1": {
+        "frame": 11520,
+        "surface": {
+          "distance": 4.3426217186760585,
+          "solid": [
+            21,
+            -49,
+            51
+          ],
+          "face": 1,
+          "air": [
+            22,
+            -49,
+            51
+          ],
+          "material": 560,
+          "hole": true
+        },
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 176,
+          "program": 27,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            60,
+            4,
+            1,
+            0
+          ],
+          "frame_epoch": 11520,
+          "world_epoch": 4,
+          "field_incarnation": 18190,
+          "field_revision": 2,
+          "geometry_incarnation": 4821,
+          "geometry_content": 4095,
+          "draw_table": true,
+          "draw_table_buffer": 57,
+          "draw_table_row": 55,
+          "indirect_buffer": 51,
+          "indirect_command": [
+            66,
+            1,
+            117708,
+            78404,
+            55
+          ],
+          "geometry_command": [
+            66,
+            117708,
+            78404
+          ]
+        }
+      },
+      "0": {
+        "frame": 10187,
+        "surface": {
+          "distance": 4.527181195900185,
+          "solid": [
+            22,
+            -49,
+            50
+          ],
+          "face": 0,
+          "air": [
+            22,
+            -49,
+            51
+          ],
+          "material": 560,
+          "hole": true
+        },
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 176,
+          "program": 27,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            60,
+            4,
+            1,
+            0
+          ],
+          "frame_epoch": 10187,
+          "world_epoch": 4,
+          "field_incarnation": 18190,
+          "field_revision": 2,
+          "geometry_incarnation": 4821,
+          "geometry_content": 4095,
+          "draw_table": true,
+          "draw_table_buffer": 57,
+          "draw_table_row": 55,
+          "indirect_buffer": 51,
+          "indirect_command": [
+            66,
+            1,
+            117708,
+            78404,
+            55
+          ],
+          "geometry_command": [
+            66,
+            117708,
+            78404
+          ]
+        }
+      },
+      "2": {
+        "frame": 10117,
+        "surface": {
+          "distance": 4.479122808589166,
+          "solid": [
+            22,
+            -49,
+            52
+          ],
+          "face": 2,
+          "air": [
+            22,
+            -49,
+            51
+          ],
+          "material": 560,
+          "hole": true
+        },
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 176,
+          "program": 27,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            60,
+            4,
+            1,
+            0
+          ],
+          "frame_epoch": 10117,
+          "world_epoch": 4,
+          "field_incarnation": 18190,
+          "field_revision": 2,
+          "geometry_incarnation": 4821,
+          "geometry_content": 4095,
+          "draw_table": true,
+          "draw_table_buffer": 80,
+          "draw_table_row": 58,
+          "indirect_buffer": 51,
+          "indirect_command": [
+            66,
+            1,
+            117708,
+            78404,
+            58
+          ],
+          "geometry_command": [
+            66,
+            117708,
+            78404
+          ]
+        }
+      },
+      "3": {
+        "frame": 9962,
+        "surface": {
+          "distance": 4.540988165497636,
+          "solid": [
+            23,
+            -49,
+            51
+          ],
+          "face": 3,
+          "air": [
+            22,
+            -49,
+            51
+          ],
+          "material": 560,
+          "hole": true
+        },
+        "bound": {
+          "schema": "bound-section-light-pixel.v1",
+          "requested": true,
+          "captured": true,
+          "valid": true,
+          "cpu_matches": true,
+          "packed": 176,
+          "program": 27,
+          "atlas_texture": 2059,
+          "table_texture": 2066,
+          "handle": [
+            60,
+            4,
+            1,
+            0
+          ],
+          "frame_epoch": 9962,
+          "world_epoch": 4,
+          "field_incarnation": 18190,
+          "field_revision": 2,
+          "geometry_incarnation": 4821,
+          "geometry_content": 4095,
+          "draw_table": true,
+          "draw_table_buffer": 57,
+          "draw_table_row": 72,
+          "indirect_buffer": 51,
+          "indirect_command": [
+            66,
+            1,
+            117708,
+            78404,
+            72
+          ],
+          "geometry_command": [
+            66,
+            117708,
+            78404
+          ]
+        }
+      }
+    }
+  },
+  "unresolved": {
+    "unjoined_frames": {
+      "5160": {
+        "samples": 15,
+        "depth_faults": 0,
+        "rgb_checked": 9,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.4780799999999914,
+        "missing_material": 15,
+        "missing_bound": 15
+      },
+      "4800": {
+        "samples": 11,
+        "depth_faults": 0,
+        "rgb_checked": 5,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.4606488772054149,
+        "missing_material": 11,
+        "missing_bound": 11
+      },
+      "4140": {
+        "samples": 8,
+        "depth_faults": 0,
+        "rgb_checked": 4,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.5368718067269356,
+        "missing_material": 8,
+        "missing_bound": 8
+      },
+      "4058": {
+        "samples": 5,
+        "depth_faults": 0,
+        "rgb_checked": 1,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.4320961636596934,
+        "missing_material": 5,
+        "missing_bound": 5
+      },
+      "4020": {
+        "samples": 5,
+        "depth_faults": 0,
+        "rgb_checked": 2,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.43166441949792045,
+        "missing_material": 5,
+        "missing_bound": 5
+      },
+      "3960": {
+        "samples": 4,
+        "depth_faults": 0,
+        "rgb_checked": 0,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0,
+        "missing_material": 4,
+        "missing_bound": 4
+      },
+      "3904": {
+        "samples": 10,
+        "depth_faults": 0,
+        "rgb_checked": 6,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.5169913254618876,
+        "missing_material": 10,
+        "missing_bound": 10
+      },
+      "3840": {
+        "samples": 10,
+        "depth_faults": 0,
+        "rgb_checked": 6,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0.5169913254618876,
+        "missing_material": 10,
+        "missing_bound": 10
+      },
+      "2758": {
+        "samples": 3,
+        "depth_faults": 0,
+        "rgb_checked": 0,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0,
+        "missing_material": 3,
+        "missing_bound": 3
+      },
+      "2700": {
+        "samples": 1,
+        "depth_faults": 0,
+        "rgb_checked": 0,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0,
+        "missing_material": 1,
+        "missing_bound": 1
+      },
+      "2640": {
+        "samples": 2,
+        "depth_faults": 0,
+        "rgb_checked": 0,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0,
+        "missing_material": 2,
+        "missing_bound": 2
+      },
+      "2400": {
+        "samples": 1,
+        "depth_faults": 0,
+        "rgb_checked": 0,
+        "rgb_numeric_faults": 0,
+        "max_error_bytes": 0,
+        "missing_material": 1,
+        "missing_bound": 1
+      }
+    },
+    "total_samples": 75,
+    "positive_rgb_samples": 33,
+    "description": "75 ordinary far-floor samples across12 frame epochs lack material/CPU geometry/bound capture identity. All independent depths match; all33 positive RGB comparisons are numerically within2bytes. Original source FAIL remains unchanged: diagnostic numeric matches cannot supply missing draw identity.",
+    "next": "Investigate actual CPU/MDI opaque-source attribution and retained draw/binding ownership for the75 samples. Preserve original FAIL; do not skip rays or promote missing proof to PASS."
+  },
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unpacked-physical-pairing-assessment-20261120.json",
+    "sha256": "ce1e1cd71771b60d8d1c1d93bdcb4a96ea69c0cced31027f40abc6d3fd222e0b"
+  },
+  "limits": [
+    "Corrected startup and five hole faces do not make the full source run PASS: retained FAIL includes unjoined far-floor metadata and missing bound fields.",
+    "Numerical RGB comparison here is diagnosis only; absent material/draw/binding identity cannot be promoted to accepted RGB/GPU evidence.",
+    "Old --cpu-meshing name was inaccurate. gpu_packed_meshing=false selects vertex output, not CPU computation; runtime actually bound gpu_greedy/mdi_vertex_pool/gpu_frustum. New flag is --no-packed-meshing.",
+    "No complete CPU mesher/solver/GLES/native/performance matrix or full S0..S6 acceptance."
+  ],
+  "next": [
+    "Resolve missing CPU/MDI geometry/material/bound-field attribution, then repeat isolated native AIR-hole reference.",
+    "Add explicit actual CPU mesher construction coverage separately from unpacked vertex consumers; do not label GPU readback as CPU meshing.",
+    "Continue full S0..S6 AIR-only/procedural producer and data-column ownership. Current ForEachColumn/ResidentColumnChunkCounts and streamer HasResidentTerrainSlice preflight still count geometry; TerrainColumnNeedsFill/IsTerrainChunkComplete still treat all-air subcolumns as needing terrain. Changes must preserve incomplete-save and stale-unload protections.",
+    "Continue persisted certificates, cancellation/catalog lifecycle, solver/backend/GLES parity, wet/transparency, seeds/R8/performance/memory requirements."
+  ]
 }
 }
