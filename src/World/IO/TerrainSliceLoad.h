@@ -26,6 +26,7 @@ bool ApplyTerrainSliceLoad(UBlockWorld &world, glm::ivec3 coord,
 class TerrainSliceLoadOwnership
 {
 public:
+  size_t GetAirInstallCount() const { return Air.size(); }
   std::vector<glm::ivec3> RetireAir(UChunkManager &manager)
   {
     std::vector<glm::ivec3> retired;

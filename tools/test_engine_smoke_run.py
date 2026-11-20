@@ -13,6 +13,11 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_cancellation_probe_requires_explicit_column_and_boolean(self):
+        for value in (True, 1, "1", None):
+            with self.assertRaisesRegex(ValueError, "AIR cancellation probe"):
+                engine_smoke_run.run("Saved", Path("unused"),
+                                     probe_partial_air_cancellation=value)
     def test_secondary_residency_requires_explicit_valid_moving_column(self):
         for column, options in [(True, {}), ([1], {}), ([1, 2, 3], {}),
                                 ([True, 2], {}), ([1.0, 2], {}),
@@ -28,10 +33,14 @@ class IsolatedFixtureTest(unittest.TestCase):
         import os
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         fingerprint = world_fingerprint(self.world)
-        for column in (None, (1, 5)):
-            artifacts = self.artifacts / ("default" if column is None else "secondary")
+        for index, (column, probe) in enumerate(((None, False), ((1, 5), False), ((1, 5), True))):
+            artifacts = self.artifacts / str(index)
             def fail_launch(*args, **kwargs):
                 env = kwargs["env"]
+                if probe:
+                    self.assertEqual(env["CUBA_DISK_AIR_CANCEL_PROBE"], "1,5")
+                else:
+                    self.assertNotIn("CUBA_DISK_AIR_CANCEL_PROBE", env)
                 if column is None:
                     self.assertNotIn("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", env)
                     self.assertNotIn("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", env)
@@ -44,13 +53,15 @@ class IsolatedFixtureTest(unittest.TestCase):
                 raise RuntimeError("controlled secondary launch failure")
             with patch.object(engine_smoke_run, "ROOT", self.root), \
                  patch.dict(os.environ, {"CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY": "99,99",
+                                         "CUBA_DISK_AIR_CANCEL_PROBE": "99,99",
                                          "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": "foreign.log"}), \
                  patch("flight_sim_run.exe_writable", return_value=True), \
                  patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
                  patch.object(engine_smoke_run.subprocess, "Popen", side_effect=fail_launch):
                 with self.assertRaisesRegex(RuntimeError, "controlled secondary launch failure"):
                     engine_smoke_run.run("Saved", artifacts, round_trip=True,
-                                         secondary_residency_column=column)
+                                         secondary_residency_column=column,
+                                         probe_partial_air_cancellation=probe)
             self.assertEqual(self.config.read_bytes(), self.original)
             self.assertEqual(world_fingerprint(self.world), fingerprint)
             self.assertFalse((self.runtime / ".engine-smoke.lock").exists())

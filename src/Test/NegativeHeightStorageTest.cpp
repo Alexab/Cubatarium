@@ -7,6 +7,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/IO/DiskAirCancellationProbe.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
@@ -921,6 +922,35 @@ static void TestLoadedAirSlice()
 
 int main()
 {
+  {
+    using cutum::DiskAirCancellationProbe;
+    Expect(!DiskAirCancellationProbe{}.Enabled(),
+           "native cancellation probe defaults off");
+    for (const char *bad : {"", "1", "1,", ",5", "1,5x", "1,5,6",
+                            "2147483648,0", "0,-2147483649"})
+      Expect(!DiskAirCancellationProbe::Parse(bad),
+             "probe rejects invalid coordinates");
+    Expect(DiskAirCancellationProbe::Parse("-2147483648,2147483647") ==
+               glm::ivec2(INT_MIN, INT_MAX),
+           "probe accepts signed coordinates without overflow");
+    DiskAirCancellationProbe probe(glm::ivec2(1, 5));
+    probe.ObserveFocus({1, 0, 3});
+    Expect(!probe.TryCancel({1, 0, 5}, true, false, 23, true),
+           "startup cannot trigger returning-demand cancellation");
+    probe.ObserveFocus({-15, 0, 3});
+    Expect(
+        !probe.TryCancel({2, 0, 5}, true, false, 23, true) &&
+            !probe.TryCancel({1, 0, 5}, false, false, 23, true) &&
+            !probe.TryCancel({1, 0, 5}, true, true, 23, true) &&
+            !probe.TryCancel({1, 0, 5}, true, false, 0, true) &&
+            !probe.TryCancel({1, 0, 5}, true, false, 23, false),
+        "wrong column, duplicate result, geometry, complete load and unstaged "
+        "result cannot fire probe");
+    Expect(probe.TryCancel({1, 0, 5}, true, false, 23, true) &&
+               !probe.TryCancel({1, 0, 5}, true, false, 23, true),
+           "probe fires exactly once after real excursion and a partial owned "
+           "AIR install");
+  }
   TestLoadedAirSlice();
   using namespace cutum;
   constexpr int kMinY = -64;

@@ -226,6 +226,9 @@ UWorldPersistence::UWorldPersistence(UWorld *world_context)
     : WorldContext(world_context)
 {
   ChunkStorage = std::make_unique<UChunkStorageService>();
+  AirCancellationProbe =
+      DiskAirCancellationProbe(DiskAirCancellationProbe::Parse(
+          std::getenv("CUBA_DISK_AIR_CANCEL_PROBE")));
   if (IsEnvironmentFlagEnabled("CUBA_SURFACE_LIGHT_DIAGNOSTICS"))
     ChunkStorage->ObserveLightCapture =
         [](glm::ivec3 column, const ColumnLightCaptureStats &stats)
@@ -4683,6 +4686,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
   }
   if (AsyncChunkIo && world.ProceduralTemplate.AsyncChunkIo)
   {
+    if (AirCancellationProbe.Enabled())
+      AirCancellationProbe.ObserveFocus(
+          UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock()));
     const auto discard_started = std::chrono::steady_clock::now();
     metrics.cancelled_discard_n = AsyncChunkIo->DiscardCancelledLoads();
     metrics.discard_cancelled_ms =
@@ -4788,6 +4794,14 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       auto pending_it = PendingAsyncColumnLoadSlices.find(ground);
       if (pending_it == PendingAsyncColumnLoadSlices.end())
       {
+        if (load.cancellation &&
+            load.cancellation->load(std::memory_order_acquire))
+        {
+          TraceChunkResidency("disk_result_cancelled", load.coord, ground,
+                              load.demandId,
+                              &world.BlockWorld.GetChunkManager());
+          ++metrics.cancelled_discard_n;
+        }
         if (apply_budget_expired())
         {
           break;
@@ -4803,6 +4817,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           load.cancellation->load(std::memory_order_acquire);
       if (!same_demand || result_cancelled)
       {
+        TraceChunkResidency(result_cancelled ? "disk_result_cancelled"
+                                             : "disk_result_stale",
+                            load.coord, ground, load.demandId,
+                            &world.BlockWorld.GetChunkManager());
         LogWorldColumnSource(
             "disk", "stale_result", ground,
             "demand_id=" + std::to_string(load.demandId) +
@@ -4880,6 +4898,8 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           PendingSectionLightRestores.Offer(receipt, load.token.sequence);
 
       const auto world_apply_started = std::chrono::steady_clock::now();
+      const auto owned_air_before =
+          state.installed_terrain.GetAirInstallCount();
       bool chunk_input_changed = false;
       const auto apply_started_at =
           trace_async_io ? std::chrono::steady_clock::now()
@@ -4916,6 +4936,12 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         state.had_disk_read_failure = true;
       }
+      const bool installed_air =
+          state.installed_terrain.GetAirInstallCount() > owned_air_before;
+      if (installed_air)
+        TraceChunkResidency("disk_air_owned", load.coord, ground,
+                            state.demand_id,
+                            &world.BlockWorld.GetChunkManager());
       if (chunk_input_changed && world.MeshService)
       {
         // Disk slices are applied incrementally, before column finalization.
@@ -4945,6 +4971,34 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       }
 
       --state.remaining_results;
+      const bool staged_result =
+          AirCancellationProbe.Enabled() && installed_air &&
+          std::any_of(completed_loads.begin() + next_load,
+                      completed_loads.end(),
+                      [&](const auto &ready)
+                      {
+                        return ready.demandId == state.demand_id &&
+                               ready.cancellation == state.cancellation;
+                      });
+      if (AirCancellationProbe.Enabled() &&
+          AirCancellationProbe.TryCancel(
+              ground, installed_air,
+              world.BlockWorld.GetChunkManager().HasResidentGeometryColumn(
+                  ground),
+              state.remaining_results, staged_result))
+      {
+        TraceChunkResidency("disk_air_probe_cancel", ground, ground,
+                            state.demand_id,
+                            &world.BlockWorld.GetChunkManager());
+        // Actual cancellation invalidates the request and removes only its
+        // exact AIR installs. A fresh request uses the normal disk IO path.
+        CancelAsyncTerrainColumnLoad(world, ground);
+        if (world.Streaming)
+          world.Streaming->GetChunkGenTokens().Bump(ground);
+        RequestAsyncTerrainColumnLoad(world, ground,
+                                      NextWorldColumnRequestId());
+        continue; // state/pending_it were erased by cancellation
+      }
       if (state.remaining_results > 0)
       {
         if (apply_budget_expired())
@@ -4984,8 +5038,19 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       deferred.reserve(completed_loads.size() - next_load);
       for (std::size_t i = next_load; i < completed_loads.size(); ++i)
       {
+        const auto &load = completed_loads[i];
+        if (load.cancellation &&
+            load.cancellation->load(std::memory_order_acquire))
+        {
+          TraceChunkResidency("disk_result_cancelled", load.coord,
+                              {load.coord.x, 0, load.coord.z}, load.demandId,
+                              &world.BlockWorld.GetChunkManager());
+          ++metrics.cancelled_discard_n;
+          continue;
+        }
         deferred.push_back(std::move(completed_loads[i]));
       }
+      metrics.requeued_loads_n = deferred.size();
       AsyncChunkIo->RequeueLoads(std::move(deferred),
                                  &metrics.result_requeue_mutex_wait_ms,
                                  &metrics.result_requeue_mutex_held_ms);
