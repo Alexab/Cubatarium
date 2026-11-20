@@ -2,9 +2,9 @@
   "schema": "engine-remediation-finish-checklist.v1",
   "scope": "Полный S0..S6; дополнение существующего плана, без перезапуска аудита и без изменения полученных verdict",
   "checkpoint": "de907fce1",
-  "current_package": "S3.05",
+  "current_package": "S3.06",
   "execution_contract": "ENGINE_REMEDIATION_EXECUTION_CONTRACT_2026_11_20.md",
-  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.06, S3.01..S3.04; stage-wide final reconciliation still required",
+  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.06, S3.01..S3.05; stage-wide final reconciliation still required",
   "execution_rules": [
     "Выполнять только один пакет реализации одновременно, в указанном порядке. Подшаги внутри пакета последовательны.",
     "Перед кодом записать в карточку пакета: недостающее требование, конкретный production путь, гипотезу, неизменные входы, критерий PASS/FAIL, ожидаемые файлы результата и timeout.",
@@ -251,7 +251,7 @@
       "done": "Полный исходный объём доказан; обязательных FAIL/UNTESTED нет. Иначе цель остаётся незавершённой с точным списком зависимостей."
     }
   ],
-  "progress_checkpoint": "S3.04 COMPLETE: exact cancel/overflow debt, actual UWorld quiesce/resume/retirement and five stale rejection/successor cases; original whole-stage scope remains open.",
-  "next_action": "S3.05: reconcile existing persisted light certificate and serializer evidence; verify compatible, changed algorithm/material/profile/input and legacy cold reload on isolated worlds.",
+  "progress_checkpoint": "S3.05 COMPLETE: disk certificate matrix, actual persistence restore/fallback, exact terrain/fluid preservation, physical coverage admission fix and actual guard-negative control; normal Release restored.",
+  "next_action": "S3.06: map actual CPU/GPU/fallback solver dispatch, available real driver targets and missing implementation; fixed common inputs versus independent oracle. CPU adapter/stub is not GPU proof.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

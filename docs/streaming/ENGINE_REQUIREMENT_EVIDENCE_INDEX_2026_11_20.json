@@ -1,8 +1,16 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.05",
+  "current_package": "S3.06",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
+    {
+      "id": "S3.05",
+      "status": "COMPLETE",
+      "card": "S3_05_PERSISTED_CERTIFICATE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s3-persisted-certificate-acceptance-20261120.json",
+      "receipt_sha256": "533cfe074c6b0891f20eff7ada846faf3f7a7e4a22c7676be91e5d85a84b52fd",
+      "scope": "Real disk/worker/World persistence certificate restoration and fallback; compatible, algorithm/material/profile/configuration/input/legacy; terrain/fluid preserved; negative guard fault detected and normal Release restored. Full S3/S6 remain open."
+    },
     {
       "id": "S3.05.disk-compatibility-checkpoint",
       "status": "PARTIAL_OPEN",

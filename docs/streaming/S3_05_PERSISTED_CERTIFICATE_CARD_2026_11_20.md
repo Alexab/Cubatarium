@@ -1,6 +1,6 @@
 # S3.05: сертификаты сохранённого света
 
-Статус OPEN. Существующие codec, storage worker и certificate доказательства переиспользуются; общий аудит не возобновляется.
+Статус COMPLETE в пределах S3.05. Существующие codec, storage worker и certificate доказательства переиспользованы; общий S3 и исходный S0..S6 остаются OPEN. Ниже сохранена история гипотез и локализации.
 
 ## H1: холодное чтение не наследует несовместимый свет
 
@@ -71,3 +71,17 @@ Physical verification остановилась раньше: compatible receipt 
 Domain verification PASS: `s3-persisted-world-load-domain-20261120-native/terrain-save-probe/report.json` содержит все три persisted cases PASS и полный probe 18/18 PASS. Checkpoint legacy: coarse state Empty=0, lit_ready=true, physical_coverage=false, queued=true, noop_skipped=0. Compatible восстановил все padded bytes; материалы/legacy удержали обычный ticket, явный sample successor установил current certified field с block=5/13. Terrain IDs и fluid packed=27 сохранены. Runtime exit 0, startup/provenance PASS; source World_261/config неизменны, lease освобождён.
 
 Receipt `build/desktop-msvc/s3-persisted-world-load-receipt-20261120.json` связывает хеши исходных native artifacts. Оригинальный smoke UNTESTED не изменён. Следующий единственный шаг пакета — описанный guard-negative control, затем точное восстановление normal production source/EXE. До этого S3.05 OPEN; остальные пакеты не начаты.
+
+## Guard negative control
+
+`s3-persisted-world-load-negative-20261120-native` обнаружил намеренный дефект на той же корректной domain fixture: FAIL `upper persistence incompatible/legacy cache retains ordinary relight obligation`. Materials checkpoint: coarse Empty=0, lit_ready=true, physical_coverage=false, queued=false, noop_skipped=2. Compatible case прошёл до него. Таким образом, guard является необходимым звеном сохранения долга, а не косметическим изменением verdict. Отключена только одна проверка через `false &&`; before/fault hashes и backup сохранены в `s3-persisted-negative-source-20261120.json/.bin`.
+
+Normal production source восстановлен побайтно из проверенной копии через write_bytes с новой mtime, чтобы MSBuild действительно перекомпилировал normal code. Завершение пакета ожидает normal Release build/provenance и итоговый receipt; повтор normal native не нужен при точном совпадении source bytes с ранее проверенным PASS.
+
+## Итоговая приёмка
+
+Normal Release build PASS (`s3-persisted-restored-build-20261120.log`), реальная перекомпиляция WorldPersistence.cpp подтверждена. Restored provenance валиден для текущих исходников и bin/Cubatarium.exe; полный source snapshot совпадает с verified domain native build. NegativeHeightStorage, LightCacheCertificate, ChunkLightingPropagation: 3/3 Release PASS, 1.05 s (`s3-persisted-restored-test-20261120.log`). Повтор normal native без изменения кода не выполнялся: исходный normal PASS и его immutable artifacts сохранены.
+
+`s3-persisted-certificate-acceptance-20261120.json` связывает 18 positive native cases, ожидаемый negative FAIL с queued=false/noop_skipped=2, source before/fault/restore, current normal EXE/provenance и unit log. Source World_261 не изменён, config восстановлен побайтно, runtime lease освобождён. Исходные global smoke UNTESTED не переписаны.
+
+S3.05 закрывает: compatible disk cache под свежими identities; algorithm/material/profile/configuration/input несовместимости; legacy без сертификата; fail-closed checksum/footprint/Unknown; сохранение terrain и fluid; actual World persistence receipt owner и сохранение relight obligation при rejected cache. Выполнена адресная production правка no-op guard и её реальный negative control. Автоматическое исполнение всех terrain FIFO, полный lifecycle остальных очередей, GPU dispatch, визуальная и performance матрицы остаются в S4/S3.06/S5/S6. Следующий пакет S3.06.

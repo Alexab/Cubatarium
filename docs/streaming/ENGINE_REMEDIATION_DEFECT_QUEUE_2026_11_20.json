@@ -3,6 +3,16 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "disk-cache-relight-noop-without-physical-coverage",
+      "stage": "S3.05",
+      "status": "RESOLVED_S3_05",
+      "observed": "Coarse Empty/LitReady plus absent mesh suppressed relight after optional disk cache rejection without a current calculation certificate.",
+      "fix": "No-op admission requires current physical light coverage in the requested band before considering settled/dark mesh faces.",
+      "evidence": "build/desktop-msvc/s3-persisted-certificate-acceptance-20261120.json",
+      "negative_control": "Same corrected Full-domain fixture, only physical guard disabled: rejected materials, no coverage, queued=false, noop_skipped=2; normal source and Release restored.",
+      "next_action": "No repeat without dependent changes; broader lifecycle and performance acceptance remain S4/S6."
+    },
+    {
       "id": "async-relight-queued-cancel-loses-obligation",
       "stage": "S3.04",
       "status": "RESOLVED_S3_04",
