@@ -204,10 +204,10 @@
     "remaining": "Independent visual/light/performance and full S0..S6 acceptance remain open"
   },
   "read_failure_followup": {
-    "status": "IN_PROGRESS",
+    "status": "scoped_fault_PASS_overall_UNTESTED",
     "unprepared_run": "UNTESTED: no cy19 input; successful route grants no fault acceptance",
     "upper_only_run": "UNTESTED: primary_return_not_proven; fault and primary column overlapped",
-    "current_artifacts": "build/desktop-msvc/physical-current-read-failure-stone-rd4-20261120-native",
+    "current_artifacts": "build\\desktop-msvc\\physical-current-read-failure-stone-rd4-20261120-native",
     "target_column": [
       1,
       5
@@ -216,6 +216,43 @@
     "harness_changes": "Require upper input; manifest and hash explicit AIR preparation; include mandatory fault evaluator in verdict",
     "tests": "33 isolation/preparation tests PASS, including explicit stone base; 10 evidence tests PASS",
     "scope_limit": "No acceptance until current native traces, snapshots and cold-save proof pass",
-    "full_air_run": "UNTESTED: disk_read_edit_failed; original base material was not stone; no recovery save request"
+    "full_air_run": "UNTESTED: disk_read_edit_failed; original base material was not stone; no recovery save request",
+    "failed_demands": [
+      23643,
+      24074,
+      24340,
+      24404,
+      24492
+    ],
+    "recovered_demand_id": 24706,
+    "retained_slices": 23,
+    "files_preserved": 30,
+    "remaining": "No OS read/open failures, autosave UI, relocation or full S0..S6 acceptance",
+    "config_restored": true,
+    "components": {
+      "runtime": "PASS",
+      "route": "PASS",
+      "startup": "PASS",
+      "visual": "UNTESTED",
+      "inspection": "PASS",
+      "disk_read_failure": "PASS",
+      "fixture": "PASS",
+      "fixture_opaque_depth": "PASS",
+      "fixture_floor_draw_source_light": "PASS",
+      "fixture_air_light_service": "PASS",
+      "fixture_camera_field_light": "PASS",
+      "fixture_floor_rgb": "PASS"
+    },
+    "evidence_sha256": "9d60b9cf8e8512606f47e4d50fbe6fff8b180bea35058dc2e442a2df200ad7bb"
+  },
+  "sync_unpacked_followup": {
+    "status": "RUNNING",
+    "artifacts": "build/desktop-msvc/physical-current-rgb-air-sync-rd4-20261120-native",
+    "fixture": "dry-rgb-air-border",
+    "requested_modes": [
+      "synchronous_meshing",
+      "no_packed_meshing"
+    ],
+    "scope_limit": "Actual construction/draw sources and independent RGB/bound-field evidence pending; no general backend parity yet"
   }
 }
