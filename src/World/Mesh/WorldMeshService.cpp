@@ -527,6 +527,10 @@ void UWorldMeshService::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
 void UWorldMeshService::MarkColumnMeshDirty(int world_x, int world_z, int min_y,
                                             int max_y)
 {
+  // Terrain data changed even if visual dirty admission is refused. Fluid
+  // maps are a separate derived cache and must not retain a pre-arrival view.
+  Cache.InvalidateFluidSurfaceForColumn(
+      UChunkManager::WorldToChunk(glm::ivec3(world_x, 0, world_z)), true);
   const glm::ivec3 base =
       UChunkManager::WorldToChunk(glm::ivec3(world_x, min_y, world_z));
   const glm::ivec3 top =
@@ -561,6 +565,8 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamed(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y,
     bool include_horizontal_neighbors, MeshRevisionBumpReason reason)
 {
+  Cache.InvalidateFluidSurfaceForColumn(ground_chunk_coord,
+                                        include_horizontal_neighbors);
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1
@@ -602,6 +608,8 @@ void UWorldMeshService::MarkTerrainChunkMeshDirtySeamedPriority(
     glm::ivec3 ground_chunk_coord, int min_y, int max_y,
     bool include_horizontal_neighbors, MeshRevisionBumpReason reason)
 {
+  Cache.InvalidateFluidSurfaceForColumn(ground_chunk_coord,
+                                        include_horizontal_neighbors);
   const int cy0 = FloorDiv(min_y, CHUNK_SIZE);
   const int cy1 = FloorDiv(max_y, CHUNK_SIZE);
   const int cx0 = include_horizontal_neighbors ? ground_chunk_coord.x - 1

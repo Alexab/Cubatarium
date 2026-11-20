@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.terrain-arrival-fluid-map.receipt",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "reproduction": "build/desktop-msvc/s4-arrival-repro-20261120-native/terrain-save-probe/report.json",
+      "receipt": "build/desktop-msvc/s4-arrival-fixed-20261120-native/terrain-save-probe/report.json",
+      "scope": "Warm dry maps at negative Y: generation Flush callback and seamed/priority receipt owners failed invalidation, then all3 PASS before publication. Actual streaming callback invalidates before visual pressure gates. Surface recompute, full generator and disk-load callback coverage remain OPEN; overall smoke UNTESTED."
+    },
+    {
       "id": "S4.02.Q01.unpublished-demand-seam-noop",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

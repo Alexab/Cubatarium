@@ -29,6 +29,7 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Core/FrameDeadline.h"
+#include "WorldGen/Core/WorldGenContext.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -101,7 +102,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       world.BlockWorld.SetVerticalProfile({-48,-33,-40});
       auto definitions=std::make_shared<UBlockDefinitionStorage>();
       BlockDefinition stone; stone.Name="stone"; stone.Physics=BlockPhysicsProfile::Solid();
-      definitions->ReplaceAll({{8,stone}},{{"stone",8}});
+      BlockDefinition water;
+      water.Name="water"; water.Physics=BlockPhysicsProfile::FromPreset("water");
+      water.Render.Style=BlockRenderStyle::Fluid; water.Render.Transparent=true;
+      definitions->ReplaceAll({{8,stone},{9,water}},{{"stone",8},{"water",9}});
       world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
       world.BlockWorld.SetFluidDefinitions(definitions.get());
       world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
@@ -116,6 +120,44 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       world.BlockWorld.SetBlock({8,-40,8},8);
       world.GetLightingPipeline().FillAllLoadedChunks(world.BlockWorld);
       auto &mesh=world.GetMeshService(); auto &cache=mesh.GetCache();
+      {
+        struct ScanRestore {
+          bool previous=PreferGpuFluidColumnScan();
+          ~ScanRestore() { SetPreferGpuFluidColumnScan(previous); }
+        } restore;
+        SetPreferGpuFluidColumnScan(false);
+        bool all_invalidated=true;
+        for(int path=0;path<3;++path) {
+          const glm::ivec3 ground(100+path*4,0,100);
+          const glm::ivec3 cell(ground.x*CHUNK_SIZE+8,-40,ground.z*CHUNK_SIZE+8);
+          world.BlockWorld.SetBlock({cell.x,-48,cell.z},8);
+          const auto *dry=cache.GetFluidSurfaceSlice(world.BlockWorld,*world.BlockRegistry,ground,-40);
+          require(dry && !dry->HasSurface(8,8) &&
+                      !cache.GetFluidSurfaceDirtyGroundChunks().count(ground),
+                  "arrival probe starts with settled dry map");
+          world.BlockWorld.SetBlock(cell,9);
+          world.BlockWorld.SetFluidState(cell,FluidCellState::Source().WithKind(FluidKind::Water));
+          if(path==0) {
+            WorldGenContext context(world.BlockWorld,*world.BlockRegistry,world.ProceduralTemplate,nullptr);
+            context.OnColumnMeshDirty=[&](int x,int z,int min_y,int max_y) {
+              world.MarkColumnMeshDirty(x,z,min_y,max_y);
+            };
+            context.ResetColumnDirty(ground.x*CHUNK_SIZE,ground.z*CHUNK_SIZE);
+            context.AccumulateDirtyColumn(-40,-40);
+            context.FlushColumnDirty();
+          } else if(path==1) {
+            mesh.MarkTerrainChunkMeshDirtySeamed(ground,-48,-33,false);
+          } else {
+            mesh.MarkTerrainChunkMeshDirtySeamedPriority(ground,-48,-33,false);
+          }
+          const bool invalidated=cache.GetFluidSurfaceDirtyGroundChunks().count(ground)!=0;
+          report["terrain_arrival_fluid_maps"].push_back({{"path",path},
+              {"cy",-3},{"invalidated_before_publication",invalidated},
+              {"publications",cache.GetPublishCount({ground.x,-3,ground.z})}});
+          all_invalidated &= invalidated;
+        }
+        require(all_invalidated,"terrain arrival invalidates warm fluid maps before publication");
+      }
       const auto physical=[&] {return world.BlockWorld.HasCompleteLightSamplingCalculation(
           coord,world.BlockRegistry->GetDefinitionsCatalogSnapshot());};
       const auto checkpoint=[&](const char *phase) {

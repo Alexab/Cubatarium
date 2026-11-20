@@ -400,6 +400,9 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         // dependency debt for every committed input chunk.
         if (world.MeshService)
         {
+          // Data arrival invalidates query caches before pressure/light gates
+          // can defer all visual dirty work for this committed column.
+          world.MeshService->InvalidateFluidSurfaceForColumn(ground, true);
           const std::vector<glm::ivec3> changed_input_chunks{coord};
           world.MeshService->QueueMeshDependencyInvalidations(
               world.BlockWorld, changed_input_chunks,
