@@ -511,6 +511,62 @@
         {
           "path": "build\\desktop-msvc\\s2-async-height-test-20261120.log",
           "sha256": "e594ef7d4ce8a0f6d4eaac575eafa480c0fb997424ba74bd0dc163f8be031468"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\route.json",
+          "sha256": "cfa56ae9ed95e3e446cd12ee57653ff027f377a85eacbb12fee41691bbbfaaa7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "8931d6ae3107aab558c9531d0deddef08dbf9d118cef3ac867a2a958e85f8e2a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\vertical-profile-evidence.json",
+          "sha256": "1c4c48cbd2ab725f7323d81fb917b2555b5ff8fa9a0cba41616a00613a25cd1b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\controller-replay-evidence.json",
+          "sha256": "00ca46b7bc5fedb4bda1d77b40879ee71c97b221677bf6c8b7e1f4627ac9b005"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\fixture-depth-reference.custom-profile.json",
+          "sha256": "ed307afccea6f288bf76b3ce84b8b90f6d64ebc700590959d5519d014e0595e8"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-native-plan-20261120.json",
+          "sha256": "b66b1942a06c06712300ab10b2990efafbf5feee562327b4e5b3f75ff14b791d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-fixture-test-20261120.log",
+          "sha256": "975e99782108dbcd8dc84c404cbdbe076774aa8975c39521aa5c5e43ee812df3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-harness-test-20261120.log",
+          "sha256": "71509babe10d07e3528aaeddf1215f220873674a60ade52b4c5d21dae00e49e1"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-release-build-20261120.log",
+          "sha256": "4a77c3efaa8a4debc8de3c843ed73edad12bd2891143882da6861fcad4298978"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-custom-profile-depth-test-20261120.log",
+          "sha256": "be1dce8e66796253782ef5ed6956930ddfc8279a2b1b530ef1579b50b1ab6de0"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-deep-profile-native-plan-20261120.json",
+          "sha256": "21096d1aab865c2929cd8bfd8979b5af1123e1f42f4def7c32bf9986400f2325"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-deep-profile-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "2c50524807a1cbaf7b3dfd7a3e0abc0376f4fc364d9fdb114fabbc1d988fac3a"
+        },
+        {
+          "path": "src\\WorldGen\\Core\\ProceduralSettings.cpp",
+          "sha256": "951b3ea2a071d246dce2459d7f66b9f505e421c133b337d0b59361625ed092cf"
+        },
+        {
+          "path": "src\\WorldGen\\Core\\ProceduralConfigIO.cpp",
+          "sha256": "ad35f7bdb64c4626cefc0a151f9cc69116c8b4a152b9525a7c82031c4fddc877"
         }
       ],
       "verified": [
@@ -520,12 +576,22 @@
         "Source inspection confirms UWorld column coverage clips to configured MinHeight/MaxHeight, approach sample requests use SliceBounds, and camera/player reasonable-position checks use profile MinimumEyeY.",
         "Release async snapshot compute tests PASS for broad -1024..1024 requests against wholly negative -127..-17 and positive 32..79 profiles, at both vertical edges.",
         "Captured profile MinY/MaxY retained; only the resident in-profile section emitted with expected adjacent blocklight13; entirely disjoint requests emit no section.",
-        "Source routing traced: UWorld async player request uses configured max; terrain-column passes explicit band; single-chunk uses chunk origin and configured max. All converge through CaptureImpl, which clips both ends against the captured vertical profile. Column pending/coverage gates also clip both configured ends."
+        "Source routing traced: UWorld async player request uses configured max; terrain-column passes explicit band; single-chunk uses chunk origin and configured max. All converge through CaptureImpl, which clips both ends against the captured vertical profile. Column pending/coverage gates also clip both configured ends.",
+        "Native supported Overworld profile -48..255: required-ring witness reports exact configured bounds, saved cave eye -41.88 retained, 157 pose samples remain negative, ordinary takeoff and 11-chunk route complete without relocation.",
+        "24/24 receipt-bound views and 2270-tick controller replay PASS; config restored and original World_261 fingerprint explicitly rechecked unchanged.",
+        "Custom-profile fixture isolation, range mismatch, wrong/relocated saved pose and out-of-band controls PASS.",
+        "Independent depth reference now recognizes the identical custom-profile cave geometry; supplemental re-evaluation of retained native trace PASS 7732 checks/0 faults. Original native overall UNTESTED preserved."
       ],
       "remaining": [
-        "Actual nondefault-profile player load/recovery and camera movement proof. Next bounded scenario: isolated dry cave below default Y=-64, configured MinY=-128, saved eye near -106; zero relocations, completed route and required-ring min_y=-128."
+        "Check and eliminate unconfigured min_y=0 entry defaults in WorldPersistence::EnqueueTerrainColumnRelight, TryEnqueueTerrainColumnRelight and WorldMeshService mesh-light callbacks. Inspect related warmup/ocean policy defaults at their UWorld call sites; distinguish intentional standalone defaults from runtime omissions."
       ],
-      "scope_limit": "Profile, sync CPU and async snapshot compute evidence plus UWorld source routing inspection. No native custom-profile player recovery or actual GPU dispatch parity claimed; S2.01 remains OPEN."
+      "scope_limit": "Profile, sync/async compute, UWorld routing inspection and supported native safe-pose retention proven. S2.01 remains OPEN for legacy API default/caller reconciliation. No arbitrary persisted height ranges, intentional custom-profile invalid-pose recovery or GPU parity claimed.",
+      "correction_to_previous_probe": {
+        "artifact": "build/desktop-msvc/s2-deep-profile-rd4-20261120-native/smoke-verdict.json",
+        "status": "FAIL retained",
+        "cause": "The agent selected unsupported persisted MinY=-128. ResolveProceduralDefaults intentionally normalizes noncompact MinHeight to -64..0 and MaxHeight to <=319; runtime correctly loaded -64 and recovered the invalid saved pose. This was a fixture assumption error, not evidence that arbitrary persisted ranges were supported.",
+        "action": "Corrected to supported nondefault -48..255; no production generator range expansion."
+      }
     }
   ],
   "completed_handoff": {

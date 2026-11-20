@@ -529,7 +529,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path.write_bytes(unpacked_meshing_payload(config_path.read_bytes()))
             (artifacts / "config.unpacked-meshing.json").write_bytes(config_path.read_bytes())
         scene = None
-        if fixture_scene in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
+        if fixture_scene in ("dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
@@ -554,7 +554,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             else:
                 scene = prepare_negative_cave(fixture, minimum_chunks,
                                              flooded=fixture_scene == "wet-negative-cave",
-                                             wide=fixture_scene == "dry-wide-negative-cave")
+                                             wide=fixture_scene == "dry-wide-negative-cave",
+                                             custom_profile=fixture_scene == "dry-custom-profile-cave")
             (artifacts / "fixture.json").write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
         elif fixture_scene is not None:
             raise ValueError("unknown fixture scene")
@@ -758,6 +759,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             statuses = [part["status"] for part in verdict["components"].values()]
             verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
             verdict["scope"] = "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance"
+        if scene and scene.get("custom_vertical_profile"):
+            from engine_vertical_profile_evidence import evaluate as evaluate_profile
+            profile_evidence = evaluate_profile(artifacts, report, scene,
+                verdict["components"].get("startup", {}).get("evidence"))
+            (artifacts / "vertical-profile-evidence.json").write_text(
+                json.dumps(profile_evidence, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["custom_vertical_profile"] = profile_evidence
         if debt_target is not None:
             from engine_debt_target import evaluate as evaluate_debt_target
             debt = evaluate_debt_target(artifacts, debt_target, report)
@@ -946,6 +954,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             world_actions=world_actions is not None,
             synchronous_meshing=synchronous_meshing,
             capture_backpressure=capture_encode_delay_ms > 0, walking=walking)
+        if scene and scene.get("custom_vertical_profile"):
+            required.append("custom_vertical_profile")
         if debt_target is not None:
             required.append("debt_inspection")
         if record_replay:
@@ -1008,7 +1018,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     parser.add_argument("--observe-bound-light", action="store_true",
                         help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
     parser.add_argument('--source-observation-scene',type=Path,

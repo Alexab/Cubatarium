@@ -100,7 +100,7 @@ def note_fault_section(sections: dict, coord: tuple[int, int, int], row: dict,
 
 def evaluate(scene: dict, perf: Path | None) -> dict:
     if (scene.get("schema") != "engine-smoke-fixture.v1" or
-            scene.get("name") not in ("dry-negative-cave", "wet-negative-cave", "dry-wide-negative-cave", "open-sky-plane")):
+            scene.get("name") not in ("dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "open-sky-plane")):
         return {"status": "UNTESTED", "reason": "unsupported_reference_scene"}
     if perf is None or not perf.is_file():
         return {"status": "UNTESTED", "reason": "missing_framebuffer_trace"}

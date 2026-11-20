@@ -7,13 +7,16 @@ from pathlib import Path
 
 
 def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool = False,
-                          wide: bool = False, air_border: bool = False) -> dict:
+                          wide: bool = False, air_border: bool = False,
+                          custom_profile: bool = False) -> dict:
     """Saved starting position is prepared before load; no runtime relocation."""
     fixture = fixture.resolve()
     if fixture.parent.name != "worlds" or not fixture.name.startswith("EngineSmoke_"):
         raise ValueError("scene preparation requires an isolated EngineSmoke_ world")
     if not 1 <= minimum_chunks <= 64:
         raise ValueError("cave fixture coverage must be 1..64 chunks")
+    if type(custom_profile) is not bool or (custom_profile and (wide or flooded or air_border)):
+        raise ValueError("custom profile requires a narrow dry cave")
     if air_border and (not wide or flooded):
         raise ValueError("AIR border requires a wide dry cave")
     chunks = fixture / "chunks"
@@ -21,6 +24,11 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
         raise ValueError("fixture chunks must be a real directory")
     metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
     profile = metadata.get("procedural", {})
+    if custom_profile:
+        profile.update(min_height=-48, max_height=255, bedrock_top_y=-48)
+        metadata["procedural"] = profile
+        (fixture / "world_data.json").write_text(
+            json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
     required_min = -64 if wide else -48
     if profile.get("min_height", 0) > required_min or profile.get("max_height", 0) < 63:
         raise ValueError(f"cave fixture requires a world containing Y={required_min}..63")
@@ -84,7 +92,10 @@ def prepare_negative_cave(fixture: Path, minimum_chunks: int, *, flooded: bool =
     for name in ("column_light.json", "ownership_snapshot.json", "ownership_snapshot.previous.json"):
         (fixture / name).unlink(missing_ok=True)
     return {"schema": "engine-smoke-fixture.v1",
-            "name": ("wet-" if flooded else "dry-") + ("wide-" if wide else "") + "negative-cave",
+            "name": ("dry-custom-profile-cave" if custom_profile else
+                     ("wet-" if flooded else "dry-") + ("wide-" if wide else "") + "negative-cave"),
+            **({"custom_vertical_profile": {"min_y": profile["min_height"], "max_y": profile["max_height"]}}
+               if custom_profile else {}),
             "starting_eye": start, "chunk_x_bounds": [min_cx, max_cx],
             "chunks_replaced": written, "omitted_internal_air_slices": omitted_air,
             "cave_bounds": {"floor": floor_y + 0.5, "ceiling": ceiling_y - 0.5,

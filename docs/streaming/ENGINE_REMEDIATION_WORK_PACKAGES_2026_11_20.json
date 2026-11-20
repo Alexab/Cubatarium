@@ -159,10 +159,11 @@
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
             "Nondefault wholly-negative and positive profile boundaries, synchronous light/source-removal edges and no out-of-profile materialization: Release PASS.",
-            "Async broad/disjoint bands and edge blocklight: Release PASS; UWorld player/terrain/chunk request routing to profile-clipped capture traced."
+            "Async broad/disjoint bands and edge blocklight: Release PASS; UWorld player/terrain/chunk request routing to profile-clipped capture traced.",
+            "Supported persisted -48..255 profile: native saved negative pose, normal takeoff/route, zero relocation, receipts/replay and isolated source/config retention PASS. Unsupported -128 probe FAIL retained with parser normalization cause."
           ],
           "remaining_subtasks": [
-            "Actual nondefault-profile player load/recovery and camera movement below the default -64 floor, with zero relocation and min_y=-128 runtime witness."
+            "Legacy min_y=0 API defaults/call-site reconciliation in persistence and mesh, plus targeted warmup/ocean policy calls."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
