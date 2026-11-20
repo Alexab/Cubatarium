@@ -37,8 +37,31 @@ class SourceObservationTest(unittest.TestCase):
         self.plan['entries'][0]['cell']=[100,-49,51]
         with self.assertRaises(ValueError):build_route(self.route,self.scene,self.plan,[22,-46.88,51])
 
-    def test_air_hole_and_non_round_trip_need_other_observation_contracts(self):
+    def test_air_hole_requires_complete_geometry_and_source_removal_contract(self):
         self.plan['entries'][0]['replacement']='air'
         with self.assertRaises(ValueError):build_route(self.route,self.scene,self.plan,[22,-46.88,51])
+        self.plan['entries'][0]['expected']='glowstone'
+        self.scene.update(schema='engine-smoke-fixture.v1',name='dry-negative-cave',chunk_x_bounds=[-20,3])
+        self.scene['cave_bounds'].update(ceiling=-16.5,z_low=34.5,z_high=67.5)
+        original=copy.deepcopy(self.scene)
+        result=build_route(self.route,self.scene,self.plan,[22,-46.88,51])
+        self.assertEqual(self.scene,original)
+        point=result['waypoints'][0]
+        self.assertEqual(point['position'],[0,2,0])
+        self.assertEqual(len(point['inspection_targets']),8)
+        absolute=[[a+b for a,b in zip(t,self.scene['starting_eye'])] for t in point['inspection_targets']]
+        expected=[[22,-49.5,51],[22.5,-49.1,51],[21.5,-49.1,51],
+                  [22,-49.1,51.5],[22,-49.1,50.5]]
+        for actual,target in zip(absolute[2:7],expected):
+            for a,b in zip(actual,target):self.assertAlmostEqual(a,b)
+        # AIR route targets actually intersect every declared hole face from
+        # the planned hover, rather than merely requesting five screenshots.
+        from engine_source_hole_reference import HoleReference
+        from test_engine_source_hole_reference import ray
+        model=HoleReference(self.scene,self.scene['lighting_fixture']['emitters'],[22,-49,51])
+        eye=[22,-44.88,51]
+        self.assertEqual({model.surface(eye,ray(eye,t)).face for t in absolute[2:7]},set(range(5)))
+
+    def test_non_round_trip_is_rejected(self):
         self.plan['entries'][0]['replacement']='glowstone';self.route['waypoints'].pop()
         with self.assertRaises(ValueError):build_route(self.route,self.scene,self.plan,[22,-46.88,51])

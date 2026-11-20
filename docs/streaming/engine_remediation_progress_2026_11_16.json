@@ -26917,5 +26917,69 @@
     "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-preinspection-add-remove-assessment-20261120.json",
     "sha256": "5921cfd0759e75923d171648d2f485081ea6e0a201c571ed4c32ad155e4b32ac"
   }
+},
+"source_air_hole_independent_model_and_observation_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "scope": "Full original S0..S6 remains active; independent AIR-hole model and motor/look observation preparation only",
+  "changes": [
+    "New declared-voxel multi-source BFS reference: opaque emitters seed level15, propagation enters only declared cave AIR and the single removed floor voxel; no observed engine field/RGB sets truth.",
+    "Hole cell [22,-49,51] predicts block11 through the upper AIR detour; a direct Manhattan path through opaque neighbor would incorrectly predict13.",
+    "Independent ray geometry predicts bottom and all four side faces, material560, signed cell coordinates and face-normal AIR light sample. Ordinary floor remains modeled; seams/roof/walls/unknown extents are not granted acceptance.",
+    "Scheduled glowstone-to-AIR observation uses exactly eight native targets: two original emitters, five hole faces and one floor control. Existing three motor waypoints, hover2, actual API reach6 and source action gate after_waypoints1 remain.",
+    "Existing stone/glowstone draw evaluator still rejects AIR. Native AIR GPU/RGB acceptance awaits integration of the new model; no existing verdict was promoted."
+  ],
+  "verification": {
+    "python_engine_tests": {
+      "status": "PASS",
+      "tests": 185,
+      "seconds": 8.123,
+      "command": "python -B -X utf8 -m unittest discover -s tools -p 'test_engine_*.py'"
+    },
+    "specific_hole_tests": 7,
+    "source_reference_tests": 37,
+    "diff_check": "PASS",
+    "controls": [
+      "Before-action stale glowstone surface is nearer than each independently predicted new hole face.",
+      "Naive straight-through-opaque light13 differs from independently propagated hole light11.",
+      "Negative coordinates, all five exposed faces, edges, unknown extent, invalid rays and unsupported contracts checked.",
+      "Generated five observation rays actually intersect five distinct expected hole faces from the planned hover."
+    ]
+  },
+  "retained_native_replay": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-model-replay-20261120.json",
+    "sha256": "934de16a9d6d199db1dfc35143cbc80d62ded0cdbe88c1eef2446ab2f56987c6",
+    "evidence": {
+      "schema": "engine-source-hole-model-replay.v1",
+      "status": "UNTESTED",
+      "scope": "Read-only geometry replay of retained pre-bound-reference native trace; no GPU/RGB or five-face acceptance",
+      "native_report": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-air-source-removal-20261120-native\\flight_sim_report.json",
+      "native_source": "d070036e45a37ecf26f9764b7f15f15a2e32e10f",
+      "fixture_sha256": "d280fd20dba375780a8904813878bfc03bd8ca65b08ae9459dcbaedd30e5a25f",
+      "counts": {
+        "floor": 4700,
+        "hole": 0,
+        "depth_mismatch": 0
+      },
+      "hole_faces": {},
+      "examples": [],
+      "missing_hole_faces": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "limits": [
+    "Read-only old-native replay matches4700 ordinary floor depths, but contains zero hole samples: all five hole faces remain UNTESTED.",
+    "No native run or desktop build launched for these Python-only changes; no AIR GPU/RGB acceptance, full-screen/backend/wet/transparency/performance/memory acceptance.",
+    "All existing WIP and failed/UNTESTED artifacts retained; full S0..S6 execution plan unchanged."
+  ],
+  "next": [
+    "Integrate hole geometry/light model with same-frame GPU field and independently witnessed normal-color RGB evaluator.",
+    "Build required Windows Release and run a new isolated scheduled AIR removal from EngineSmoke_64fa31ebf1b448f8ae28369da1860604 with all five hole faces observed.",
+    "Continue all remaining S0..S6 requirements after scoped source validation."
+  ]
 }
 }
