@@ -30288,5 +30288,586 @@
     ]
   },
   "next_work": "Finish remaining streaming save-result propagation and producer/deletion authority, then dedicated native autosave/menu/quit recovery and complete original S0..S6 acceptance matrix."
+},
+"async_save_completion_gates_streaming_retirement_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no restart or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-completion-assessment-20261120.json",
+    "sha256": "728251d2604b237f8546e38c9ef292a2e34bbfa578f79c66e5edebfd7da73656"
+  },
+  "validation": {
+    "schema": "engine-streaming-save-completion-assessment.v1",
+    "status": "PASS",
+    "scope": "Streaming retains terrain until current async batch reports success and its owned slice/field/weather stamp remains current; old-folder writes have separate disk-index and ACK authority",
+    "full_goal_status": "IN_PROGRESS",
+    "source_commits": [
+      "965b5f0dc",
+      "d500ac356",
+      "be384c40aeebac8c8e5911a73a3f326acebf97c5"
+    ],
+    "implementation": [
+      "Remove whole-column deletion from incomplete synchronous and async streaming save requests; both report admission/failure explicitly.",
+      "World unload callback saves before cancelling producers/removing meshes/data. Async enqueue vetoes retirement until all actual expected file operations have ACKed the same batch, folder and column.",
+      "Compact per-slice stamps capture geometry incarnation/content revision, field incarnation/light revision and weather. Mutation/replacement or catalog/profile/folder changes require a fresh save.",
+      "ACK ledger rejects stale/duplicate/foreign batch/folder/column and unexpected operation results; failed completed batches retain RAM and retry with a one-second cooldown.",
+      "Writer snapshots own numeric serialization registry state instead of retaining a mutable main-thread registry reference; CCHK4/JSON4 numeric payloads are unchanged.",
+      "Late old-folder successful writes update their own physical disk index without completing a current-folder batch. Quiescence checks pending/active work in all three pools and never discards late ACKs outside the normal consumer path."
+    ],
+    "release_tests": {
+      "related_tests": "3 PASS /1.17seconds total",
+      "worker_controls": [
+        "real metadata/slice/cleanup ACKs preserve batch identity",
+        "enqueue has no completion authority",
+        "out-of-order successful ACKs complete exactly once",
+        "foreign batch/folder/column and terrain impersonating metadata rejected",
+        "late old ACK cannot complete newer batch",
+        "actual failed metadata write completes unsuccessfully",
+        "geometry deletion, fluid, light, weather, AIR materialization, replacement and manager changes invalidate saved stamps",
+        "unrelated column edit does not invalidate this column stamp"
+      ]
+    },
+    "final_native_api": {
+      "schema": "terrain-save-api-native-assessment.v1",
+      "status": "PASS",
+      "source_commit": "be384c40aeebac8c8e5911a73a3f326acebf97c5",
+      "probe": {
+        "cases": [
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": false,
+            "cold_edit_preserved": true,
+            "dirty_preserved": 1,
+            "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 6,
+            "folder_switch_checked": false,
+            "kind": "incomplete",
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "status": "PASS",
+            "unload_waited_for_ack": true
+          },
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": true,
+            "cold_edit_preserved": true,
+            "dirty_preserved": 1,
+            "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 7,
+            "folder_switch_checked": true,
+            "kind": "write_failure",
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "status": "PASS",
+            "unload_waited_for_ack": true
+          }
+        ],
+        "schema": "terrain-save-failure-native.v1",
+        "scope": "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance",
+        "status": "PASS"
+      },
+      "cold_independent": {
+        "incomplete": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "write-failure": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 0
+          }
+        },
+        "late_old_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        }
+      },
+      "provenance": {
+        "source": true,
+        "exe": true,
+        "config": true,
+        "head": true,
+        "clean": true
+      },
+      "startup_smoke_status": "PASS",
+      "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance"
+    },
+    "round_trip": {
+      "built_source": "965b5f0dcc35b7608643c9d68ad610c26aa2e0ca",
+      "native": {
+        "wall_elapsed_sec": 321.169,
+        "ingame_frames": 9554,
+        "diagnostic_relocations_after_start": 0
+      },
+      "components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "disk_read_failure": "PASS",
+        "draw": "PASS",
+        "cpu_vertex_draw": "PASS"
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "generic_smoke_status": "UNTESTED",
+      "read_failure": {
+        "failed_demands": [
+          63186,
+          63543,
+          63706,
+          63770,
+          63906
+        ],
+        "recovered_demand_id": 64220,
+        "retained_slices": 23,
+        "dirty_chunks_preserved": 45,
+        "cold_local_edit": {
+          "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_57c0072cf8084f9fb6c81d822e2d8b22\\chunks\\1_-4_5.cchunk",
+          "sha256": "eb6951409722f8c91d9cb2d7a90f656fe87bb58c54463599edef75832d5dd932",
+          "section": [
+            1,
+            -4,
+            5
+          ],
+          "local": [
+            1,
+            1,
+            1
+          ],
+          "id": 0
+        }
+      },
+      "ordering": {
+        "schema": "stream-save-ordering.v1",
+        "baseline": {
+          "status": "PASS",
+          "reason": "all_initial_geometry_and_air_retired_after_current_save_ack",
+          "sections": [
+            {
+              "coord": [
+                1,
+                -4,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 2,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 13,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                -3,
+                3
+              ],
+              "kind": "runtime_air_initial",
+              "owner": 1,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 14,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                -2,
+                3
+              ],
+              "kind": "runtime_air_initial",
+              "owner": 4,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 15,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                -1,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 3,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 16,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                0,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 4,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 17,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                1,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 5,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 18,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                2,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 6,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 19,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                3,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 1,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 20,
+              "wait_ms": 569
+            },
+            {
+              "coord": [
+                1,
+                4,
+                3
+              ],
+              "kind": "runtime_initial",
+              "owner": 7,
+              "batch": 19677,
+              "queue_seq": 11,
+              "ack_seq": 12,
+              "remove_seq": 21,
+              "wait_ms": 569
+            }
+          ]
+        },
+        "controls": [
+          {
+            "name": "missing_queue",
+            "expected": "UNTESTED",
+            "actual": "UNTESTED",
+            "reason": "missing_save_queue_or_completion"
+          },
+          {
+            "name": "missing_ack",
+            "expected": "UNTESTED",
+            "actual": "UNTESTED",
+            "reason": "missing_save_queue_or_completion"
+          },
+          {
+            "name": "wrong_batch",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "completion_has_no_current_queued_batch"
+          },
+          {
+            "name": "foreign_manager",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "foreign_save_identity"
+          },
+          {
+            "name": "ack_before_queue",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "completion_has_no_current_queued_batch"
+          },
+          {
+            "name": "ack_after_retirement",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "retirement_precedes_current_save_completion"
+          },
+          {
+            "name": "duplicate_ack",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "duplicate_batch_marker"
+          },
+          {
+            "name": "lost_geometry_retirement",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "initial_owner_not_retired"
+          },
+          {
+            "name": "lost_air_retirement",
+            "expected": "FAIL",
+            "actual": "FAIL",
+            "reason": "initial_owner_not_retired"
+          },
+          {
+            "name": "lost_export",
+            "expected": "UNTESTED",
+            "actual": "UNTESTED",
+            "reason": "incomplete_trace_export"
+          }
+        ],
+        "scope": "Scoped initial geometry/AIR cohort queue, ACK and retirement ordering; actual IO/stamp behavior is separately covered by native API probe and Release worker tests"
+      }
+    },
+    "preserved_native_failure": {
+      "evidence": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-folder-receipt-20261120-native\\save-api-assessment.json",
+        "sha256": "886b77d3b43e20940883365179b11407c0679219ab2290db9c9f102c1f36587e"
+      },
+      "reason": "World switch cleared logical batch state; the old drain could observe empty queues while workers were active, declare quiescence and/or discard a late result. The old-folder physical ceiling write did not reach its main-thread index before the assertion. Final probe verifies the active-job/drain fix and separate new-folder save authority."
+    },
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-receipt-regression-build-20261120.log",
+        "sha256": "0604431120a3ef15bb5844201ce2a4d4e6b0220a772dc8eed40055beb104e027"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-receipt-regression-test-20261120.log",
+        "sha256": "8d69c506ba5dd7d1ddb1b6700db6a1a2339350c2531e745b73e990cdef054b00"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-receipt-release-build-20261120.log",
+        "sha256": "bbd204fbce6f4cac1aeb05bf4828153dae6c8317958e23a9c31179d5f24fc054"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-receipt-drain-release-build-20261120.log",
+        "sha256": "43e4236473ea5f477146e2edf89a1caad8539c2a5cb55499a2206d5b273b44e9"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\save-api-assessment.json",
+        "sha256": "53d0a20eb4ab086e9162f221c5bcf2fa994a5a5bb247bce05c623278b0d518c4"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-drained-folder-20261120-native\\terrain-save-probe\\report.json",
+        "sha256": "1bd03ec30c75033aa00fd76a39e444dc2af630fec5f9939d4e318e89b9365004"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-stream-save-receipt-return-20261120-native\\source-acceptance.json",
+        "sha256": "adaad6ec8b6f6f640d9d5bc1a44a00924c6c3207286b42499c2b5dab3b8a4fca"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-stream-save-receipt-return-20261120-native\\round-trip-residency.log",
+        "sha256": "0c3c2818c2189e91101cfed315a58962d0ef14bbb3529ead44c158606e04c2dc"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-stream-save-receipt-return-20261120-native\\disk-read-failure-evidence.json",
+        "sha256": "580f2d16519194932a91baa560c6a8c62cfcbe581c0373378e88e19d9ee82baf"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\stream-save-receipt-ordering-20261120.json",
+        "sha256": "5168d57815be6c07bbe73e817d719b801a601208743b55686a011bd7520dd524"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_stream_save_ordering_20261120.py",
+        "sha256": "03ccfdace2dd8abd0c4f0c1c50e92da3043f34d4e476f80e655694d55fcef2e6"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_stream_save_drained_folder_native_20261120.py",
+        "sha256": "7c89843bedbed1b4485a506037067f9c4f031fc831c8a308913cbffccae3fc3d"
+      }
+    ],
+    "limits": [
+      "Return/light/RGB regression was run on965b5f0dc. The subsequent old-folder index/drain-only fixes were built and exercised by the final isolated native API probe onbe384c40a. No claim that the entire native matrix ran on the final source.",
+      "Readiness depends on reported per-file write success and tracked chunk/field/weather identities. It is not a multi-file atomic transaction or forced-exit/power-loss durability certificate.",
+      "Persistent I/O errors retain resident terrain. General queue/backpressure/memory caps, long-run fluid/weather/light mutation pressure and starvation bounds are not yet certified.",
+      "Abort/cancel and cooperative/menu/quit save interleaving with active async writes still need a complete fence/recovery contract. Current abort may clear batch bookkeeping/cancel queued work; this turn does not certify that path.",
+      "Actual application save-error menu rendering, autosave scheduler, quit cancellation/resumption and manual recovery remain unverified by these isolated UWorld API probes.",
+      "Generic Ensure whole-column clearing and procedural/mixed producer receipts remain open, along with full persisted content/profile/catalog/algorithm certificates, CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen and full S6 performance/memory matrix."
+    ]
+  },
+  "next_work": "Fence abort/cancel and same-folder cooperative save against active async writes; verify actual menu/quit recovery and memory/backpressure bounds; continue every remaining original S0..S6 requirement."
 }
 }
