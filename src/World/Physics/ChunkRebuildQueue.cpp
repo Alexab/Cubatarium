@@ -113,24 +113,34 @@ bool UChunkRebuildQueue::Enqueue(glm::ivec3 chunk_coord, int priority,
   return true;
 }
 
+size_t UChunkRebuildQueue::DrainBudgeted(
+    const std::function<void(glm::ivec3)> &consume,
+    const std::function<bool()> &may_continue)
+{
+  size_t processed = 0;
+  const size_t budget = static_cast<size_t>(PerTickMax);
+  while (!Queue.empty() && processed < budget && may_continue())
+  {
+    const Request request = Queue.top();
+    consume(request.ChunkCoord);
+    Queue.pop();
+    Keys.erase(request.ChunkCoord);
+    ++processed;
+    ++Stats.Processed;
+    Stats.Depth = Queue.size();
+  }
+  if (!Queue.empty())
+    Stats.Deferred += Queue.size();
+  Stats.Depth = Queue.size();
+  return processed;
+}
+
 std::vector<glm::ivec3> UChunkRebuildQueue::PopBudgeted()
 {
   std::vector<glm::ivec3> out;
-  const size_t budget = static_cast<size_t>(PerTickMax);
-  out.reserve(budget);
-  while (!Queue.empty() && out.size() < budget)
-  {
-    const Request request = Queue.top();
-    Queue.pop();
-    Keys.erase(request.ChunkCoord);
-    out.push_back(request.ChunkCoord);
-  }
-  if (!Queue.empty())
-  {
-    Stats.Deferred += Queue.size();
-  }
-  Stats.Processed += out.size();
-  Stats.Depth = Queue.size();
+  out.reserve(static_cast<size_t>(PerTickMax));
+  DrainBudgeted([&](glm::ivec3 coord) { out.push_back(coord); },
+                [] { return true; });
   return out;
 }
 

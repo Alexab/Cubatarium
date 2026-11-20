@@ -3,6 +3,7 @@
 
 #include "World/Chunks/ChunkManager.h"
 #include <cstdint>
+#include <functional>
 #include <glm/glm.hpp>
 #include <queue>
 #include <unordered_set>
@@ -29,6 +30,11 @@ public:
   void SetProtectLowPriorities(bool protect) { ProtectLowPriorities = protect; }
   bool Enqueue(glm::ivec3 chunk_coord, int priority, uint64_t local_order);
   std::vector<glm::ivec3> PopBudgeted();
+  /// Consume at most the tick budget, checking admission before each item.
+  /// The consumer must not modify this queue. A stop or exception retains the
+  /// current request and suffix with their original priority/order.
+  size_t DrainBudgeted(const std::function<void(glm::ivec3)> &consume,
+                       const std::function<bool()> &may_continue);
   void Clear();
 
   size_t Size() const { return Queue.size(); }

@@ -94,7 +94,6 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
     world.Collision.RebuildChunkMovementSolid(chunk_coord);
   }
 
-  const std::vector<glm::ivec3> visualChunks = VisualQueue.PopBudgeted();
   const float movement_speed = world.GetLastMovementSpeed();
   const bool moving =
       movement_speed > world.GetProceduralSettings().MovementPrefetchThreshold;
@@ -102,26 +101,23 @@ void UWorldChunkDirtyService::DrainRebuildQueues(UWorld &world)
       world.MeshService ? world.MeshService->GetDirtyCount() : 0;
   const bool drain_time_cap = moving && pending_dirty > 200;
   const auto drain_t0 = std::chrono::high_resolution_clock::now();
-  for (glm::ivec3 chunk_coord : visualChunks)
-  {
-    if (drain_time_cap)
-    {
-      const double drain_ms =
-          std::chrono::duration<double, std::milli>(
-              std::chrono::high_resolution_clock::now() - drain_t0)
-              .count();
-      if (drain_ms > 15.0)
+  VisualQueue.DrainBudgeted(
+      [&](glm::ivec3 chunk_coord)
       {
-        break;
-      }
-    }
-    world.ModifiedChunks.insert(chunk_coord);
-    if (world.BlockRegistry)
-    {
-      world.MeshService->MarkDirty(chunk_coord,
-                                   MeshRevisionBumpReason::VisualRebuildQueue);
-    }
-  }
+        world.ModifiedChunks.insert(chunk_coord);
+        if (world.BlockRegistry)
+          world.MeshService->MarkDirty(
+              chunk_coord, MeshRevisionBumpReason::VisualRebuildQueue);
+      },
+      [&]
+      {
+        if (!drain_time_cap)
+          return true;
+        const double drain_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - drain_t0).count();
+        return drain_ms <= 15.0;
+      });
 
   const ChunkRebuildQueueStats &visualStats = VisualQueue.GetStats();
   const ChunkRebuildQueueStats &collisionStats = CollisionQueue.GetStats();

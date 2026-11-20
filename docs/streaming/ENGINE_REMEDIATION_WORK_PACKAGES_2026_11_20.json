@@ -197,11 +197,12 @@
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
-            "Exact flood producer report/count across X/Z and negative-Y seams; duplicate waterlogged-decor mutation fixed; three Release tests and app build PASS."
+            "Exact flood producer report/count across X/Z and negative-Y seams; duplicate waterlogged-decor mutation fixed; three Release tests and app build PASS.",
+            "Visual time-cap suffix loss reproduced/fixed by per-item admission/acknowledgement; queue deadline/order/exception controls and Release app build PASS."
           ],
           "remaining_subtasks": [
-            "Mesh/light/fluid-map/dirty-save consumer delivery, including last-fluid removal.",
-            "Visual rebuild queue time-cap suffix retention before downstream save/remesh obligations can be considered proven."
+            "Light/fluid-map consumer delivery including last-fluid removal.",
+            "Dirty-save ownership independent of visual queue rejection/eviction."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
