@@ -32,12 +32,43 @@ public:
         return false;
     return true;
   }
+  bool Covers(glm::ivec3 ground, int min_y, int max_y) const
+  {
+    return ground == Ground && min_y <= max_y &&
+           FloorDiv(min_y, CHUNK_SIZE) == MinCy &&
+           FloorDiv(max_y, CHUNK_SIZE) == MaxCy;
+  }
+
 private:
   std::weak_ptr<const uint64_t> Owner;
   glm::ivec3 Ground{0};
   int MinCy{0}, MaxCy{-1};
   std::vector<UChunkManager::TerrainSaveState> States;
 };
+
+// Only a successfully written, still-current column can acknowledge edits.
+// Preserve unrelated columns and edits outside the written vertical profile.
+inline size_t AcknowledgeTerrainColumnEdits(
+    const UChunkManager &manager,
+    std::unordered_set<glm::ivec3, IVec3Hash> &dirty, glm::ivec3 ground,
+    const TerrainColumnSaveStamp &stamp, int min_y, int max_y)
+{
+  if (!stamp.Covers(ground, min_y, max_y) || !stamp.Matches(manager))
+    return 0;
+  const int min_cy = FloorDiv(min_y, CHUNK_SIZE);
+  const int max_cy = FloorDiv(max_y, CHUNK_SIZE);
+  size_t count = 0;
+  for (auto it = dirty.begin(); it != dirty.end();)
+    if (it->x == ground.x && it->z == ground.z && it->y >= min_cy &&
+        it->y <= max_cy)
+    {
+      it = dirty.erase(it);
+      ++count;
+    }
+    else
+      ++it;
+  return count;
+}
 
 // An ACK belongs to one folder/column/batch and one expected operation. A
 // stale or duplicate result cannot complete a newer column save.

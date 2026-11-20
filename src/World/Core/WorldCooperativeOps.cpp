@@ -1021,6 +1021,12 @@ void UWorldCooperativeSession::ScanChunkFiles(UWorld &world)
 void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
 {
   Save.SaveChunkCoords.clear();
+  Save.WrittenColumns.clear();
+  Save.MinY = world.ProceduralTemplate.MinHeight;
+  Save.MaxY = world.ProceduralTemplate.MaxHeight;
+  Save.Catalog = world.BlockRegistry
+                     ? world.BlockRegistry->GetDefinitionsCatalogSnapshot()
+                     : nullptr;
   Save.SaveChunkIndex = 0;
   Save.SaveUsesTerrainColumns = true;
   std::unordered_set<glm::ivec3, IVec3Hash> grounds;
@@ -1390,6 +1396,21 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
 
   const int budget = std::max(1, chunkBudget);
 
+  if (Kind == WorldCoopKind::Save && CurrentPhase >= Phase::SaveChunks &&
+      CurrentPhase <= Phase::SaveMetadataDiag &&
+      (world.GetWorldFolderPath() != FolderPath ||
+       world.ProceduralTemplate.MinHeight != Save.MinY ||
+       world.ProceduralTemplate.MaxHeight != Save.MaxY ||
+       (world.BlockRegistry
+            ? world.BlockRegistry->GetDefinitionsCatalogSnapshot()
+            : nullptr) != Save.Catalog))
+  {
+    FailSave(world, sink,
+             "World save context changed. Local edits remain in memory; retry "
+             "saving.");
+    return true;
+  }
+
   switch (CurrentPhase)
   {
   case Phase::Init:
@@ -1617,7 +1638,31 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   case Phase::SaveMetadataDiag:
   {
     world.SaveMovementDiagnostics(FolderPath + "/movement_diagnostics.json");
-    world.ModifiedChunks.clear();
+    auto &manager = world.BlockWorld.GetChunkManager();
+    for (const auto &[ground, stamp] : Save.WrittenColumns)
+    {
+      if (stamp.Matches(manager))
+        AcknowledgeTerrainColumnEdits(manager, world.ModifiedChunks, ground,
+                                      stamp, Save.MinY, Save.MaxY);
+      else
+        world.ModifiedChunks.insert(
+            {ground.x, FloorDiv(Save.MinY, CHUNK_SIZE), ground.z});
+    }
+    manager.ForEachTerrainDataColumn(
+        [&](glm::ivec3 ground)
+        {
+          if (!Save.WrittenColumns.count(ground) &&
+              IsTerrainColumnSaveCandidate(world.BlockWorld, ground, Save.MaxY,
+                                           Save.MinY))
+            world.ModifiedChunks.insert(
+                {ground.x, FloorDiv(Save.MinY, CHUNK_SIZE), ground.z});
+        });
+    if (!ResumeStreamingAfterSave && !world.ModifiedChunks.empty())
+    {
+      FailSave(world, sink,
+               "New changes arrived while saving. Save again before leaving.");
+      break;
+    }
     if (ResumeStreamingAfterSave)
     {
       CubatariumLogInfo("Save", "save_metadata resume_streaming");
@@ -1626,7 +1671,10 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     CurrentPhase = Phase::Done;
     Active = false;
     CubatariumLogInfo("Save", "save_metadata end");
-    Report(sink, "done", 1.f, "World saved.");
+    Report(sink, "done", 1.f,
+           world.ModifiedChunks.empty()
+               ? "World saved."
+               : "Save finished. New changes remain to be saved.");
     break;
   }
   case Phase::GenerateColumns:
@@ -3212,6 +3260,8 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
     }
     if (save_by_ground_column)
     {
+      TerrainColumnSaveStamp stamp(world.BlockWorld.GetChunkManager(), coord,
+                                   Save.MinY, Save.MaxY);
       const bool complete = IsTerrainChunkComplete(
           world.BlockWorld, coord, world.ProceduralTemplate.MaxHeight,
           kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight);
@@ -3226,6 +3276,7 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
             : "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.");
         return;
       }
+      Save.WrittenColumns.insert_or_assign(coord, std::move(stamp));
     }
     else
     {

@@ -1155,6 +1155,26 @@ static void TestColumnSaveReceipts()
     Expect(!completion.Consume(result), "duplicate ACK cannot decrement a newer obligation");
   }
   Expect(completion.Succeeded(), "all actual successful writes complete their exact batch");
+  stamp = TerrainColumnSaveStamp(manager, column, -64, -17);
+  std::unordered_set<glm::ivec3, IVec3Hash> dirty{
+      coord, {column.x, -3, column.z}, {column.x, -5, column.z}, {5, -4, -2}};
+  Expect(AcknowledgeTerrainColumnEdits(manager, dirty, {5, 0, -2}, stamp, -64,
+                                       -17) == 0 &&
+             AcknowledgeTerrainColumnEdits(manager, dirty, column, stamp, -80,
+                                           -17) == 0 &&
+             dirty.size() == 4,
+         "save stamp cannot acknowledge a foreign column or profile");
+  Expect(AcknowledgeTerrainColumnEdits(manager, dirty, column, stamp, -64,
+                                       -17) == 2 &&
+             dirty.count({column.x, -5, column.z}) && dirty.count({5, -4, -2}),
+         "successful current save acknowledges only its written column and "
+         "profile");
+  dirty.insert(coord);
+  world.SetBlock(cell, BLOCK_AIR);
+  Expect(AcknowledgeTerrainColumnEdits(manager, dirty, column, stamp, -64,
+                                       -17) == 0 &&
+             dirty.count(coord),
+         "post-write deletion stays dirty after stale completion");
   ColumnSaveCompletion newer(batch + 1, folder.string(), column, -4, -2, true);
   for (const auto &result : done)
     Expect(!newer.Consume(result), "late old results cannot finish a newer save");

@@ -183,29 +183,38 @@ inline void RunTerrainSaveFailureProbe()
         }
       };
       const auto during = deleted + glm::ivec3(2, 0, 0);
+      world.ModifiedChunks.insert(floor);
       require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
                   storage.IsColumnSavePending(column), "enqueue cannot admit retirement");
       world.BlockWorld.SetBlock(during, 8);
       drain();
-      require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
-                  storage.IsColumnSavePending(column), "new local edit must invalidate old ACK");
+      require(
+          !world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+              storage.IsColumnSavePending(column) &&
+              world.ModifiedChunks.count(floor),
+          "new local edit must invalidate old ACK without clearing dirty "
+          "state");
       drain();
       require(world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
-                  world.BlockWorld.GetChunkManager().HasChunk(floor),
+                  world.BlockWorld.GetChunkManager().HasChunk(floor) &&
+                  !world.ModifiedChunks.count(floor),
               "only the current completed save admits retirement");
       if (io_failure)
       {
         require(fs::create_directory(blocker), "async temp blocker is owned");
         std::ofstream(blocker / "fixture-blocker") << "keep this file";
         world.BlockWorld.SetBlock(during, BLOCK_AIR);
+        world.ModifiedChunks.insert(floor);
         require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
                     storage.IsColumnSavePending(column), "failed async save starts with RAM retained");
         drain();
-        require(!world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
-                    !storage.IsColumnSavePending(column) &&
-                    world.BlockWorld.GetBlock(during) == BLOCK_AIR &&
-                    world.BlockWorld.GetChunkManager().HasChunk(floor),
-                "failed completed batch cannot authorize retirement");
+        require(
+            !world.Persistence->TrySaveTerrainColumnForUnload(world, column) &&
+                !storage.IsColumnSavePending(column) &&
+                world.BlockWorld.GetBlock(during) == BLOCK_AIR &&
+                world.ModifiedChunks.count(floor) &&
+                world.BlockWorld.GetChunkManager().HasChunk(floor),
+            "failed completed batch cannot authorize retirement");
         require(fs::remove(blocker / "fixture-blocker") && fs::remove(blocker),
                 "remove only the owned async blocker");
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -422,6 +431,79 @@ inline void RunTerrainSaveFailureProbe()
                     late_cold.GetBlock(during) == 8 &&
                     late_cold.GetBlock({19, -62, 3}) == 8,
                 "retry persists both newer edit and unlisted column");
+        // A resumable save may finish its cohort, but newer changes must be
+        // retained for the following save rather than silently acknowledged.
+        Progress background;
+        world.BeginCooperativeSave(switched.string(), true);
+        const auto background_by =
+            std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (std::find(background.phases.begin(), background.phases.end(),
+                         "save_metadata") == background.phases.end())
+        {
+          require(std::chrono::steady_clock::now() < background_by &&
+                      !world.TickCooperativeSave(background, 1),
+                  "resumable save reaches metadata");
+          std::this_thread::yield();
+        }
+        world.BlockWorld.SetBlock(during, BLOCK_AIR);
+        world.ModifiedChunks.insert(floor);
+        const glm::ivec3 background_column(2, 0, 0), background_floor(2, -4, 0);
+        for (int cy = -4; cy <= 0; ++cy)
+        {
+          const glm::ivec3 extra(2, cy, 0);
+          UChunk frame(extra);
+          if (cy == -4)
+            frame.SetBlockLocal({3, 2, 3}, 8);
+          const auto decoded = codec.Deserialize(
+              codec.Serialize(extra, frame, *world.BlockRegistry).bytes, extra,
+              *world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(world.BlockWorld, extra, &decoded,
+                                        nullptr, {background_column, 1}, 1,
+                                        false),
+                  "background new-column fixture");
+        }
+        while (!world.TickCooperativeSave(background, 1))
+        {
+          require(std::chrono::steady_clock::now() < background_by,
+                  "resumable save completion bound");
+          std::this_thread::yield();
+        }
+        UBlockWorld background_cold;
+        require(
+            world.GetCooperativeSaveError().empty() &&
+                world.ModifiedChunks.count(floor) &&
+                world.ModifiedChunks.count(background_floor) &&
+                storage.LoadTerrainColumn(column, background_cold,
+                                          switched.string(),
+                                          *world.BlockRegistry, 15, -64) > 0 &&
+                background_cold.GetBlock(during) == 8 &&
+                !fs::exists(storage.ChunkFilePath(switched.string(),
+                                                  background_floor,
+                                                  ChunkDiskFormat::Binary)),
+            "resumable save retains newer edits outside its persisted cohort");
+        Progress background_retry;
+        world.BeginCooperativeSave(switched.string(), true);
+        const auto background_retry_by =
+            std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.TickCooperativeSave(background_retry, 1))
+        {
+          require(std::chrono::steady_clock::now() < background_retry_by,
+                  "resumable retry bound");
+          std::this_thread::yield();
+        }
+        UBlockWorld background_retry_cold;
+        require(world.GetCooperativeSaveError().empty() &&
+                    world.ModifiedChunks.empty() &&
+                    storage.LoadTerrainColumn(
+                        column, background_retry_cold, switched.string(),
+                        *world.BlockRegistry, 15, -64) > 0 &&
+                    storage.LoadTerrainColumn(
+                        background_column, background_retry_cold,
+                        switched.string(), *world.BlockRegistry, 15, -64) > 0 &&
+                    background_retry_cold.GetBlock(during) == BLOCK_AIR &&
+                    background_retry_cold.GetBlock({35, -62, 3}) == 8,
+                "resumable retry persists deletion and new column");
+        fence_evidence["resumable_late_edit_phases"] = background.phases;
       }
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},

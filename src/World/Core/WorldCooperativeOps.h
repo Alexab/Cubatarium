@@ -1,16 +1,19 @@
 #pragma once
 
 #include "Core/Progress/IUProgressSink.h"
+#include "World/IO/ColumnSaveReceipt.h"
 #include <chrono>
 #include <climits>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace cutum
 {
 struct EnterWarmupStepSample;
+struct BlockDefinitionCatalog;
 
 class UWorld;
 
@@ -261,6 +264,10 @@ private:
   struct FSaveState
   {
     std::vector<glm::ivec3> SaveChunkCoords;
+    std::unordered_map<glm::ivec3, TerrainColumnSaveStamp, IVec3Hash>
+        WrittenColumns;
+    std::shared_ptr<const BlockDefinitionCatalog> Catalog;
+    int MinY{0}, MaxY{-1};
     size_t SaveChunkIndex{0};
     bool SaveUsesTerrainColumns{false};
     int SaveDrainIoFrames{0};

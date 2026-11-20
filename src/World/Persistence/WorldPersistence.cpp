@@ -5707,8 +5707,15 @@ bool UWorldPersistence::TrySaveTerrainColumnForUnload(UWorld &world,
   const auto &settings = world.GetProceduralSettings();
   if (!settings.AsyncChunkIo)
   {
+    TerrainColumnSaveStamp stamp(world.BlockWorld.GetChunkManager(), ground,
+                                 settings.MinHeight, settings.MaxHeight);
     const bool saved = SaveTerrainColumn(ground, world.BlockWorld, *world.BlockRegistry,
                                           settings.MaxHeight, settings.MinHeight);
+    if (!saved || !stamp.Matches(world.BlockWorld.GetChunkManager()))
+      return false;
+    AcknowledgeTerrainColumnEdits(world.BlockWorld.GetChunkManager(),
+                                  world.ModifiedChunks, ground, stamp,
+                                  settings.MinHeight, settings.MaxHeight);
     if (saved && world.Streaming && world.Streaming->GetStreamer())
       world.Streaming->GetStreamer()->NoteColumnSaveQueued();
     return saved;
@@ -5726,6 +5733,9 @@ bool UWorldPersistence::TrySaveTerrainColumnForUnload(UWorld &world,
     {
       TraceChunkResidency("disk_save_committed", ground, ground, saved.batch,
                           &world.BlockWorld.GetChunkManager());
+      AcknowledgeTerrainColumnEdits(world.BlockWorld.GetChunkManager(),
+                                    world.ModifiedChunks, ground, saved.stamp,
+                                    saved.minY, saved.maxY);
       UnloadSaveReceipts.erase(receipt);
       return true;
     }
