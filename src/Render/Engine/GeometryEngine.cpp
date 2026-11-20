@@ -2100,15 +2100,16 @@ void CaptureTransparentPixelProbe(
           auto packed_source = packed_surface_source(
               opaque_chunk, opaque_point, voxel_ray_origin, voxel_ray_direction,
               false);
+          const auto primary_cpu = cpu_surface_source(
+              opaque_chunk, opaque_point, voxel_ray_origin, voxel_ray_direction,
+              BoundSectionLightProbeRequested());
           std::optional<CpuSurfaceSource> recovered_cpu;
           size_t tried_count = 1;
-          // Recover a missing packed source or an AIR primary with no CPU
-          // source. Ownership needs an actual same-frame drawn triangle
+          // Recover a missing packed source or a primary CPU source whose
+          // nearby triangle is not hit by the original ray. Ownership needs
+          // an actual same-frame drawn triangle
           // intersected by the original ray, not a voxel/material guess.
-          if (!packed_source.match.valid &&
-              (packed_opaque_chunks.count(opaque_chunk) ||
-               (!opaque_ref_chunks.count(opaque_chunk) &&
-                !transparent_ref_chunks.count(opaque_chunk))))
+          if (!packed_source.match.valid && !primary_cpu.match.valid)
           {
             PackedSurfaceSource recovered;
             std::optional<CpuSurfaceSource> cpu;
@@ -2194,11 +2195,7 @@ void CaptureTransparentPixelProbe(
                 opaque_chunk_data->GetLightFieldRevision();
           }
 
-          const auto cpu_source =
-              recovered_cpu ? *recovered_cpu
-                            : cpu_surface_source(opaque_chunk, opaque_point,
-                                                 voxel_ray_origin,
-                                                 voxel_ray_direction, false);
+          const auto cpu_source = recovered_cpu ? *recovered_cpu : primary_cpu;
           auto opaque_vertex_light = cpu_source.match;
           record.renderer_pixel_opaque_source_index_count =
               cpu_source.index_count;

@@ -13,6 +13,11 @@ struct ScreenRayTransform
 {
   glm::mat4 inverse_view{1.0f};
   glm::mat4 inverse_projection{1.0f};
+  // Depth reconstruction amplifies reciprocal/cancellation errors near z=1.
+  // Retain inverses of the actual float draw matrices in double precision;
+  // convert the reconstructed points only at the public float output boundary.
+  glm::dmat4 depth_inverse_view{1.0};
+  glm::dmat4 depth_inverse_projection{1.0};
   bool perspective = true;
   bool valid = false;
 };

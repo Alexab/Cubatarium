@@ -41,6 +41,17 @@ bool HomogeneousPoint(const glm::mat4 &transform, const glm::vec4 &point,
   return IsFinite(out_point);
 }
 
+bool PreciseHomogeneousPoint(const glm::dmat4 &transform,
+                             const glm::dvec4 &point, glm::dvec3 &out_point)
+{
+  const auto transformed = transform * point;
+  if (!std::isfinite(transformed.w) || std::abs(transformed.w) < 1e-8)
+    return false;
+  out_point = glm::dvec3(transformed) / transformed.w;
+  return std::isfinite(out_point.x) && std::isfinite(out_point.y) &&
+         std::isfinite(out_point.z);
+}
+
 } // namespace
 
 bool BuildScreenRayTransform(const glm::mat4 &view, const glm::mat4 &proj,
@@ -49,6 +60,8 @@ bool BuildScreenRayTransform(const glm::mat4 &view, const glm::mat4 &proj,
   out_transform = ScreenRayTransform{};
   out_transform.inverse_view = glm::inverse(view);
   out_transform.inverse_projection = glm::inverse(proj);
+  out_transform.depth_inverse_view = glm::inverse(glm::dmat4(view));
+  out_transform.depth_inverse_projection = glm::inverse(glm::dmat4(proj));
   out_transform.perspective = std::abs(proj[3][3]) < 1.0e-6f;
   out_transform.valid = IsFinite(out_transform.inverse_view) &&
                         IsFinite(out_transform.inverse_projection);
@@ -171,11 +184,17 @@ bool ScreenNdcDepthToCameraSpacePoint(const ScreenRayTransform &transform,
     return false;
   }
 
-  return HomogeneousPoint(transform.inverse_projection,
-                          glm::vec4(ndc_x, ndc_y, depth01 * 2.0f - 1.0f, 1.0f),
-                          out_view_point) &&
-         HomogeneousPoint(transform.inverse_view,
-                          glm::vec4(out_view_point, 1.0f), out_world_point);
+  glm::dvec3 view_point{}, world_point{};
+  if (!PreciseHomogeneousPoint(
+          transform.depth_inverse_projection,
+          glm::dvec4(ndc_x, ndc_y, double(depth01) * 2.0 - 1.0, 1.0),
+          view_point) ||
+      !PreciseHomogeneousPoint(transform.depth_inverse_view,
+                               glm::dvec4(view_point, 1.0), world_point))
+    return false;
+  out_view_point = glm::vec3(view_point);
+  out_world_point = glm::vec3(world_point);
+  return IsFinite(out_view_point) && IsFinite(out_world_point);
 }
 
 bool ScreenPointToCameraSpaceRay(const ScreenRayTransform &transform,

@@ -16,6 +16,36 @@ static void Expect(bool cond, const char *message)
 
 int main()
 {
+  // Analytic inverse of the actual float perspective matrix, including the
+  // float depth sample's quantization. No inverse-matrix implementation sets
+  // this reference. These are the nearby negative-cave floor distances where
+  // float reciprocal/cancellation displaced the witness across a section seam.
+  for (float far_plane : {512.0f, 2000.0f})
+    for (float distance : {12.0f, 20.0f, 28.0f, 32.0f})
+    {
+      const glm::vec3 eye(-280, -41.2f, 51);
+      const auto cave_view = glm::translate(glm::mat4(1), -eye);
+      const auto projection =
+          glm::perspective(glm::radians(70.0f), 16.0f / 9.0f, .1f, far_plane);
+      cutum::ScreenRayTransform transform;
+      Expect(cutum::BuildScreenRayTransform(cave_view, projection, transform),
+             "cave depth precision fixture is valid");
+      const double a = projection[2][2], b = projection[3][2];
+      const float depth = float((-a + b / distance + 1.0) / 2.0);
+      const float ndc_y =
+          float(double(projection[1][1]) * (-48.5 - eye.y) / distance);
+      const double expected_z = -b / (2.0 * double(depth) - 1.0 + a);
+      const double expected_y =
+          double(eye.y) - expected_z * double(ndc_y) / projection[1][1];
+      glm::vec3 view_point, world_point;
+      Expect(cutum::ScreenNdcDepthToCameraSpacePoint(
+                 transform, .4f, ndc_y, depth, view_point, world_point),
+             "quantized cave depth reconstructs");
+      Expect(std::abs(double(world_point.y) - expected_y) < .00002 &&
+                 std::abs(double(view_point.z) - expected_z) < .00002,
+             "depth reconstruction preserves analytic quantized sample to "
+             "float output precision");
+    }
   const glm::mat4 view =
       glm::lookAt(glm::vec3(10.0f, 20.0f, 30.0f), glm::vec3(0.0f, 0.0f, 0.0f),
                   glm::vec3(0.0f, 1.0f, 0.0f));
