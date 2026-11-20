@@ -371,6 +371,57 @@ inline void RunTerrainSaveFailureProbe()
                                               *world.BlockRegistry, 15, -64) > 0 &&
                     retry_cold.GetBlock(during) == BLOCK_AIR,
                 "retry after I/O timeout must persist the newer edit");
+        Progress late;
+        world.BeginCooperativeSave(switched.string(), false);
+        const auto chunks_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (std::find(late.phases.begin(), late.phases.end(), "chunks") == late.phases.end())
+        {
+          require(std::chrono::steady_clock::now() < chunks_by &&
+                      !world.TickCooperativeSave(late, 1), "late-edit save reaches terrain phase");
+          std::this_thread::yield();
+        }
+        world.BlockWorld.SetBlock(during, 8);
+        world.ModifiedChunks.insert(floor);
+        const glm::ivec3 late_column(1, 0, 0), late_floor(1, -4, 0);
+        for (int cy = -4; cy <= 0; ++cy)
+        {
+          const glm::ivec3 extra(1, cy, 0);
+          UChunk frame(extra);
+          if (cy == -4) frame.SetBlockLocal({3, 2, 3}, 8);
+          const auto decoded = codec.Deserialize(
+              codec.Serialize(extra, frame, *world.BlockRegistry).bytes,
+              extra, *world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(world.BlockWorld, extra, &decoded, nullptr,
+                                       {late_column, 1}, 1, false), "late new-column fixture");
+        }
+        const auto late_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.TickCooperativeSave(late, 1))
+        {
+          require(std::chrono::steady_clock::now() < late_by, "late-edit completion bound");
+          std::this_thread::yield();
+        }
+        require(world.ModifiedChunks.count(floor) && world.ModifiedChunks.count(late_floor),
+                "save cannot acknowledge post-write edits or unlisted new columns");
+        require(!world.GetCooperativeSaveError().empty(),
+                "exit save must refuse to discard newer unsaved data");
+        fence_evidence["late_exit_phases"] = late.phases;
+        Progress latest;
+        world.BeginCooperativeSave(switched.string(), false);
+        const auto latest_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!world.TickCooperativeSave(latest, 1))
+        {
+          require(std::chrono::steady_clock::now() < latest_by, "late-edit retry bound");
+          std::this_thread::yield();
+        }
+        UBlockWorld late_cold;
+        require(world.GetCooperativeSaveError().empty() && world.ModifiedChunks.empty() &&
+                    storage.LoadTerrainColumn(column, late_cold, switched.string(),
+                                              *world.BlockRegistry, 15, -64) > 0 &&
+                    storage.LoadTerrainColumn(late_column, late_cold, switched.string(),
+                                              *world.BlockRegistry, 15, -64) > 0 &&
+                    late_cold.GetBlock(during) == 8 &&
+                    late_cold.GetBlock({19, -62, 3}) == 8,
+                "retry persists both newer edit and unlisted column");
       }
       report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
           {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
@@ -379,7 +430,7 @@ inline void RunTerrainSaveFailureProbe()
           {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
           {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}, {"cooperative_write_fence_checked", io_failure},
           {"metadata_only_preserved_dirty", true}, {"snapshot_fence_checked", io_failure},
-          {"io_timeout_and_retry_checked", io_failure}, {"write_fence_evidence", fence_evidence}});
+          {"io_timeout_and_retry_checked", io_failure}, {"write_fence_evidence", fence_evidence}, {"late_edit_and_column_checked", io_failure}});
     }
     report["status"] = "PASS";
   }
