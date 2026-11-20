@@ -27,8 +27,10 @@ class IsolatedFixtureTest(unittest.TestCase):
             frame = json.loads((worlds[0] / "chunks/1_19_3.json").read_text())
             self.assertEqual(frame, dict(format_version=4, cx=1, cy=19,
                                          cz=3, voxels=[]))
-            self.assertEqual((worlds[0] / "chunks/1_-4_3.cchunk").read_bytes(),
-                             b"retained base")
+            base = json.loads((worlds[0] / "chunks/1_-4_3.json").read_text())
+            self.assertEqual(len(base["voxels"]), 4096)
+            self.assertEqual({v["type"] for v in base["voxels"]}, {"stone"})
+            self.assertFalse((worlds[0] / "chunks/1_-4_3.cchunk").exists())
             for cy in range(-3, 20):
                 self.assertEqual(json.loads((worlds[0] / f"chunks/1_{cy}_3.json").read_text())["voxels"], [])
                 self.assertFalse((worlds[0] / f"chunks/1_{cy}_3.cchunk").exists())

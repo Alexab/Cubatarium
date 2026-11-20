@@ -427,7 +427,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 raise ValueError("upper AIR preparation refuses existing slice")
             replacements = []
             import hashlib
-            for cy in range(-3, 20):
+            for cy in range(-4, 20):
                 frame = fixture / "chunks" / f"{x}_{cy}_{z}.json"
                 binary = frame.with_suffix(".cchunk")
                 if frame.is_symlink() or binary.is_symlink():
@@ -435,12 +435,15 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 previous = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
                             for p in (frame, binary) if p.is_file()}
                 binary.unlink(missing_ok=True)
+                voxels = ([dict(lx=lx, ly=ly, lz=lz, type="stone")
+                           for lz in range(16) for ly in range(16)
+                           for lx in range(16)] if cy == -4 else [])
                 frame.write_text(json.dumps(dict(format_version=4, cx=x,
-                    cy=cy, cz=z, voxels=[])), encoding="utf-8")
+                    cy=cy, cz=z, voxels=voxels)), encoding="utf-8")
                 replacements.append(dict(coord=[x, cy, z], previous=previous,
                     sha256=hashlib.sha256(frame.read_bytes()).hexdigest()))
             (artifacts / "read-failure-fixture.json").write_text(json.dumps({
-                "scope": "explicit isolated AIR column above retained cy=-4 geometry",
+                "scope": "explicit isolated stone cy=-4 plus AIR cy=-3..19 fault column",
                 "replacements": replacements,
                 "coord": [x, 19, z], "source_unchanged": True}) + "\n", encoding="utf-8")
         if probe_disk_read_failure:
@@ -844,7 +847,7 @@ def main() -> int:
     parser.add_argument("--probe-disk-read-failure", action="store_true",
                         help="corrupt five returning upper-frame read buffers then recover; controlled local edit and save rejection exercise")
     parser.add_argument("--prepare-read-failure-air", action="store_true",
-                        help="explicitly replace cy=-3..19 with AIR in isolated probe column; retain cy=-4")
+                        help="explicitly prepare stone cy=-4 and AIR cy=-3..19 in isolated probe column")
     parser.add_argument("--probe-terrain-save-failure", action="store_true",
                         help="startup-only isolated UWorld save failure/retry API probe")
     parser.add_argument("--startup-only", action="store_true",

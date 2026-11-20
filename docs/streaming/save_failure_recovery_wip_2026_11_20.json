@@ -207,14 +207,15 @@
     "status": "IN_PROGRESS",
     "unprepared_run": "UNTESTED: no cy19 input; successful route grants no fault acceptance",
     "upper_only_run": "UNTESTED: primary_return_not_proven; fault and primary column overlapped",
-    "current_artifacts": "build/desktop-msvc/physical-current-read-failure-full-rd4-20261120-native",
+    "current_artifacts": "build/desktop-msvc/physical-current-read-failure-stone-rd4-20261120-native",
     "target_column": [
       1,
       5
     ],
-    "fixture": "dry-rgb-air-border plus explicit isolated secondary AIR frames cy=-3..19",
+    "fixture": "dry-rgb-air-border; explicit secondary stone cy=-4 and AIR cy=-3..19",
     "harness_changes": "Require upper input; manifest and hash explicit AIR preparation; include mandatory fault evaluator in verdict",
-    "tests": "33 isolation/preparation tests PASS; 10 fault-evidence tests PASS",
-    "scope_limit": "No acceptance until current native traces, snapshots and cold-save proof pass"
+    "tests": "33 isolation/preparation tests PASS, including explicit stone base; 10 evidence tests PASS",
+    "scope_limit": "No acceptance until current native traces, snapshots and cold-save proof pass",
+    "full_air_run": "UNTESTED: disk_read_edit_failed; original base material was not stone; no recovery save request"
   }
 }
