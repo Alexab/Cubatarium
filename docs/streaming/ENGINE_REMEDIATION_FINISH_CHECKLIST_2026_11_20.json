@@ -250,7 +250,7 @@
       "done": "Полный исходный объём доказан; обязательных FAIL/UNTESTED нет. Иначе цель остаётся незавершённой с точным списком зависимостей."
     }
   ],
-  "progress_checkpoint": "S2.05 local mutation handoffs reconciled and complete. Required initial terrain snapshot/cache lifetime retained in S4 queue; S2 parent remains OPEN. Full S0..S6 scope unchanged.",
-  "next_action": "S2.06: reuse existing local-water-interval regressions and negative-pose native evidence; identify exact missing dry/wet/air-pocket cases before running tests. No restart of audit or repeat of completed fluid handoff probes.",
+  "progress_checkpoint": "S2.05 complete; S2.06 current local interval/waterline Release coverage PASS across custom profiles. Existing negative-pose and wet native evidence reviewed. Explicit air-pocket native load gate remains unexecuted; original S3..S6 work retained.",
+  "next_action": "S2.06: implement the fixed static air-pocket fixture and strict evidence reader/negative controls from its execution card; only then one native startup validation. No repeat of passing local-query tests absent a dependent change.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

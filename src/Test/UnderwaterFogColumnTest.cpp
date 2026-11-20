@@ -9,6 +9,7 @@
 #include <iostream>
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 static void Expect(bool cond, const char *message)
 {
@@ -53,6 +54,59 @@ static std::shared_ptr<cutum::UBlockDefinitionStorage> MakeDefinitions()
   return definitions;
 }
 
+static void TestProfileLocalIntervals(cutum::UBlockRegistry &registry,
+                                      const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (const auto bounds : {std::pair<int, int>{-127, -17}, {32, 79}, {-48, 255}})
+    for (const glm::ivec3 horizontal : {glm::ivec3(-17, 0, 16), glm::ivec3(15, 0, -16)})
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      auto profile = world.GetVerticalProfile();
+      profile.MinY = bounds.first;
+      profile.MaxY = bounds.second;
+      world.SetVerticalProfile(profile);
+      const int floor = bounds.first;
+      const auto pos = [&](int y) { return glm::ivec3(horizontal.x, y, horizontal.z); };
+      for (int y = floor; y <= floor + 3; ++y) world.SetBlock(pos(y), 9);
+      for (int y = floor + 6; y <= floor + 8; ++y) world.SetBlock(pos(y), 9);
+      world.SetBlock(pos(floor + 9), 8); // separates the local cave from a distant ocean
+      world.SetBlock(pos(bounds.second), 9);
+      const size_t resident = world.GetChunkManager().GetResidentChunkCount();
+      const auto at = [&](float y)
+      {
+        return FindFluidColumnSurfaceForEye(world, registry,
+                    glm::vec3(horizontal.x, y, horizontal.z));
+      };
+      const auto lower = at(static_cast<float>(floor + 1));
+      Expect(lower.valid && lower.bottomBlockY == floor &&
+                 lower.surfaceBlockY == floor + 3,
+             "custom profile retains exact lower connected water interval");
+      const auto upper = at(static_cast<float>(floor + 7));
+      Expect(upper.valid && upper.bottomBlockY == floor + 6 &&
+                 upper.surfaceBlockY == floor + 8,
+             "air gap separates two local intervals even under distant water");
+      Expect(!at(static_cast<float>(floor + 4)).valid &&
+                 !at(static_cast<float>(floor + 5)).valid,
+             "custom-profile air pocket never borrows water above or below");
+      const float top = BlockTopY(floor + 3);
+      Expect(ContainsFluidAtHeight(at(top - 0.001f), top - 0.001f) &&
+                 !ContainsFluidAtHeight(at(top), top),
+             "water top is half-open at an exact block boundary");
+      Expect(at(top + 0.249f).valid && !at(top + 0.251f).valid,
+             "just-emerged transition is bounded to a quarter block");
+      const float bottom = static_cast<float>(floor) - 0.5f;
+      Expect(ContainsFluidAtHeight(at(bottom), bottom) && !at(bottom - 0.001f).valid,
+             "profile-floor water includes its bottom face but not outside data");
+      Expect(!ContainsFluidAtHeight(at(BlockTopY(bounds.second)), BlockTopY(bounds.second)) &&
+                 !at(static_cast<float>(bounds.second + 1)).valid,
+             "ceiling surface and above-profile eye are not submerged");
+      Expect(world.GetChunkManager().GetResidentChunkCount() == resident,
+             "eye queries do not materialize missing sections");
+    }
+}
+
 int main()
 {
   const auto definitions = MakeDefinitions();
@@ -64,6 +118,7 @@ int main()
   constexpr cutum::BlockId kLava = 11;
   constexpr cutum::BlockId kStone = 8;
   constexpr int kSeaY = 63;
+  TestProfileLocalIntervals(registry, definitions.get());
   const int bx = 4;
   const int bz = 7;
 

@@ -1278,6 +1278,71 @@
         "S4 terrain-arrival-fluid-map-lifetime",
         "S3 independent solver/certificates/backend parity; S4 complete queue/arrival lifecycle; S5/S6 all original consumer/rendered/performance acceptance"
       ]
+    },
+    {
+      "id": "S2.06",
+      "status": "OPEN",
+      "evidence": [
+        {
+          "path": "src\\Test\\UnderwaterFogColumnTest.cpp",
+          "sha256": "112acfce3f424b613b6bf2c02012534702db908170d383bf81a1fc2462c67bdd"
+        },
+        {
+          "path": "src\\Test\\UnderwaterWaterlineTest.cpp",
+          "sha256": "33b94149a26f130efb2aeded56b399afcc0e31eb3faa7aae39a783276653fc6c"
+        },
+        {
+          "path": "src\\World\\Core\\FluidColumnSurfaceQuery.cpp",
+          "sha256": "c8b02d96e2660601033814661e6a09355eaf0f7a46dc1eb91332a07bfdfab0a6"
+        },
+        {
+          "path": "src\\World\\Collision\\WorldCollision.cpp",
+          "sha256": "8aef522e36fc4ee32682e6b70637213097fe30a23b3eda3b96cdf18fef9cf7fd"
+        },
+        {
+          "path": "src\\Render\\Engine\\UnderwaterFogPass.cpp",
+          "sha256": "6ee0b933fa0c349ab97fc2285d5c65f10a683af67879189b8ee8729912aacd66"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-local-interval-build-20261120.log",
+          "sha256": "4e87b61442ec0a72836e350b637337c46414c8738d109266424ef5cc6ca78ba9"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-local-interval-test-20261120.log",
+          "sha256": "4911bdec36d230462005fe9ced38cb300658516989ef4bc44efc8ba58e3f3ee0"
+        },
+        {
+          "path": "docs\\streaming\\S2_06_LOCAL_INTERVAL_PLAN_2026_11_20.json",
+          "sha256": "0aeaba89449616e5577b6b11693a32e889408addb5364f0ace56c41a842a3332"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\vertical-profile-evidence.json",
+          "sha256": "1c4c48cbd2ab725f7323d81fb917b2555b5ff8fa9a0cba41616a00613a25cd1b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-supported-profile-rd4-20261120-native\\route.json",
+          "sha256": "cfa56ae9ed95e3e446cd12ee57653ff027f377a85eacbb12fee41691bbbfaaa7"
+        },
+        {
+          "path": "build\\desktop-msvc\\physical-current-wet-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "9c7ee43921accf75b84d4a83c2e69552076b8f22cb2f3162e43d33a2620ffbda"
+        },
+        {
+          "path": "build\\desktop-msvc\\physical-current-wet-rd4-20261120-native\\route.json",
+          "sha256": "7c27dd5965877bde3dce99e34b4642af949e64c6e16d75af78dc8e3b6ed94bc1"
+        }
+      ],
+      "verified": [
+        "Current Release local-water query and waterline tests PASS. Existing dry cave below ocean, negative flooded cave, separated air pocket, lava boundary and emergence cases retained.",
+        "New raw-profile cases -127..-17,32..79,-48..255 across negative X/Z seams verify exact lower/upper connected intervals, dry gaps, half-open top/bottom, quarter-block emergence, ceiling/out-of-profile rejection and no section materialization.",
+        "Source chain World.FindFluidColumnSurface -> WorldCollision.FindFluidColumnSurfaceEye -> FindFluidColumnSurfaceForEye is used by underwater fog render-position classification; no distant-column surface is used to classify eye submersion.",
+        "Existing native supported-profile evidence PASS retains saved negative eye -41.88. Existing wet negative route has runtime/route/fixture PASS. These are historical executable/source-bound evidence, not current full framebuffer or performance acceptance."
+      ],
+      "remaining": [
+        "Implement and validate explicit static negative air-pocket fixture, strict pose/dry classification reader and negative controls; then one startup-only native Release run.",
+        "Reconcile safe saved-player load/position retention for dry, wet and air-pocket cases against source-bound evidence; S2 parent and full S0..S6 remain OPEN."
+      ],
+      "scope_limit": "No production bug reproduced in query tests, so production query unchanged. Raw profile tests do not expand persisted profile support; logic/source trace is not wet RGB/transparency/framebuffer proof. Native air-pocket load not yet executed."
     }
   ],
   "completed_handoff": {

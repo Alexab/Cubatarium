@@ -1,0 +1,31 @@
+{
+  "package": "S2.06",
+  "scope": "Camera local water interval and retention of safe saved-player cave position; no new audit, reuse existing source-bound evidence",
+  "existing_evidence": [
+    "UnderwaterFogColumnTest dry cave below ocean, negative flooded cave, internal air pocket, lava boundary and emerged transition",
+    "s2-supported-profile-rd4-20261120-native/vertical-profile-evidence.json: supported -48..255 and safe saved eye -41.88 retained",
+    "physical-current-wet-rd4-20261120-native: actual wet negative cave route; visual/performance overall UNTESTED"
+  ],
+  "current_hypothesis": "Existing local query should retain correct half-open connected intervals in wholly negative, wholly positive and supported custom profiles, including X/Z seams, air gaps and profile boundaries",
+  "inputs": "Raw profiles -127..-17,32..79,-48..255; X/Z -17/16 and15/-16; two disjoint water intervals, stone ceiling, distant upper water. Exact bottom, top and quarter-block emergence boundaries.",
+  "pass": "Exact connected bounds, dry air gaps, no remote-ocean borrowing, correct half-open limits and no new resident sections; existing waterline regressions pass",
+  "fail": "Any wrong interval/classification, out-of-profile submersion or materialized section",
+  "build": "cmake --build build/desktop-msvc --config Release --target underwater_fog_column_test underwater_waterline_test --parallel 8",
+  "test": "ctest --test-dir build/desktop-msvc -C Release -R ^(underwater_fog_column_test|underwater_waterline_test)$ --output-on-failure",
+  "artifacts": "build/desktop-msvc/s2-local-interval-{build,test}-20261120.log",
+  "timeout_seconds": 120,
+  "run_budget": "One validation; if FAIL, inspect and fix one localized hypothesis before one verification. No extra rerun after sufficient PASS.",
+  "remaining_native_gate": "Not executed: static negative air-pocket saved-player load and local dry classification with explicit geometry/settings; S2.06 remains OPEN.",
+  "scope_limit": "Raw profile unit tests do not extend supported persisted world ranges; query/waterline logic is not independent wet RGB, transparency or fog framebuffer acceptance, which remains S6.",
+  "unit_result": "PASS: underwater_fog_column_test and underwater_waterline_test; six profile/coordinate scenarios plus existing dry/wet/air-gap/liquid-type regressions. No production query change required.",
+  "native_next_steps": [
+    "Add an isolated air-pocket-negative-cave fixture based on the existing flooded narrow cave; do not alter original saves.",
+    "Keep saved eye(22,-41.88,51), body origin(22,-43.5,51), stone floor y=-44. Carve exact dry cells x20..24,y-43..-38,z49..53 (150 cells); retained surrounding and overhead cave water must be verified from written voxel frames.",
+    "For this static classification/load gate only, disable fluid simulation in the isolated config and procedural fill/seal in copied metadata. Verify effective settings/preconditions before native; retain original enabled-fluid wet-route evidence separately.",
+    "Fixture unit controls: refuse original/non-isolated paths; check exact carved cells, retained water above/sides, safe floor, aligned saved user/body pose and no remaining binary frame overriding JSON.",
+    "Add a strict startup-only evidence reader: at least10 actual pose rows, first saved-pose distance<=0.25, all rows inside pocket and negative, eye_in_fluid=false; zero diagnostic relocations and teleport_cruise=false.",
+    "Negative reader controls: wrongly wet row, moved-to-surface pose, missing rows and missing relocation audit must not PASS.",
+    "Run one Release native startup-only validation through flight_sim_run.py using explicit fixture selection, RD4, idle5, stop20, timeout600; report route/visual/performance UNTESTED for this gate. Reuse dry/wet routes rather than repeat them.",
+    "If validation fails, classify fixture/setup vs engine failure from retained artifacts before one localized fix/verification. Do not change fixture and acceptance together."
+  ]
+}
