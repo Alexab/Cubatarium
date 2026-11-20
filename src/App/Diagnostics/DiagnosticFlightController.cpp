@@ -16,6 +16,18 @@ float TurnToward(float current, float target, float maximum)
                               -maximum, maximum);
 }
 constexpr float kArrive = 0.65f;
+constexpr float kHorizontalMotorDeadZone = 0.35f;
+bool Arrived(const DiagnosticFlightWaypoint &point, glm::vec3 position)
+{
+  const glm::vec3 delta = point.position - position;
+  // Panoramas tolerate the general arrival sphere. Directed observations of
+  // voxel openings also need horizontal convergence, or the near lip can hide
+  // an interior face. Match the normal forward-motor dead zone so this cannot
+  // demand an unreachable precision or substitute a camera relocation.
+  return glm::length(delta) < kArrive &&
+         (!point.inspect || point.inspectionTargets.empty() ||
+          glm::length(glm::vec2(delta.x, delta.z)) <= kHorizontalMotorDeadZone);
+}
 constexpr int kGridRadius = 8;
 int Key(glm::ivec3 p)
 {
@@ -125,8 +137,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     ProgressPosition_ = o.position;
     TakeoffY_ = o.position.y;
     const bool needs_departure =
-        !Route_.empty() &&
-        glm::length(Route_.front().position - o.position) >= kArrive;
+        !Route_.empty() && !Arrived(Route_.front(), o.position);
     State_ = o.grounded && needs_departure ? DiagnosticFlightState::Takeoff
                                            : DiagnosticFlightState::Travel;
   }
@@ -225,7 +236,7 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   if (State_ == DiagnosticFlightState::WaitingForTerrain && o.time < NextPlan_)
     return command;
   const glm::vec3 target = Route_[Waypoint_].position;
-  if (glm::length(target - o.position) < kArrive)
+  if (Arrived(Route_[Waypoint_], o.position))
   {
     Detour_.clear();
     if (Route_[Waypoint_].inspect)
@@ -289,12 +300,13 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
     return command;
   }
   const float horizontal = glm::length(glm::vec2(delta.x, delta.z));
-  const float yaw =
-      horizontal > 0.35f ? glm::degrees(std::atan2(delta.z, delta.x)) : o.yaw;
+  const float yaw = horizontal > kHorizontalMotorDeadZone
+                        ? glm::degrees(std::atan2(delta.z, delta.x))
+                        : o.yaw;
   command.yaw = TurnToward(o.yaw, yaw, dt * 180.0f);
   command.pitch = TurnToward(o.pitch, 0.0f, dt * 90.0f);
   const bool level = std::abs(o.pitch) < 5.0f;
-  command.forward = level && horizontal > 0.35f &&
+  command.forward = level && horizontal > kHorizontalMotorDeadZone &&
                     std::abs(std::remainder(o.yaw - yaw, 360.0f)) < 10.0f;
   command.up = level && delta.y > 0.35f;
   command.down = level && delta.y < -0.35f;

@@ -46,6 +46,28 @@ int main()
 {
   {
     DiagnosticFlightController bot;
+    DiagnosticFlightWaypoint point{{22, -44.88f, 51}, true};
+    point.inspectionTargets = {{22, -49.5f, 51}, {21.5f, -49.1f, 51}};
+    bot.SetRoute({point}, false);
+    // Retained AIR-hole native return stopped here under the general 0.65
+    // arrival sphere, outside the one-voxel opening. The left wall was hidden.
+    DiagnosticFlightObservation o{{21.4832f, -44.6193f, 51}, 0, 0, 0, false};
+    const auto approach = bot.Tick(o, Clear);
+    Expect(bot.State() == DiagnosticFlightState::Travel && approach.forward &&
+               !approach.capture,
+           "targeted inspection must approach within the horizontal motor "
+           "dead zone before capturing a one-voxel opening");
+    for (int tick = 0;
+         tick < 1600 && bot.State() != DiagnosticFlightState::Complete; ++tick)
+      Step(bot, o, Clear);
+    Expect(bot.State() == DiagnosticFlightState::Complete &&
+               std::abs(o.position.x - 22) <= .35f &&
+               bot.InspectionCaptureCount() == 14,
+           "targeted inspection must converge by motor without stalling or "
+           "losing its panorama and target captures");
+  }
+  {
+    DiagnosticFlightController bot;
     bot.SetRoute({{{0, 0, 0}, true}, {{3, 5, 0}, false}}, true);
     DiagnosticFlightObservation o{{22, -46.88f, 51}, 180, 0, 0, true, true};
     for (int tick = 0; tick < 800 && bot.VisitedWaypoints() == 0; ++tick)
