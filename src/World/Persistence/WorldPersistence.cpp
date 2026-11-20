@@ -122,6 +122,11 @@ bool ColumnSurfaceBandHasUnsettledOrStaleDarkFace(const UWorld &world,
                                                   glm::ivec2 ground_xz,
                                                   int band_min, int band_max)
 {
+  // Coarse Empty/LitReady and an absent mesh cannot certify disk light.
+  // Keep the physical obligation when optional cache restoration rejected or
+  // has not yet supplied a current calculation for the requested band.
+  if (!world.HasCurrentColumnLightCoverage(ground_xz, band_min, band_max))
+    return true;
   // A zero-light face is not automatically stale (caves and shaded faces are
   // common). Keep relight work while that slice is unsettled, or when the
   // current light field proves the baked dark face stale.

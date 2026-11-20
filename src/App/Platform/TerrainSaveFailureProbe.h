@@ -250,11 +250,17 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       UWorld world(nullptr, nullptr);
       world.ProceduralTemplate.MinHeight = -48;
       world.ProceduralTemplate.MaxHeight = -17;
+      world.ProceduralTemplate.SeaLevel = -33;
       auto profile = world.BlockWorld.GetVerticalProfile();
       profile.MinY = -48;
       profile.MaxY = -17;
+      profile.SeaLevelY = -33;
       world.BlockWorld.SetVerticalProfile(profile);
-      world.BlockWorld.SetLightingConfigurationIdentity(1);
+      const auto lighting_identity =
+          static_cast<uint64_t>(world.GetLightingPipeline().GetMode());
+      require(world.RequiresLightingLitGate() &&
+                  world.BlockWorld.GetLightingConfigurationIdentity() == lighting_identity,
+              "upper persistence fixture binds the actual Full lighting domain");
       auto definitions = std::make_shared<UBlockDefinitionStorage>();
       BlockDefinition stone, torch, water;
       stone.Name = "stone";
@@ -274,10 +280,17 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
       world.BlockWorld.SetFluidDefinitions(definitions.get());
       world.SetWorldFolderPath(folder.string());
+      world.Streaming->EnsureStreamer(world.BlockWorld, *world.BlockRegistry,
+                                      42, world.ProceduralTemplate);
+      require(world.Streaming->HasStreamer() &&
+                  std::max(world.ProceduralTemplate.MinHeight,
+                      world.ProceduralTemplate.SeaLevel - CHUNK_SIZE * 2) <=
+                      world.ProceduralTemplate.MaxHeight,
+              "upper persistence requires streamer and valid fallback band");
       auto &storage = world.GetChunkStorage();
       UBlockWorld original;
       original.SetVerticalProfile(profile);
-      original.SetLightingConfigurationIdentity(1);
+      original.SetLightingConfigurationIdentity(lighting_identity);
       original.SetFluidDefinitions(definitions.get());
       original.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
       // A procedural column without decoded AIR slices is complete only when
@@ -343,6 +356,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                 "upper persistence restores compatible AIR cache exactly");
       else
       {
+        report["persisted_fallback_checkpoint"] = {
+            {"case", cache_case},
+            {"column_state", static_cast<int>(world.GetColumnEmergeState({0, 0, 0}))},
+            {"coarse_lit_ready", world.IsColumnLitReady({0, 0, 0})},
+            {"physical_coverage", world.HasCurrentColumnLightCoverage({0, 0}, -48, -17)},
+            {"queued", world.IsTerrainColumnRelightQueued({0, 0})},
+            {"noop_skipped", world.GetPhysicsTelemetry().RelightSkippedNoOpEnqueueN}};
         require(!world.BlockWorld.HasCompleteLightSamplingCalculation({0, -2, 0}, catalog) &&
                     world.IsTerrainColumnRelightQueued({0, 0}),
                 "upper persistence incompatible/legacy cache retains ordinary relight obligation");

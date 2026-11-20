@@ -12,6 +12,8 @@
       "upper_initial_fail": "build/desktop-msvc/s3-persisted-world-load-20261120-native/terrain-save-probe/report.json",
       "upper_floor_checkpoint": "build/desktop-msvc/s3-persisted-world-load-floor-20261120-native/terrain-save-probe/report.json",
       "upper_state": "Compatible restore PASS and material rejection proven. Upper fallback assertion FAIL: isolated fixture lacks streamer and uses out-of-profile sea level; source owner map saved before further run. Legacy/successor not executed.",
+      "upper_verified_receipt": "build/desktop-msvc/s3-persisted-world-load-receipt-20261120.json",
+      "current_state": "Correct Full domain/streamer fixture and physical-coverage guard: native 18/18 PASS, compatible/materials/legacy, exact terrain/fluid retained. Remaining: negative control of physical guard on same corrected fixture, restore normal EXE. S3.05 OPEN.",
       "scope": "Real storage cold read, typed restore queue and physical recalculate: compatible/algorithm/material/profile/configuration/input/legacy, preserving terrain and exact fluid state. Upper UWorld load owner reconciliation remains."
     },
     {
