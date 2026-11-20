@@ -20,6 +20,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include <filesystem>
 #include <fstream>
@@ -166,10 +167,46 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(!world.Persistence->TryEnqueueTerrainColumnRelight(world,0,0,false,-48,-33) &&
                   !world.IsTerrainColumnRelightQueued({0,0}),
               "current band is not requeued because a different slice is unfinished");
+      world.SetColumnEmergeState({0,0,0},ColumnEmergeState::Meshing);
+      const bool promoted=UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor);
+      report["section_owner_publication_checkpoint"]={
+          {"lower_current",world.HasCurrentColumnLightCoverage({0,0},-48,-33)},
+          {"upper_current",world.HasCurrentColumnLightCoverage({0,0},-32,-17)},
+          {"pending",world.IsPendingLightBeforeMesh({0,0})},
+          {"promoted",promoted},
+          {"coarse_state",static_cast<int>(world.GetColumnEmergeState({0,0,0}))},
+          {"stage",ColumnJobStageName(section_executor.GetColumnJobStage({0,0}))}};
+      require(!promoted && world.GetColumnEmergeState({0,0,0})!=ColumnEmergeState::RenderReady,
+              "lit publication cannot promote column with uncertified sibling");
+      world.SetColumnEmergeState({0,0,0},ColumnEmergeState::LitReady);
+      require(!UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor),
+              "coarse LitReady also cannot bypass uncertified sibling");
+      RelightJobSpec all_bands;
+      all_bands.min_world_y=-48; all_bands.max_world_y=-17;
+      auto full_snapshot=UChunkRelightSnapshot::CaptureSections(
+          world.BlockWorld,all_bands,{coord,{0,-2,0}});
+      full_snapshot.SetInputCatalog(world.BlockRegistry->GetDefinitionsCatalogSnapshot());
+      const auto full_result=full_snapshot.Compute(*world.BlockRegistry);
+      require(full_result.inputs_complete && full_result.chunks.size()==2,
+              "publication aggregate full-column calculation precondition");
+      for(const auto &chunk:full_result.chunks)
+        InstallComputedLight(world.BlockWorld,chunk,true,true);
+      require(world.BlockWorld.RecordLightCalculation(full_result,
+                  world.BlockRegistry->GetDefinitionsCatalogSnapshot())==2,
+              "publication aggregate records both section certificates");
+      world.NoteChunkSliceLightCalculationSettled(coord);
+      world.NoteChunkSliceLightCalculationSettled({0,-2,0});
+      require(world.IsColumnLitReady({0,0,0}) &&
+                  UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor) &&
+                  world.GetColumnEmergeState({0,0,0})==ColumnEmergeState::RenderReady &&
+                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+              "current column light aggregate permits publication notification promotion");
       report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
           {"stale_geometry_rejected",true},{"replacement_rejected",true},
           {"recompute_recovers",true},{"repeat_idempotent",true},{"band_local_noop",true},
-          {"executor_retains_physical_debt",true},{"executor_settle_clears_debt",true}});
+          {"executor_retains_physical_debt",true},{"executor_settle_clears_debt",true},
+          {"publication_rejects_uncertified_sibling",true},
+          {"publication_current_light_recovers",true}});
     }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {

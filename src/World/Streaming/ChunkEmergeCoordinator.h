@@ -16,6 +16,7 @@ namespace cutum
 
 class UWorld;
 class UWorldMeshService;
+class UColumnFlowExecutor;
 struct ProceduralSettings;
 
 /// Per-frame budgets for chunk commit and mesh rebuild during streaming emerge.
@@ -52,6 +53,12 @@ public:
                   int default_load_ops, double last_frame_ms = 0.0);
 
   void TickMeshEmerge(UWorld &world, const StreamingPressureCaps &pressure);
+
+  /// Column aggregate promotion after a lit slice publication notification.
+  /// The caller supplies the scheduling owner; section publication remains
+  /// owned and validated by the mesh service.
+  static bool TryPromoteLitColumn(UWorld &world, glm::ivec2 column,
+                                  UColumnFlowExecutor &executor);
 
 private:
   bool HasResidentChunk(glm::ivec3 chunk_coord);

@@ -60,6 +60,54 @@
 
 namespace cutum
 {
+bool UChunkEmergeCoordinator::TryPromoteLitColumn(
+    UWorld &world, glm::ivec2 col, UColumnFlowExecutor &executor)
+{
+  if (!world.IsPendingLightBeforeMesh(col))
+  {
+    const glm::ivec3 ground(col.x, 0, col.y);
+    // A22 S2 / A23 D2 / A40: sole RenderReady promotion site. One Y-slice
+    // lit commit must not Ready the column while another loaded slice is
+    // still FullyDark *without* LegalDarkSettled (multi-Y aggregate).
+    // GpuPipeline progress (~620) only flips visual→Publishing — never
+    // Ready.
+    bool sibling_fully_dark = false;
+    {
+      UWorldMeshService &mesh = world.GetMeshService();
+      const ColumnRecord *settled_rec =
+          world.GetColumnRecords().Find(col);
+      const bool col_legal =
+          settled_rec && (settled_rec->legal_dark_settled ||
+                          settled_rec->visual_obligation ==
+                              VisualObligation::LegalDark ||
+                          settled_rec->visual_obligation ==
+                              VisualObligation::LitDrawable);
+      const auto &settings = world.GetProceduralSettings();
+      const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+      const int cy1 = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
+      for (int cy = min_cy; cy <= cy1; ++cy)
+      {
+        const glm::ivec3 sib(col.x, cy, col.y);
+        if (mesh.HasGreedyMesh(sib) &&
+            mesh.GetCache().ChunkHasFullyDarkFace(sib) && !col_legal)
+        {
+          sibling_fully_dark = true;
+          break;
+        }
+      }
+    }
+    // A slice notification cannot certify its siblings. Coarse scheduling
+    // labels must not bypass the current section calculation aggregate.
+    if (!sibling_fully_dark && world.IsColumnLitReady(ground))
+    {
+      world.SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
+      executor.SetColumnJobStage(col, ColumnJobStage::RenderReady);
+      return true;
+    }
+  }
+  return false;
+}
+
 bool UChunkEmergeCoordinator::HasResidentChunk(glm::ivec3 chunk_coord)
 {
 
@@ -6957,51 +7005,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
             }
           }
         }
-        if (!world_ref.IsPendingLightBeforeMesh(col))
-        {
-          const glm::ivec3 ground(col.x, 0, col.y);
-          // A22 S2 / A23 D2 / A40: sole RenderReady promotion site. One Y-slice
-          // lit commit must not Ready the column while another loaded slice is
-          // still FullyDark *without* LegalDarkSettled (multi-Y aggregate).
-          // GpuPipeline progress (~620) only flips visual→Publishing — never
-          // Ready.
-          bool sibling_fully_dark = false;
-          {
-            UWorldMeshService &mesh = world_ref.GetMeshService();
-            const ColumnRecord *settled_rec =
-                world_ref.GetColumnRecords().Find(col);
-            const bool col_legal =
-                settled_rec && (settled_rec->legal_dark_settled ||
-                                settled_rec->visual_obligation ==
-                                    VisualObligation::LegalDark ||
-                                settled_rec->visual_obligation ==
-                                    VisualObligation::LitDrawable);
-            const auto &settings = world_ref.GetProceduralSettings();
-            const int min_cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
-            const int cy1 = FloorDiv(settings.MaxHeight, CHUNK_SIZE);
-            for (int cy = min_cy; cy <= cy1; ++cy)
-            {
-              const glm::ivec3 sib(col.x, cy, col.y);
-              if (mesh.HasGreedyMesh(sib) &&
-                  mesh.GetCache().ChunkHasFullyDarkFace(sib) && !col_legal)
-              {
-                sibling_fully_dark = true;
-                break;
-              }
-            }
-          }
-          if (!sibling_fully_dark && (world_ref.IsColumnLitReady(ground) ||
-                                      world_ref.GetColumnEmergeState(ground) ==
-                                          ColumnEmergeState::Meshing ||
-                                      world_ref.GetColumnEmergeState(ground) ==
-                                          ColumnEmergeState::LitReady))
-          {
-            world_ref.SetColumnEmergeState(ground,
-                                           ColumnEmergeState::RenderReady);
-            GetColumnFlowExecutor().SetColumnJobStage(
-                col, ColumnJobStage::RenderReady);
-          }
-        }
+        (void)TryPromoteLitColumn(world_ref, col, GetColumnFlowExecutor());
       });
   mesh_service.SetOnFaceDebtFn(
       [this](glm::ivec3 chunk_coord)
