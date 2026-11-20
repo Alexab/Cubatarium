@@ -213,7 +213,7 @@ class IsolatedFixtureTest(unittest.TestCase):
                 observe_bound_light=True,world_actions=plan,source_observation_scene=scene)
         route=json.loads((self.artifacts/'bot-route.json').read_text(encoding='utf-8'))
         self.assertEqual(route['waypoints'][0]['position'],[0,0,0])
-        self.assertEqual(len(route['waypoints'][0]['inspection_targets']),9)
+        self.assertEqual(len(route['waypoints'][0]['inspection_targets']),8)
         self.assertEqual(route['world_actions']['after_waypoints'],1)
         env=launch.call_args.kwargs['env']
         self.assertEqual(env['CUBA_VISUAL_BLACK_TRACE_DENSE_PIXELS'],'1')

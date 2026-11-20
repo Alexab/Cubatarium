@@ -44,7 +44,7 @@ def build_route(route, scene, plan, saved_eye):
             x=math.floor(eye[0]+.5)
             targets=[[e[0],-48.5,e[2]] for e in nearest]
             targets += [[x+dx,-48.5,51+dz] for dx,dz in
-                        ((-2,-4),(0,-4),(-1,-7),(0,-7),(-2,0),(1,0),(0,0))]
+                        ((-2,-4),(0,-4),(0,-7),(-2,0),(1,0),(0,0))]
             point['inspect']=True
             point['inspection_targets']=[[a-b for a,b in zip(t,saved_eye)] for t in targets]
         return result

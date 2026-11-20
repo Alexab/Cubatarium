@@ -23,7 +23,7 @@ class SourceObservationTest(unittest.TestCase):
         self.assertEqual(r['waypoints'][1]['position'],[-304,6,0])
         for point in r['waypoints']:
             self.assertTrue(point['inspect'])
-            self.assertEqual(len(point['inspection_targets']),9)
+            self.assertEqual(len(point['inspection_targets']),8)
         target=r['waypoints'][0]['inspection_targets'][0]
         self.assertEqual([target[0],target[2]],[2,0])
         self.assertAlmostEqual(target[1],-1.62)
