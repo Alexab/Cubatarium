@@ -1,4 +1,5 @@
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkResidencyTrace.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -34,7 +35,7 @@ BlockQueryResult UChunkManager::QueryBlock(glm::ivec3 worldPos) const
   auto it = Chunks.find(chunkCoord);
   if (it == Chunks.end())
   {
-    return MakeUnloadedQuery();
+    return HasLoadedAirSlice(chunkCoord) ? MakeAirQuery() : MakeUnloadedQuery();
   }
   return MakeSolidQuery(it->second->GetBlockLocal(WorldToLocal(worldPos)));
 }
@@ -90,6 +91,7 @@ void UChunkManager::Clear()
   NoteInputMutation();
   Chunks.clear();
   LightFields.clear();
+  LoadedAirSlices.clear();
   AbsentLightFieldScan.clear();
   ResidentColumnChunkCounts.clear();
   FreeList.clear();
@@ -149,6 +151,51 @@ bool UChunkManager::HasChunk(glm::ivec3 chunkCoord) const
   return Chunks.find(chunkCoord) != Chunks.end();
 }
 
+bool UChunkManager::HasLoadedAirSlice(glm::ivec3 coord) const
+{
+  return LoadedAirSlices.find(coord) != LoadedAirSlices.end();
+}
+
+bool UChunkManager::InstallLoadedAirSlice(const LoadedAirSlice &slice,
+                                          const ChunkGenerationToken &token,
+                                          uint64_t current_sequence,
+                                          bool cancelled)
+{
+  const auto coord = slice.Coord;
+  if (cancelled || !token.IsValidFor({coord.x, 0, coord.z}, current_sequence) ||
+      HasChunk(coord) || HasLoadedAirSlice(coord))
+    return false;
+  // Never inherit a computed proof from an earlier field-only owner. Loading
+  // legacy light bytes is not a new physical calculation.
+  auto field = std::make_shared<SectionLightField>();
+  if (slice.LegacyLight)
+    field->Replace(*slice.LegacyLight);
+  LightFields[coord] = field;
+  auto metadata = slice;
+  metadata.LegacyLight.reset(); // canonical bytes now belong to LightFields
+  LoadedAirSlices.emplace(coord, std::move(metadata));
+  AbsentLightFieldScan.emplace_back(coord, field->GetIncarnation());
+  NoteInputMutation();
+  return true;
+}
+
+std::unique_ptr<UChunk>
+UChunkManager::MakeTerrainSaveSnapshot(glm::ivec3 coord) const
+{
+  if (const auto *chunk = GetChunk(coord))
+    return std::make_unique<UChunk>(*chunk);
+  const auto air = LoadedAirSlices.find(coord);
+  if (air == LoadedAirSlices.end())
+    return nullptr;
+  auto result = std::make_unique<UChunk>(coord);
+  if (const auto field = GetSectionLightField(coord))
+    result->ReplaceLightData(field->GetData());
+  if (air->second.HasWeather)
+    result->SetWeatherState(air->second.Wetness,
+                            air->second.WeatherLastUpdateSec);
+  return result;
+}
+
 std::shared_ptr<const SectionLightField>
 UChunkManager::GetSectionLightField(glm::ivec3 coord) const
 {
@@ -193,7 +240,7 @@ bool UChunkManager::ReplaceComputedSectionLightVolume(
 
 bool UChunkManager::ReleaseAbsentSectionLightField(glm::ivec3 coord)
 {
-  if (HasChunk(coord) || !LightFields.erase(coord))
+  if (HasChunk(coord) || HasLoadedAirSlice(coord) || !LightFields.erase(coord))
     return false;
   NoteLightInputMutation();
   return true;
@@ -213,7 +260,7 @@ size_t UChunkManager::RetireAbsentSectionLightFields(
         field->second->GetIncarnation() != entry.second ||
         HasChunk(entry.first))
       continue;
-    if (keep(entry.first))
+    if (HasLoadedAirSlice(entry.first) || keep(entry.first))
       AbsentLightFieldScan.push_back(entry);
     else
     {
@@ -246,6 +293,11 @@ void UChunkManager::ForEachColumn(
 
 void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
+  if (LoadedAirSlices.erase(chunkCoord))
+  {
+    LightFields.erase(chunkCoord);
+    NoteInputMutation();
+  }
   auto it = Chunks.find(chunkCoord);
   if (it == Chunks.end())
   {
@@ -310,6 +362,14 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
       LightFields.emplace(chunkCoord, chunk->Light.field);
   if (!field_inserted)
     chunk->Light.field = field_it->second;
+  if (const auto air = LoadedAirSlices.find(chunkCoord);
+      air != LoadedAirSlices.end())
+  {
+    if (air->second.HasWeather)
+      chunk->SetWeatherState(air->second.Wetness,
+                             air->second.WeatherLastUpdateSec);
+    LoadedAirSlices.erase(air);
+  }
   chunk->InputRevision.clock = InputRevision;
   chunk->InputRevision.geometry_clock = GeometryInputRevision;
   const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));

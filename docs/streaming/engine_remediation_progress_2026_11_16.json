@@ -19067,5 +19067,151 @@
     "Save empty AIR compatibility payloads or sparse absence without creating live geometry; verify dense legacy and sparse worlds, save/evict/return/cold reload and the current positive AIR camera/GPU/RGB route.",
     "Attribute missing packed-source readback coverage explicitly, preserving bounded diagnostics and no falsePASS; then continue source-removal timeline and all originalS0..S6 tasks."
   ]
+},
+"decoded_air_slice_ownership_foundation_2026_11_20": {
+  "schema": "decoded-air-slice-foundation.v1",
+  "status": "PARTIAL_FOUNDATION_VERIFIED_NATIVE_COUNTEREXAMPLE_OPEN",
+  "parent_head": "9885789f59e72c0868d5ea1af072c3ed8fc14583",
+  "goal": "Active full original S0..S6; no audit restart or scope reduction.",
+  "changes": [
+    "LoadedAirSlice is a privately constructed decoded-empty payload. Only successful complete binary/JSON frame decoding can seal UChunkBuffer, and every public buffer mutation clears the seal. Default/failed/malformed/foreign/nonempty/fluid-bearing buffers cannot grant AIR knowledge.",
+    "Binary v1..4 validation seal additionally checks header coordinate, nonzero RLE runs, recognized fluid/light lengths and exact frame consumption. Existing ordinary decoding behavior is retained; lack of seal is not interpreted as AIR.",
+    "Sparse JSON seal checks schema, optional matching coordinates/version, integer in-range locals/IDs, resolvable explicit AIR and no nonzero fluid. Numeric IDs retain their precedence over type names; legacy sparse files without coordinates remain supported.",
+    "UChunkManager can install a sealed empty slice only for the current uncancelled column token and refuses resident geometry or duplicate completions. Installation starts a fresh canonical light-field incarnation with legacy bytes but no computed/padded light proof.",
+    "Loaded AIR is explicit block-query/stamp knowledge without a resident UChunk or geometry-column count. Loaded metadata retains weather while canonical light bytes belong to LightFields, not a duplicate permanent payload.",
+    "Detached MakeTerrainSaveSnapshot preserves exact legacy AIR binary serialization without inserting geometry or touching live revision clocks. Unknown slices return no snapshot. Real edits consume AIR metadata and inherit field/weather; RemoveChunk/Clear retire AIR ownership even without geometry.",
+    "Fair light-field retirement retains loaded AIR legacy light until terrain ownership retires; field allocation alone still leaves unknown geometry."
+  ],
+  "verification": {
+    "release_desktop_build": "PASS",
+    "release_matrix": {
+      "schema": "loaded-air-foundation-matrix.v1",
+      "targets": [
+        "chunk_lighting_propagation_test",
+        "relight_result_install_test",
+        "negative_height_storage_test",
+        "section_light_field_ownership_test",
+        "light_cache_certificate_test",
+        "decor_mesh_integration_test",
+        "fluid_chunk_io_test"
+      ],
+      "test_names": [
+        "chunk_lighting_propagation_test",
+        "relight_result_install_test",
+        "negative_height_storage_test",
+        "section_light_field_ownership_test",
+        "light_cache_certificate_test",
+        "decor_mesh_integration_test",
+        "fluid_chunk_io_test",
+        "light_sync-noop_test",
+        "light_sync-neighbor_test",
+        "light_sync-halo_test",
+        "light_unknown-boundary_test",
+        "light_sparse-sky_test",
+        "light_sync-parity_test",
+        "light_edit-contract_test",
+        "pending_light_coverage_test",
+        "light_calculation_certificate_test",
+        "section_light_geometry_test",
+        "section_skylight_frontier_test"
+      ],
+      "expected_test_count": 18,
+      "build": {
+        "exit": 0,
+        "log": "build/desktop-msvc/loaded-air-foundation-matrix-20261120-build.log"
+      },
+      "tests": {
+        "exit": 0,
+        "log": "build/desktop-msvc/loaded-air-foundation-matrix-20261120-tests.log"
+      },
+      "pass": true
+    },
+    "negative_controls": {
+      "schema": "loaded-air-foundation-controls.v1",
+      "head": "9885789f59e72c0868d5ea1af072c3ed8fc14583",
+      "source_sha256": {
+        "src/World/Chunks/ChunkBuffer.cpp": "53a7a5f04c88af3602505d2de9af7eea65bce3a56b629b101d945352556ed692",
+        "src/World/Chunks/ChunkManager.cpp": "2f88c63d66558ddc14aede75b490e9d839f9594eb69847d87da6b826a673286a"
+      },
+      "controls": [
+        {
+          "name": "decode-authority",
+          "build": {
+            "exit": 0,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-decode-authority-build.log"
+          },
+          "test": {
+            "exit": 8,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-decode-authority-test.log"
+          },
+          "assertion": "even an edit erased back to AIR invalidates decode authority",
+          "expected_failure": true
+        },
+        {
+          "name": "generation-ownership",
+          "build": {
+            "exit": 0,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-generation-ownership-build.log"
+          },
+          "test": {
+            "exit": 8,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-generation-ownership-test.log"
+          },
+          "assertion": "stale, cancelled and wrong-column commits are side-effect free",
+          "expected_failure": true
+        },
+        {
+          "name": "air-retirement",
+          "build": {
+            "exit": 0,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-air-retirement-build.log"
+          },
+          "test": {
+            "exit": 8,
+            "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-air-retirement-test.log"
+          },
+          "assertion": "retiring geometry-free AIR clears both knowledge and bytes",
+          "expected_failure": true
+        }
+      ],
+      "exact_source_restore": true,
+      "restored_build": {
+        "exit": 0,
+        "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-restored-build.log"
+      },
+      "restored_test": {
+        "exit": 0,
+        "log": "build/desktop-msvc/loaded-air-foundation-v2-20261120-restored-test.log"
+      }
+    },
+    "control_harness_first_attempt": {
+      "path": "build/desktop-msvc/loaded-air-foundation-20261120-controls.json",
+      "result": "Test was correctly RED, but harness expected a later/wrong assertion. Initial receipt retained unchanged. V2 checks the actual first failure and reruns all three controls with exact source restoration."
+    },
+    "roundtrip": "CCHK4 AIR light pattern and weather survive exact serialized-byte roundtrip through detached save carrier; complete legacy CCHK1..3 and sparse JSON acceptance verified.",
+    "ownership": "Tests cover unknown field-only allocation, stale/wrong/cancelled token refusal without clock effects, duplicate completion, no resident geometry, missing physical authority, edit inheritance, resident edit protection, retirement, fresh reload incarnation and valid sequence zero."
+  },
+  "integration_findings": [
+    "WorldPersistence::ApplyPendingAsyncChunkResults already rejects same-demand/cancellation mismatches before applying slices near4810. Preserve that owner gate; the new manager gate additionally checks current column generation.",
+    "Production async/sync load/save and terrain completeness still use legacy EnsureChunk/HasChunk paths. No production IO caller uses InstallLoadedAirSlice or MakeTerrainSaveSnapshot yet; these interfaces are exercised by the real serializer/storage regression fixture only.",
+    "Disk absence needs its own owned producer evidence; do not mint decoded AIR from an empty/default buffer or make light-field allocation imply AIR. Generated data and all-AIR columns require explicit lifecycle semantics as well."
+  ],
+  "limits": [
+    "This commit is a prerequisite, not the completed AIR IO cutover. Existing positive AIR-border camera FAIL4956/4956 and RGB attribution FAIL18/5729 remain authoritative and unresolved; no new native acceptance run is claimed.",
+    "Completeness, geometry-free async/sync saves, real sparse absence, dense legacy AIR load, save/evict/return/cold reload and actual native light/geometry publication remain to integrate and verify.",
+    "New AIR metadata memory/performance has no native measurement yet. Full lifecycle/provider/catalog/cancellation, CPU/GPU/backend parity, source-removal timeline, independent wet/transparency and full seed/R8/performance/memory matrix remain required.",
+    "No original worlds were run or edited, no Debug build, no branch integration, no prior journal entries or historical reports replaced."
+  ],
+  "next": [
+    "Integrate sealed decoded AIR and separately proven sparse absence through the existing demand owner/cancellation/current-generation gates; update column completeness to explicit loaded-slice membership.",
+    "Route legacy save serialization through detached snapshots without live EnsureChunk; preserve strict unknown-slice failures and light receipt capture ordering.",
+    "Verify dense/sparse legacy compatibility and save/evict/return/cold reload, then rerun positive AIR-border native camera/GPU/RGB acceptance without weakening resident0 or triangle evidence.",
+    "Continue missing-source attribution, source-removal timeline and every original S0..S6 obligation."
+  ],
+  "artifact_sha256": {
+    "build/desktop-msvc/loaded-air-foundation-desktop-build-20261120.log": "32d8aa05f4ac625a9ebbff347549f356f24bb023fdd9fcd7efe58fbe1a1a8688",
+    "build/desktop-msvc/loaded-air-foundation-v2-20261120-controls.json": "da59644f2d647e0fe7917be53f69225e00d84d9c640e4da3018bbe8fb66997c9",
+    "build/desktop-msvc/loaded-air-foundation-matrix-20261120.json": "da7c39961f248ec38b3ea69f1b59d11c3542f537cf6b889f3cfa32a188166699"
+  }
 }
 }

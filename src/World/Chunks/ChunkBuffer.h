@@ -1,8 +1,10 @@
 #pragma once
 
 #include "World/Chunks/ChunkManager.h"
+#include "World/Chunks/LoadedAirSlice.h"
 #include "World/Core/IUBlockWriter.h"
 #include <array>
+#include <optional>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -56,8 +58,19 @@ public:
   /// Fast path for buffers known to contain one chunk (disk slice loads).
   void ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const;
   void Clear();
+  /// Refuses unvalidated, subsequently edited, nonempty or foreign buffers.
+  std::optional<LoadedAirSlice> GetDecodedAirSlice(glm::ivec3 coord) const;
 
 private:
+  friend class UBinaryChunkSerializer;
+  friend class UJsonChunkSerializer;
+  void MarkDecodedFrame(glm::ivec3 coord)
+  {
+    DecodedCoord = coord;
+    DecodedFrameValid = true;
+  }
+  bool DecodedFrameValid{false};
+  glm::ivec3 DecodedCoord{0};
   std::unordered_map<glm::ivec3, BlockId, IVec3Hash> Blocks;
   std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> FluidPacked;
   std::unordered_map<glm::ivec3, uint8_t, IVec3Hash> LightPacked;

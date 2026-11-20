@@ -1,16 +1,19 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/RelightResultInstall.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
 #include "World/Math/BlockTypes.h"
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -298,8 +301,201 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   std::filesystem::remove_all(folder_path);
 }
 
+static void TestLoadedAirSlice()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBinaryChunkSerializer binary;
+  UJsonChunkSerializer json;
+  const glm::ivec3 coord(2, -3, -3), column(2, 0, -3);
+  const auto cell = coord * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  UChunk carrier(coord);
+  std::array<uint8_t, CHUNK_VOLUME> pattern{};
+  for (size_t i = 0; i < pattern.size(); ++i)
+    pattern[i] = static_cast<uint8_t>((i * 37 + 113) & 255);
+  carrier.ReplaceLightData(pattern);
+  carrier.SetWeatherState(0.25f, 123.456);
+  const auto encoded = binary.Serialize(coord, carrier, registry);
+  auto decoded = binary.Deserialize(encoded.bytes, coord, registry);
+  auto air = decoded.GetDecodedAirSlice(coord);
+  Expect(air.has_value(), "complete CCHK4 certifies decoded AIR geometry");
+  Expect(!decoded.GetDecodedAirSlice(coord + glm::ivec3(0, 1, 0)),
+         "decoded AIR cannot be rebound to a foreign slice");
+  UChunkBuffer untrusted;
+  untrusted.SetChunkLightData(coord, pattern);
+  untrusted.SetChunkWeatherState(coord, 0.25f, 123.456);
+  Expect(!untrusted.GetDecodedAirSlice(coord),
+         "raw metadata does not mint decoded AIR authority");
+  auto modified = decoded;
+  modified.SetBlock(cell, 8);
+  modified.SetBlock(cell, BLOCK_AIR);
+  Expect(!modified.GetDecodedAirSlice(coord),
+         "even an edit erased back to AIR invalidates decode authority");
+  modified = decoded;
+  modified.SetFluidPacked(cell, 1);
+  Expect(!modified.GetDecodedAirSlice(coord), "fluid payload is not empty AIR");
+  modified = decoded;
+  modified.SetLightPacked(cell, 0);
+  Expect(!modified.GetDecodedAirSlice(coord),
+         "post-decode light write invalidates seal");
+  modified = decoded;
+  modified.Clear();
+  Expect(!modified.GetDecodedAirSlice(coord), "clear removes decode authority");
+  for (const size_t size :
+       {size_t(0), size_t(19), size_t(28), encoded.bytes.size() - 1})
+  {
+    const std::vector<uint8_t> truncated(encoded.bytes.begin(),
+                                         encoded.bytes.begin() + size);
+    Expect(!binary.Deserialize(truncated, coord, registry)
+                .GetDecodedAirSlice(coord),
+           "truncated binary never proves AIR");
+  }
+  auto corrupt = encoded.bytes;
+  corrupt.push_back(0);
+  Expect(
+      !binary.Deserialize(corrupt, coord, registry).GetDecodedAirSlice(coord),
+      "unconsumed binary bytes deny AIR authority");
+  corrupt = encoded.bytes;
+  corrupt[29] = 0;
+  corrupt[30] = 0;
+  corrupt[31] = 0;
+  corrupt[32] = 0;
+  Expect(
+      !binary.Deserialize(corrupt, coord, registry).GetDecodedAirSlice(coord),
+      "unrecognized fluid length cannot prove AIR");
+  Expect(
+      !binary.Deserialize(encoded.bytes, coord + glm::ivec3(0, 1, 0), registry)
+           .GetDecodedAirSlice(coord + glm::ivec3(0, 1, 0)),
+      "binary header mismatch cannot prove foreign AIR");
+  for (int version = 1; version <= 3; ++version)
+  {
+    auto legacy = encoded.bytes;
+    legacy[4] = static_cast<uint8_t>(version);
+    legacy.resize(29 + (version >= 2 ? 4100 : 0) + (version >= 3 ? 4100 : 0));
+    Expect(binary.Deserialize(legacy, coord, registry)
+               .GetDecodedAirSlice(coord)
+               .has_value(),
+           "complete CCHK1..3 AIR retains backward compatibility");
+  }
+  auto nonair = carrier;
+  nonair.SetBlockLocal({1, 2, 3}, 8);
+  const auto solid = binary.Serialize(coord, nonair, registry);
+  Expect(!binary.Deserialize(solid.bytes, coord, registry)
+              .GetDecodedAirSlice(coord),
+         "decoded solid slice cannot mint AIR");
+  const auto json_bytes = json.Serialize(coord, carrier, registry);
+  Expect(json.Deserialize(json_bytes.bytes, coord, registry)
+             .GetDecodedAirSlice(coord)
+             .has_value(),
+         "JSON4 empty geometry has explicit decoded authority");
+  const auto decode_json = [&](const std::string &text)
+  {
+    return json.Deserialize(std::vector<uint8_t>(text.begin(), text.end()),
+                            coord, registry);
+  };
+  Expect(decode_json(R"({"voxels":[]})").GetDecodedAirSlice(coord).has_value(),
+         "legacy sparse JSON without coordinates is accepted");
+  for (const char *bad :
+       {R"({"voxels":{}})", R"({"voxels":[],"cx":2})",
+        R"({"voxels":[],"format_version":99})",
+        R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":"missing_block"}]})",
+        R"({"voxels":[{"lx":16,"ly":0,"lz":0,"id":0}]})",
+        R"({"voxels":[{"lx":0.5,"ly":0,"lz":0,"id":0}]})",
+        R"({"voxels":[{"lx":0,"ly":0,"lz":0,"id":65536}]})",
+        R"({"voxels":[{"lx":0,"ly":0,"lz":0,"id":0,"fluid":1}]})",
+        R"({"voxels":[],"weather_state":false})"})
+    Expect(!decode_json(bad).GetDecodedAirSlice(coord),
+           "malformed or ambiguous sparse JSON never proves AIR");
+
+  UBlockWorld world;
+  auto &manager = world.GetChunkManager();
+  manager.EnsureSectionLightField(coord);
+  Expect(manager.QueryBlock(cell).IsUnloaded() &&
+             !world.IsKnownAbsentAirChunk(coord),
+         "field allocation alone retains unknown geometry");
+  const auto prior_field = manager.GetSectionLightField(coord);
+  const auto revision = manager.GetGeometryInputRevision();
+  Expect(!manager.InstallLoadedAirSlice(*air, {column, 7}, 8, false) &&
+             !manager.InstallLoadedAirSlice(*air, {column, 8}, 8, true) &&
+             !manager.InstallLoadedAirSlice(*air, {coord, 8}, 8, false) &&
+             manager.GetGeometryInputRevision() == revision,
+         "stale, cancelled and wrong-column commits are side-effect free");
+  Expect(manager.InstallLoadedAirSlice(*air, {column, 8}, 8, false),
+         "current owned completion installs known AIR");
+  const auto field = manager.GetSectionLightField(coord);
+  Expect(field != prior_field && field->GetData() == pattern &&
+             field->GetPaddedDomains() == 0 && !field->GetPaddedData(),
+         "legacy bytes get fresh field ownership without computed authority");
+  Expect(manager.GetResidentChunkCount() == 0 &&
+             manager.GetResidentColumnCount() == 0 &&
+             manager.QueryBlock(cell).IsAir() &&
+             world.IsKnownAbsentAirChunk(coord),
+         "loaded AIR has explicit knowledge without geometry holders");
+  Expect(world.GetLightCalculationState(
+             coord, LightDomain::Block,
+             registry.GetDefinitionsCatalogSnapshot()) ==
+             LightCalculationState::Missing,
+         "loaded light bytes cannot masquerade as completed light");
+  Expect(!manager.ReleaseAbsentSectionLightField(coord) &&
+             manager.RetireAbsentSectionLightFields(100, [](glm::ivec3)
+                                                    { return false; }) == 0,
+         "loaded AIR owns legacy light until terrain retirement");
+  const auto clock = manager.GetInputRevision();
+  const auto geometry_clock = manager.GetGeometryInputRevision();
+  auto saved = manager.MakeTerrainSaveSnapshot(coord);
+  Expect(saved && saved->IsAirOnly() && saved->GetLightData() == pattern &&
+             std::abs(saved->GetSurfaceWetness() - 0.25f) < 0.00002f &&
+             std::abs(saved->GetWeatherLastUpdateSec() - 123.456) < 0.001 &&
+             manager.GetInputRevision() == clock &&
+             manager.GetGeometryInputRevision() == geometry_clock &&
+             manager.GetResidentChunkCount() == 0 &&
+             !manager.MakeTerrainSaveSnapshot(coord + glm::ivec3(0, 1, 0)),
+         "save carrier preserves metadata without changing live clocks or "
+         "inventing unknown slices");
+  Expect(binary.Serialize(coord, *saved, registry).bytes == encoded.bytes,
+         "detached save carrier reproduces exact AIR CCHK4 frame");
+  Expect(!manager.InstallLoadedAirSlice(*air, {column, 8}, 8, false),
+         "duplicate completion cannot reset field ownership");
+  manager.SetBlock(cell, 8);
+  const auto *materialized = manager.GetChunk(coord);
+  Expect(materialized && !manager.HasLoadedAirSlice(coord) &&
+             materialized->GetLightData() == pattern &&
+             std::abs(materialized->GetSurfaceWetness() - 0.25f) < 0.00002f &&
+             manager.GetSectionLightField(coord) == field,
+         "real edit materializes geometry while retaining canonical light and "
+         "weather");
+  Expect(!manager.InstallLoadedAirSlice(*air, {column, 8}, 8, false) &&
+             manager.GetBlock(cell) == 8,
+         "late AIR completion cannot discard resident edits");
+  manager.RemoveChunk(coord);
+  Expect(manager.QueryBlock(cell).IsUnloaded() &&
+             !manager.GetSectionLightField(coord),
+         "retiring materialized slice clears AIR and light ownership");
+  Expect(manager.InstallLoadedAirSlice(*air, {column, 9}, 9, false) &&
+             manager.GetSectionLightField(coord)->GetIncarnation() !=
+                 field->GetIncarnation(),
+         "reload starts a fresh field incarnation");
+  manager.RemoveChunk(coord);
+  Expect(!manager.HasLoadedAirSlice(coord) &&
+             !manager.GetSectionLightField(coord) &&
+             manager.QueryBlock(cell).IsUnloaded() &&
+             !world.IsKnownAbsentAirChunk(coord),
+         "retiring geometry-free AIR clears both knowledge and bytes");
+  Expect(manager.InstallLoadedAirSlice(*air, {column, 0}, 0, false),
+         "initial generation zero is a valid owner");
+  manager.Clear();
+  Expect(!manager.HasLoadedAirSlice(coord) &&
+             manager.GetSectionLightFieldCount() == 0,
+         "manager clear removes loaded AIR ownership");
+}
+
 int main()
 {
+  TestLoadedAirSlice();
   using namespace cutum;
   constexpr int kMinY = -64;
   constexpr int kMaxY = 319;

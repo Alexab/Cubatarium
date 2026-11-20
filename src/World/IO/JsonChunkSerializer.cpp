@@ -94,6 +94,20 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   {
     const std::string text(bytes.begin(), bytes.end());
     const json data = json::parse(text);
+    bool frame_valid = data.is_object() && data.contains("voxels") &&
+                       data.at("voxels").is_array();
+    if (data.contains("format_version"))
+      frame_valid &= data.at("format_version").is_number_integer() &&
+                     data.at("format_version") >= 1 &&
+                     data.at("format_version") <= 4;
+    const char *keys[] = {"cx", "cy", "cz"};
+    const bool has_coord =
+        data.contains("cx") || data.contains("cy") || data.contains("cz");
+    if (has_coord)
+      for (int i = 0; i < 3; ++i)
+        frame_valid &= data.contains(keys[i]) &&
+                       data.at(keys[i]).is_number_integer() &&
+                       data.at(keys[i]) == chunkCoord[i];
     if (data.contains("weather_state") && data["weather_state"].is_object())
     {
       const json &weather = data["weather_state"];
@@ -101,12 +115,36 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                   weather.value("surface_wetness", 0.0f),
                                   weather.value("last_update_sec", 0.0));
     }
+    if (data.contains("weather_state"))
+    {
+      const auto &weather = data.at("weather_state");
+      frame_valid &= weather.is_object();
+      if (weather.is_object())
+        for (const char *key : {"surface_wetness", "last_update_sec"})
+          if (weather.contains(key))
+            frame_valid &= weather.at(key).is_number();
+    }
     for (const auto &voxel : data.at("voxels"))
     {
       const int lx = voxel.at("lx").get<int>();
       const int ly = voxel.at("ly").get<int>();
       const int lz = voxel.at("lz").get<int>();
+      frame_valid &= voxel.at("lx").is_number_integer() &&
+                     voxel.at("ly").is_number_integer() &&
+                     voxel.at("lz").is_number_integer() && lx >= 0 &&
+                     lx < CHUNK_SIZE && ly >= 0 && ly < CHUNK_SIZE && lz >= 0 &&
+                     lz < CHUNK_SIZE;
+      if (voxel.contains("id"))
+        frame_valid &= voxel.at("id").is_number_integer() &&
+                       voxel.at("id") >= 0 && voxel.at("id") <= 65535;
+      else
+        frame_valid &= voxel.contains("type") && voxel.at("type").is_string();
+      if (voxel.contains("fluid"))
+        frame_valid &=
+            voxel.at("fluid").is_number_integer() && voxel.at("fluid") == 0;
       const BlockId id = ResolveVoxelId(voxel, registry);
+      if (!voxel.contains("id") && id == BLOCK_AIR && voxel.contains("type"))
+        frame_valid &= voxel.at("type") == "air";
       if (id == BLOCK_AIR)
       {
         continue;
@@ -126,6 +164,8 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                               PackFluidCellState(FluidCellState::Source()));
       }
     }
+    if (frame_valid)
+      buffer.MarkDecodedFrame(chunkCoord);
   }
   catch (const json::exception &)
   {

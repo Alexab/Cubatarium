@@ -230,9 +230,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   {
     return buffer;
   }
-  (void)cx;
-  (void)cy;
-  (void)cz;
+  bool frame_valid = glm::ivec3(cx, cy, cz) == chunkCoord;
 
   uint16_t paletteCount = 0;
   if (!ReadU16(bytes, offset, paletteCount))
@@ -291,6 +289,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       buffer.Clear();
       return buffer;
     }
+    frame_valid &= length != 0;
     const BlockId id = palette[paletteIdx];
     for (uint16_t i = 0; i < length; ++i)
     {
@@ -330,6 +329,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       buffer.Clear();
       return buffer;
     }
+    frame_valid &= fluid_byte_count == CHUNK_VOLUME;
     if (fluid_byte_count == CHUNK_VOLUME)
     {
       if (offset + CHUNK_VOLUME > bytes.size())
@@ -373,6 +373,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       buffer.Clear();
       return buffer;
     }
+    frame_valid &= light_byte_count == CHUNK_VOLUME;
     if (light_byte_count == CHUNK_VOLUME)
     {
       if (offset + CHUNK_VOLUME > bytes.size())
@@ -402,6 +403,8 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                 static_cast<double>(last_update_ms) / 1000.0);
   }
 
+  if (frame_valid && offset == bytes.size())
+    buffer.MarkDecodedFrame(chunkCoord);
   return buffer;
 }
 

@@ -3,6 +3,7 @@
 
 #include "World/Chunks/BlockQuery.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/LoadedAirSlice.h"
 #include "World/Math/BlockTypes.h"
 #include <deque>
 #include <functional>
@@ -25,6 +26,8 @@ struct IVec3Hash
   }
 };
 
+struct ChunkGenerationToken;
+
 class UChunkManager
 {
 public:
@@ -42,6 +45,13 @@ public:
   const UChunk *GetChunk(glm::ivec3 chunk_coord) const;
   bool HasChunk(glm::ivec3 chunk_coord) const;
   void EnsureChunk(glm::ivec3 chunk_coord);
+  /// Caller supplies the current owning column sequence, never a cached one.
+  bool InstallLoadedAirSlice(const LoadedAirSlice &slice,
+                             const ChunkGenerationToken &token,
+                             uint64_t current_sequence, bool cancelled);
+  bool HasLoadedAirSlice(glm::ivec3 coord) const;
+  /// Legacy serialization carrier only; never inserts geometry into the world.
+  std::unique_ptr<UChunk> MakeTerrainSaveSnapshot(glm::ivec3 coord) const;
   /// Light ownership may exist without allocating a geometry chunk. Allocation
   /// alone is not evidence of known AIR or a completed physical calculation.
   std::shared_ptr<const SectionLightField>
@@ -128,6 +138,7 @@ private:
   std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
   std::unordered_map<glm::ivec3, std::shared_ptr<SectionLightField>, IVec3Hash>
       LightFields;
+  std::unordered_map<glm::ivec3, LoadedAirSlice, IVec3Hash> LoadedAirSlices;
   std::deque<std::pair<glm::ivec3, uint64_t>> AbsentLightFieldScan;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;

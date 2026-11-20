@@ -73,6 +73,7 @@ BlockId UBlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
 
 void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
+  DecodedFrameValid = false;
   if (id == BLOCK_AIR)
   {
     Blocks.erase(worldPos);
@@ -94,6 +95,7 @@ void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
 
 void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
 {
+  DecodedFrameValid = false;
   if (packed == 0)
   {
     FluidPacked.erase(worldPos);
@@ -104,6 +106,7 @@ void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
 
 void UChunkBuffer::SetLightPacked(glm::ivec3 worldPos, uint8_t packed)
 {
+  DecodedFrameValid = false;
   // Zero is an explicit light removal when applying over resident data.
   LightPacked[worldPos] = packed;
 }
@@ -111,6 +114,7 @@ void UChunkBuffer::SetLightPacked(glm::ivec3 worldPos, uint8_t packed)
 void UChunkBuffer::SetChunkLightData(
     glm::ivec3 chunkCoord, const std::array<uint8_t, CHUNK_VOLUME> &light)
 {
+  DecodedFrameValid = false;
   HasChunkLight = true;
   ChunkLightCoord = chunkCoord;
   ChunkLight = light;
@@ -119,6 +123,7 @@ void UChunkBuffer::SetChunkLightData(
 void UChunkBuffer::SetChunkWeatherState(glm::ivec3 chunkCoord, float wetness,
                                         double last_update_sec)
 {
+  DecodedFrameValid = false;
   HasChunkWeather = true;
   ChunkWeatherCoord = chunkCoord;
   ChunkWetness =
@@ -131,6 +136,7 @@ void UChunkBuffer::SetWorldGenOwnerChunk(
     glm::ivec3 chunkCoord, const UBlockRegistry &registry,
     const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
 {
+  DecodedFrameValid = false;
   WorldGenOwnerChunk = chunkCoord;
   HasWorldGenOwnerChunk = true;
   WorldGenTreeBlockRanks.clear();
@@ -318,8 +324,28 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
   }
 }
 
+std::optional<LoadedAirSlice>
+UChunkBuffer::GetDecodedAirSlice(glm::ivec3 coord) const
+{
+  if (!DecodedFrameValid || DecodedCoord != coord || !Blocks.empty() ||
+      !FluidPacked.empty() || !LightPacked.empty() || HasWorldGenOwnerChunk ||
+      (HasChunkLight && ChunkLightCoord != coord) ||
+      (HasChunkWeather && ChunkWeatherCoord != coord))
+    return std::nullopt;
+  LoadedAirSlice result;
+  result.Coord = coord;
+  if (HasChunkLight)
+    result.LegacyLight =
+        std::make_shared<const std::array<uint8_t, CHUNK_VOLUME>>(ChunkLight);
+  result.HasWeather = HasChunkWeather;
+  result.Wetness = ChunkWetness;
+  result.WeatherLastUpdateSec = ChunkWeatherLastUpdateSec;
+  return result;
+}
+
 void UChunkBuffer::Clear()
 {
+  DecodedFrameValid = false;
   Blocks.clear();
   FluidPacked.clear();
   LightPacked.clear();

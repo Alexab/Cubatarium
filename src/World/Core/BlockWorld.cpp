@@ -414,6 +414,8 @@ bool UBlockWorld::IsKnownAbsentAirChunk(glm::ivec3 coord,
 {
   if (Chunks.GetChunk(coord))
     return false;
+  if (Chunks.HasLoadedAirSlice(coord))
+    return true;
   if (coord.y < VerticalProfile.MinChunkY(CHUNK_SIZE) ||
       coord.y > VerticalProfile.MaxChunkY(CHUNK_SIZE))
     return true;
