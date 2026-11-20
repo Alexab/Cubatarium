@@ -3486,23 +3486,11 @@ bool UWorld::IsColumnLitReady(glm::ivec3 ground) const
   }
   if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
     return false;
-  // Coarse scheduling state never overrides outstanding section work.
-  const ColumnEmergeState state = GetColumnEmergeState(ground);
-  switch (state)
-  {
-  case ColumnEmergeState::LitReady:
-  case ColumnEmergeState::Meshing:
-  case ColumnEmergeState::RenderReady:
-  case ColumnEmergeState::Empty:
-    return true;
-  default:
-    break;
-  }
-  if (IsPendingLightBeforeMesh(glm::ivec2(ground.x, ground.z)))
-  {
-    return false;
-  }
-  return false;
+  // Scheduling labels are not a second completion authority. Aggregate the
+  // current section calculation/no-surface/known-AIR proofs instead; geometry
+  // mutation or incarnation replacement closes this gate immediately.
+  return HasCurrentColumnLightCoverage({ground.x, ground.z},
+      ProceduralTemplate.MinHeight, ProceduralTemplate.MaxHeight);
 }
 
 bool UWorld::IsColumnVisualReadyForRing(glm::ivec3 ground) const

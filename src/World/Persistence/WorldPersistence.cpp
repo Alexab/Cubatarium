@@ -991,8 +991,8 @@ void UWorldPersistence::EnqueueTerrainColumnRelightImpl(
 
     const bool pending_light =
         world_context->IsPendingLightBeforeMesh(ground_xz);
-    const bool column_lit_ready = world_context->IsColumnLitReady(
-        glm::ivec3(ground_xz.x, 0, ground_xz.y));
+    const bool column_lit_ready = world_context->HasCurrentColumnLightCoverage(
+        ground_xz, no_op_min_y, no_op_max_y);
     const bool band_needs_relight =
         !pending_light && column_lit_ready &&
         ColumnSurfaceBandHasUnsettledOrStaleDarkFace(*world_context, ground_xz,
@@ -1526,7 +1526,7 @@ bool UWorldPersistence::TryEnqueueTerrainColumnRelight(UWorld &world,
                                   world.ProceduralTemplate.MaxHeight);
   const bool pending_light = world.IsPendingLightBeforeMesh(ground_xz);
   const bool column_lit_ready =
-      world.IsColumnLitReady(glm::ivec3(ground_xz.x, 0, ground_xz.y));
+      world.HasCurrentColumnLightCoverage(ground_xz, band_min, band_max);
   const bool band_needs_relight = !pending_light && column_lit_ready &&
                                   ColumnSurfaceBandHasUnsettledOrStaleDarkFace(
                                       world, ground_xz, band_min, band_max);

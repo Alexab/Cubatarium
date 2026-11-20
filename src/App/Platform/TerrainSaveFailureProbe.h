@@ -15,6 +15,7 @@
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/RelightInputValidation.h"
+#include "World/Lighting/RelightResultInstall.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -75,6 +76,86 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    // S4.01: section physical truth versus surviving coarse column state.
+    {
+      UWorld world(nullptr,nullptr);
+      world.ProceduralTemplate.MinHeight=-48;
+      world.ProceduralTemplate.MaxHeight=-33;
+      world.ProceduralTemplate.SeaLevel=-40;
+      world.BlockWorld.SetVerticalProfile({-48,-33,-40});
+      (void)world.GetLightingPipeline();
+      auto definitions=std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone,torch;
+      stone.Physics=BlockPhysicsProfile::Solid(); stone.Name="stone";
+      torch.Render.Style=BlockRenderStyle::Cross; torch.Name="torch"; torch.Lighting.Emission=14;
+      definitions->ReplaceAll({{8,stone},{50,torch}},{{"stone",8},{"torch",50}});
+      world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+      const glm::ivec3 coord(0,-3,0);
+      const auto populate=[&] {
+        for(int x=0;x<16;++x) for(int z=0;z<16;++z) world.BlockWorld.SetBlock({x,-48,z},8);
+        world.BlockWorld.SetBlock({8,-40,8},50);
+      };
+      const auto settle=[&] {
+        RelightJobSpec spec; spec.min_world_y=-48; spec.max_world_y=-33;
+        auto snapshot=UChunkRelightSnapshot::CaptureSections(world.BlockWorld,spec,{coord});
+        snapshot.SetInputCatalog(world.BlockRegistry->GetDefinitionsCatalogSnapshot());
+        const auto result=snapshot.Compute(*world.BlockRegistry);
+        require(result.inputs_complete && result.chunks.size()==1,"section owner fixture complete calculation");
+        InstallComputedLight(world.BlockWorld,result.chunks[0],true,true);
+        require(world.BlockWorld.RecordLightCalculation(result,
+                    world.BlockRegistry->GetDefinitionsCatalogSnapshot())==1,
+                "section owner fixture records physical certificate");
+        world.NoteChunkSliceLightCalculationSettled(coord);
+      };
+      populate(); settle();
+      world.SetColumnEmergeState({0,0,0},ColumnEmergeState::LitReady);
+      require(world.HasCurrentColumnLightCoverage({0,0},-48,-33) &&
+                  world.HasCurrentChunkSliceLightSettlement(coord) && world.IsColumnLitReady({0,0,0}),
+              "section owner positive ready precondition");
+      world.BlockWorld.SetBlock({2,-40,2},8);
+      report["section_owner_checkpoint"]={
+          {"physical",world.HasCurrentColumnLightCoverage({0,0},-48,-33)},
+          {"section_settlement",world.HasCurrentChunkSliceLightSettlement(coord)},
+          {"column_ready",world.IsColumnLitReady({0,0,0})},
+          {"coarse_state",static_cast<int>(world.GetColumnEmergeState({0,0,0}))},
+          {"pending",world.IsPendingLightBeforeMesh({0,0})}};
+      require(!world.HasCurrentColumnLightCoverage({0,0},-48,-33) &&
+                  !world.HasCurrentChunkSliceLightSettlement(coord) && !world.IsColumnLitReady({0,0,0}),
+              "coarse column cannot certify geometry-invalidated section");
+      settle();
+      require(world.IsColumnLitReady({0,0,0}),"section owner recompute restores aggregate");
+      const auto previous_incarnation=world.BlockWorld.GetChunkManager().GetChunk(coord)->GetIncarnation();
+      world.BlockWorld.GetChunkManager().RemoveChunk(coord);
+      populate(); world.BlockWorld.SetBlock({2,-40,2},8);
+      require(world.BlockWorld.GetChunkManager().GetChunk(coord)->GetIncarnation()!=previous_incarnation &&
+                  !world.HasCurrentChunkSliceLightSettlement(coord) && !world.IsColumnLitReady({0,0,0}),
+              "old section incarnation cannot confirm replacement aggregate");
+      settle();
+      const auto revision=world.BlockWorld.GetChunkManager().GetChunk(coord)->GetLightFieldRevision();
+      world.NoteChunkSliceLightCalculationSettled(coord);
+      world.NoteChunkSliceLightCalculationSettled(coord);
+      require(world.IsColumnLitReady({0,0,0}) &&
+                  world.BlockWorld.GetChunkManager().GetChunk(coord)->GetLightFieldRevision()==revision,
+              "repeated settlement preserves current field identity");
+      require(!world.IsColumnLitReady({7,0,7}),"unknown coarse Empty is not physical readiness");
+      // An unfinished different slice must not reopen an already-current band.
+      world.ProceduralTemplate.MaxHeight=-17;
+      auto wider=world.BlockWorld.GetVerticalProfile(); wider.MaxY=-17;
+      world.BlockWorld.SetVerticalProfile(wider);
+      world.BlockWorld.SetBlock({4,-24,4},8);
+      settle();
+      require(world.HasCurrentColumnLightCoverage({0,0},-48,-33) &&
+                  !world.IsColumnLitReady({0,0,0}),
+              "section owner mixed-band precondition");
+      require(!world.Persistence->TryEnqueueTerrainColumnRelight(world,0,0,false,-48,-33) &&
+                  !world.IsTerrainColumnRelightQueued({0,0}),
+              "current band is not requeued because a different slice is unfinished");
+      report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
+          {"stale_geometry_rejected",true},{"replacement_rejected",true},
+          {"recompute_recovers",true},{"repeat_idempotent",true},{"band_local_noop",true}});
+    }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {
       UWorld world(nullptr, nullptr);

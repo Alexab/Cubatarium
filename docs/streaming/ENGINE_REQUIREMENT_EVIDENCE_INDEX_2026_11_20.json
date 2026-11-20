@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.01.column-light-aggregate",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h1-receipt-20261120.json",
+      "scope": "Actual UWorld stale geometry/incarnation/recompute and band-local no-op: native 20/20 PASS; capture/demand/publication tests 4/4 PASS. Remaining named column job-stage/publication projections; package OPEN."
+    },
+    {
       "id": "S3.06",
       "status": "COMPLETE",
       "card": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md",
