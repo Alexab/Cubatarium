@@ -13,6 +13,23 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_air_pocket_component_survives_startup_scope_reduction(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        for status in ("PASS", "FAIL"):
+            artifacts = self.root / ("pocket-" + status)
+            child = Mock(pid=123, returncode=0)
+            with patch.object(engine_smoke_run, "ROOT", self.root), \
+                 patch("flight_sim_run.exe_writable", return_value=True), \
+                 patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+                 patch.object(engine_smoke_run.subprocess, "Popen", return_value=child), \
+                 patch("engine_air_pocket.prepare", return_value={"name":"air-pocket-negative-cave"}), \
+                 patch("engine_air_pocket.evaluate", return_value={"status":status,"reason":"controlled pocket evidence"}):
+                verdict = engine_smoke_run.run("Saved", artifacts, startup_only=True,
+                                              fixture_scene="air-pocket-negative-cave")
+            self.assertEqual(verdict["components"]["air_pocket_load"]["status"], status)
+            self.assertIn("air_pocket_load", verdict["required_components"])
+            self.assertEqual(self.config.read_bytes(), self.original)
+
     def test_explicit_upper_air_preparation_is_isolated(self):
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable")
         (self.world / "chunks/1_-4_3.cchunk").write_bytes(b"retained base")

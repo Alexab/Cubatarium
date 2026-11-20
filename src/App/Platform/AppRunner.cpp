@@ -3119,8 +3119,15 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
                       << ",\"eye_in_fluid\":"
                       << (ContainsFluidAtHeight(fluid_column, pos.y) ? "true"
                                                                      : "false")
-                      << ",\"eye_fluid_id\":" << fluid_column.fluidId
-                      << ",\"capture_ready\":" << observation.captureReady
+                      << ",\"eye_fluid_id\":" << fluid_column.fluidId;
+                  if (std::getenv("CUBA_FLIGHT_AIR_POCKET_PROBE"))
+                  {
+                    bot_trace << ",\"air_pocket_above_in_fluid\":"
+                        << (world->IsCameraInsideFluid(pos + glm::vec3(0, 5, 0)) ? "true" : "false")
+                        << ",\"air_pocket_side_in_fluid\":"
+                        << (world->IsCameraInsideFluid(pos + glm::vec3(4, 0, 0)) ? "true" : "false");
+                  }
+                  bot_trace << ",\"capture_ready\":" << observation.captureReady
                       << ",\"capture_request\":" << action.capture
                       << ",\"capture_id\":" << action.captureId
                       << ",\"plan_expansions\":"

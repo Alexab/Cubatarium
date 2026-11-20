@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.06",
+  "current_package": "S3.01",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -1281,7 +1281,7 @@
     },
     {
       "id": "S2.06",
-      "status": "OPEN",
+      "status": "COMPLETE",
       "evidence": [
         {
           "path": "src\\Test\\UnderwaterFogColumnTest.cpp",
@@ -1330,19 +1330,104 @@
         {
           "path": "build\\desktop-msvc\\physical-current-wet-rd4-20261120-native\\route.json",
           "sha256": "7c27dd5965877bde3dce99e34b4642af949e64c6e16d75af78dc8e3b6ed94bc1"
+        },
+        {
+          "path": "tools\\engine_air_pocket.py",
+          "sha256": "996ebf9590e0caa6ee8ee891b078ed168c9bea595358daf1b3aa4db26fe71234"
+        },
+        {
+          "path": "tools\\test_engine_air_pocket.py",
+          "sha256": "63ce18575f258962acf17d5c822bb2b9488c2d19da83a54d35e44afe0f92e52f"
+        },
+        {
+          "path": "tools\\engine_smoke_run.py",
+          "sha256": "3a1de23d3bed9fad5284ea843172a10369262963e3f9447727ebd014168b6de2"
+        },
+        {
+          "path": "tools\\test_engine_smoke_run.py",
+          "sha256": "35ec054e38b9750a1863fba40e3da0808268deced82076d5995216aed233298f"
+        },
+        {
+          "path": "src\\App\\Platform\\AppRunner.cpp",
+          "sha256": "ad10b0c395ae4b98c2d9d530d080f41798a107599f06df57e85d116225dbfdde"
+        },
+        {
+          "path": "docs\\streaming\\S2_06_AIR_POCKET_NATIVE_CARD_2026_11_20.json",
+          "sha256": "ff31c5d5fac83d13db4d6bc0c84e75a296e4ec6a1a6476ddd12bf3086557affe"
+        },
+        {
+          "path": "docs\\streaming\\S2_06_LOCAL_INTERVAL_PLAN_2026_11_20.json",
+          "sha256": "a96c7559d91bd0870d0f33a8ab3d945302e7ffd43735245d772fa17a8656e48b"
+        },
+        {
+          "path": "docs\\streaming\\S2_06_LOCAL_INTERVAL_ACCEPTANCE_2026_11_20.json",
+          "sha256": "0cd2cd10a7dde2a08da5d8041551d5f6b81c24293337083fe14d077378947e8e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-eye-interval-evidence-reuse-20261120.json",
+          "sha256": "7db203f103d49b3f74ad24b3106631a87e97a322162ab694e1e7bf887b9ceb8b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-components-reconciled-20261120.json",
+          "sha256": "7c3675d93106dc328db4399716c1e504379b7ceb2005262e0bde849c6480ea5c"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\route.json",
+          "sha256": "22f323d62497af763bd52315bc1d5e4f3ca6acd288d1087d2d7e7746a086fdb7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\fixture.json",
+          "sha256": "dc02392fd9859205a036fc2a5b5d44fd9e53dfe70f737747cc06405028b37f4d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\config.air-pocket.json",
+          "sha256": "a040bcead7dde4ee439f03feb06374266af113b4a4cf7f46432496cce879ccaa"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\diagnostic_bot.jsonl",
+          "sha256": "ed24e1d14c8bcfa10e44962ff4dc9c0ad0878515f3c849c27e94669e30cc6449"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\air-pocket-load-evidence.json",
+          "sha256": "73ab1973f3f3c1f93b1dbe0d3d44d5467531c000a35c408b853bc27532fa3fe5"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "bf8453e091439eb2c6ec80deb7d26a03820470b89360207efd2f855100c75b8b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-harness-test-20261120.log",
+          "sha256": "b8ddbfd32b70e93c64d2667c90f6e1226e0e4fc836bc53cf14dc5b75f2f103bb"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-runner-test-20261120.log",
+          "sha256": "82133b76bd3957893b1e1ec9e4e51f578e0f78e1972076d334fd8ab94d079fd8"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-component-test-20261120.log",
+          "sha256": "816d7acd5a31d77c8661f25c85e950ce23103e4ccc1946f9ada1ffda410ae992"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-release-build-20261120.log",
+          "sha256": "542dcac7617950218816597eb487c87fbfe717c30430c9406cd464fdebc8a1b8"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-air-pocket-release-provenance-20261120.json",
+          "sha256": "a7f6c15011e3e6f06e1fc8cc57b64beb5f3e39dbafeb75a360647554848bdb15"
         }
       ],
       "verified": [
         "Current Release local-water query and waterline tests PASS. Existing dry cave below ocean, negative flooded cave, separated air pocket, lava boundary and emergence cases retained.",
         "New raw-profile cases -127..-17,32..79,-48..255 across negative X/Z seams verify exact lower/upper connected intervals, dry gaps, half-open top/bottom, quarter-block emergence, ceiling/out-of-profile rejection and no section materialization.",
         "Source chain World.FindFluidColumnSurface -> WorldCollision.FindFluidColumnSurfaceEye -> FindFluidColumnSurfaceForEye is used by underwater fog render-position classification; no distant-column surface is used to classify eye submersion.",
-        "Existing native supported-profile evidence PASS retains saved negative eye -41.88. Existing wet negative route has runtime/route/fixture PASS. These are historical executable/source-bound evidence, not current full framebuffer or performance acceptance."
+        "Existing native supported-profile evidence PASS retains saved negative eye -41.88. Existing wet negative route has runtime/route/fixture PASS. These are historical executable/source-bound evidence, not current full framebuffer or performance acceptance.",
+        "New static isolated air-pocket fixture unit checks exact150 carved water cells, retained water above/side and safe floor, matching saved player/body pose, no binary override and source-path refusal. Two harness tests PASS.",
+        "Actual Release native static air-pocket load:39 observations over19.62107s retain exact saved negative eye, classify dry eye with above/side wet, zero relocation/teleport. Runtime/startup/build provenance PASS; original world/config restored.",
+        "Postprocessor ordering defect localized: startup_only_verdict dropped an earlier pocket component. Hook now attaches it afterwards;35 runner tests PASS including PASS/FAIL component integration. Original native verdict untouched; separately reconciled report has air_pocket_load PASS and overall UNTESTED, using the same raw measurements.",
+        "Historical dry157 and wet175 route observations re-read: correct local classification, negative saved start and zero relocations. Eye query and grid coordinate sources unchanged from historical wet commit, verified by normalized source comparison. Full current-executable matrix still required in S6."
       ],
-      "remaining": [
-        "Implement and validate explicit static negative air-pocket fixture, strict pose/dry classification reader and negative controls; then one startup-only native Release run.",
-        "Reconcile safe saved-player load/position retention for dry, wet and air-pocket cases against source-bound evidence; S2 parent and full S0..S6 remain OPEN."
-      ],
-      "scope_limit": "No production bug reproduced in query tests, so production query unchanged. Raw profile tests do not expand persisted profile support; logic/source trace is not wet RGB/transparency/framebuffer proof. Native air-pocket load not yet executed."
+      "remaining": [],
+      "scope_limit": "Local interval/load-position package COMPLETE per acceptance record. Static air-pocket settings are isolated/restored; no hydrodynamics/wet RGB/transparency/performance parity claim. Raw profile tests do not expand persisted support. Historical routes retain source/EXE limits; S2 parent and full S0..S6 remain OPEN pending full matrix."
     }
   ],
   "completed_handoff": {

@@ -1,0 +1,14 @@
+{
+  "package": "S2.06",
+  "hypothesis": "A safe saved negative-height player remains inside its local dry air pocket during actual load; remote water above and beside does not classify the eye as submerged or relocate it to the surface",
+  "inputs": "Isolated World_261 copy, prepared narrow flooded negative cave with dry cells x20..24,y-43..-38,z49..53. Saved eye22,-41.88,51; body22,-43.5,51; floor y=-44. Static only: copied procedural.fill_water=false and isolated config physics.enable_fluids=false. Actual query probes at eye+[0,5,0] and eye+[4,0,0] must remain wet.",
+  "pass": "Native process exit0; strict relocation audit0 and teleport=false; at least10 distinct pose rows spanning5s; each pose within0.25 of saved position and pocket bounds; eye dry, above/side wet. Source world/config restored. No missing required air_pocket_load component.",
+  "fail": "Moved/invalid pose, wet eye, missing surrounding water, malformed or missing relocation/query evidence. Insufficient samples remain UNTESTED.",
+  "negative_controls": "Fixture geometry and policy tests plus wrong wet/dry observation, moved-to-surface pose, nonfinite pose, repeated time, missing samples and relocation audit: test_engine_air_pocket.py PASS",
+  "command": "python tools/engine_smoke_run.py --world World_261 --artifacts build/desktop-msvc/s2-air-pocket-rd4-20261120-native --fixture-scene air-pocket-negative-cave --startup-only --render-distance 4 --minimum-chunks 8 --fly-seconds 65 --idle-seconds 5 --stop-seconds 20 --process-timeout 600",
+  "timeout_seconds": 600,
+  "run_budget": "One validation. If it fails, localize fixture/setup versus engine using retained artifacts before one fix/verification; no identical rerun without new evidence.",
+  "scope_limit": "Static load/position/local eye query only. Existing enabled-fluid wet route retained separately; no hydrodynamics, wet RGB/transparency/framebuffer or performance acceptance. Original S3..S6 remain required.",
+  "result": "Native local gate PASS first attempt:39 samples,19.62107s, exact saved eye retained, dry eye/wet above+side. Runtime/startup/provenance PASS; source/config restored. Original summary dropped component before hook fix; offline reconciliation retained separately, no repeated native.",
+  "offline_hook_fix": "Attach air_pocket_load after startup_only_verdict; 35 runner tests PASS including PASS/FAIL integration. Original artifacts immutable."
+}

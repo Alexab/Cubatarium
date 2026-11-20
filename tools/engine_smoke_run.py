@@ -426,6 +426,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         prepare_read_failure_air: bool = False,
         probe_terrain_save_failure: bool = False, walking: bool = False,
         record_replay: bool = False, debt_target: dict | None = None) -> dict:
+    if fixture_scene == "air-pocket-negative-cave" and not startup_only:
+        raise ValueError("static air-pocket fixture requires startup-only observation")
     if debt_target is not None:
         from engine_debt_target import validate as validate_debt_target
         validate_debt_target(debt_target)
@@ -529,7 +531,14 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             config_path.write_bytes(unpacked_meshing_payload(config_path.read_bytes()))
             (artifacts / "config.unpacked-meshing.json").write_bytes(config_path.read_bytes())
         scene = None
-        if fixture_scene in ("dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
+        if fixture_scene == "air-pocket-negative-cave":
+            from engine_air_pocket import prepare as prepare_pocket, static_config
+            scene = prepare_pocket(fixture, minimum_chunks)
+            config_path = runtime / "config.json"
+            config_path.write_bytes(static_config(config_path.read_bytes()))
+            (artifacts / "config.air-pocket.json").write_bytes(config_path.read_bytes())
+            (artifacts / "fixture.json").write_text(json.dumps(scene, indent=2)+"\n", encoding="utf-8")
+        elif fixture_scene in ("dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"):
             if yaw != 180:
                 raise ValueError("negative-cave route requires yaw 180")
             from engine_smoke_fixtures import prepare_negative_cave
@@ -587,6 +596,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "10",
             "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS": str(capture_encode_delay_ms),
         })
+        if fixture_scene == "air-pocket-negative-cave":
+            env["CUBA_FLIGHT_AIR_POCKET_PROBE"] = "1"
         if round_trip:
             env.update({"CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED": "1",
@@ -799,6 +810,11 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             from engine_smoke_verdict import startup_only_verdict
             verdict = startup_only_verdict(
                 report, verdict, startup_observation_evidence(artifacts / "diagnostic_bot.jsonl"))
+        if fixture_scene == "air-pocket-negative-cave":
+            from engine_air_pocket import evaluate as evaluate_pocket
+            pocket = evaluate_pocket(artifacts, report, scene)
+            verdict["components"]["air_pocket_load"] = pocket
+            (artifacts / "air-pocket-load-evidence.json").write_text(json.dumps(pocket, indent=2)+"\n", encoding="utf-8")
         if synchronous_meshing:
             mode = synchronous_meshing_evidence(artifacts / "movement_diagnostics.json")
             verdict["components"]["synchronous_meshing"] = mode
@@ -960,6 +976,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             required.append("debt_inspection")
         if record_replay:
             required.append("controller_replay")
+        if fixture_scene == "air-pocket-negative-cave":
+            required.append("air_pocket_load")
         if not startup_only:
             required.append("route_path")
         finalize(verdict, required)
@@ -1018,7 +1036,7 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
-    parser.add_argument("--fixture-scene", choices=["dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
+    parser.add_argument("--fixture-scene", choices=["air-pocket-negative-cave", "dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     parser.add_argument("--observe-bound-light", action="store_true",
                         help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
     parser.add_argument('--source-observation-scene',type=Path,

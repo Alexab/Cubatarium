@@ -213,16 +213,16 @@
         {
           "id": "S2.06",
           "action": "Закрыть локальный интервал воды у глаз, отрицательную пещеру и воздушный карман без переноса игрока на поверхность.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
-            "Current Release eye interval/waterline tests PASS; custom raw profile/seam/exact-boundary coverage added without production changes. Historical supported negative saved-pose and wet route evidence reviewed with source/executable limits."
+            "Current Release eye interval/waterline tests PASS; custom raw profile/seam/exact-boundary coverage added without production changes. Historical supported negative saved-pose and wet route evidence reviewed with source/executable limits.",
+            "Static air-pocket fixture and strict reader/negative controls plus current native39-sample load PASS; actual wet neighbors verified. Historical dry/wet pose/query reuse source-bound, offline verdict ordering fixed with integration test. Scope reconciled in acceptance record."
           ],
-          "remaining_subtasks": [
-            "Static negative air-pocket fixture and strict load-position/dry-eye reader with negative controls, then one startup-only native validation and evidence reconciliation."
-          ],
-          "execution_card": "S2_06_LOCAL_INTERVAL_PLAN_2026_11_20.json"
+          "remaining_subtasks": [],
+          "execution_card": "S2_06_LOCAL_INTERVAL_PLAN_2026_11_20.json",
+          "acceptance_record": "S2_06_LOCAL_INTERVAL_ACCEPTANCE_2026_11_20.json"
         }
       ]
     },
@@ -470,7 +470,7 @@
       ]
     }
   ],
-  "current_step": "S2.06",
+  "current_step": "S3.01",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

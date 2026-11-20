@@ -15,7 +15,7 @@
   "artifacts": "build/desktop-msvc/s2-local-interval-{build,test}-20261120.log",
   "timeout_seconds": 120,
   "run_budget": "One validation; if FAIL, inspect and fix one localized hypothesis before one verification. No extra rerun after sufficient PASS.",
-  "remaining_native_gate": "Not executed: static negative air-pocket saved-player load and local dry classification with explicit geometry/settings; S2.06 remains OPEN.",
+  "remaining_native_gate": "COMPLETE within static local load/query scope; see S2_06_LOCAL_INTERVAL_ACCEPTANCE_2026_11_20.json",
   "scope_limit": "Raw profile unit tests do not extend supported persisted world ranges; query/waterline logic is not independent wet RGB, transparency or fog framebuffer acceptance, which remains S6.",
   "unit_result": "PASS: underwater_fog_column_test and underwater_waterline_test; six profile/coordinate scenarios plus existing dry/wet/air-gap/liquid-type regressions. No production query change required.",
   "native_next_steps": [
@@ -27,5 +27,6 @@
     "Negative reader controls: wrongly wet row, moved-to-surface pose, missing rows and missing relocation audit must not PASS.",
     "Run one Release native startup-only validation through flight_sim_run.py using explicit fixture selection, RD4, idle5, stop20, timeout600; report route/visual/performance UNTESTED for this gate. Reuse dry/wet routes rather than repeat them.",
     "If validation fails, classify fixture/setup vs engine failure from retained artifacts before one localized fix/verification. Do not change fixture and acceptance together."
-  ]
+  ],
+  "acceptance_record": "S2_06_LOCAL_INTERVAL_ACCEPTANCE_2026_11_20.json"
 }
