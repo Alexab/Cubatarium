@@ -31257,5 +31257,434 @@
     ]
   },
   "next_work": "Verify actual application menu/quit error and retry, replace metadata-only legacy save bypass with proper budgeted save semantics, and handle live edits/dirty acknowledgements during autosave; continue all other original S0..S6 requirements."
+},
+"cooperative_save_acknowledges_only_current_written_versions_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no audit restart or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-acknowledgement-assessment-20261120.json",
+    "sha256": "2ca239b1afe73f2b6af6ebacf3b20de724b31e7ee726e62e4fa75a178a107f28"
+  },
+  "validation": {
+    "schema": "engine-late-save-edit-acknowledgement.v1",
+    "status": "PASS",
+    "full_goal_status": "IN_PROGRESS",
+    "scope": "Cooperative save snapshot version acknowledgement and unload dirty acknowledgement; not UI/autosave scheduler acceptance",
+    "source_commits": [
+      "0925549a2afe0ddb571c872e5bef44cd5335b09d",
+      "a60a10426b17405e8e484766177219d9cad9867e"
+    ],
+    "changes": [
+      "Track per-column terrain/content/light/weather owner stamps for successful synchronous writes; only current saved versions acknowledge dirty chunks within the written vertical profile.",
+      "Keep changed saved columns and newly appearing candidate columns dirty, including new decoded columns without an existing modified marker.",
+      "Resumable save finishes its cohort and retains newer changes for the next save; shutdown/replacement save fails before teardown if newer dirty data remains.",
+      "Reject changed folder/profile/catalog during save instead of acknowledging another context.",
+      "Successful current async/sync unload saves acknowledge their own dirty keys before retirement; failed/stale async completions retain dirty keys."
+    ],
+    "negative_control": {
+      "schema": "terrain-save-api-native-assessment.v1",
+      "status": "FAIL",
+      "source_commit": "0925549a2afe0ddb571c872e5bef44cd5335b09d",
+      "probe": {
+        "cases": [
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": false,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": false,
+            "dirty_preserved": 1,
+            "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 7,
+            "folder_switch_checked": false,
+            "io_timeout_and_retry_checked": false,
+            "kind": "incomplete",
+            "late_edit_and_column_checked": false,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "snapshot_fence_checked": false,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {}
+          }
+        ],
+        "error": "save cannot acknowledge post-write edits or unlisted new columns",
+        "schema": "terrain-save-failure-native.v1",
+        "scope": "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance",
+        "status": "FAIL"
+      },
+      "cold_independent": {},
+      "provenance": {
+        "source": true,
+        "exe": true,
+        "config": true,
+        "head": true,
+        "clean": true
+      },
+      "startup_smoke_status": "PASS",
+      "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance"
+    },
+    "fixed_native": {
+      "schema": "terrain-save-api-native-assessment.v1",
+      "status": "PASS",
+      "source_commit": "a60a10426b17405e8e484766177219d9cad9867e",
+      "probe": {
+        "cases": [
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": false,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": false,
+            "dirty_preserved": 1,
+            "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 7,
+            "folder_switch_checked": false,
+            "io_timeout_and_retry_checked": false,
+            "kind": "incomplete",
+            "late_edit_and_column_checked": false,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "snapshot_fence_checked": false,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {}
+          },
+          {
+            "async_cold_edit_preserved": true,
+            "async_failure_retained": true,
+            "cold_edit_preserved": true,
+            "cooperative_write_fence_checked": true,
+            "dirty_preserved": 1,
+            "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+            "failure_phases": [
+              "scan",
+              "save_failed"
+            ],
+            "files_preserved": 8,
+            "folder_switch_checked": true,
+            "io_timeout_and_retry_checked": true,
+            "kind": "write_failure",
+            "late_edit_and_column_checked": true,
+            "metadata_only_preserved_dirty": true,
+            "newer_edit_invalidated_ack": true,
+            "recovery_phases": [
+              "scan",
+              "chunks",
+              "save_metadata",
+              "done"
+            ],
+            "snapshot_fence_checked": true,
+            "status": "PASS",
+            "unload_waited_for_ack": true,
+            "write_fence_evidence": {
+              "fenced_save_phases": [
+                "save_waiting_for_io",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "late_exit_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "save_failed"
+              ],
+              "resumable_late_edit_phases": [
+                "init",
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "timeout_phases": [
+                "save_waiting_for_io",
+                "save_failed"
+              ],
+              "timeout_seconds": 10.0032204
+            }
+          }
+        ],
+        "schema": "terrain-save-failure-native.v1",
+        "scope": "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance",
+        "status": "PASS"
+      },
+      "cold_independent": {
+        "incomplete": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+            "sha256": "0e3da59468f7d3035958d468e73e06ba1e3883af68eda2381aee639b0fbfb6bb",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 8
+          }
+        },
+        "write-failure": {
+          "deleted": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 0
+          },
+          "added": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              2,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "upper": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+            "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+            "section": [
+              0,
+              -2,
+              0
+            ],
+            "local": [
+              1,
+              2,
+              3
+            ],
+            "id": 8
+          },
+          "during": {
+            "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+            "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+            "section": [
+              0,
+              -4,
+              0
+            ],
+            "local": [
+              3,
+              2,
+              3
+            ],
+            "id": 0
+          }
+        },
+        "late_old_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_top": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_0_0.cchunk",
+          "sha256": "8e99e37ff97ba9e011a204609155efd3425f324c38aafb093fd7d70ac797573e",
+          "section": [
+            0,
+            0,
+            0
+          ],
+          "local": [
+            1,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_folder_last_edit": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\0_-4_0.cchunk",
+          "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+          "section": [
+            0,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 0
+        },
+        "new_column_19": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\1_-4_0.cchunk",
+          "sha256": "b03705ce15f9fad9976247ce47b1f66903dd90ffd7699d34dabb96a9c3a0d177",
+          "section": [
+            1,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        },
+        "new_column_35": {
+          "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\terrain-save-probe\\switched-folder\\chunks\\2_-4_0.cchunk",
+          "sha256": "5770dbdec04ea19d2532095a76b05d1aef5316c93fbd0eda88a7741ffcfed005",
+          "section": [
+            2,
+            -4,
+            0
+          ],
+          "local": [
+            3,
+            2,
+            3
+          ],
+          "id": 8
+        }
+      },
+      "provenance": {
+        "source": true,
+        "exe": true,
+        "config": true,
+        "head": true,
+        "clean": true
+      },
+      "startup_smoke_status": "PASS",
+      "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance"
+    },
+    "native_summary": {
+      "wall_elapsed_sec": 128.803,
+      "ingame_frames": 1528,
+      "diagnostic_relocations_after_start": 0,
+      "chunks_traveled_cheb": 0
+    },
+    "release_tests": {
+      "status": "PASS",
+      "count": 3,
+      "seconds": 0.96,
+      "names": [
+        "negative_height_storage_test",
+        "terrain_column_util_test",
+        "chunk_streamer_committed_column_test"
+      ]
+    },
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-before-20261120-native\\save-api-assessment.json",
+        "sha256": "2671c07c13ae173c1e99c33e155f131f7ea0b5b9d12e0699abba5e85c1a49625"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-20261120-native\\save-api-assessment.json",
+        "sha256": "0b36c4ceb0d3c8329ff9809b8360372b9ccb1880dfeade0122f5794bb1f5dfff"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-regression-build-20261120.log",
+        "sha256": "b5ec00324777498ff6305b4a11eb64c1ff83bee6234aa9c6397ae3b34f55855c"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-regression-test-20261120.log",
+        "sha256": "9220a7ca5517a835f7912c59aa92c2f9c0568b251f536b9d61eaf4b2285998e1"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\late-save-edit-fixed-release-build-20261120.log",
+        "sha256": "86577083db28f11c38e1b7e399f175bf1bcae7b02dccd8f34eaddd4d58a8393d"
+      }
+    ],
+    "limitations": [
+      "No UI error rendering, actual quit cancellation/resumption or WindowManager autosave scheduler verification in this run.",
+      "Folder/profile/catalog guard added and scope mismatch helper negatives pass; mid-save context change native control remains untested.",
+      "Legacy WorldLifecycleFacade full SaveWorld still bypasses terrain through metadata-only refresh for streamed persisted worlds; remains open.",
+      "No atomic multi-file transaction, forced-exit/OS fault acceptance or full performance/memory matrix in this scoped run.",
+      "All remaining original S0..S6 producer/lifecycle/persisted certificates/CPU-GPU-backend parity/independent RGB-wet-transparency/native-performance-memory requirements remain open."
+    ]
+  },
+  "next": "Verify actual save/error/exit/autosave application paths, fix remaining legacy metadata-only full-save bypass, then continue all outstanding original S0..S6 requirements."
 }
 }
