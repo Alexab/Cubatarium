@@ -69,11 +69,13 @@
         {
           "id": "S0.05",
           "action": "Создать одну команду запуска утверждённой матрицы с неизменяемыми артефактами и итоговым индексом.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         }
-      ]
+      ],
+      "scope_note": "All five infrastructure packages verified; original stage-wide acceptance stays open until final evidence reconciliation. No S6 scope reduction."
     },
     {
       "id": "S1",
@@ -426,6 +428,6 @@
       ]
     }
   ],
-  "current_step": "S0.05",
+  "current_step": "S1.01",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
 }

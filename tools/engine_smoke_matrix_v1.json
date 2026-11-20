@@ -1,0 +1,101 @@
+{
+  "schema": "engine-smoke-matrix.v1",
+  "scope": "Core Release regression matrix; not full S6 seed/backend/performance/wet-RGB/transparency acceptance",
+  "cases": [
+    {
+      "id": "startup",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 65,
+        "minimum_chunks": 8,
+        "process_timeout": 600,
+        "startup_only": true
+      }
+    },
+    {
+      "id": "frontier",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 300,
+        "minimum_chunks": 8,
+        "process_timeout": 600
+      }
+    },
+    {
+      "id": "roundtrip",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 600,
+        "minimum_chunks": 16,
+        "process_timeout": 900,
+        "round_trip": true
+      }
+    },
+    {
+      "id": "rgb-air-packed",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 300,
+        "minimum_chunks": 8,
+        "process_timeout": 600,
+        "fixture_scene": "dry-rgb-air-border",
+        "observe_bound_light": true
+      }
+    },
+    {
+      "id": "rgb-air-sync",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 300,
+        "minimum_chunks": 8,
+        "process_timeout": 600,
+        "fixture_scene": "dry-rgb-air-border",
+        "observe_bound_light": true,
+        "synchronous_meshing": true,
+        "unpacked_meshing": true
+      }
+    },
+    {
+      "id": "wet-cave",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 300,
+        "minimum_chunks": 8,
+        "process_timeout": 600,
+        "fixture_scene": "wet-negative-cave"
+      }
+    },
+    {
+      "id": "read-fault",
+      "options": {
+        "render_distance": 4,
+        "idle_seconds": 5,
+        "stop_seconds": 20,
+        "fly_seconds": 600,
+        "minimum_chunks": 16,
+        "process_timeout": 900,
+        "fixture_scene": "dry-rgb-air-border",
+        "observe_bound_light": true,
+        "round_trip": true,
+        "secondary_residency_column": [
+          1,
+          5
+        ],
+        "probe_disk_read_failure": true,
+        "prepare_read_failure_air": true
+      }
+    }
+  ]
+}

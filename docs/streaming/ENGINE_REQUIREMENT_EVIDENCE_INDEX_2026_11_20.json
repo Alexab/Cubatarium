@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S0.05",
+  "current_package": "S1.01",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -111,6 +111,38 @@
         "missing_reference": "test_legacy_pixels_do_not_grant_acceptance / test_missing_fault_result_is_untested"
       },
       "scope_limit": "Synthetic verifier negative controls; native hidden-face/light corruption controls remain in S6."
+    },
+    {
+      "id": "S0.05",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "tools/engine_smoke_matrix_v1.json",
+          "sha256": "2b120ef4339091d4b23c350168dec5c0aa83a51fbc41d83aecd1be5e21c6da8a"
+        },
+        {
+          "path": "build/desktop-msvc/s0-matrix-orchestrator-test-20261120.log",
+          "sha256": "a8a217dddc04f88764d337e0bc9aac025c1827945731730940ae3a0b25fdacbf"
+        }
+      ],
+      "verified": [
+        "Seven versioned core scenarios; serial execution through existing isolated native runner",
+        "Exclusive fresh output tree, retained matrix hash and per-case persisted verdict hashes",
+        "Partial/interrupted matrix cannot PASS; unrelated prior evidence is not overwritten",
+        "CLI requires matching source/EXE Release provenance"
+      ],
+      "command": [
+        "python",
+        "tools/engine_smoke_matrix.py",
+        "--matrix",
+        "tools/engine_smoke_matrix_v1.json",
+        "--world",
+        "World_261",
+        "--artifacts",
+        "build/desktop-msvc/core-matrix-UNIQUE"
+      ],
+      "prerequisite": "Load LOCAL_ENV.ps1 and run tools/release_build_with_provenance.py after build-input changes",
+      "scope_limit": "Orchestrator unit/contract verified. No new seven-case native execution here; full S6 multi-seed/backend/performance/wet/transparency acceptance remains open."
     }
   ],
   "completed_handoff": {
