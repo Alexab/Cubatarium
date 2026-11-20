@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <map>
 
 namespace cutum
 {
@@ -467,6 +468,13 @@ static void TestAirTerrainIo(const std::filesystem::path &folder)
     pattern[i] = static_cast<uint8_t>(i * 19 + 31);
   air_chunk.ReplaceLightData(pattern);
   air_chunk.SetWeatherState(0.75f, 71.125);
+  UBinaryChunkSerializer fixture_codec;
+  const auto fixture_air = fixture_codec.Deserialize(
+      fixture_codec.Serialize(air_coord, air_chunk, registry).bytes,
+      air_coord, registry);
+  Expect(ApplyTerrainSliceLoad(source, air_coord, &fixture_air, nullptr,
+                              {column, 1}, 1, false),
+         "dense fixture declares its internal AIR instead of saving unknown data");
   storage.SaveTerrainColumn(column, source, folder.string(), registry, -17,
                             -64);
   Expect(storage.SaveChunk(air_coord, air_chunk, folder.string(), registry),
@@ -947,6 +955,100 @@ static void TestDiskRetryStorage()
   }
 }
 
+static void TestUnmarkedPartialSavePreservesDisk()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBinaryChunkSerializer codec;
+  const glm::ivec3 column(-11, 0, 7), floor(-11, -4, 7);
+  const auto deleted = floor * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  const auto added = deleted + glm::ivec3(1, 0, 0);
+  const auto capture = [](const std::filesystem::path &folder)
+  {
+    std::map<std::string, std::vector<uint8_t>> files;
+    if (std::filesystem::exists(folder))
+      for (const auto &entry : std::filesystem::recursive_directory_iterator(folder))
+        if (entry.is_regular_file())
+        {
+          std::ifstream input(entry.path(), std::ios::binary);
+          files[entry.path().lexically_relative(folder).generic_string()] =
+              std::vector<uint8_t>(std::istreambuf_iterator<char>(input), {});
+        }
+    return files;
+  };
+  for (auto format : {ChunkWriteFormat::Binary, ChunkWriteFormat::Json})
+  {
+    const auto folder = std::filesystem::temp_directory_path() /
+        ("cubatarium_partial_save_" + std::to_string(
+          std::chrono::steady_clock::now().time_since_epoch().count()));
+    Expect(!std::filesystem::exists(folder), "partial save fixture is fresh");
+    UChunkStorageService storage({format, true});
+    UBlockWorld source, partial;
+    for (int cy = -4; cy <= 19; ++cy)
+    {
+      const glm::ivec3 coord(column.x, cy, column.z);
+      UChunk frame(coord);
+      frame.SetWeatherState(.25f, 123.125);
+      if (cy == -4 || cy == 19)
+        frame.SetBlockLocal({1, 2, 3}, 8);
+      const auto decoded = codec.Deserialize(
+          codec.Serialize(coord, frame, registry).bytes, coord, registry);
+      Expect(ApplyTerrainSliceLoad(source, coord, &decoded, nullptr, {column, 1},
+                                  1, false), "full source frame decodes");
+      if (cy == -4)
+        Expect(ApplyTerrainSliceLoad(partial, coord, &decoded, nullptr,
+                                    {column, 1}, 1, false),
+               "partial save owns only the lower real decoded frame");
+    }
+    Expect(storage.SaveTerrainColumn(column, source, folder.string(), registry, 319, -64),
+           "complete source reports successful persistence");
+    const auto before = capture(folder);
+    Expect(before.size() >= 24, "partial save fixture has actual indexed files");
+    partial.SetBlock(deleted, BLOCK_AIR);
+    partial.SetBlock(added, 8);
+    partial.GetChunkManager().GetChunk(floor)->SetWeatherState(.75f, 456.125);
+    const auto incarnation = partial.GetChunkManager().GetChunk(floor)->GetIncarnation();
+    Expect(!partial.GetChunkManager().HasUnresolvedTerrainColumnRead(column),
+           "unknown save must be rejected independently of failed-read marker");
+    Expect(!storage.SaveTerrainColumn(column, partial, folder.string(), registry, 319, -64),
+           "unmarked unknown range reports an explicit save refusal");
+    Expect(capture(folder) == before && partial.GetBlock(deleted) == BLOCK_AIR &&
+               partial.GetBlock(added) == 8 &&
+               partial.GetChunkManager().GetChunk(floor)->GetIncarnation() == incarnation,
+           "unmarked partial save must preserve every disk byte and RAM edit");
+    const auto fresh = folder / "new-world";
+    UBlockWorld new_partial;
+    new_partial.SetBlock(added, 8);
+    new_partial.SetBlock(glm::ivec3(-11, 19, 7) * CHUNK_SIZE, 8);
+    Expect(!storage.SaveTerrainColumn(column, new_partial, fresh.string(), registry, 319, -64),
+           "unknown new range reports an explicit save refusal");
+    Expect(!std::filesystem::exists(fresh),
+           "unknown range must not create a new incomplete terrain snapshot");
+    Expect(storage.LoadTerrainColumn(column, partial, folder.string(), registry,
+                                    319, -64) > 0 &&
+               partial.GetBlock(deleted) == BLOCK_AIR && partial.GetBlock(added) == 8,
+           "real reload completes the base without overwriting local edits");
+    Expect(storage.SaveTerrainColumn(column, partial, folder.string(), registry, 319, -64),
+           "recovered complete range reports successful persistence");
+    UBlockWorld cold;
+    Expect(storage.LoadTerrainColumn(column, cold, folder.string(), registry,
+                                    319, -64) > 0 &&
+               cold.GetBlock(deleted) == BLOCK_AIR && cold.GetBlock(added) == 8 &&
+               cold.GetBlock(glm::ivec3(-11, 19, 7) * CHUNK_SIZE + glm::ivec3(1, 2, 3)) == 8 &&
+               cold.GetChunkManager().GetChunk(floor)->GetWeatherLastUpdateSec() == 456.125,
+           "completed save preserves edits, upper geometry and weather on cold reload");
+    const auto resolved = std::filesystem::weakly_canonical(folder);
+    Expect(resolved.parent_path() == std::filesystem::weakly_canonical(
+               std::filesystem::temp_directory_path()),
+           "partial save cleanup remains inside its unique system-temp fixture");
+    std::filesystem::remove_all(resolved);
+  }
+}
+
 static void TestLoadedAirSlice()
 {
   using namespace cutum;
@@ -1191,6 +1293,7 @@ int main()
   TestLoadedAirSlice();
   TestDiskRetryReadSafety();
   TestDiskRetryStorage();
+  TestUnmarkedPartialSavePreservesDisk();
   using namespace cutum;
   constexpr int kMinY = -64;
   constexpr int kMaxY = 319;
@@ -1388,6 +1491,19 @@ int main()
           LightCalculationState::Transient,
       "save completion restores exact lower-only disk evidence");
 
+  // The fixture intentionally has empty internal sections. Declare them
+  // through real decoded frames; saving missing allocations is not AIR proof.
+  UBinaryChunkSerializer source_codec;
+  for (int cy = -3; cy <= 18; ++cy)
+  {
+    const glm::ivec3 coord(ground.x, cy, ground.z);
+    UChunk empty(coord);
+    const auto decoded = source_codec.Deserialize(
+        source_codec.Serialize(coord, empty, registry).bytes, coord, registry);
+    Expect(ApplyTerrainSliceLoad(source, coord, &decoded, nullptr,
+                                {ground, 1}, 1, false),
+           "expanded fixture explicitly decodes its empty internal sections");
+  }
   storage.SaveTerrainColumn(ground, source, world_folder.string(), registry,
                             kMaxY, kMinY);
   Expect(storage.GetHighestChunkSliceOnDisk(world_folder.string(), ground) == 19,

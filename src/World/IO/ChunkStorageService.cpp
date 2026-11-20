@@ -797,20 +797,20 @@ UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
   }
 }
 
-void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
+bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              const UBlockWorld &world,
                                              const std::string &worldFolder,
                                              UBlockRegistry &registry,
                                              int maxWorldY, int minWorldY)
 {
   if (world.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord))
-    return; // Unknown disk data is not permission to overwrite or truncate it.
+    return false; // Unknown disk data cannot authorize overwrite/truncation.
   if (groundCoord.y != 0)
   {
     groundCoord.y = 0;
   }
-  const auto light = CaptureColumnLight(groundCoord, world, registry);
-  WriteColumnLight(worldFolder, groundCoord, *light);
+  if (maxWorldY < minWorldY)
+    return false;
   const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
   const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
@@ -825,9 +825,25 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   }
   if (highestToSave == kNoTerrainChunkSlice)
   {
-    return;
+    const auto light = CaptureColumnLight(groundCoord, world, registry);
+    return WriteColumnLight(worldFolder, groundCoord, *light);
   }
   highestToSave = std::clamp(highestToSave, minCy, maxCy);
+
+  // An absent RAM allocation is not a decoded AIR frame. Preflight the whole
+  // range, including the indexed disk ceiling, before changing even metadata.
+  // Known absence is accepted only through the world's ordinary evidence API.
+  UBlockWorld::InputStampValidationBatch batch;
+  for (int cy = minCy; cy <= highestToSave; ++cy)
+  {
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    if (!world.GetChunkManager().HasLoadedTerrainSlice(slice) &&
+        !world.IsKnownAbsentAirChunk(slice, &batch))
+      return false;
+  }
+  const auto light = CaptureColumnLight(groundCoord, world, registry);
+  if (!WriteColumnLight(worldFolder, groundCoord, *light))
+    return false;
 
   for (int cy = minCy; cy <= highestToSave; ++cy)
   {
@@ -836,20 +852,24 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
         world.GetChunkManager().MakeTerrainSaveSnapshot(slice);
     if (snapshot)
     {
-      SaveChunk(slice, *snapshot, worldFolder, registry);
+      if (!SaveChunk(slice, *snapshot, worldFolder, registry))
+        return false;
     }
     else
     {
       const UChunk empty_slice(slice);
-      SaveChunk(slice, empty_slice, worldFolder, registry);
+      if (!SaveChunk(slice, empty_slice, worldFolder, registry))
+        return false;
     }
   }
 
   for (int cy = highestToSave + 1; cy <= maxCy; ++cy)
   {
-    RemoveChunkSliceFromDisk(
-        worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z));
+    if (!RemoveChunkSliceFromDisk(
+            worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z)))
+      return false;
   }
+  return true;
 }
 
 int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,

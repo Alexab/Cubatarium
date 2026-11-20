@@ -93,7 +93,9 @@ public:
                                    std::string *outError = nullptr,
                                    int minWorldY = 0) const;
 
-  void SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
+  /// Refuse unknown slices before any metadata/terrain write; false also
+  /// reports a filesystem write failure. Existing disk height is mandatory.
+  bool SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,
                          UBlockRegistry &registry, int maxWorldY,
                          int minWorldY = 0);
