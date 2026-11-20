@@ -1971,25 +1971,38 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     };
     const auto trace_residency_snapshot = [&](const char *phase)
     {
-      const auto column = ChunkResidencyTraceColumn();
-      if (!column)
-        return;
       const auto &profile = world->GetBlockWorld().GetVerticalProfile();
       const auto &manager = world->GetBlockWorld().GetChunkManager();
-      for (int cy = profile.MinChunkY(CHUNK_SIZE);
-           cy <= profile.MaxChunkY(CHUNK_SIZE); ++cy)
+      const auto secondary = ChunkResidencyTraceSecondaryColumn();
+      for (const auto column : {ChunkResidencyTraceColumn(), secondary})
       {
-        const glm::ivec3 coord(column->x, cy, column->y);
-        if (const auto *chunk = manager.GetChunk(coord))
-          TraceChunkResidency(phase, coord, {column->x, 0, column->y},
-                              chunk->GetIncarnation(), &manager);
-        else if (manager.HasLoadedAirSlice(coord))
-          if (const auto field = manager.GetSectionLightField(coord))
-            TraceChunkResidency(std::string_view(phase) == "runtime_initial"
-                                    ? "runtime_air_initial"
-                                    : "runtime_air_final",
-                                coord, {column->x, 0, column->y},
-                                field->GetIncarnation(), &manager);
+        if (!column)
+          continue;
+        for (int cy = profile.MinChunkY(CHUNK_SIZE);
+             cy <= profile.MaxChunkY(CHUNK_SIZE); ++cy)
+        {
+          const glm::ivec3 coord(column->x, cy, column->y);
+          if (const auto *chunk = manager.GetChunk(coord))
+            TraceChunkResidency(phase, coord, {column->x, 0, column->y},
+                                chunk->GetIncarnation(), &manager);
+          else if (manager.HasLoadedAirSlice(coord))
+            if (const auto field = manager.GetSectionLightField(coord))
+            {
+              TraceChunkResidency(std::string_view(phase) == "runtime_initial"
+                                      ? "runtime_air_initial"
+                                      : "runtime_air_final",
+                                  coord, {column->x, 0, column->y},
+                                  field->GetIncarnation(), &manager);
+              // Explicit decoded terrain ownership is separate from having an
+              // allocated light field, and is not a physical-light certificate.
+              if (column == secondary && manager.HasDecodedTerrainSlice(coord))
+                TraceChunkResidency(std::string_view(phase) == "runtime_initial"
+                                        ? "runtime_air_decoded_initial"
+                                        : "runtime_air_decoded_final",
+                                    coord, {column->x, 0, column->y},
+                                    field->GetIncarnation(), &manager);
+            }
+        }
       }
     };
     const bool route_line_tracking_enabled =

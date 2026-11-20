@@ -23,8 +23,134 @@ static void Environment(const char *key, const std::string &value)
   setenv(key, value.c_str(), 1);
 #endif
 }
+static int SecondaryTest(bool overflow)
+{
+  const auto base =
+      std::filesystem::temp_directory_path() /
+      ("cubatarium-residency-pair-" +
+       std::to_string(
+           std::chrono::steady_clock::now().time_since_epoch().count()));
+  const std::array<std::filesystem::path, 2> paths = {
+      base.string() + "-primary.log", base.string() + "-secondary.log"};
+  for (const auto &path : paths)
+    Expect(!std::filesystem::exists(path),
+           "fresh pair of trace files required");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN", "1");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED", "1");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_FILE", paths[0].string());
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", "7,6");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", paths[1].string());
+  cutum::TraceChunkResidency("scratch", {7, 4, 6}, glm::ivec3(0));
+  Expect(!cutum::ChunkResidencyTraceSecondaryColumn() &&
+             !cutum::TraceChunkResidencyEnabled({7, 4, 6}),
+         "secondary waits for runtime selection");
+  const int manager = 7;
+  cutum::TraceChunkResidencyRuntimeOwner(&manager, {6, -3, 6});
+  cutum::SelectChunkResidencyStartColumn({7, -3, 6});
+  Expect(cutum::ChunkResidencyTraceColumn() == glm::ivec2(6, 6) &&
+             cutum::ChunkResidencyTraceSecondaryColumn() == glm::ivec2(7, 6),
+         "two distinct immutable columns");
+  const size_t each = overflow ? 1023 : 128;
+  std::vector<std::thread> workers;
+  for (size_t worker = 0; worker < 4; ++worker)
+    workers.emplace_back(
+        [&, worker]
+        {
+          for (size_t n = 0; n < each; ++n)
+          {
+            cutum::TraceChunkResidency("event", {6 + int(n % 2), 4, 6},
+                                       glm::ivec3(0), worker * each + n,
+                                       &manager);
+            cutum::TraceChunkResidency("excluded", {8, 4, 6}, glm::ivec3(0));
+          }
+        });
+  for (auto &worker : workers)
+    worker.join();
+  if (overflow)
+  {
+    for (int x : {6, 7})
+      cutum::TraceChunkResidency("event", {x, 4, 6}, glm::ivec3(0),
+                                 4092 + x - 6, &manager);
+    for (int n = 0; n < 9; ++n)
+      cutum::TraceChunkResidency("overflow", {7, 4, 6}, glm::ivec3(0));
+  }
+  for (const auto &path : paths)
+    Expect(!std::filesystem::exists(path),
+           "no worker file IO for either column");
+  cutum::FlushChunkResidencyTrace();
+  size_t total = 0;
+  std::set<uint64_t> values;
+  std::array<uintmax_t, 2> bytes{};
+  for (size_t index = 0; index < paths.size(); ++index)
+  {
+    std::ifstream file(paths[index]);
+    std::string line, summary;
+    size_t rows = 0, owners = 0;
+    const auto coord = "coord=(" + std::to_string(6 + index) + ",";
+    while (std::getline(file, line))
+      if (line.find("[ChunkResidency] ") == 0)
+      {
+        Expect(summary.empty(), "no events after summary");
+        Expect(std::stoull(line.substr(line.find("seq=") + 4)) == ++rows,
+               "each file has contiguous local sequences");
+        Expect(line.find(coord) != std::string::npos,
+               "no foreign column in either file");
+        if (line.find("source=runtime_owner ") != std::string::npos)
+        {
+          ++owners;
+          Expect(line.find("origin=(6,-3,6)") != std::string::npos,
+                 "secondary owner retains actual primary starting focus");
+        }
+        else
+        {
+          Expect(line.find("source=event ") != std::string::npos,
+                 "scratch, foreign and dropped events excluded");
+          Expect(
+              values.insert(std::stoull(line.substr(line.find("value=") + 6)))
+                  .second,
+              "concurrent selected events exported exactly once");
+        }
+      }
+      else
+      {
+        Expect(summary.empty(), "exactly one summary per file");
+        summary = line;
+      }
+    const auto lost = overflow ? 9 : 0;
+    Expect(owners == 1 && rows > 1,
+           "both files contain runtime owner and events");
+    Expect(summary == "[ChunkResidencySummary] buffered=1 reserved=" +
+                          std::to_string(rows + lost) +
+                          " published=" + std::to_string(rows) +
+                          " dropped=" + std::to_string(lost) +
+                          " unpublished=0 complete=" + (overflow ? "0" : "1"),
+           "shared overflow invalidates both files even when only secondary "
+           "loses events");
+    total += rows;
+    file.close();
+    bytes[index] = std::filesystem::file_size(paths[index]);
+  }
+  Expect(total == (overflow ? 4096 : 514) && values.size() == total - 2,
+         "secondary shares original total capacity rather than doubling it");
+  for (int x : {6, 7})
+    cutum::TraceChunkResidency("late", {x, 4, 6}, glm::ivec3(0));
+  cutum::FlushChunkResidencyTrace();
+  for (size_t index = 0; index < paths.size(); ++index)
+  {
+    Expect(std::filesystem::file_size(paths[index]) == bytes[index],
+           "neither closed file can change");
+    std::filesystem::remove(paths[index]);
+  }
+  std::cout << "chunk_residency_trace_secondary_test: OK\n";
+  return 0;
+}
 int main(int argc, char **argv)
 {
+  if (argc > 1 && (std::string(argv[1]) == "secondary" ||
+                   std::string(argv[1]) == "secondary-overflow"))
+    return SecondaryTest(std::string(argv[1]) == "secondary-overflow");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", "");
+  Environment("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", "");
   const bool overflow = argc > 1 && std::string(argv[1]) == "overflow";
   const bool start = argc > 1 && std::string(argv[1]) == "start";
   const auto path =

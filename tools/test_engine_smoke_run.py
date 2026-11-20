@@ -13,6 +13,48 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_secondary_residency_requires_explicit_valid_moving_column(self):
+        for column, options in [(True, {}), ([1], {}), ([1, 2, 3], {}),
+                                ([True, 2], {}), ([1.0, 2], {}),
+                                ([2**31, 2], {}), ([1, 2], {"round_trip": False}),
+                                ([1, 2], {"startup_only": True})]:
+            with self.subTest(column=column, options=options):
+                with self.assertRaisesRegex(ValueError, "secondary residency"):
+                    engine_smoke_run.run("Saved", Path("unused"),
+                                         **({"round_trip": True} | options),
+                                         secondary_residency_column=column)
+
+    def test_secondary_trace_reaches_child_and_failure_preserves_source(self):
+        import os
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        fingerprint = world_fingerprint(self.world)
+        for column in (None, (1, 5)):
+            artifacts = self.artifacts / ("default" if column is None else "secondary")
+            def fail_launch(*args, **kwargs):
+                env = kwargs["env"]
+                if column is None:
+                    self.assertNotIn("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", env)
+                    self.assertNotIn("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", env)
+                else:
+                    self.assertEqual(env["CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY"], "1,5")
+                    self.assertEqual(Path(env["CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE"]),
+                                     (artifacts / "secondary-column-residency.log").resolve())
+                    self.assertNotEqual(env["CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE"],
+                                        env["CUBA_CHUNK_RESIDENCY_TRACE_FILE"])
+                raise RuntimeError("controlled secondary launch failure")
+            with patch.object(engine_smoke_run, "ROOT", self.root), \
+                 patch.dict(os.environ, {"CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY": "99,99",
+                                         "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": "foreign.log"}), \
+                 patch("flight_sim_run.exe_writable", return_value=True), \
+                 patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+                 patch.object(engine_smoke_run.subprocess, "Popen", side_effect=fail_launch):
+                with self.assertRaisesRegex(RuntimeError, "controlled secondary launch failure"):
+                    engine_smoke_run.run("Saved", artifacts, round_trip=True,
+                                         secondary_residency_column=column)
+            self.assertEqual(self.config.read_bytes(), self.original)
+            self.assertEqual(world_fingerprint(self.world), fingerprint)
+            self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)

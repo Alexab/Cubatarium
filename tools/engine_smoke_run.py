@@ -352,7 +352,15 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         startup_only: bool = False, capture_encode_delay_ms: int = 0,
         synchronous_meshing: bool = False, round_trip: bool = False,
         world_actions: dict | None = None, observe_bound_light: bool = False,
-        source_observation_scene: dict | None = None, unpacked_meshing: bool = False) -> dict:
+        source_observation_scene: dict | None = None, unpacked_meshing: bool = False,
+        secondary_residency_column: tuple[int, int] | None = None) -> dict:
+    if secondary_residency_column is not None and (
+            not round_trip or startup_only or
+            not isinstance(secondary_residency_column, (tuple, list)) or
+            len(secondary_residency_column) != 2 or
+            any(type(v) is not int or not -(1 << 31) <= v < (1 << 31)
+                for v in secondary_residency_column)):
+        raise ValueError("secondary residency requires a round trip and two int32 coordinates")
     if type(unpacked_meshing) is not bool:
         raise ValueError("unpacked meshing request must be boolean")
     if type(observe_bound_light) is not bool:
@@ -425,6 +433,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         exe = runtime / "Cubatarium.exe"
         env = os.environ.copy()
         env.pop("CUBA_RGB_REFERENCE", None)
+        # Secondary evidence is opt-in for this run, never an inherited trace.
+        env.pop("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", None)
+        env.pop("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", None)
         # Historical QA hooks can reposition cameras or modify worlds. Do not
         # inherit those switches into a correctness scenario.
         for key in list(env):
@@ -446,6 +457,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             env.update({"CUBA_CHUNK_RESIDENCY_TRACE_START_COLUMN": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_BUFFERED": "1",
                         "CUBA_CHUNK_RESIDENCY_TRACE_FILE": str((artifacts / "round-trip-residency.log").resolve())})
+        if secondary_residency_column is not None:
+            env.update({"CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY": ",".join(map(str, secondary_residency_column)),
+                        "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": str((artifacts / "secondary-column-residency.log").resolve())})
         if observe_bound_light or (scene and scene.get("rgb_fixture")):
             env["CUBA_RGB_REFERENCE"] = "1"
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
@@ -541,6 +555,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "synchronous_meshing": synchronous_meshing,
                  "unpacked_meshing_requested": unpacked_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
+                 "secondary_residency_column": secondary_residency_column,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -742,6 +757,8 @@ def main() -> int:
     parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
     parser.add_argument("--round-trip", action="store_true",
                         help="motor return with initial-cohort eviction/fresh disk reload evidence")
+    parser.add_argument("--secondary-residency-column", nargs=2, type=int, metavar=("X", "Z"),
+                        help="observe a second column in a separate bounded trace; grants no acceptance")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -786,6 +803,7 @@ def main() -> int:
                   unpacked_meshing=args.no_packed_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
                   round_trip=args.round_trip,
+                  secondary_residency_column=args.secondary_residency_column,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
