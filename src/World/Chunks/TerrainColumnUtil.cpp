@@ -84,8 +84,9 @@ void MaterializeTerrainColumnSliceRange(UBlockWorld &world, glm::ivec3 groundCoo
   }
   for (int cy = fromCy; cy <= toCy; ++cy)
   {
-    world.GetChunkManager().EnsureChunk(
-        glm::ivec3(groundCoord.x, cy, groundCoord.z));
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    if (!world.GetChunkManager().HasLoadedTerrainSlice(slice))
+      world.GetChunkManager().EnsureChunk(slice);
   }
 }
 
@@ -124,7 +125,7 @@ bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
   int highestLoadedCy = kNoTerrainChunkSlice;
   for (int cy = minCy; cy <= maxCy; ++cy)
   {
-    if (world.GetChunkManager().HasChunk(
+    if (world.GetChunkManager().HasLoadedTerrainSlice(
             glm::ivec3(groundCoord.x, cy, groundCoord.z)))
     {
       highestLoadedCy = cy;
@@ -149,7 +150,7 @@ bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
   requiredCy = std::min(requiredCy, maxCy);
   for (int cy = minCy; cy <= requiredCy; ++cy)
   {
-    if (!world.GetChunkManager().HasChunk(
+    if (!world.GetChunkManager().HasLoadedTerrainSlice(
             glm::ivec3(groundCoord.x, cy, groundCoord.z)))
     {
       return false;

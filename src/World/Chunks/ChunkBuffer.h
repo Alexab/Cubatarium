@@ -46,6 +46,10 @@ public:
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;
   bool HasChunkLightData() const { return HasChunkLight; }
+  bool HasGeometryPayload() const
+  {
+    return !Blocks.empty() || !FluidPacked.empty();
+  }
   bool IsEmpty() const
   {
     return Blocks.empty() && LightPacked.empty() && !HasChunkLight &&

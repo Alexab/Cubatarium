@@ -6,8 +6,9 @@
 namespace cutum
 {
 
-/// Decoded empty geometry, not a light computation certificate. Only codecs
-/// through UChunkBuffer can mint this value after validating the whole frame.
+/// Empty terrain data, not a light computation certificate. Codecs can mint
+/// this after a full validated decode; storage can mint an exact absent slice
+/// only inside an existing saved column with no pending save.
 class LoadedAirSlice
 {
 public:
@@ -15,6 +16,7 @@ public:
 
 private:
   friend class UChunkBuffer;
+  friend class UChunkStorageService;
   friend class UChunkManager;
   LoadedAirSlice() = default;
   glm::ivec3 Coord{0};

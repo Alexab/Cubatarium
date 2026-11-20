@@ -3,6 +3,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
@@ -365,6 +366,29 @@ void UChunkStorageService::RecordChunkSliceSaved(
   KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
+std::optional<LoadedAirSlice> UChunkStorageService::ReadKnownAbsentTerrainSlice(
+    const std::string &worldFolder, glm::ivec3 coord) const
+{
+  const glm::ivec3 column(coord.x, 0, coord.z);
+  if (IsColumnSavePending(column))
+    return std::nullopt;
+  const int highest = GetHighestChunkSliceOnDisk(worldFolder, column);
+  if (highest == kNoChunkSliceOnDisk || coord.y > highest ||
+      !IsChunkSliceAbsentOnDisk(worldFolder, coord))
+    return std::nullopt;
+  for (const auto format : {ChunkDiskFormat::Binary, ChunkDiskFormat::Json})
+  {
+    std::error_code ec;
+    if (std::filesystem::exists(ChunkFilePath(worldFolder, coord, format),
+                                ec) ||
+        ec)
+      return std::nullopt;
+  }
+  LoadedAirSlice air;
+  air.Coord = coord;
+  return air;
+}
+
 int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
                                     const std::string &worldFolder,
                                     UBlockRegistry &registry)
@@ -384,8 +408,12 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
 
   const UChunkBuffer buffer =
       DeserializeChunk(bytes, chunkCoord, format, registry);
-  const int placed = ApplyBufferToWorld(buffer, world);
-  return placed;
+  const size_t before = world.CountNonAir();
+  if (!ApplyTerrainSliceLoad(world, chunkCoord, &buffer, nullptr,
+                             {{chunkCoord.x, 0, chunkCoord.z}, 0}, 0, false))
+    return -1;
+  const size_t after = world.CountNonAir();
+  return static_cast<int>(after > before ? after - before : 0);
 }
 
 void UChunkStorageService::RefreshDiskColumnIndex(
@@ -771,10 +799,11 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   for (int cy = minCy; cy <= highestToSave; ++cy)
   {
     const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
-    const UChunk *chunk = world.GetChunkManager().GetChunk(slice);
-    if (chunk)
+    const auto snapshot =
+        world.GetChunkManager().MakeTerrainSaveSnapshot(slice);
+    if (snapshot)
     {
-      SaveChunk(slice, *chunk, worldFolder, registry);
+      SaveChunk(slice, *snapshot, worldFolder, registry);
     }
     else
     {
@@ -815,15 +844,26 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   const int highestToLoad = std::min(highestOnDisk, FloorDiv(maxWorldY, CHUNK_SIZE));
   for (int cy = minCy; cy <= highestToLoad; ++cy)
   {
-    const int placed = LoadChunk(glm::ivec3(groundCoord.x, cy, groundCoord.z),
-                                 world, worldFolder, registry);
+    const glm::ivec3 slice(groundCoord.x, cy, groundCoord.z);
+    int placed = 0;
+    if (DetectFormatOnDisk(worldFolder, slice) == ChunkDiskFormat::Absent)
+    {
+      const auto air = ReadKnownAbsentTerrainSlice(worldFolder, slice);
+      if (!air || !ApplyTerrainSliceLoad(world, slice, nullptr, &*air,
+                                         {groundCoord, 0}, 0, false))
+        return -1;
+    }
+    else
+    {
+      placed = LoadChunk(slice, world, worldFolder, registry);
+      if (placed < 0)
+        return -1;
+    }
     if (placed > 0)
     {
       total += placed;
     }
   }
-  MaterializeRequiredTerrainColumnSlices(world, groundCoord, maxWorldY,
-                                         highestToLoad, minWorldY);
   if (const auto receipts = ReadColumnLight(worldFolder, groundCoord))
     for (const auto &receipt : *receipts)
       if (!world.HasCompleteLightSamplingCalculation(

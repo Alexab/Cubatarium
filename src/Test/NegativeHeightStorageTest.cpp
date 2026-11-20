@@ -8,6 +8,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/RelightResultInstall.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
@@ -301,6 +302,180 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   std::filesystem::remove_all(folder_path);
 }
 
+static void TestAirTerrainIo(const std::filesystem::path &folder)
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UChunkStorageService storage;
+  UBlockWorld source;
+  const glm::ivec3 column(-2, 0, 3), air_coord(-2, -3, 3), roof(-2, -2, 3);
+  const auto cell = air_coord * CHUNK_SIZE + glm::ivec3(1, 2, 3);
+  for (int x = 0; x < CHUNK_SIZE; ++x)
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      source.SetBlock(column * CHUNK_SIZE + glm::ivec3(x, -64, z), 8);
+  source.SetBlock(roof * CHUNK_SIZE, 8);
+  UChunk air_chunk(air_coord);
+  std::array<uint8_t, CHUNK_VOLUME> pattern{};
+  for (size_t i = 0; i < pattern.size(); ++i)
+    pattern[i] = static_cast<uint8_t>(i * 19 + 31);
+  air_chunk.ReplaceLightData(pattern);
+  air_chunk.SetWeatherState(0.75f, 71.125);
+  storage.SaveTerrainColumn(column, source, folder.string(), registry, -17,
+                            -64);
+  Expect(storage.SaveChunk(air_coord, air_chunk, folder.string(), registry),
+         "dense legacy AIR fixture writes real CCHK4 payload");
+  UBlockWorld restored;
+  Expect(storage.LoadTerrainColumn(column, restored, folder.string(), registry,
+                                   -17, -64) > 0 &&
+             restored.GetChunkManager().GetResidentChunkCount() == 2 &&
+             restored.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+             !restored.GetChunkManager().HasChunk(air_coord) &&
+             IsTerrainChunkComplete(restored, column, -17, -2, -64),
+         "real dense disk column completes with geometry-free AIR");
+  auto snapshot = restored.GetChunkManager().MakeTerrainSaveSnapshot(air_coord);
+  Expect(snapshot && snapshot->GetLightData() == pattern &&
+             std::abs(snapshot->GetSurfaceWetness() - 0.75f) < 0.00002f &&
+             snapshot->GetWeatherLastUpdateSec() == 71.125,
+         "dense disk AIR retains canonical light and weather");
+  const auto first_field =
+      restored.GetChunkManager().GetSectionLightField(air_coord);
+  MaterializeRequiredTerrainColumnSlices(restored, column, -17, -2, -64);
+  Expect(!restored.GetChunkManager().HasChunk(air_coord),
+         "legacy materialization helper respects explicit loaded AIR");
+  UAsyncChunkIO io;
+  const ChunkGenerationToken token{column, 12};
+  const auto cancellation = std::make_shared<std::atomic<bool>>(false);
+  io.RequestLoad(air_coord, storage, registry, folder.string(), token,
+                 cancellation, 71);
+  Expect(io.WaitIdleFor(std::chrono::seconds(5)),
+         "actual dense AIR load worker completes");
+  auto loads = io.DrainLoads();
+  Expect(loads.size() == 1 && loads[0].success && loads[0].decodedBuffer,
+         "dense worker returns a decoded AIR payload");
+  UBlockWorld async_world;
+  UChunkBuffer failed_decode;
+  failed_decode.SetChunkLightData(air_coord, pattern);
+  Expect(!ApplyTerrainSliceLoad(async_world, air_coord, &failed_decode, nullptr,
+                                token, 12, false),
+         "unvalidated metadata-only buffer is not a successful terrain load");
+  Expect(!ApplyTerrainSliceLoad(async_world, air_coord,
+                                loads[0].decodedBuffer.get(), nullptr, token,
+                                13, false) &&
+             !ApplyTerrainSliceLoad(async_world, air_coord,
+                                    loads[0].decodedBuffer.get(), nullptr,
+                                    token, 12, true) &&
+             async_world.GetChunkManager().GetSectionLightFieldCount() == 0,
+         "real worker payload cannot commit under stale or cancelled owner");
+  Expect(ApplyTerrainSliceLoad(async_world, air_coord,
+                               loads[0].decodedBuffer.get(), nullptr, token, 12,
+                               false) &&
+             !async_world.GetChunkManager().HasChunk(air_coord),
+         "actual async commit installs AIR without geometry");
+  const auto clock = async_world.GetChunkManager().GetInputRevision();
+  io.RequestSave(air_coord, storage, folder.string(), async_world, registry,
+                 token);
+  Expect(io.WaitIdleFor(std::chrono::seconds(5)),
+         "actual AIR save worker completes");
+  auto saves = io.DrainSaves();
+  Expect(saves.size() == 1 && saves[0].success &&
+             async_world.GetChunkManager().GetInputRevision() == clock &&
+             async_world.GetChunkManager().GetResidentChunkCount() == 0,
+         "real async save uses detached AIR snapshot without live mutations");
+  UBlockWorld cold;
+  Expect(storage.LoadChunk(air_coord, cold, folder.string(), registry) == 0 &&
+             cold.GetChunkManager()
+                     .MakeTerrainSaveSnapshot(air_coord)
+                     ->GetLightData() == pattern,
+         "cold disk reload retains saved geometry-free AIR light");
+  io.RequestSave(air_coord + glm::ivec3(0, 1, 0), storage, folder.string(),
+                 async_world, registry, token);
+  saves = io.DrainSaves();
+  Expect(
+      saves.size() == 1 && !saves[0].success &&
+          saves[0].error == "chunk_missing_before_serialize",
+      "async save refuses unknown slices instead of creating empty geometry");
+  UBlockWorld edited;
+  edited.SetBlock(cell, 8);
+  Expect(ApplyTerrainSliceLoad(edited, air_coord, loads[0].decodedBuffer.get(),
+                               nullptr, token, 12, false) &&
+             edited.GetBlock(cell) == 8,
+         "late dense AIR completion preserves resident edit");
+  ClearTerrainColumnChunks(restored, column, -17, -64);
+  Expect(
+      !restored.GetChunkManager().HasLoadedTerrainSlice(air_coord) &&
+          restored.QueryBlock(cell).IsUnloaded() &&
+          !restored.GetChunkManager().GetSectionLightField(air_coord),
+      "normal column eviction retires geometry-free AIR knowledge and bytes");
+  Expect(storage.LoadTerrainColumn(column, restored, folder.string(), registry,
+                                   -17, -64) > 0 &&
+             restored.GetChunkManager()
+                     .GetSectionLightField(air_coord)
+                     ->GetIncarnation() != first_field->GetIncarnation(),
+         "return from real disk starts fresh AIR field ownership");
+  Expect(storage.RemoveChunkSliceFromDisk(folder.string(), air_coord),
+         "sparse fixture removes real internal AIR file");
+  Expect(!storage.ReadKnownAbsentTerrainSlice(folder.string(),
+                                              {column.x + 1, -3, column.z}) &&
+             !storage.ReadKnownAbsentTerrainSlice(folder.string(),
+                                                  {column.x, -1, column.z}),
+         "absence outside saved column bounds cannot invent terrain");
+  storage.MarkColumnSavePending(column);
+  Expect(!storage.ReadKnownAbsentTerrainSlice(folder.string(), air_coord),
+         "pending save blocks sparse absence authority");
+  storage.ClearColumnSavePending(column);
+  const auto absent =
+      storage.ReadKnownAbsentTerrainSlice(folder.string(), air_coord);
+  Expect(absent.has_value(),
+         "exact internal saved-column absence is explicit AIR evidence");
+  UBlockWorld sparse;
+  Expect(storage.LoadTerrainColumn(column, sparse, folder.string(), registry,
+                                   -17, -64) > 0 &&
+             sparse.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+             sparse.GetChunkManager().GetResidentChunkCount() == 2 &&
+             IsTerrainChunkComplete(sparse, column, -17, -2, -64),
+         "real sparse disk column completes without materializing its gap");
+  io.RequestLoad(air_coord, storage, registry, folder.string(), token,
+                 cancellation, 72);
+  loads = io.DrainLoads();
+  Expect(loads.size() == 1 && loads[0].format == ChunkDiskFormat::Absent &&
+             !loads[0].success,
+         "real absent fast path remains distinct from successful decode");
+  UBlockWorld absent_world;
+  Expect(
+      !ApplyTerrainSliceLoad(absent_world, air_coord, nullptr, &*absent, token,
+                             13, false) &&
+          ApplyTerrainSliceLoad(absent_world, air_coord, nullptr, &*absent,
+                                token, 12, false) &&
+          absent_world.GetChunkManager().GetResidentChunkCount() == 0,
+      "absent completion requires current token and never allocates geometry");
+  UBlockWorld missing;
+  missing.SetBlock({column.x * CHUNK_SIZE, -64, column.z * CHUNK_SIZE}, 8);
+  missing.SetBlock(roof * CHUNK_SIZE, 8);
+  Expect(!AreTerrainColumnSlicesLoaded(missing, column, -17, -2, -64),
+         "unknown internal slice still prevents completion");
+  storage.SaveTerrainColumn(column, sparse, folder.string(), registry, -17,
+                            -64);
+  Expect(!storage.ReadKnownAbsentTerrainSlice(folder.string(), air_coord) &&
+             sparse.GetChunkManager().GetResidentChunkCount() == 2,
+         "dense compatibility save writes AIR without creating live holder");
+  UBlockWorld recold;
+  Expect(storage.LoadTerrainColumn(column, recold, folder.string(), registry,
+                                   -17, -64) > 0 &&
+             recold.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+             recold.GetChunkManager().GetResidentChunkCount() == 2,
+         "sparse-to-dense save and cold reload keep geometry absent");
+  const auto normalized = std::filesystem::weakly_canonical(folder);
+  Expect(normalized.parent_path() ==
+             std::filesystem::weakly_canonical(
+                 std::filesystem::temp_directory_path()),
+         "AIR IO fixture remains inside system temp root");
+  std::filesystem::remove_all(normalized);
+}
+
 static void TestLoadedAirSlice()
 {
   using namespace cutum;
@@ -506,6 +681,7 @@ int main()
       temp_root / ("cubatarium_negative_height_storage_" +
                    std::to_string(nonce));
   TestColumnLightPersistence(world_folder.string() + "_receipts");
+  TestAirTerrainIo(world_folder.string() + "_air_io");
 
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
   BlockDefinition stone;

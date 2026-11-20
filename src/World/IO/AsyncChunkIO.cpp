@@ -435,8 +435,9 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                                 UBlockRegistry &registry,
                                 ChunkGenerationToken token)
 {
-  const UChunk *chunk = world.GetChunkManager().GetChunk(coord);
-  if (!chunk)
+  auto terrain_snapshot =
+      world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
+  if (!terrain_snapshot)
   {
     AsyncChunkSaveRequest failed;
     failed.coord = coord;
@@ -452,7 +453,7 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
   // immutable snapshot here, then do palette/RLE/JSON serialization on the
   // I/O worker so unloading a column does not serialize every vertical slice
   // inside the streaming update.
-  const auto snapshot = std::make_shared<UChunk>(*chunk);
+  const std::shared_ptr<const UChunk> snapshot(std::move(terrain_snapshot));
   const ChunkStorageSettings settings = storage.GetSettings();
   const glm::ivec3 ground(coord.x, 0, coord.z);
   (void)token;

@@ -50,6 +50,10 @@ public:
                              const ChunkGenerationToken &token,
                              uint64_t current_sequence, bool cancelled);
   bool HasLoadedAirSlice(glm::ivec3 coord) const;
+  bool HasLoadedTerrainSlice(glm::ivec3 coord) const
+  {
+    return HasChunk(coord) || HasLoadedAirSlice(coord);
+  }
   /// Legacy serialization carrier only; never inserts geometry into the world.
   std::unique_ptr<UChunk> MakeTerrainSaveSnapshot(glm::ivec3 coord) const;
   /// Light ownership may exist without allocating a geometry chunk. Allocation

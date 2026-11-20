@@ -11,6 +11,7 @@
 #include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -59,6 +60,12 @@ public:
                             ChunkDiskFormat format) const;
   ChunkDiskFormat DetectFormatOnDisk(const std::string &worldFolder,
                                      glm::ivec3 coord) const;
+
+  /// Main-thread recheck for a missing internal slice of a saved column.
+  /// Ungenerated columns, pending saves and filesystem errors remain unknown.
+  std::optional<LoadedAirSlice>
+  ReadKnownAbsentTerrainSlice(const std::string &worldFolder,
+                              glm::ivec3 coord) const;
 
   bool SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                  const std::string &worldFolder, UBlockRegistry &registry);

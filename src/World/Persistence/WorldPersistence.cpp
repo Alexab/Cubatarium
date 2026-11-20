@@ -27,6 +27,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/JobStageTrace.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/LightCacheCertificate.h"
 #include "World/Math/BlockTypes.h"
@@ -4299,9 +4300,6 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   };
   const int max_height = world.ProceduralTemplate.MaxHeight;
   const int min_height = world.ProceduralTemplate.MinHeight;
-  MaterializeRequiredTerrainColumnSlices(world.BlockWorld, ground_coord,
-                                         max_height, state.highest_cy_on_disk,
-                                         min_height);
 
   const bool has_disk = state.highest_cy_on_disk != kNoChunkSliceOnDisk;
   const bool complete =
@@ -4886,32 +4884,31 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       const auto apply_started_at =
           trace_async_io ? std::chrono::steady_clock::now()
                          : std::chrono::steady_clock::time_point{};
-      if (load.success && token_valid && world.BlockRegistry)
+      if (!token_valid)
       {
-        const UChunkBuffer *buffer = load.decodedBuffer.get();
-        if (buffer && !buffer->IsEmpty())
-        {
-          buffer->ApplyToChunk(world.BlockWorld, load.coord);
-          chunk_input_changed = true;
-          if (buffer->HasChunkLightData())
-          {
-            state.had_disk_light = true;
-          }
-        }
-        else
-        {
-          world.BlockWorld.GetChunkManager().EnsureChunk(load.coord);
-          chunk_input_changed = true;
-        }
+        state.had_invalid_token = true;
+      }
+      else if (load.success && world.BlockRegistry && load.decodedBuffer)
+      {
+        chunk_input_changed = ApplyTerrainSliceLoad(
+            world.BlockWorld, load.coord, load.decodedBuffer.get(), nullptr,
+            load.token, current_sequence, result_cancelled);
+        if (!chunk_input_changed)
+          state.had_disk_read_failure = true;
+        else if (load.decodedBuffer->HasChunkLightData())
+          state.had_disk_light = true;
       }
       else if (disk_format == ChunkDiskFormat::Absent)
       {
-        world.BlockWorld.GetChunkManager().EnsureChunk(load.coord);
-        chunk_input_changed = true;
-      }
-      else if (!token_valid)
-      {
-        state.had_invalid_token = true;
+        // Revalidate exact absence now, not just the worker's old observation.
+        const auto air = ChunkStorage->ReadKnownAbsentTerrainSlice(
+            WorldFolderPath, load.coord);
+        chunk_input_changed =
+            air && ApplyTerrainSliceLoad(world.BlockWorld, load.coord, nullptr,
+                                         &*air, load.token, current_sequence,
+                                         result_cancelled);
+        if (!chunk_input_changed)
+          state.had_disk_read_failure = true;
       }
       else
       {
@@ -5480,7 +5477,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                           ? highest_on_disk
                           : std::max(highest_on_disk, highest_to_save);
   }
-  // Capture before legacy AIR materialization and pending-save absence gates,
+  // Capture before pending-save absence gates,
   // including field-only columns which have no terrain slice to serialize.
   const auto light_receipts = ChunkStorage->CaptureColumnLight(
       ground_coord, world.BlockWorld, *world.BlockRegistry);
@@ -5501,9 +5498,12 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   for (int cy = min_cy; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    if (!world.BlockWorld.GetChunkManager().HasChunk(slice))
+    if (!world.BlockWorld.GetChunkManager().HasLoadedTerrainSlice(slice))
     {
-      world.BlockWorld.GetChunkManager().EnsureChunk(slice);
+      LogWorldColumnSave("skip_unknown_slice", ground_coord,
+                         "slice_y=" + std::to_string(cy) +
+                             " world_folder=" + WorldFolderPath);
+      return;
     }
     ++save_count;
   }
