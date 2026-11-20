@@ -55,6 +55,9 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
     std::lock_guard<std::mutex> lock(InFlightMutex);
     InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count();
+    auto retry = snapshot.GetJobSpec();
+    retry.job_id = job_id;
+    RetryObligations[job_id] = {submit_epoch, std::move(retry)};
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -169,6 +172,7 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
     InFlight[job_id] = std::chrono::duration_cast<std::chrono::milliseconds>(
                            capture_started.time_since_epoch())
                            .count();
+    RetryObligations[job_id] = {submit_epoch, spec};
   }
 
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
@@ -306,13 +310,8 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
       if (result.submitEpoch != current_epoch)
       {
         DiscardedLate.fetch_add(1, std::memory_order_relaxed);
-        InFlight.erase(result.job_id);
-        {
-          std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
-          DiscardedSources.insert(DiscardedSources.end(),
-                                  result.source_block_positions.begin(),
-                                  result.source_block_positions.end());
-        }
+        // Cancel already transferred this obligation. A late completion must
+        // neither duplicate it nor erase a successor reusing the same ID.
         continue;
       }
       const auto submitted = InFlight.find(result.job_id);
@@ -326,6 +325,7 @@ UAsyncRelightBuilder::DrainCompleted(int max_per_frame)
         SampleDeliveryBudget.Observe(now_ms, now_ms - submitted->second);
       }
       InFlight.erase(result.job_id);
+      RetryObligations.erase(result.job_id);
       accepted.push_back(std::move(result));
     }
   }
@@ -393,6 +393,10 @@ void UAsyncRelightBuilder::CancelPending()
   Pool.CancelPendingJobs();
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
+    std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
+    for (auto &entry : RetryObligations)
+      DiscardedJobs.push_back(std::move(entry.second.spec));
+    RetryObligations.clear();
     InFlight.clear();
   }
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
@@ -401,47 +405,52 @@ void UAsyncRelightBuilder::CancelPending()
     if (result.submitEpoch != current_epoch)
     {
       DiscardedLate.fetch_add(1, std::memory_order_relaxed);
-      std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
-      DiscardedSources.insert(DiscardedSources.end(),
-                              result.source_block_positions.begin(),
-                              result.source_block_positions.end());
     }
   }
 }
 
 std::vector<glm::ivec3> UAsyncRelightBuilder::TakeDiscardedSourcePositions()
 {
-  std::lock_guard<std::mutex> src_lock(DiscardedSourcesMutex);
   std::vector<glm::ivec3> out;
-  out.swap(DiscardedSources);
+  for (auto &spec : TakeDiscardedJobs())
+    out.insert(out.end(), spec.block_positions.begin(), spec.block_positions.end());
+  return out;
+}
+
+std::vector<RelightJobSpec> UAsyncRelightBuilder::TakeDiscardedJobs()
+{
+  std::lock_guard<std::mutex> lock(DiscardedSourcesMutex);
+  std::vector<RelightJobSpec> out;
+  out.swap(DiscardedJobs);
   return out;
 }
 
 void UAsyncRelightBuilder::NoteCompletedOverflow(RelightComputeResult &&dropped)
 {
-  {
-    std::lock_guard<std::mutex> lock(InFlightMutex);
-    InFlight.erase(dropped.job_id);
-  }
-  std::vector<glm::ivec3> sources = std::move(dropped.source_block_positions);
-  if (sources.empty())
-  {
-    for (const RelightChunkLightData &chunk : dropped.chunks)
-    {
-      sources.push_back(glm::ivec3(chunk.coord.x * CHUNK_SIZE,
-                                   chunk.coord.y * CHUNK_SIZE,
-                                   chunk.coord.z * CHUNK_SIZE));
-    }
-  }
+  std::lock_guard<std::mutex> lock(InFlightMutex);
+  const auto found = RetryObligations.find(dropped.job_id);
+  if (found == RetryObligations.end() ||
+      found->second.epoch != dropped.submitEpoch)
+    return; // Already transferred by cancel, or belongs to an older epoch.
   std::lock_guard<std::mutex> olock(OverflowMutex);
-  OverflowSources.insert(OverflowSources.end(), sources.begin(), sources.end());
+  OverflowJobs.push_back(std::move(found->second.spec));
+  RetryObligations.erase(found);
+  InFlight.erase(dropped.job_id);
 }
 
 std::vector<glm::ivec3> UAsyncRelightBuilder::TakeOverflowSourcePositions()
 {
-  std::lock_guard<std::mutex> olock(OverflowMutex);
   std::vector<glm::ivec3> out;
-  out.swap(OverflowSources);
+  for (auto &spec : TakeOverflowJobs())
+    out.insert(out.end(), spec.block_positions.begin(), spec.block_positions.end());
+  return out;
+}
+
+std::vector<RelightJobSpec> UAsyncRelightBuilder::TakeOverflowJobs()
+{
+  std::lock_guard<std::mutex> lock(OverflowMutex);
+  std::vector<RelightJobSpec> out;
+  out.swap(OverflowJobs);
   return out;
 }
 

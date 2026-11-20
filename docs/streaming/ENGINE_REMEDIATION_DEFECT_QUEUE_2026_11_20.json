@@ -5,11 +5,12 @@
     {
       "id": "async-relight-queued-cancel-loses-obligation",
       "stage": "S3.04",
-      "status": "CONFIRMED_OPEN",
+      "status": "PARTIAL_FIX_OPEN",
       "evidence": "build/desktop-msvc/s3-cancel-repro-test-20261120.log",
       "observed": "Real single-worker queue held by promise barrier; queued job 9101 cancelled before compute; expected_sources=1 recovered_sources=0; Release CTest FAIL in 0.08 s.",
       "blocks_overall_acceptance": true,
-      "next_action": "Retain full retry specification across cancellation/overflow; hand it once to deferred world recovery; verify successor and late completion without duplicate debt. Do not restart reproduction before fix."
+      "builder_verification": "s3-cancel-late-cached-flag-test-20261120.log: Release PASS for exact queued/running/completed cancel, overflow, successor AIR install and late same-ID epoch control.",
+      "next_action": "Wire exact builder retry APIs into deferred UWorld recovery; verify quiesce/resume and world replacement. Existing World position adapters still lose exact semantics, so S3.04 remains open."
     },
     {
       "id": "surface-first-paint-unready",

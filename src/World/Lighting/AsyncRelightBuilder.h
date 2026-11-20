@@ -54,6 +54,9 @@ public:
   void WaitIdle();
   bool WaitIdleFor(std::chrono::milliseconds timeout);
   void CancelPending();
+  /// Transfers exact retry obligations once, including jobs cancelled in queue.
+  std::vector<RelightJobSpec> TakeDiscardedJobs();
+  std::vector<RelightJobSpec> TakeOverflowJobs();
   /// Source block positions from jobs discarded by CancelPending / late epoch.
   std::vector<glm::ivec3> TakeDiscardedSourcePositions();
   uint64_t GetDiscardedLateCount() const
@@ -96,14 +99,21 @@ private:
   mutable std::mutex InFlightMutex;
   /// job_id -> steady ms at submit (value doubles as the watchdog age source).
   std::unordered_map<uint64_t, int64_t> InFlight;
+  struct RetryObligation
+  {
+    uint64_t epoch;
+    RelightJobSpec spec;
+  };
+  /// Guarded by InFlightMutex; survives until delivery, cancel or overflow.
+  std::unordered_map<uint64_t, RetryObligation> RetryObligations;
   LightSampleDeliveryBudget SampleDeliveryBudget;
   std::atomic<uint64_t> NextJobId{1};
   std::atomic<uint64_t> Epoch{1};
   std::atomic<uint64_t> DiscardedLate{0};
   mutable std::mutex DiscardedSourcesMutex;
-  std::vector<glm::ivec3> DiscardedSources;
+  std::vector<RelightJobSpec> DiscardedJobs;
   mutable std::mutex OverflowMutex;
-  std::vector<glm::ivec3> OverflowSources;
+  std::vector<RelightJobSpec> OverflowJobs;
   int LastCaptureFullN{0};
   int LastCaptureNeighborLightN{0};
   // Join before destroying any state captured by callbacks.

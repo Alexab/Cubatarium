@@ -141,6 +141,7 @@ public:
     InputCatalogPinned = true;
   }
   uint64_t GetJobId() const { return Spec.job_id; }
+  const RelightJobSpec &GetJobSpec() const { return Spec; }
   const WorkToken &GetWorkToken() const { return CapturedWorkToken; }
   const DependencyStamp &GetDependencyStamp() const { return CapturedDepStamp; }
   void SetSubmitContext(WorkToken token, DependencyStamp deps)
