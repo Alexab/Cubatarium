@@ -3511,10 +3511,17 @@ static void TestNeighborBoundaryGeometryInputs(
         Expect(!legacy.Matches(interior), "legacy stamps without boundary "
                                           "evidence retain full-content guard");
         auto boundary = glm::ivec3(7);
+        boundary[axis] = sign > 0 ? 1 : CHUNK_SIZE - 2;
+        world.SetBlock(neighbor * CHUNK_SIZE + boundary, kStone);
+        const auto second_plane =
+            world.CaptureGeometryRenderInputs(root, catalog);
+        Expect(!interior.Matches(second_plane),
+               "distance-two neighbor geometry must invalidate the retained "
+               "proof");
         boundary[axis] = sign > 0 ? 0 : CHUNK_SIZE - 1;
         world.SetBlock(neighbor * CHUNK_SIZE + boundary, kStone);
         const auto changed = world.CaptureGeometryRenderInputs(root, catalog);
-        Expect(!interior.Matches(changed),
+        Expect(!second_plane.Matches(changed),
                "actual neighboring boundary edit rejects retained geometry");
         auto *chunk = world.GetChunkManager().GetChunk(neighbor);
         chunk->SetFluidLocal(boundary, FluidCellState::Flowing(3));

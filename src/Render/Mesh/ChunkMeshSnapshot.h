@@ -35,6 +35,8 @@ enum class MeshApplyStaleInputReason : uint8_t
 /// CHUNK_SIZE^2), not hash maps.
 struct ChunkMeshSnapshot
 {
+  static_assert(UChunk::kGeometryBoundaryDepth == 2,
+                "geometry provenance must cover both captured axial planes");
   static constexpr int kShellFaceCount = 6;
   static constexpr int kShellFaceCells = CHUNK_SIZE * CHUNK_SIZE;
   static constexpr int kShellCells = kShellFaceCount * kShellFaceCells;
@@ -55,8 +57,9 @@ struct ChunkMeshSnapshot
   std::array<uint8_t, CHUNK_VOLUME> light_packed{};
   std::array<BlockId, kShellCells> shellBlocks{};
   /// Axial distance-2 geometry for NeighborHidesFace's transparent-solid
-  /// before/beyond rule. Same six whole-chunk content stamps cover both
-  /// planes. Fluid/load-state reads still use the adjacent plane.
+  /// before/beyond rule. Geometry boundary clocks cover both planes; full
+  /// capture stamps remain conservative. Fluid/load-state reads still use
+  /// the adjacent plane.
   std::array<BlockId, kShellCells> outerShellBlocks{};
   std::array<uint8_t, kShellCells> shellFluid{};
   /// Light-only radius-2 padded neighborhood; covers FaceLightPacked fallback.

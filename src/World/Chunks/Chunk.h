@@ -17,6 +17,7 @@ namespace cutum
 class UChunk
 {
 public:
+  static constexpr int kGeometryBoundaryDepth = 2;
   explicit UChunk(glm::ivec3 chunkCoord);
   UChunk(const UChunk &) = default;
   /// A managed destination keeps its coordinate/clock and starts a fresh
@@ -169,7 +170,7 @@ private:
   inline static std::atomic<uint64_t> NextIncarnation{1};
   uint64_t Incarnation{NextIncarnation.fetch_add(1, std::memory_order_relaxed)};
   uint64_t ContentRevision{0};
-  // Runtime-only clocks for the six voxel/fluid boundary planes (-X,+X,...).
+  // Runtime-only clocks for the six voxel/fluid boundary slabs (-X,+X,...).
   // Incarnation still protects replacement/reuse; own geometry uses full
   // content.
   std::array<uint64_t, 6> BoundaryContentRevisions{};

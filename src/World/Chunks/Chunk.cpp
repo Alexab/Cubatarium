@@ -92,9 +92,9 @@ void UChunk::NoteContentMutation(glm::ivec3 local)
   ++ContentRevision;
   for (int axis = 0; axis < 3; ++axis)
   {
-    if (local[axis] == 0)
+    if (local[axis] < kGeometryBoundaryDepth)
       ++BoundaryContentRevisions[2 * axis];
-    if (local[axis] == CHUNK_SIZE - 1)
+    if (local[axis] >= CHUNK_SIZE - kGeometryBoundaryDepth)
       ++BoundaryContentRevisions[2 * axis + 1];
   }
   InputRevision.NoteGeometryMutation();

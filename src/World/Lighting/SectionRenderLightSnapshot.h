@@ -99,8 +99,8 @@ struct SectionGeometryRenderInputs
           a.incarnation != b.incarnation ||
           a.missingEvidence != b.missingEvidence)
         return false;
-      // A section's geometry reads its own cells and one boundary plane from
-      // each face neighbor. An interior neighbor edit may change transported
+      // A section's geometry reads its own cells and two axial boundary planes
+      // from each face neighbor. An interior edit may change transported
       // light without changing any geometry input. Keep full revision matching
       // for legacy stamps without captured boundary clocks.
       const bool boundary =
