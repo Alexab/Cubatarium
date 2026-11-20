@@ -4678,6 +4678,19 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     }
   }
   world.Streaming->GetStreamer()->NotifyChunkCommitted(ground_coord);
+  if (ReadFailureEditCell && !ReadFailureRecoverySaveRequested &&
+      UChunkManager::WorldToChunk(*ReadFailureEditCell).x == ground_coord.x &&
+      UChunkManager::WorldToChunk(*ReadFailureEditCell).z == ground_coord.z)
+  {
+    // Flight-sim disables autosave and exits without a session save. Exercise
+    // the actual positive terrain-save path explicitly after recovery.
+    ReadFailureRecoverySaveRequested = true;
+    RequestAsyncTerrainColumnSave(world, ground_coord);
+    if (ChunkStorage->IsColumnSavePending(ground_coord))
+      TraceChunkResidency("disk_read_recovery_save_queued", ground_coord,
+                          ground_coord, state.demand_id,
+                          &world.BlockWorld.GetChunkManager());
+  }
 }
 
 AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(

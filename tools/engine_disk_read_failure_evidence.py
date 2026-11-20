@@ -17,7 +17,7 @@ def evaluate(artifacts, report, route, *, column=(1, 5), worlds_root=None):
     def result(status, reason, **evidence):
         return dict(schema="engine-disk-read-failure-evidence.v1", status=status, reason=reason,
                     scope="five controlled returning upper-frame decode failures, retained owners/local edit, "
-                          "rejected metadata save and cold edit persistence; no OS open/read fault or save-error UI acceptance",
+                          "rejected metadata save and explicit recovery terrain save/cold persistence; no OS open/read fault or save-error UI acceptance",
                     **evidence)
     primary = evaluate_primary(artifacts, report, route, require_air=True)
     if primary["status"] != "PASS":
@@ -80,6 +80,9 @@ def evaluate(artifacts, report, route, *, column=(1, 5), worlds_root=None):
                 queues[recovered_id]["tick"] - exhausted[0]["tick"] < 999 or
                 not any(e["value"] == recovered_id for e in rows("disk_read_recovered"))):
             return result("UNTESTED", "missing_bounded_recovery")
+        recovery_saves = rows("disk_read_recovery_save_queued")
+        if len(recovery_saves) != 1 or recovery_saves[0]["value"] != recovered_id or recovery_saves[0]["seq"] <= completion["seq"]:
+            return result("UNTESTED", "missing_recovery_save_request")
         ids = bad_ids + [recovered_id]
         for index, demand in enumerate(ids):
             if demand not in queues:

@@ -54,6 +54,7 @@ class DiskReadFailureEvidenceTest(unittest.TestCase):
             else:
                 self.f.add('disk_read_recovered',tick+2,0,demand)
                 self.f.add('disk_column_complete',tick+2,0,demand)
+                self.f.add('disk_read_recovery_save_queued',tick+2,0,demand)
         for cy in range(-4,20):
             for source in (('runtime_final','runtime_decoded_final') if cy==-4 else ('runtime_air_final','runtime_air_decoded_final')):
                 self.f.add(source,10010,cy,500 if cy==-4 else 600+cy)
@@ -89,6 +90,10 @@ class DiskReadFailureEvidenceTest(unittest.TestCase):
     def test_missing_fault_and_exhaustion_cannot_pass(self):
         self.f.events=[e for e in self.f.events if e['source']!='disk_read_exhausted']
         self.check('UNTESTED','missing_retry_exhaustion_chain')
+
+    def test_real_recovery_save_is_required(self):
+        self.f.events=[e for e in self.f.events if e['source']!='disk_read_recovery_save_queued']
+        self.check('UNTESTED','missing_recovery_save_request')
 
     def test_changed_retained_owner_fails(self):
         e=next(e for e in self.f.events if e['source']=='disk_geometry_owner')

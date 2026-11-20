@@ -250,6 +250,7 @@ private:
   DiskAirCancellationProbe AirCancellationProbe;
   DiskReadFailureProbe ReadFailureProbe;
   std::optional<glm::ivec3> ReadFailureEditCell;
+  bool ReadFailureRecoverySaveRequested{false};
   void ObserveReadFailureSaveProbe(UWorld &world, glm::ivec3 ground,
                                    uint64_t demand_id);
   void TraceDeniedRelightAdmission(glm::ivec2 ground_xz, int min_y, int max_y,
