@@ -19213,5 +19213,705 @@
     "build/desktop-msvc/loaded-air-foundation-v2-20261120-controls.json": "da59644f2d647e0fe7917be53f69225e00d84d9c640e4da3018bbe8fb66997c9",
     "build/desktop-msvc/loaded-air-foundation-matrix-20261120.json": "da7c39961f248ec38b3ea69f1b59d11c3542f537cf6b889f3cfa32a188166699"
   }
+},
+"internal_air_io_cutover_native_2026_11_20": {
+  "assessment": "build\\desktop-msvc\\air-io-cutover-native-assessment-20261120.json",
+  "schema": "internal-air-io-cutover-native.v1",
+  "source_commit": "3504bc14306cb47d0a6baf3959f4b56010964766",
+  "goal_status": "active; full original S0..S6 preserved",
+  "changes": [
+    "Async and synchronous saved terrain loads use ApplyTerrainSliceLoad with current-generation/cancellation checks. Existing demand-ID and cancellation-owner gate remains before async commit; stale generation is rejected before the absent branch too.",
+    "Decoded AIR uses sealed geometry-free storage. Empty or unvalidated metadata-only buffers are refused. Late empty completions preserve resident edits and duplicate loaded owners.",
+    "Missing internal files require a main-thread recheck: existing saved column, exact disk-index absence, no pending save, no binary or JSON file and no filesystem error. New/unknown columns and above-top absence cannot mint loaded terrain.",
+    "Column completeness counts explicit loaded AIR membership. Async/synchronous load finalization no longer fills unknown gaps via EnsureChunk. General legacy materialization helpers retain already loaded AIR.",
+    "Async serialization snapshots actual terrain or explicit AIR without inserting live chunks; unknown snapshots fail. Async column save skips an unknown slice rather than materializing it. Synchronous compatibility save uses detached AIR snapshots and retains its existing detached-empty fallback for source gaps.",
+    "New actual-worker and disk tests exercise dense legacy AIR metadata, sparse saved-column gaps, current/stale/cancelled commit, pending-save refusal, unknown save refusal, resident edit protection, column eviction/return and cold reload."
+  ],
+  "artifacts": "build\\desktop-msvc\\engine-positive-air-border-io-cutover-20261120-native",
+  "provenance": {
+    "exe": true,
+    "config_restored": true,
+    "source_world": true,
+    "runtime_shader_assets": true,
+    "source_commit": true
+  },
+  "runtime": {
+    "status": "PASS",
+    "reason": "native_process",
+    "exit_code": 0
+  },
+  "overall": "FAIL",
+  "camera_reference": {
+    "schema": "engine-camera-light-reference.v1",
+    "status": "PASS",
+    "reason": "camera_canonical_field_at_paint",
+    "samples": 5022,
+    "ready_samples": 5022,
+    "air_samples": 5022,
+    "frame_epochs": 5022,
+    "distinct_air_sections": 20,
+    "expected_game_frames": 5022,
+    "observed_paint_frames": 5022,
+    "unsupported_mode_samples": 0,
+    "skipped_unscoped": 0,
+    "faults": 0,
+    "examples": [],
+    "missing_coverage": [],
+    "expected_block_levels": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "scope": "roofed AIR section, sky0 and independent emitter Manhattan blocklight at every paint; no creature/item, GPU page, shader RGB, latency or full-screen acceptance"
+  },
+  "startup": {
+    "status": "PASS",
+    "reason": "first_world_paint_required_ring_census",
+    "evidence": {
+      "certified_no_surface_sections": 224,
+      "columns": 49,
+      "domain": "configured-render-ring.v1",
+      "expected_columns": 49,
+      "expected_sections": 1176,
+      "focus": [
+        1,
+        -3,
+        3
+      ],
+      "known_air_sections": 736,
+      "light_unready_sections": 0,
+      "max_y": 319,
+      "min_y": -64,
+      "missing_data_columns": 0,
+      "phase": "first_world_paint",
+      "publication_unready_sections": 0,
+      "radius": 3,
+      "ready": true,
+      "render_distance_chunks": 3,
+      "render_pass_complete": true,
+      "resident_air_sections": 0,
+      "schema": "required-presentation-witness.v2",
+      "sections": 1176,
+      "surface_sections": 440,
+      "unknown_sections": 0,
+      "world_epoch": 4
+    },
+    "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+  },
+  "draw_field": {
+    "status": "PASS",
+    "reason": "analytic_floor_draw_source_light",
+    "checked": 6857,
+    "positive_expected": 5567,
+    "faults": 0,
+    "source_counts": {
+      "cpu": 0,
+      "packed_gpu": 6857,
+      "bound_gpu": 6857
+    },
+    "missing_bound_fields": 0,
+    "positive_bound_with_baked_zero": 5567,
+    "frame_epochs": 104,
+    "observed_emitter_cells": 2,
+    "distinct_floor_cells": 2554,
+    "distinct_expected_levels": 15,
+    "skipped": 9169,
+    "skip_reasons": {
+      "unscoped_floor_cell": 1516,
+      "not_joined_floor_depth": 2292,
+      "not_downward_valid_ray": 5331,
+      "missing_or_provisional_source_match": 30
+    },
+    "missing_coverage": [],
+    "examples": [],
+    "scope": "prepared dry-cave opaque floor CPU/packed baked light or explicit same-draw GPU-bound field readback joined to analytic framebuffer depth; requested bound proof never falls back to baked data; no shaded RGB, transparency or full-screen acceptance"
+  },
+  "rgb_reference": {
+    "schema": "engine-floor-rgb-reference.v1",
+    "status": "FAIL",
+    "reason": "analytic_positive_floor_normal_rgb",
+    "scope": "independent positive blocklight + constant opaque material normal-color world framebuffer at sampled floor rays; no whole-screen/wet/transparency/backend acceptance",
+    "checked": 5581,
+    "faults": 14,
+    "frame_epochs": 102,
+    "distinct_cells": 1882,
+    "expected_levels": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "draw_sources": [
+      0,
+      2
+    ],
+    "unwitnessed": 0,
+    "skipped": 10445,
+    "examples": [
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -276,
+          -49,
+          42
+        ],
+        "expected_light": 1,
+        "predicted_rgba": [
+          57.70044959743222,
+          72.81827559605642,
+          97.30464046679923,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            58,
+            73,
+            97,
+            255
+          ],
+          [
+            58,
+            73,
+            97,
+            255
+          ]
+        ],
+        "error_bytes": 0.30464046679922774,
+        "intensity": 0.092682373632,
+        "fog_factor": 0.39866928680978103,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -276,
+          -49,
+          46
+        ],
+        "expected_light": 5,
+        "predicted_rgba": [
+          54.48876963435958,
+          64.28971754564381,
+          81.71717576312916,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            54,
+            64,
+            82,
+            255
+          ],
+          [
+            54,
+            64,
+            82,
+            255
+          ]
+        ],
+        "error_bytes": 0.48876963435957776,
+        "intensity": 0.1251333333333333,
+        "fog_factor": 0.32453891328446494,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -276,
+          -49,
+          49
+        ],
+        "expected_light": 8,
+        "predicted_rgba": [
+          60.631236609690745,
+          64.93334319524456,
+          75.92068217773947,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            61,
+            65,
+            76,
+            255
+          ],
+          [
+            61,
+            65,
+            76,
+            255
+          ]
+        ],
+        "error_bytes": 0.36876339030925465,
+        "intensity": 0.1972133333333333,
+        "fog_factor": 0.2844837245408623,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -276,
+          -49,
+          53
+        ],
+        "expected_light": 8,
+        "predicted_rgba": [
+          60.605704239047604,
+          64.88883083422651,
+          75.84969234073125,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            61,
+            65,
+            76,
+            255
+          ],
+          [
+            61,
+            65,
+            76,
+            255
+          ]
+        ],
+        "error_bytes": 0.3942957609523958,
+        "intensity": 0.1972133333333333,
+        "fog_factor": 0.2841646761509369,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -268,
+          -49,
+          42
+        ],
+        "expected_light": 1,
+        "predicted_rgba": [
+          17.795015737344,
+          11.863343824895999,
+          5.9316719124479995,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            18,
+            12,
+            6,
+            255
+          ],
+          [
+            18,
+            12,
+            6,
+            255
+          ]
+        ],
+        "error_bytes": 0.20498426265600145,
+        "intensity": 0.092682373632,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -268,
+          -49,
+          44
+        ],
+        "expected_light": 3,
+        "predicted_rgba": [
+          17.795015737344,
+          11.863343824895999,
+          5.9316719124479995,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            18,
+            12,
+            6,
+            255
+          ],
+          [
+            18,
+            12,
+            6,
+            255
+          ]
+        ],
+        "error_bytes": 0.20498426265600145,
+        "intensity": 0.092682373632,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -268,
+          -49,
+          46
+        ],
+        "expected_light": 5,
+        "predicted_rgba": [
+          24.02559999999999,
+          16.01706666666666,
+          8.00853333333333,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            24,
+            16,
+            8,
+            255
+          ],
+          [
+            24,
+            16,
+            8,
+            255
+          ]
+        ],
+        "error_bytes": 0.025599999999990075,
+        "intensity": 0.1251333333333333,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      },
+      {
+        "frame_epoch": 2607,
+        "cell": [
+          -268,
+          -49,
+          48
+        ],
+        "expected_light": 7,
+        "predicted_rgba": [
+          33.251839999999994,
+          22.167893333333332,
+          11.083946666666666,
+          255.0
+        ],
+        "actual_rgba": [
+          [
+            33,
+            22,
+            11,
+            255
+          ],
+          [
+            33,
+            22,
+            11,
+            255
+          ]
+        ],
+        "error_bytes": 0.2518399999999943,
+        "intensity": 0.17318666666666666,
+        "fog_factor": 0.0,
+        "valid_material": true,
+        "surface_ok": false
+      }
+    ],
+    "missing_coverage": []
+  },
+  "rgb_failure_diagnostic": {
+    "reasons": {
+      "material": 14,
+      "face": 14,
+      "failed_rows": 14
+    },
+    "maximum_error_bytes": 0.5519532205542532,
+    "examples": [
+      {
+        "frame": 2607,
+        "cell": [
+          -276,
+          -49,
+          42
+        ],
+        "error_bytes": 0.30464046679922774,
+        "source_kind": 0,
+        "packed_payload_valid": 1,
+        "packed_quads": 1,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 2607,
+        "cell": [
+          -276,
+          -49,
+          46
+        ],
+        "error_bytes": 0.48876963435957776,
+        "source_kind": 0,
+        "packed_payload_valid": 1,
+        "packed_quads": 1,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 2607,
+        "cell": [
+          -276,
+          -49,
+          49
+        ],
+        "error_bytes": 0.36876339030925465,
+        "source_kind": 0,
+        "packed_payload_valid": 0,
+        "packed_quads": 0,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 2607,
+        "cell": [
+          -276,
+          -49,
+          53
+        ],
+        "error_bytes": 0.3942957609523958,
+        "source_kind": 0,
+        "packed_payload_valid": 0,
+        "packed_quads": 0,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 2607,
+        "cell": [
+          -268,
+          -49,
+          42
+        ],
+        "error_bytes": 0.20498426265600145,
+        "source_kind": 0,
+        "packed_payload_valid": 1,
+        "packed_quads": 1,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      },
+      {
+        "frame": 2607,
+        "cell": [
+          -268,
+          -49,
+          44
+        ],
+        "error_bytes": 0.20498426265600145,
+        "source_kind": 0,
+        "packed_payload_valid": 1,
+        "packed_quads": 1,
+        "flags": {
+          "rgb": false,
+          "depth": false,
+          "surface": false,
+          "material": true,
+          "face": true
+        }
+      }
+    ]
+  },
+  "route": {
+    "status": "PASS",
+    "reason": "frontier_route_covered",
+    "displacement_chunks": 19,
+    "outside_initial_resident_samples": 3386
+  },
+  "inspection": {
+    "status": "PASS",
+    "reason": "inspection_capture_coverage",
+    "requested": 26,
+    "queued": 26,
+    "verified": 26
+  },
+  "depth": {
+    "status": "PASS",
+    "reason": "analytic_near_cave_opaque_depth",
+    "checked": 13776,
+    "faults": 0,
+    "frame_epochs": 118,
+    "skipped_unscoped_or_occluded": 2250,
+    "examples": [],
+    "fault_attribution": {
+      "schema": "engine-depth-fault-attribution.v1",
+      "section_count": 0,
+      "sections": [],
+      "scope": "analytic solid-side sections with optional same-hit engine metadata; reported settlement is not a current physical proof; metadata never changes the depth verdict"
+    },
+    "scope": "opaque cave surfaces within 32 blocks; no light, transparent or full-screen acceptance"
+  },
+  "air_service": {
+    "schema": "engine-air-light-service.v1",
+    "status": "PASS",
+    "reason": "joined_air_light_producer_receipts",
+    "joined_completed_jobs": 183,
+    "distinct_columns": 61,
+    "minimum_columns": 3,
+    "observed_records": 2308,
+    "unjoined_completions": 0,
+    "faults": 0,
+    "examples": [],
+    "scope": "observed requested AIR fields with complete canonical physical receipts; no all-request coverage, field-value, latency, GPU or framebuffer acceptance"
+  },
+  "timing": {
+    "wall_elapsed_sec": 192.185,
+    "active_elapsed_sec": 192.185,
+    "excluded_clock_gap_sec": 0,
+    "ingame_frames": 5022
+  },
+  "saved_compatibility_air_payloads": [
+    {
+      "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_1c57ede6e6794c65816d43302b9c203b\\chunks\\1_-3_3.cchunk",
+      "bytes": 8239,
+      "sha256": "bc6288b5b6e2771cdcf1e4f48aef2b4c1df381454b2766ea2c2a44f866fe44d7",
+      "all4096_cells_air": true
+    },
+    {
+      "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_1c57ede6e6794c65816d43302b9c203b\\chunks\\1_-2_3.cchunk",
+      "bytes": 8239,
+      "sha256": "2e71754223171692441562b719ca7a5013f90f4a0e2503e5a1fd1c4d85eca7c2",
+      "all4096_cells_air": true
+    }
+  ],
+  "tests": {
+    "release_desktop_build": "PASS",
+    "matrix": {
+      "schema": "loaded-air-foundation-matrix.v1",
+      "targets": [
+        "chunk_lighting_propagation_test",
+        "relight_result_install_test",
+        "negative_height_storage_test",
+        "section_light_field_ownership_test",
+        "light_cache_certificate_test",
+        "decor_mesh_integration_test",
+        "fluid_chunk_io_test"
+      ],
+      "test_names": [
+        "chunk_lighting_propagation_test",
+        "relight_result_install_test",
+        "negative_height_storage_test",
+        "section_light_field_ownership_test",
+        "light_cache_certificate_test",
+        "decor_mesh_integration_test",
+        "fluid_chunk_io_test",
+        "light_sync-noop_test",
+        "light_sync-neighbor_test",
+        "light_sync-halo_test",
+        "light_unknown-boundary_test",
+        "light_sparse-sky_test",
+        "light_sync-parity_test",
+        "light_edit-contract_test",
+        "pending_light_coverage_test",
+        "light_calculation_certificate_test",
+        "section_light_geometry_test",
+        "section_skylight_frontier_test"
+      ],
+      "expected_test_count": 18,
+      "build": {
+        "exit": 0,
+        "log": "build/desktop-msvc/air-io-cutover-matrix-20261120-build.log"
+      },
+      "tests": {
+        "exit": 0,
+        "log": "build/desktop-msvc/air-io-cutover-matrix-20261120-tests.log"
+      },
+      "pass": true
+    },
+    "initial_fixture_failure": "Temporary-root path equality differed by a trailing Windows separator. Canonicalized both paths; final actual-worker/storage test and 18-test matrix PASS. No acceptance requirement weakened.",
+    "negative_controls": "Previous foundation three RED/restore controls retained; not claimed rerun for this IO change.",
+    "unchanged_python_and_driver_tests": "Not rerun; do not transfer prior results into a new full-matrix claim."
+  },
+  "performance": {
+    "legacy_pass": false,
+    "metrics": {
+      "wall_ms_med": 22.6209,
+      "wall_ms_fly_med": 29.934,
+      "wall_ms_no_holes_med": 40.1495,
+      "post_stop_readiness_debt_max": 0.0,
+      "post_stop_visual_holes_max": 0.0,
+      "post_stop_focus_dirty_med": 0.0
+    }
+  },
+  "before_after": {
+    "previous_source": "93213da95",
+    "previous_artifacts": "build/desktop-msvc/engine-positive-air-border-20261120-native",
+    "previous_camera": "FAIL4956/4956 resident1",
+    "current_camera": "PASS5022/5022 resident0;20sections;sky0;block3..11",
+    "caveat": "Same deterministic AIR-border scene and acceptance rules; frame counts/timing naturally differ. This is scoped camera/IO evidence, not full AIR lifecycle or S0..S6 completion."
+  },
+  "limits": [
+    "Native overall FAIL is retained. RGB14/5581 failures are source-triangle/material/face attribution refusals; no numerical RGB tolerance or evidence requirement changed. Exact refusal path/cap pressure still requires attribution.",
+    "Native first-world ring census and every paint camera proof pass. This route is outbound, not the edited-material round-trip/cold-reload proof; those previously recorded runs predate this IO change and must be rerun before claiming current native lifecycle coverage.",
+    "Unit disk/worker eviction/return/cold coverage is not a substitute for native lifecycle proof. Synchronous compatibility gap fallback still intentionally writes detached empty carriers; it does not create live geometry and is not generic unknown-data authority.",
+    "Legacy performance gate remains failed, general visual reference remains UNTESTED. No full seed/R8 or memory acceptance, wet/transparency, source-removal timeline, all CPU/GPU/backend parity, catalog/provider/procedural AIR or complete cancellation/lifecycle acceptance is claimed.",
+    "Full S0..S6 goal remains active. No original world was altered; no Debug, merge, push or audit restart."
+  ],
+  "next": [
+    "Attribute packed-source readback refusals without increasing a cap merely to obtain PASS; preserve bounded diagnostics and triangle ownership requirements.",
+    "Verify current AIR IO in native edited-material save/evict/return and cold reload, including loaded legacy AIR light/weather and fresh field incarnation.",
+    "Continue source-removal action/publication/field-generation timeline and all remaining original S0..S6 requirements."
+  ],
+  "artifact_sha256": {
+    "fixture.json": "ab42ebd3fb61f7a6ee9a38a9c9c9f285cc868520d5d7235093ccef8d4945ff0e",
+    "route.json": "ba5d2b89316667c2e72e4de45fcbbca4521c04ffbc8368e787d3494268e64795",
+    "flight_sim_report.json": "7b370331a2f356aee25e44b29b7e999202327249c38316b737b0abad4e2bd626",
+    "smoke-verdict.json": "ff21585f8f76cfedd8d4e37a1fee636e0bdc93f8141243a569e2f5de1d9bf9f8",
+    "fixture-camera-light-reference.json": "6215f718b6d34785704c878e05ffbc66bf45d684c074ffa6b92e6985ab4d2787",
+    "fixture-floor-light-reference.json": "30a9de4bc86950dfe9b9b6b39d362a7a04c408d8af2af28907f072beda242002",
+    "fixture-floor-rgb-reference.json": "024770400e5e69404dd79d62090011e2fa48936e4e11fba593dacb2a3798abef",
+    "surface-lease-cohort-observation.json": "9d2bd61cd7665350424c59dac61ce911177d597bfa369b501297585bf3bd028e"
+  }
 }
 }
