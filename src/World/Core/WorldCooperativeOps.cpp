@@ -1024,32 +1024,17 @@ void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
   Save.SaveChunkIndex = 0;
   Save.SaveUsesTerrainColumns = true;
   std::unordered_set<glm::ivec3, IVec3Hash> grounds;
-  const bool incremental_save =
-      world.IsStreamingEnabled() && world.HasPersistedSave;
-  if (incremental_save || !world.ModifiedChunks.empty())
+  world.BlockWorld.GetChunkManager().ForEachTerrainDataColumn(
+      [&](glm::ivec3 column)
+      {
+        if (IsTerrainColumnSaveCandidate(world.BlockWorld, column,
+                                         world.ProceduralTemplate.MaxHeight,
+                                         world.ProceduralTemplate.MinHeight))
+          grounds.insert(column);
+      });
+  for (const glm::ivec3 &modified : world.ModifiedChunks)
   {
-    if (incremental_save)
-    {
-      world.BlockWorld.GetChunkManager().ForEachChunk(
-          [&](const UChunk &chunk)
-          {
-            const glm::ivec3 coord = chunk.GetCoord();
-            grounds.insert(glm::ivec3(coord.x, 0, coord.z));
-          });
-    }
-    for (const glm::ivec3 &modified : world.ModifiedChunks)
-    {
-      grounds.insert(glm::ivec3(modified.x, 0, modified.z));
-    }
-  }
-  else
-  {
-    world.BlockWorld.GetChunkManager().ForEachChunk(
-        [&](const UChunk &chunk)
-        {
-          const glm::ivec3 coord = chunk.GetCoord();
-          grounds.insert(glm::ivec3(coord.x, 0, coord.z));
-        });
+    grounds.insert(glm::ivec3(modified.x, 0, modified.z));
   }
   Save.SaveChunkCoords.reserve(grounds.size());
   for (const glm::ivec3 &ground : grounds)

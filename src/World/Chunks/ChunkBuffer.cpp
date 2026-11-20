@@ -273,6 +273,10 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
   }
 
   UChunkManager &chunks = world.GetChunkManager();
+  // A geometry-free AIR owner is a complete empty base too. Existing geometry
+  // may contain an unvalidated partial generation or local edits, so applying
+  // a sparse decoded overlay there cannot mint new full-frame authority.
+  const bool fresh_target = !chunks.HasChunk(chunkCoord);
   chunks.EnsureChunk(chunkCoord);
   UChunk *chunk = chunks.GetChunk(chunkCoord);
   if (!chunk)
@@ -322,6 +326,9 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
     chunk->SetLightLocal(UChunkManager::WorldToLocal(entry.first),
                          entry.second & 0x0F, entry.second >> 4);
   }
+  if (DecodedFrameValid && DecodedCoord == chunkCoord && fresh_target &&
+      !HasWorldGenOwnerChunk && HasGeometryPayload())
+    chunks.NoteDecodedTerrainSlice(chunkCoord);
 }
 
 std::optional<LoadedAirSlice>
@@ -334,6 +341,7 @@ UChunkBuffer::GetDecodedAirSlice(glm::ivec3 coord) const
     return std::nullopt;
   LoadedAirSlice result;
   result.Coord = coord;
+  result.ExplicitDecode = true;
   if (HasChunkLight)
     result.LegacyLight =
         std::make_shared<const std::array<uint8_t, CHUNK_VOLUME>>(ChunkLight);

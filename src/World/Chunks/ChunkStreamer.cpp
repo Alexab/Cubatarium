@@ -43,15 +43,23 @@ void LogStreamerUnloadPhase(const char *phase, glm::ivec3 ground,
 }
 
 // A cursor/deferred coordinate is only a scheduling hint. Another unload can
-// retire its geometry before it is visited; saving that absence would cause
+// retire its data before it is visited; saving that absence would cause
 // persistence to classify the column as incomplete and delete its disk copy.
-bool HasResidentTerrainSlice(const UBlockWorld &world, glm::ivec3 ground,
-                             int min_cy, int max_cy)
+bool HasTerrainUnloadAuthority(const UBlockWorld &world, glm::ivec3 ground,
+                               int min_cy, int max_cy)
 {
+  bool decoded_profile = true;
   for (int cy = min_cy; cy <= max_cy; ++cy)
+  {
     if (world.GetChunkManager().HasChunk({ground.x, cy, ground.z}))
       return true;
-  return false;
+    decoded_profile &= world.GetChunkManager().HasDecodedTerrainSlice(
+        {ground.x, cy, ground.z});
+  }
+  // Do not turn a partial disk AIR load into permission to call the existing
+  // whole-column save/purge contract. Its data owner stays resident until the
+  // producer completes the profile or explicitly cancels/retire it.
+  return decoded_profile;
 }
 
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,
@@ -756,9 +764,10 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
     const auto snapshot_started = std::chrono::steady_clock::now();
     const UChunkManager &chunk_manager = World.GetChunkManager();
     UnloadColumnSnapshot.clear();
-    UnloadColumnSnapshot.reserve(chunk_manager.GetResidentColumnCount());
-    chunk_manager.ForEachColumn([&](const glm::ivec3 &ground)
-                                { UnloadColumnSnapshot.push_back(ground); });
+    UnloadColumnSnapshot.reserve(chunk_manager.GetResidentTerrainColumnCount());
+    chunk_manager.ForEachTerrainDataColumn(
+        [&](const glm::ivec3 &ground)
+        { UnloadColumnSnapshot.push_back(ground); });
     std::sort(UnloadColumnSnapshot.begin(), UnloadColumnSnapshot.end(),
               [](const glm::ivec3 &a, const glm::ivec3 &b)
               {
@@ -807,7 +816,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
       return true; // scanned ok, not a candidate
     }
 
-    if (!HasResidentTerrainSlice(World, ground, minCy, maxCy))
+    if (!HasTerrainUnloadAuthority(World, ground, minCy, maxCy))
       return true;
 
     bool keepColumn = false;
@@ -1006,7 +1015,7 @@ void UChunkStreamer::DrainDeferredUnloadSaves(glm::ivec3 feetBlockPos,
       ++ops;
       continue;
     }
-    if (!HasResidentTerrainSlice(World, ground, minCy, maxCy))
+    if (!HasTerrainUnloadAuthority(World, ground, minCy, maxCy))
     {
       ++ops;
       continue;

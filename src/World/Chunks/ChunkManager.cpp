@@ -96,8 +96,10 @@ void UChunkManager::Clear()
   Chunks.clear();
   LightFields.clear();
   LoadedAirSlices.clear();
+  DecodedTerrainSlices.clear();
   AbsentLightFieldScan.clear();
   ResidentColumnChunkCounts.clear();
+  ResidentColumnTerrainCounts.clear();
   FreeList.clear();
 }
 
@@ -178,6 +180,9 @@ bool UChunkManager::InstallLoadedAirSlice(const LoadedAirSlice &slice,
   auto metadata = slice;
   metadata.LegacyLight.reset(); // canonical bytes now belong to LightFields
   LoadedAirSlices.emplace(coord, std::move(metadata));
+  if (slice.ExplicitDecode)
+    DecodedTerrainSlices[coord] = {false, 0};
+  ++ResidentColumnTerrainCounts[{coord.x, 0, coord.z}];
   AbsentLightFieldScan.emplace_back(coord, field->GetIncarnation());
   NoteInputMutation();
   TraceChunkResidency("air_install", coord, coord, field->GetIncarnation(),
@@ -301,6 +306,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
 {
   if (LoadedAirSlices.erase(chunkCoord))
   {
+    NoteTerrainSliceRemoved(chunkCoord);
     if (const auto field = GetSectionLightField(chunkCoord))
       TraceChunkResidency("air_remove", chunkCoord, chunkCoord,
                           field->GetIncarnation(), this);
@@ -318,6 +324,7 @@ void UChunkManager::RemoveChunk(glm::ivec3 chunkCoord)
   std::unique_ptr<UChunk> chunk = std::move(it->second);
   chunk->ClearLightCalculationProofs();
   Chunks.erase(it);
+  NoteTerrainSliceRemoved(chunkCoord);
   LightFields.erase(chunkCoord);
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   auto columnIt = ResidentColumnChunkCounts.find(groundCoord);
@@ -371,6 +378,8 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
       LightFields.emplace(chunkCoord, chunk->Light.field);
   if (!field_inserted)
     chunk->Light.field = field_it->second;
+  const bool had_air_data = HasLoadedAirSlice(chunkCoord);
+  const bool had_decoded_air = HasDecodedTerrainSlice(chunkCoord);
   if (const auto air = LoadedAirSlices.find(chunkCoord);
       air != LoadedAirSlices.end())
   {
@@ -384,12 +393,47 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   chunk->InputRevision.clock = InputRevision;
   chunk->InputRevision.geometry_clock = GeometryInputRevision;
   const auto inserted = Chunks.emplace(chunkCoord, std::move(chunk));
+  if (had_decoded_air)
+    DecodedTerrainSlices[chunkCoord] = {
+        true, inserted.first->second->GetIncarnation()};
   const glm::ivec3 groundCoord(chunkCoord.x, 0, chunkCoord.z);
   if (inserted.second)
   {
     ++ResidentColumnChunkCounts[groundCoord];
+    if (!had_air_data)
+      ++ResidentColumnTerrainCounts[groundCoord];
   }
   return *inserted.first->second;
+}
+
+void UChunkManager::ForEachTerrainDataColumn(
+    const std::function<void(const glm::ivec3 &)> &fn) const
+{
+  for (const auto &entry : ResidentColumnTerrainCounts)
+    fn(entry.first);
+}
+
+void UChunkManager::NoteTerrainSliceRemoved(glm::ivec3 coord)
+{
+  DecodedTerrainSlices.erase(coord);
+  const auto found = ResidentColumnTerrainCounts.find({coord.x, 0, coord.z});
+  if (found != ResidentColumnTerrainCounts.end())
+  {
+    if (found->second <= 1)
+      ResidentColumnTerrainCounts.erase(found);
+    else
+      --found->second;
+  }
+}
+
+void UChunkManager::NoteDecodedTerrainSlice(glm::ivec3 coord)
+{
+  if (const auto *chunk = GetChunk(coord);
+      chunk && !HasDecodedTerrainSlice(coord))
+  {
+    DecodedTerrainSlices[coord] = {true, chunk->GetIncarnation()};
+    NoteInputMutation();
+  }
 }
 
 } // namespace cutum

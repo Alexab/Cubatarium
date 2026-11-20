@@ -50,6 +50,19 @@ public:
                              const ChunkGenerationToken &token,
                              uint64_t current_sequence, bool cancelled);
   bool HasLoadedAirSlice(glm::ivec3 coord) const;
+  /// Complete terrain data from a validated decode, retained through local
+  /// edits/materialization. Allocation/light bytes never mint this authority.
+  /// This is not a physical light calculation or open-sky certificate.
+  bool HasDecodedTerrainSlice(glm::ivec3 coord) const
+  {
+    const auto found = DecodedTerrainSlices.find(coord);
+    if (found == DecodedTerrainSlices.end())
+      return false;
+    if (const auto *chunk = GetChunk(coord))
+      return found->second.geometry &&
+             found->second.incarnation == chunk->GetIncarnation();
+    return !found->second.geometry && HasLoadedAirSlice(coord);
+  }
   bool HasLoadedTerrainSlice(glm::ivec3 coord) const
   {
     return HasChunk(coord) || HasLoadedAirSlice(coord);
@@ -82,8 +95,19 @@ public:
   std::function<void(glm::ivec3)> OnChunkBecameNonAir;
   void RemoveChunk(glm::ivec3 chunk_coord);
   void ForEachChunk(const std::function<void(const UChunk &)> &fn) const;
-  /// Iterate each resident horizontal column once (coordinate Y is always 0).
+  /// Iterate each geometry-resident horizontal column once (Y is always 0).
   void ForEachColumn(const std::function<void(const glm::ivec3 &)> &fn) const;
+  /// Iterate columns owning actual terrain data, including geometry-free AIR.
+  void ForEachTerrainDataColumn(
+      const std::function<void(const glm::ivec3 &)> &fn) const;
+  size_t GetResidentTerrainColumnCount() const
+  {
+    return ResidentColumnTerrainCounts.size();
+  }
+  bool HasResidentGeometryColumn(glm::ivec3 column) const
+  {
+    return ResidentColumnChunkCounts.count({column.x, 0, column.z}) != 0;
+  }
   /// O(1) resident chunk count (loaded map size, not free-list).
   size_t GetResidentChunkCount() const { return Chunks.size(); }
   /// Changes for every resident data/light mutation and residency transition.
@@ -107,7 +131,7 @@ public:
   {
     return GeometryInputRevision ? *GeometryInputRevision : 0;
   }
-  /// O(1) count of unique horizontal columns with one or more resident slices.
+  /// O(1) count of columns with resident geometry slices (not AIR-only data).
   size_t GetResidentColumnCount() const
   {
     return ResidentColumnChunkCounts.size();
@@ -121,7 +145,10 @@ public:
 
 private:
   friend class UBlockWorld;
+  friend class UChunkBuffer;
   UChunk &GetOrCreateChunk(glm::ivec3 chunk_coord);
+  void NoteTerrainSliceRemoved(glm::ivec3 coord);
+  void NoteDecodedTerrainSlice(glm::ivec3 coord);
 
   void NoteLightInputMutation()
   {
@@ -143,8 +170,16 @@ private:
   std::unordered_map<glm::ivec3, std::shared_ptr<SectionLightField>, IVec3Hash>
       LightFields;
   std::unordered_map<glm::ivec3, LoadedAirSlice, IVec3Hash> LoadedAirSlices;
+  struct DecodedTerrainOwner
+  {
+    bool geometry{false};
+    uint64_t incarnation{0};
+  };
+  std::unordered_map<glm::ivec3, DecodedTerrainOwner, IVec3Hash>
+      DecodedTerrainSlices;
   std::deque<std::pair<glm::ivec3, uint64_t>> AbsentLightFieldScan;
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
+  std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnTerrainCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};
 };

@@ -15124,11 +15124,13 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
   if (BlockRegistry)
   {
     std::unordered_set<glm::ivec3, IVec3Hash> grounds;
-    BlockWorld.GetChunkManager().ForEachChunk(
-        [&](const UChunk &chunk)
+    BlockWorld.GetChunkManager().ForEachTerrainDataColumn(
+        [&](glm::ivec3 column)
         {
-          const glm::ivec3 coord = chunk.GetCoord();
-          grounds.insert(glm::ivec3(coord.x, 0, coord.z));
+          if (IsTerrainColumnSaveCandidate(BlockWorld, column,
+                                           ProceduralTemplate.MaxHeight,
+                                           ProceduralTemplate.MinHeight))
+            grounds.insert(column);
         });
     for (const glm::ivec3 &modified : ModifiedChunks)
     {

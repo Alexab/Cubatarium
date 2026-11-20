@@ -781,9 +781,9 @@ void UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   const int minCy = FloorDiv(minWorldY, CHUNK_SIZE);
   const int maxCy = FloorDiv(maxWorldY, CHUNK_SIZE);
   const int highestOnDisk = GetHighestChunkSliceOnDisk(worldFolder, groundCoord);
-  const int highestNonAir =
-      GetHighestNonAirChunkSlice(world, groundCoord, maxWorldY, minWorldY);
-  int highestToSave = highestNonAir;
+  const int highestData =
+      GetHighestTerrainSliceForSave(world, groundCoord, maxWorldY, minWorldY);
+  int highestToSave = highestData;
   if (highestOnDisk != kNoChunkSliceOnDisk)
   {
     highestToSave = highestToSave == kNoTerrainChunkSlice

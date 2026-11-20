@@ -6,6 +6,21 @@
 
 namespace cutum
 {
+namespace
+{
+bool HasDecodedColumnData(const UBlockWorld &world, glm::ivec3 ground,
+                          int max_y, int min_y)
+{
+  if (max_y < min_y)
+    return false;
+  for (int cy = FloorDiv(min_y, CHUNK_SIZE); cy <= FloorDiv(max_y, CHUNK_SIZE);
+       ++cy)
+    if (!world.GetChunkManager().HasDecodedTerrainSlice(
+            {ground.x, cy, ground.z}))
+      return false;
+  return true;
+}
+} // namespace
 
 bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
                             int maxWorldY, int minWorldY)
@@ -14,6 +29,10 @@ bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
   {
     return true;
   }
+  if (HasDecodedColumnData(world,
+                           UChunkManager::WorldToChunk({worldX, 0, worldZ}),
+                           maxWorldY, minWorldY))
+    return false;
   for (int y = minWorldY; y <= maxWorldY; ++y)
   {
     if (world.GetBlock(glm::ivec3(worldX, y, worldZ)) != BLOCK_AIR)
@@ -22,6 +41,13 @@ bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
     }
   }
   return true;
+}
+
+bool IsTerrainColumnSaveCandidate(const UBlockWorld &world, glm::ivec3 column,
+                                  int max_y, int min_y)
+{
+  return world.GetChunkManager().HasResidentGeometryColumn(column) ||
+         HasDecodedColumnData(world, column, max_y, min_y);
 }
 
 int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
@@ -69,6 +95,22 @@ int GetRequiredTerrainColumnTopCy(const UBlockWorld &world, glm::ivec3 groundCoo
     return kNoTerrainChunkSlice;
   }
   return std::min(topCy, maxCy);
+}
+
+int GetHighestTerrainSliceForSave(const UBlockWorld &world, glm::ivec3 ground,
+                                  int max_y, int min_y)
+{
+  const int non_air = GetHighestNonAirChunkSlice(world, ground, max_y, min_y);
+  int decoded = kNoTerrainChunkSlice;
+  for (int cy = FloorDiv(min_y, CHUNK_SIZE); cy <= FloorDiv(max_y, CHUNK_SIZE);
+       ++cy)
+    if (world.GetChunkManager().HasDecodedTerrainSlice(
+            {ground.x, cy, ground.z}))
+      decoded = cy;
+  return decoded > non_air &&
+                 IsTerrainChunkComplete(world, ground, max_y, decoded, min_y)
+             ? decoded
+             : non_air;
 }
 
 void MaterializeTerrainColumnSliceRange(UBlockWorld &world, glm::ivec3 groundCoord,
@@ -172,6 +214,8 @@ bool IsTerrainChunkComplete(const UBlockWorld &world, glm::ivec3 groundCoord,
   {
     return false;
   }
+  if (HasDecodedColumnData(world, groundCoord, maxWorldY, minWorldY))
+    return true;
   for (int lx = 0; lx < CHUNK_SIZE; ++lx)
   {
     for (int lz = 0; lz < CHUNK_SIZE; ++lz)

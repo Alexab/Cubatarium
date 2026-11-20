@@ -15,6 +15,12 @@ bool TerrainColumnNeedsFill(const UBlockWorld &world, int worldX, int worldZ,
                             int maxWorldY, int minWorldY = 0);
 int GetHighestNonAirChunkSlice(const UBlockWorld &world, glm::ivec3 groundCoord,
                                int maxWorldY, int minWorldY = 0);
+/// Include decoded AIR metadata only when whole-column completeness is proved.
+/// Field allocation, sparse absent-index receipts and unknown gaps cannot raise
+/// it.
+int GetHighestTerrainSliceForSave(const UBlockWorld &world,
+                                  glm::ivec3 groundCoord, int maxWorldY,
+                                  int minWorldY = 0);
 int GetRequiredTerrainColumnTopCy(const UBlockWorld &world, glm::ivec3 groundCoord,
                                   int maxWorldY,
                                   int highestCyOnDisk = kNoTerrainChunkSlice,
@@ -28,6 +34,10 @@ void MaterializeRequiredTerrainColumnSlices(UBlockWorld &world,
                                             int minWorldY = 0);
 void MaterializeTerrainColumnAirSlices(UBlockWorld &world, glm::ivec3 groundCoord,
                                      int maxWorldY, int minWorldY = 0);
+/// Preserve legacy geometry save candidates; add AIR-only data only after
+/// explicit full-profile decode. A partial AIR load cannot authorize purge.
+bool IsTerrainColumnSaveCandidate(const UBlockWorld &world, glm::ivec3 column,
+                                  int maxWorldY, int minWorldY = 0);
 bool AreTerrainColumnSlicesLoaded(const UBlockWorld &world,
                                   glm::ivec3 groundCoord, int maxWorldY,
                                   int minimumSliceCy = kNoTerrainChunkSlice,

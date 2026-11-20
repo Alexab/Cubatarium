@@ -2,6 +2,7 @@
 #include "Core/FrameDeadline.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkStreamer.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/IO/BinaryChunkSerializer.h"
@@ -139,8 +140,164 @@ static void TestAirRetiresWithTerrainColumn()
   tuning.UnloadAmortizeMode = prior;
 }
 
+static void TestAirOnlyColumnLifecycle()
+{
+  using namespace cutum;
+  auto &tuning = URuntimeTuning::Get();
+  const int prior = tuning.UnloadAmortizeMode;
+  for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
+    for (bool edit : {false, true})
+    {
+      tuning.UnloadAmortizeMode = mode;
+      UBlockWorld world;
+      UBlockRegistry registry(nullptr);
+      auto &manager = world.GetChunkManager();
+      const glm::ivec3 column(40, 0, -3);
+      std::array<uint8_t, CHUNK_VOLUME> pattern;
+      pattern.fill(0x53);
+      const auto install = [&](int cy)
+      {
+        const glm::ivec3 coord(column.x, cy, column.z);
+        UChunk source(coord);
+        source.ReplaceLightData(pattern);
+        source.SetWeatherState(.25f, 123.125);
+        UBinaryChunkSerializer serializer;
+        const auto encoded = serializer.Serialize(coord, source, registry);
+        const auto decoded =
+            serializer.Deserialize(encoded.bytes, coord, registry);
+        const auto air = decoded.GetDecodedAirSlice(coord);
+        Expect(air &&
+                   manager.InstallLoadedAirSlice(*air, {column, 7}, 7, false),
+               "all-air column requires actual validated decoded slices");
+      };
+      for (int cy = -4; cy <= 19; ++cy)
+        install(cy);
+      int data_columns = 0;
+      manager.ForEachTerrainDataColumn(
+          [&](glm::ivec3 key)
+          {
+            Expect(key == column,
+                   "data column enumeration retains signed coordinates");
+            ++data_columns;
+          });
+      Expect(data_columns == 1 &&
+                 manager.GetResidentTerrainColumnCount() == 1 &&
+                 manager.GetResidentColumnCount() == 0,
+             "AIR data is counted separately from geometry columns");
+      Expect(IsTerrainColumnSaveCandidate(world, column, 319, -64),
+             "normal and cooperative save enumeration can retain AIR-only "
+             "columns");
+      Expect(manager.GetResidentChunkCount() == 0 &&
+                 IsTerrainChunkComplete(world, column, 319,
+                                        kNoTerrainChunkSlice, -64),
+             "full decoded AIR column is complete without geometry");
+      Expect(!TerrainColumnNeedsFill(world, column.x * CHUNK_SIZE,
+                                     column.z * CHUNK_SIZE, 319, -64),
+             "decoded AIR is data, not a procedural generation hole");
+      manager.RemoveChunk({column.x, 0, column.z});
+      Expect(
+          !IsTerrainColumnSaveCandidate(world, column, 319, -64),
+          "partial AIR data cannot enter whole-world save/purge enumeration");
+      Expect(!IsTerrainChunkComplete(world, column, 319, kNoTerrainChunkSlice,
+                                     -64) &&
+                 TerrainColumnNeedsFill(world, column.x * CHUNK_SIZE,
+                                        column.z * CHUNK_SIZE, 319, -64),
+             "one unknown slice breaks AIR column completeness");
+      UChunkStreamer partial(world, registry, 1, 0, 319, -64);
+      partial.SetMaxUnloadOpsPerFrame(1);
+      int unauthorized_saves = 0;
+      partial.SetCallbacks(
+          nullptr, [&](glm::ivec3) { ++unauthorized_saves; }, nullptr, nullptr);
+      partial.SetUnloadColumnCallback([](glm::ivec3, int) { return true; });
+      UFrameDeadline::Get().BeginFrame(0);
+      partial.UnloadPass({0, -4, 0}, {8, -60, 8}, PlayerCapsule{});
+      Expect(unauthorized_saves == 0 &&
+                 manager.HasLoadedAirSlice({column.x, -4, column.z}),
+             "partial AIR load cannot authorize whole-column save/purge or "
+             "lose its owner");
+      install(0);
+      if (edit)
+      {
+        const auto cell = glm::ivec3(column.x, -4, column.z) * CHUNK_SIZE;
+        world.SetBlock(cell, 8);
+        world.SetBlock(cell, BLOCK_AIR);
+        Expect(manager.HasChunk({column.x, -4, column.z}) &&
+                   manager.GetResidentTerrainColumnCount() == 1 &&
+                   manager.GetResidentColumnCount() == 1 &&
+                   IsTerrainChunkComplete(world, column, 319,
+                                          kNoTerrainChunkSlice, -64),
+               "materializing and editing decoded data preserves full-slice "
+               "authority");
+        const glm::ivec3 root(column.x, -4, column.z);
+        *manager.GetChunk(root) = UChunk(root);
+        Expect(!manager.HasDecodedTerrainSlice(root) &&
+                   !IsTerrainChunkComplete(world, column, 319,
+                                           kNoTerrainChunkSlice, -64),
+               "a replacement geometry incarnation cannot inherit decoded data "
+               "authority");
+        manager.RemoveChunk(root);
+        install(-4);
+        world.SetBlock(cell, 8);
+        world.SetBlock(cell, BLOCK_AIR);
+      }
+      int saved = 0;
+      UChunkStreamer streamer(world, registry, 1, 0, 319, -64);
+      streamer.SetMaxUnloadOpsPerFrame(1);
+      streamer.SetCallbacks(
+          nullptr,
+          [&](glm::ivec3 key)
+          {
+            Expect(key == column, "AIR-only save uses the original column key");
+            for (int cy = -4; cy <= 19; ++cy)
+            {
+              const auto snapshot =
+                  manager.MakeTerrainSaveSnapshot({column.x, cy, column.z});
+              Expect(snapshot && snapshot->IsAirOnly() &&
+                         snapshot->GetLightData() == pattern &&
+                         snapshot->GetWeatherLastUpdateSec() == 123.125,
+                     "all AIR metadata is observable by save before eviction");
+            }
+            ++saved;
+          },
+          nullptr, nullptr);
+      streamer.SetUnloadColumnCallback([](glm::ivec3, int) { return true; });
+      UFrameDeadline::Get().BeginFrame(0);
+      streamer.UnloadPass({0, -4, 0}, {8, -60, 8}, PlayerCapsule{});
+      Expect(saved == 1 && manager.GetResidentChunkCount() == 0,
+             "AIR-only column participates in bounded save and eviction");
+      Expect(manager.GetResidentTerrainColumnCount() == 0 &&
+                 manager.GetResidentColumnCount() == 0,
+             "materialization never double-counts terrain column residency");
+      for (int cy = -4; cy <= 19; ++cy)
+        Expect(!manager.HasLoadedTerrainSlice({column.x, cy, column.z}) &&
+                   !manager.HasDecodedTerrainSlice({column.x, cy, column.z}) &&
+                   !manager.GetSectionLightField({column.x, cy, column.z}),
+               "AIR-only eviction retires data and field owners");
+      streamer.UnloadPass({0, -4, 0}, {8, -60, 8}, PlayerCapsule{});
+      Expect(saved == 1, "retired AIR candidate cannot authorize another save");
+    }
+  tuning.UnloadAmortizeMode = prior;
+  UBlockWorld allocated, fields;
+  for (int cy = -4; cy <= 19; ++cy)
+  {
+    allocated.GetChunkManager().EnsureChunk({40, cy, -3});
+    fields.GetChunkManager().EnsureSectionLightField({40, cy, -3});
+  }
+  Expect(!IsTerrainChunkComplete(allocated, {40, 0, -3}, 319,
+                                 kNoTerrainChunkSlice, -64) &&
+             !IsTerrainChunkComplete(fields, {40, 0, -3}, 319,
+                                     kNoTerrainChunkSlice, -64) &&
+             fields.GetChunkManager().GetResidentTerrainColumnCount() == 0,
+         "empty geometry allocation and field allocation cannot mint decoded "
+         "terrain authority");
+  allocated.GetChunkManager().Clear();
+  Expect(allocated.GetChunkManager().GetResidentTerrainColumnCount() == 0,
+         "clear retires the data column counter too");
+}
+
 int main()
 {
+  TestAirOnlyColumnLifecycle();
   TestAirRetiresWithTerrainColumn();
   TestRetiredUnloadCandidate();
   cutum::UBlockWorld world;

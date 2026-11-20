@@ -5463,14 +5463,14 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - disk_index_started)
           .count();
-  const auto highest_non_air_started = std::chrono::steady_clock::now();
-  const int highest_non_air = GetHighestNonAirChunkSlice(
+  const auto highest_data_started = std::chrono::steady_clock::now();
+  const int highest_data = GetHighestTerrainSliceForSave(
       world.BlockWorld, ground_coord, max_height, min_height);
-  const double highest_non_air_ms =
+  const double highest_data_ms =
       std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - highest_non_air_started)
+          std::chrono::steady_clock::now() - highest_data_started)
           .count();
-  int highest_to_save = highest_non_air;
+  int highest_to_save = highest_data;
   if (highest_on_disk != kNoChunkSliceOnDisk)
   {
     highest_to_save = highest_to_save == kNoTerrainChunkSlice
@@ -5556,7 +5556,7 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
             " stale_slices=" + std::to_string(stale_slice_count) +
             " complete_ms=" + std::to_string(completeness_ms) +
             " disk_index_ms=" + std::to_string(disk_index_ms) +
-            " highest_non_air_ms=" + std::to_string(highest_non_air_ms) +
+            " highest_data_ms=" + std::to_string(highest_data_ms) +
             " materialize_ms=" + std::to_string(materialize_ms) +
             " snapshot_enqueue_ms=" + std::to_string(snapshot_enqueue_ms) +
             " pending_setup_ms=" + std::to_string(pending_setup_ms) +

@@ -20,6 +20,9 @@ private:
   friend class UChunkManager;
   LoadedAirSlice() = default;
   glm::ivec3 Coord{0};
+  // An indexed absence is known AIR data, but cannot stand in for an
+  // explicitly decoded frame when proving whole-profile completeness.
+  bool ExplicitDecode{false};
   std::shared_ptr<const std::array<uint8_t, CHUNK_VOLUME>> LegacyLight;
   bool HasWeather{false};
   float Wetness{0};

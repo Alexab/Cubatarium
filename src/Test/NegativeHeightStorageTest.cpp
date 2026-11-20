@@ -302,6 +302,100 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   std::filesystem::remove_all(folder_path);
 }
 
+static void TestAirOnlyColumnStorage(const std::filesystem::path &root_folder)
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  for (auto format : {ChunkWriteFormat::Binary, ChunkWriteFormat::Json})
+  {
+    const auto folder =
+        root_folder.string() +
+        (format == ChunkWriteFormat::Binary ? "_binary" : "_json");
+    Expect(!std::filesystem::exists(folder),
+           "AIR-only storage fixture never reuses a world");
+    UChunkStorageService storage({format, true});
+    UBlockWorld source;
+    source.SetFluidDefinitions(definitions.get());
+    const glm::ivec3 column(-7, 0, 5);
+    UBinaryChunkSerializer codec;
+    for (int cy = -4; cy <= 19; ++cy)
+    {
+      const glm::ivec3 coord(column.x, cy, column.z);
+      UChunk empty(coord);
+      empty.SetWeatherState(.25f, 123.125);
+      const auto bytes = codec.Serialize(coord, empty, registry);
+      const auto decoded = codec.Deserialize(bytes.bytes, coord, registry);
+      Expect(ApplyTerrainSliceLoad(source, coord, &decoded, nullptr,
+                                   {column, 9}, 9, false),
+             "all-air fixture installs real decoded full frames");
+    }
+    Expect(
+        IsTerrainChunkComplete(source, column, 319, kNoTerrainChunkSlice, -64),
+        "full explicit AIR profile is complete before saving");
+    storage.SaveTerrainColumn(column, source, folder, registry, 319, -64);
+    Expect(
+        storage.GetHighestChunkSliceOnDisk(folder, column) == 19,
+        "new AIR-only column persists metadata even without a non-air ceiling");
+    UBlockWorld cold;
+    Expect(storage.LoadTerrainColumn(column, cold, folder, registry, 319, -64) >
+                   0 &&
+               cold.GetChunkManager().GetResidentChunkCount() == 0 &&
+               IsTerrainChunkComplete(cold, column, 319, kNoTerrainChunkSlice,
+                                      -64),
+           "cold AIR-only disk load retains complete data without geometry");
+    for (int cy = -4; cy <= 19; ++cy)
+    {
+      const auto snapshot = cold.GetChunkManager().MakeTerrainSaveSnapshot(
+          {column.x, cy, column.z});
+      Expect(snapshot &&
+                 std::abs(snapshot->GetSurfaceWetness() - .25f) < .00002f &&
+                 snapshot->GetWeatherLastUpdateSec() == 123.125,
+             "both legacy formats retain every AIR slice's weather");
+    }
+    const auto edited = glm::ivec3(column.x, -4, column.z) * CHUNK_SIZE;
+    cold.SetBlock(edited, 8);
+    Expect(IsTerrainChunkComplete(cold, column, 319, kNoTerrainChunkSlice, -64),
+           "local edit retains decoded full-profile authority");
+    storage.SaveTerrainColumn(column, cold, folder, registry, 319, -64);
+    UBlockWorld recold;
+    Expect(storage.LoadTerrainColumn(column, recold, folder, registry, 319,
+                                     -64) > 0 &&
+               recold.GetBlock(edited) == 8 &&
+               IsTerrainChunkComplete(recold, column, 319, kNoTerrainChunkSlice,
+                                      -64),
+           "edited all-air base survives another cold load without being "
+           "classified as incomplete");
+    // A single decoded top frame plus indexed absences is not an explicit
+    // complete profile and must not bypass legacy partial-generation guards.
+    UBlockWorld sparse;
+    Expect(
+        storage.RemoveTerrainColumnFromDisk(folder, column, 319, nullptr, -64),
+        "sparse fixture removes the previous full saved range");
+    const glm::ivec3 top(column.x, 19, column.z);
+    const auto top_snapshot =
+        source.GetChunkManager().MakeTerrainSaveSnapshot(top);
+    Expect(top_snapshot &&
+               storage.SaveChunk(top, *top_snapshot, folder, registry),
+           "sparse fixture retains only one valid explicit top frame");
+    Expect(
+        storage.LoadTerrainColumn(column, sparse, folder, registry, 319, -64) >
+                0 &&
+            !IsTerrainChunkComplete(sparse, column, 319, kNoTerrainChunkSlice,
+                                    -64),
+        "indexed absent AIR does not mint explicit whole-profile completeness");
+    const auto normalized = std::filesystem::weakly_canonical(folder);
+    Expect(normalized.parent_path() ==
+               std::filesystem::weakly_canonical(
+                   std::filesystem::temp_directory_path()),
+           "all-air storage cleanup stays in its unique system-temp world");
+    std::filesystem::remove_all(normalized);
+  }
+}
+
 static void TestAirTerrainIo(const std::filesystem::path &folder)
 {
   using namespace cutum;
@@ -682,6 +776,7 @@ int main()
                    std::to_string(nonce));
   TestColumnLightPersistence(world_folder.string() + "_receipts");
   TestAirTerrainIo(world_folder.string() + "_air_io");
+  TestAirOnlyColumnStorage(world_folder.string() + "_air_only");
 
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
   BlockDefinition stone;
