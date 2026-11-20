@@ -29818,5 +29818,146 @@
     "No closure of mixed/procedural cancelled-producer ownership, content/profile/catalog/algorithm certificates, full solver/backend/GLES parity, independent wet/transparency/whole-screen or S6 memory/performance matrix."
   ],
   "remaining_work": "Continue full S0..S6: mixed/procedural cancelled-producer ownership and persisted certificates; native OS I/O/save UI and cold-launch coverage; CPU construction/GPU solver/backend/GLES parity; independent wet/transparency/whole-screen; native lifetime/pressure/performance/memory matrix."
+},
+"partial_decoded_mixed_column_unload_authority_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no restart or scope reduction",
+  "source_commit": "19bf916c5bb3965ebf4ac48b8f432e0f7aa864cf",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\mixed-decoded-unload-assessment-20261120.json",
+    "sha256": "febb267e2cf4816a597bb30a99be840061353e2fc585c3ac084505eda7ce70e0"
+  },
+  "changes": [
+    "Scan the entire candidate column before granting terrain unload authority, including decoded AIR above resident geometry and decoded geometry below cy=0.",
+    "Partial columns containing decoded data must satisfy the existing column-completion contract before any unload/save callback. Fully decoded profiles and legacy procedural-only behavior retain their existing paths."
+  ],
+  "validation": {
+    "schema": "engine-mixed-decoded-unload-assessment.v1",
+    "status": "PASS",
+    "full_goal_status": "IN_PROGRESS",
+    "source_commit": "19bf916c5bb3965ebf4ac48b8f432e0f7aa864cf",
+    "scope": "Prevent one resident geometry slice from authorizing whole-column save/retirement while decoded mixed-column data is incomplete under the current completion contract.",
+    "differential_test": {
+      "before": "FAIL",
+      "after": "PASS",
+      "modes": [
+        "U0",
+        "UB",
+        "UD"
+      ],
+      "checks": [
+        "no save/unload callbacks while partial",
+        "retain geometry incarnation",
+        "retain local AIR deletion and added stone",
+        "retain weather",
+        "retain decoded AIR",
+        "release ordinary save/unload after full decoded profile"
+      ]
+    },
+    "release_regression_tests": {
+      "passed": 3,
+      "seconds": 0.6
+    },
+    "native": {
+      "wall_elapsed_sec": 322.591,
+      "ingame_frames": 9801,
+      "diagnostic_relocations_after_start": 0,
+      "strict_no_relocation": true
+    },
+    "native_components": {
+      "material": "PASS",
+      "camera": "PASS",
+      "startup": "PASS",
+      "air_return": "PASS",
+      "disk_read_failure": "PASS",
+      "draw": "PASS",
+      "cpu_vertex_draw": "PASS"
+    },
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "general_smoke_status": "UNTESTED",
+    "read_failure": {
+      "failed_demands": [
+        62339,
+        62560,
+        62732,
+        62796,
+        62869
+      ],
+      "recovered_demand_id": 63214,
+      "retained_slices": 23,
+      "dirty_chunks_preserved": 45,
+      "cold_local_edit": {
+        "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_f0100c6b727643aeb8b61be45778a146\\chunks\\1_-4_5.cchunk",
+        "sha256": "eb6951409722f8c91d9cb2d7a90f656fe87bb58c54463599edef75832d5dd932",
+        "section": [
+          1,
+          -4,
+          5
+        ],
+        "local": [
+          1,
+          1,
+          1
+        ],
+        "id": 0
+      }
+    },
+    "files_preserved": 30,
+    "maximum_excursion_blocks": 303.652,
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\mixed-decoded-unload-before-test-20261120.log",
+        "sha256": "48d1bb561f2b742188fb5901d10a1954b4960052d6c0daea256284e33a63dc71"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\mixed-decoded-unload-regression-test-20261120.log",
+        "sha256": "1b5ed17cab3236f0a818f1531b17980d02e0572ac98bbe775389cebd3b79acc5"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\mixed-decoded-unload-regression-build-20261120.log",
+        "sha256": "7fb7cab56774e312f425c74be9400ce85062c94298ded7d233df96c554de26b8"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\mixed-decoded-unload-desktop-release-build-20261120.log",
+        "sha256": "54d492eb475057aca3c4dfd4b4824191fab9966e2c8b200785a3825bd97efd74"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-mixed-decoded-unload-20261120-native\\source-acceptance.json",
+        "sha256": "5a22f7b6595faef7aa5d9f51ea119936c5a6684ef474c4cd6d5087019d04aa19"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-mixed-decoded-unload-20261120-native\\disk-read-failure-evidence.json",
+        "sha256": "3fef0ac5c28dfbe93b0b08825a008a6a4e238ad5b6c54180f188ac4af0b86cc9"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-mixed-decoded-unload-20261120-native\\air-round-trip-evidence.json",
+        "sha256": "c8136f61ed170db1bef7b664413ac3947f21d876efcf834d8f216007398657a0"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-mixed-decoded-unload-20261120-native\\flight_sim_report.json",
+        "sha256": "501d147e977fe8e71e72a17072f3b7360d6a6efb87d635151fe8dbc06d775067"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_native_read_failure_20261120.py",
+        "sha256": "565bce5ddb4c20cdd67beccaac4056a8667dbea43b38dbe3971a84595e0d4e5b"
+      }
+    ],
+    "limits": [
+      "Native run is a regression of the motor return, read-failure and scoped lighting scenario; branch-specific partial mixed-column unload is directly exercised by the differential Release test, not separately certified by the native trace.",
+      "Uses existing IsTerrainChunkComplete contract; does not certify a full content/profile/catalog/algorithm proof for partial mixed producers.",
+      "Legacy procedural-only partial cleanup, generic Ensure clear paths and direct incomplete save/purge APIs still require explicit producer ownership and deletion authority.",
+      "No OS open/read-error, save-error UI, autosave/quit durability or second native cold-world launch acceptance.",
+      "Full S0..S6 remains active, including CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen and S6 lifetime/memory/performance matrix."
+    ]
+  },
+  "next_work": "Replace incomplete procedural/mixed producer clearing and save/purge with explicit producer and deletion authority; do not treat this existing-completion-contract fix as full ownership/certificate closure."
 }
 }
