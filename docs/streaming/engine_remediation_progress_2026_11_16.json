@@ -29959,5 +29959,94 @@
     ]
   },
   "next_work": "Replace incomplete procedural/mixed producer clearing and save/purge with explicit producer and deletion authority; do not treat this existing-completion-contract fix as full ownership/certificate closure."
+},
+"unknown_slice_synchronous_save_preflight_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no restart or scope reduction",
+  "source_commits": [
+    "9138983bac70171e80d44d4525358705011710b1",
+    "75aedd16f4806b5d8043b5653fbdc2a2d030596a"
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-slice-save-assessment-20261120.json",
+    "sha256": "0273297185dbe407a82ea85914fdeb68a8c5dca6cc056813e5030b47e0142c71"
+  },
+  "validation": {
+    "schema": "engine-unknown-slice-save-assessment.v1",
+    "status": "PASS",
+    "scope": "synchronous column save refuses missing terrain without AIR fabrication before metadata or chunk writes",
+    "full_goal_status": "IN_PROGRESS",
+    "built_application_source": "9138983bac70171e80d44d4525358705011710b1",
+    "test_source": "75aedd16f4806b5d8043b5653fbdc2a2d030596a",
+    "changes": [
+      "SaveTerrainColumn preflights all required slices, including indexed on-disk ceiling, before changing metadata. Missing allocations require ordinary known-AIR absence evidence.",
+      "Return bool for preflight rejection, metadata/slice write failure and cleanup failure; true only after all requested operations succeed.",
+      "Two fixtures explicitly decode intentionally empty internal slices instead of relying on implicit AIR fabrication."
+    ],
+    "differential_regression": {
+      "before": "FAIL: original storage overwrote a partially resident saved column",
+      "after": "PASS",
+      "formats": [
+        "Binary",
+        "Json"
+      ],
+      "unresolved_read_marker": false,
+      "checks": [
+        "existing indexed upper frame preserved",
+        "local AIR deletion and added block retained",
+        "RAM incarnation unchanged",
+        "byte-distinct valid existing light metadata preserved",
+        "unknown new range creates no world directory",
+        "reload completes the saved base while retaining local edits",
+        "subsequent save returns true and cold reload retains edits, upper geometry and weather",
+        "ordinary file blocking target directory causes explicit false and remains unchanged"
+      ]
+    },
+    "verification": {
+      "related_tests": "3 PASS (0.85s total)",
+      "latest_storage_with_metadata_and_IO_controls": "PASS (0.79s test / 0.89s CTest total)",
+      "desktop_release_build": "PASS; built application code equals current application code; subsequent commit changes tests only",
+      "current_source_native_save_flow": "UNTESTED"
+    },
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-before-test-20261120.log",
+        "sha256": "7101b806d9796c77f385ac7c49993ad43743aea143e115b867bff952b5f281da"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-final-regression-build-20261120.log",
+        "sha256": "2787f67b3ec52b8e08989dee7a2fa945e97cfc0d75af16bfc562302fafd1b022"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-final-regression-test-20261120.log",
+        "sha256": "53031a990d57cd0f943794319746c34631b5f4b1c160f4facaad67cf9756d9ae"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-metadata-control-build-20261120.log",
+        "sha256": "4a90074a948c0a80add5195a94ae07b44061d2d4160eb05635c2e822d2e33383"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-metadata-control-test-20261120.log",
+        "sha256": "7a9b05f600a4620fcfddda4b3b0a4cfe28b70a6b46b2d41f759ddc3ffe7a4589"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\unknown-save-desktop-release-build-20261120.log",
+        "sha256": "4e13c04942db31554a3a1f74c9c2b2f05edf6d802102d2125cbb8c18d5c04ea7"
+      }
+    ],
+    "fixture_validation_corrections": [
+      "First post-guard test failed because dense fixture had not declared its empty internal slice; added a real decoded AIR frame.",
+      "Second post-guard test failed because expanded-profile fixture had unknown internal allocations; added real decoded empty frames without changing its geometry holder count."
+    ],
+    "limits": [
+      "Preflight uses existing HasLoadedTerrainSlice and known-absence evidence. It does not establish new producer/profile/content certificates for legacy allocated/generated slices.",
+      "False reports unknown-slice refusal or write failure. Only refusal during preflight is verified to happen before all writes; multi-file filesystem failure atomicity is not claimed.",
+      "Production callers currently may ignore the new bool. Propagating refusal through cooperative save, session metadata/dirty-state handling and UI remains required.",
+      "Higher-level incomplete-column purge APIs in persistence/cooperative/session save and generic Ensure whole-column clearing remain open; this guard does not authorize their deletion behavior.",
+      "Current-source native save UI/autosave/quit and fault matrix remain UNTESTED. No new native run was used to claim coverage of this synchronous disk primitive; real Binary/JSON round trips are headless Release tests.",
+      "Full original S0..S6 remains active, including mixed/procedural ownership, persisted certificate acceptance, CPU/GPU/backend/GLES parity, independent wet/transparency/whole-screen and native lifetime/performance/memory matrix."
+    ]
+  },
+  "next_work": "Propagate explicit save refusal without false success/dirty clearing; replace incomplete-column deletion with producer-owned data and edit lifetime handling, including recoverable native UI/save behavior."
 }
 }
