@@ -156,7 +156,15 @@
           "action": "Проверить настроенные min/max Y во всех запросах света и восстановлении игрока; убрать оставшиеся фиксированные диапазоны.",
           "status": "OPEN",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "completed_subtasks": [
+            "Nondefault wholly-negative and positive profile boundaries, synchronous light/source-removal edges and no out-of-profile materialization: Release PASS."
+          ],
+          "remaining_subtasks": [
+            "UWorld request routing including async capture bands.",
+            "Actual nondefault-profile player recovery handling."
+          ],
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S2.02",

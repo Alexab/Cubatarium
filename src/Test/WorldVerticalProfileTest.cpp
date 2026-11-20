@@ -43,5 +43,18 @@ int main()
   Expect(!normal.SliceBounds(0, 0) &&
              !cutum::WorldVerticalProfile(1, 0).SliceBounds(0, 16),
          "invalid profiles and chunk sizes cannot create light jobs");
+  const cutum::WorldVerticalProfile below_datum(-127, -17, -48, -127);
+  Expect(below_datum.MinChunkY(16) == -8 && below_datum.MaxChunkY(16) == -2 &&
+             below_datum.SliceBounds(-8, 16) == std::make_pair(-127, -113) &&
+             below_datum.SliceBounds(-2, 16) == std::make_pair(-32, -17) &&
+             !below_datum.SliceBounds(-1, 16) &&
+             below_datum.MinimumEyeY() == -127.5f,
+         "entirely negative worlds retain both partial edges and recovery floor");
+  const cutum::WorldVerticalProfile above_datum(32, 79, 48, 32);
+  Expect(above_datum.MinChunkY(16) == 2 && above_datum.MaxChunkY(16) == 4 &&
+             !above_datum.SliceBounds(1, 16) &&
+             above_datum.SliceBounds(4, 16) == std::make_pair(64, 79) &&
+             above_datum.MinimumEyeY() == 31.5f,
+         "a world above datum must not invent lower slices or a zero recovery floor");
   return EXIT_SUCCESS;
 }

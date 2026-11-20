@@ -909,6 +909,33 @@ int main(int argc, char **argv)
     Expect(block_light_at(torch_b) == 14, "E: torch B keeps source emission");
   }
 
+  // Exercise public synchronous entry points with profiles that share neither
+  // the default bottom nor the default top. Known absent AIR is explicit.
+  for (const auto profile : {cutum::WorldVerticalProfile(-127, -17, -48, -127),
+                             cutum::WorldVerticalProfile(32, 79, 48, 32)})
+    for (const int y : {profile.MinY + 1, profile.MaxY - 1})
+    {
+      cutum::UBlockWorld custom;
+      custom.SetVerticalProfile(profile);
+      custom.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      const glm::ivec3 source(8, y, 8);
+      custom.SetBlock(source, kTorch);
+      const auto coord = cutum::UChunkManager::WorldToChunk(source);
+      cutum::RelightChunkBlockLight(custom, *registry, coord);
+      Expect(BlockAt(custom, source) == 14 &&
+                 BlockAt(custom, source + glm::ivec3(1, 0, 0)) == 13,
+             "sync blocklight must work at both edges of a nondefault profile");
+      custom.SetBlock(source, cutum::BLOCK_AIR);
+      cutum::RelightBlocksAroundEdit(custom, *registry, {source});
+      Expect(BlockAt(custom, source + glm::ivec3(1, 0, 0)) == 0,
+             "source removal must clear light inside the configured height band");
+      Expect(!custom.GetChunkManager().HasChunk(
+                 {0, profile.MinChunkY(cutum::CHUNK_SIZE)-1, 0}) &&
+                 !custom.GetChunkManager().HasChunk(
+                 {0, profile.MaxChunkY(cutum::CHUNK_SIZE)+1, 0}),
+             "relighting must not materialize slices beyond the configured profile");
+    }
+
   // A partial relight at negative Y must use the entire vertical sky context,
   // including attenuation in read-only water above its writable slice.
   cutum::SetTestSkylightSeedAvailable(true);

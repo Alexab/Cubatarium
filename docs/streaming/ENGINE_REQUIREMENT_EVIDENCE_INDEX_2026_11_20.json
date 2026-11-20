@@ -467,6 +467,39 @@
         "Packed floor draw-source sky reference still FAIL; diagnose current bound-field consumer versus baked-source oracle contract in S5.",
         "Full current-version backend/reference/performance/memory matrix remains S6."
       ]
+    },
+    {
+      "id": "S2.01",
+      "status": "OPEN",
+      "evidence": [
+        {
+          "path": "src\\Test\\WorldVerticalProfileTest.cpp",
+          "sha256": "b5146819e75aa6a2acb068b4c0fc835eb80dea55f80197407ca84c4f0e882b03"
+        },
+        {
+          "path": "src\\Test\\ChunkLightingPropagationTest.cpp",
+          "sha256": "ac8898c0cc00a13cd0d71ac6ce253b12d474c2203030f08e258d04d6ec6952a1"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-custom-height-fixed-build-20261120.log",
+          "sha256": "4478a5dc014553b148ecea41bc548391c0945c2ae13c8476e3f30657bfddca22"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-custom-height-test-20261120.log",
+          "sha256": "ecc2ed6fae5224ecc23347bbe3b3df35961f993323c95a8aef708fec8376abff"
+        }
+      ],
+      "verified": [
+        "Release profile/lighting tests PASS for wholly negative -127..-17 and positive 32..79 profiles.",
+        "Signed slice boundaries, partial bottom/top slices, no outside-profile slice and recovery minimum eye height checked.",
+        "Public synchronous RelightChunkBlockLight and edit source-removal entry points produce 14/13 light and clear it at both configured vertical edges; no extra outside-profile geometry sections materialized.",
+        "Source inspection confirms UWorld column coverage clips to configured MinHeight/MaxHeight, approach sample requests use SliceBounds, and camera/player reasonable-position checks use profile MinimumEyeY."
+      ],
+      "remaining": [
+        "Complete UWorld request-entry routing evidence, including asynchronous capture bands, for nondefault profiles.",
+        "Verify actual player recovery/position handling with nondefault profile; scalar MinimumEyeY check is not full player recovery proof."
+      ],
+      "scope_limit": "Lower-level/profile and synchronous CPU evidence. No claim all height consumers, native nondefault-profile recovery, GPU/backend parity or S2.01 completion."
     }
   ],
   "completed_handoff": {
