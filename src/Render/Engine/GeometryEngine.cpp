@@ -1785,6 +1785,64 @@ void CaptureTransparentPixelProbe(
     return &out;
   };
 
+  struct PackedSurfaceSource
+  {
+    GreedyVertexLightMatch match;
+    const PackedLightPayload *payload{nullptr};
+  };
+  const auto packed_surface_source =
+      [&](glm::ivec3 coord, glm::vec3 surface, glm::vec3 ray_origin,
+          glm::vec3 ray_direction, bool require_ray_hit)
+  {
+    PackedSurfaceSource source;
+    if (!packed_opaque_chunks.count(coord))
+      return source;
+    source.payload = packed_light_payload(coord);
+    const auto *payload = source.payload;
+    if (!payload || !payload->readable)
+      return source;
+    for (const auto &[q, material, bound_light] : payload->quads)
+    {
+      std::array<glm::vec3, 4> corners;
+      if (!DecodePackedQuadCorners(q, coord * CHUNK_SIZE, corners))
+        continue;
+      for (const auto tri :
+           {std::array<int, 3>{0, 1, 2}, std::array<int, 3>{0, 2, 3}})
+      {
+        glm::vec3 ray_hit_point{};
+        if (require_ray_hit)
+        {
+          RayTriangleHit hit;
+          if (!IntersectRayTriangle(ray_origin, ray_direction, corners[tri[0]],
+                                    corners[tri[1]], corners[tri[2]], hit))
+            continue;
+          ray_hit_point = ray_origin + ray_direction * hit.distance;
+          const auto delta = ray_hit_point - surface;
+          const auto normal = glm::vec3(GreedyFaceNormal(q.Face()));
+          if (glm::length(delta) > kOpaqueVertexLightMatchDistance ||
+              std::abs(glm::dot(delta, normal)) > 0.002f)
+            continue;
+        }
+        const auto point = ClosestPointOnTriangle(
+            surface, corners[tri[0]], corners[tri[1]], corners[tri[2]]);
+        const float distance = glm::length(surface - point.point);
+        if (!std::isfinite(distance) || distance >= source.match.distance)
+          continue;
+        source.match.distance = distance;
+        source.match.surface = require_ray_hit ? ray_hit_point : point.point;
+        source.match.sky = q.SkyLight() / 15.0f;
+        source.match.block = q.BlockLight() / 15.0f;
+        source.match.preview =
+            (q.word1 & kPackedQuadFlagLightPreview) ? 1.0f : 0.0f;
+        source.match.face_index = q.Face();
+        source.match.block_id = material;
+        source.match.bound_light = bound_light;
+        source.match.valid = distance <= kOpaqueVertexLightMatchDistance;
+      }
+    }
+    return source;
+  };
+
   for (int row = 0; row < rows; ++row)
   {
     const int local_y =
@@ -1950,10 +2008,59 @@ void CaptureTransparentPixelProbe(
                   : glm::dot(opaque_view_point - camera_ray.view_near,
                              camera_ray.view_direction);
           record.renderer_pixel_opaque_hit_distance = opaque_hit_distance;
-          const glm::ivec3 opaque_cell =
-              FramebufferSurfaceCell(opaque_point, voxel_ray_direction);
-          const glm::ivec3 opaque_chunk =
-              UChunkManager::WorldToChunk(opaque_cell);
+          const auto opaque_cells = FramebufferSurfaceCandidateCells(
+              opaque_point, voxel_ray_direction);
+          glm::ivec3 opaque_chunk =
+              UChunkManager::WorldToChunk(opaque_cells.cells[0]);
+          auto packed_source = packed_surface_source(
+              opaque_chunk, opaque_point, voxel_ray_origin, voxel_ray_direction,
+              false);
+          std::array<glm::ivec3, 8> tried_chunks;
+          size_t tried_count = 1;
+          tried_chunks[0] = opaque_chunk;
+          // Only recover a missing packed source (or an AIR primary with no
+          // CPU source). Ownership needs an actual same-frame drawn triangle
+          // intersected by the original ray, not a voxel/material guess.
+          if (!packed_source.match.valid &&
+              (packed_opaque_chunks.count(opaque_chunk) ||
+               (!opaque_ref_chunks.count(opaque_chunk) &&
+                !transparent_ref_chunks.count(opaque_chunk))))
+          {
+            PackedSurfaceSource recovered;
+            glm::ivec3 recovered_coord = opaque_chunk;
+            uint8_t recovery_matches = 0;
+            for (size_t i = 1; i < opaque_cells.count; ++i)
+            {
+              const auto candidate =
+                  UChunkManager::WorldToChunk(opaque_cells.cells[i]);
+              bool tried = false;
+              for (size_t j = 0; j < tried_count; ++j)
+                tried |= tried_chunks[j] == candidate;
+              if (tried)
+                continue;
+              tried_chunks[tried_count++] = candidate;
+              auto alternative = packed_surface_source(
+                  candidate, opaque_point, voxel_ray_origin,
+                  voxel_ray_direction, true);
+              if (alternative.match.valid)
+              {
+                ++recovery_matches;
+                recovered = std::move(alternative);
+                recovered_coord = candidate;
+              }
+            }
+            record.renderer_pixel_opaque_source_neighbor_matches =
+                recovery_matches;
+            // Multiple plausible owners are not a certificate of this pixel.
+            if (recovery_matches == 1)
+            {
+              packed_source = std::move(recovered);
+              opaque_chunk = recovered_coord;
+              record.renderer_pixel_opaque_source_neighbor_recovered = 1;
+            }
+          }
+          record.renderer_pixel_opaque_source_candidate_chunks =
+              static_cast<uint8_t>(tried_count);
           record.renderer_pixel_opaque_surface_valid = 1;
           record.renderer_pixel_opaque_surface_x = opaque_point.x;
           record.renderer_pixel_opaque_surface_y = opaque_point.y;
@@ -2046,42 +2153,13 @@ void CaptureTransparentPixelProbe(
           {
             opaque_vertex_light = {};
             record.renderer_pixel_opaque_light_source_kind = 0;
-            if (const auto *payload = packed_light_payload(opaque_chunk);
+            if (const auto *payload = packed_source.payload;
                 payload && payload->readable)
             {
               record.renderer_pixel_opaque_packed_light_payload_valid = 1;
               record.renderer_pixel_opaque_packed_light_quad_count =
                   static_cast<uint32_t>(payload->quads.size());
-              for (const auto &[q, material, bound_light] : payload->quads)
-              {
-                std::array<glm::vec3, 4> corners;
-                if (!DecodePackedQuadCorners(q, opaque_chunk * CHUNK_SIZE,
-                                             corners))
-                  continue;
-                for (const auto tri :
-                     {std::array<int, 3>{0, 1, 2}, std::array<int, 3>{0, 2, 3}})
-                {
-                  const auto point =
-                      ClosestPointOnTriangle(opaque_surface, corners[tri[0]],
-                                             corners[tri[1]], corners[tri[2]]);
-                  const float distance =
-                      glm::length(opaque_surface - point.point);
-                  if (!std::isfinite(distance) ||
-                      distance >= opaque_vertex_light.distance)
-                    continue;
-                  opaque_vertex_light.distance = distance;
-                  opaque_vertex_light.surface = point.point;
-                  opaque_vertex_light.sky = q.SkyLight() / 15.0f;
-                  opaque_vertex_light.block = q.BlockLight() / 15.0f;
-                  opaque_vertex_light.preview =
-                      (q.word1 & kPackedQuadFlagLightPreview) ? 1.0f : 0.0f;
-                  opaque_vertex_light.face_index = q.Face();
-                  opaque_vertex_light.block_id = material;
-                  opaque_vertex_light.bound_light = bound_light;
-                  opaque_vertex_light.valid =
-                      distance <= kOpaqueVertexLightMatchDistance;
-                }
-              }
+              opaque_vertex_light = packed_source.match;
               if (opaque_vertex_light.valid)
                 record.renderer_pixel_opaque_light_source_kind = 2;
             }

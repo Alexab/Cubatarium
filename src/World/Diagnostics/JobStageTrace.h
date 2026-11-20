@@ -823,6 +823,9 @@ struct VisualBlackTraceRecord
   /// 0=unobserved,1=CPU published vertices,2=actual packed draw SSBO words.
   uint8_t renderer_pixel_opaque_light_source_kind{0};
   BoundFieldPixelEvidence renderer_pixel_opaque_bound_field;
+  uint8_t renderer_pixel_opaque_source_candidate_chunks{0};
+  uint8_t renderer_pixel_opaque_source_neighbor_matches{0};
+  uint8_t renderer_pixel_opaque_source_neighbor_recovered{0};
   uint8_t renderer_pixel_opaque_packed_light_payload_valid{0};
   uint32_t renderer_pixel_opaque_packed_light_quad_count{0};
   uint8_t renderer_pixel_opaque_vertex_light_valid{0};

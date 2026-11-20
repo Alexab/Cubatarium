@@ -5953,6 +5953,15 @@ void UFramePerfMonitor::Shutdown()
               << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
               << ",\"renderer_pixel_opaque_bound_field\":"
               << r.renderer_pixel_opaque_bound_field
+              << ",\"renderer_pixel_opaque_source_candidate_chunks\":"
+              << static_cast<unsigned>(
+                     r.renderer_pixel_opaque_source_candidate_chunks)
+              << ",\"renderer_pixel_opaque_source_neighbor_matches\":"
+              << static_cast<unsigned>(
+                     r.renderer_pixel_opaque_source_neighbor_matches)
+              << ",\"renderer_pixel_opaque_source_neighbor_recovered\":"
+              << static_cast<unsigned>(
+                     r.renderer_pixel_opaque_source_neighbor_recovered)
               << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
               << static_cast<int>(
                      r.renderer_pixel_opaque_packed_light_payload_valid)
@@ -6554,6 +6563,15 @@ void UFramePerfMonitor::Shutdown()
             << static_cast<int>(r.renderer_pixel_opaque_light_source_kind)
             << ",\"renderer_pixel_opaque_bound_field\":"
             << r.renderer_pixel_opaque_bound_field
+            << ",\"renderer_pixel_opaque_source_candidate_chunks\":"
+            << static_cast<unsigned>(
+                   r.renderer_pixel_opaque_source_candidate_chunks)
+            << ",\"renderer_pixel_opaque_source_neighbor_matches\":"
+            << static_cast<unsigned>(
+                   r.renderer_pixel_opaque_source_neighbor_matches)
+            << ",\"renderer_pixel_opaque_source_neighbor_recovered\":"
+            << static_cast<unsigned>(
+                   r.renderer_pixel_opaque_source_neighbor_recovered)
             << ",\"renderer_pixel_opaque_packed_light_payload_valid\":"
             << static_cast<int>(
                    r.renderer_pixel_opaque_packed_light_payload_valid)
