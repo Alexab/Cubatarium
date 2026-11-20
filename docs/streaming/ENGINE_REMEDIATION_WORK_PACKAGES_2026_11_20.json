@@ -124,16 +124,15 @@
         {
           "id": "S1.05",
           "action": "Добавить маршрут по поверхности, воспроизводимый replay и исследование конкретной области долга.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
             "Ordinary walking motor and native flat-surface proof.",
-            "Opt-in per-tick observation/probe transcript, standalone Release verifier, native 1957-tick replay and negative controls."
+            "Opt-in per-tick observation/probe transcript, standalone Release verifier, native 1957-tick replay and negative controls.",
+            "Hash-bound selection from real retained debt, ordinary walking and receipt-bound directed capture of the selected cell, with native and negative evidence."
           ],
-          "remaining_subtasks": [
-            "Target a concrete observed debt region through normal bounded movement and confirm actual inspection of the selected region."
-          ],
+          "remaining_subtasks": [],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         }
       ]
@@ -440,7 +439,7 @@
       ]
     }
   ],
-  "current_step": "S1.05",
+  "current_step": "S2.01",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [

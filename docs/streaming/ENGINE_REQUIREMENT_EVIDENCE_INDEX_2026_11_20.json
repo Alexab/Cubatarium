@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S1.05",
+  "current_package": "S2.01",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -301,7 +301,7 @@
     },
     {
       "id": "S1.05",
-      "status": "OPEN",
+      "status": "COMPLETE",
       "evidence": [
         {
           "path": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\route.json",
@@ -382,6 +382,62 @@
         {
           "path": "build\\desktop-msvc\\s1-replay-release-build-20261120.log",
           "sha256": "30a541d69127de5da26ad31fac61e253aa9e8cf063122a9f43096e013cd47d66"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\route.json",
+          "sha256": "ba4e48b4480e8511a32e3e02db171c8b75a18d7954ea29d2bf3f91b9b25cf6fe"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\bot-route.json",
+          "sha256": "e07cbe70ea3ef44df972966009abd5a2ffb610e35be26f9c8a066f19f1d917ac"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
+          "sha256": "14c8c63bbd853f4cea01f723ef3db8101b93ecc96bc77533b9fcad9e5e46d35f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\debt-target.json",
+          "sha256": "537b57d8b1c2ea618db22f6ba7ed95b0b46e23ed05ceea51bdcf17498302bf5d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\debt-inspection-evidence.json",
+          "sha256": "318251168c16b5c41b03be528f019c06f9dcb97755996e0c900264df1b051183"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\debt-negative-controls.json",
+          "sha256": "3a786c0983e58886f46b81e527426503795dc46311418ac13a840fa555f54ccd"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\controller-replay-evidence.json",
+          "sha256": "6a348cc397748f5d528993b14778efd526d7b07d554e150874c132419d1ca4a3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\captures\\inspection_0025.png",
+          "sha256": "36c2bec40463a09b91a4fb05eeb18c3005e5401ac48fbfc4d3190a87f3359895"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\captures\\inspection_0025.png.json",
+          "sha256": "39e9de7d5f54f82426396702a9818385ab8cf4385cb6e2837dc8abda1cd66adc"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-target-test-20261120.log",
+          "sha256": "faaa02ec63d62015fb53d7960ecba7912718020b1241f55be3a3ebc753e02a19"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-origin-final-test-20261120.log",
+          "sha256": "869abd0e2b84452f4b1d9e29207b48a28b92e272d1df9ca35a154860fce6d539"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-harness-test-20261120.log",
+          "sha256": "62db4f6dcbf18c3a34e2bf616d07333da2bddd1f013281abebc3ad8a64292db6"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-native-plan-20261120.json",
+          "sha256": "20bc5b88029977c485503c7470217d3c076253ee6ac0f97b0ea3c230f1428e07"
+        },
+        {
+          "path": "build\\desktop-msvc\\s1-debt-release-build-20261120.log",
+          "sha256": "f40581d69a4a913149053a9d8c1f6e245339b66a658f2e2df5ab25f9019e60df"
         }
       ],
       "verified": [
@@ -393,17 +449,24 @@
         "Bounded recorder/verifier: 200000 ticks, 4096 probes per tick, 2 MiB per row, 64 MiB total; required footer, monotonic observations and exact tick/probe/result comparisons.",
         "Release tests replay flying/walking, temporary Unknown, blocked terminal, capture backpressure, directed panorama and multi-node wall detour twice; corrupt decisions/probes/order/time/truncation/output failure rejected.",
         "Native RD4 frontier: 1957 controller ticks exactly replayed, 11 chunks, both points completed, 24/24 receipt-bound captures; runtime/startup/route/path/inspection/provenance PASS, config restored.",
-        "Native transcript negative copies reject changed probe coordinates, changed command and missing footer. Original transcript/hash retained."
+        "Native transcript negative copies reject changed probe coordinates, changed command and missing footer. Original transcript/hash retained.",
+        "Selected concrete floor cell [-124,-61,49] from retained failed direct-sky draw-source evidence, with original verdict/fixture/source hashes. Author rejects changed origin, scene/source mismatch, unsupported cells and inadequate excursion.",
+        "Native ordinary walking reached the selected region; directed capture 25 at frame 31238 independently intersects the selected top face at [-124.0003558,-60.5,49.0000065]. Receipt/PNG binding and 26/26 inspection coverage PASS.",
+        "Native runtime/startup/route/ordered path/surface/debt inspection/replay/provenance PASS; 3607 controller ticks exactly replayed, 9 chunks crossed, config restored.",
+        "Negative controls reject generic surface route as debt-directed exploration and reject substituted debt cell. Directed PNG visually inspected: intended floor block lies at the central aim point.",
+        "Original lighting reference failure retained: 3933/3933 packed floor draw-source checks fail; native overall FAIL remains. This is not a claim that the lighting bug or oracle-contract discrepancy is fixed."
       ],
-      "remaining": [
-        "Targeted exploration of a concrete debt region remains open.",
-        "Surface native startup/draw-source failures remain queued for S4/S5; current frontier replay native overall UNTESTED for missing full visual/performance acceptance."
-      ],
+      "remaining": [],
       "historical_route_evidence": {
         "out_and_back": "build/desktop-msvc/physical-current-roundtrip-rd4-20261120-native/smoke-verdict.json",
         "wet_cave": "build/desktop-msvc/physical-current-wet-rd4-20261120-native/smoke-verdict.json"
       },
-      "scope_limit": "Walking and deterministic controller replay subtasks proven. This does not prove deterministic world/physics/rendering or general terrain AI. S1.05 remains OPEN for debt-directed exploration; overall S0..S6 remains open."
+      "scope_limit": "S1.05 foundation subtasks proven: flat walking, deterministic controller replay and selected historical-debt exploration. No arbitrary terrain AI, deterministic world/rendering, current physical-light correctness or stage-wide final matrix acceptance.",
+      "remaining_s0_s6": [
+        "Surface first-paint intermittent failure remains S4 queue debt despite this run startup PASS.",
+        "Packed floor draw-source sky reference still FAIL; diagnose current bound-field consumer versus baked-source oracle contract in S5.",
+        "Full current-version backend/reference/performance/memory matrix remains S6."
+      ]
     }
   ],
   "completed_handoff": {

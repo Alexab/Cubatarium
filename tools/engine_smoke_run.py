@@ -425,7 +425,12 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         probe_disk_read_failure: bool = False,
         prepare_read_failure_air: bool = False,
         probe_terrain_save_failure: bool = False, walking: bool = False,
-        record_replay: bool = False) -> dict:
+        record_replay: bool = False, debt_target: dict | None = None) -> dict:
+    if debt_target is not None:
+        from engine_debt_target import validate as validate_debt_target
+        validate_debt_target(debt_target)
+        if not walking or world_actions is not None or source_observation_scene is not None:
+            raise ValueError("debt target requires an exclusive authored surface walk")
     if type(record_replay) is not bool:
         raise ValueError("record_replay must be boolean")
     if type(walking) is not bool or (walking and (
@@ -660,6 +665,13 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             bot_route=build_route(bot_route,source_observation_scene,world_actions,users['Username']['position'])
             (artifacts/'source-observation-scene.json').write_text(
                 json.dumps(source_observation_scene,indent=2)+'\n',encoding='utf-8')
+        if debt_target is not None:
+            from engine_debt_target import author as author_debt_route
+            bot_route = author_debt_route(bot_route, debt_target, scene,
+                fixture_hash=digest(artifacts / "fixture.json"), source_hash=source_hash,
+                minimum_chunks=minimum_chunks)
+            (artifacts / "debt-target.json").write_text(
+                json.dumps(debt_target, indent=2) + "\n", encoding="utf-8")
         bot_path = artifacts / "bot-route.json"
         bot_path.write_text(json.dumps(bot_route, indent=2) + "\n", encoding="utf-8")
         command = [sys.executable, str(ROOT / "tools/flight_sim_run.py"),
@@ -697,6 +709,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "unpacked_meshing_requested": unpacked_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
                  "walking": walking, "record_replay": record_replay,
+                 "debt_target": debt_target,
                  "secondary_residency_column": secondary_residency_column,
                  "probe_partial_air_cancellation": probe_partial_air_cancellation,
                  "probe_disk_read_failure": probe_disk_read_failure,
@@ -745,6 +758,12 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             statuses = [part["status"] for part in verdict["components"].values()]
             verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
             verdict["scope"] = "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance"
+        if debt_target is not None:
+            from engine_debt_target import evaluate as evaluate_debt_target
+            debt = evaluate_debt_target(artifacts, debt_target, report)
+            (artifacts / "debt-inspection-evidence.json").write_text(
+                json.dumps(debt, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["debt_inspection"] = debt
         if record_replay:
             from engine_controller_replay_evidence import evaluate as evaluate_replay
             replay = evaluate_replay(artifacts,
@@ -927,6 +946,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             world_actions=world_actions is not None,
             synchronous_meshing=synchronous_meshing,
             capture_backpressure=capture_encode_delay_ms > 0, walking=walking)
+        if debt_target is not None:
+            required.append("debt_inspection")
         if record_replay:
             required.append("controller_replay")
         if not startup_only:
@@ -950,6 +971,8 @@ def main() -> int:
     parser.add_argument("--fly-seconds", type=float, default=300,
                         help="maximum in-game route budget; completion ends the run early")
     parser.add_argument("--sprint", action="store_true", help="use native Ctrl input while moving forward")
+    parser.add_argument("--debt-target", type=Path,
+                        help="Inspect a concrete cell selected from retained failed fixture evidence")
     parser.add_argument("--record-replay", action="store_true",
                         help="Record every controller tick/probe and verify offline decisions")
     parser.add_argument("--walking", action="store_true",
@@ -1010,6 +1033,7 @@ def main() -> int:
                   unpacked_meshing=args.no_packed_meshing,
                   capture_encode_delay_ms=args.capture_encode_delay_ms,
                   round_trip=args.round_trip, walking=args.walking, record_replay=args.record_replay,
+                  debt_target=json.loads(args.debt_target.read_text(encoding="utf-8")) if args.debt_target else None,
                   secondary_residency_column=args.secondary_residency_column,
                   probe_partial_air_cancellation=args.probe_partial_air_cancellation,
                   probe_disk_read_failure=args.probe_disk_read_failure,

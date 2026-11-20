@@ -45,7 +45,11 @@
       },
       "blocks_surface_motor_proof": false,
       "blocks_overall_acceptance": true,
-      "next_action": "Inspect first-paint admission versus required presentation witness for the 13 named unready sections; identify the authority mismatch before one targeted fix/verification."
+      "next_action": "Inspect first-paint admission versus required presentation witness for the 13 named unready sections; identify the authority mismatch before one targeted fix/verification.",
+      "additional_observation": {
+        "artifact": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
+        "status": "Startup PASS in debt-target run; does not invalidate original 13-section FAIL or establish a fix."
+      }
     },
     {
       "id": "surface-packed-floor-sky-zero",
@@ -187,7 +191,20 @@
       },
       "blocks_surface_motor_proof": false,
       "blocks_overall_acceptance": true,
-      "next_action": "Join sampled packed draw-source sky0 to current bound field values and the intended physical-light consumer contract; establish engine fault versus stale oracle before changing code or rerunning."
+      "next_action": "Join sampled packed draw-source sky0 to current bound field values and the intended physical-light consumer contract; establish engine fault versus stale oracle before changing code or rerunning.",
+      "additional_observation": {
+        "artifact": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
+        "sha256": "14c8c63bbd853f4cea01f723ef3db8101b93ecc96bc77533b9fcad9e5e46d35f",
+        "checked": 3933,
+        "faults": 3933,
+        "selected_cell": [
+          -124,
+          -61,
+          49
+        ],
+        "directed_capture": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\captures\\inspection_0025.png",
+        "note": "Floor visibly rendered; do not infer framebuffer darkness solely from baked draw-source sky0. Diagnose oracle/physical-consumer contract."
+      }
     }
   ]
 }
