@@ -1713,7 +1713,13 @@ private:
   uint64_t ReconcileFrame{0};
   size_t ReconcileCursor{0};
   std::vector<glm::ivec3> ReconcileKeys;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ReconcileLastMarkFrame;
+  struct ReconcileRepairStamp
+  {
+    uint64_t Frame{0};
+    uint64_t Publication{0};
+  };
+  std::unordered_map<glm::ivec3, ReconcileRepairStamp, IVec3Hash>
+      ReconcileLastRepair;
   /// SoT 100303: accepted-stale would have held empty spoof — publish instead.
   uint64_t I3tHoldEmptySpoofN{0};
   /// I3t: last ApplyMeshResult held prior draw (not a Completed publish).

@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.03",
+  "current_package": "S2.04",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -688,6 +688,68 @@
         "Release queue/snapshot/decor integration tests PASS (3 tests); full prescribed Cubatarium Release build and source/EXE provenance PASS."
       ],
       "scope_limit": "Local lossless queue and bounded-pass fairness. No native/performance acceptance inferred from unit tests. Snapshot refresh still copies the whole cache at pass boundaries; S6.04 global maintenance-scan removal/budget proof remains open."
+    },
+    {
+      "id": "S2.03",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src\\Render\\Mesh\\ChunkMeshCache.cpp",
+          "sha256": "e7a2d1da21ab10fb9894c001947669c77a6b11faecf959a7479522f2eb2ac8f2"
+        },
+        {
+          "path": "src\\Render\\Mesh\\ChunkMeshCache.h",
+          "sha256": "ef1e58582e03e83e8f236a66bf3421466f8dc876b3147f447604222c4473ee89"
+        },
+        {
+          "path": "src\\Test\\DecorMeshIntegrationTest.cpp",
+          "sha256": "6dc592e67cff6cf5decfaaad91ff11d26dc7c6fe16f87656ae2073b8246a8456"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-mesh-reconcile-test-20261120.log",
+          "sha256": "0bc263d0c8f161532be08b7fa79ca9252d7c3446f45201ebe03de4553c201ed9"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-catalog-repro-test-20261120.log",
+          "sha256": "acd4e96ebf217cf2ca7f2370f63d7fdf162443d7af9217a17e4b37a55e3e2f0a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-final-test-20261120.log",
+          "sha256": "7a729a495d404f05e04d32ca0095722a2b4f0d286d96c7748d0f9603ded3bc99"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-generation-build-20261120.log",
+          "sha256": "2908da71a16214db448374de3a84451093c941d55545533a86d14d99e7deeeef"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-generation-test-20261120.log",
+          "sha256": "5bdfb229dea1f3771b6f6a23f316691968c23028b638115676443003e769a055"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-release-build-20261120.log",
+          "sha256": "8a7a74da4b62eee2a787d0b310748f120456fe0b3351570fff5808359e8b5690"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-zero-certificate-release-provenance-20261120.json",
+          "sha256": "37cc0fb2149137502dcbea308104fc048b555b45ecc87f446d8d2aab36653adb"
+        }
+      ],
+      "reproduced": [
+        "Bounded reconciliation ignored a stale NoSurface catalog certificate because raw chunk geometry stamps still matched.",
+        "After actual catalog-repair republication, the old coordinate-only 240-frame cooldown masked a new geometry obligation."
+      ],
+      "fixed": [
+        "Physical NoSurface reconciliation validates its complete current geometry/catalog/profile/capture-epoch certificate, preserving independence from sampled light.",
+        "Retry cooldown stores the publication counter with the frame and cannot mask a successor publication repair; MarkAllDirty clears that retry history."
+      ],
+      "verified": [
+        "Enclosed negative-Y section publishes intentional zero-quad geometry without an overlay, exposes faces after neighbor opening and returns to zero after closure.",
+        "Physical empty/occluded NoSurface cases cover sync CPU, async CPU and packed publication admission; current light-only field revision change advances actual field but does not dirty/revise/republish geometry.",
+        "Automatic one-check reconciliation repairs geometry changes without explicit dependency notification, catalog mismatch and capture-epoch mismatch. Catalog restoration uses actual repair/republication before the next geometry edit.",
+        "Independent field sample demand remains present while NoSurface geometry repair hints retire; no light resource is fabricated for a NoDraw proof.",
+        "Full decor mesh integration Release test PASS and prescribed Cubatarium Release build/source provenance PASS."
+      ],
+      "scope_limit": "Zero-mesh dependency/certificate and local repair behavior. Packed admission tests are not actual GPU dispatch/backend parity. Native hole/visual reference matrix and complete eviction/cancel/ABA/performance lifecycle remain in S4..S6; no general light/visual acceptance inferred."
     }
   ],
   "completed_handoff": {

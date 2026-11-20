@@ -618,6 +618,7 @@ void UChunkMeshCache::MarkAllDirty()
   GreedyCache.clear();
   ReconcileKeys.clear();
   ReconcileCursor = 0;
+  ReconcileLastRepair.clear();
   GreedyVertexCountByChunk.clear();
   GreedyVertexCountTotal = 0;
   FluidSurfaceCache.clear();
@@ -3621,10 +3622,15 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
   {
     const glm::ivec3 coord = ReconcileKeys[ReconcileCursor];
     const auto it = GreedyCache.find(coord);
-    if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid)
+    if (it == GreedyCache.end())
     {
       continue;
     }
+    const bool physical_no_surface =
+        CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField &&
+        it->second.PublishedNoSurface;
+    if (!physical_no_surface && !it->second.PublishedGeomStampsValid)
+      continue;
     if (!chunks.GetChunk(coord))
     {
       continue;
@@ -3636,25 +3642,35 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
       continue;
     }
     bool current = true;
-    for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
+    if (physical_no_surface)
     {
-      if (!ChunkMeshSnapshot::MeshInputStampMatchesWorld(stamp, world))
-      {
-        current = false;
-        break;
-      }
+      // NoDraw owns a geometry/catalog/profile/epoch certificate, not sampled
+      // light. Raw chunk stamps alone miss catalog and capture-epoch changes.
+      current = IsPublishedMeshCurrentForInputs(coord, world);
     }
+    else
+      for (const ChunkInputStamp &stamp : it->second.PublishedGeomStamps)
+      {
+        if (!ChunkMeshSnapshot::MeshInputStampMatchesWorld(stamp, world))
+        {
+          current = false;
+          break;
+        }
+      }
     if (current)
     {
       continue;
     }
-    const auto last = ReconcileLastMarkFrame.find(coord);
-    if (last != ReconcileLastMarkFrame.end() &&
-        ReconcileFrame - last->second < kCooldownFrames)
+    const auto last = ReconcileLastRepair.find(coord);
+    // A successor publication can incur a distinct new geometry obligation.
+    // The prior publication's retry throttle must not delay that repair.
+    if (last != ReconcileLastRepair.end() &&
+        last->second.Publication == it->second.PublishCount &&
+        ReconcileFrame - last->second.Frame < kCooldownFrames)
     {
       continue;
     }
-    ReconcileLastMarkFrame[coord] = ReconcileFrame;
+    ReconcileLastRepair[coord] = {ReconcileFrame, it->second.PublishCount};
     ++ReconcileRedirtyN;
     MarkDirty(coord);
   }

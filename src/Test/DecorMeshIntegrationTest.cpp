@@ -2744,6 +2744,18 @@ TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
           publications == 1 &&
               cache.IsPublishedMeshCurrentForInputs(root, world),
           "current NoSurface publication is independent of baked light stamps");
+      const auto field_revision =
+          world.GetChunkManager().GetChunk(root)->GetLightFieldRevision();
+      world.GetChunkManager().GetChunk(root)->SetLightLocal({8, 8, 8}, 13, 11);
+      Expect(world.GetChunkManager().GetChunk(root)->GetLightFieldRevision() >
+                 field_revision,
+             "NoSurface light-only control must actually advance the field");
+      cache.ReconcilePublishedMeshInputs(world, 1);
+      Expect(cache.IsPublishedMeshCurrentForInputs(root, world) &&
+                 !cache.IsChunkMeshDirty(root) &&
+                 cache.GetChunkMeshRevision(root) == revision &&
+                 cache.GetPublishCount(root) == publications,
+             "bounded reconciliation must not rebuild NoSurface for a light-only change");
       for (int tick = 0; tick < 4; ++tick)
       {
         cache.MarkDirtyPriority(
@@ -2770,7 +2782,30 @@ TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
       world.SetFluidDefinitions(&other_definitions);
       Expect(!cache.IsPublishedMeshCurrentForInputs(root, world),
              "another installed catalog invalidates NoSurface repair evidence");
+      cache.ReconcilePublishedMeshInputs(world, 1);
+      Expect(cache.IsChunkMeshDirty(root),
+             "bounded reconciliation must repair a NoSurface catalog mismatch");
       world.SetFluidDefinitions(definitions);
+      // Restoring a catalog does not erase the admitted geometry obligation.
+      // Republish through the same lane before testing a new neighbor edit.
+      if (lane == 2)
+      {
+        const auto restored = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(
+            cache, world, root);
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CommitEmptyPacked(
+                   cache, world, registry, restored),
+               "restored catalog republishes certified packed NoSurface");
+        cache.ClearDirtyAndRemeshAfterApply(root);
+      }
+      else
+      {
+        cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "catalog repair geometry worker finishes");
+        cache.RebuildDirtyChunksWithStats(world, registry, 8, 0, false, 0);
+      }
+      Expect(cache.IsPublishedMeshCurrentForInputs(root, world),
+             "actual catalog repair publishes current NoSurface before the next edit");
       if (lane == 2)
       {
         UChunkMeshCache epoch_cache;
@@ -2791,12 +2826,20 @@ TestNoSurfaceRepairStability(cutum::UBlockRegistry &registry,
         epoch_cache.GetCaptureStore().BumpWorldEpoch();
         Expect(!epoch_cache.IsPublishedMeshCurrentForInputs(root, world),
                "NoSurface repair evidence cannot cross a capture epoch");
+        epoch_cache.ReconcilePublishedMeshInputs(world, 1);
+        Expect(epoch_cache.IsChunkMeshDirty(root),
+               "bounded reconciliation must repair a NoSurface epoch mismatch");
       }
       world.SetBlock(hidden ? glm::ivec3(16, 8, 8) : glm::ivec3(4, 4, 4),
                      hidden ? BLOCK_AIR : kStone);
       Expect(!cache.IsPublishedMeshCurrentForInputs(root, world) &&
                  !UGreedyMesher::BuildChunkMesh(world, root, registry).empty(),
              "geometry edit invalidates NoSurface and exposes real faces");
+      // No explicit dependency notification: the bounded fallback must retain
+      // zero-quad publications as geometry dependencies in all three lanes.
+      cache.ReconcilePublishedMeshInputs(world, 1);
+      Expect(cache.IsChunkMeshDirty(root),
+             "bounded reconciliation independently repairs stale NoSurface geometry");
       cache.MarkDirtyPriority(
           root, MeshRevisionBumpReason::PriorityChunkEmergeRepair);
       Expect(cache.IsChunkMeshDirty(root),
