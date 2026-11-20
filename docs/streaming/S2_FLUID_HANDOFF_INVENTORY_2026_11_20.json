@@ -37,7 +37,8 @@
       "light": "Normal OnColumnMeshDirty relights; synchronous generation suppresses per-voxel work within a main-thread bracket and completion invokes OnRelightTerrainColumn. Incomplete generation retains its column cursor.",
       "proof": "WorldGenStages.cpp, WorldGenContext.cpp, ChunkStreamer.cpp GenerateTerrainColumnBudgeted, WorldStreaming.cpp SetGenerationLightingHooks",
       "status": "SOURCE_TRACED",
-      "scope_limit": "Async capture/install and complete generation lifetime certification remain S3/S4 requirements"
+      "scope_limit": "Async capture/install and complete generation lifetime certification remain S3/S4 requirements",
+      "initial_snapshot_followup": "Required S4 terrain-arrival-fluid-map-lifetime queue entry; this source trace does not prove cache lifecycle of initial generated/loaded data snapshots."
     },
     {
       "id": "streaming-shore-seal",
@@ -45,9 +46,9 @@
       "owner": "UWorldStreaming::PublishFluidSealMutations",
       "light": "Per-column actual changed bands -> NotePendingLightBeforeMesh and EnqueueBoundaryDependencyRelight",
       "save_mesh": "ModifiedChunks before queues; mesh dependency invalidation and near/far dirty notification",
-      "map": "No explicit fluid-surface invalidate seen in this owner. Cache MarkDirty intentionally does not invalidate fluid maps; needs one targeted warm-cache delivery check before closing S2.05.",
-      "status": "TARGETED_CHECK_REQUIRED",
-      "next_action": "After player-placement package, warm real cached fluid slice, deliver an actual changed-section receipt via this owner under deferred visual work, and inspect immediate map invalidation; one repro, one verification only if failure is demonstrated."
+      "map": "Explicit actual-column invalidation before visual admission, once per XZ column; native near/far warm dry cache reproduction and fix PASS",
+      "status": "SCOPED_PROVEN",
+      "proof": "build\\desktop-msvc\\s2-seal-map-comparison-20261120.json"
     },
     {
       "id": "explicit-notification-wrappers",
@@ -65,10 +66,7 @@
       "scope_limit": "Exception, cancel, terminal outcome and async handoff lifetime remain S4; this trace does not certify those cases."
     }
   ],
-  "remaining_sequence": [
-    "One targeted streaming-shore-seal fluid-map delivery check; fix only a demonstrated lost obligation.",
-    "Reconcile S2.05 acceptance against existing producer, queue, map, save and new light evidence. Any actual uncovered requirement stays explicit; full backend, lifecycle and rendered proofs remain in original S3..S6 packages."
-  ],
+  "remaining_sequence": [],
   "source_receipts": [
     {
       "path": "src\\World\\Core\\World.cpp",
@@ -84,7 +82,7 @@
     },
     {
       "path": "src\\World\\Streaming\\WorldStreaming.cpp",
-      "sha256": "e17cddc91b451edd8650e05aafad29f2c0c017b61d80fc23fbaca956b34535bb"
+      "sha256": "9d5d9768e002213f47e8675bfa2c51ffc3686f7a88423ce383aa59f1b4c26976"
     },
     {
       "path": "src\\World\\Chunks\\ChunkStreamer.cpp",
@@ -114,5 +112,8 @@
       "path": "src\\Render\\Mesh\\ChunkMeshCache.cpp",
       "sha256": "e7a2d1da21ab10fb9894c001947669c77a6b11faecf959a7479522f2eb2ac8f2"
     }
+  ],
+  "required_cross_stage_followups": [
+    "S4 terrain-arrival-fluid-map-lifetime; all original S3/S4 ownership/install contracts and S5/S6 backend/rendered/performance gates remain required."
   ]
 }

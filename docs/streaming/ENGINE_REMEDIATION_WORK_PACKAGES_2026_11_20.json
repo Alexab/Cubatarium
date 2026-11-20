@@ -193,7 +193,7 @@
         {
           "id": "S2.05",
           "action": "Провести точное множество fluid mutations через mesh/light/fluid-map/dirty-save, включая соседей.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
@@ -202,12 +202,13 @@
             "Last-fluid and waterlogged removal invalidation plus batch seam fluid-map/dirty-save delivery: real mesh service/cache tests and Release app build PASS.",
             "Actual isolated UWorld dirty-save ownership survives visual capacity0 rejection and capacity1 eviction; exact cold block/fluid state and existing save probes PASS after production fix. Native repro retained.",
             "Nonemissive physics mutation light omission reproduced:14 stale vs13 recompute; fixed before remesh. Native addition and optional decay removal PASS; drying policy restored; existing fluid policy and save probes PASS. Invalid fixture runs retained separately.",
-            "Public player AddObject water placement reproduced sky15 stale vs14; fixed pre-remesh light handoff, native source state/save owner/no-physics-tick assertions and all seven probe cases PASS. Finite producer/deferred handoff inventory recorded."
+            "Public player AddObject water placement reproduced sky15 stale vs14; fixed pre-remesh light handoff, native source state/save owner/no-physics-tick assertions and all seven probe cases PASS. Finite producer/deferred handoff inventory recorded.",
+            "Streaming seal near/far warm-cache map omission reproduced/fixed; all nine native probe cases PASS. Local receipt handoff acceptance reconciled; initial terrain snapshot cache lifetime explicitly retained as required S4 follow-up."
           ],
-          "remaining_subtasks": [
-            "Targeted warm-cache fluid-map delivery through streaming shore-seal mutation owner, then final S2.05 evidence reconciliation."
-          ],
-          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
+          "remaining_subtasks": [],
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
+          "acceptance_record": "S2_05_LOCAL_HANDOFF_ACCEPTANCE_2026_11_20.json",
+          "required_cross_stage_followup": "S4 terrain-arrival-fluid-map-lifetime; original lifecycle/backend/rendered gates not waived"
         },
         {
           "id": "S2.06",
@@ -462,7 +463,7 @@
       ]
     }
   ],
-  "current_step": "S2.05",
+  "current_step": "S2.06",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

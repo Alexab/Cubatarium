@@ -1,0 +1,79 @@
+{
+  "schema": "local-fluid-handoff-acceptance.v1",
+  "package": "S2.05",
+  "status": "COMPLETE",
+  "requirements": [
+    {
+      "id": "exact-producer-sets",
+      "proof": "Flood before/after block+packed-fluid-state diffs equal unique report/count across X/Z and negative Y seams; fixed+regression Release logs checked",
+      "artifacts": [
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-fixed-test-20261120.log",
+          "sha256": "d839a765938629bd5d983c338ca05c2ea3db4348ae89ba1b24c42e6bc66b9666"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-regression-test-20261120.log",
+          "sha256": "4daeaf75d26f12aa52e9eb994ca2b8e9633b270b6f691fc63319290b842f2abc"
+        }
+      ]
+    },
+    {
+      "id": "mesh-handoff",
+      "proof": "Actual changed/neighbor inputs reach edit/physics/seal mesh paths; admitted suffix retained by per-item acknowledgement under deadline and exception; queue Release log checked",
+      "artifact": {
+        "path": "build\\desktop-msvc\\s2-visual-tail-fixed-test-20261120.log",
+        "sha256": "ad0d49af929689b4d13856ee1c7e4f2574de975c35a8a34bb1aff1c019f38e3d"
+      }
+    },
+    {
+      "id": "map-handoff",
+      "proof": "Real service ordinary/waterlogged removal and registry-unavailable batch seam notification tests PASS; streaming seal near/far receipts now invalidate warm dry cache before mesh",
+      "artifacts": [
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-map-fixed-test-20261120.log",
+          "sha256": "b23c75283c97bd22585e487631af61c625746e1e68dc13a2d0e9e57813570c75"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-map-surface-test-20261120.log",
+          "sha256": "0f2f354a0ada5b9c6cb79280617c77ce069a30c3715c1eef8accf53af523475b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-comparison-20261120.json",
+          "sha256": "dafd7659e0ee64cce0dde0fe203ce2ca4a132d9c4268eeec20eb5efaf34b2294"
+        }
+      ]
+    },
+    {
+      "id": "save-handoff",
+      "proof": "Native capacity0 rejection/capacity1 eviction retains mutation save owners; exact cold flowing block/state preserved",
+      "artifact": {
+        "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\terrain-save-probe\\report.json",
+        "sha256": "020c573f482e457ca33574e88b4fa192eecddfbd9c2aaf4d75ae50f8f1e28290"
+      }
+    },
+    {
+      "id": "light-handoff",
+      "proof": "Real simulation addition/removal and public player placement change skylight before maintenance; same-solver comparison proves delivery only; seal receipts retain pending light bands",
+      "artifact": {
+        "path": "build\\desktop-msvc\\s2-seal-map-fixed-20261120-native\\terrain-save-probe\\report.json",
+        "sha256": "1466415cbaa3f69467c32bd5886726716376fad226c1a07d02fd59d54ad9821e"
+      }
+    },
+    {
+      "id": "finite-owner-inventory",
+      "proof": "Live simulation, edit/flood and seal paths inspected; inactive wrappers and loading/deferred generation boundaries source-traced",
+      "artifact": {
+        "path": "docs\\streaming\\S2_FLUID_HANDOFF_INVENTORY_2026_11_20.json",
+        "sha256": "300cd395944bcba743304ca94fe96be90c90c3a2bf730de5ac6ea6996cb5191c"
+      }
+    }
+  ],
+  "required_cross_stage_work": [
+    "S4 initial terrain snapshot/cache arrival and reload ownership: terrain-arrival-fluid-map-lifetime",
+    "S4 visual admission/cancel/overflow/eviction terminal lifecycle for all queues; local save and admitted-tail proofs do not close it",
+    "S3 independent solver/async certificates and real backend parity",
+    "S5/S6 rendered wet/transparency, light resource cutover, budgets and full matrix"
+  ],
+  "limits": "Local mutation receipt handoff package only. No whole-S2 or whole-goal completion. Source trace is not native lifecycle evidence; same-solver reference is not independent solver proof; warm dry map invalidation is not a wet/GPU reference.",
+  "next_package": "S2.06"
+}

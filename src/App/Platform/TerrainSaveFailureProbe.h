@@ -14,6 +14,9 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Math/GridMath.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/WorldStreaming.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -70,6 +73,87 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    // Test receipt delivery, not the shore-sealing algorithm or GPU scan.
+    // A dry cached slice is the correct initial value even when the normal
+    // CPU hitch gate returns empty; no backend result is fabricated here.
+    const bool original_gpu_scan = PreferGpuFluidColumnScan();
+    bool seal_maps_invalidated = true;
+    for (bool near_column : {false, true})
+    {
+      struct RestoreScanPreference
+      {
+        bool Previous{PreferGpuFluidColumnScan()};
+        ~RestoreScanPreference() { SetPreferGpuFluidColumnScan(Previous); }
+      } restore_scan_preference;
+      SetPreferGpuFluidColumnScan(false);
+      UWorld world(nullptr, nullptr);
+      world.ProceduralTemplate.MinHeight = -48;
+      world.ProceduralTemplate.MaxHeight = -17;
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -17;
+      world.BlockWorld.SetVerticalProfile(profile);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone, water;
+      stone.Physics = BlockPhysicsProfile::Solid();
+      water.Physics.IsLiquid = true;
+      water.Physics.FluidKindPreset = FluidKind::Water;
+      definitions->ReplaceAll({{8, stone}, {9, water}}, {{"stone", 8}, {"water", 9}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      auto &cache = world.MeshService->GetCache();
+      const glm::ivec3 origin(100 * CHUNK_SIZE, 0, 100 * CHUNK_SIZE);
+      const std::vector<glm::ivec3> cells{
+          origin + glm::ivec3(15, -33, 15),
+          origin + glm::ivec3(16, -32, 15),
+          origin + glm::ivec3(15, -33, 16)};
+      const std::vector<glm::ivec3> columns{{100, 0, 100}, {101, 0, 100},
+                                             {100, 0, 101}, {101, 0, 101}};
+      for (const auto ground : columns)
+      {
+        world.BlockWorld.SetBlock({ground.x * CHUNK_SIZE, -48, ground.z * CHUNK_SIZE}, 8);
+        const auto *slice = cache.GetFluidSurfaceSlice(world.BlockWorld,
+            *world.BlockRegistry, ground, -33);
+        require(slice && !slice->HasSurface(15, 15), "seal fixture initial dry cached slice");
+        require(cache.GetFluidSurfaceSlice(world.BlockWorld, *world.BlockRegistry,
+                    ground, -33) == slice, "seal fixture warm cache hit");
+        require(!cache.GetFluidSurfaceDirtyGroundChunks().count(ground),
+                "seal fixture must start with settled cache");
+      }
+      world.ModifiedChunks.clear();
+      std::vector<glm::ivec3> changed;
+      for (const auto cell : cells)
+      {
+        world.BlockWorld.SetBlock(cell, 9);
+        world.BlockWorld.SetFluidState(cell, FluidCellState::Source().WithKind(FluidKind::Water));
+        changed.push_back(UChunkManager::WorldToChunk(cell));
+      }
+      changed.push_back(changed.front()); // real producer receipts may coalesce
+      world.Streaming->PublishFluidSealMutations(world, changed, near_column);
+      bool invalidated = true, saved = world.ModifiedChunks.size() == cells.size();
+      bool no_mesh = true;
+      for (const auto cell : cells)
+      {
+        const auto coord = UChunkManager::WorldToChunk(cell);
+        invalidated &= cache.GetFluidSurfaceDirtyGroundChunks().count({coord.x, 0, coord.z}) == 1;
+        saved &= world.ModifiedChunks.count(coord) == 1;
+        no_mesh &= !cache.HasGreedyMesh(coord);
+      }
+      const bool control_untouched = !cache.GetFluidSurfaceDirtyGroundChunks().count(columns.back());
+      const bool light_obligation = world.GetPendingLightBeforeMeshCount() >= cells.size();
+      const bool passed = invalidated && saved && no_mesh && control_untouched && light_obligation;
+      report["cases"].push_back({
+          {"kind", near_column ? "seal_map_near" : "seal_map_far"},
+          {"status", passed ? "PASS" : "FAIL"}, {"cached_dry_columns", columns.size()},
+          {"dirty_map_before_remesh", invalidated}, {"actual_owners_saved", saved},
+          {"control_untouched", control_untouched}, {"no_mesh_published", no_mesh},
+          {"light_obligation_retained", light_obligation},
+          {"scope", "Actual shore-seal receipt owner, cached dry map invalidation before visual work; not seal algorithm, surface recompute, or GPU/framebuffer parity"}});
+      seal_maps_invalidated &= passed;
+    }
+    report["fluid_scan_preference_restored"] = PreferGpuFluidColumnScan() == original_gpu_scan;
+    require(report["fluid_scan_preference_restored"].get<bool>(), "seal probe changed live scan preference");
+    require(seal_maps_invalidated, "shore-seal receipt did not invalidate cached fluid map");
     // Physics owns persistence independently of the best-effort visual queue.
     // These are raw API fixtures, not persisted procedural-profile fixtures.
     bool fluid_dirty_retained = true;

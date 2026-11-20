@@ -3371,6 +3371,7 @@ void UWorldStreaming::PublishFluidSealMutations(
   auto &cache = world.MeshService->GetCache();
   const uint64_t epoch = cache.GetCaptureStore().WorldEpoch();
   std::unordered_map<glm::ivec2, glm::ivec2, IVec2Hash> relight_bands;
+  std::unordered_set<glm::ivec2, IVec2Hash> invalidated_fluid_columns;
   for (const glm::ivec3 changed_coord : changed_chunks)
   {
     if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
@@ -3381,6 +3382,11 @@ void UWorldStreaming::PublishFluidSealMutations(
               std::to_string(changed_coord.y) + "," +
               std::to_string(changed_coord.z) + ")");
     world.ModifiedChunks.insert(changed_coord);
+    // Fluid maps own a separate cache. MarkDirty may be deferred or denied
+    // and deliberately does not invalidate it; deliver the actual mutation
+    // once per XZ column before any best-effort visual admission.
+    if (invalidated_fluid_columns.insert({changed_coord.x, changed_coord.z}).second)
+      cache.InvalidateFluidSurfaceForChunk(changed_coord);
     DeferredPhysicsSeedQueue.push_back(changed_coord);
     if (const UChunk *chunk =
             world.BlockWorld.GetChunkManager().GetChunk(changed_coord))

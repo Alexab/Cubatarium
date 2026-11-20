@@ -1,0 +1,16 @@
+{
+  "requirement": "S2.05 streaming seal fluid-map mutation delivery before visual admission",
+  "hypothesis": "PublishFluidSealMutations retains save, light and mesh obligations but omits explicit fluid-map invalidation; Cache.MarkDirty intentionally does not invalidate maps",
+  "inputs": "Fresh actual UWorld and real UWorldStreaming receipt owner; raw profile-48..-17. Four initially dry cached ground columns around100,100. Water mutations at local15,-33,15;16,-32,15;15,-33,16. Three unique changed sections plus duplicate receipt. Independent near/far branches; unchanged fourth-column control. No mesh/relight drain.",
+  "fixture_preconditions": "Real GetFluidSurfaceSlice twice returns warm dry cache, no preexisting dirty flags. PreferGPU disabled only in RAII scope; correct empty initial cache needs no GPU dispatch. No computed wet surface is claimed.",
+  "pass": "All three actual ground columns invalidated immediately, unchanged control clean, exact actual dirty-save owners retained, light obligations retained and no mesh publication; scan preference restored",
+  "fail": "Any missing obligation, unrelated control invalidation or premature mesh publication",
+  "scope_limit": "Receipt delivery only. Prior producer/cache tests and later S3..S6 backend, wet RGB and surface references retain their scope. No full solver, sealing algorithm or rendered acceptance claim.",
+  "reproduction_artifacts": "build/desktop-msvc/s2-seal-map-repro-20261120-native",
+  "verification_artifacts": "build/desktop-msvc/s2-seal-map-fixed-20261120-native",
+  "command_options": "--world World_261 --render-distance 4 --minimum-chunks 8 --fly-seconds 65 --idle-seconds 5 --stop-seconds 20 --process-timeout 600 --startup-only --probe-terrain-save-failure",
+  "timeout_seconds": 600,
+  "run_budget": "One reproduction then one verification after a demonstrated production fix; stop on sufficient PASS",
+  "result": "Both near/far reproduced stale cached map while save/light/control/no-mesh checks passed. After explicit once-per-XZ invalidation, both PASS and all nine native probe cases PASS; scan preference and original world/config restored.",
+  "comparison": "build\\desktop-msvc\\s2-seal-map-comparison-20261120.json"
+}

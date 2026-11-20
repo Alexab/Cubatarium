@@ -215,6 +215,23 @@
       "evidence_sha256": "70275ed61bd36877b23257ac8938dc04a95502cb73731d1f809c3905aa968180",
       "observed": "Native terrain-save-probe/report.json exists and PASS, but smoke components terrain_save_failure and save_error_ui remain missing_required_component UNTESTED. No false PASS; report manually validated for this scoped evidence.",
       "next_action": "Add strict component readers using existing retained reports and malformed/missing/negative report controls. Do not rerun native solely to wire offline report evaluation; UI evidence requires its own actual report, never infer UI from storage."
+    },
+    {
+      "id": "terrain-arrival-fluid-map-lifetime",
+      "stage": "S4",
+      "status": "OPEN",
+      "verification_status": "SOURCE_SUSPICION_NOT_NATIVE_FAILURE",
+      "discovered_by": "S2.05 handoff closure source inventory",
+      "source_locations": [
+        "WorldGenContext::FlushColumnDirty",
+        "UWorldMeshService::MarkColumnMeshDirty",
+        "UWorldMeshService::MarkTerrainChunkMeshDirtySeamed",
+        "UWorldStreaming generation/commit callbacks",
+        "UChunkMeshCache::GetFluidSurfaceSlice"
+      ],
+      "observed": "Initial terrain data publication has a separate lifetime from local fluid mutation receipts. Generic mesh dirty deliberately does not invalidate cached fluid maps; generation/commit cache refresh coverage is not proven by seal/edit tests. Do not infer correctness from later remesh or eventual GPU scan.",
+      "next_action": "During S4.01/S4.02 data arrival/reload ownership checks, warm a map before terrain arrival, publish actual generated/loaded fluid data and verify cache generation/invalidation before readiness; include negative-height columns. Local edit and seal receipts are already covered by S2.05; preserve initial snapshot publication coverage here.",
+      "scope_rule": "Required full-goal follow-up, not waived by S2.05 completion. No native rerun without the specific arrival hypothesis/card."
     }
   ]
 }

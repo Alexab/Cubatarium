@@ -26,6 +26,7 @@ namespace cutum
 {
 
 class UWorld;
+class UCore;
 class UWorldMeshService;
 class UChunkEmergeCoordinator;
 struct ProceduralSettings;
@@ -114,6 +115,7 @@ public:
   }
 
 private:
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   RequiredLightScan RequiredLightInputs;
   void RecordGpuAllocationTelemetry(UWorld &world);
   bool PrepareChunkScheduler(UWorld &world);

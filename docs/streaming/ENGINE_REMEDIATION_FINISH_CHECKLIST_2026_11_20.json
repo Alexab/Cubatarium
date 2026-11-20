@@ -2,8 +2,8 @@
   "schema": "engine-remediation-finish-checklist.v1",
   "scope": "Полный S0..S6; дополнение существующего плана, без перезапуска аудита и без изменения полученных verdict",
   "checkpoint": "de907fce1",
-  "current_package": "S2.05",
-  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.04; переиспользовать индекс доказательств",
+  "current_package": "S2.06",
+  "completed_packages": "S0.01..S0.05, S1.01..S1.05, S2.01..S2.05; reuse evidence index",
   "execution_rules": [
     "Выполнять только один пакет реализации одновременно, в указанном порядке. Подшаги внутри пакета последовательны.",
     "Перед кодом записать в карточку пакета: недостающее требование, конкретный production путь, гипотезу, неизменные входы, критерий PASS/FAIL, ожидаемые файлы результата и timeout.",
@@ -250,7 +250,7 @@
       "done": "Полный исходный объём доказан; обязательных FAIL/UNTESTED нет. Иначе цель остаётся незавершённой с точным списком зависимостей."
     }
   ],
-  "progress_checkpoint": "S2.05 save admission/eviction and simulation/player-placement light delivery verified. Finite handoff inventory source-traced, with source receipts. One remaining targeted streaming seal cached-map check; original S3..S6 scope unchanged.",
-  "next_action": "S2.05: one warm-cache fluid-map test at UWorldStreaming::PublishFluidSealMutations before deferred visual work. Fix only a demonstrated omission, verify once, reconcile package acceptance; no repeated player/simulation native run without a dependent change.",
+  "progress_checkpoint": "S2.05 local mutation handoffs reconciled and complete. Required initial terrain snapshot/cache lifetime retained in S4 queue; S2 parent remains OPEN. Full S0..S6 scope unchanged.",
+  "next_action": "S2.06: reuse existing local-water-interval regressions and negative-pose native evidence; identify exact missing dry/wet/air-pocket cases before running tests. No restart of audit or repeat of completed fluid handoff probes.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
 }

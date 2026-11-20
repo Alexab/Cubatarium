@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.05",
+  "current_package": "S2.06",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -809,7 +809,7 @@
     },
     {
       "id": "S2.05",
-      "status": "OPEN",
+      "status": "COMPLETE",
       "evidence": [
         {
           "path": "src\\World\\Physics\\FluidFloodService.cpp",
@@ -1170,6 +1170,74 @@
         {
           "path": "build\\desktop-msvc\\s2-fluid-player-light-fixed-provenance-20261120.json",
           "sha256": "2b48d8c53c4b81332f540d41f398f510691fbf7254823f254a70473f92b70051"
+        },
+        {
+          "path": "src\\App\\Platform\\TerrainSaveFailureProbe.h",
+          "sha256": "e3d96b9c61273cc181f9f616f308111d2bb0777ba089445dde80f5086fc11f8a"
+        },
+        {
+          "path": "src\\World\\Streaming\\WorldStreaming.h",
+          "sha256": "e45a2ed4595726a0b893777c8a30f96bd37992142b037c419da6b3f84bee5086"
+        },
+        {
+          "path": "src\\World\\Streaming\\WorldStreaming.cpp",
+          "sha256": "9d5d9768e002213f47e8675bfa2c51ffc3686f7a88423ce383aa59f1b4c26976"
+        },
+        {
+          "path": "docs\\streaming\\S2_SEAL_MAP_HANDOFF_PROBE_2026_11_20.json",
+          "sha256": "dc60b29c3ddac011ee0a03965f1fda0f45f3f649bec692164499c110d6c4b104"
+        },
+        {
+          "path": "docs\\streaming\\S2_FLUID_HANDOFF_INVENTORY_2026_11_20.json",
+          "sha256": "300cd395944bcba743304ca94fe96be90c90c3a2bf730de5ac6ea6996cb5191c"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-comparison-20261120.json",
+          "sha256": "dafd7659e0ee64cce0dde0fe203ce2ca4a132d9c4268eeec20eb5efaf34b2294"
+        },
+        {
+          "path": "docs\\streaming\\S2_05_LOCAL_HANDOFF_ACCEPTANCE_2026_11_20.json",
+          "sha256": "fb0dea5d1f3b54c62e27ded172ed885d0638dd5ee14374d7bbea687d9e65c88b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "691e99ac683b4483bfecd0ffbefa62e56fbc83882badfa8bce37bea8184db8e7"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "c808cea7114c49867fb8b801ba79b54fdd50c28c2313e7f9c3f78d7c96a73757"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-repro-20261120-native\\route.json",
+          "sha256": "cd37b4127b069c03475b1480a36441739c838b2d53153b712734de792845d377"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-repro-build-20261120.log",
+          "sha256": "c85f7703585c66f8455ba988711dea3f8cfb1e78d51d748aab96c3d652616002"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-repro-provenance-20261120.json",
+          "sha256": "1bc2a5fbd16bb3b2f58f30581d44a0f46c511cd7e70f2f9eb0c8d7daf1264cca"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-fixed-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "1466415cbaa3f69467c32bd5886726716376fad226c1a07d02fd59d54ad9821e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-fixed-20261120-native\\smoke-verdict.json",
+          "sha256": "72d2037be9039f2273d78ec83395d05e0dc6c1f0ca212f61acf65cc27e1b4142"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-fixed-20261120-native\\route.json",
+          "sha256": "d350f31cbb1377164a18214702e243d26dae38212f36a33508fdca572a3f8e6c"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-fixed-build-20261120.log",
+          "sha256": "f84788cd201bcb6eda4aec5685d301b07e1bf277e945a1cccc6877ab36c5e163"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-seal-map-fixed-provenance-20261120.json",
+          "sha256": "4d72b0fd26078dca5df3637fd09fd21e1448710aa957ff68c6d5d11f736c04c1"
         }
       ],
       "reproduced": "Two wet neighbors revisited a shared permeable decor cell. Break-site flood counted/reported an identical second waterlog write as a new mutation.",
@@ -1199,12 +1267,17 @@
         "Public AddObject(water, BlockCenter(cell)) reproduces player placement light omission: accepted source Water, actual save owner retained, no physics tick, sky remains15 while explicit recompute gives14.",
         "TryAddFluidObject now retains persistence and invokes ApplyEditFastRelight before immediate MarkBlockChunkDirty, matching solid-edit ordering. Native identical centered fixture after fix immediately15->14 with correct source state and no simulation tick.",
         "Native final probe seven cases PASS, drying policy restored; prescribed Release build/provenance/runtime PASS. Source worlds/config restored for invalid half-offset fixture, valid reproduction and verification; invalid rejection not counted as a production failure.",
-        "Finite fluid handoff inventory saved with source receipts: simulation, player place, break-site flood, generation, streaming seals, notification wrappers and deferred-lighting state boundary. Inactive notification wrappers have no live gameplay mutation callers. Deferred load/create is outside InGame physics; synchronous streamer bracket has no physics tick inside. S3/S4 lifetime certification remains separate."
+        "Finite fluid handoff inventory saved with source receipts: simulation, player place, break-site flood, generation, streaming seals, notification wrappers and deferred-lighting state boundary. Inactive notification wrappers have no live gameplay mutation callers. Deferred load/create is outside InGame physics; synchronous streamer bracket has no physics tick inside. S3/S4 lifetime certification remains separate.",
+        "Actual near/far streaming seal receipt owner reproduced missing cached-map invalidation with exact save owners, pending light and untouched control already correct. Explicit once-per-XZ invalidation now precedes visual admission; both native cases PASS.",
+        "Final native nine probe cases PASS; scan/drying preferences restored. Prescribed Release build/provenance/runtime PASS, original world/config retained. Overall startup-only verdict remains UNTESTED.",
+        "S2.05 local handoff acceptance reconciled against retained producer, queue, real cache, native save/light/seal evidence; selected prior PASS logs re-read and their recorded hashes verified. Initial terrain snapshot/cache arrival is a required distinct S4 follow-up, not certified by these mutation tests."
       ],
-      "remaining": [
-        "One targeted warm-cache fluid-map handoff check for UWorldStreaming::PublishFluidSealMutations. Light/save/mesh handoffs are explicit there, but no fluid-map invalidate seen before visual admission and Cache.MarkDirty intentionally does not invalidate fluid maps. Confirm or reject with one actual owner receipt test; then reconcile S2.05."
-      ],
-      "scope_limit": "Producer, visual suffix, explicit map delivery, physics save ownership and simulation/player placement light delivery proven within retained scopes. Same-solver light reference does not certify S3 algorithm correctness or native rendered/backend parity. Finite handoff inventory complete at source level; streaming shore-seal cached-map delivery still unproven, so S2.05 remains OPEN. Full S3..S6 scope retained."
+      "remaining": [],
+      "scope_limit": "Local mutation receipt handoffs COMPLETE per S2_05_LOCAL_HANDOFF_ACCEPTANCE_2026_11_20.json. No whole-stage/goal claim. Same-solver light reference tests delivery only; seal map evidence uses correct initially dry cache and proves invalidation, not surface recompute/GPU parity. Initial generated/loaded snapshot cache lifetime remains required S4 work.",
+      "required_cross_stage_followups": [
+        "S4 terrain-arrival-fluid-map-lifetime",
+        "S3 independent solver/certificates/backend parity; S4 complete queue/arrival lifecycle; S5/S6 all original consumer/rendered/performance acceptance"
+      ]
     }
   ],
   "completed_handoff": {
