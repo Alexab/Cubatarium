@@ -1664,7 +1664,7 @@ private:
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
   friend class UWorldCooperativeSession;
-  friend void RunTerrainSaveFailureProbe();
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   friend class UWorldStreaming;
   friend class UWorldPersistence;
   friend class UChunkEmergeCoordinator;

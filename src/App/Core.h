@@ -51,6 +51,7 @@ class UAudioDirector;
 class UCore : public IUGameContent
 {
   friend class UWorldLifecycleFacade;
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   friend class UResourcePackBootstrap;
 
 public:

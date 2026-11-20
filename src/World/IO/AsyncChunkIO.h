@@ -23,6 +23,7 @@
 namespace cutum
 {
 
+class UCore;
 class UBlockRegistry;
 class UBlockWorld;
 class UChunkStorageService;
@@ -97,7 +98,7 @@ struct AsyncColumnLightFlagsSaveResult
 class UAsyncChunkIO
 {
 private:
-  friend void RunTerrainSaveFailureProbe();
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
   static std::size_t ChunkIoWorkerBudget()
   {

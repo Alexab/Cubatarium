@@ -1,4 +1,6 @@
 #pragma once
+#include "App/Core.h"
+#include "App/WorldOperationRunner.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Progress/IUProgressSink.h"
@@ -7,17 +9,17 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Persistence/WorldPersistence.h"
-#include <thread>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <nlohmann/json.hpp>
+#include <thread>
 
 namespace cutum
 {
 // Opt-in native API probe. All fixtures are new subdirectories of a previously
 // nonexistent output directory; no live world, config or source save is edited.
-inline void RunTerrainSaveFailureProbe()
+inline void RunTerrainSaveFailureProbe(UCore &core)
 {
   const char *output = std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE");
   if (!output || !*output)
@@ -119,6 +121,57 @@ inline void RunTerrainSaveFailureProbe()
         std::this_thread::yield();
       }
       const auto before = capture(folder);
+      // Redirect only the main-thread facade call to this owned fixture.
+      // Restore the live Core even if an assertion or save throws; never
+      // construct another Core whose destructor clears global render caches.
+      const auto with_fixture_core = [&](auto action)
+      {
+        const auto previous_world = core.WorldInstance;
+        const auto previous_folder = core.ActiveWorldFolder;
+        const auto previous_merge = core.BlockMergeRegistryInstance;
+        const auto restore = [&]()
+        {
+          core.WorldInstance = previous_world;
+          core.ActiveWorldFolder = previous_folder;
+          core.BlockMergeRegistryInstance = previous_merge;
+        };
+        core.WorldInstance = std::shared_ptr<UWorld>(&world, [](UWorld *) {});
+        core.ActiveWorldFolder = folder;
+        core.BlockMergeRegistryInstance.reset();
+        try
+        {
+          action();
+        }
+        catch (...)
+        {
+          restore();
+          throw;
+        }
+        restore();
+      };
+      require(world.IsStreamingEnabled() &&
+                  UWorld::HasPersistedTerrainOnDisk(folder.string()),
+              "facade fixture selects streaming persisted save path");
+      bool facade_failed = false;
+      with_fixture_core(
+          [&]()
+          {
+            try
+            {
+              core.SaveWorld("isolated-save-probe");
+            }
+            catch (const std::exception &error)
+            {
+              facade_failed = std::string(error.what())
+                                  .find(io_failure ? "Terrain save failed"
+                                                   : "Terrain is incomplete") !=
+                              std::string::npos;
+            }
+          });
+      require(facade_failed, "full Core SaveWorld must reject unsaved terrain "
+                             "instead of metadata-only success");
+      require(capture(folder) == before && world.ModifiedChunks == dirty,
+              "failed full Core SaveWorld preserves files and dirty edits");
       Progress failed;
       world.BeginCooperativeSave(folder.string(), false);
       size_t ticks = 0;
@@ -168,6 +221,17 @@ inline void RunTerrainSaveFailureProbe()
                                        *world.BlockRegistry, -17, -64) > 0 &&
               cold.GetBlock(deleted) == BLOCK_AIR && cold.GetBlock(added) == 8,
               "successful retry lost persisted edit");
+      const auto facade_cell = deleted + glm::ivec3(4, 0, 0);
+      world.BlockWorld.SetBlock(facade_cell, 8);
+      world.ModifiedChunks.insert(floor);
+      with_fixture_core([&]() { core.SaveWorld("isolated-save-probe"); });
+      UBlockWorld facade_cold;
+      require(
+          world.ModifiedChunks.empty() &&
+              storage.LoadTerrainColumn(column, facade_cold, folder.string(),
+                                        *world.BlockRegistry, -17, -64) > 0 &&
+              facade_cold.GetBlock(facade_cell) == 8,
+          "full Core SaveWorld persists edits in an existing streaming world");
       // The unload path must wait for real ACKs and reject an ACK for a
       // snapshot which changed while the worker owned its immutable bytes.
       world.ProceduralTemplate.AsyncChunkIo = true;
@@ -505,14 +569,27 @@ inline void RunTerrainSaveFailureProbe()
                 "resumable retry persists deletion and new column");
         fence_evidence["resumable_late_edit_phases"] = background.phases;
       }
-      report["cases"].push_back({{"kind", io_failure ? "write_failure" : "incomplete"},
-          {"status", "PASS"}, {"failure", error}, {"failure_phases", failed.phases},
-          {"recovery_phases", recovered.phases}, {"files_preserved", before.size()},
-          {"dirty_preserved", dirty.size()}, {"cold_edit_preserved", true}, {"unload_waited_for_ack", true},
-          {"newer_edit_invalidated_ack", true}, {"async_failure_retained", io_failure},
-          {"async_cold_edit_preserved", true}, {"folder_switch_checked", io_failure}, {"cooperative_write_fence_checked", io_failure},
-          {"metadata_only_preserved_dirty", true}, {"snapshot_fence_checked", io_failure},
-          {"io_timeout_and_retry_checked", io_failure}, {"write_fence_evidence", fence_evidence}, {"late_edit_and_column_checked", io_failure}});
+      report["cases"].push_back(
+          {{"kind", io_failure ? "write_failure" : "incomplete"},
+           {"status", "PASS"},
+           {"failure", error},
+           {"failure_phases", failed.phases},
+           {"recovery_phases", recovered.phases},
+           {"files_preserved", before.size()},
+           {"dirty_preserved", dirty.size()},
+           {"cold_edit_preserved", true},
+           {"unload_waited_for_ack", true},
+           {"newer_edit_invalidated_ack", true},
+           {"async_failure_retained", io_failure},
+           {"async_cold_edit_preserved", true},
+           {"folder_switch_checked", io_failure},
+           {"cooperative_write_fence_checked", io_failure},
+           {"full_core_save_failure_and_retry_checked", true},
+           {"metadata_only_preserved_dirty", true},
+           {"snapshot_fence_checked", io_failure},
+           {"io_timeout_and_retry_checked", io_failure},
+           {"write_fence_evidence", fence_evidence},
+           {"late_edit_and_column_checked", io_failure}});
     }
     report["status"] = "PASS";
   }

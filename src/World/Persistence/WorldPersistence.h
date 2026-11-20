@@ -32,6 +32,7 @@ struct IVec2Hash
   }
 };
 
+class UCore;
 class UBlockRegistry;
 class UBlockWorld;
 class UWorld;
@@ -249,7 +250,7 @@ public:
                                    uint64_t *saved_revision = nullptr);
 
 private:
-  friend void RunTerrainSaveFailureProbe();
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   DiskAirCancellationProbe AirCancellationProbe;
   DiskReadFailureProbe ReadFailureProbe;
   std::optional<glm::ivec3> ReadFailureEditCell;
