@@ -200,10 +200,12 @@
             "Exact flood producer report/count across X/Z and negative-Y seams; duplicate waterlogged-decor mutation fixed; three Release tests and app build PASS.",
             "Visual time-cap suffix loss reproduced/fixed by per-item admission/acknowledgement; queue deadline/order/exception controls and Release app build PASS.",
             "Last-fluid and waterlogged removal invalidation plus batch seam fluid-map/dirty-save delivery: real mesh service/cache tests and Release app build PASS.",
-            "Actual isolated UWorld dirty-save ownership survives visual capacity0 rejection and capacity1 eviction; exact cold block/fluid state and existing save probes PASS after production fix. Native repro retained."
+            "Actual isolated UWorld dirty-save ownership survives visual capacity0 rejection and capacity1 eviction; exact cold block/fluid state and existing save probes PASS after production fix. Native repro retained.",
+            "Nonemissive physics mutation light omission reproduced:14 stale vs13 recompute; fixed before remesh. Native addition and optional decay removal PASS; drying policy restored; existing fluid policy and save probes PASS. Invalid fixture runs retained separately."
           ],
           "remaining_subtasks": [
-            "Fluid mutation light obligations."
+            "Player fluid placement TryAddFluidObject light handoff before remesh.",
+            "Complete bounded handoff inventory for explicit APIs and deferred-lighting reachability; reuse existing producer and lifecycle evidence."
           ],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },

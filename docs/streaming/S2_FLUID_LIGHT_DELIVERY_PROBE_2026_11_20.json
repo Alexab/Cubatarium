@@ -1,0 +1,21 @@
+{
+  "requirement": "S2.05 fluid mutation light-obligation delivery",
+  "hypothesis": "ProcessFluidChange filters relight by emission, so ordinary water attenuation changes retain stale skylight until unrelated maintenance",
+  "inputs": "Actual Standard UWorld physics queue tick; resident raw -48..-17 profile, solid32x32 shell. Unchanged addition: sky shaft x=z=15, cell(15,-33,15), source above-32, sample below-35. Corrected removal: shaft x14,z15, flowing cell(15,-33,15), solid floor/roof, air sample(16,-33,15), explicit RAII-restored WaterFlowingDries=true. Water emission0, period1, visual processing0.",
+  "pass": "Fluid tick changes expected block; recorded skylight before any maintenance matches explicit post-tick recompute, decreases on addition and increases on removal",
+  "scope_limit": "Delivery through real physics service and synchronous install; same production solver reference does not prove independent S3 solver correctness, async parity, or rendered pixels",
+  "command_options": "--world World_261 --render-distance 4 --minimum-chunks 8 --fly-seconds 65 --idle-seconds 5 --stop-seconds 20 --process-timeout 600 --startup-only --probe-terrain-save-failure",
+  "invalid_fixture_artifacts": "build/desktop-msvc/s2-fluid-light-delivery-repro-20261120-native: raw UWorld default Primitive overrides EnableFluids=false; not engine light-delivery reproduction",
+  "fixture_correction": "Explicit Standard profile; sample two cells below mutation because direct sky seed stores incoming level before liquid decrement. Removal uses already matching downward flow below, which cannot feed the unsupported cell above; source inspection excludes spread-down early return. Require actual mutation and changed reference before accepting light delivery.",
+  "reproduction_artifacts": "build/desktop-msvc/s2-fluid-light-delivery-standard-repro-20261120-native",
+  "initial_verification_artifacts": "build/desktop-msvc/s2-fluid-light-delivery-fixed-20261120-native: addition valid; removal alcove still uses default stable-puddle policy, so no removal expected",
+  "verification_artifacts": "build/desktop-msvc/s2-fluid-light-delivery-decay-fixed-20261120-native",
+  "removal_policy_localization": "FluidTransformSim EffectiveMinSurviveLevel and LiquidFlowScenariosTest TestWaterFlowingDriesFlag prove default WaterFlowingDries=false intentionally retains unsupported water. Explicit RAII-restored opt-in true is required for a removal test, not a game-policy change. No further fixture iteration without new localized evidence.",
+  "reproduction_result": "Standard addition: mutated=true, sky before14/delivered14/recompute13. Valid production reproduction. Standard removal: mutated=false, not a light-delivery reproduction; retained as invalid fixture evidence.",
+  "verification_rows": [
+    "Addition unchanged: original shaft/source/sample and same runner inputs, verifies reproduced defect.",
+    "New removal-alcove row: open shaft x14,z15; flowing non-source water at (15,-33,15), solid floor/roof, air sample (16,-33,15). No incoming liquid or spread-down path; explicit post-tick recompute must increase sample sky. Distinct case ID, no baseline-removal reproduction claimed."
+  ],
+  "timeout_seconds": 600,
+  "run_budget": "One reproduction and one verification after fix; no identical repeat without new evidence"
+}

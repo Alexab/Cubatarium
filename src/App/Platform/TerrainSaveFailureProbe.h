@@ -5,11 +5,14 @@
 #include "Blocks/BlockRegistry.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "World/Core/World.h"
+#include "World/Core/RuntimeTuning.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Physics/WorldChunkDirtyService.h"
+#include "World/Physics/WorldBlockPhysicsService.h"
+#include "World/Lighting/IULightingPipeline.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -146,6 +149,95 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       fluid_dirty_retained &= passed;
     }
     require(fluid_dirty_retained, "physics fluid dirty-save lost before visual drain");
+    bool fluid_light_delivered = true;
+    const bool original_drying_policy = URuntimeTuning::Get().WaterFlowingDries;
+    for (bool removal : {false, true})
+    {
+      struct RestoreDryingPolicy
+      {
+        bool Previous{URuntimeTuning::Get().WaterFlowingDries};
+        ~RestoreDryingPolicy() { URuntimeTuning::Get().WaterFlowingDries = Previous; }
+      } restore_drying_policy;
+      // Stable puddles are the default game policy. Exercise the existing
+      // opt-in decay path only in this isolated removal fixture.
+      if (removal) URuntimeTuning::Get().WaterFlowingDries = true;
+      UWorld world(nullptr, nullptr);
+      world.ProceduralTemplate.MinHeight = -48;
+      world.ProceduralTemplate.MaxHeight = -17;
+      world.ProceduralTemplate.FillWater = false;
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -17;
+      world.BlockWorld.SetVerticalProfile(profile);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone, water;
+      stone.Physics = BlockPhysicsProfile::Solid();
+      water.Physics.IsLiquid = true;
+      water.Physics.FluidKindPreset = FluidKind::Water;
+      water.Physics.FluidSpreadPeriodTicks = 1;
+      definitions->ReplaceAll({{8, stone}, {9, water}}, {{"stone", 8}, {"water", 9}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      // Fully resident narrow shaft, closed sides: no unknown terrain or
+      // alternate sky path. The falling input crosses Y=-32/-33.
+      for (int x = 0; x < 32; ++x)
+        for (int z = 0; z < 32; ++z)
+          for (int y = -48; y <= -17; ++y)
+            world.BlockWorld.SetBlock({x, y, z}, x == (removal ? 14 : 15) && z == 15 && y > -48 ? BLOCK_AIR : 8);
+      const glm::ivec3 cell(15, -33, 15);
+      if (removal)
+      {
+        world.BlockWorld.SetBlock(cell, 9);
+        world.BlockWorld.SetFluidState(cell, FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        // Side alcove with solid floor/roof: no downward spread or incoming
+        // fluid. Sky enters horizontally from the adjacent open shaft.
+        world.BlockWorld.SetBlock(cell + glm::ivec3(1, 0, 0), BLOCK_AIR);
+      }
+      else
+        world.BlockWorld.SetBlock(cell + glm::ivec3(0, 1, 0), 9);
+      auto &lighting = world.GetLightingPipeline();
+      lighting.RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
+      const auto sky = [&]()
+      {
+        const auto sample = cell + (removal ? glm::ivec3(1, 0, 0) : glm::ivec3(0, -2, 0));
+        return world.BlockWorld.GetChunkManager().GetChunk(
+            UChunkManager::WorldToChunk(sample))->GetSkyLightLocal(
+                UChunkManager::WorldToLocal(sample));
+      };
+      const int before = sky();
+      PhysicsFeatureFlags flags;
+      flags.EnableFluids = true;
+      flags.LiquidShadowMode = false;
+      world.SetPhysicsProfile(PhysicsProfile::Standard);
+      world.SetPhysicsFeatureFlags(flags);
+      PhysicsBudgets budgets;
+      budgets.BlockEventsPerTickMax = 0;
+      budgets.LiquidEventsPerTickMax = 1;
+      budgets.VisualRemeshPerTickMax = 0;
+      world.SetPhysicsBudgets(budgets);
+      world.BlockPhysicsService->PublishFluid(cell);
+      world.BlockPhysicsService->TickBlockPhysics(world);
+      const bool mutated = world.BlockWorld.GetBlock(cell) == (removal ? BLOCK_AIR : 9);
+      const int delivered = sky();
+      // Delivery oracle only: same solver explicitly invoked after recording
+      // the tick's result. Independent solver correctness belongs to S3.
+      lighting.RelightAllLoadedChunks(world.BlockWorld, *world.BlockRegistry);
+      const int reference = sky();
+      const bool changed_reference = removal ? reference > before : reference < before;
+      const bool passed = mutated && changed_reference && delivered == reference;
+      report["cases"].push_back({
+          {"kind", removal ? "fluid_light_removal_alcove" : "fluid_light_addition"},
+          {"status", passed ? "PASS" : "FAIL"}, {"mutated", mutated},
+          {"water_flowing_dries", URuntimeTuning::Get().WaterFlowingDries},
+          {"sky_before", before}, {"sky_delivered", delivered},
+          {"sky_explicit_recompute", reference},
+          {"scope", "Actual nonemissive fluid tick delivery before maintenance; not independent solver or framebuffer correctness"}});
+      fluid_light_delivered &= passed;
+    }
+    report["fluid_drying_policy_restored"] =
+        URuntimeTuning::Get().WaterFlowingDries == original_drying_policy;
+    require(report["fluid_drying_policy_restored"].get<bool>(), "fluid probe changed live drying policy");
+    require(fluid_light_delivered, "nonemissive fluid mutation did not deliver skylight update");
     for (bool io_failure : {false, true})
     {
       Json fence_evidence = Json::object();

@@ -986,6 +986,110 @@
         {
           "path": "build\\desktop-msvc\\s2-fluid-save-admission-fixed-20261120-native\\route.json",
           "sha256": "99a6ca6a0dfef7d10756bfe69eab1efbe99c7d527783f6eaf90e0058740d2364"
+        },
+        {
+          "path": "src\\World\\Physics\\WorldBlockPhysicsService.cpp",
+          "sha256": "92c002b1c3f3fe57c50fd9f5a6e5e2006a7263a808b0e516a3f307a063de81c0"
+        },
+        {
+          "path": "src\\App\\Platform\\TerrainSaveFailureProbe.h",
+          "sha256": "8b1bf0df00050d072744409d113cbd14419c9849868cd76eb91b35fe066bd741"
+        },
+        {
+          "path": "docs\\streaming\\S2_FLUID_LIGHT_DELIVERY_PROBE_2026_11_20.json",
+          "sha256": "30dbacefc7e635eafe63d5074c5f9e1a53ba5d5b9760c53c787ea0c4b98e001e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-comparison-20261120.json",
+          "sha256": "4e90f8253f0816b47ed9e46dd8b636211df12796f82889b7705c31e9a41a4c9c"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "b2427fc707e37f4f89f2b9f1f4e8b156eef927c2794bcc40db7b92ac268d2c37"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "9f9d5a4bc02b28b9c8b6b3cd7c19a6e8a463080840fb9926ade88bf567d1e2f3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-repro-20261120-native\\route.json",
+          "sha256": "f54ec3af6b02fad28f333413f3c7f6b5554f311fc804e49f05415fc199905c8e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-standard-repro-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "cb685b9917fa5015f20fb82b19d99172d7e5819f1ed143416346caef847cd81f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-standard-repro-20261120-native\\smoke-verdict.json",
+          "sha256": "c79a56a763103efeb587266abf75ef2d6191d44d3392dea2c89fd8789a8885d8"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-standard-repro-20261120-native\\route.json",
+          "sha256": "31ed24b3dbaba9dc1570b66d0910b73cc419a8a71b0f579e408af026d793ee0b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-fixed-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "15628baf78f6f890653edb2424791babfa7e9f7314862c5747d4c9e3bf9c2156"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-fixed-20261120-native\\smoke-verdict.json",
+          "sha256": "213913834e256e3fe881297048dfabfa6dcc0f633b46e32f0fad204f9a0b043e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-fixed-20261120-native\\route.json",
+          "sha256": "cd7a2508f5c7e5c127de11de209616084744fec998777df3218638d28381bc56"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-decay-fixed-20261120-native\\terrain-save-probe\\report.json",
+          "sha256": "5e1eefcd65fba946202638d492755b6b28c04c6a22f54319a77229f4d2fd0b6b"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-decay-fixed-20261120-native\\smoke-verdict.json",
+          "sha256": "d75573706528a6426a609eff25cea658b431c772d143630e76468fb1297c1545"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-decay-fixed-20261120-native\\route.json",
+          "sha256": "e2080894d878fe5f4d98c34f74c608b744cb758243437b0a9b187b83c05d9ffc"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-repro-build-20261120.log",
+          "sha256": "1a0f17a2b54116888eb46de10716c6470a2f31ee407fd678e93ca71968398af1"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-repro-provenance-20261120.json",
+          "sha256": "b8f4071d8dc7c8fb239f2f31587cb095164f3a5433529b5bc36db26062348927"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-standard-repro-build-20261120.log",
+          "sha256": "f32674f38fa32839f72afdd625ab09a81d34d87648840109d007bcfc754f0021"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-standard-repro-provenance-20261120.json",
+          "sha256": "3268170e2326b88c197cb9eb1cb386ad94f0fa5958acbe92e0e6279743c54487"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-fixed-build-20261120.log",
+          "sha256": "742454105ff57854f7450451b1841bfaac83299225552b73e8a2727eba5e1ca3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-fixed-provenance-20261120.json",
+          "sha256": "ddc53ad45070d517391bc7db367a2f0d799314d58ce7ffdbde41cec77284661f"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-decay-fixed-build-20261120.log",
+          "sha256": "e410f2d32226934dfad4416eb09643d808be9473b45feff9069ec608ef2e3c59"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-light-delivery-decay-fixed-provenance-20261120.json",
+          "sha256": "fca0c64f86daf75c8ada93167b1a76a68c6fa4e1418b4662caa17b086f145c68"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-drying-policy-build-20261120.log",
+          "sha256": "d5f2615ae2cf44a5d64bb1d4f66d24de317165b2d7ab94f61f42b49500ae5f93"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-drying-policy-test-20261120.log",
+          "sha256": "88bbc61fa8004b2fc5d574f85f95178b9eefea0f57d060cd133927601ace4648"
         }
       ],
       "reproduced": "Two wet neighbors revisited a shared permeable decor cell. Break-site flood counted/reported an identical second waterlog write as a new mutation.",
@@ -1006,12 +1110,18 @@
         "Native isolated UWorld repro: capacity0 rejects visual work and capacity1 evicts; both lost actual mutation dirty-save before/after zero-budget drain, while direct cold block/fluid storage remained correct.",
         "MarkVisualRemesh now records actual changed owner in ModifiedChunks before best-effort admission. Native verification with identical fixtures retains dirty-save in both rejection and eviction cases; backlog0/1 and dropped/purged telemetry prove capacity paths.",
         "Native cold read preserves water ID9 and exact flowing level3 packed state at negative Y=-40 in each changed column. Existing cooperative save failure/retry/fence probes also PASS. Release app build/provenance and native runtime PASS.",
-        "Both native run source-world fingerprints match the current original; original config bytes restored. Isolation receipt and complete route/EXE/source provenance retained."
+        "Both native run source-world fingerprints match the current original; original config bytes restored. Isolation receipt and complete route/EXE/source provenance retained.",
+        "Actual Standard UWorld fluid queue tick reproduces missing nonemissive-water light delivery across Y=-32/-33: block mutates, skylight stays14 while explicit recompute gives13. No maintenance intervenes.",
+        "ProcessFluidChange now retains persistence and installs local light before near/far mesh selection for every change, without emission filter. Material-reaction changed positions also retain save ownership and receive relight before visual notification; that branch is source-traced, not separately native-certified.",
+        "Unchanged addition fixture after fix:14->13, matching recompute. Distinct removal-alcove fixture across X15/16 with existing opt-in drying policy:12->13, matching recompute; actual block removal required. Runtime drying policy restoration asserted PASS.",
+        "First Primitive fixture and default stable-puddle removal fixtures were invalid for the intended mutation; FAIL artifacts retained and not counted as engine reproductions. Existing Release liquid_flow_scenarios_test confirms both drying policies PASS.",
+        "Final actual native report includes six PASS cases (two save-admission, two light delivery, two pre-existing save failure/retry fixtures). Prescribed Release build/provenance/runtime PASS; all four run source-world fingerprints and restored config bytes checked. Overall startup-only verdict remains UNTESTED."
       ],
       "remaining": [
-        "Verify light-obligation delivery for fluid mutations rather than relying on later stale-field discovery."
+        "Target live player placement owner UWorldFluidFacade::TryAddFluidObject: it applies fluid fill then MarkBlockChunkDirty without explicit ApplyEditFastRelight; UWorld::TryAddObject returns through it before normal solid edit lighting. Reproduce and fix this concrete entry point.",
+        "Finish fluid light handoff inventory: explicit notification/flood APIs and deferred-lighting reachability. Add work only for a reachable missing obligation; keep async lifecycle/full backend and visual proof in their original S3..S6 packages."
       ],
-      "scope_limit": "Producer reports, visual suffix retention, fluid-map delivery and physics dirty-save ownership under rejection/eviction proven. Native direct cold storage does not prove autosave scheduling or full-world relocation. Overall startup-only smoke remains UNTESTED for route/visual/performance and missing save probe component readers. S2.05 OPEN for light obligations; GPU/wet/transparency scope retained."
+      "scope_limit": "Physics save ownership, map delivery and nonemissive simulation light addition/removal proven within stated fixtures. Light comparison uses the same production solver to test delivery, not solver correctness. Near immediate ordering and material-reaction light calls source-traced; no native rendered/emitter/reaction parity claim. Player fluid placement handoff remains OPEN; S2.05 not closed. S3..S6 full scope retained."
     }
   ],
   "completed_handoff": {

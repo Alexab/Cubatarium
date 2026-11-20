@@ -153,6 +153,12 @@ void UWorldBlockPhysicsService::WakeNearbyFluids(
 void UWorldBlockPhysicsService::ProcessFluidChange(
     UWorld &world, const FluidSpreadChange &change)
 {
+  // Water changes skylight attenuation even with zero emission. Install the
+  // new field before a near-player immediate mesh can sample the old light.
+  // Retain persistence first, independently of solver or visual admission.
+  world.ModifiedChunks.insert(UChunkManager::WorldToChunk(change.BlockPos));
+  world.ModifiedChunks.insert(UChunkManager::WorldToChunk(change.NeighborPos));
+  world.ApplyEditFastRelight({change.BlockPos, change.NeighborPos});
   // Near the player: Immediate remesh so spread is visible without 3–5s SoftDefer
   // / VisualRemesh starve. Far: keep budgeted physics remesh.
   if (world.IsWithinLiquidUpdateRadius(change.BlockPos))
@@ -185,20 +191,6 @@ void UWorldBlockPhysicsService::ProcessFluidChange(
     world.PublishBlockPhysicsEvent(change.BlockPos);
   }
 
-  {
-    const UBlockRegistry &registry = world.GetBlockRegistry();
-    const int emission = std::max(
-        {registry.GetLightEmission(change.FluidId),
-         registry.GetLightEmission(
-             world.GetBlockWorld().GetBlock(change.BlockPos)),
-         registry.GetLightEmission(
-             world.GetBlockWorld().GetBlock(change.NeighborPos))});
-    if (emission > 0)
-    {
-      world.ApplyEditFastRelight({change.BlockPos, change.NeighborPos});
-    }
-  }
-
   if (Flags.EnableMaterialRules)
   {
     auto apply_reactions =
@@ -210,6 +202,8 @@ void UWorldBlockPhysicsService::ProcessFluidChange(
         {
           continue;
         }
+        world.ModifiedChunks.insert(UChunkManager::WorldToChunk(reaction.BlockPos));
+        world.ApplyEditFastRelight({reaction.BlockPos});
         world.MarkBlockChunkDirtyFromPhysics(reaction.BlockPos);
         world.TryEnqueueFluidAt(reaction.BlockPos);
         WakeFluidAdjacency(world, reaction.BlockPos);
