@@ -1006,6 +1006,14 @@ static void TestUnmarkedPartialSavePreservesDisk()
     }
     Expect(storage.SaveTerrainColumn(column, source, folder.string(), registry, 319, -64),
            "complete source reports successful persistence");
+    // Keep a semantically valid but byte-distinct existing receipt. Even
+    // rewriting unchanged metadata would violate refusal-before-first-write.
+    {
+      std::ofstream light(UChunkStorageService::ColumnLightFilePath(
+                              folder.string(), column), std::ios::app);
+      light << "\n";
+      Expect(light.good(), "metadata refusal fixture has distinct original bytes");
+    }
     const auto before = capture(folder);
     Expect(before.size() >= 24, "partial save fixture has actual indexed files");
     partial.SetBlock(deleted, BLOCK_AIR);
@@ -1041,6 +1049,16 @@ static void TestUnmarkedPartialSavePreservesDisk()
                cold.GetBlock(glm::ivec3(-11, 19, 7) * CHUNK_SIZE + glm::ivec3(1, 2, 3)) == 8 &&
                cold.GetChunkManager().GetChunk(floor)->GetWeatherLastUpdateSec() == 456.125,
            "completed save preserves edits, upper geometry and weather on cold reload");
+    const auto blocked = folder / "not-a-directory";
+    {
+      std::ofstream file(blocked);
+      file << "preserve this ordinary file";
+    }
+    const auto failure_before = capture(folder);
+    Expect(!storage.SaveTerrainColumn(column, source, blocked.string(), registry,
+                                     319, -64) &&
+               capture(folder) == failure_before,
+           "actual metadata write failure reports false without replacing its blocker");
     const auto resolved = std::filesystem::weakly_canonical(folder);
     Expect(resolved.parent_path() == std::filesystem::weakly_canonical(
                std::filesystem::temp_directory_path()),
