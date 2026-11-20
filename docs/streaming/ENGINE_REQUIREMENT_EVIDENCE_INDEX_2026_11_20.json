@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S3.05.disk-compatibility-checkpoint",
+      "status": "PARTIAL_OPEN",
+      "card": "S3_05_PERSISTED_CERTIFICATE_CARD_2026_11_20.md",
+      "matrix_tests": "build/desktop-msvc/s3-persisted-matrix-test-20261120.log",
+      "fluid_matrix": "build/desktop-msvc/s3-persisted-fluid-test-20261120.log",
+      "scope": "Real storage cold read, typed restore queue and physical recalculate: compatible/algorithm/material/profile/configuration/input/legacy, preserving terrain and exact fluid state. Upper UWorld load owner reconciliation remains."
+    },
+    {
       "id": "S3.04",
       "status": "COMPLETE",
       "acceptance": "S3_04_STALE_INSTALL_MATRIX_2026_11_20.md",

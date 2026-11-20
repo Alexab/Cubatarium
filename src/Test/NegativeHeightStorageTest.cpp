@@ -54,14 +54,18 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   using namespace cutum;
   const auto folder = folder_path.string();
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
-  BlockDefinition stone, torch;
+  BlockDefinition stone, torch, water;
   stone.Name = "stone";
   stone.Physics = BlockPhysicsProfile::Solid();
   torch.Name = "torch";
   torch.Render.Style = BlockRenderStyle::Cross;
   torch.Lighting.Emission = 14;
-  definitions->ReplaceAll({{8, stone}, {50, torch}},
-                          {{"stone", 8}, {"torch", 50}});
+  water.Name = "water";
+  water.Physics.IsLiquid = true;
+  water.Physics.FluidKindPreset = FluidKind::Water;
+  water.Render.Style = BlockRenderStyle::Fluid;
+  definitions->ReplaceAll({{8, stone}, {50, torch}, {9, water}},
+                          {{"stone", 8}, {"torch", 50}, {"water", 9}});
   UBlockRegistry registry(nullptr, definitions);
   const auto catalog = registry.GetDefinitionsCatalogSnapshot();
   const glm::ivec3 root(2, -3, -3), upper(2, -2, -3);
@@ -72,6 +76,10 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   original.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
   original.SetBlock({root.x * CHUNK_SIZE, -64, root.z * CHUNK_SIZE}, 8);
   original.SetBlock(source_pos, 50);
+  const glm::ivec3 fluid_pos(root.x * CHUNK_SIZE + 2, -63, root.z * CHUNK_SIZE + 2);
+  const auto fluid_state = FluidCellState::Flowing(3, true).WithKind(FluidKind::Water);
+  original.SetBlock(fluid_pos, 9);
+  original.SetFluidState(fluid_pos, fluid_state);
   for (const auto coord : {root, upper})
   {
     RelightJobSpec spec;
@@ -93,7 +101,7 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
   Expect(snapshot->size() == 2 && !original.GetChunkManager().HasChunk(root),
          "column snapshot includes field-only AIR above terrain without "
          "geometry allocation");
-  definitions->ReplaceAll(catalog->ById, {{"stone", 8}, {"torch", 50}});
+  definitions->ReplaceAll(catalog->ById, {{"stone", 8}, {"torch", 50}, {"water", 9}});
   registry.Reload();
   const auto refreshed_catalog = registry.GetDefinitionsCatalogSnapshot();
   ColumnLightCaptureStats capture_stats;
@@ -177,6 +185,90 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
              (*loaded)[0]->volume.cells == (*snapshot)[0]->volume.cells,
          "ordinary column save has reloadable content receipts and all padded "
          "bytes");
+  // S3.05: real disk -> fresh world -> rejected cache -> physical recalculate.
+  for (const std::string change : {"compatible", "algorithm", "materials",
+                                   "profile", "configuration", "inputs", "legacy"})
+  {
+    auto case_definitions = std::make_shared<UBlockDefinitionStorage>();
+    auto case_blocks = catalog->ById;
+    if (change == "materials") case_blocks.at(50).Lighting.Emission = 6;
+    case_definitions->ReplaceAll(case_blocks, {{"stone", 8}, {"torch", 50}, {"water", 9}});
+    UBlockRegistry case_registry(nullptr, case_definitions);
+    const auto case_catalog = case_registry.GetDefinitionsCatalogSnapshot();
+    PersistedColumnLight disk_payload = *snapshot;
+    if (change == "algorithm")
+      for (auto &entry : disk_payload)
+      {
+        auto older = std::make_shared<PersistedSectionLight>(*entry);
+        older->signature = "light-v5" + older->signature.substr(older->signature.find(':'));
+        older->checksum = persisted_light_detail::Checksum(*older);
+        entry = std::move(older);
+      }
+    Expect(reopened.WriteColumnLight(folder, column, disk_payload),
+           "compatibility matrix writes physical column cache");
+    if (change == "legacy")
+      std::filesystem::remove(UChunkStorageService::ColumnLightFilePath(folder, column));
+    UBlockWorld case_world;
+    case_world.SetFluidDefinitions(case_definitions.get());
+    case_world.SetLightingConfigurationIdentity(change == "configuration" ? 2 : 1);
+    auto case_profile = case_world.GetVerticalProfile();
+    if (change == "profile") ++case_profile.SeaLevelY;
+    case_world.SetVerticalProfile(case_profile);
+    case_world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return false; });
+    Expect(reopened.LoadTerrainColumn({root.x + 1, 0, root.z}, case_world,
+               folder, case_registry, 319, -64) > 0 &&
+               reopened.LoadTerrainColumn(column, case_world, folder,
+                   case_registry, 319, -64) > 0 &&
+               case_world.GetBlock(source_pos) == 50 &&
+               case_world.GetBlock({root.x * CHUNK_SIZE, -64, root.z * CHUNK_SIZE}) == 8,
+           "every cache compatibility case cold-loads terrain edits unchanged");
+    if (change == "inputs") case_world.SetBlock(source_pos, BLOCK_AIR);
+    case_world.SetKnownOpenSkyAbsentQuery([&](glm::ivec3 coord) {
+      return reopened.IsChunkSliceAbsentOnDisk(folder, coord);
+    });
+    const auto disk_receipts = reopened.ReadColumnLight(folder, column);
+    SectionLightRestoreQueue case_queue;
+    if (disk_receipts)
+      for (const auto &entry : *disk_receipts)
+        Expect(case_queue.Offer(entry, 1), "disk cache obtains restore owner");
+    const auto case_stats = case_queue.Drain(case_world, case_catalog,
+        [](glm::ivec3, uint64_t owner) { return owner == 1; }, [](glm::ivec3) {}, 8);
+    if (change == "compatible")
+      Expect(case_stats.restored == 2 && case_world.HasCompleteLightSamplingCalculation(root, case_catalog) &&
+                 case_world.GetChunkManager().GetSectionLightField(root)->GetPaddedData()->cells ==
+                     (*snapshot)[0]->volume.cells,
+             "compatible cold cache restores all padded bytes under fresh identities");
+    else
+    {
+      Expect(!case_world.HasCompleteLightSamplingCalculation(root, case_catalog) &&
+                 !case_world.GetChunkManager().GetSectionLightField(root) &&
+                 (change == "legacy" ? !disk_receipts : case_stats.rejected == 2),
+             "incompatible or legacy cold cache cannot grant field readiness");
+      RelightJobSpec repair;
+      repair.min_world_y = -64;
+      repair.max_world_y = 319;
+      repair.include_known_air_outputs = true;
+      auto result = UChunkRelightSnapshot::CaptureSections(case_world, repair, {root}).Compute(case_registry);
+      Expect(result.inputs_complete && result.chunks.size() == 1,
+             "cold incompatible cache has complete recapture inputs");
+      InstallComputedLight(case_world, result.chunks.front(), true, true);
+      Expect(case_world.RecordLightCalculation(result, case_catalog) == 1 &&
+                 case_world.HasCompleteLightSamplingCalculation(root, case_catalog),
+             "incompatible or legacy cold cache is replaced by certified calculation");
+    }
+    const auto volume = case_world.GetChunkManager().GetSectionLightField(root)->GetPaddedData();
+    const int expected_block = change == "inputs" ? 0 : change == "materials" ? 5 : 13;
+    Expect(volume && UnpackBlock(volume->cells[SectionLightVolume::Index(15, 8, 8)]) == expected_block &&
+               case_world.GetBlock(source_pos) == (change == "inputs" ? BLOCK_AIR : 50) &&
+               case_world.GetBlock(fluid_pos) == 9 &&
+               PackFluidCellState(case_world.GetFluidState(fluid_pos)) == PackFluidCellState(fluid_state) &&
+               case_world.GetBlock({root.x * CHUNK_SIZE, -64, root.z * CHUNK_SIZE}) == 8,
+           "cold cache recovery preserves terrain and computes current emission/removal");
+    std::cout << "persisted_disk_matrix case=" << change << " PASS block="
+              << expected_block << " fluid=" << int(PackFluidCellState(fluid_state)) << '\n';
+  }
+  Expect(reopened.WriteColumnLight(folder, column, *snapshot),
+         "compatibility matrix restores its valid isolated disk fixture");
   UBlockWorld cold;
   cold.SetLightingConfigurationIdentity(1);
   cold.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return false; });
