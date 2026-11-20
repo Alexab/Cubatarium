@@ -91,16 +91,13 @@ struct ChunkMeshSnapshot
   using NeighborVisualDrawableFn = bool (*)(void *ctx,
                                             glm::ivec3 neighbor_chunk);
 
-  /// True when an ABSENT face neighbor chunk is known open air, so its shared
-  /// boundary faces must be emitted instead of being hidden as Unknown:
-  ///  - below the configured world floor;
-  ///  - a slice above the world ceiling or one with authoritative open-sky
-  ///    absence evidence from the owning world. A lower resident slice alone
-  ///    does not prove this: upper slices may still be waiting on disk/IO.
-  /// Changing absence evidence invalidates the mesh even without loading a
-  /// chunk. Neighbor drawability never participates in that identity.
+  /// Legacy skylight fallback proof. Loaded internal AIR geometry alone must
+  /// not enable this predicate or introduce sky15 inside a roofed cavity.
   static bool IsAbsentOpenSkyChunk(const UBlockWorld &world,
                                    glm::ivec3 chunk_coord);
+  /// Geometry proof matching world stamp validation: loaded empty terrain
+  /// (including present AIR files), world exterior or owned absence evidence.
+  /// Unknown remains unknown; neighbor drawability does not grant evidence.
   static bool IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
                                            glm::ivec3 neighbor_coord, int axis,
                                            int sign);

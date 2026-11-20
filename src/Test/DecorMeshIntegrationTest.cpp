@@ -21,8 +21,10 @@
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshCaptureToken.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
+#include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
+#include "World/IO/BinaryChunkSerializer.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 
@@ -1033,6 +1035,80 @@ TestNoSurfaceGeometryProof(cutum::UBlockRegistry &registry,
   world.SetFluidState(interior,
                       FluidCellState::Source().WithKind(FluidKind::Water));
   Expect(!classify(), "fluid rejects a previously certified AIR-only section");
+}
+
+static void TestDenseAirMeshCapture(cutum::UBlockRegistry &registry)
+{
+  using namespace cutum;
+  for (const auto root : {glm::ivec3(1, -4, 3), glm::ivec3(1, 1, 3)})
+    for (int axis = 0; axis < 3; ++axis)
+      for (int sign : {-1, 1})
+      {
+        glm::ivec3 offset(0);
+        offset[axis] = sign;
+        const auto air_coord = root + offset;
+        if (air_coord.y < -4)
+          continue;
+        UBlockWorld world;
+        auto profile = world.GetVerticalProfile();
+        profile.MinY = -64;
+        profile.MaxY = 319;
+        world.SetVerticalProfile(profile);
+        world.SetBlock(root * CHUNK_SIZE + glm::ivec3(8, 15, 8), kStone);
+        UChunk legacy(air_coord);
+        std::array<uint8_t, CHUNK_VOLUME> light;
+        light.fill(0x53);
+        legacy.ReplaceLightData(light);
+        legacy.SetWeatherState(.5f, 123.125);
+        UBinaryChunkSerializer serializer;
+        const auto bytes = serializer.Serialize(air_coord, legacy, registry);
+        const auto decoded =
+            serializer.Deserialize(bytes.bytes, air_coord, registry);
+        const auto air = decoded.GetDecodedAirSlice(air_coord);
+        auto &manager = world.GetChunkManager();
+        const ChunkGenerationToken token{{air_coord.x, 0, air_coord.z}, 0};
+        Expect(air && manager.InstallLoadedAirSlice(*air, token, 0, false) &&
+                   !manager.HasChunk(air_coord) &&
+                   world.IsKnownAbsentAirChunk(air_coord),
+               "dense decoded AIR fixture has explicit empty geometry without "
+               "a holder");
+        Expect(!ChunkMeshSnapshot::IsAbsentOpenSkyChunk(world, air_coord),
+               "loaded internal AIR does not imply open sky illumination");
+        const auto snapshot = ChunkMeshSnapshot::Capture(
+            world, root, 7, nullptr, nullptr, MeshLightInputs::PhysicalField);
+        Expect(snapshot.inputStampsValid && snapshot.InputsStillValid(world),
+               "new geometry capture with dense loaded AIR must be immediately "
+               "current");
+        const unsigned face = axis * 2 + (sign > 0 ? 1 : 0);
+        Expect((snapshot.boundaryOverlay.missingNeighborFaces & (1u << face)) ==
+                   0,
+               "explicit loaded AIR is not unknown shell debt");
+        UMeshCaptureStore store;
+        store.SetLightInputsPolicy(MeshLightInputs::PhysicalField);
+        Expect(store.CaptureAndStore(world, root, 7) &&
+                   store.TryGet(world, root, 7) && store.TryGet(world, root, 7),
+               "dense AIR geometry capture survives real commit and repeated "
+               "cache lookup");
+        const auto baked = ChunkMeshSnapshot::Capture(world, root, 7);
+        const unsigned light_offset =
+            (offset.y + 1) * 9 + (offset.z + 1) * 3 + offset.x + 1;
+        Expect((baked.openSkyAbsentMask & (1u << light_offset)) == 0,
+               "geometry AIR proof must not enable legacy sky15 fallback");
+        manager.RemoveChunk(air_coord);
+        Expect(!snapshot.InputsStillValid(world) &&
+                   !store.TryGet(world, root, 7),
+               "AIR retirement invalidates captured known-empty dependencies");
+        manager.EnsureSectionLightField(air_coord);
+        Expect(!ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(
+                   world, air_coord, axis, sign),
+               "field allocation alone cannot certify mesh AIR boundary");
+        const auto unknown = ChunkMeshSnapshot::Capture(
+            world, root, 7, nullptr, nullptr, MeshLightInputs::PhysicalField);
+        Expect(unknown.InputsStillValid(world) &&
+                   (unknown.boundaryOverlay.missingNeighborFaces &
+                    (1u << face)) != 0,
+               "unknown shell remains explicitly unknown and self-consistent");
+      }
 }
 
 static void
@@ -6780,6 +6856,7 @@ int main(int argc, char **argv)
   TestOverflowRetryWithNoDirtyAdmission(registry);
   TestNoSurfaceGeometryProof(registry, definitions.get());
   TestSecondPlaneGeometryParity(registry, definitions.get());
+  TestDenseAirMeshCapture(registry);
   TestPhysicalCaptureOwnership(registry, definitions.get());
   TestMeshResultCaptureOwnership(registry, definitions.get());
   TestUnknownGeometryDefersPhysicalBuild(registry, definitions.get());

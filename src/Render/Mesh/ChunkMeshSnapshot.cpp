@@ -221,8 +221,11 @@ bool ChunkMeshSnapshot::IsKnownAirAbsentFaceNeighbor(const UBlockWorld &world,
   }
   (void)axis;
   (void)sign;
-  return neighbor_coord.y < world.GetVerticalProfile().MinChunkY(CHUNK_SIZE) ||
-         IsAbsentOpenSkyChunk(world, neighbor_coord);
+  // Geometry may know an internal AIR slice through a successful dense load.
+  // Its file is present, so disk/open-sky absence cannot represent that fact.
+  // Use the same evidence as stamp validation; do not change the separate
+  // skylight predicate above or turn roofed empty space into sky15.
+  return world.IsKnownAbsentAirChunk(neighbor_coord);
 }
 
 bool ChunkMeshSnapshot::MeshInputStampMatchesWorld(const ChunkInputStamp &stamp,
