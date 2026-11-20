@@ -8,6 +8,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/DiskAirCancellationProbe.h"
+#include "World/IO/DiskReadFailureProbe.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
@@ -498,6 +499,22 @@ static void TestAirTerrainIo(const std::filesystem::path &folder)
   auto loads = io.DrainLoads();
   Expect(loads.size() == 1 && loads[0].success && loads[0].decodedBuffer,
          "dense worker returns a decoded AIR payload");
+  io.RequestLoad(air_coord, storage, registry, folder.string(), token,
+                 cancellation, 70, false, true);
+  Expect(io.WaitIdleFor(std::chrono::seconds(5)),
+         "injected actual read worker completes");
+  auto invalid_loads = io.DrainLoads();
+  UBlockWorld invalid_world;
+  Expect(
+      invalid_loads.size() == 1 && invalid_loads[0].success &&
+          invalid_loads[0].injectedInvalidFrame &&
+          invalid_loads[0].decodedBuffer &&
+          !invalid_loads[0].decodedBuffer->HasDecodedTerrainFrame(air_coord) &&
+          !ApplyTerrainSliceLoad(invalid_world, air_coord,
+                                 invalid_loads[0].decodedBuffer.get(), nullptr,
+                                 token, 12, false) &&
+          invalid_world.GetChunkManager().GetResidentTerrainColumnCount() == 0,
+      "real codec rejects corrupted read buffer without publishing data");
   UBlockWorld async_world;
   UChunkBuffer failed_decode;
   failed_decode.SetChunkLightData(air_coord, pattern);
@@ -1124,6 +1141,24 @@ static void TestLoadedAirSlice()
 
 int main()
 {
+  {
+    cutum::DiskReadFailureProbe disabled;
+    Expect(!disabled.Enabled() && !disabled.InjectFor({1, 19, 5}) &&
+               !disabled.CheckSaveOnce(),
+           "read probe defaults off");
+    cutum::DiskReadFailureProbe probe(glm::ivec2(1, 5));
+    probe.ObserveFocus({1, 0, 3});
+    Expect(!probe.InjectFor({1, 19, 5}), "startup cannot inject read failures");
+    probe.ObserveFocus({-15, 0, 3});
+    Expect(!probe.InjectFor({2, 19, 5}) && !probe.InjectFor({1, 18, 5}),
+           "wrong frame cannot consume read probe budget");
+    for (int n = 0; n < 5; ++n)
+      Expect(probe.InjectFor({1, 19, 5}),
+             "five real returning requests may inject");
+    Expect(!probe.InjectFor({1, 19, 5}) && probe.CheckSaveOnce() &&
+               !probe.CheckSaveOnce(),
+           "injection budget closes and save check is one-shot");
+  }
   {
     using cutum::DiskAirCancellationProbe;
     Expect(!DiskAirCancellationProbe{}.Enabled(),

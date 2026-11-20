@@ -41,6 +41,7 @@ struct AsyncChunkLoadResult
   std::shared_ptr<const PersistedColumnLight> columnLight;
   ChunkDiskFormat format{ChunkDiskFormat::Absent};
   bool success{false};
+  bool injectedInvalidFrame{false};
   std::chrono::steady_clock::time_point submittedAt{};
   std::chrono::steady_clock::time_point workerStartedAt{};
   std::chrono::steady_clock::time_point workerFinishedAt{};
@@ -122,7 +123,8 @@ public:
                    UBlockRegistry &registry, const std::string &worldFolder,
                    ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation,
-                   uint64_t demandId, bool includeColumnLight = false);
+                   uint64_t demandId, bool includeColumnLight = false,
+                   bool injectInvalidFrame = false);
   void RequestSaveColumnLight(
       glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
       UChunkStorageService &storage, const std::string &worldFolder);

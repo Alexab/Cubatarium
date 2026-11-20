@@ -1983,8 +1983,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         {
           const glm::ivec3 coord(column->x, cy, column->y);
           if (const auto *chunk = manager.GetChunk(coord))
+          {
             TraceChunkResidency(phase, coord, {column->x, 0, column->y},
                                 chunk->GetIncarnation(), &manager);
+            if (column == secondary && manager.HasDecodedTerrainSlice(coord))
+              TraceChunkResidency(std::string_view(phase) == "runtime_initial"
+                                      ? "runtime_decoded_initial"
+                                      : "runtime_decoded_final",
+                                  coord, {column->x, 0, column->y},
+                                  chunk->GetIncarnation(), &manager);
+          }
           else if (manager.HasLoadedAirSlice(coord))
             if (const auto field = manager.GetSectionLightField(coord))
             {

@@ -230,7 +230,8 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 const std::string &worldFolder,
                                 ChunkGenerationToken token,
                                 std::shared_ptr<std::atomic<bool>> cancellation,
-                                uint64_t demandId, bool includeColumnLight)
+                                uint64_t demandId, bool includeColumnLight,
+                                bool injectInvalidFrame)
 {
   const auto is_cancelled = [&]()
   {
@@ -275,7 +276,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   LoadPool.Enqueue(
       [this, coord, filePath, token, format, submitted_at, format_detect_ms,
        trace_io, cancellation, demandId, &registry, worker_storage_settings,
-       includeColumnLight, worldFolder]()
+       includeColumnLight, worldFolder, injectInvalidFrame]()
       {
         const auto is_cancelled = [&]()
         {
@@ -359,6 +360,13 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
         result.success = !result.payload.empty();
         if (result.success)
         {
+          // Diagnostic only: the saved file is never modified. Corrupt the
+          // actual read buffer so the normal codec/commit path must reject it.
+          if (injectInvalidFrame)
+          {
+            result.payload.push_back(format == ChunkDiskFormat::Json ? 'x' : 0);
+            result.injectedInvalidFrame = true;
+          }
           const auto deserialize_started = std::chrono::steady_clock::now();
           try
           {

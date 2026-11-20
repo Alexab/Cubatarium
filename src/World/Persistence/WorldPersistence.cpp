@@ -229,6 +229,8 @@ UWorldPersistence::UWorldPersistence(UWorld *world_context)
   AirCancellationProbe =
       DiskAirCancellationProbe(DiskAirCancellationProbe::Parse(
           std::getenv("CUBA_DISK_AIR_CANCEL_PROBE")));
+  ReadFailureProbe = DiskReadFailureProbe(DiskAirCancellationProbe::Parse(
+      std::getenv("CUBA_DISK_READ_FAILURE_PROBE")));
   if (IsEnvironmentFlagEnabled("CUBA_SURFACE_LIGHT_DIAGNOSTICS"))
     ChunkStorage->ObserveLightCapture =
         [](glm::ivec3 column, const ColumnLightCaptureStats &stats)
@@ -4420,7 +4422,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
       AsyncChunkIo->RequestLoad(
           glm::ivec3(ground_coord.x, cy, ground_coord.z), *ChunkStorage,
           *world.BlockRegistry, WorldFolderPath, token,
-          retry_state.cancellation, retry_state.demand_id);
+          retry_state.cancellation, retry_state.demand_id, false,
+          ReadFailureProbe.InjectFor({ground_coord.x, cy, ground_coord.z}));
     }
     return;
   }
@@ -4442,6 +4445,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           ground_coord);
       FailedColumnRetryAfter[ground_coord] =
           std::chrono::steady_clock::now() + std::chrono::seconds(1);
+      TraceChunkResidency("disk_read_exhausted", ground_coord, ground_coord,
+                          state.demand_id, &world.BlockWorld.GetChunkManager());
     }
     return;
   }
@@ -4455,6 +4460,9 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
     return;
   }
   FailedColumnRetryAfter.erase(ground_coord);
+  if (has_disk && ReadFailureProbe.Enabled())
+    TraceChunkResidency("disk_read_recovered", ground_coord, ground_coord,
+                        state.demand_id, &world.BlockWorld.GetChunkManager());
 
   if (has_disk && !state.had_disk_read_failure && !state.had_invalid_token)
     TraceChunkResidency("disk_column_complete", ground_coord, ground_coord,
@@ -4721,6 +4729,9 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     if (AirCancellationProbe.Enabled())
       AirCancellationProbe.ObserveFocus(
           UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock()));
+    if (ReadFailureProbe.Enabled())
+      ReadFailureProbe.ObserveFocus(
+          UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock()));
     const auto discard_started = std::chrono::steady_clock::now();
     metrics.cancelled_discard_n = AsyncChunkIo->DiscardCancelledLoads();
     metrics.discard_cancelled_ms =
@@ -4979,10 +4990,38 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       if (state.had_disk_read_failure || state.had_invalid_token)
         world.BlockWorld.GetChunkManager().MarkTerrainColumnReadUnresolved(
             ground);
+      if (load.injectedInvalidFrame && token_valid && load.success &&
+          load.decodedBuffer &&
+          !load.decodedBuffer->HasDecodedTerrainFrame(load.coord) &&
+          !chunk_input_changed)
+      {
+        TraceChunkResidency("disk_read_frame_rejected", load.coord, ground,
+                            state.demand_id,
+                            &world.BlockWorld.GetChunkManager());
+        if (ReadFailureProbe.CheckSaveOnce())
+          ObserveReadFailureSaveProbe(world, ground, state.demand_id);
+      }
       if (installed_air)
         TraceChunkResidency("disk_air_owned", load.coord, ground,
                             state.demand_id,
                             &world.BlockWorld.GetChunkManager());
+      if (chunk_input_changed && TraceChunkResidencyEnabled(load.coord))
+      {
+        auto &manager = world.BlockWorld.GetChunkManager();
+        TraceChunkResidency("disk_slice_read_valid", load.coord, ground,
+                            state.demand_id, &manager);
+        if (const auto *chunk = manager.GetChunk(load.coord))
+          TraceChunkResidency("disk_geometry_owner", load.coord, ground,
+                              chunk->GetIncarnation(), &manager);
+        else if (const auto field = manager.GetSectionLightField(load.coord))
+          TraceChunkResidency("disk_air_owner", load.coord, ground,
+                              field->GetIncarnation(), &manager);
+        if (ReadFailureEditCell &&
+            UChunkManager::WorldToChunk(*ReadFailureEditCell) == load.coord)
+          TraceChunkResidency("disk_read_edit_current", load.coord,
+                              *ReadFailureEditCell,
+                              manager.GetBlock(*ReadFailureEditCell), &manager);
+      }
       if (chunk_input_changed && world.MeshService)
       {
         // Disk slices are applied incrementally, before column finalization.
@@ -5513,10 +5552,138 @@ void UWorldPersistence::RequestAsyncTerrainColumnLoad(UWorld &world,
   const auto token = world.Streaming->GetChunkGenTokens().Current(ground_coord);
   for (int cy : cy_order)
   {
-    AsyncChunkIo->RequestLoad(glm::ivec3(ground_coord.x, cy, ground_coord.z),
-                              *ChunkStorage, *world.BlockRegistry,
-                              WorldFolderPath, token, state.cancellation,
-                              state.demand_id, cy == cy_order.front());
+    AsyncChunkIo->RequestLoad(
+        glm::ivec3(ground_coord.x, cy, ground_coord.z), *ChunkStorage,
+        *world.BlockRegistry, WorldFolderPath, token, state.cancellation,
+        state.demand_id, cy == cy_order.front(),
+        ReadFailureProbe.InjectFor({ground_coord.x, cy, ground_coord.z}));
+  }
+}
+
+void UWorldPersistence::ObserveReadFailureSaveProbe(UWorld &world,
+                                                    glm::ivec3 ground,
+                                                    uint64_t demand_id)
+{
+  auto &manager = world.BlockWorld.GetChunkManager();
+  const glm::ivec3 cell(ground.x * CHUNK_SIZE + 1, -4 * CHUNK_SIZE + 1,
+                        ground.z * CHUNK_SIZE + 1);
+  const auto coord = UChunkManager::WorldToChunk(cell);
+  const auto *chunk = manager.GetChunk(coord);
+  const auto stone = world.BlockRegistry->GetIdByTypeName("stone");
+  TraceChunkResidency("disk_read_edit_before", coord, cell,
+                      manager.GetBlock(cell), &manager);
+  if (chunk && manager.HasDecodedTerrainSlice(coord) && stone != BLOCK_AIR &&
+      manager.GetBlock(cell) == stone && world.ReplaceBlockAt(cell, "air"))
+  {
+    ReadFailureEditCell = cell;
+    TraceChunkResidency("disk_read_edit_after", coord, cell,
+                        manager.GetBlock(cell), &manager);
+    TraceChunkResidency("disk_read_edit_owner", coord, cell,
+                        chunk->GetIncarnation(), &manager);
+  }
+  else
+    TraceChunkResidency("disk_read_edit_failed", coord, cell, demand_id,
+                        &manager);
+
+  // Bounded diagnostic snapshots of the actual files around the real rejected
+  // save API call. Python verifies byte equality and decodes their payloads.
+  using Snapshot = std::unordered_map<std::string, std::vector<uint8_t>>;
+  const auto capture = [&]() -> std::optional<Snapshot>
+  {
+    Snapshot files;
+    size_t total = 0;
+    const auto add = [&](const std::string &relative)
+    {
+      const auto path = std::filesystem::path(WorldFolderPath) / relative;
+      std::error_code ec;
+      if (std::filesystem::is_symlink(path, ec) || ec)
+        return false;
+      const auto bytes = std::filesystem::file_size(path, ec);
+      if (ec || bytes > 16 * 1024 * 1024 || total + bytes > 16 * 1024 * 1024)
+        return false;
+      std::vector<uint8_t> data;
+      if (!ChunkStorage->ReadBytesFromFile(path.string(), data))
+        return false;
+      total += data.size();
+      files.emplace(relative, std::move(data));
+      return true;
+    };
+    std::error_code ec;
+    for (const auto &entry :
+         std::filesystem::directory_iterator(WorldFolderPath, ec))
+      if (entry.is_regular_file() &&
+          !add(entry.path().filename().generic_string()))
+        return {};
+    if (ec)
+      return {};
+    for (int cy = -4; cy <= 19; ++cy)
+    {
+      const glm::ivec3 slice(ground.x, cy, ground.z);
+      const auto format =
+          ChunkStorage->DetectFormatOnDisk(WorldFolderPath, slice);
+      if (format == ChunkDiskFormat::Absent)
+        return {};
+      const auto path =
+          ChunkStorage->ChunkFilePath(WorldFolderPath, slice, format);
+      const auto relative = std::filesystem::path(path)
+                                .lexically_relative(WorldFolderPath)
+                                .generic_string();
+      if (!add(relative))
+        return {};
+    }
+    return files;
+  };
+  const auto before = capture();
+  TraceChunkResidency("disk_read_dirty_before", ground, ground,
+                      world.ModifiedChunks.size(), &manager);
+  try
+  {
+    world.SaveSessionSnapshotMetadataOnly(WorldFolderPath);
+    TraceChunkResidency("disk_read_save_accepted", ground, ground, demand_id,
+                        &manager);
+  }
+  catch (const std::exception &error)
+  {
+    TraceChunkResidency(
+        std::string_view(error.what()).find("Cannot save unread terrain") == 0
+            ? "disk_read_save_rejected"
+            : "disk_read_save_unexpected_exception",
+        ground, ground, demand_id, &manager);
+  }
+  TraceChunkResidency("disk_read_dirty_after", ground, ground,
+                      world.ModifiedChunks.size(), &manager);
+  const auto after = capture();
+  if (!before || !after || *before != *after)
+    return;
+  if (const char *output = std::getenv("CUBA_DISK_READ_FAILURE_ARTIFACTS");
+      output && *output)
+  {
+    const auto root = std::filesystem::path(output);
+    json manifest = {{"schema", "disk-read-save-files.v1"},
+                     {"column", {ground.x, ground.z}},
+                     {"demand_id", demand_id},
+                     {"files", json::array()}};
+    for (const auto &[relative, data] : *before)
+    {
+      for (const char *phase : {"before", "after"})
+      {
+        const auto path = root / phase / relative;
+        std::filesystem::create_directories(path.parent_path());
+        const auto &payload =
+            std::string_view(phase) == "before" ? data : after->at(relative);
+        std::ofstream file(path, std::ios::binary);
+        file.write(reinterpret_cast<const char *>(payload.data()),
+                   payload.size());
+        if (!file.good())
+          return;
+      }
+      manifest["files"].push_back({{"path", relative}, {"bytes", data.size()}});
+    }
+    std::ofstream file(root / "manifest.json");
+    file << manifest.dump(2) << '\n';
+    if (file.good())
+      TraceChunkResidency("disk_read_files_snapshot", ground, ground,
+                          before->size(), &manager);
   }
 }
 

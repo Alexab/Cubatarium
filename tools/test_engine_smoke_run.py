@@ -13,6 +13,11 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_read_probe_requires_column_boolean_and_no_cancel_probe(self):
+        for options in (dict(probe_disk_read_failure=True),dict(probe_disk_read_failure=1),
+                        dict(probe_disk_read_failure=True,secondary_residency_column=(1,5),probe_partial_air_cancellation=True)):
+            with self.assertRaisesRegex(ValueError,"disk read probe"):
+                engine_smoke_run.run("Saved",Path("unused"),**options)
     def test_cancellation_probe_requires_explicit_column_and_boolean(self):
         for value in (True, 1, "1", None):
             with self.assertRaisesRegex(ValueError, "AIR cancellation probe"):
@@ -33,10 +38,16 @@ class IsolatedFixtureTest(unittest.TestCase):
         import os
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         fingerprint = world_fingerprint(self.world)
-        for index, (column, probe) in enumerate(((None, False), ((1, 5), False), ((1, 5), True))):
+        for index, (column, probe, read_probe) in enumerate(((None, False,False), ((1, 5), False,False), ((1, 5), True,False), ((1,5),False,True))):
             artifacts = self.artifacts / str(index)
             def fail_launch(*args, **kwargs):
                 env = kwargs["env"]
+                if read_probe:
+                    self.assertEqual(env["CUBA_DISK_READ_FAILURE_PROBE"],"1,5")
+                    self.assertEqual(Path(env["CUBA_DISK_READ_FAILURE_ARTIFACTS"]),(artifacts/"disk-read-save").resolve())
+                else:
+                    self.assertNotIn("CUBA_DISK_READ_FAILURE_PROBE",env)
+                    self.assertNotIn("CUBA_DISK_READ_FAILURE_ARTIFACTS",env)
                 if probe:
                     self.assertEqual(env["CUBA_DISK_AIR_CANCEL_PROBE"], "1,5")
                 else:
@@ -54,6 +65,8 @@ class IsolatedFixtureTest(unittest.TestCase):
             with patch.object(engine_smoke_run, "ROOT", self.root), \
                  patch.dict(os.environ, {"CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY": "99,99",
                                          "CUBA_DISK_AIR_CANCEL_PROBE": "99,99",
+                                         "CUBA_DISK_READ_FAILURE_PROBE": "99,99",
+                                         "CUBA_DISK_READ_FAILURE_ARTIFACTS": "foreign",
                                          "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": "foreign.log"}), \
                  patch("flight_sim_run.exe_writable", return_value=True), \
                  patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
@@ -61,7 +74,8 @@ class IsolatedFixtureTest(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "controlled secondary launch failure"):
                     engine_smoke_run.run("Saved", artifacts, round_trip=True,
                                          secondary_residency_column=column,
-                                         probe_partial_air_cancellation=probe)
+                                         probe_partial_air_cancellation=probe,
+                                         probe_disk_read_failure=read_probe)
             self.assertEqual(self.config.read_bytes(), self.original)
             self.assertEqual(world_fingerprint(self.world), fingerprint)
             self.assertFalse((self.runtime / ".engine-smoke.lock").exists())

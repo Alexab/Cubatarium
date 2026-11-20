@@ -6,6 +6,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
 #include "World/IO/DiskAirCancellationProbe.h"
+#include "World/IO/DiskReadFailureProbe.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
 #include <atomic>
@@ -247,6 +248,10 @@ public:
 
 private:
   DiskAirCancellationProbe AirCancellationProbe;
+  DiskReadFailureProbe ReadFailureProbe;
+  std::optional<glm::ivec3> ReadFailureEditCell;
+  void ObserveReadFailureSaveProbe(UWorld &world, glm::ivec3 ground,
+                                   uint64_t demand_id);
   void TraceDeniedRelightAdmission(glm::ivec2 ground_xz, int min_y, int max_y,
                                    UWorld *world_context, const char *producer,
                                    int fifo_n, int horiz, glm::ivec2 key,

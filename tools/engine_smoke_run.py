@@ -354,7 +354,11 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         world_actions: dict | None = None, observe_bound_light: bool = False,
         source_observation_scene: dict | None = None, unpacked_meshing: bool = False,
         secondary_residency_column: tuple[int, int] | None = None,
-        probe_partial_air_cancellation: bool = False) -> dict:
+        probe_partial_air_cancellation: bool = False,
+        probe_disk_read_failure: bool = False) -> dict:
+    if type(probe_disk_read_failure) is not bool or (probe_disk_read_failure and (
+            secondary_residency_column is None or probe_partial_air_cancellation)):
+        raise ValueError("disk read probe requires a secondary column and excludes cancellation probe")
     if type(probe_partial_air_cancellation) is not bool or (
             probe_partial_air_cancellation and secondary_residency_column is None):
         raise ValueError("AIR cancellation probe requires an explicit secondary residency column")
@@ -441,6 +445,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         env.pop("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY", None)
         env.pop("CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE", None)
         env.pop("CUBA_DISK_AIR_CANCEL_PROBE", None)
+        env.pop("CUBA_DISK_READ_FAILURE_PROBE", None)
+        env.pop("CUBA_DISK_READ_FAILURE_ARTIFACTS", None)
         # Historical QA hooks can reposition cameras or modify worlds. Do not
         # inherit those switches into a correctness scenario.
         for key in list(env):
@@ -467,6 +473,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                         "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": str((artifacts / "secondary-column-residency.log").resolve())})
         if probe_partial_air_cancellation:
             env["CUBA_DISK_AIR_CANCEL_PROBE"] = ",".join(map(str, secondary_residency_column))
+        if probe_disk_read_failure:
+            env["CUBA_DISK_READ_FAILURE_PROBE"] = ",".join(map(str, secondary_residency_column))
+            env["CUBA_DISK_READ_FAILURE_ARTIFACTS"] = str((artifacts / "disk-read-save").resolve())
         if observe_bound_light or (scene and scene.get("rgb_fixture")):
             env["CUBA_RGB_REFERENCE"] = "1"
         if scene and scene.get("name") == "open-sky-plane" and not startup_only:
@@ -564,6 +573,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
                  "secondary_residency_column": secondary_residency_column,
                  "probe_partial_air_cancellation": probe_partial_air_cancellation,
+                 "probe_disk_read_failure": probe_disk_read_failure,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -769,6 +779,8 @@ def main() -> int:
                         help="observe a second column in a separate bounded trace; grants no acceptance")
     parser.add_argument("--probe-partial-air-cancellation", action="store_true",
                         help="one-shot real returning disk-demand cancellation/reissue for the secondary column; requires actual evidence")
+    parser.add_argument("--probe-disk-read-failure", action="store_true",
+                        help="corrupt five returning upper-frame read buffers then recover; controlled local edit and save rejection exercise")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -815,6 +827,7 @@ def main() -> int:
                   round_trip=args.round_trip,
                   secondary_residency_column=args.secondary_residency_column,
                   probe_partial_air_cancellation=args.probe_partial_air_cancellation,
+                  probe_disk_read_failure=args.probe_disk_read_failure,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)
