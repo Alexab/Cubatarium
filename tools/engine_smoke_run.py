@@ -343,6 +343,16 @@ def startup_observation_evidence(trace: Path) -> dict:
             "samples": samples, "maximum_drift_blocks": maximum_drift}
 
 
+def require_read_failure_probe_slice(fixture: Path, column) -> None:
+    # Native DiskReadFailureProbe injects only cy=19. An absent disk frame
+    # cannot exercise decode failure, even when the motor route succeeds.
+    x, z = column
+    chunks = fixture / "chunks"
+    if not any((chunks / f"{x}_19_{z}{suffix}").is_file()
+               for suffix in (".cchunk", ".json")):
+        raise ValueError("disk read probe requires a persisted cy=19 target slice")
+
+
 def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         stop_seconds: float = 20, idle_seconds: float = 5,
         yaw: float = 180, pitch: float = -25,
@@ -356,6 +366,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         secondary_residency_column: tuple[int, int] | None = None,
         probe_partial_air_cancellation: bool = False,
         probe_disk_read_failure: bool = False,
+        prepare_read_failure_air: bool = False,
         probe_terrain_save_failure: bool = False) -> dict:
     if type(probe_terrain_save_failure) is not bool or (probe_terrain_save_failure and not startup_only):
         raise ValueError("terrain save probe requires an explicit startup-only scenario")
@@ -399,6 +410,41 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
     if not flight_sim_run.exe_writable(0.5):
         raise RuntimeError("Release executable is in use; the running session was left intact")
     with isolated_fixture(runtime, world, artifacts) as (fixture, source_hash):
+        if prepare_read_failure_air:
+            if not probe_disk_read_failure:
+                raise ValueError("upper AIR preparation requires disk read probe")
+            x, z = secondary_residency_column
+            metadata = json.loads((fixture / "world_data.json").read_text(encoding="utf-8"))
+            if metadata.get("procedural", {}).get("max_height", 0) < 319:
+                raise ValueError("upper AIR preparation requires Y=319 in world profile")
+            target = fixture / "chunks" / f"{x}_19_{z}.json"
+            base = target.parent / f"{x}_-4_{z}.json"
+            if not (base.is_file() or base.with_suffix(".cchunk").is_file()):
+                raise ValueError("AIR column preparation requires retained cy=-4 geometry")
+            if target.parent.is_symlink() or target.is_symlink() or target.with_suffix(".cchunk").is_symlink():
+                raise ValueError("upper AIR preparation refuses symlinks")
+            if target.exists() or target.with_suffix(".cchunk").exists():
+                raise ValueError("upper AIR preparation refuses existing slice")
+            replacements = []
+            import hashlib
+            for cy in range(-3, 20):
+                frame = fixture / "chunks" / f"{x}_{cy}_{z}.json"
+                binary = frame.with_suffix(".cchunk")
+                if frame.is_symlink() or binary.is_symlink():
+                    raise ValueError("AIR column preparation refuses symlinks")
+                previous = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+                            for p in (frame, binary) if p.is_file()}
+                binary.unlink(missing_ok=True)
+                frame.write_text(json.dumps(dict(format_version=4, cx=x,
+                    cy=cy, cz=z, voxels=[])), encoding="utf-8")
+                replacements.append(dict(coord=[x, cy, z], previous=previous,
+                    sha256=hashlib.sha256(frame.read_bytes()).hexdigest()))
+            (artifacts / "read-failure-fixture.json").write_text(json.dumps({
+                "scope": "explicit isolated AIR column above retained cy=-4 geometry",
+                "replacements": replacements,
+                "coord": [x, 19, z], "source_unchanged": True}) + "\n", encoding="utf-8")
+        if probe_disk_read_failure:
+            require_read_failure_probe_slice(fixture, secondary_residency_column)
         if render_distance is not None:
             config_path = runtime / "config.json"
             config_path.write_bytes(render_distance_payload(config_path.read_bytes(), render_distance))
@@ -616,6 +662,16 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             statuses = [part["status"] for part in verdict["components"].values()]
             verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
             verdict["scope"] = "motor out-and-back data lifecycle and sampled references; no general visual/light/performance acceptance"
+        if probe_disk_read_failure:
+            from engine_disk_read_failure_evidence import evaluate as evaluate_read_failure
+            fault = evaluate_read_failure(artifacts, report, bot_route,
+                                          column=secondary_residency_column,
+                                          worlds_root=runtime / "worlds")
+            (artifacts / "disk-read-failure-evidence.json").write_text(
+                json.dumps(fault, indent=2) + "\n", encoding="utf-8")
+            verdict["components"]["disk_read_failure"] = fault
+            statuses = [part["status"] for part in verdict["components"].values()]
+            verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
         if startup_only:
             from engine_smoke_verdict import startup_only_verdict
             verdict = startup_only_verdict(
@@ -787,6 +843,8 @@ def main() -> int:
                         help="one-shot real returning disk-demand cancellation/reissue for the secondary column; requires actual evidence")
     parser.add_argument("--probe-disk-read-failure", action="store_true",
                         help="corrupt five returning upper-frame read buffers then recover; controlled local edit and save rejection exercise")
+    parser.add_argument("--prepare-read-failure-air", action="store_true",
+                        help="explicitly replace cy=-3..19 with AIR in isolated probe column; retain cy=-4")
     parser.add_argument("--probe-terrain-save-failure", action="store_true",
                         help="startup-only isolated UWorld save failure/retry API probe")
     parser.add_argument("--startup-only", action="store_true",
@@ -836,6 +894,7 @@ def main() -> int:
                   secondary_residency_column=args.secondary_residency_column,
                   probe_partial_air_cancellation=args.probe_partial_air_cancellation,
                   probe_disk_read_failure=args.probe_disk_read_failure,
+                  prepare_read_failure_air=args.prepare_read_failure_air,
                   probe_terrain_save_failure=args.probe_terrain_save_failure,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,

@@ -13,6 +13,50 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_explicit_upper_air_preparation_is_isolated(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable")
+        (self.world / "chunks/1_-4_3.cchunk").write_bytes(b"retained base")
+        (self.world / "chunks/1_2_3.cchunk").write_bytes(b"replaced geometry")
+        (self.world / "world_data.json").write_text(
+            json.dumps({"procedural": {"max_height": 319}}))
+        fingerprint = world_fingerprint(self.world)
+        artifacts = self.artifacts / "prepared-air"
+        def inspect_launch(*args, **kwargs):
+            worlds = list((self.runtime / "worlds").glob("EngineSmoke_*"))
+            self.assertEqual(len(worlds), 1)
+            frame = json.loads((worlds[0] / "chunks/1_19_3.json").read_text())
+            self.assertEqual(frame, dict(format_version=4, cx=1, cy=19,
+                                         cz=3, voxels=[]))
+            self.assertEqual((worlds[0] / "chunks/1_-4_3.cchunk").read_bytes(),
+                             b"retained base")
+            for cy in range(-3, 20):
+                self.assertEqual(json.loads((worlds[0] / f"chunks/1_{cy}_3.json").read_text())["voxels"], [])
+                self.assertFalse((worlds[0] / f"chunks/1_{cy}_3.cchunk").exists())
+            self.assertTrue((artifacts / "read-failure-fixture.json").is_file())
+            raise RuntimeError("controlled prepared launch")
+        with patch.object(engine_smoke_run, "ROOT", self.root), \
+             patch("flight_sim_run.exe_writable", return_value=True), \
+             patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+             patch.object(engine_smoke_run.subprocess, "Popen", side_effect=inspect_launch):
+            with self.assertRaisesRegex(RuntimeError, "controlled prepared launch"):
+                engine_smoke_run.run("Saved", artifacts, round_trip=True,
+                    secondary_residency_column=(1, 3),
+                    probe_disk_read_failure=True, prepare_read_failure_air=True)
+        self.assertEqual(world_fingerprint(self.world), fingerprint)
+        self.assertEqual(self.config.read_bytes(), self.original)
+        self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
+
+    def test_read_failure_probe_requires_actual_upper_slice(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory)
+            chunks = fixture / "chunks"
+            chunks.mkdir()
+            (chunks / "1_4_3.cchunk").write_bytes(b"lower frame")
+            with self.assertRaisesRegex(ValueError, "persisted cy=19"):
+                engine_smoke_run.require_read_failure_probe_slice(fixture, (1, 3))
+            (chunks / "1_19_3.cchunk").write_bytes(b"upper frame")
+            engine_smoke_run.require_read_failure_probe_slice(fixture, (1, 3))
+
     def test_save_probe_requires_explicit_startup_and_boolean(self):
         for options in (dict(probe_terrain_save_failure=True),
                         dict(probe_terrain_save_failure=1, startup_only=True)):
@@ -69,6 +113,7 @@ class IsolatedFixtureTest(unittest.TestCase):
     def test_secondary_trace_reaches_child_and_failure_preserves_source(self):
         import os
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        (self.world / "chunks" / "1_19_5.cchunk").write_bytes(b"upper probe frame")
         fingerprint = world_fingerprint(self.world)
         for index, (column, probe, read_probe) in enumerate(((None, False,False), ((1, 5), False,False), ((1, 5), True,False), ((1,5),False,True))):
             artifacts = self.artifacts / str(index)

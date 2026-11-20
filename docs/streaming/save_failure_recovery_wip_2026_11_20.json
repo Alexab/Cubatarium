@@ -204,13 +204,17 @@
     "remaining": "Independent visual/light/performance and full S0..S6 acceptance remain open"
   },
   "read_failure_followup": {
-    "status": "RUNNING",
-    "artifacts": "build/desktop-msvc/physical-current-read-failure-rd4-20261120-native",
+    "status": "IN_PROGRESS",
+    "unprepared_run": "UNTESTED: no cy19 input; successful route grants no fault acceptance",
+    "upper_only_run": "UNTESTED: primary_return_not_proven; fault and primary column overlapped",
+    "current_artifacts": "build/desktop-msvc/physical-current-read-failure-full-rd4-20261120-native",
     "target_column": [
       1,
-      3
+      5
     ],
-    "fault": "Five returning Y-section19 decode buffers after >=16 chunk excursion",
-    "scope_limit": "No original save corruption; final rejection/recovery/hash evidence pending"
+    "fixture": "dry-rgb-air-border plus explicit isolated secondary AIR frames cy=-3..19",
+    "harness_changes": "Require upper input; manifest and hash explicit AIR preparation; include mandatory fault evaluator in verdict",
+    "tests": "33 isolation/preparation tests PASS; 10 fault-evidence tests PASS",
+    "scope_limit": "No acceptance until current native traces, snapshots and cold-save proof pass"
   }
 }
