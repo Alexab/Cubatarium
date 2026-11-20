@@ -175,14 +175,11 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   {
     meshing = true;
   }
-  if (emerge == ColumnEmergeState::Lighting)
-  {
-    pending_light = true;
-  }
-
+  // Missing queue metadata does not settle a section's calculation debt.
+  // Coarse column labels are scheduling projections, not light certificates.
+  const bool lit_ready = world.IsColumnLitReady(ground);
+  pending_light = pending_light || !lit_ready;
   const bool render_ready = world.IsColumnRenderReady(ground);
-  const bool lit_ready =
-      !pending_light && !render_ready && has_chunk && !meshing && !gpu_pending;
 
   ColumnWorldTruth truth{};
   truth.has_chunk = has_chunk;

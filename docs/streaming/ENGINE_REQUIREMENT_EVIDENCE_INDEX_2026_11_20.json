@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.01.executor-light-debt",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h2-receipt-20261120.json",
+      "receipt_sha256": "c91bdfb3197166c76eecb164220581bec19432ccaa2a8da87b3b27bcd8ec3815",
+      "scope": "Actual executor stale certificate debt FAIL Gen -> PASS PendingLight; calculation clears debt. Native 20/20, scheduler/coordinator 2/2; source/config retained. Publication callback and strict completion remain OPEN."
+    },
+    {
       "id": "S4.01.column-light-aggregate",
       "status": "PARTIAL_OPEN",
       "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",

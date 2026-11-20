@@ -19,6 +19,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/ColumnFlowExecutor.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include <filesystem>
 #include <fstream>
@@ -124,8 +125,21 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(!world.HasCurrentColumnLightCoverage({0,0},-48,-33) &&
                   !world.HasCurrentChunkSliceLightSettlement(coord) && !world.IsColumnLitReady({0,0,0}),
               "coarse column cannot certify geometry-invalidated section");
+      UColumnFlowExecutor section_executor;
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      report["section_owner_job_stage_checkpoint"]={
+          {"stage",ColumnJobStageName(section_executor.GetColumnJobStage({0,0}))},
+          {"pending_light",world.GetColumnRecords().GetOrCreate({0,0}).pending_light},
+          {"physical",world.HasCurrentColumnLightCoverage({0,0},-48,-33)}};
+      require(world.GetColumnRecords().GetOrCreate({0,0}).pending_light &&
+                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::PendingLight,
+              "executor retains uncertified section light debt without queue metadata");
       settle();
       require(world.IsColumnLitReady({0,0,0}),"section owner recompute restores aggregate");
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      require(!world.GetColumnRecords().GetOrCreate({0,0}).pending_light &&
+                  section_executor.GetColumnJobStage({0,0})!=ColumnJobStage::PendingLight,
+              "executor clears physical light debt after current calculation");
       const auto previous_incarnation=world.BlockWorld.GetChunkManager().GetChunk(coord)->GetIncarnation();
       world.BlockWorld.GetChunkManager().RemoveChunk(coord);
       populate(); world.BlockWorld.SetBlock({2,-40,2},8);
@@ -154,7 +168,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               "current band is not requeued because a different slice is unfinished");
       report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
           {"stale_geometry_rejected",true},{"replacement_rejected",true},
-          {"recompute_recovers",true},{"repeat_idempotent",true},{"band_local_noop",true}});
+          {"recompute_recovers",true},{"repeat_idempotent",true},{"band_local_noop",true},
+          {"executor_retains_physical_debt",true},{"executor_settle_clears_debt",true}});
     }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {
