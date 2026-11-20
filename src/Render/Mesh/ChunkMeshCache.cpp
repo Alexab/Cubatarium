@@ -616,6 +616,8 @@ void UChunkMeshCache::MarkAllDirty()
   Dirty.Clear();
   Cache.clear();
   GreedyCache.clear();
+  ReconcileKeys.clear();
+  ReconcileCursor = 0;
   GreedyVertexCountByChunk.clear();
   GreedyVertexCountTotal = 0;
   FluidSurfaceCache.clear();
@@ -3607,7 +3609,7 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
                                                    int max_checks)
 {
   ++ReconcileFrame;
-  if (max_checks <= 0 || GreedyCache.empty())
+  if (max_checks <= 0)
   {
     return;
   }

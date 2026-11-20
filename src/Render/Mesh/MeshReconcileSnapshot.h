@@ -9,11 +9,13 @@ namespace cutum
 
 /// Keep a stable key snapshot for each bounded pass. Refresh after a complete
 /// pass even if streaming replaced entries without changing the map's size.
+/// Live growth/shrink also waits for the tail; retired keys are skipped by the
+/// consumer. An empty cache retires the snapshot immediately.
 template <typename MeshMap>
 bool RefreshMeshReconcileSnapshot(const MeshMap &meshes,
                                   std::vector<glm::ivec3> &keys, size_t &cursor)
 {
-  if (keys.size() == meshes.size() && cursor < keys.size())
+  if (!meshes.empty() && cursor < keys.size())
     return false;
   keys.clear();
   keys.reserve(meshes.size());

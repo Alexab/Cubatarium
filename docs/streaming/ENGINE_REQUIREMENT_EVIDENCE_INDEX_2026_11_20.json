@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.02",
+  "current_package": "S2.03",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -622,6 +622,72 @@
         "cause": "The agent selected unsupported persisted MinY=-128. ResolveProceduralDefaults intentionally normalizes noncompact MinHeight to -64..0 and MaxHeight to <=319; runtime correctly loaded -64 and recovered the invalid saved pose. This was a fixture assumption error, not evidence that arbitrary persisted ranges were supported.",
         "action": "Corrected to supported nondefault -48..255; no production generator range expansion."
       }
+    },
+    {
+      "id": "S2.02",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src\\Core\\Jobs\\JobThreadPool.h",
+          "sha256": "b14b347bad99b2df21056f6bd35542ed91fe4e28e2653fb29b5f7d3de466f7e5"
+        },
+        {
+          "path": "src\\Test\\CompletedJobQueueTest.cpp",
+          "sha256": "e50bde4918c97cd539d9c395af4111f8a66e13403297dd5a2885d4c3edfcfbc4"
+        },
+        {
+          "path": "src\\Render\\Mesh\\MeshReconcileSnapshot.h",
+          "sha256": "3ccba2bb882f6012e2cb4fd424ec610093cfcfb4e7825cc33a40b1e7aada8f35"
+        },
+        {
+          "path": "src\\Test\\MeshReconcileSnapshotTest.cpp",
+          "sha256": "5e6e64bc0bc3f746d113a81a12cdc1971552c4cf898e416ba34b287709d93a3f"
+        },
+        {
+          "path": "src\\Render\\Mesh\\ChunkMeshCache.cpp",
+          "sha256": "aa219e8e02b7c16dfda3f431c97becd08a0d9505547159fe696cfd1591aac638"
+        },
+        {
+          "path": "src\\World\\Core\\World.cpp",
+          "sha256": "c38c06ec84e88aaf520d467ab063e4a996acf72b3f2c5ac67a0c6dbf9ae6f75a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-tail-repro-test-20261120.log",
+          "sha256": "267e4c5c3f0e15fc0295cb7ee309ca2ee361ab5accb64177c18a1d74483b5d1a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-tail-fixed-test-20261120.log",
+          "sha256": "de520b77b0a62ea15f9ae83692f243ee5e85ac13763ed662d47a14fcd11ede03"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-reset-build-20261120.log",
+          "sha256": "37f1971546711ce8f93ce448e5ab5e31748ccd094e70ad33b6f6ee4732630143"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-reset-test-20261120.log",
+          "sha256": "038498d5e3e815128c1ffef58b1ea2ee4857d7bc1dd91077516b08a0c0b16fc3"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-reset-release-build-20261120.log",
+          "sha256": "583d2710d29c9f1d27bc8dab618f61ef8932fd4bfb5be20c87386727d948d850"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-cache-reset-release-provenance-20261120.json",
+          "sha256": "9bd1447a3ece96b131008e23ea8a803d1455449d3df3ca8e2d9fa8d403643eaa"
+        }
+      ],
+      "reproduced": "Cache growth restarted a partially consumed reconciliation pass; new Release regression failed on current code.",
+      "fixed": [
+        "Any nonempty live cache growth/shrink now preserves the current key snapshot until its tail completes. Arrivals join the next pass; removed keys are skipped by the existing lookup.",
+        "MarkAllDirty clears reconciliation keys/cursor, and positive-budget empty-cache reconciliation no longer bypasses snapshot retirement."
+      ],
+      "verified": [
+        "Existing population regression: 2500 events, first drain512 leaves1288, subsequent arrivals preserve FIFO across partial drains; no losses/duplicates/overflow. Runtime producer uses unbounded Push and consumer DrainUpTo512.",
+        "Same-size key replacement detected at the next completed pass; clear/repopulate and cache growth/shrink controls PASS.",
+        "One-check frame budget with continuous arrivals services every one of 32 original keys exactly in snapshot order; following pass contains all64 live keys.",
+        "Release queue/snapshot/decor integration tests PASS (3 tests); full prescribed Cubatarium Release build and source/EXE provenance PASS."
+      ],
+      "scope_limit": "Local lossless queue and bounded-pass fairness. No native/performance acceptance inferred from unit tests. Snapshot refresh still copies the whole cache at pass boundaries; S6.04 global maintenance-scan removal/budget proof remains open."
     }
   ],
   "completed_handoff": {
