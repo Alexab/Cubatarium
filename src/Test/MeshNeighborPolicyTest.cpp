@@ -181,13 +181,13 @@ int main()
     int max_y = 0;
     cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, /*publisher_cy=*/1,
                                            SeaSeamEyeContext::AirNearFluid,
-                                           min_y, max_y);
+                                           min_y, max_y, 0);
     if (min_y != 62 - 16)
     {
       return Fail("air-near-fluid Y range is surface (not publisher_cy)");
     }
   }
-  if (cutum::SeaSeamRemeshMinYSurface(62, 16) != 62 - 16)
+  if (cutum::SeaSeamRemeshMinYSurface(62, 16, 0) != 62 - 16)
   {
     return Fail("surface remesh min y");
   }
@@ -214,13 +214,13 @@ int main()
     int max_y = 0;
     const int publisher_cy = 1;
     cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, publisher_cy, true,
-                                           min_y, max_y);
+                                           min_y, max_y, 0);
     if (min_y != 16 || max_y != 31)
     {
       return Fail("underwater remesh Y = publisher_cy only");
     }
     const int per_col = cutum::SeaSeamRemeshChunksPerPeerColumn(
-        62, 16, 256, publisher_cy, true);
+        62, 16, 256, publisher_cy, true, 0);
     if (per_col != 1)
     {
       return Fail("underwater dirty chunks/column must be 1 (same cy)");
@@ -300,7 +300,7 @@ int main()
     int min_y = 0;
     int max_y = 0;
     cutum::SeaSeamRemeshYRangeForPublisher(62, 16, 256, sea_cy, false, min_y,
-                                           max_y);
+                                           max_y, 0);
     if (min_y != 62 - 16)
     {
       return Fail("inland surface min y KEEP");

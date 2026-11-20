@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S2.01",
+  "current_package": "S2.02",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -470,7 +470,7 @@
     },
     {
       "id": "S2.01",
-      "status": "OPEN",
+      "status": "COMPLETE",
       "evidence": [
         {
           "path": "src\\Test\\WorldVerticalProfileTest.cpp",
@@ -567,6 +567,34 @@
         {
           "path": "src\\WorldGen\\Core\\ProceduralConfigIO.cpp",
           "sha256": "ad35f7bdb64c4626cefc0a151f9cc69116c8b4a152b9525a7c82031c4fddc877"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-explicit-height-policy-build-20261120.log",
+          "sha256": "b36976730511e8ec2720dd10eec511d5d18db0bec287fad7d02c1d207c93d821"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-explicit-height-policy-test-20261120.log",
+          "sha256": "af6bedd0e296bfbc6408b98de7c8ec255df64c01ce9b02e5262628fa97bb4dbd"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-explicit-height-release-build-20261120.log",
+          "sha256": "a9f75a43c138692a3ab49d0b8137949639f9be590864b5414230a8c83b32f766"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-height-api-negative-control-20261120.json",
+          "sha256": "d537f229efea478576e15c41d559c5041d0481db7ab09374fe01d68efdecb073"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-omitted-height-negative-build-20261120.log",
+          "sha256": "b159d89a3403b956452ec3a16b5264e6a62c217b66fcfb1944d3265afb12ad9d"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-height-api-restored-build-20261120.log",
+          "sha256": "af7e024dc833f6d4b099ffd27bd3a6629bfca8827d53c640c68cbcf67ed54def"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-height-api-restored-test-20261120.log",
+          "sha256": "4e9f62e9d39b1f306614ef803a86314c5b36762f40c95571b24ff9d1a8b4a2d9"
         }
       ],
       "verified": [
@@ -580,12 +608,14 @@
         "Native supported Overworld profile -48..255: required-ring witness reports exact configured bounds, saved cave eye -41.88 retained, 157 pose samples remain negative, ordinary takeoff and 11-chunk route complete without relocation.",
         "24/24 receipt-bound views and 2270-tick controller replay PASS; config restored and original World_261 fingerprint explicitly rechecked unchanged.",
         "Custom-profile fixture isolation, range mismatch, wrong/relocated saved pose and out-of-band controls PASS.",
-        "Independent depth reference now recognizes the identical custom-profile cave geometry; supplemental re-evaluation of retained native trace PASS 7732 checks/0 faults. Original native overall UNTESTED preserved."
+        "Independent depth reference now recognizes the identical custom-profile cave geometry; supplemental re-evaluation of retained native trace PASS 7732 checks/0 faults. Original native overall UNTESTED preserved.",
+        "Removed implicit zero lower-bound defaults from persistence relight/load/save/remove APIs, mesh dig-seam repair, enter/capture/warmup, ocean lateral and sea-seam policies. Bounds now required at call sites.",
+        "Full prescribed Cubatarium Release build PASS without production call-site edits: all runtime consumers already supply their selected/profile bounds. Existing zero-domain policy tests now pass zero explicitly; signed negative-range controls retained.",
+        "Policy Release tests PASS. Deliberately omitted floor argument rejected with MSVC C2660; original test restored byte-for-byte, rebuilt and PASS.",
+        "Current source/EXE provenance rechecked PASS after negative control: record SHA256 601250e056488d1e5ccc7ce4154e5650831cb76cd1ee49e0ba0417e75f65cb92."
       ],
-      "remaining": [
-        "Check and eliminate unconfigured min_y=0 entry defaults in WorldPersistence::EnqueueTerrainColumnRelight, TryEnqueueTerrainColumnRelight and WorldMeshService mesh-light callbacks. Inspect related warmup/ocean policy defaults at their UWorld call sites; distinguish intentional standalone defaults from runtime omissions."
-      ],
-      "scope_limit": "Profile, sync/async compute, UWorld routing inspection and supported native safe-pose retention proven. S2.01 remains OPEN for legacy API default/caller reconciliation. No arbitrary persisted height ranges, intentional custom-profile invalid-pose recovery or GPU parity claimed.",
+      "remaining": [],
+      "scope_limit": "S2.01 configured-height routing/recovery-floor foundation proven by source routing, sync/async CPU tests, supported native -48..255 saved-pose retention and explicit API contract. Native artifact retains its recorded executable; no new run for declaration-only changes with unchanged runtime call arguments/bodies. No arbitrary persisted ranges, intentional invalid-pose custom-profile matrix, GPU parity or broader S2/S6 completion claimed.",
       "correction_to_previous_probe": {
         "artifact": "build/desktop-msvc/s2-deep-profile-rd4-20261120-native/smoke-verdict.json",
         "status": "FAIL retained",

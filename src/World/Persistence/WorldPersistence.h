@@ -138,8 +138,8 @@ public:
   void AbortAsyncChunkIo(UWorld &world);
   bool AbortAsyncChunkIoFor(UWorld &world, std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
-                                   bool priority = false, int min_y = 0,
-                                   int max_y = -1,
+                                   bool priority, int min_y,
+                                   int max_y,
                                    const char *producer = nullptr,
                                    UWorld *world_context = nullptr);
   /// Queue a relight because an installed horizontal boundary light changed.
@@ -167,8 +167,8 @@ public:
       const char *producer = nullptr);
   /// F3b: enqueue only when column surface still needs relight.
   bool TryEnqueueTerrainColumnRelight(UWorld &world, int world_x, int world_z,
-                                      bool priority = false, int min_y = 0,
-                                      int max_y = -1);
+                                      bool priority, int min_y,
+                                      int max_y);
   void DeferFarRelightColumn(glm::ivec2 ground_xz, int min_y, int max_y,
                              bool priority, const char *reason = nullptr);
   void ClearDeferredFarRelightColumn(glm::ivec2 ground_xz,
@@ -223,14 +223,14 @@ public:
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
                         UBlockRegistry &registry, int max_height,
-                        int min_height = 0);
+                        int min_height);
   bool SaveTerrainColumn(glm::ivec3 ground_coord, UBlockWorld &block_world,
                          UBlockRegistry &registry, int max_height,
-                         int min_height = 0);
+                         int min_height);
   /// Remove all disk slices for a ground column (used when incomplete in RAM
   /// must not leave a stale complete ocean/land file behind).
   void RemoveTerrainColumnFromDisk(glm::ivec3 ground_coord, int max_height,
-                                   int min_height = 0);
+                                   int min_height);
   /// Preserve an incompletely read saved column until its data can be read.
   void PreserveIncompleteTerrainColumn(UBlockWorld &block_world,
                                        glm::ivec3 ground_coord);

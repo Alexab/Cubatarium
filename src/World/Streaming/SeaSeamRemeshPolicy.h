@@ -71,7 +71,7 @@ inline bool ShouldRemeshSeaSeamOnFirstDrawable(int chunk_cy, int sea_cy,
 
 /// Inland / air-near-fluid surface: sea_level - CHUNK .. sea+2*CHUNK.
 inline int SeaSeamRemeshMinYSurface(int sea_level, int chunk_size,
-                                    int min_height = 0)
+                                    int min_height)
 {
   return std::max(min_height, sea_level - chunk_size);
 }
@@ -87,7 +87,7 @@ inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                             int max_height, int publisher_cy,
                                             SeaSeamEyeContext ctx,
                                             int &out_min_y, int &out_max_y,
-                                            int min_height = 0)
+                                            int min_height)
 {
   if (SeaSeamEyeUsesUnderwaterBand(ctx))
   {
@@ -103,7 +103,7 @@ inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
                                             int max_height, int publisher_cy,
                                             bool underwater_wide,
                                             int &out_min_y, int &out_max_y,
-                                            int min_height = 0)
+                                            int min_height)
 {
   SeaSeamRemeshYRangeForPublisher(
       sea_level, chunk_size, max_height, publisher_cy,
@@ -116,7 +116,7 @@ inline void SeaSeamRemeshYRangeForPublisher(int sea_level, int chunk_size,
 inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
                                             int max_height, int publisher_cy,
                                             SeaSeamEyeContext ctx,
-                                            int min_height = 0)
+                                            int min_height)
 {
   int min_y = 0;
   int max_y = 0;
@@ -130,7 +130,7 @@ inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
 inline int SeaSeamRemeshChunksPerPeerColumn(int sea_level, int chunk_size,
                                             int max_height, int publisher_cy,
                                             bool underwater_wide,
-                                            int min_height = 0)
+                                            int min_height)
 {
   return SeaSeamRemeshChunksPerPeerColumn(
       sea_level, chunk_size, max_height, publisher_cy,

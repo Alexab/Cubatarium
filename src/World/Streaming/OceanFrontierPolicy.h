@@ -56,7 +56,7 @@ inline bool SoftDeferEmptyNeedsParallelVoidRelight(bool empty_placeholder,
 /// Era26 I-O5: FillWater lateral (horiz 2–5) remesh/relight band floor.
 inline void FillWaterLateralRemeshBand(bool fill_water, int horiz, int sea,
                                        int max_y, int &band_min, int &band_max,
-                                       int chunk_size, int min_y = 0)
+                                       int chunk_size, int min_y)
 {
   if (!fill_water || horiz < 2 || horiz > 5 || chunk_size <= 0)
   {

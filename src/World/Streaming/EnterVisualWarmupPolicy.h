@@ -206,7 +206,7 @@ inline bool EnterLitQuiesceMayLiftSpawnSoftDefer(bool enter_lit_quiesce,
 inline void EnterSpawnPresentableCyRange(int player_cy, int sea_cy,
                                          bool fill_water, int max_cy,
                                          int &out_cy0, int &out_cy1,
-                                         int min_cy = 0)
+                                         int min_cy)
 {
   out_cy0 = std::max(min_cy, player_cy - 1);
   out_cy1 = std::min(max_cy, std::max(player_cy + 1,
@@ -509,7 +509,7 @@ inline bool ShouldRemeshAfterApplyOnlyOnIdleDrawable(bool idle_or_suppress,
 /// Era36 B1: visible surface cy-band (surface_cy-1 .. surface_cy+3).
 inline std::pair<int, int> RelightSurfaceBandCy(int surface_block_y,
                                                 int chunk_size, int max_cy,
-                                                int min_cy = 0)
+                                                int min_cy)
 {
   const int surface_cy = FloorDiv(surface_block_y, chunk_size);
   return {std::max(min_cy, surface_cy - 1),
@@ -528,7 +528,7 @@ inline int RelightSurfaceBandMinY(int surface_block_y, int chunk_size,
 /// Era36 B1: clamp max_y to surface band top (surface_cy+3).
 inline int RelightSurfaceBandMaxY(int surface_block_y, int chunk_size,
                                   int max_height, int original_max_y,
-                                  int min_height = 0)
+                                  int min_height)
 {
   const int max_cy = FloorDiv(max_height, chunk_size);
   const int min_cy = FloorDiv(min_height, chunk_size);
@@ -620,7 +620,7 @@ inline int ClampCaptureMovingBgCapWithHoles(int bg_cap, bool moving,
 
 /// Cruise SOTA: moving + holes — narrow Capture Y-band (hot surface only).
 inline int EffectiveRelightCaptureBandCy(int band_cy, bool moving,
-                                         bool visual_holes, int min_cy = 0)
+                                         bool visual_holes, int min_cy)
 {
   const int base = std::max(min_cy, band_cy);
   if (moving && visual_holes && base > 1)
@@ -661,7 +661,7 @@ inline std::pair<int, int> RelightSurfaceBandForColumn(int focus_block_y,
                                                       int max_height,
                                                       int orig_min_y,
                                                       int orig_max_y,
-                                                      int min_world_y = 0)
+                                                      int min_world_y)
 {
   const int surface_y =
       RelightColumnSurfaceBlockY(focus_block_y, column_top_block_y);

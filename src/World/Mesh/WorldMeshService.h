@@ -189,8 +189,8 @@ public:
   /// Enqueue missing solid slices below placed block for post-place DigSeam.
   int EnqueueColumnMissingDigSeamBelow(const UBlockWorld &world,
                                        glm::ivec3 block_pos,
-                                       int max_enqueue = 4,
-                                       int min_world_y = 0);
+                                       int max_enqueue,
+                                       int min_world_y);
 
   void RebuildAll(UBlockWorld &world, UBlockRegistry &registry);
   void RebuildDirtyChunks(UBlockWorld &world, UBlockRegistry &registry,

@@ -360,7 +360,7 @@ int main()
   {
     int bmin = 40;
     int bmax = 50;
-    cutum::FillWaterLateralRemeshBand(true, 3, 64, 256, bmin, bmax, 16);
+    cutum::FillWaterLateralRemeshBand(true, 3, 64, 256, bmin, bmax, 16, 0);
     Expect(bmin <= 48 && bmax >= 80,
            "Era26 I-O5: FillWater lateral widens sea±CHUNK");
     int signed_min = 0;
@@ -376,7 +376,7 @@ int main()
         "relight surface band clamps a bottom-world surface to signed bounds");
     int keep_min = 40;
     int keep_max = 50;
-    cutum::FillWaterLateralRemeshBand(true, 1, 64, 256, keep_min, keep_max, 16);
+    cutum::FillWaterLateralRemeshBand(true, 1, 64, 256, keep_min, keep_max, 16, 0);
     Expect(keep_min == 40 && keep_max == 50,
            "Era26 I-O5: horiz≤1 leaves band to underfeet path");
   }
@@ -1136,9 +1136,9 @@ int main()
     using cutum::EffectiveRelightCaptureBandCy;
     Expect(ClampCaptureMovingBgCapWithHoles(8, true, true, 2) == 2,
            "cruise B: holes clamp bg to dynamic");
-    Expect(EffectiveRelightCaptureBandCy(4, true, true) == 3,
+    Expect(EffectiveRelightCaptureBandCy(4, true, true, 0) == 3,
            "cruise B: moving holes narrow band");
-    Expect(EffectiveRelightCaptureBandCy(1, true, true) == 1,
+    Expect(EffectiveRelightCaptureBandCy(1, true, true, 0) == 1,
            "cruise B: band floor 1");
     using cutum::ShouldSkipRelightOnTrustedDiskLight;
     using cutum::ShouldTrustDiskLightmap;
@@ -1713,7 +1713,7 @@ int main()
     using cutum::EnterSpawnRingIgnoresHinterlandMeshDebt;
     int cy0 = 0;
     int cy1 = 0;
-    EnterSpawnPresentableCyRange(/*player*/ 6, /*sea*/ 4, true, 16, cy0, cy1);
+    EnterSpawnPresentableCyRange(/*player*/ 6, /*sea*/ 4, true, 16, cy0, cy1, 0);
     Expect(cy0 <= 6 && cy1 >= 6, "presentable band covers player cy");
     Expect(cy0 < 6 || cy0 == 5, "band includes below player");
     Expect(EnterSpawnRingIgnoresHinterlandMeshDebt(true, 0, true),
@@ -1967,11 +1967,11 @@ int main()
            "Era36 B1: surface_y=16 clamps to 0");
     Expect(RelightSurfaceBandMinY(64, 16, 60) == 60,
            "Era36 B1: original min_y=60 > surface_min=48, keeps 60");
-    Expect(RelightSurfaceBandMaxY(64, 16, 255, 255) == 127,
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 255, 0) == 127,
            "Era36 B1: surface_y=64 caps max_y at cy7 top (127)");
-    Expect(RelightSurfaceBandMaxY(64, 16, 255, 100) == 100,
+    Expect(RelightSurfaceBandMaxY(64, 16, 255, 100, 0) == 100,
            "Era36 B1: original max below band top keeps original");
-    const auto band = RelightSurfaceBandCy(64, 16, 15);
+    const auto band = RelightSurfaceBandCy(64, 16, 15, 0);
     Expect(band.first == 3 && band.second == 7,
            "Era36 B1: surface cy=4 -> band 3..7");
   }
@@ -2143,7 +2143,7 @@ int main()
            "Era37 P5: column top overrides focus");
     Expect(RelightColumnSurfaceBlockY(64, -1) == 64,
            "Era37 P5: fallback to focus when no column top");
-    const auto hill = RelightSurfaceBandForColumn(64, 96, 16, 255, 0, 255);
+    const auto hill = RelightSurfaceBandForColumn(64, 96, 16, 255, 0, 255, 0);
     Expect(hill.first == 80 && hill.second == 159,
            "Era37 P5: hill column band uses column surface");
   }

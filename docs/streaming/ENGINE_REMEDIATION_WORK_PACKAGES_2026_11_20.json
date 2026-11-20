@@ -154,17 +154,16 @@
         {
           "id": "S2.01",
           "action": "Проверить настроенные min/max Y во всех запросах света и восстановлении игрока; убрать оставшиеся фиксированные диапазоны.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
           "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
           "completed_subtasks": [
             "Nondefault wholly-negative and positive profile boundaries, synchronous light/source-removal edges and no out-of-profile materialization: Release PASS.",
             "Async broad/disjoint bands and edge blocklight: Release PASS; UWorld player/terrain/chunk request routing to profile-clipped capture traced.",
-            "Supported persisted -48..255 profile: native saved negative pose, normal takeoff/route, zero relocation, receipts/replay and isolated source/config retention PASS. Unsupported -128 probe FAIL retained with parser normalization cause."
+            "Supported persisted -48..255 profile: native saved negative pose, normal takeoff/route, zero relocation, receipts/replay and isolated source/config retention PASS. Unsupported -128 probe FAIL retained with parser normalization cause.",
+            "Legacy zero lower-bound defaults removed; full Release app/policy builds PASS, omitted-bound compiler negative control rejects, source restored and provenance verified."
           ],
-          "remaining_subtasks": [
-            "Legacy min_y=0 API defaults/call-site reconciliation in persistence and mesh, plus targeted warmup/ocean policy calls."
-          ],
+          "remaining_subtasks": [],
           "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
@@ -448,7 +447,7 @@
       ]
     }
   ],
-  "current_step": "S2.01",
+  "current_step": "S2.02",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [
