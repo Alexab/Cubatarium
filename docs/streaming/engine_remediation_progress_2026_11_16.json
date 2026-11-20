@@ -29645,5 +29645,178 @@
     "Complete explicit ownership for mixed/cancelled/procedural partial data and eliminate legacy clear/purge without producer authority even where no failed-read marker exists.",
     "Continue full S0..S6 profile/absence/content/algorithm/catalog certificates, startup/first-publication/R8, actual CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen and lifetime/performance/memory matrix."
   ]
+},
+"native_decode_failure_retry_local_edit_and_save_recovery_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no new audit or scope reduction",
+  "source_commits": [
+    "e5a3c2af9",
+    "f4307fa1a"
+  ],
+  "final_source_commit": "f4307fa1a83670901b2e02babce8f638b0e67e3d",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\native-read-failure-assessment-20261120.json",
+    "sha256": "3f2d5893424ebe16b0b81d5be9ddfa0f02bdd827bb0e7d21ee2d0d4f6a6c04ae",
+    "status": "PASS",
+    "scope": "one bounded returning decode-failure/retry/exhaustion/local-edit/save-rejection/recovery/explicit-save scenario; full S0..S6 remains IN_PROGRESS"
+  },
+  "changes": [
+    "Default-off bounded native probe injects five invalid frames into actual worker read buffers after a motor excursion; stored source files remain unchanged.",
+    "Trace and independent verifier require fresh retry demands, exhaustion/cooldown, retained decoded owners and local deletion, metadata-save rejection without dirty-state or file changes, complete recovery and explicit ordinary async terrain save.",
+    "Flight-sim disables autosave and exits without session save. First native probe omitted positive recovery save and failed cold edit verification; raw FAIL is preserved. Follow-up queues ordinary async terrain save after recovery and verifies saved bytes independently."
+  ],
+  "validation": {
+    "release_storage": "PASS (0.68 seconds)",
+    "harness_tests": "29 PASS",
+    "evidence_tests": "10 PASS",
+    "desktop_release_build": "PASS",
+    "actual_trace_controls": [
+      {
+        "name": "baseline",
+        "expected": "PASS",
+        "actual": "PASS",
+        "reason": "failed_reads_preserved_data_edit_and_save_guard_then_recovered"
+      },
+      {
+        "name": "missing_fault",
+        "expected": "UNTESTED",
+        "actual": "UNTESTED",
+        "reason": "missing_five_real_frame_rejections"
+      },
+      {
+        "name": "missing_exhaustion",
+        "expected": "UNTESTED",
+        "actual": "UNTESTED",
+        "reason": "missing_retry_exhaustion_chain"
+      },
+      {
+        "name": "changed_owner",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "retained_read_owner_changed"
+      },
+      {
+        "name": "stale_overlay",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "local_edit_overwritten_during_retry"
+      },
+      {
+        "name": "dirty_state_cleared",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "blocked_save_not_rejected_with_dirty_state"
+      },
+      {
+        "name": "changed_save_file",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "blocked_save_modified_files"
+      },
+      {
+        "name": "missing_recovery_save",
+        "expected": "UNTESTED",
+        "actual": "UNTESTED",
+        "reason": "missing_recovery_save_request"
+      },
+      {
+        "name": "false_complete",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "failed_demand_claimed_complete"
+      },
+      {
+        "name": "foreign_manager",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "retained_read_owner_changed"
+      },
+      {
+        "name": "lost_export",
+        "expected": "UNTESTED",
+        "actual": "UNTESTED",
+        "reason": "incomplete_read_failure_export"
+      },
+      {
+        "name": "cold_edit_missing",
+        "expected": "FAIL",
+        "actual": "FAIL",
+        "reason": "local_edit_missing_from_final_disk"
+      }
+    ],
+    "native": {
+      "wall_elapsed_sec": 322.446,
+      "ingame_frames": 9693,
+      "relocations": 0,
+      "maximum_excursion_blocks": 303.753
+    },
+    "source_components": {
+      "material": "PASS",
+      "camera": "PASS",
+      "startup": "PASS",
+      "air_return": "PASS",
+      "disk_read_failure": "PASS",
+      "draw": "PASS",
+      "cpu_vertex_draw": "PASS"
+    },
+    "general_smoke_status": "UNTESTED",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    }
+  },
+  "native_evidence": {
+    "failed_demands": [
+      63140,
+      63469,
+      63686,
+      63822,
+      64088
+    ],
+    "recovered_demand_id": 64390,
+    "retained_slices": 23,
+    "edited_geometry_incarnation": 5104,
+    "dirty_chunks_preserved": 45,
+    "cold_local_edit": {
+      "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_cb7e39a778a44d72af1b8b5ae9250176\\chunks\\1_-4_5.cchunk",
+      "sha256": "eb6951409722f8c91d9cb2d7a90f656fe87bb58c54463599edef75832d5dd932",
+      "section": [
+        1,
+        -4,
+        5
+      ],
+      "local": [
+        1,
+        1,
+        1
+      ],
+      "id": 0
+    }
+  },
+  "files_during_rejected_save": 30,
+  "before_after_bytes": 384722,
+  "saved_frames_independently_decoded": 24,
+  "first_native_failure_preserved": {
+    "status": "FAIL",
+    "reason": "local_edit_missing_from_final_disk",
+    "evidence": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-native-read-failure-20261120-native\\disk-read-failure-evidence.json",
+      "sha256": "7483b64d4e1b6b63b1c558cdcfde25982ce50a8e090df5921d89ec4c7135c522"
+    },
+    "explanation": "Flight-sim disables autosave and exits without a session save. The original diagnostic omitted a positive recovery save, so the unchanged original stone remained on disk. Raw FAIL retained; second run uses ordinary explicit async terrain save."
+  },
+  "limits": [
+    "Controlled decode corruption of an actual read buffer, not OS open/read error, physical file corruption or uncontrolled fault frequency.",
+    "Actual metadata save API rejects while blocked. Cooperative save progress/UI rendering and manual save-error recovery remain UNTESTED.",
+    "Explicit ordinary async terrain save after recovery, not automatic autosave/quit/forced-exit durability acceptance.",
+    "Cold check independently decodes saved bytes, not a second native cold-world launch.",
+    "No closure of mixed/procedural cancelled-producer ownership, content/profile/catalog/algorithm certificates, full solver/backend/GLES parity, independent wet/transparency/whole-screen or S6 memory/performance matrix."
+  ],
+  "remaining_work": "Continue full S0..S6: mixed/procedural cancelled-producer ownership and persisted certificates; native OS I/O/save UI and cold-launch coverage; CPU construction/GPU solver/backend/GLES parity; independent wet/transparency/whole-screen; native lifetime/pressure/performance/memory matrix."
 }
 }
