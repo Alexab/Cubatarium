@@ -76,8 +76,18 @@ class SourceDrawTest(unittest.TestCase):
         self.rows[34]['renderer_pixel_rgba']=255
         self.check('FAIL')
 
+    def test_bound_field_cannot_hide_behind_missing_baked_vertex_proximity(self):
+        self.rows[34]['renderer_pixel_opaque_bound_field']['packed']=10<<4
+        self.rows[34]['renderer_pixel_opaque_vertex_light_distance']=1
+        r=self.check('FAIL')
+        self.assertEqual(r['counts']['after']['field_faults'],1)
+
     def test_missing_capture_is_incomplete_not_numeric_success(self):
         self.rows[34]['renderer_pixel_opaque_bound_field'].update(captured=False,valid=False)
+        self.check('UNTESTED')
+
+    def test_provisional_surface_cannot_supply_joined_gpu_acceptance(self):
+        self.rows[34]['renderer_pixel_opaque_preview_shader_override']=1
         self.check('UNTESTED')
 
     def test_foreign_world_and_frame_cannot_supply_binding(self):

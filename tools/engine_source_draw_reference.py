@@ -41,7 +41,9 @@ def evaluate_records(scene, rows, logs, *, action_frame, world_epoch, cell,
         if not after: return result('UNTESTED','no_remaining_reference_emitters')
         for s,emitters in zip(scenes,(sources,sorted(after))):
             s['lighting_fixture']['emitters']=[list(e) for e in emitters]
-        counts=[dict(rows=0,source_effect=0),dict(rows=0,source_effect=0)]
+        counts=[dict(rows=0,source_effect=0,field_checked=0,field_faults=0,field_unjoined=0),
+                dict(rows=0,source_effect=0,field_checked=0,field_faults=0,field_unjoined=0)]
+        examples=[]
         unordered=0
         with tempfile.TemporaryDirectory(prefix='engine-source-draw-') as temp:
             paths=[Path(temp)/'before.jsonl',Path(temp)/'after.jsonl']
@@ -72,7 +74,25 @@ def evaluate_records(scene, rows, logs, *, action_frame, world_epoch, cell,
                     lo,hi=scene['chunk_x_bounds']
                     if abs(hit[0]-x)>.45 or abs(hit[2]-z)>.45 or not lo*16+16<=x<(hi+1)*16-16: continue
                     levels=[expected_floor_light(s,x,z) for s in scenes]
-                    if levels[0]!=levels[1] and bound['packed']==levels[phase]<<4:
+                    actual_depth=row.get('renderer_pixel_opaque_hit_distance')
+                    material=376 if [x,-49,z] in scenes[phase]['lighting_fixture']['emitters'] else 560
+                    surface_ok=(number(actual_depth) and abs(actual_depth-depth)<=.05+depth*.001 and
+                        row.get('renderer_pixel_opaque_surface_valid')==1 and
+                        row.get('renderer_pixel_opaque_vertex_light_face_index')==4 and
+                        row.get('renderer_pixel_opaque_vertex_light_block_id')==material and
+                        row.get('renderer_pixel_opaque_drawable')==1 and
+                        row.get('renderer_pixel_opaque_draw_ready')==1 and
+                        row.get('renderer_pixel_opaque_preview_shader_override')==0)
+                    if not surface_ok:
+                        counts[phase]['field_unjoined']+=1
+                        continue
+                    counts[phase]['field_checked']+=1
+                    fault=bound['packed']!=levels[phase]<<4
+                    counts[phase]['field_faults']+=fault
+                    if fault and len(examples)<8:
+                        examples.append(dict(frame=frame,cell=[x,-49,z],expected=levels[phase]<<4,
+                            actual=bound['packed'],surface_ok=surface_ok,bound=bound))
+                    if not fault and levels[0]!=levels[1]:
                         counts[phase]['source_effect']+=1
             finally:
                 for stream in streams: stream.close()
@@ -81,10 +101,11 @@ def evaluate_records(scene, rows, logs, *, action_frame, world_epoch, cell,
                 components[name]=dict(field=floor_evaluate(s,path),rgb=rgb_evaluate(s,path,logs))
         statuses=[v['status'] for c in components.values() for v in c.values()]
         missing=[name+'_source_effect' for name,c in zip(('before','after'),counts) if c['source_effect']<8]
-        status='FAIL' if 'FAIL' in statuses else 'UNTESTED' if 'UNTESTED' in statuses or missing else 'PASS'
+        missing += [name+'_joined_gpu_surfaces' for name,c in zip(('before','after'),counts) if c['field_unjoined']]
+        status='FAIL' if 'FAIL' in statuses or any(c['field_faults'] for c in counts) else 'UNTESTED' if 'UNTESTED' in statuses or missing else 'PASS'
         return result(status,'frame_bound_source_draw_transport',action_frame=action_frame,
             world_epoch=world_epoch,counts=dict(zip(('before','after'),counts)),
-            unordered_action_rows=unordered,components=components,missing_coverage=missing)
+            unordered_action_rows=unordered,components=components,missing_coverage=missing,examples=examples)
     except (ValueError,KeyError,TypeError,AttributeError,OSError,OverflowError):
         return result('FAIL','malformed_source_draw_evidence')
 
