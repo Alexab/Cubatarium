@@ -13,6 +13,7 @@
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Lighting/IULightingPipeline.h"
+#include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -73,6 +74,87 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    // S3.04: real World lifecycle; no live player/world or disk data involved.
+    {
+      UWorld world(nullptr, nullptr);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -17;
+      world.BlockWorld.SetVerticalProfile(profile);
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      world.AsyncRelight = std::make_unique<UAsyncRelightBuilder>(1);
+      world.NextAsyncRelightJobId = 9200;
+      RelightJobSpec spec;
+      spec.job_id = 9199;
+      spec.block_positions = {{4, -40, 4}};
+      spec.min_world_y = -48;
+      spec.max_world_y = -33;
+      spec.column_center_only = true;
+      spec.include_known_air_outputs = true;
+      spec.known_air_output_sections = {{1, -2, 0}};
+      spec.light_sample_output_sections = {{0, -3, 0}};
+      spec.finalize_pending_gate = false;
+      spec.visible_draw_gate_repair = true;
+      world.AsyncRelight->EnqueueJob(world.BlockWorld, spec, *world.BlockRegistry);
+      require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)) &&
+                  world.AsyncRelight->GetCompletedSize() == 1,
+              "relight lifecycle completed predecessor precondition");
+      world.QuiesceBackgroundWork(std::chrono::milliseconds(100));
+      require(world.DeferredRelightRetries.Size() == 1 &&
+                  world.DeferredRelightRetries.IsSuspended() &&
+                  world.DrainAsyncRelightResults(4, false, false) == 0 &&
+                  world.AsyncRelight->GetInFlightCount() == 0 &&
+                  world.BlockWorld.GetChunkManager().GetSectionLightFieldCount() == 0,
+              "quiesce retains exact debt without dispatch/publication");
+      world.ResumeAfterSessionSave();
+      bool exact = false;
+      world.DeferredRelightRetries.Drain(1, [&](const RelightJobSpec &retry) {
+        exact = retry.job_id == spec.job_id &&
+                retry.block_positions == spec.block_positions &&
+                retry.min_world_y == spec.min_world_y &&
+                retry.max_world_y == spec.max_world_y &&
+                retry.column_center_only == spec.column_center_only &&
+                retry.include_known_air_outputs == spec.include_known_air_outputs &&
+                retry.known_air_output_sections == spec.known_air_output_sections &&
+                retry.light_sample_output_sections == spec.light_sample_output_sections &&
+                retry.include_skylight == spec.include_skylight &&
+                retry.include_block_light == spec.include_block_light &&
+                retry.frontier_iterations == spec.frontier_iterations &&
+                retry.finalize_pending_gate == spec.finalize_pending_gate &&
+                retry.visible_draw_gate_repair == spec.visible_draw_gate_repair;
+        return false; // Observe the actual retained request without consuming it.
+      });
+      require(exact, "World preserves every retry specification field");
+      world.DrainAsyncRelightResults(4, false, false);
+      require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)),
+              "resumed relight successor worker bound");
+      world.DrainAsyncRelightResults(4, false, false);
+      require(world.DeferredRelightRetries.Empty() &&
+                  world.BlockWorld.GetCurrentLightSamplingVolume({0, -3, 0}) &&
+                  world.BlockWorld.GetCurrentLightSamplingVolume({1, -2, 0}),
+              "resumed World installs certified AIR and out-of-band target");
+      const auto sample = world.BlockWorld.SampleSceneLight({20, -24, 4});
+      require(sample.packed && UnpackSky(*sample.packed) == 15,
+              "out-of-band AIR receives physical open sky");
+      spec.job_id = 9300;
+      world.AsyncRelight->EnqueueJob(world.BlockWorld, spec, *world.BlockRegistry);
+      require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)),
+              "replacement predecessor worker bound");
+      world.CancelAsyncRelightWork();
+      require(world.DeferredRelightRetries.Size() == 1,
+              "replacement fixture contains old-world debt");
+      world.AbandonTerrainForWorldReplace();
+      require(world.DeferredRelightRetries.Empty() &&
+                  world.BlockWorld.GetChunkManager().GetSectionLightFieldCount() == 0,
+              "world replacement retires old debt and fields");
+      report["cases"].push_back({{"kind", "relight_cancel_quiesce_resume"},
+          {"status", "PASS"}, {"exact_spec_retained", true},
+          {"no_dispatch_during_quiesce", true}, {"certified_air_successor", true},
+          {"outside_band_target", true}, {"replacement_retires_debt", true}});
+    }
     // Test receipt delivery, not the shore-sealing algorithm or GPU scan.
     // A dry cached slice is the correct initial value even when the normal
     // CPU hitch gate returns empty; no backend result is fabricated here.

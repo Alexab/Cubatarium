@@ -43,3 +43,17 @@ BeginBackgroundQuiesce и синхронный Quiesce приостанавли�
 Полные сборки приложения PASS: `s3-world-retry-app-build-20261120.log` и после уточнения Flat pending `s3-world-retry-mode-app-build-20261120.log`; используется обязательная Release команда и provenance wrapper. Итоговый provenance: `s3-world-retry-mode-release-provenance-20261120.json`.
 
 Следующий шаг: один адресный native API probe изолированного UWorld для cancel → quiesce → resume → точный AIR successor, включая очистку при замене мира. Затем сверка оставшихся sync/async stale controls. До этого интеграция lifecycle считается непроверенной, S3.04 остаётся OPEN.
+
+## Native H2: фактический UWorld owner
+
+Проверка добавлена в opt-in TerrainSaveFailureProbe, вызываемый штатным runner. Отдельный `UWorld(nullptr,nullptr)`, один worker, доказанный AIR, профиль -48..-17. Job 9199 пишет band -48..-33 и explicit AIR target (1,-2,0) вне этого band; finalize=false, draw repair=true. После completed predecessor реальный Quiesce отменяет работу; drain должен оставить 1 точный запрос, 0 inflight и 0 полей. После ResumeAfterSessionSave штатный drain должен установить certified AIR поля (0,-3,0) и (1,-2,0), sky=15 на (20,-24,4). Затем новый completed request отменяется, AbandonTerrainForWorldReplace должен удалить долг и поля.
+
+PASS: все предусловия и утверждения проходят, case `relight_cancel_quiesce_resume` имеет PASS. FAIL сохраняет точное сообщение require в report.json. Worker waits ограничены 5 s каждый; общий native процесс timeout 600 s. Вызов: engine_smoke_run, World_261, изолированная копия, render distance 4, startup-only, --probe-terrain-save-failure, уникальная папка `s3-world-relight-lifecycle-20261120-native`. Проверяется API lifecycle; не menu UX, реальный GPU свет или общая финальная матрица.
+
+H2 PASS: report.json содержит `relight_cancel_quiesce_resume` PASS и все 10 API cases PASS. Реальный UWorld удержал все поля spec, не запустил работу в quiesce, после resume установил certified AIR поля и sky=15 вне первоначального band, replacement очистил поля/долг. Native exit 0; startup и build provenance PASS; 40 stationary observation samples, drift 0. Wall elapsed 127.079 s.
+
+`s3-world-relight-lifecycle-receipt-20261120.json` фиксирует хеши исходных report/route/verdict/flight report, неизменность source World_261 и побайтное восстановление config. Runtime lease освобождён; EngineSmoke-копия намеренно удерживается штатным runner для воспроизведения.
+
+Исходный общий smoke-verdict сохранён UNTESTED: missing terrain_save_failure/save_error_ui component readers (существующий долг S0) и отсутствующие route/visual/performance acceptance. Положительный API report не переписан в общий PASS. Повтор native H2 не требуется без изменения зависимого кода.
+
+Оставшийся шаг S3.04: конечная таблица sync/async read-set/catalog/profile/configuration/incarnation/epoch с адресными rejection-and-successor controls; переиспользовать существующие certificate и immutable catalog проверки. Quiesce/retire native H2 и builder queued/running/overflow доказательства уже получены.

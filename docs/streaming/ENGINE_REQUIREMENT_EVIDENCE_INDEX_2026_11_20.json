@@ -12,7 +12,10 @@
       "deferred_policy_verification": "build/desktop-msvc/s3-world-retry-policy-test-20261120.log",
       "app_build": "build/desktop-msvc/s3-world-retry-mode-app-build-20261120.log",
       "provenance": "build/desktop-msvc/s3-world-retry-mode-release-provenance-20261120.json",
-      "remaining": "Native UWorld lifecycle, world replacement behavior and remaining immutable sync/async validation controls; no package closure claimed."
+      "native_world_lifecycle": "build/desktop-msvc/s3-world-relight-lifecycle-20261120-native/terrain-save-probe/report.json",
+      "native_receipt": "build/desktop-msvc/s3-world-relight-lifecycle-receipt-20261120.json",
+      "native_scope": "PASS: actual isolated UWorld exact cancel/quiesce/resume, out-of-band certified AIR successor and retirement; runtime exit 0, source/config retained. Original overall smoke remains UNTESTED.",
+      "remaining": "Remaining immutable sync/async validation controls; no package closure claimed."
     },
     {
       "id": "S0.01",
