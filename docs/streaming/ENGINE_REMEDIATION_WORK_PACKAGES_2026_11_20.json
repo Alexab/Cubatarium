@@ -53,9 +53,10 @@
         {
           "id": "S0.03",
           "action": "Сделать обязательными отдельные verdict runtime/startup/route/inspection/visual/performance и fault-specific проверки.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S0.04",
@@ -424,6 +425,6 @@
       ]
     }
   ],
-  "current_step": "S0.03",
+  "current_step": "S0.04",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
 }

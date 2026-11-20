@@ -827,8 +827,19 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             verdict["components"]["runtime"] = {"status": "FAIL", "reason": "missing_native_report"}
         verdict["components"]["build_provenance"] = {
             k: v for k, v in build_provenance.items() if k != "record"}
-        statuses = [part["status"] for part in verdict["components"].values()]
-        verdict["status"] = "FAIL" if "FAIL" in statuses else "UNTESTED" if "UNTESTED" in statuses else "PASS"
+        verdict["components"]["performance"] = {
+            "status": "UNTESTED", "reason": "no_approved_performance_baseline",
+            "observations": "legacy-gates.json",
+            "scope": "Legacy proxy metrics retained; no matched workload/hardware baseline acceptance"}
+        from engine_verdict_contract import finalize, required_for_options
+        required = required_for_options(
+            read_failure=probe_disk_read_failure,
+            air_cancellation=probe_partial_air_cancellation,
+            terrain_save_failure=probe_terrain_save_failure,
+            world_actions=world_actions is not None,
+            synchronous_meshing=synchronous_meshing,
+            capture_backpressure=capture_encode_delay_ms > 0)
+        finalize(verdict, required)
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
             json.dumps(publication, indent=2) + "\n", encoding="utf-8")

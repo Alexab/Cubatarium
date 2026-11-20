@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S0.03",
+  "current_package": "S0.04",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -69,6 +69,26 @@
         "Exercised clone retained for reproduction"
       ],
       "scope_limit": "Cooperative exception/timeout/interrupt cleanup; abrupt host power loss is outside this harness claim"
+    },
+    {
+      "id": "S0.03",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "build/desktop-msvc/s0-verdict-contract-final-test-20261120.log",
+          "sha256": "6ce19fe5c6e39322ca0b13f5b467573e2eeec70d41fbf64d3e414ddbe59845d6"
+        },
+        {
+          "path": "build/desktop-msvc/required-probe-integration-test-20261120.log",
+          "sha256": "885bb938fc33d7078891df768a1f8992a8ca0644f9cc75c74ecbb2c89120c3f5"
+        }
+      ],
+      "verified": [
+        "Required runtime/startup/route/inspection/visual/performance/build provenance verdicts",
+        "Explicit fault/action/mode/backpressure requirements cannot disappear",
+        "Missing evidence UNTESTED; malformed status/container FAIL; failure precedence retained"
+      ],
+      "scope_limit": "Contract enforcement only. Missing terrain-save/UI and cancellation evaluators remain explicitly UNTESTED; performance acceptance awaits approved S6 baseline."
     }
   ],
   "completed_handoff": {
