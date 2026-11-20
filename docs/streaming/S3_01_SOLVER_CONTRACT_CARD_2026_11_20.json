@@ -1,0 +1,17 @@
+{
+  "package": "S3.01",
+  "hypothesis": "Existing geometry solver preserves exact analytic blocklight across all six section faces during obstacle/source/material changes; existing full-context roof/water tests should remain PASS",
+  "inputs": "Six independent closed one-voxel corridors across +/-X,+/-Y,+/-Z, including -33/-32 vertical seam. Literal test direction list, source14; stone barrier at distance3, removal, water and nonemissive Cross at distance2, same catalog source emission changed to6, then source removal.",
+  "pass": "All eight corridor cells equal max(0,emission-distance), or zero at/beyond opaque blocker. Water and Cross transmit blocklight with unit loss. All six boundary preconditions verified. Existing propagation suite including remote roof Y304, negative writable slice, water attenuation and sync/async target-only contract remains PASS.",
+  "fail": "Wrong face, stale emission after removal/catalog change, blocked transmission or unexpected bypass around barrier",
+  "build": "cmake --build build/desktop-msvc --config Release --target chunk_lighting_propagation_test --parallel 8",
+  "test": "ctest --test-dir build/desktop-msvc -C Release -R ^(chunk_lighting_propagation_test|light_six-faces_test)$ --output-on-failure",
+  "artifacts": "build/desktop-msvc/s3-solver-contract-{build,test}-20261120.log",
+  "timeout_seconds": 180,
+  "negative_control": "After baseline PASS, temporarily skip +X neighbor in actual ChunkRelightSnapshot flood, build Release test target and require light_six-faces_test FAIL. Backup raw source bytes before injection and restore in finally; verify exact SHA256 restoration, rebuild normal target and verify six-face PASS. No native app run or fault hook retained.",
+  "run_budget": "One validation; a failure needs localized cause before one correction/verification. No repeat after sufficient PASS.",
+  "existing_independent_evidence_to_reuse": "RelightResultInstallTest TestGeometryHaloAgainstDenseReference and TestSkyFrontierAgainstDenseReference contain independent dense Jacobi references; review/complete them in S3.02, do not replace them with same-solver comparison.",
+  "scope_limit": "CPU production solver numeric contract only. Desktop pipeline test target uses seed stub, not real GPU dispatch. S3.02 independent oracle/order, S3.03 AIR/Unknown, S3.04..06 lifecycle/persistence/backends and all S4..S6 remain required.",
+  "result": "Baseline full propagation + explicit six-face tests PASS. Actual +X omission makes six-face test FAIL; source restored to exact original SHA256, test target recompiled, six-face PASS. Production solver unchanged.",
+  "build_recovery_note": "Copy preserved backup mtime older than fault object; MSBuild skipped compilation. The failed restored-test artifact is retained as build-state failure, not solver failure."
+}

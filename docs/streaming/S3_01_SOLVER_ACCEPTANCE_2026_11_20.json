@@ -1,0 +1,48 @@
+{
+  "package": "S3.01",
+  "status": "COMPLETE",
+  "requirements": [
+    {
+      "id": "full-upper-context",
+      "proof": "Existing full propagation suite currently PASS: roof Y304 over negative -48..-33 write slice; far-roof geometry read stamp retained; three water layers above target produce sky12; sync and snapshot computations preserve writable band."
+    },
+    {
+      "id": "material-contract",
+      "proof": "Opaque stone blocks the closed corridor; liquid and nonemissive Cross pass blocklight with unit loss. Same material catalog source emission14->6 changes field without changing source block."
+    },
+    {
+      "id": "all-six-directions",
+      "proof": "Literal independent test direction list covers +/-X,+/-Y,+/-Z and asserts each first edge crosses a section boundary, including -32/-33. All eight corridor cells checked after seven mutations in each direction."
+    },
+    {
+      "id": "removal",
+      "proof": "Stone insertion clears downstream light; removal restores it; source removal clears all corridor cells for every direction."
+    },
+    {
+      "id": "negative-control",
+      "proof": "Temporary actual production +X flood omission causes numeric regression failure. Exact source-byte restoration and recompiled normal test PASS; preserved stale-binary restore failure is explicitly classified as MSBuild timestamp issue.",
+      "artifact": {
+        "path": "build\\desktop-msvc\\s3-solver-negative-source-20261120.json",
+        "sha256": "275886adaebc668172955490356cadb95d75e59e621ef2569b5a11ceac76b5cc"
+      }
+    }
+  ],
+  "positive_log": {
+    "path": "build\\desktop-msvc\\s3-solver-contract-test-20261120.log",
+    "sha256": "1fcc947a0bec582404960d60fc825878fba375a514a5ad65b3e35c007be48cfd"
+  },
+  "negative_log": {
+    "path": "build\\desktop-msvc\\s3-solver-negative-test-20261120.log",
+    "sha256": "9f139f70126abdb9b73755ebf5bba899d3c464780532d95471ebfadb7562aaad"
+  },
+  "restored_log": {
+    "path": "build\\desktop-msvc\\s3-solver-restored-recompile-test-20261120.log",
+    "sha256": "f4e9e5378ca00dc304943b5f3bea22ed8e6e36259175379e9fa695b5295db6a6"
+  },
+  "scope_limits": [
+    "CPU numeric contract only; host GPU seed/blocklight stubs in the target do not prove real GPU dispatch or backend parity.",
+    "Independent dense oracle and job ordering remain S3.02. AIR/Unknown, install/cancel, persisted certificates and true CPU/GPU/fallback remain S3.03..06.",
+    "No native rendered, wet/transparency, performance/memory or full-matrix acceptance; original S4..S6 scope retained."
+  ],
+  "next_package": "S3.02"
+}

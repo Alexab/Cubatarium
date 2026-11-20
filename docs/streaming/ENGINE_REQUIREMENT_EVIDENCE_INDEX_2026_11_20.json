@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.01",
+  "current_package": "S3.02",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -1428,6 +1428,82 @@
       ],
       "remaining": [],
       "scope_limit": "Local interval/load-position package COMPLETE per acceptance record. Static air-pocket settings are isolated/restored; no hydrodynamics/wet RGB/transparency/performance parity claim. Raw profile tests do not expand persisted support. Historical routes retain source/EXE limits; S2 parent and full S0..S6 remain OPEN pending full matrix."
+    },
+    {
+      "id": "S3.01",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src\\Test\\ChunkLightingPropagationTest.cpp",
+          "sha256": "b5d74b126800c3fc54a67f939b2747b5d9c70ef29ed7e639a62eb384a4af6ce5"
+        },
+        {
+          "path": "src\\World\\Lighting\\ChunkRelightSnapshot.cpp",
+          "sha256": "de49fce0dd9d0363289102ca3e4fe44f22f6e559e7180a6509958c5ed79510aa"
+        },
+        {
+          "path": "src\\World\\Lighting\\ChunkLighting.cpp",
+          "sha256": "2da742c3c73e3deb130043b50f259d66ece0e93e97d7fc90b3b7ece80b4f21a5"
+        },
+        {
+          "path": "src\\World\\Lighting\\LightUtil.cpp",
+          "sha256": "5bfee7866e4859a25b2e8649f7089e064b93854dfc0d941faf270c7fc0a0e886"
+        },
+        {
+          "path": "CMakeLists.txt",
+          "sha256": "d56ee35dc9716215007388148647c2540201a1db14d75a7797eac0dd05ab0e57"
+        },
+        {
+          "path": "docs\\streaming\\S3_01_SOLVER_CONTRACT_CARD_2026_11_20.json",
+          "sha256": "f389f682400c7b57880c389ebc854f9ae06b7ff9c4c593924b34961f105614c0"
+        },
+        {
+          "path": "docs\\streaming\\S3_01_SOLVER_ACCEPTANCE_2026_11_20.json",
+          "sha256": "9f7df5690336944d0b2b31b9a3219aa4db5156fe1531d8f4146dd9621328e5a2"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-negative-source-20261120.json",
+          "sha256": "275886adaebc668172955490356cadb95d75e59e621ef2569b5a11ceac76b5cc"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-contract-build-20261120.log",
+          "sha256": "73baa5e116e462fdda35c59ee7d491e83a3504fc795673255c8ab891031bb16a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-contract-test-20261120.log",
+          "sha256": "1fcc947a0bec582404960d60fc825878fba375a514a5ad65b3e35c007be48cfd"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-negative-build-20261120.log",
+          "sha256": "fe852ed2df7e426d84156531667212d53d4d3e6e6614a1f3a010b88b2211027a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-negative-test-20261120.log",
+          "sha256": "9f139f70126abdb9b73755ebf5bba899d3c464780532d95471ebfadb7562aaad"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-restored-build-20261120.log",
+          "sha256": "48e064d60851084be9bbde98a234115aa720779a053c620b2a7dffb5def157cd"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-restored-test-20261120.log",
+          "sha256": "6311b4acd3456401d1356ee27eb578e69f8ba34a90eab4a97f12dc88a3f10cee"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-restored-recompile-build-20261120.log",
+          "sha256": "fe852ed2df7e426d84156531667212d53d4d3e6e6614a1f3a010b88b2211027a"
+        },
+        {
+          "path": "build\\desktop-msvc\\s3-solver-restored-recompile-test-20261120.log",
+          "sha256": "f4e9e5378ca00dc304943b5f3bea22ed8e6e36259175379e9fa695b5295db6a6"
+        }
+      ],
+      "verified": [
+        "Current Release full propagation suite and new six-face material/removal analytic corridors PASS. Existing full-height roof/water and sync/snapshot write-band properties re-read in source and executed by the suite.",
+        "Actual production +X neighbor fault makes six-face regression fail. Raw source SHA256 restored exactly; source timestamp issue localized when MSBuild initially retained faulty test object; explicit recompilation and normal test PASS. No fault hook or production solver change remains."
+      ],
+      "remaining": [],
+      "scope_limit": "CPU numeric solver contract only. Independent oracle/order and all original S3.03..S6 lifecycle/backend/rendered/performance requirements remain open; no real GPU claim from test host stubs."
     }
   ],
   "completed_handoff": {

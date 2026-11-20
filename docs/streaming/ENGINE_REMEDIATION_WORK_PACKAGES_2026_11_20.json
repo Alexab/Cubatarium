@@ -243,9 +243,15 @@
         {
           "id": "S3.01",
           "action": "Закрепить solver: полный верхний контекст, свойства материалов, шесть направлений распространения и удаления света.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "completed_subtasks": [
+            "Full upper-context/water and explicit all-six-face material/source/obstacle mutation contracts: Release PASS. Actual direction fault rejected; exact source and normal binary restored."
+          ],
+          "remaining_subtasks": [],
+          "acceptance_record": "S3_01_SOLVER_ACCEPTANCE_2026_11_20.json",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S3.02",
@@ -470,7 +476,7 @@
       ]
     }
   ],
-  "current_step": "S3.01",
+  "current_step": "S3.02",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

@@ -118,6 +118,82 @@ static void BuildEnclosedRoom(cutum::UBlockWorld &world, cutum::BlockId stone,
   }
 }
 
+static void TestSixFaceMaterialAndRemovalContract()
+{
+  using namespace cutum;
+  const std::array<glm::ivec3, 6> directions{{{1,0,0},{-1,0,0},{0,1,0},
+                                             {0,-1,0},{0,0,1},{0,0,-1}}};
+  for (const auto direction : directions)
+  {
+    auto definitions = std::make_shared<UBlockDefinitionStorage>();
+    BlockDefinition stone, water, torch, cross;
+    stone.Physics = BlockPhysicsProfile::Solid();
+    water.Physics.IsLiquid = true;
+    water.Render.Style = BlockRenderStyle::Fluid;
+    torch.Physics = BlockPhysicsProfile::Solid();
+    torch.Render.Style = BlockRenderStyle::Cross;
+    torch.Lighting.Emission = 14;
+    cross.Physics = BlockPhysicsProfile::Solid();
+    cross.Render.Style = BlockRenderStyle::Cross;
+    const auto install_catalog = [&]
+    {
+      definitions->ReplaceAll({{8,stone},{9,water},{50,torch},{51,cross}},
+          {{"stone",8},{"water",9},{"torch",50},{"cross",51}});
+    };
+    install_catalog();
+    UBlockRegistry registry(nullptr, definitions);
+    UBlockWorld world;
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    glm::ivec3 source(15,-33,15);
+    if (direction.x < 0 || direction.y < 0 || direction.z < 0)
+      source -= direction;
+    const glm::ivec3 u = direction.x ? glm::ivec3(0,1,0) : glm::ivec3(1,0,0);
+    const glm::ivec3 v = direction.z ? glm::ivec3(0,1,0) : glm::ivec3(0,0,1);
+    // A closed one-voxel corridor makes the expected field analytic. Literal
+    // directions are independent of the production neighbor traversal table.
+    for (int i = -1; i <= 8; ++i)
+      for (int a = -1; a <= 1; ++a)
+        for (int b = -1; b <= 1; ++b)
+          world.SetBlock(source + direction*i + u*a + v*b, 8);
+    for (int i = 0; i < 8; ++i)
+      world.SetBlock(source + direction*i, BLOCK_AIR);
+    world.SetBlock(source, 50);
+    Expect(UChunkManager::WorldToChunk(source) !=
+               UChunkManager::WorldToChunk(source + direction),
+           "six-face fixture crosses the intended section boundary");
+    const auto check = [&](int emission, int blocker)
+    {
+      for (int i = 0; i < 8; ++i)
+        Expect(BlockAt(world, source + direction*i) ==
+                   (blocker >= 0 && i >= blocker ? 0 : std::max(0, emission-i)),
+               "six-face corridor exact attenuation/removal field");
+    };
+    RelightBlocksAroundEdit(world, registry, {source});
+    check(14, -1);
+    const auto barrier = source + direction*3;
+    world.SetBlock(barrier, 8);
+    RelightBlocksAroundEdit(world, registry, {barrier});
+    check(14, 3);
+    world.SetBlock(barrier, BLOCK_AIR);
+    RelightBlocksAroundEdit(world, registry, {barrier});
+    check(14, -1);
+    const auto material = source + direction*2;
+    for (const BlockId id : {BlockId(9), BlockId(51)})
+    {
+      world.SetBlock(material, id);
+      RelightBlocksAroundEdit(world, registry, {material});
+      check(14, -1); // water/cross transmit blocklight with normal unit decay
+    }
+    torch.Lighting.Emission = 6;
+    install_catalog();
+    RelightBlocksAroundEdit(world, registry, {source});
+    check(6, -1);
+    world.SetBlock(source, BLOCK_AIR);
+    RelightBlocksAroundEdit(world, registry, {source});
+    check(0, -1);
+  }
+}
+
 static void TestSyncContract(const std::string &mode)
 {
   using namespace cutum;
@@ -572,7 +648,10 @@ int main(int argc, char **argv)
 {
   if (argc == 2)
   {
-    TestSyncContract(argv[1]);
+    if (std::string(argv[1]) == "--six-faces")
+      TestSixFaceMaterialAndRemovalContract();
+    else
+      TestSyncContract(argv[1]);
     std::cout << "sync_light_contract_test: OK\n";
     return 0;
   }

@@ -1928,7 +1928,7 @@ cubatarium_add_test(NAME chunk_lighting_propagation_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
 
-foreach(_sync_light_mode sync-noop sync-neighbor sync-halo unknown-boundary sparse-sky sync-parity edit-contract)
+foreach(_sync_light_mode sync-noop sync-neighbor sync-halo unknown-boundary sparse-sky sync-parity edit-contract six-faces)
   add_test(NAME light_${_sync_light_mode}_test
       COMMAND $<TARGET_FILE:chunk_lighting_propagation_test> --${_sync_light_mode})
   set_tests_properties(light_${_sync_light_mode}_test PROPERTIES LABELS "unit;lighting;streaming")
