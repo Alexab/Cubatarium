@@ -89,6 +89,9 @@ private:
   bool Relative_{true};
   double LastTick_{0.0}, StageStarted_{0.0}, LastProgress_{0.0};
   double NextPlan_{0.0}, InspectPoseStarted_{-1.0};
+  // Availability transitions are not motor progress. Retain one recovery
+  // deadline until the observed capsule actually moves or reaches a waypoint.
+  double RecoveryStarted_{-1.0};
   glm::vec3 ProgressPosition_{0.0f};
   float TakeoffY_{0.0f}, InspectYaw_{0.0f};
   int InspectPose_{0}, PlanAttempts_{0}, PlanExpansions_{0};

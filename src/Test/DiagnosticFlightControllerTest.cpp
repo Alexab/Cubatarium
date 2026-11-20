@@ -315,5 +315,100 @@ int main()
                bot.FailureReason() == "walking_pose_not_ready",
            "missing motor readiness must have its own bounded failure");
   }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{8, 2, 0}, false}}, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, false};
+    const auto unknown = [](glm::vec3, glm::vec3)
+    { return DiagnosticSegmentState::Unknown; };
+    for (int tick = 0; tick < 60; ++tick)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, unknown);
+      Expect(!action.forward && !action.up && !action.down,
+             "temporary Unknown must hold the motor");
+    }
+    for (int tick = 0; tick < 300 &&
+                       bot.State() != DiagnosticFlightState::Complete; ++tick)
+      Step(bot, o, Clear);
+    Expect(bot.State() == DiagnosticFlightState::Complete,
+           "terrain arrival must recover through normal motor movement");
+  }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{8, 2, 0}, false}}, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, false};
+    for (int tick = 0; tick < 420 &&
+                       bot.State() != DiagnosticFlightState::Blocked; ++tick)
+    {
+      o.time += 0.05;
+      // Streaming availability flickers, but the physical motor never moves.
+      const auto probe = [&](glm::vec3, glm::vec3)
+      { return (static_cast<int>(o.time) % 2 == 0)
+                   ? DiagnosticSegmentState::Unknown
+                   : DiagnosticSegmentState::Clear; };
+      bot.Tick(o, probe);
+    }
+    Expect(bot.State() == DiagnosticFlightState::Blocked,
+           "availability flicker without physical progress must terminate");
+    Expect(bot.PlanAttempts() <= 20 &&
+               bot.PlanExpansions() <= bot.PlanAttempts() * 256,
+           "non-progress recovery must have bounded planning work");
+    for (int tick = 0; tick < 20; ++tick)
+    {
+      o.time += 0.05;
+      const auto action = bot.Tick(o, Clear);
+      Expect(bot.State() == DiagnosticFlightState::Blocked &&
+                 !action.forward && !action.up && !action.down && !action.capture,
+             "terminal blocked state must not resume motor or capture commands");
+    }
+  }
+  {
+    for (const bool enclosed : {false, true})
+    {
+      DiagnosticFlightController bot;
+      bot.SetRoute({{{8, 2, 0}, false}}, false);
+      DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, false};
+      const auto probe = [&](glm::vec3, glm::vec3)
+      { return enclosed ? DiagnosticSegmentState::Blocked
+                        : DiagnosticSegmentState::Clear; };
+      for (int tick = 0; tick < 130 &&
+                         bot.State() != DiagnosticFlightState::Blocked; ++tick)
+      {
+        o.time += 0.05;
+        bot.Tick(o, probe);
+      }
+      Expect(bot.State() == DiagnosticFlightState::Blocked &&
+                 bot.FailureReason() == (enclosed ? "no_safe_local_path"
+                                                 : "movement_stalled"),
+             "enclosure and a stalled motor must have bounded distinct failures");
+    }
+  }
+  {
+    DiagnosticFlightController bot;
+    bot.SetRoute({{{8, 2, 0}, false}}, false);
+    DiagnosticFlightObservation o{{0, 2, 0}, 0, 0, 0, false};
+    const auto unknown = [](glm::vec3, glm::vec3)
+    { return DiagnosticSegmentState::Unknown; };
+    for (int tick = 0; tick < 200; ++tick)
+    {
+      o.time += 0.05;
+      bot.Tick(o, unknown);
+    }
+    // Real observed progress starts a new bounded recovery interval.
+    o.position.x += 0.3f;
+    for (int tick = 0; tick < 200; ++tick)
+    {
+      o.time += 0.05;
+      bot.Tick(o, unknown);
+    }
+    Expect(bot.State() != DiagnosticFlightState::Blocked,
+           "actual motor progress must reset the recovery deadline");
+    for (int tick = 0; tick < 300 &&
+                       bot.State() != DiagnosticFlightState::Complete; ++tick)
+      Step(bot, o, Clear);
+    Expect(bot.State() == DiagnosticFlightState::Complete,
+           "progressing recovery must retain a usable route");
+  }
   return EXIT_SUCCESS;
 }

@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S1.02",
+  "current_package": "S1.03",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -176,6 +176,58 @@
         "Release controller tests PASS."
       ],
       "scope_limit": "Architecture/input-boundary package only. Earlier native route remains historical evidence for its recorded EXE; current executable identity and complete no-relocation runtime acceptance are not inferred. Routes and replay remain S1.04/S1.05."
+    },
+    {
+      "id": "S1.02",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src/App/Diagnostics/DiagnosticFlightController.cpp",
+          "sha256": "15ac209b0f97ee2a9c8df210ed6e5b5ac276658199d4d15431659658e3e5c982"
+        },
+        {
+          "path": "src/App/Diagnostics/DiagnosticFlightController.h",
+          "sha256": "ab475da745d6b5f9e3921391502bb545d940737cd7aa9fdfc5d078e4d36c7b84"
+        },
+        {
+          "path": "src/Test/DiagnosticFlightControllerTest.cpp",
+          "sha256": "478b24f1d135dfe21f30a5653a2e0bace50e92c3e2269aad5cf7f8f727428d4c"
+        },
+        {
+          "path": "build/desktop-msvc/s1-recovery-repro-test-20261120.log",
+          "sha256": "ca63b53b4cc6ed8dc1625bd8c833a1b97c940efd34bde4935176ade0f84a2f61"
+        },
+        {
+          "path": "build/desktop-msvc/s1-recovery-fixed-test-20261120.log",
+          "sha256": "e02a421ef0dd2e2289bcf70533c9a143f96e99603c1df5f2a7c03dd30581d34e"
+        },
+        {
+          "path": "build/desktop-msvc/s1-recovery-contract-test-20261120.log",
+          "sha256": "501e537c6592bd727325dd75fcfd3f9bee0c3862305d081b010c88a98286d876"
+        },
+        {
+          "path": "build/desktop-msvc/s1-recovery-contract-fixed-build-20261120.log",
+          "sha256": "cf9cd96f611653b42569694d04215ddbc2fb129225f68adac86745cb92161285"
+        },
+        {
+          "path": "build/desktop-msvc/s1-recovery-contract-fixed-test-20261120.log",
+          "sha256": "5e5c983369e955bd069839ed85ff8bec821b19c387498b86c30458422d1e0011"
+        }
+      ],
+      "reproduced": [
+        "Unknown/Clear flicker without physical movement never reached Blocked in 21 seconds.",
+        "After adding the total deadline, observed movement did not reset the original continuous-wait timer; regression exposed this separately."
+      ],
+      "fixed": [
+        "Recovery deadline survives availability transitions and terminates after 15 seconds without observed progress.",
+        "Observed displacement over 0.25 resets both recovery and continuous-wait deadlines; waypoint arrival clears recovery."
+      ],
+      "verified": [
+        "Release controller suite PASS, including wall detour, 256 expansions per plan, temporary Unknown recovery, flickering availability termination and terminal commands disabled.",
+        "Enclosed route and stalled motor terminate with distinct no_safe_local_path/movement_stalled failures.",
+        "Actual observed progress permits a fresh bounded recovery interval, followed by normal motor completion."
+      ],
+      "scope_limit": "Controller and simulated motor contract. Native route acceptance remains S1.04; no new current-EXE native proof claimed."
     }
   ],
   "completed_handoff": {

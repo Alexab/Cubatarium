@@ -232,12 +232,23 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
   {
     ProgressPosition_ = o.position;
     LastProgress_ = o.time;
+    RecoveryStarted_ = -1.0;
+    if (State_ == DiagnosticFlightState::WaitingForTerrain)
+      StageStarted_ = o.time;
+  }
+  if (RecoveryStarted_ >= 0.0 && o.time - RecoveryStarted_ >= 15.0)
+  {
+    fail(State_ == DiagnosticFlightState::WaitingForTerrain
+             ? "streaming_dependency_timeout"
+             : "recovery_without_motor_progress");
+    return command;
   }
   if (State_ == DiagnosticFlightState::WaitingForTerrain && o.time < NextPlan_)
     return command;
   const glm::vec3 target = Route_[Waypoint_].position;
   if (Arrived(Route_[Waypoint_], o.position))
   {
+    RecoveryStarted_ = -1.0;
     Detour_.clear();
     if (Route_[Waypoint_].inspect)
     {
@@ -270,6 +281,8 @@ DiagnosticFlightController::Tick(const DiagnosticFlightObservation &o,
       probe(o.position, o.position + delta * (std::min(length, 2.0f) / length));
   if (segment != DiagnosticSegmentState::Clear)
   {
+    if (RecoveryStarted_ < 0.0)
+      RecoveryStarted_ = o.time;
     if (o.time >= NextPlan_)
     {
       bool unknown = segment == DiagnosticSegmentState::Unknown;

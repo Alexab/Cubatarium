@@ -100,9 +100,10 @@
         {
           "id": "S1.02",
           "action": "Закрыть обычный взлёт, ожидание неизвестной территории, ограниченный обход препятствия и исход blocked.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S1.03",
@@ -429,7 +430,7 @@
       ]
     }
   ],
-  "current_step": "S1.02",
+  "current_step": "S1.03",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {
     "before_work": [
