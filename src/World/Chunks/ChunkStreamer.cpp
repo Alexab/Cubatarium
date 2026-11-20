@@ -50,18 +50,33 @@ bool HasTerrainUnloadAuthority(const UBlockWorld &world, glm::ivec3 ground,
 {
   if (world.GetChunkManager().HasUnresolvedTerrainColumnRead(ground))
     return false;
+  bool geometry = false;
+  bool decoded_data = false;
   bool decoded_profile = true;
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
-    if (world.GetChunkManager().HasChunk({ground.x, cy, ground.z}))
-      return true;
-    decoded_profile &= world.GetChunkManager().HasDecodedTerrainSlice(
-        {ground.x, cy, ground.z});
+    const glm::ivec3 slice(ground.x, cy, ground.z);
+    geometry |= world.GetChunkManager().HasChunk(slice);
+    const bool decoded =
+        world.GetChunkManager().HasDecodedTerrainSlice(slice);
+    decoded_data |= decoded;
+    decoded_profile &= decoded;
   }
-  // Do not turn a partial disk AIR load into permission to call the existing
-  // whole-column save/purge contract. Its data owner stays resident until the
-  // producer completes the profile or explicitly cancels/retire it.
-  return decoded_profile;
+  if (decoded_profile)
+    return true;
+  if (!geometry)
+    return false;
+  // One geometry holder is not completion authority for a partial disk load.
+  // Scan before deciding: decoded AIR may occur above that holder, while
+  // decoded non-AIR may occur below cy=0. Preserve both and local edits until
+  // the ordinary column-completion contract permits saving them together.
+  if (decoded_data)
+    return IsTerrainChunkComplete(world, ground,
+                                  (max_cy + 1) * CHUNK_SIZE - 1,
+                                  kNoTerrainChunkSlice, min_cy * CHUNK_SIZE);
+  // Legacy procedural-only partial columns retain their existing cleanup
+  // contract. Replacing that contract requires explicit producer receipts.
+  return true;
 }
 
 bool ChunkAabbIntersectsPlayer(glm::ivec3 chunkCoord, const glm::vec3 &eyePos,

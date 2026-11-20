@@ -1,3 +1,4 @@
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/FrameDeadline.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -6,6 +7,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/IO/BinaryChunkSerializer.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include <cstdlib>
 #include <iostream>
@@ -72,6 +74,82 @@ static void TestRetiredUnloadCandidate()
   Expect(saved == 2 && unloaded == 2 &&
              !world.GetChunkManager().HasChunk(second),
          "returned resident geometry has a fresh save obligation");
+  tuning.UnloadAmortizeMode = prior;
+}
+
+static void TestPartialDecodedGeometryCannotAuthorizeUnload()
+{
+  using namespace cutum;
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBinaryChunkSerializer serializer;
+  auto &tuning = URuntimeTuning::Get();
+  const int prior = tuning.UnloadAmortizeMode;
+  for (int mode : {kUnloadAmortizeU0, kUnloadAmortizeUB, kUnloadAmortizeUD})
+  {
+    tuning.UnloadAmortizeMode = mode;
+    UBlockWorld world;
+    const glm::ivec3 ground(40, 0, 3), geometry(40, -4, 3);
+    const auto original = geometry * CHUNK_SIZE;
+    const auto added = original + glm::ivec3(1, 0, 0);
+    auto install = [&](int cy)
+    {
+      const glm::ivec3 coord(ground.x, cy, ground.z);
+      UChunk frame(coord);
+      frame.SetWeatherState(.25f, 123.125);
+      if (cy == -4)
+        frame.SetBlockLocal({0, 0, 0}, 8);
+      const auto decoded = serializer.Deserialize(
+          serializer.Serialize(coord, frame, registry).bytes, coord, registry);
+      Expect(ApplyTerrainSliceLoad(world, coord, &decoded, nullptr, {ground, 1},
+                                  1, false),
+             "mixed unload fixture installs an actual decoded disk frame");
+    };
+    install(-4);
+    install(-3);
+    world.SetBlock(original, BLOCK_AIR);
+    world.SetBlock(added, 8);
+    auto &manager = world.GetChunkManager();
+    const auto incarnation = manager.GetChunk(geometry)->GetIncarnation();
+    manager.GetChunk(geometry)->SetWeatherState(.75f, 456.125);
+    UChunkStreamer streamer(world, registry, 1, 0, 319, -64);
+    streamer.SetMaxUnloadOpsPerFrame(1);
+    int saves = 0, unloads = 0;
+    streamer.SetCallbacks(nullptr, [&](glm::ivec3)
+    {
+      Expect(world.GetBlock(original) == BLOCK_AIR && world.GetBlock(added) == 8,
+             "completed mixed column saves the current local edits");
+      ++saves;
+    }, nullptr, nullptr);
+    streamer.SetUnloadColumnCallback([&](glm::ivec3, int)
+    {
+      ++unloads;
+      return true;
+    });
+    UFrameDeadline::Get().BeginFrame(0);
+    const glm::vec3 eye(8, -60, 8);
+    streamer.UnloadPass({0, -4, 0}, eye, PlayerCapsule{});
+    streamer.DrainDeferredUnloadSaves({0, -4, 0}, eye, PlayerCapsule{}, 8);
+    Expect(saves == 0 && unloads == 0 &&
+               manager.GetChunk(geometry) &&
+               manager.GetChunk(geometry)->GetIncarnation() == incarnation &&
+               world.GetBlock(original) == BLOCK_AIR &&
+               world.GetBlock(added) == 8 &&
+               manager.GetChunk(geometry)->GetWeatherLastUpdateSec() == 456.125 &&
+               manager.HasLoadedAirSlice({40, -3, 3}),
+           "partial decoded geometry must not authorize whole-column "
+           "save/purge or retire another slice/local edit in any unload mode");
+    for (int cy = -2; cy <= 19; ++cy)
+      install(cy);
+    streamer.UnloadPass({0, -4, 0}, eye, PlayerCapsule{});
+    streamer.DrainDeferredUnloadSaves({0, -4, 0}, eye, PlayerCapsule{}, 8);
+    Expect(saves == 1 && unloads == 1 && !manager.HasChunk(geometry) &&
+               !manager.HasLoadedAirSlice({40, -3, 3}),
+           "validated complete decoded profile releases the unload obligation");
+  }
   tuning.UnloadAmortizeMode = prior;
 }
 
@@ -355,6 +433,7 @@ int main()
   TestAirOnlyColumnLifecycle();
   TestAirRetiresWithTerrainColumn();
   TestRetiredUnloadCandidate();
+  TestPartialDecodedGeometryCannotAuthorizeUnload();
   cutum::UBlockWorld world;
   cutum::UBlockRegistry registry(nullptr);
   const glm::ivec3 center(-21, 0, 3);
