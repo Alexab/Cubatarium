@@ -29193,5 +29193,278 @@
     "Fix ownership/edit-safe disk retries and nondestructive read/incomplete failure behavior; existing whole-column clear/purge is not covered by the new cancellation receipts.",
     "Continue mixed/procedural/profile/absence producer certificates, persisted content/algorithm/catalog proof and the entire original S0..S6 backend/reference/startup/lifetime/performance/memory matrix."
   ]
+},
+"controlled_native_partial_air_disk_cancellation_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "source_commit": "264be3337f13efe746a2f01fac583a2e611a773a",
+  "full_goal": "Full original S0..S6 remains active; no new audit or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\controlled-air-cancellation-assessment-20261120.json",
+    "sha256": "4bdfa6f61f4fa7865e2ea24b9a395d7f020c8d2ddc99884c7cf58bbc069c09af"
+  },
+  "changes": [
+    "Default-off one-shot DiskAirCancellationProbe parses signed target coordinates strictly and arms only after actual focus travel of at least16 columns. Startup, duplicate installs, geometry, completed requests and absence of staged real results cannot trigger it.",
+    "For the selected returning AIR-only request, the probe calls actual cancellation after a new owned AIR install with another real result already staged, bumps the generation and requests a fresh normal disk demand. It never fabricates load, owner, removal or completion records.",
+    "Trace each actual owned AIR installation with its demand ID, and cancelled/stale actual consumer result rejection. Cancelled deferred results are discarded instead of being requeued; requeue metrics reflect the retained queue.",
+    "Smoke harness adds explicit --probe-partial-air-cancellation with secondary-column validation, removes inherited probe switches and records the effective request/environment. Ordinary runs keep it disabled.",
+    "Independent cancellation verifier first requires unchanged strict primary geometry/AIR round trip and the complete secondary decoded AIR profile. It then joins partial queued demand, exact installed field, cancellation/removal, actual late-result discard and distinct fresh demand/field identities."
+  ],
+  "verification": {
+    "release_application_build": "PASS",
+    "release_storage_policy_test": "PASS",
+    "release_storage_policy_seconds": 0.51,
+    "python_tests": 50,
+    "python_breakdown": {
+      "cancellation": 9,
+      "full_air_return": 13,
+      "harness": 28
+    },
+    "native": {
+      "run": "engine-air-cancel-probe-20261120-native",
+      "runtime_world": "EngineSmoke_4bc4e254cb8746e39b30b1920a4b66a0",
+      "prepared_source_world": "EngineSmoke_32e3c8877a044e5594404cdeb0a967cb",
+      "wall_elapsed_sec": 322.145,
+      "ingame_frames": 10251,
+      "maximum_excursion_blocks": 303.667,
+      "relocations": 0,
+      "cancelled_demand_id": 65408,
+      "remaining_results_at_cancel": 23,
+      "cancelled_coord": [
+        1,
+        -3,
+        5
+      ],
+      "cancelled_field_incarnation": 18468,
+      "discarded_late_result_coord": [
+        1,
+        3,
+        5
+      ],
+      "discarded_late_result_count": 1,
+      "returned_demand_id": 65593,
+      "returned_field_incarnation": 18589,
+      "primary_disk_demand_id": 65397,
+      "secondary_complete_profile_slices": 24,
+      "min_chunk_y": -4,
+      "max_chunk_y": 19,
+      "primary_trace_rows": 48,
+      "secondary_trace_rows": 178,
+      "shared_capacity": 4096,
+      "geometry_materialization_events": 0,
+      "saved_air_weather": "PASS: all24 full CCHK4 frames, no non-AIR/fluid; wetness16384/65535, timestamp123125ms retained; no incomplete discard",
+      "source_components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "air_data_column": "PASS",
+        "air_cancellation": "PASS",
+        "draw": "PASS",
+        "cpu_vertex_draw": "PASS"
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "source_draw": {
+        "before_field": 1005,
+        "after_field": 7990,
+        "before_rgb": 940,
+        "after_rgb": 6925,
+        "field_faults": 0,
+        "field_unjoined": 0,
+        "missing_bound": 0,
+        "rgb_faults": 0,
+        "geometry_faults": 0,
+        "hole_faces": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "unmodified_general_smoke": "UNTESTED",
+      "scoped_source_and_controlled_cancel": "PASS"
+    }
+  },
+  "actual_trace_controls": [
+    {
+      "name": "baseline",
+      "expected": "PASS",
+      "actual": "PASS",
+      "reason": "partial_air_demand_cancelled_retired_and_disk_reloaded"
+    },
+    {
+      "name": "no_probe",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "no_actual_partial_cancellation"
+    },
+    {
+      "name": "missing_retirement",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "cancelled_air_owner_not_retired"
+    },
+    {
+      "name": "wrong_field",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "cancelled_air_owner_not_retired"
+    },
+    {
+      "name": "wrong_demand",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_partial_owned_air_installs"
+    },
+    {
+      "name": "missing_late",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_actual_cancelled_result_discard"
+    },
+    {
+      "name": "cancelled_complete",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "cancelled_demand_claimed_complete"
+    },
+    {
+      "name": "reused_partial_field",
+      "expected": "FAIL",
+      "actual": "FAIL",
+      "reason": "fresh_return_reused_cancelled_field"
+    },
+    {
+      "name": "foreign_late_manager",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "missing_actual_cancelled_result_discard"
+    },
+    {
+      "name": "dropped",
+      "expected": "UNTESTED",
+      "actual": "UNTESTED",
+      "reason": "full_return_not_proven"
+    }
+  ],
+  "native_chain": [
+    {
+      "seq": 74,
+      "event": "disk_column_queued",
+      "demand": 65408
+    },
+    {
+      "seq": 75,
+      "event": "air_install",
+      "coord": [
+        1,
+        -3,
+        5
+      ],
+      "field": 18468
+    },
+    {
+      "seq": 76,
+      "event": "disk_air_owned",
+      "demand": 65408
+    },
+    {
+      "seq": 77,
+      "event": "disk_air_probe_cancel",
+      "demand": 65408
+    },
+    {
+      "seq": 78,
+      "event": "air_remove",
+      "field": 18468
+    },
+    {
+      "seq": 79,
+      "event": "disk_air_cancelled",
+      "demand": 65408
+    },
+    {
+      "seq": 80,
+      "event": "disk_column_queued",
+      "demand": 65593
+    },
+    {
+      "seq": 81,
+      "event": "disk_result_cancelled",
+      "coord": [
+        1,
+        3,
+        5
+      ],
+      "demand": 65408
+    },
+    {
+      "seq": 130,
+      "event": "disk_column_complete",
+      "demand": 65593
+    }
+  ],
+  "receipts": {
+    "air-cancel-probe-policy-final-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-policy-final-build-20261120.log",
+      "sha256": "4a90074a948c0a80add5195a94ae07b44061d2d4160eb05635c2e822d2e33383"
+    },
+    "air-cancel-probe-policy-final-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-policy-final-test-20261120.log",
+      "sha256": "d8b4bda0c6cf80a08f7171325edb9dcbc911767c749c9c00d2be674c160bedb6"
+    },
+    "air-cancel-probe-evidence-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-evidence-tests-20261120.log",
+      "sha256": "e19c8574679b3c343164453d1b17afa4928c33847eaaa0f59b7e29baa2b5897a"
+    },
+    "air-cancel-probe-column-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-column-tests-20261120.log",
+      "sha256": "01cf08e4d982daac8298bcd443d1a7324461735f464d9888eff3643c1394a126"
+    },
+    "air-cancel-probe-harness-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-harness-tests-20261120.log",
+      "sha256": "2e95f3361f118f0cceb197c3b2673e08a688eaa47466918cf59f71cd15a04a8e"
+    },
+    "air-cancel-probe-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-release-build-20261120.log",
+      "sha256": "3655c46d69d6dc81eeb8464538e08f12be286b9e9e36c813a8544c081e21f6ae"
+    },
+    "prepare_air_cancel_probe_wrapper_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\prepare_air_cancel_probe_wrapper_20261120.py",
+      "sha256": "0c63b32c8766900c5edcd9d18edbbc979b17c4df626edae94fb90215f2dcce7a"
+    },
+    "run_air_cancel_probe_native_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_air_cancel_probe_native_20261120.py",
+      "sha256": "1ddbf7f88c7d85f5d52cf796bafacfb7f056f9a1925180e9e096fbdd4c35753f"
+    },
+    "assess_air_cancel_probe_column_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_air_cancel_probe_column_20261120.py",
+      "sha256": "6315b330dfad4f74a3fce9e495c538bf362887c1cb618a52f240bf736126e0f8"
+    }
+  },
+  "column_assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\air-cancel-probe-column-assessment-20261120.json",
+    "sha256": "a712ea6432c9248811782116d077f7541066fe21bb2d3a1835adcb081b36816b"
+  },
+  "limits": [
+    "The one-shot probe explicitly cancels and reissues a real disk demand after motor travel; this is not a natural cancellation frequency or automatic broker-retry acceptance claim.",
+    "One AIR-only partial demand with23 results remaining; mixed/geometry producer cancellation remains separate.",
+    "Disk retry/incomplete finalization still has legacy whole-column clear/purge paths; ownership/edit-safe nondestructive failure handling remains to fix.",
+    "No procedural/profile/absence completion or persisted content/algorithm/catalog/physical-light certificate acceptance.",
+    "No CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen or S6 performance/memory acceptance; general smoke UNTESTED retained."
+  ],
+  "next": [
+    "Replace legacy whole-column clear/purge in disk retry/incomplete finalization with ownership/edit-safe nondestructive failure handling. Failed reads must not authorize deleting saved user data or resident edits.",
+    "Continue mixed/geometry/procedural producer lifecycle and explicit profile/absence completion certificates; controlled AIR-only retry does not close those requirements.",
+    "Preserve full S0..S6 persisted content/algorithm/catalog proofs, first-publication/startup/R8, actual CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen references and lifetime/performance/memory matrix."
+  ]
 }
 }
