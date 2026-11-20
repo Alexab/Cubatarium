@@ -1944,6 +1944,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         world_actions_failed = world_actions_failed || !success;
         world_action_observations.push_back(
             {{"phase", initial ? "initial" : "final"},
+             {"frame_epoch", world->GetStreamingFrameEpoch()},
              {"cell", {action.cell.x, action.cell.y, action.cell.z}},
              {"section", {coord.x, coord.y, coord.z}},
              {"expected_id", expected},
