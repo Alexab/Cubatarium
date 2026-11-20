@@ -5466,7 +5466,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
         break;
       }
     }
-    (void)world.Persistence->AbortAsyncChunkIoFor(async_io_timeout);
+    (void)world.Persistence->AbortAsyncChunkIoFor(world, async_io_timeout);
   }
 }
 
@@ -5981,7 +5981,9 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         const int canceled_relight_work =
             world.Persistence->CancelTerrainColumnRelight(world_key);
         invalidated_work = canceled_relight_work > 0 || invalidated_work;
-        world.Persistence->CancelAsyncTerrainColumnLoad(ground);
+        // Save runs after this callback. Cancelling the worker must not make
+        // the resident column incomplete before its serialization snapshot.
+        world.Persistence->CancelAsyncTerrainColumnLoad(world, ground, true);
         ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
         {

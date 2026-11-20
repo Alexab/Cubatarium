@@ -11766,7 +11766,8 @@ void UWorld::AbandonTerrainForWorldReplace()
   }
   if (Persistence)
   {
-    (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+    (void)Persistence->AbortAsyncChunkIoFor(*this,
+                                            std::chrono::milliseconds(0));
   }
 
   if (MeshService)
@@ -15349,7 +15350,7 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
       drained = Persistence->TickDrainAsyncChunkIo(*this, 8);
       if (!drained)
       {
-        drained = Persistence->AbortAsyncChunkIoFor(step_timeout);
+        drained = Persistence->AbortAsyncChunkIoFor(*this, step_timeout);
       }
     }
     const float frac =
@@ -15362,7 +15363,7 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     {
       if (Persistence && !drained)
       {
-        (void)Persistence->AbortAsyncChunkIoFor(step_timeout);
+        (void)Persistence->AbortAsyncChunkIoFor(*this, step_timeout);
       }
       state.phase = UBackgroundQuiesceState::Phase::CancelWorkers;
     }
@@ -15419,7 +15420,8 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     }
     if (Persistence)
     {
-      (void)Persistence->AbortAsyncChunkIoFor(std::chrono::milliseconds(0));
+      (void)Persistence->AbortAsyncChunkIoFor(*this,
+                                              std::chrono::milliseconds(0));
     }
     BackgroundQuiesceFinished = true;
     report("done", 1.f, "Background work stopped.");

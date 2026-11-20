@@ -4892,7 +4892,8 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       {
         chunk_input_changed = ApplyTerrainSliceLoad(
             world.BlockWorld, load.coord, load.decodedBuffer.get(), nullptr,
-            load.token, current_sequence, result_cancelled);
+            load.token, current_sequence, result_cancelled,
+            &state.installed_terrain);
         if (!chunk_input_changed)
           state.had_disk_read_failure = true;
         else if (load.decodedBuffer->HasChunkLightData())
@@ -4904,9 +4905,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         const auto air = ChunkStorage->ReadKnownAbsentTerrainSlice(
             WorldFolderPath, load.coord);
         chunk_input_changed =
-            air && ApplyTerrainSliceLoad(world.BlockWorld, load.coord, nullptr,
-                                         &*air, load.token, current_sequence,
-                                         result_cancelled);
+            air &&
+            ApplyTerrainSliceLoad(world.BlockWorld, load.coord, nullptr, &*air,
+                                  load.token, current_sequence,
+                                  result_cancelled, &state.installed_terrain);
         if (!chunk_input_changed)
           state.had_disk_read_failure = true;
       }
@@ -4952,10 +4954,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         continue;
       }
 
-      const PendingAsyncColumnLoadState finished = state;
+      auto finished = std::move(state);
       PendingAsyncColumnLoadSlices.erase(pending_it);
       const auto finalize_started = std::chrono::steady_clock::now();
-      FinalizeAsyncTerrainColumnLoad(world, ground, finished);
+      FinalizeAsyncTerrainColumnLoad(world, ground, std::move(finished));
       metrics.column_finalize_ms +=
           std::chrono::duration<double, std::milli>(
               std::chrono::steady_clock::now() - finalize_started)
@@ -5241,25 +5243,26 @@ void UWorldPersistence::FlushAsyncChunkIo(UWorld &world)
   }
 }
 
-void UWorldPersistence::AbortAsyncChunkIo()
+void UWorldPersistence::AbortAsyncChunkIo(UWorld &world)
 {
-  (void)AbortAsyncChunkIoFor(std::chrono::milliseconds(200));
+  (void)AbortAsyncChunkIoFor(world, std::chrono::milliseconds(200));
 }
 
 bool UWorldPersistence::AbortAsyncChunkIoFor(
-    const std::chrono::milliseconds timeout)
+    UWorld &world, const std::chrono::milliseconds timeout)
 {
   PendingSectionLightRestores.Clear();
   const auto abort_started = std::chrono::steady_clock::now();
   bool cancelled_loads = false;
-  for (const auto &entry : PendingAsyncColumnLoadSlices)
+  for (auto &entry : PendingAsyncColumnLoadSlices)
   {
-    const PendingAsyncColumnLoadState &state = entry.second;
+    auto &state = entry.second;
     if (state.cancellation)
     {
       state.cancellation->store(true, std::memory_order_release);
       cancelled_loads = true;
     }
+    const auto retired_air = RetireCancelledAirLoad(world, entry.first, state);
     const double elapsed_ms =
         state.requested_at == std::chrono::steady_clock::time_point{}
             ? 0.0
@@ -5270,6 +5273,7 @@ bool UWorldPersistence::AbortAsyncChunkIoFor(
                          "demand_id=" + std::to_string(state.demand_id) +
                              " reason=abort_async_io remaining_slices=" +
                              std::to_string(state.remaining_results) +
+                             " retired_air=" + std::to_string(retired_air) +
                              " elapsed_ms=" + std::to_string(elapsed_ms));
   }
   if (cancelled_loads && AsyncChunkIo)
@@ -5570,24 +5574,53 @@ void UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
   }
 }
 
-void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
+std::size_t UWorldPersistence::RetireCancelledAirLoad(
+    UWorld &world, glm::ivec3 ground_coord, PendingAsyncColumnLoadState &state)
 {
-  PendingSectionLightRestores.CancelColumn(ground_coord);
+  // Called only after this demand's cancellation flag is published. Exact
+  // install receipts cannot remove pre-existing, replaced or edited terrain.
+  if (!state.cancellation ||
+      !state.cancellation->load(std::memory_order_acquire))
+    return 0;
+  const auto retired =
+      state.installed_terrain.RetireAir(world.BlockWorld.GetChunkManager());
+  if (!retired.empty())
+  {
+    PendingSectionLightRestores.CancelColumn(ground_coord);
+    ClearColumnLightComplete({ground_coord.x, ground_coord.z},
+                             "cancelled_disk_air_retired");
+    if (world.MeshService)
+      world.MeshService->QueueMeshDependencyInvalidations(
+          world.BlockWorld, retired, "cancelled_disk_air_retired");
+    TraceChunkResidency("disk_air_cancelled", ground_coord, ground_coord,
+                        state.demand_id, &world.BlockWorld.GetChunkManager());
+  }
+  return retired.size();
+}
+
+void UWorldPersistence::CancelAsyncTerrainColumnLoad(
+    UWorld &world, glm::ivec3 ground_coord, bool retain_for_column_save)
+{
   if (ground_coord.y != 0)
   {
     ground_coord.y = 0;
   }
+  PendingSectionLightRestores.CancelColumn(ground_coord);
   const auto pending = PendingAsyncColumnLoadSlices.find(ground_coord);
   if (pending == PendingAsyncColumnLoadSlices.end())
   {
     return;
   }
-  const PendingAsyncColumnLoadState state = pending->second;
+  auto state = std::move(pending->second);
   if (state.cancellation)
   {
     state.cancellation->store(true, std::memory_order_release);
   }
   PendingAsyncColumnLoadSlices.erase(pending);
+  const auto retired_air =
+      retain_for_column_save
+          ? 0
+          : RetireCancelledAirLoad(world, ground_coord, state);
   if (AsyncChunkIo)
   {
     AsyncChunkIo->NoteLoadCancellation();
@@ -5603,6 +5636,7 @@ void UWorldPersistence::CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord)
       "disk", "cancelled_unloaded", ground_coord,
       "demand_id=" + std::to_string(state.demand_id) +
           " remaining_slices=" + std::to_string(state.remaining_results) +
+          " retired_air=" + std::to_string(retired_air) +
           " elapsed_ms=" + std::to_string(elapsed_ms));
 }
 
@@ -5624,12 +5658,13 @@ int UWorldPersistence::CancelAsyncTerrainColumnLoadsOutsideRadius(
       continue;
     }
 
-    const PendingAsyncColumnLoadState state = pending->second;
+    auto state = std::move(pending->second);
     if (state.cancellation)
     {
       state.cancellation->store(true, std::memory_order_release);
     }
     pending = PendingAsyncColumnLoadSlices.erase(pending);
+    const auto retired_air = RetireCancelledAirLoad(world, ground, state);
     if (world.Streaming)
     {
       world.Streaming->GetChunkGenTokens().Bump(ground);
@@ -5646,6 +5681,7 @@ int UWorldPersistence::CancelAsyncTerrainColumnLoadsOutsideRadius(
             " distance_chunks=" + std::to_string(distance) +
             " radius_chunks=" + std::to_string(radius) +
             " remaining_slices=" + std::to_string(state.remaining_results) +
+            " retired_air=" + std::to_string(retired_air) +
             " elapsed_ms=" + std::to_string(elapsed_ms));
     ++cancelled;
   }

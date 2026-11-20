@@ -5,6 +5,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
 #include <atomic>
 #include <chrono>
@@ -130,8 +131,8 @@ public:
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;
   void TraceAsyncChunkIoShutdownState() const;
-  void AbortAsyncChunkIo();
-  bool AbortAsyncChunkIoFor(std::chrono::milliseconds timeout);
+  void AbortAsyncChunkIo(UWorld &world);
+  bool AbortAsyncChunkIoFor(UWorld &world, std::chrono::milliseconds timeout);
   void EnqueueTerrainColumnRelight(int world_x, int world_z,
                                    bool priority = false, int min_y = 0,
                                    int max_y = -1,
@@ -206,7 +207,10 @@ public:
   void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                      uint64_t demand_id = 0);
   void RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
-  void CancelAsyncTerrainColumnLoad(glm::ivec3 ground_coord);
+  // Unload cancels workers before serializing the still-resident column.
+  // Retain its data until that save/eviction has completed.
+  void CancelAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
+                                    bool retain_for_column_save = false);
   int CancelAsyncTerrainColumnLoadsOutsideRadius(UWorld &world,
                                                  glm::ivec3 center,
                                                  int radius_chunks);
@@ -252,6 +256,7 @@ private:
     int remaining_results{0};
     int highest_cy_on_disk{kNoChunkSliceOnDisk};
     std::shared_ptr<std::atomic<bool>> cancellation;
+    TerrainSliceLoadOwnership installed_terrain;
     std::chrono::steady_clock::time_point requested_at{};
     double disk_discovery_ms{0.0};
     int timing_slice_count{0};
@@ -278,6 +283,9 @@ private:
   };
 
   static constexpr int kMaxAsyncColumnLoadRetries = 4;
+
+  std::size_t RetireCancelledAirLoad(UWorld &world, glm::ivec3 ground_coord,
+                                     PendingAsyncColumnLoadState &state);
 
   void FinalizeAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
                                       PendingAsyncColumnLoadState state);

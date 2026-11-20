@@ -340,6 +340,47 @@ static void TestAirOnlyColumnStorage(const std::filesystem::path &root_folder)
     Expect(
         storage.GetHighestChunkSliceOnDisk(folder, column) == 19,
         "new AIR-only column persists metadata even without a non-air ceiling");
+    for (int slices : {1, 12, 23})
+    {
+      UAsyncChunkIO io;
+      UBlockWorld partial;
+      TerrainSliceLoadOwnership owner;
+      const ChunkGenerationToken token{column, 17};
+      const auto cancellation = std::make_shared<std::atomic<bool>>(false);
+      for (int cy = -4; cy < -4 + slices; ++cy)
+        io.RequestLoad({column.x, cy, column.z}, storage, registry, folder,
+                       token, cancellation, 83);
+      Expect(io.WaitIdleFor(std::chrono::seconds(5)),
+             "partial full-profile AIR disk workers finish");
+      const auto loads = io.DrainLoads();
+      Expect(loads.size() == static_cast<size_t>(slices),
+             "actual disk results cover requested partial AIR range");
+      for (const auto &load : loads)
+        Expect(load.success && load.decodedBuffer && load.demandId == 83 &&
+                   load.cancellation == cancellation &&
+                   ApplyTerrainSliceLoad(partial, load.coord,
+                                         load.decodedBuffer.get(), nullptr,
+                                         load.token, 17, false, &owner),
+               "actual Binary/JSON results commit under their matching demand");
+      Expect(!IsTerrainChunkComplete(partial, column, 319, kNoTerrainChunkSlice,
+                                     -64),
+             "partial decoded AIR data cannot authorize whole-column save");
+      cancellation->store(true, std::memory_order_release);
+      const auto retired = owner.RetireAir(partial.GetChunkManager());
+      Expect(retired.size() == static_cast<size_t>(slices) &&
+                 partial.GetChunkManager().GetResidentTerrainColumnCount() ==
+                     0 &&
+                 partial.GetChunkManager().GetSectionLightFieldCount() == 0 &&
+                 storage.GetHighestChunkSliceOnDisk(folder, column) == 19,
+             "all owned partial AIR retires with no resident fields or disk "
+             "purge");
+      for (const auto &load : loads)
+        Expect(!ApplyTerrainSliceLoad(
+                   partial, load.coord, load.decodedBuffer.get(), nullptr,
+                   load.token, 17,
+                   cancellation->load(std::memory_order_acquire), &owner),
+               "late decoded result cannot republish cancelled data");
+    }
     UBlockWorld cold;
     Expect(storage.LoadTerrainColumn(column, cold, folder, registry, 319, -64) >
                    0 &&
@@ -469,6 +510,117 @@ static void TestAirTerrainIo(const std::filesystem::path &folder)
                                false) &&
              !async_world.GetChunkManager().HasChunk(air_coord),
          "actual async commit installs AIR without geometry");
+  // A partial column can never authorize the whole-column save/purge path.
+  // Its cancelled disk demand must instead release exactly its own AIR data.
+  UBlockWorld cancelled_partial;
+  TerrainSliceLoadOwnership partial_owner;
+  Expect(ApplyTerrainSliceLoad(cancelled_partial, air_coord,
+                               loads[0].decodedBuffer.get(), nullptr, token, 12,
+                               false, &partial_owner),
+         "partial demand installs a real decoded worker AIR frame");
+  auto &partial_manager = cancelled_partial.GetChunkManager();
+  const auto retained_field = partial_manager.GetSectionLightField(air_coord);
+  const auto retired = partial_owner.RetireAir(partial_manager);
+  Expect(retired == std::vector<glm::ivec3>{air_coord} &&
+             partial_manager.QueryBlock(cell).IsUnloaded() &&
+             !partial_manager.HasDecodedTerrainSlice(air_coord) &&
+             !partial_manager.GetSectionLightField(air_coord) &&
+             partial_manager.GetResidentTerrainColumnCount() == 0 &&
+             retained_field->GetData() == pattern,
+         "cancelled partial disk demand retires owned AIR without save/purge; "
+         "external field snapshot remains immutable");
+  Expect(partial_owner.RetireAir(partial_manager).empty(),
+         "cancelled demand cannot retire the same AIR twice");
+  Expect(!ApplyTerrainSliceLoad(cancelled_partial, air_coord,
+                                loads[0].decodedBuffer.get(), nullptr, token,
+                                12, true, &partial_owner) &&
+             !partial_manager.HasLoadedTerrainSlice(air_coord),
+         "already decoded late result cannot recreate cancelled AIR");
+  UBlockWorld cancellation_cold;
+  Expect(
+      storage.LoadChunk(air_coord, cancellation_cold, folder.string(),
+                        registry) == 0 &&
+          cancellation_cold.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+          cancellation_cold.GetChunkManager()
+                  .MakeTerrainSaveSnapshot(air_coord)
+                  ->GetWeatherLastUpdateSec() == 71.125,
+      "partial cancellation never purges the saved AIR frame or its weather");
+  const auto apply_owned =
+      [&](UBlockWorld &target, TerrainSliceLoadOwnership &owner)
+  {
+    return ApplyTerrainSliceLoad(target, air_coord,
+                                 loads[0].decodedBuffer.get(), nullptr, token,
+                                 12, false, &owner);
+  };
+  UBlockWorld duplicates;
+  TerrainSliceLoadOwnership first_owner, duplicate_owner;
+  Expect(apply_owned(duplicates, first_owner) &&
+             apply_owned(duplicates, duplicate_owner) &&
+             duplicate_owner.RetireAir(duplicates.GetChunkManager()).empty() &&
+             duplicates.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+             first_owner.RetireAir(duplicates.GetChunkManager()).size() == 1,
+         "duplicate completion cannot claim or retire pre-existing AIR data");
+  UBlockWorld replaced;
+  TerrainSliceLoadOwnership old_owner, new_owner;
+  Expect(apply_owned(replaced, old_owner), "old demand installs AIR");
+  const auto old_field =
+      replaced.GetChunkManager().GetSectionLightField(air_coord);
+  replaced.GetChunkManager().RemoveChunk(air_coord);
+  Expect(apply_owned(replaced, new_owner) &&
+             replaced.GetChunkManager()
+                     .GetSectionLightField(air_coord)
+                     ->GetIncarnation() != old_field->GetIncarnation() &&
+             old_owner.RetireAir(replaced.GetChunkManager()).empty() &&
+             replaced.GetChunkManager().HasDecodedTerrainSlice(air_coord) &&
+             new_owner.RetireAir(replaced.GetChunkManager()).size() == 1,
+         "cancelled old demand cannot retire a newer AIR incarnation at the "
+         "same coordinate");
+  UBlockWorld original_manager, foreign_manager;
+  TerrainSliceLoadOwnership original_lease, foreign_lease;
+  Expect(
+      apply_owned(original_manager, original_lease) &&
+          apply_owned(foreign_manager, foreign_lease) &&
+          original_lease.RetireAir(foreign_manager.GetChunkManager()).empty() &&
+          foreign_manager.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+          original_lease.RetireAir(original_manager.GetChunkManager()).size() ==
+              1,
+      "manager identity protects replacement and scratch worlds without "
+      "consuming the actual owner");
+  UBlockWorld edited_demand;
+  TerrainSliceLoadOwnership edit_lease;
+  Expect(apply_owned(edited_demand, edit_lease),
+         "editable demand installs AIR");
+  edited_demand.SetBlock(cell, 8);
+  edited_demand.SetBlock(cell, BLOCK_AIR);
+  Expect(
+      edit_lease.RetireAir(edited_demand.GetChunkManager()).empty() &&
+          edited_demand.GetChunkManager().HasChunk(air_coord) &&
+          edited_demand.GetChunkManager().HasDecodedTerrainSlice(air_coord) &&
+          edited_demand.GetChunkManager()
+                  .MakeTerrainSaveSnapshot(air_coord)
+                  ->GetWeatherLastUpdateSec() == 71.125,
+      "materialized edits retain data/weather/decoded authority even after "
+      "editing back to AIR");
+  UBlockWorld mixed_demand;
+  TerrainSliceLoadOwnership mixed_lease;
+  Expect(apply_owned(mixed_demand, mixed_lease), "mixed demand installs AIR");
+  mixed_demand.SetBlock(roof * CHUNK_SIZE, 8);
+  Expect(mixed_lease.RetireAir(mixed_demand.GetChunkManager()).empty() &&
+             mixed_demand.GetChunkManager().HasLoadedAirSlice(air_coord) &&
+             mixed_demand.GetBlock(roof * CHUNK_SIZE) == 8,
+         "a column with geometry retains AIR until normal save/eviction, "
+         "avoiding incomplete purge");
+  UBlockWorld field_only;
+  TerrainSliceLoadOwnership field_lease;
+  const auto field_before_install =
+      field_only.GetChunkManager().EnsureSectionLightField(air_coord);
+  Expect(apply_owned(field_only, field_lease) &&
+             field_only.GetChunkManager().GetSectionLightField(air_coord) !=
+                 field_before_install &&
+             field_lease.RetireAir(field_only.GetChunkManager()).size() == 1 &&
+             !field_only.GetChunkManager().GetSectionLightField(air_coord),
+         "field-only allocation cannot claim terrain; cancellation releases "
+         "only newly installed field ownership");
   const auto clock = async_world.GetChunkManager().GetInputRevision();
   io.RequestSave(air_coord, storage, folder.string(), async_world, registry,
                  token);
@@ -539,13 +691,18 @@ static void TestAirTerrainIo(const std::filesystem::path &folder)
              !loads[0].success,
          "real absent fast path remains distinct from successful decode");
   UBlockWorld absent_world;
+  TerrainSliceLoadOwnership absent_owner;
   Expect(
       !ApplyTerrainSliceLoad(absent_world, air_coord, nullptr, &*absent, token,
                              13, false) &&
           ApplyTerrainSliceLoad(absent_world, air_coord, nullptr, &*absent,
-                                token, 12, false) &&
+                                token, 12, false, &absent_owner) &&
           absent_world.GetChunkManager().GetResidentChunkCount() == 0,
       "absent completion requires current token and never allocates geometry");
+  Expect(absent_owner.RetireAir(absent_world.GetChunkManager()).size() == 1 &&
+             !absent_world.GetChunkManager().HasLoadedTerrainSlice(air_coord),
+         "indexed absent AIR has cancellable data ownership but no decoded "
+         "completeness authority");
   UBlockWorld missing;
   missing.SetBlock({column.x * CHUNK_SIZE, -64, column.z * CHUNK_SIZE}, 8);
   missing.SetBlock(roof * CHUNK_SIZE, 8);

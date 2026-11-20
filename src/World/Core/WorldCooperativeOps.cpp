@@ -1693,7 +1693,7 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     {
       // Cancel pending IO only — do not WaitIdle (can stick on late disk IO).
       (void)world.Persistence->AbortAsyncChunkIoFor(
-          std::chrono::milliseconds(0));
+          world, std::chrono::milliseconds(0));
     }
     // Quit-save: skip catalog reload (unchanged after quiesce).
     if (ResumeStreamingAfterSave)
@@ -3123,7 +3123,7 @@ void UWorldCooperativeSession::HandlePhaseDrainAsyncIo(UWorld &world,
     if (world.Persistence)
     {
       (void)world.Persistence->AbortAsyncChunkIoFor(
-          std::chrono::milliseconds(0));
+          world, std::chrono::milliseconds(0));
     }
     CubatariumLogInfo("Save", "drain_async_io begin");
   }
@@ -3144,7 +3144,7 @@ void UWorldCooperativeSession::HandlePhaseDrainAsyncIo(UWorld &world,
     if (!drained && world.Persistence)
     {
       (void)world.Persistence->AbortAsyncChunkIoFor(
-          std::chrono::milliseconds(0));
+          world, std::chrono::milliseconds(0));
     }
     CubatariumLogInfo("Save", std::string("drain_async_io end frames=") +
                                   std::to_string(Save.SaveDrainIoFrames) +
