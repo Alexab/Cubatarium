@@ -515,6 +515,46 @@ bool UWorldCollision::CheckBlockCollisionVolume(
   return false;
 }
 
+std::optional<bool> UWorldCollision::QueryKnownBlockCollisionVolume(
+    const CollisionVolume &vol) const
+{
+  if (!BlockRegistry)
+  {
+    return std::nullopt;
+  }
+  // The occupancy broadphase treats unloaded sections as empty. Restoration
+  // needs positive knowledge of every intersecting cell, so do not use it.
+  const glm::ivec3 minCell = WorldPosToBlock(vol.center - vol.halfExtents);
+  const glm::ivec3 maxCell = WorldPosToBlock(vol.center + vol.halfExtents);
+  bool unknown = false;
+  for (int x = minCell.x; x <= maxCell.x; ++x)
+  {
+    for (int y = minCell.y; y <= maxCell.y; ++y)
+    {
+      for (int z = minCell.z; z <= maxCell.z; ++z)
+      {
+        const glm::ivec3 cell(x, y, z);
+        if (!CheckAabbCollisionWithTouchingTolerance(
+                vol.center, vol.halfExtents, BlockCenter(cell),
+                glm::vec3(0.5f)))
+        {
+          continue;
+        }
+        const auto block = BlockWorld.QueryBlock(cell);
+        if (block.IsUnloaded())
+        {
+          unknown = true;
+        }
+        else if (BlockRegistry->BlocksMovement(block.id))
+        {
+          return true;
+        }
+      }
+    }
+  }
+  return unknown ? std::nullopt : std::optional<bool>(false);
+}
+
 bool UWorldCollision::MayContainSolid(const CollisionVolume &vol) const
 {
   const glm::vec3 min_pos = vol.center - vol.halfExtents;

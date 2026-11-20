@@ -276,15 +276,25 @@ void UWorldViewBinding::EnsurePlayerOnGround(UWorld &world)
   const PlayerCapsule cap =
       camera ? camera->GetPlayerCapsule() : PlayerCapsule::Standing();
   glm::vec3 pos = user->GetPosition();
-  // A valid saved cave floor is already ground. Choosing the highest solid
-  // block in its column would move the player onto the cave roof or ocean.
-  if (world.IsReasonablePlayerPosition(pos) &&
-      !world.CheckBlockCollisionVolume(CollisionVolumeFromEye(pos, cap)) &&
-      world.HasGroundSupport(pos, cap))
+  // Preserve a clear saved position even without immediate ground support:
+  // a removed floor or a save during a jump must settle through normal physics,
+  // rather than moving the player onto the highest cave roof or ocean.
+  if (world.IsReasonablePlayerPosition(pos))
   {
-    camera->SetPosition(pos);
-    camera->ResetVerticalPhysics();
-    return;
+    const auto collision = world.Collision.QueryKnownBlockCollisionVolume(
+        CollisionVolumeFromEye(pos, cap));
+    if (!collision.has_value())
+    {
+      // Streaming has not established clearance yet. Missing data must not
+      // authorize either restoration as AIR or a highest-solid relocation.
+      return;
+    }
+    if (!*collision)
+    {
+      camera->SetPosition(pos);
+      camera->ResetVerticalPhysics();
+      return;
+    }
   }
   const glm::ivec3 column = WorldPosToBlock(pos);
   int x = column.x;

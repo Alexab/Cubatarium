@@ -80,6 +80,10 @@ public:
                              float feetY) const;
 
   bool CheckBlockCollisionVolume(const CollisionVolume &vol) const;
+  /// false proves known clear space, true proves a solid overlap; nullopt
+  /// means some overlapping terrain is unavailable (never assumed AIR).
+  std::optional<bool>
+  QueryKnownBlockCollisionVolume(const CollisionVolume &vol) const;
   bool CheckCreatureCollisionVolume(const CollisionVolume &vol,
                                     CreatureId skipCreatureId) const;
   bool CheckCollisionVolume(const CollisionVolume &vol,

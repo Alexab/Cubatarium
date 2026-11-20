@@ -133,6 +133,76 @@ int main()
   collision_b.SetEntityCollisionEnabled(false);
   RunOneAirBlocked(block_world_b, collision_b, kStone, cap);
 
+  // Actual cold-source-removal counterexample: the saved eye is still at its
+  // former standing height, one floor cell is AIR, and the cave roof remains.
+  // Clearance, unlike ground support or highest-column height, preserves this
+  // valid airborne position and lets ordinary vertical movement settle it.
+  cutum::UBlockWorld cave;
+  const glm::vec3 saved(22.0f, -46.88f, 51.0f);
+  const auto saved_volume = cutum::CollisionVolumeFromEye(saved, cap);
+  cutum::UWorldCollision cave_collision(cave);
+  cave_collision.SetBlockRegistry(&registry);
+  Expect(
+      !cave_collision.QueryKnownBlockCollisionVolume(saved_volume).has_value(),
+      "unloaded saved body is unknown even when occupancy broadphase is empty");
+  for (int y = -50; y <= -33; ++y)
+  {
+    cave.SetBlock(glm::ivec3(22, y, 51), cutum::BLOCK_AIR);
+  }
+  // SetBlock(AIR) alone does not allocate previously absent terrain.
+  cave.SetBlock(glm::ivec3(23, -48, 51), kStone);
+  cave.SetBlock(glm::ivec3(22, -50, 51), kStone);
+  cave.SetBlock(glm::ivec3(22, -33, 51), kStone);
+  Expect(!cave_collision.HasGroundSupport(saved, cap),
+         "removed floor leaves the saved eye without immediate ground support");
+  const auto clear =
+      cave_collision.QueryKnownBlockCollisionVolume(saved_volume);
+  Expect(clear.has_value() && !*clear,
+         "known AIR body above removed floor remains valid below the roof");
+  Expect(cave_collision.FindHighestSolidY(22, 51) == -33,
+         "highest-column fallback would incorrectly choose the roof");
+  const auto settled = cave_collision.ResolveMovement(
+      saved, glm::vec3(0.0f, -2.0f, 0.0f), cap, 0);
+  Expect(
+      settled.y < saved.y - 0.5f && settled.y > -48.0f,
+      "normal movement settles the saved body onto the block below the hole");
+  cave.SetBlock(glm::ivec3(22, -49, 51), kStone);
+  const auto standing =
+      cave_collision.QueryKnownBlockCollisionVolume(saved_volume);
+  Expect(standing.has_value() && !*standing,
+         "touching the restored floor is not a penetrating body overlap");
+  cave.SetBlock(glm::ivec3(22, -47, 51), kStone);
+  const auto blocked =
+      cave_collision.QueryKnownBlockCollisionVolume(saved_volume);
+  Expect(blocked.has_value() && *blocked,
+         "known solid overlap still requires position repair");
+  cutum::UWorldCollision no_registry(cave);
+  Expect(!no_registry.QueryKnownBlockCollisionVolume(saved_volume).has_value(),
+         "missing catalog cannot prove saved-body clearance");
+  for (float boundary_x : {15.5f, -0.5f})
+  {
+    cutum::UBlockWorld seam;
+    cutum::UWorldCollision seam_collision(seam);
+    seam_collision.SetBlockRegistry(&registry);
+    const int left = static_cast<int>(std::floor(boundary_x));
+    seam.SetBlock(glm::ivec3(left, -47, 55), kStone);
+    const auto body = cutum::CollisionVolumeFromEye(
+        glm::vec3(boundary_x, saved.y, saved.z), cap);
+    Expect(
+        !seam_collision.QueryKnownBlockCollisionVolume(body).has_value(),
+        "partially loaded body across signed section seam must await terrain");
+    seam.SetBlock(glm::ivec3(left + 1, -47, 55), kStone);
+    const auto seam_clear = seam_collision.QueryKnownBlockCollisionVolume(body);
+    Expect(
+        seam_clear.has_value() && !*seam_clear,
+        "both known AIR sides establish clearance across signed section seam");
+    seam.SetBlock(glm::ivec3(left + 1, -47, 51), kStone);
+    const auto seam_blocked =
+        seam_collision.QueryKnownBlockCollisionVolume(body);
+    Expect(seam_blocked.has_value() && *seam_blocked,
+           "solid on either side of seam prevents clear restoration");
+  }
+
   std::cout << "player_clearance_test: OK" << std::endl;
   return 0;
 }
