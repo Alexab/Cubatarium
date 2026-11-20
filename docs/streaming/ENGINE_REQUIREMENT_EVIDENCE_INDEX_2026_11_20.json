@@ -1,6 +1,6 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S1.01",
+  "current_package": "S1.02",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
@@ -143,6 +143,39 @@
       ],
       "prerequisite": "Load LOCAL_ENV.ps1 and run tools/release_build_with_provenance.py after build-input changes",
       "scope_limit": "Orchestrator unit/contract verified. No new seven-case native execution here; full S6 multi-seed/backend/performance/wet/transparency acceptance remains open."
+    },
+    {
+      "id": "S1.01",
+      "status": "COMPLETE",
+      "evidence": [
+        {
+          "path": "src/App/Diagnostics/DiagnosticFlightController.h",
+          "sha256": "b47d0a0285dca6b4b7426bc4b8988501d562c8c46ce10531f1db6cc303e57434"
+        },
+        {
+          "path": "src/App/Diagnostics/DiagnosticFlightController.cpp",
+          "sha256": "320ac3fb1a5f280206187d39552f1478c566facfef94030fc5830ae5dd384bc6"
+        },
+        {
+          "path": "src/App/Platform/AppRunner.cpp",
+          "sha256": "fe45a330a08beb20ae9792bbb7106cbcf2c8357b483079ee0cbb8088a8c71a2f"
+        },
+        {
+          "path": "build/desktop-msvc/s1-controller-contract-build-20261120.log",
+          "sha256": "c2635cdef09cb7d37c69f46e30757593a1792ed66cc721f0ce90117c8afdb9e2"
+        },
+        {
+          "path": "build/desktop-msvc/s1-controller-contract-test-20261120.log",
+          "sha256": "e02a421ef0dd2e2289bcf70533c9a143f96e99603c1df5f2a7c03dd30581d34e"
+        }
+      ],
+      "verified": [
+        "Controller receives value observations and a read-only segment query; command has movement/view/capture intent and no position or world writer.",
+        "AppRunner diagnostic adapter samples collision/support/known AIR and applies motor keys, flight mode, orientation and capture only; no position assignment.",
+        "Controller and AppRunner source files unchanged versus bdad9b0070a89195fb3e3f46b94cdf140bcd2b9c (git diff --quiet exit 0).",
+        "Release controller tests PASS."
+      ],
+      "scope_limit": "Architecture/input-boundary package only. Earlier native route remains historical evidence for its recorded EXE; current executable identity and complete no-relocation runtime acceptance are not inferred. Routes and replay remain S1.04/S1.05."
     }
   ],
   "completed_handoff": {
