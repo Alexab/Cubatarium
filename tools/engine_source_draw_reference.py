@@ -1,7 +1,7 @@
 """Action-bound GPU field and independent RGB reference for opaque floor edits.
 
-Stone/glowstone replacement preserves the analytic floor. AIR holes require a
-different geometry reference and deliberately cannot pass this evaluator.
+Stone/glowstone replacement preserves the analytic floor. Source removal to
+AIR dispatches to the independent declared-voxel five-face hole reference.
 """
 from __future__ import annotations
 import copy
@@ -18,6 +18,10 @@ from engine_rgb_reference import evaluate as rgb_evaluate, number
 
 def evaluate_records(scene, rows, logs, *, action_frame, world_epoch, cell,
                      expected, replacement, initial_extra_emitters=()):
+    if expected=='glowstone' and replacement=='air':
+        from engine_source_hole_draw_reference import evaluate_records as evaluate_hole
+        return evaluate_hole(scene,rows,logs,action_frame=action_frame,world_epoch=world_epoch,
+            cell=cell,expected=expected,replacement=replacement,initial_extra_emitters=initial_extra_emitters)
     def result(status, reason, **data):
         return dict(schema='engine-source-draw-reference.v1', status=status, reason=reason,
             scope='One verified opaque floor source edit, actual same-frame GPU-bound field and independent constant-texture framebuffer RGB; no AIR-hole/wet/transparency/full-backend/latency acceptance', **data)

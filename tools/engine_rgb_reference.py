@@ -143,6 +143,59 @@ def shade_dry_floor(row: dict, rgba: list, light_level: int, distance: float, ho
     return [clamp(v)*255 for v in color]+[255.0], intensity, fog_factor
 
 
+class RgbContractError(ValueError):
+    pass
+
+
+def material_contract(scene: dict, logs: list[Path]):
+    """Validate authored constant materials and index actual per-frame atlas witnesses.
+
+    Shared by floor and hole geometry references; measured RGB/light never
+    participates in selecting a material or its expected texel.
+    """
+    fixture=scene['rgb_fixture']
+    if fixture.get('schema')!='engine-constant-floor-rgb-fixture.v1':
+        raise ValueError('unsupported RGB fixture')
+    materials={m['id']:m for m in fixture['materials']}
+    if (len(fixture['materials'])!=2 or set(materials)!={560,376} or
+            scene['name']!='dry-negative-cave' or scene.get('expected_eye_in_fluid') is not False):
+        raise ValueError('unsupported RGB material/scene contract')
+    for identifier,name,emission in ((560,'stone',0),(376,'glowstone',15)):
+        material=materials[identifier]
+        if (material['name']!=name or material['emission']!=emission or material['rgba']!=COLORS[name] or
+                material['stem']!=fixture['pack_id']+'/reference_'+name):
+            raise ValueError('RGB fixture material contract changed')
+    pack=Path(fixture['pack_path'])
+    files=fixture['files_sha256']
+    if not files or any(hashlib.sha256((pack/relative).read_bytes()).hexdigest()!=digest
+                        for relative,digest in files.items()):
+        raise RgbContractError('rgb_fixture_pack_changed')
+    sources=fixture['source_material_sha256']
+    if not sources or any(hashlib.sha256(Path(path).read_bytes()).hexdigest()!=digest
+                          for path,digest in sources.items()):
+        raise RgbContractError('original_rgb_material_changed')
+    witnesses={}
+    for path in logs:
+        for line in path.read_text(encoding='utf-8',errors='replace').splitlines():
+            marker='[RgbReferenceMaterial] '
+            if marker not in line: continue
+            record=json.loads(line.split(marker,1)[1])
+            key=(record['frame_epoch'],record['material_id'])
+            if key in witnesses:
+                raise ValueError('duplicate runtime RGB material witness')
+            witnesses[key]=record
+    return materials,witnesses
+
+
+def valid_material_witness(witness, material):
+    return (witness.get('schema')=='rgb-reference-material.v1' and
+        witness.get('valid') is True and witness.get('rgba_min')==material['rgba']==witness.get('rgba_max') and
+        witness.get('variation')==0 and witness.get('emission')==material['emission'] and
+        witness.get('opaque_cube') is True and witness.get('frames')==1 and
+        witness.get('stems')==[material['stem']]*6 and witness.get('linear_texture') is True and
+        witness.get('framebuffer_srgb') is False)
+
+
 def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
     def result(status,reason,**evidence):
         return dict(schema="engine-floor-rgb-reference.v1",status=status,reason=reason,
@@ -154,15 +207,7 @@ def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
         return result("UNTESTED","missing_rgb_framebuffer_trace")
     witnesses={}
     try:
-        materials={m["id"]:m for m in fixture["materials"]}
-        if (set(materials) != {560,376} or scene["name"] != "dry-negative-cave" or
-                scene.get("expected_eye_in_fluid") is not False):
-            raise ValueError("unsupported RGB material/scene contract")
-        for identifier,name,emission in ((560,"stone",0),(376,"glowstone",15)):
-            material=materials[identifier]
-            if (material["name"] != name or material["emission"] != emission or material["rgba"] != COLORS[name] or
-                    material["stem"] != fixture["pack_id"]+"/reference_"+name):
-                raise ValueError("RGB fixture material contract changed")
+        materials,witnesses=material_contract(scene,logs)
         light=scene["lighting_fixture"]
         floor_y=round(scene["cave_bounds"]["floor"]-.5)
         if (light.get("schema") != "engine-positive-blocklight-fixture.v1" or light.get("emission") != 15 or
@@ -170,23 +215,6 @@ def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
                 any(not isinstance(e,list) or len(e)!=3 or any(type(v) is not int for v in e) or e[1]!=floor_y
                     for e in light["emitters"])):
             raise ValueError("invalid independent source contract")
-        pack=Path(fixture["pack_path"])
-        files=fixture["files_sha256"]
-        if not files or any(hashlib.sha256((pack/relative).read_bytes()).hexdigest()!=digest
-                            for relative,digest in files.items()):
-            return result("FAIL","rgb_fixture_pack_changed")
-        if any(hashlib.sha256(Path(path).read_bytes()).hexdigest()!=digest
-               for path,digest in fixture["source_material_sha256"].items()):
-            return result("FAIL","original_rgb_material_changed")
-        for path in logs:
-            for line in path.read_text(encoding="utf-8",errors="replace").splitlines():
-                marker="[RgbReferenceMaterial] "
-                if marker not in line: continue
-                record=json.loads(line.split(marker,1)[1])
-                key=(record["frame_epoch"],record["material_id"])
-                if key in witnesses:
-                    raise ValueError("duplicate runtime RGB material witness")
-                witnesses[key]=record
         if not witnesses:
             return result("UNTESTED","missing_runtime_atlas_material_witness")
         checked=faults=positive=skipped=unwitnessed=0
@@ -217,12 +245,7 @@ def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
             witness=witnesses.get((epoch,material["id"]))
             if witness is None:
                 unwitnessed+=1; continue
-            valid_material=(witness.get("schema")=="rgb-reference-material.v1" and
-                witness.get("valid") is True and witness.get("rgba_min")==material["rgba"]==witness.get("rgba_max") and
-                witness.get("variation")==0 and witness.get("emission")==material["emission"] and
-                witness.get("opaque_cube") is True and witness.get("frames")==1 and
-                witness.get("stems")==[material["stem"]]*6 and witness.get("linear_texture") is True and
-                witness.get("framebuffer_srgb") is False)
+            valid_material=valid_material_witness(witness,material)
             # A scoped sample with a missing/mismatched surface must fail,
             # rather than disappearing from the RGB reference coverage.
             actual_depth=row.get("renderer_pixel_opaque_hit_distance")
@@ -259,6 +282,8 @@ def evaluate(scene: dict, perf: Path | None, logs: list[Path]) -> dict:
             distinct_cells=len(cells),expected_levels=sorted(levels),draw_sources=sorted(v for v in draw_sources if v is not None),
             unwitnessed=unwitnessed,skipped=skipped,examples=examples,
             missing_coverage=[k for k,v in coverage.items() if not v])
+    except RgbContractError as error:
+        return result('FAIL',str(error))
     except (ValueError,KeyError,TypeError,AttributeError,OSError,OverflowError):
         return result("FAIL","malformed_rgb_reference_evidence")
 
