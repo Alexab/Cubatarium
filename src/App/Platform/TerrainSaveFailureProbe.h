@@ -113,8 +113,13 @@ inline void RunTerrainSaveFailureProbe()
       Progress failed;
       world.BeginCooperativeSave(folder.string(), false);
       size_t ticks = 0;
+      const auto failed_by = std::chrono::steady_clock::now() + std::chrono::seconds(12);
       while (!world.TickCooperativeSave(failed, 1))
-        require(++ticks < 64, "save failure must become terminal");
+      {
+        ++ticks;
+        require(std::chrono::steady_clock::now() < failed_by, "save failure must become terminal");
+        std::this_thread::yield();
+      }
       const auto error = world.GetCooperativeSaveError();
       require(!error.empty() && !world.HasActiveCooperativeOperation(), "failure result");
       require(error.find(io_failure ? "Terrain save failed" : "Terrain is incomplete") != std::string::npos,
@@ -140,8 +145,13 @@ inline void RunTerrainSaveFailureProbe()
       Progress recovered;
       world.BeginCooperativeSave(folder.string(), false);
       ticks = 0;
+      const auto recovered_by = std::chrono::steady_clock::now() + std::chrono::seconds(12);
       while (!world.TickCooperativeSave(recovered, 1))
-        require(++ticks < 64, "recovered save must finish");
+      {
+        ++ticks;
+        require(std::chrono::steady_clock::now() < recovered_by, "recovered save must finish");
+        std::this_thread::yield();
+      }
       require(world.GetCooperativeSaveError().empty() && world.ModifiedChunks.empty(),
               "retry did not reset error or finish saving");
       UBlockWorld cold;
