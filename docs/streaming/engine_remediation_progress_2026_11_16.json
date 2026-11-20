@@ -22214,5 +22214,248 @@
     "Regress and repair saved unsupported-but-clear cave position restoration without roof relocation; preserve unknown-data safety, collision checks and original saved worlds.",
     "Repeat removed-source cold AIR probe after verified repair, then dynamic GPU/shader/field generation and full remaining S0..S6."
   ]
+},
+"unsupported_saved_cave_position_restoration_2026_11_20": {
+  "schema": "cold-cave-restore-assessment.v1",
+  "source_commit": "bd7719760e74ec69f45ebd040dfda264ceb23292",
+  "status": "PASS_SCOPED",
+  "corrected_behavior": "Known clear saved body retained without immediate ground support; missing overlapping terrain defers repair; solid overlap retains repair path. Ordinary runtime physics handles unsupported saved position.",
+  "production": [
+    "src/World/Collision/WorldCollision.cpp",
+    "src/World/Collision/WorldCollision.h",
+    "src/World/Core/WorldViewBinding.cpp"
+  ],
+  "tests": {
+    "command": "ctest --test-dir build/desktop-msvc -C Release -R '^(player_clearance_test|collision_broadphase_subchunk_test|creature_terrestrial_gate_test)$' --output-on-failure",
+    "status": "PASS",
+    "count": 3,
+    "elapsed_seconds": 0.33,
+    "coverage": [
+      "unloaded body even with empty occupancy",
+      "negative cave floor hole and roof",
+      "normal collision movement onto lower floor",
+      "face touching is clear",
+      "solid body overlap",
+      "missing registry is unknown",
+      "signed positive/negative partially loaded section seams"
+    ]
+  },
+  "causal_negative_control": {
+    "schema": "cold-cave-clearance-negative-control.v1",
+    "sha256_before": "8aef522e36fc4ee32682e6b70637213097fe30a23b3eda3b96cdf18fef9cf7fd",
+    "control_build": 0,
+    "control_test": 1,
+    "control_output": "player_clearance_test: unloaded saved body is unknown even when occupancy broadphase is empty\n",
+    "sha256_restored": "8aef522e36fc4ee32682e6b70637213097fe30a23b3eda3b96cdf18fef9cf7fd",
+    "restored_build": 0,
+    "restored_test": 0
+  },
+  "release_build": {
+    "command": "cmake --build build/desktop-msvc --config Release --target Cubatarium --parallel 8",
+    "status": "PASS",
+    "log": "build/desktop-msvc/cold-cave-restore-desktop-build-20261120.log",
+    "sha256": "74615e408cd96ae107bacdfba01b4096198a5362de7d00ebdb541d1c9f14f0fa"
+  },
+  "native": {
+    "artifact": "engine-air-source-removal-cold-restored-20261120-native",
+    "source_commit": "bd7719760e74ec69f45ebd040dfda264ceb23292",
+    "private_world": "EngineSmoke_4b002e84e060432294ace1d53158afb1",
+    "source_world": "EngineSmoke_30549409357e401f888ca9477ce36c9d",
+    "source_world_sha256": "05e8be1512666deccf290a44ba0b7cbd560514eefb31f7154674b66d9a1d2c9c",
+    "exe_sha256": "c5ffd632cac8923a332ffb5eaaf5aa43a1002710a8e5753d5cc879d67466e10d",
+    "status": "PASS",
+    "original_smoke_status": "PASS",
+    "provenance": {
+      "exe": true,
+      "config_restored": true,
+      "source_world": true,
+      "runtime_shader_assets": true,
+      "source_commit": true,
+      "reference_contract": true,
+      "reference_fixture": true
+    },
+    "camera": {
+      "schema": "engine-source-camera-reference.v1",
+      "status": "PASS",
+      "reason": "frame_bound_declared_source_transport",
+      "scope": "Declared roofed AIR, sky0 and15-Manhattan canonical CPU values before/after one verified source edit; no GPU/shader, lifetime or publication-latency acceptance",
+      "action_frame": 64,
+      "counts": {
+        "after_samples": 1100,
+        "after_ready": 1100
+      },
+      "faults": 0,
+      "expected_paints": 1100,
+      "world_epoch": 4,
+      "observed_paints": 1100,
+      "transitions": [],
+      "examples": [],
+      "missing_coverage": []
+    },
+    "material": {
+      "schema": "engine-world-actions-evidence.v1",
+      "status": "PASS",
+      "reason": "cold_material_probe_and_disk_agree",
+      "scope": "observed material edit/probe and independent persisted voxel; no light/pixel/performance acceptance",
+      "cells": [
+        {
+          "cell": [
+            22,
+            -49,
+            51
+          ],
+          "before_id": 0,
+          "after_id": 0,
+          "initial_incarnation": 2,
+          "final_incarnation": 2,
+          "disk": {
+            "path": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_4b002e84e060432294ace1d53158afb1\\chunks\\1_-4_3.cchunk",
+            "sha256": "a0803ad3f7a7450489180af1ab64abd1666576f2c1f32da2559dba0dc9a89927",
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "local": [
+              6,
+              15,
+              3
+            ],
+            "id": 0
+          }
+        }
+      ]
+    },
+    "startup": {
+      "status": "PASS",
+      "reason": "first_world_paint_required_ring_census",
+      "evidence": {
+        "certified_no_surface_sections": 224,
+        "columns": 49,
+        "domain": "configured-render-ring.v1",
+        "expected_columns": 49,
+        "expected_sections": 1176,
+        "focus": [
+          1,
+          -3,
+          3
+        ],
+        "known_air_sections": 736,
+        "light_unready_sections": 0,
+        "max_y": 319,
+        "min_y": -64,
+        "missing_data_columns": 0,
+        "phase": "first_world_paint",
+        "publication_unready_sections": 0,
+        "radius": 3,
+        "ready": true,
+        "render_distance_chunks": 3,
+        "render_pass_complete": true,
+        "resident_air_sections": 0,
+        "schema": "required-presentation-witness.v2",
+        "sections": 1176,
+        "surface_sections": 440,
+        "unknown_sections": 0,
+        "world_epoch": 4
+      },
+      "scope": "configured render-distance ring publication/input readiness; no pixel or physical-light oracle"
+    },
+    "first_bot_pose": {
+      "schema": "diagnostic-bot-trace.v1",
+      "time": 5.01151,
+      "steady_tick_ms": 739348191,
+      "position": [
+        22,
+        -47.3856,
+        51
+      ],
+      "state": "complete",
+      "waypoints_visited": 0,
+      "forward": 0,
+      "up": 0,
+      "down": 0,
+      "grounded": true,
+      "walking_ready": true,
+      "yaw": 180,
+      "pitch": 0,
+      "eye_in_fluid": false,
+      "eye_fluid_id": 0,
+      "capture_ready": 1,
+      "capture_request": 0,
+      "capture_id": 0,
+      "plan_expansions": 0,
+      "reason": ""
+    },
+    "last_bot_pose": {
+      "schema": "diagnostic-bot-trace.v1",
+      "time": 24.636,
+      "steady_tick_ms": 739367815,
+      "position": [
+        22,
+        -47.3856,
+        51
+      ],
+      "state": "complete",
+      "waypoints_visited": 0,
+      "forward": 0,
+      "up": 0,
+      "down": 0,
+      "grounded": true,
+      "walking_ready": false,
+      "yaw": 180,
+      "pitch": 0,
+      "eye_in_fluid": false,
+      "eye_fluid_id": 0,
+      "capture_ready": 1,
+      "capture_request": 0,
+      "capture_id": 0,
+      "plan_expansions": 0,
+      "reason": ""
+    },
+    "camera_sample_groups": {
+      "('(22,-47,51)', '0', '11')": 1100
+    },
+    "explicit_air_trace": [
+      "[ChunkResidency] seq=3 tick_ms=739345204 source=runtime_air_initial coord=(1,-3,3) origin=(1,0,3) value=11 manager=00000268A67A14D8",
+      "[ChunkResidency] seq=4 tick_ms=739345204 source=runtime_air_initial coord=(1,-2,3) origin=(1,0,3) value=3 manager=00000268A67A14D8",
+      "[ChunkResidency] seq=12 tick_ms=739369198 source=runtime_air_final coord=(1,-3,3) origin=(1,0,3) value=11 manager=00000268A67A14D8",
+      "[ChunkResidency] seq=13 tick_ms=739369198 source=runtime_air_final coord=(1,-2,3) origin=(1,0,3) value=3 manager=00000268A67A14D8"
+    ],
+    "trace_summary": "[ChunkResidencySummary] buffered=1 reserved=19 published=19 dropped=0 unpublished=0 complete=1",
+    "report_sha256": {
+      "source-acceptance.json": "1a7187cd28e991f743256962f623e847b71d5bfd300895c23fdee979c9a075cf",
+      "source-camera-reference.json": "b1b78c80d17ba0177b3c541a2d49ad6d6ca9a8d6a2384cb31a32ebc0350603ff",
+      "route.json": "0918ceb8ad4ecbf5948e24388fd5f0b27a857ec369cb109b29e5ed2013b9a398",
+      "flight_sim_report.json": "e03e950412e5150add487a4189cb8b4ce907c73a395ad19291b13d54c488665d",
+      "world-actions-evidence.json": "13351ac919760d197a6ed9694d24be064d1b525940ad12ba6647f21f6fb3f26d",
+      "cold-air-residency.log": "fb5eb716839186091a38e1bc834c8aa3083ecef37c76cab7a737298b0c4171a7",
+      "diagnostic_bot.jsonl": "90a7fe9a508c96467f313204ef822baf37ad606f42f512fbd5711a002c1b7e1d"
+    },
+    "no_relocation": {
+      "teleport_cruise": false,
+      "after_start": 0
+    }
+  },
+  "old_artifact_reports_unchanged": {
+    "engine-edited-air-source-return-owned-20261120-native": true,
+    "engine-edited-air-source-cold-owned-20261120-native": true,
+    "engine-air-source-removal-20261120-native": true,
+    "engine-air-source-removal-cold-20261120-native": true
+  },
+  "limits": [
+    "Native startup-only scoped source/CPU AIR PASS, not hot motion or GPU/shader/RGB/backend acceptance.",
+    "Observed bot grounded=true and walking_ready=false are retained; no full locomotion/supported-footprint acceptance is claimed.",
+    "Unknown-overlap safety is unit tested across signed seams; native cancellation/provider/partial-load restoration stress remains open.",
+    "Generic AIR-only/procedural ownership, publication-generation latency, all original S0..S6/backend/seed/R8/performance/memory obligations remain active."
+  ],
+  "next": [
+    "Join verified source action epoch to actual GPU-bound field and shaded RGB source-addition/removal observations with causal negative controls.",
+    "Complete remaining explicit AIR-only/procedural/lifecycle/cancellation/catalog, backend, wet/transparency and full performance/memory obligations."
+  ],
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cold-cave-restore-assessment-20261120.json",
+    "sha256": "eb41d08fefc34c6eea71e7cef98aa23be9a0e7d364cc763d8e33bb4030f5fc0d"
+  },
+  "goal_status": "active_full_original_S0_S6"
 }
 }
