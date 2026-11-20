@@ -30048,5 +30048,245 @@
     ]
   },
   "next_work": "Propagate explicit save refusal without false success/dirty clearing; replace incomplete-column deletion with producer-owned data and edit lifetime handling, including recoverable native UI/save behavior."
+},
+"cooperative_save_error_propagation_and_native_retry_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no restart or scope reduction",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\cooperative-save-error-assessment-20261120.json",
+    "sha256": "34657b91dbf25edaf612e421f91ba36d700688ea93b9f300beea385b271bfba9"
+  },
+  "validation": {
+    "schema": "engine-cooperative-save-error-assessment.v1",
+    "status": "PASS",
+    "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance",
+    "full_goal_status": "IN_PROGRESS",
+    "source_commits": [
+      "8c8a60fc1",
+      "54ce0068fabd3f56693342fb1955082b573bd10a"
+    ],
+    "implementation": [
+      "Cooperative terrain save treats incomplete columns and false storage result as terminal save failure, preserving ModifiedChunks and avoiding metadata/done phases. Incompleteness no longer deletes that column in the cooperative save path.",
+      "Expose cooperative save error; synchronous Save throws on failure; full-session snapshot checks storage result and no longer deletes incomplete columns or clears edits after refusing one.",
+      "Operation runner propagates failure before save-then-load/create or shutdown finalization. Application retains world and returns to menu; failed save no longer requests application closure. Autosave records the failure and resumes without a success claim.",
+      "Default-off isolated native probe and explicit startup-only harness flag; inherited QA hook is scrubbed."
+    ],
+    "verification": {
+      "native": {
+        "schema": "terrain-save-api-native-assessment.v1",
+        "status": "PASS",
+        "source_commit": "54ce0068fabd3f56693342fb1955082b573bd10a",
+        "probe": {
+          "cases": [
+            {
+              "cold_edit_preserved": true,
+              "dirty_preserved": 1,
+              "failure": "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.",
+              "failure_phases": [
+                "scan",
+                "save_failed"
+              ],
+              "files_preserved": 6,
+              "kind": "incomplete",
+              "recovery_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "status": "PASS"
+            },
+            {
+              "cold_edit_preserved": true,
+              "dirty_preserved": 1,
+              "failure": "Terrain save failed. Local edits remain in memory; retry saving before leaving.",
+              "failure_phases": [
+                "scan",
+                "save_failed"
+              ],
+              "files_preserved": 7,
+              "kind": "write_failure",
+              "recovery_phases": [
+                "scan",
+                "chunks",
+                "save_metadata",
+                "done"
+              ],
+              "status": "PASS"
+            }
+          ],
+          "schema": "terrain-save-failure-native.v1",
+          "scope": "Actual isolated UWorld cooperative save APIs; no application menu/error rendering or autosave scheduler acceptance",
+          "status": "PASS"
+        },
+        "cold_independent": {
+          "incomplete": {
+            "deleted": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 0
+            },
+            "added": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                2,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "upper": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\incomplete\\chunks\\0_-2_0.cchunk",
+              "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+              "section": [
+                0,
+                -2,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 8
+            }
+          },
+          "write-failure": {
+            "deleted": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 0
+            },
+            "added": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-4_0.cchunk",
+              "sha256": "60604d1ff113b95a90f43b30716efeae487b8c4cbd8094b0d5df290700178344",
+              "section": [
+                0,
+                -4,
+                0
+              ],
+              "local": [
+                2,
+                2,
+                3
+              ],
+              "id": 8
+            },
+            "upper": {
+              "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\write-failure\\chunks\\0_-2_0.cchunk",
+              "sha256": "bfa9b3fc1c46753dd953e08d8d35669b90e7b40df12cba29f0d785cb7e2c00a6",
+              "section": [
+                0,
+                -2,
+                0
+              ],
+              "local": [
+                1,
+                2,
+                3
+              ],
+              "id": 8
+            }
+          }
+        },
+        "provenance": {
+          "source": true,
+          "exe": true,
+          "config": true,
+          "head": true,
+          "clean": true
+        },
+        "startup_smoke_status": "PASS",
+        "scope": "Actual cooperative save failure and retry in two isolated UWorlds within native Release; no UI/autosave scheduler/actual quit cancellation acceptance"
+      },
+      "native_report": {
+        "wall_elapsed_sec": 96.7988,
+        "ingame_frames": 600,
+        "diagnostic_relocations_after_start": 0
+      },
+      "harness": "31 PASS",
+      "desktop_release_build": "PASS"
+    },
+    "first_native_control_failure": {
+      "evidence": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-20261120-native\\save-api-assessment.json",
+        "sha256": "483751db0460a145e2451fcf4aa926ba59cfa39fde8d870457c0786925577005"
+      },
+      "explanation": "Empty destination directory did not force I/O failure: the existing writer removed/replaced it. First native incomplete case and its recovery passed; write-failure control failed as intended by its assertion. Raw FAIL preserved. Final control blocks the metadata temporary-file open with a nonempty directory, then removes only that owned blocker and retries."
+    },
+    "evidence": [
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\save-api-assessment.json",
+        "sha256": "281b20129ecbbfe9da99dd480f50d6b00abe8c5b8334d9da2ee40a6280c0fd11"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\terrain-save-probe\\report.json",
+        "sha256": "26029d8ff1e7a00771b6a9248d5d76b2a5f3d3bbefd4d5bae77e5392c9bbbe00"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\flight_sim_report.json",
+        "sha256": "727c3388737e7f0e95a7ffd93de596be6fa13efe0a3a35d4c88934cd7ddb4e5a"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\smoke-verdict.json",
+        "sha256": "73a0a3f61d648fb9fe5e06d63896879611ac847b778cc33a2c671b03e446b13b"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocked-20261120-native\\route.json",
+        "sha256": "ddf8900a52715cdeab70b36c609f8424536234d6583a3112daa9789b40ac4c06"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-harness-test-20261120.log",
+        "sha256": "e2284b0e0d706c69c8af73491592171c73f86cfa8cfa1b12c84894f89e12618f"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-committed-release-build-20261120.log",
+        "sha256": "df9a66d009dbaa7a7885948c8bbd06e145f5222e194483c819a5a2dff485c4f9"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\save-error-propagation-blocker-release-build-20261120.log",
+        "sha256": "77c096d6e34741a8c331d44323c1d6e4c87827082c76ea11851770b0785a3c14"
+      },
+      {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\run_save_error_blocked_native_20261120.py",
+        "sha256": "97027caacd336863fba6715026fb1325f8a3bcad8870bff99ebd2be3dd139994"
+      }
+    ],
+    "limits": [
+      "Native proof covers actual isolated UWorld cooperative save APIs (resume_streaming_after_save=false), file preservation, dirty/owner retention, terminal error, explicit retry and independent cold Binary decoding. It does not certify actual application shutdown cancellation or menu/error rendering.",
+      "Autosave scheduler, regular resume_streaming_after_save=true, SaveThenLoad/Create, full-session snapshot refusal and manual UI recovery require dedicated native coverage. No claim of universal filesystem/metadata failure handling or multi-file atomicity.",
+      "Remaining incomplete purge in UWorldPersistence sync/async streaming save paths, ignored bool there, procedural/mixed producer ownership and generic Ensure whole-column clearing remain open.",
+      "Partial procedural work may now cause a recoverable save error rather than destruction in cooperative/session snapshot paths; successful procedural completion and retry after returning from menu/quit error is not yet natively verified.",
+      "Runtime allocated/generated slices still use legacy loaded/completion evidence; persisted profile/catalog/content/algorithm certificates and full CPU/GPU/backend/GLES parity remain required.",
+      "Full S0..S6 remains active, including independent wet/transparency/whole-screen, native lifetime/slot pressure and S6 memory/performance matrix."
+    ]
+  },
+  "next_work": "Finish remaining streaming save-result propagation and producer/deletion authority, then dedicated native autosave/menu/quit recovery and complete original S0..S6 acceptance matrix."
 }
 }
