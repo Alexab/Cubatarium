@@ -282,9 +282,10 @@
         {
           "id": "S3.04",
           "action": "Провести immutable read-set/catalog/profile/incarnation validation через sync и async install; stale/cancel сохраняют долг.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "S3_04_STALE_INSTALL_MATRIX_2026_11_20.md; S3_04_CANCEL_DEBT_CARD_2026_11_20.md; ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S3.05",
@@ -488,7 +489,7 @@
       ]
     }
   ],
-  "current_step": "S3.04",
+  "current_step": "S3.05",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

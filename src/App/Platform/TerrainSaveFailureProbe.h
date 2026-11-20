@@ -14,6 +14,7 @@
 #include "World/Physics/WorldBlockPhysicsService.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
+#include "World/Lighting/RelightInputValidation.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -154,6 +155,92 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"status", "PASS"}, {"exact_spec_retained", true},
           {"no_dispatch_during_quiesce", true}, {"certified_air_successor", true},
           {"outside_band_target", true}, {"replacement_retires_debt", true}});
+    }
+    // Fixed S3.04 install matrix: mutate only after the worker has completed.
+    for (const std::string mutation : {"read_set", "catalog", "profile",
+                                       "configuration", "incarnation"})
+    {
+      UWorld world(nullptr, nullptr);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone;
+      stone.Physics = BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      auto profile = world.BlockWorld.GetVerticalProfile();
+      profile.MinY = -48;
+      profile.MaxY = -17;
+      world.BlockWorld.SetVerticalProfile(profile);
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      auto &manager = world.BlockWorld.GetChunkManager();
+      manager.EnsureChunk({1, -3, 0});
+      const auto old_incarnation = manager.GetChunk({1, -3, 0})->GetIncarnation();
+      world.AsyncRelight = std::make_unique<UAsyncRelightBuilder>(1);
+      world.NextAsyncRelightJobId = 9400;
+      RelightJobSpec spec;
+      spec.job_id = 9399;
+      spec.block_positions = {{4, -40, 4}};
+      spec.min_world_y = -48;
+      spec.max_world_y = -33;
+      spec.column_center_only = true;
+      spec.include_known_air_outputs = true;
+      spec.light_sample_output_sections = {{0, -3, 0}};
+      spec.finalize_pending_gate = false;
+      auto sync_snapshot = UChunkRelightSnapshot::Capture(world.BlockWorld, spec);
+      sync_snapshot.SetInputCatalog(world.BlockRegistry->GetDefinitionsCatalogSnapshot());
+      const auto sync_result = sync_snapshot.Compute(*world.BlockRegistry);
+      require(ValidateRelightInputs(sync_result, world.BlockWorld,
+                  world.BlockRegistry->GetDefinitionsCatalogSnapshot(), true) ==
+                  RelightInputValidation::Current,
+              "stale matrix requires current complete original inputs");
+      world.AsyncRelight->EnqueueJob(world.BlockWorld, spec, *world.BlockRegistry);
+      require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)) &&
+                  world.AsyncRelight->GetCompletedSize() == 1,
+              "stale matrix completed worker precondition");
+      auto expected = RelightInputValidation::ReadSet;
+      if (mutation == "read_set")
+        world.BlockWorld.SetBlock({16, -40, 4}, 8);
+      else if (mutation == "catalog")
+      {
+        stone.Lighting.Emission = 7;
+        definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+        expected = RelightInputValidation::Catalog;
+      }
+      else if (mutation == "profile")
+      {
+        profile.MaxY = -1;
+        world.BlockWorld.SetVerticalProfile(profile);
+        expected = RelightInputValidation::Profile;
+      }
+      else if (mutation == "configuration")
+      {
+        world.BlockWorld.SetLightingConfigurationIdentity(99);
+        expected = RelightInputValidation::Configuration;
+      }
+      else
+      {
+        manager.RemoveChunk({1, -3, 0});
+        manager.EnsureChunk({1, -3, 0});
+        require(manager.GetChunk({1, -3, 0})->GetIncarnation() != old_incarnation,
+                "incarnation control must replace equal AIR geometry");
+      }
+      require(ValidateRelightInputs(sync_result, world.BlockWorld,
+                  world.BlockRegistry->GetDefinitionsCatalogSnapshot(), true) == expected,
+              "immutable snapshot must reject the exact changed input category");
+      const int old_applied = world.DrainAsyncRelightResults(1, false, false);
+      require(old_applied == 0 && world.NextAsyncRelightJobId == 9401 &&
+                  !manager.GetSectionLightField({0, -3, 0}),
+              "World rejects stale completion before publishing and enqueues successor");
+      require(world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)),
+              "stale successor worker bound");
+      require(world.DrainAsyncRelightResults(1, false, false) == 1 &&
+                  world.BlockWorld.GetCurrentLightSamplingVolume({0, -3, 0}) &&
+                  !world.HasPendingAsyncRelightWork(),
+              "World stale successor installs current certified AIR field");
+      report["cases"].push_back({{"kind", "relight_stale_" + mutation},
+          {"status", "PASS"}, {"validation_reason", static_cast<int>(expected)},
+          {"stale_applied", old_applied}, {"successor_job", 9401},
+          {"certified_air_successor", true}});
     }
     // Test receipt delivery, not the shore-sealing algorithm or GPU scan.
     // A dry cached slice is the correct initial value even when the normal

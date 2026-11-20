@@ -5,13 +5,13 @@
     {
       "id": "async-relight-queued-cancel-loses-obligation",
       "stage": "S3.04",
-      "status": "PARTIAL_FIX_OPEN",
+      "status": "RESOLVED_S3_04",
       "evidence": "build/desktop-msvc/s3-cancel-repro-test-20261120.log",
       "observed": "Real single-worker queue held by promise barrier; queued job 9101 cancelled before compute; expected_sources=1 recovered_sources=0; Release CTest FAIL in 0.08 s.",
       "blocks_overall_acceptance": true,
       "builder_verification": "s3-cancel-late-cached-flag-test-20261120.log: Release PASS for exact queued/running/completed cancel, overflow, successor AIR install and late same-ID epoch control.",
       "world_integration": "Exact deferred queue wired into UWorld; Release policy/builder test and full app builds PASS. Native s3-world-relight-lifecycle-20261120-native report PASS: actual UWorld cancel/quiesce/resume exact spec, certified AIR out-of-band successor and retirement. Source/config preserved.",
-      "next_action": "Reconcile remaining stale validation controls and final S3.04 acceptance. No repeat of native lifecycle proof without dependent changes. S3.04 remains open."
+      "next_action": "No additional rerun required without dependent changes; broader queue lifecycle remains S4.02."
     },
     {
       "id": "surface-first-paint-unready",

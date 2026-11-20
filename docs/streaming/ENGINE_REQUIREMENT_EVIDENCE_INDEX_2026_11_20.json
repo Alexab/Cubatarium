@@ -1,8 +1,18 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.04",
+  "current_package": "S3.05",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
+    {
+      "id": "S3.04",
+      "status": "COMPLETE",
+      "acceptance": "S3_04_STALE_INSTALL_MATRIX_2026_11_20.md",
+      "cancel_lifecycle": "S3_04_CANCEL_DEBT_CARD_2026_11_20.md",
+      "native_receipt": "build/desktop-msvc/s3-stale-install-matrix-receipt-20261120.json",
+      "receipt_sha256": "e06fe8132db1eab4fdf1464b313cc5c3fe59d313fc31e01e2d8a248190463d69",
+      "unit": "build/desktop-msvc/s3-stale-unit-test-20261120.log",
+      "scope": "CPU immutable validator and actual UWorld async stale/cancel/overflow recovery. GPU, persisted certificates and complete S4 queue lifecycle remain separate."
+    },
     {
       "id": "S3.04.cancel-debt-checkpoint",
       "status": "PARTIAL_OPEN",
