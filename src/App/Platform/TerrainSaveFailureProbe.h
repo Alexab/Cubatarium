@@ -109,6 +109,15 @@ inline void RunTerrainSaveFailureProbe()
         require(fs::create_directory(blocker), "directory blocks temp-file open");
         std::ofstream(blocker / "fixture-blocker") << "keep this file";
       }
+      // Settle fixture index/signature work before the no-write comparison.
+      // The save fence is allowed to finish earlier IO; that must not be
+      // confused with new writes issued by an incomplete save attempt.
+      const auto prepared_by = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+      while (!world.Persistence->TickDrainAsyncChunkIo(world, 8))
+      {
+        require(std::chrono::steady_clock::now() < prepared_by, "fixture IO preparation timeout");
+        std::this_thread::yield();
+      }
       const auto before = capture(folder);
       Progress failed;
       world.BeginCooperativeSave(folder.string(), false);
