@@ -38,4 +38,12 @@
 
 ## Критерий закрытия
 
+### Q01 / расширение на незавершённый demand и seam no-op
+
+Фиксированные входы: та же native CPU/Flat сцена, ещё неопубликованная секция (0,-3,0). FirstMesh через public Executor.Enqueue; DrainBudget с admit_batch=0. PASS: publication debt остаётся, actual dirty/inflight и synthetic tokens отсутствуют, RecordWantsFirstMeshEnqueue=true. После ровно трёх кадров штатного cooldown повторный public Enqueue/DrainBudget с admit_batch=1 должен передать работу в actual dirty owner; существующий RebuildChunkImmediate завершает actual publication. Затем на готовой сцене public RemeshSeam должен завершиться no-op без dirty/token и сохранить RenderReady. Это проверка недостающих исходов, не новая production гипотеза.
+
+Команда после Release provenance build: `python tools/engine_smoke_run.py --world World_261 --artifacts build/desktop-msvc/s4-q01-demand-seam-20261120-native --startup-only --probe-terrain-save-failure --flat-publication`. Timeout — штатный bounded startup runner; очередь retry без sleep. Ожидаемые поля report: flow_unpublished_demand и flow_seam_noop, оба обязательны. Первая сборка обнаружила отсутствующий прямой include ColumnRecordCoordinator.h; include добавлен, runtime ещё не запускался.
+
+Результат: scoped PASS в `s4-q01-demand-seam-20261120-native/terrain-save-probe/report.json`. Незавершённый demand: refused_dispatch=1, debt_retained=true, successor_queued=true, admitted_dispatch=1, dirty=true, pending_stage=Meshing. Subsequent actual CPU publication подтверждена существующим checkpoint published; mutation/replacement также PASS. Seam no-op: dispatched=1, dirty=false, inflight_job=pending_token=0, stage=RenderReady. Runner завершён: process exit0, build_provenance PASS; overall smoke UNTESTED сохраняется. Production код в этом расширении не менялся; ранее полученные policy3/3 не повторяются. Q01 upgrade/remove/band-preservation и остальные строки остаются открыты.
+
 Каждая строка имеет проверенные source limits, допустимые terminal outcomes и receipt, который доказывает сохранение обязательства и завершение актуального преемника. REUSE привязан к совместимому коду и точному свойству. CHECK/SKIP/UNTESTED не считаются PASS. Затем обновить основной evidence index, сохранить commit и перейти к S4.03. S4 и полная цель остаются OPEN.

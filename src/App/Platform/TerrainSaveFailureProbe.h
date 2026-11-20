@@ -20,6 +20,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
+#include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Lighting/SectionRenderLightBindings.h"
@@ -128,6 +129,37 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       };
       checkpoint("unpublished");
       require(!physical() && !world.IsColumnRenderReady({0,0,0}),"Flat still needs geometry publication");
+      {
+        struct DemandDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~DemandDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UColumnFlowExecutor executor;
+        executor.Enqueue({0,0},ColumnWorkKind::FirstMesh,100);
+        const int refused=executor.DrainBudget(world,1,{0,0,0},1,0);
+        executor.SyncColumnJobStageFromWorld(world,{0,0});
+        const auto &record=world.GetColumnRecords().GetOrCreate({0,0});
+        const bool debt_retained=!world.IsColumnRenderReady({0,0,0}) &&
+            !mesh.IsChunkMeshDirty(coord) && !mesh.HasInflightMeshBuild(coord) &&
+            record.inflight_job==0 && record.pending.token==0 &&
+            UColumnRecordCoordinator::RecordWantsFirstMeshEnqueue(record);
+        // Advance only the documented three-frame enqueue cooldown; no
+        // sleeping or direct access to the scheduler on the retry path.
+        for(int frame=0;frame<3;++frame) executor.DrainBudget(world,0,{0,0,0},1,1);
+        executor.Enqueue({0,0},ColumnWorkKind::FirstMesh,100);
+        const bool successor_queued=executor.Scheduler().Contains({0,0},ColumnWorkKind::FirstMesh);
+        const int admitted=executor.DrainBudget(world,1,{0,0,0},1,1);
+        executor.SyncColumnJobStageFromWorld(world,{0,0});
+        report["flow_unpublished_demand"]={{"refused_dispatch",refused},
+            {"debt_retained",debt_retained},{"successor_queued",successor_queued},
+            {"admitted_dispatch",admitted},{"dirty",mesh.IsChunkMeshDirty(coord)},
+            {"pending_stage",static_cast<int>(executor.GetColumnJobStage({0,0}))}};
+        require(refused==1 && debt_retained && successor_queued && admitted==1 &&
+                    mesh.IsChunkMeshDirty(coord) &&
+                    executor.GetColumnJobStage({0,0})==ColumnJobStage::Meshing,
+                "unpublished demand survives refusal and returns to actual dirty owner");
+      }
       mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
       checkpoint("published");
       require(!physical() && mesh.HasDrawableGreedyMesh(coord) && world.IsColumnRenderReady({0,0,0}),
@@ -155,6 +187,17 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(dispatched==1 && record.inflight_job==0 && record.pending.token==0 &&
                     executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
                 "refused FirstMesh admission leaves no fictitious running owner");
+        executor.Enqueue({0,0},ColumnWorkKind::RemeshSeam,100);
+        const int seam=executor.DrainBudget(world,1,{0,0,0},1,1);
+        executor.SyncColumnJobStageFromWorld(world,{0,0});
+        report["flow_seam_noop"]={{"dispatched",seam},
+            {"inflight_job",record.inflight_job},{"pending_token",record.pending.token},
+            {"dirty",mesh.IsChunkMeshDirty(coord)},
+            {"stage",static_cast<int>(executor.GetColumnJobStage({0,0}))}};
+        require(seam==1 && record.inflight_job==0 && record.pending.token==0 &&
+                    !mesh.IsChunkMeshDirty(coord) &&
+                    executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+                "seam no-op leaves no fictitious running owner");
       }
       world.BlockWorld.SetBlock({3,-40,3},8);
       checkpoint("stale_geometry");
