@@ -29466,5 +29466,184 @@
     "Continue mixed/geometry/procedural producer lifecycle and explicit profile/absence completion certificates; controlled AIR-only retry does not close those requirements.",
     "Preserve full S0..S6 persisted content/algorithm/catalog proofs, first-publication/startup/R8, actual CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen references and lifetime/performance/memory matrix."
   ]
+},
+"nondestructive_disk_read_retry_and_save_barrier_foundation_2026_11_20": {
+  "status": "IN_PROGRESS",
+  "full_goal": "Full original S0..S6 remains active; no new audit or scope reduction",
+  "source_commits": [
+    "3106286db",
+    "92a7fcf78",
+    "12886e668",
+    "ccb646913"
+  ],
+  "final_source_commit": "ccb646913ccab4b8686c3bc8e5191476b8ac74c0",
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-read-retry-final-assessment-20261120.json",
+    "sha256": "351abf1cf0b331cddf9578ba4f59356c14446a3da6750ea2e71717f24a711c74"
+  },
+  "changes": [
+    "Reject every unsealed/foreign disk frame before applying non-AIR geometry, fluid, light or weather. Partial parser output with geometry is not a successful decode.",
+    "Retrying an immutable disk base retains existing decoded resident data, local voxel deletions, incarnation and weather instead of applying the old geometry overlay again. An unvalidated resident allocation cannot mint recovered disk authority.",
+    "Async retry no longer clears the column. Exhaustion preserves RAM and disk instead of whole-column purge. Each retry has a fresh demand/cancellation owner and bumped generation; duplicate results cannot decrement the new request completion count.",
+    "Unresolved read state belongs to the current chunk manager, invalidates input evidence and blocks terrain completion, whole-column writes, procedural fallback and retirement. Only validated current reads plus decoded resident bases/exact loaded indexed absences release it.",
+    "Failed batches back off for1second before another request batch. Folder switch clears retry cooldowns; actual disk misses remain eligible for new procedural production.",
+    "Incomplete saved-column load repair now preserves data rather than clearing/deleting it. Coop spatial loading, normal save, snapshot save and streaming save/unload paths honor the read barrier.",
+    "Cooperative save waits/retries before changing the source folder or clearing dirty tracking. Metadata-only/full snapshots report failure rather than falsely succeeding with unread terrain; full snapshot checks again after quiescing reads.",
+    "Synchronous IO save recovery uses synchronous loading. A still-incomplete sparse profile keeps the barrier even when each attempted read is syntactically valid.",
+    "Cache followup overrides stale complete entries before readiness checks; generic ensure/repair avoids clearing data or advancing procedural generation while a read is unresolved. Tests cover all3 unload modes."
+  ],
+  "regressions": {
+    "malformed_non_air": "RED: trailing-byte CCHK frame retained parsed geometry and mutated the world before sealed-frame guard.",
+    "stale_overlay": "RED: retry replayed old non-AIR voxel/weather over a local deletion before retaining decoded resident bases.",
+    "stale_complete_cache": "RED: an earlier complete cache entry overrode a newly unresolved read before cache/generic ensure followup."
+  },
+  "verification": {
+    "headless": {
+      "status": "PASS",
+      "formats": [
+        "Binary v4",
+        "JSON v4"
+      ],
+      "profile": [
+        -4,
+        19
+      ],
+      "failed_retries_per_format": 5,
+      "real_corrupt_frames": "trailing CCHK byte and JSON format_version99 retain parsed geometry but cannot commit",
+      "preserved": "all files including failed frame and column-light metadata byte-identical through five retries and blocked saves; local voxel deletion, UChunk incarnation and weather retained",
+      "recovery": "after restoring actual file, all indexed frames validate; barrier clears; edited AIR/weather survive saving and cold load in both formats",
+      "negative_controls": [
+        "invalid non-AIR frame cannot mutate fresh world",
+        "stale disk geometry/weather cannot overwrite local edits",
+        "unvalidated allocation cannot mint recovered-base authority",
+        "earlier complete cache entry cannot override unresolved read",
+        "all3 unload modes reject save/retire",
+        "generic ensure retries disk without clearing edits or procedural generation"
+      ]
+    },
+    "release_four_test_names": [
+      "decor_mesh_integration_test",
+      "chunk_streamer_committed_column_test",
+      "terrain_column_util_test",
+      "negative_height_storage_test"
+    ],
+    "release_four_tests": "PASS 3.70sec; cache followup PASS 2.92sec",
+    "final_sync_profile_storage_test": "PASS 0.68sec",
+    "final_release_build": "PASS",
+    "native_regression": {
+      "status": "PASS",
+      "built_source": "3106286db816765ee49cbffc6df2e0104881ae67",
+      "scope": "Valid-file normal motor/source + real controlled AIR cancellation regression before cache/sync/quiesce followups; no native read fault was injected.",
+      "run": "engine-disk-retry-safety-20261120-native",
+      "wall_elapsed_sec": 320.515,
+      "ingame_frames": 10502,
+      "excursion_blocks": 303.661,
+      "relocations": 0,
+      "unexpected_disk_read_failures": 0,
+      "primary_disk_demand_id": 67530,
+      "cancelled_demand_id": 67541,
+      "returned_demand_id": 67708,
+      "cancelled_field_incarnation": 18496,
+      "returned_field_incarnation": 18617,
+      "discarded_late_results": 3,
+      "saved_air_weather_slices": 24,
+      "source_components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "air_data_column": "PASS",
+        "air_cancellation": "PASS",
+        "draw": "PASS",
+        "cpu_vertex_draw": "PASS"
+      },
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "general_smoke": "UNTESTED"
+    },
+    "native_failed_read_and_save_error_ui": "UNTESTED"
+  },
+  "receipts": {
+    "disk-retry-safety-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-safety-red-test-20261120.log",
+      "sha256": "ac0830af3259201ecf1de124dbd24b6391b6e8e7440a9379542b1411ee510d95"
+    },
+    "disk-retry-overlay-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-overlay-red-test-20261120.log",
+      "sha256": "0f5f67252e23e92d8046651873f4c3f56d31b505904e8e681ccb7b87ce98a3ec"
+    },
+    "disk-read-cache-red-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-read-cache-red-test-20261120.log",
+      "sha256": "0654f0d8b4ecccfb79c63bf72483b2ac8174252f1c52e4ac710075a2160080dd"
+    },
+    "disk-retry-safety-targeted-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-safety-targeted-test-20261120.log",
+      "sha256": "e0d7babac76a95541c7f19adb15281d79514e96e72b192f84c602d5c7ffe78b9"
+    },
+    "disk-retry-safety-fixed-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-safety-fixed-tests-20261120.log",
+      "sha256": "18023b0eb4fb95a59046b3ff8a113c39d0c298e67f223bf4e283cf248da7703d"
+    },
+    "disk-read-cache-final-tests-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-read-cache-final-tests-20261120.log",
+      "sha256": "7b1abc1a7108f7f7c7b95a8443bcd9fc03e92bc536204d198c3fbc7793696f7e"
+    },
+    "disk-retry-safety-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-safety-release-build-20261120.log",
+      "sha256": "96307e8a33858f61fdee830028d95cdef265e2ae45950d5a50ccb0c0222b96fb"
+    },
+    "disk-read-cache-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-read-cache-release-build-20261120.log",
+      "sha256": "b9757a7f8021e86837050d1d84af327a116fed9abf5b4221c207c2f414349528"
+    },
+    "assess_disk_retry_native_baseline_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_disk_retry_native_baseline_20261120.py",
+      "sha256": "d138d27cb2992f7133fed06c4fc57aff3a557c43ac332dafc27c244c7722d6dc"
+    },
+    "assess_disk_retry_safety_column_20261120.py": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\assess_disk_retry_safety_column_20261120.py",
+      "sha256": "7deab743bc46ce81eeded10ae8f30b02cb57db04d7ab6892dfb2e2592844582f"
+    },
+    "disk-retry-sync-profile-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-sync-profile-build-20261120.log",
+      "sha256": "4a90074a948c0a80add5195a94ae07b44061d2d4160eb05635c2e822d2e33383"
+    },
+    "disk-retry-sync-profile-test-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-sync-profile-test-20261120.log",
+      "sha256": "0c0970720aee909b7c17f310543cc6cb5f4191d7e360e6e3af9fb7ad9c4a1752"
+    },
+    "disk-retry-sync-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-sync-release-build-20261120.log",
+      "sha256": "2af1c58f3cd2bcf7cd2dd64a145e74d6a0cb05579e6c81265edc4cff153b5e94"
+    },
+    "disk-retry-quiesce-release-build-20261120.log": {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-quiesce-release-build-20261120.log",
+      "sha256": "77578b058be2cdff660100fa09a6dcf98fbf1c62e077af0311d75de77d0e76b0"
+    }
+  },
+  "native_baseline_assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\disk-retry-native-baseline-assessment-20261120.json",
+    "sha256": "5e6c639fba429e8d6fb1ded05600a4a573fcb5394c6b3f0d61e7086e3be5dfc7"
+  },
+  "limits": [
+    "Native failed read, retry exhaustion/recovery with local edits and save error/wait UI still need controlled reproduction.",
+    "Known valid resident disk bases are retained; external content replacement, catalog/profile/algorithm identities need their full certificate contracts.",
+    "Unreadable data and edits are retained conservatively. Bounded memory/retirement for persistent faults and durable edit overlays across forced exit remain open.",
+    "Legacy incomplete generation/cancel paths without a failed-read marker still need explicit producer ownership instead of whole-column clear/purge.",
+    "No complete S0..S6 persisted proof, CPU/GPU/backend/GLES parity, independent wet/transparency/whole-screen or long performance/memory acceptance."
+  ],
+  "next": [
+    "Create a bounded native read-failure probe covering failed-frame rejection, retry exhaustion, retained known owners/local edits and eventual restored-file recovery; verify no clear/purge/write while blocked.",
+    "Verify cooperative save waiting and synchronous/metadata save error handling in the native UI; no false-success or forced-exit edit-durability acceptance yet.",
+    "Complete explicit ownership for mixed/cancelled/procedural partial data and eliminate legacy clear/purge without producer authority even where no failed-read marker exists.",
+    "Continue full S0..S6 profile/absence/content/algorithm/catalog certificates, startup/first-publication/R8, actual CPU construction/GPU solver/backend/GLES parity, independent wet/transparency/whole-screen and lifetime/performance/memory matrix."
+  ]
 }
 }
