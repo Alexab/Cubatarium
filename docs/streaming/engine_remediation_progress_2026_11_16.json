@@ -26981,5 +26981,394 @@
     "Build required Windows Release and run a new isolated scheduled AIR removal from EngineSmoke_64fa31ebf1b448f8ae28369da1860604 with all five hole faces observed.",
     "Continue all remaining S0..S6 requirements after scoped source validation."
   ]
+},
+"native_air_source_hole_five_face_gpu_rgb_2026_11_20": {
+  "status": "SCOPED_PASS",
+  "scope": "Single scheduled source removal to AIR and five exposed faces; full original S0..S6 remains active",
+  "commits": {
+    "reference": "4a6bec3fd",
+    "inspection_convergence": "4bd856bed"
+  },
+  "independent_contract": [
+    "Existing verified CPU/action/disk evaluator gates the source draw evaluator; initial extra source22 and actual action paint select before/after models. Same-action paint is excluded as unordered.",
+    "Declared-voxel BFS through AIR predicts level11 inside the single removed voxel; opaque stone excludes the incorrect direct level13 path. Bottom and four inner walls use their independently determined face AIR cell.",
+    "Same-frame/world GPU-bound capture, material/face/depth, draw-ready/presentation, authored constant material file hashes and actual per-frame atlas witnesses are required.",
+    "Dry opaque normal-color equation has no directional face attenuation; identical constant texels cover all six material faces. Wet/debug/underwater do not borrow dry acceptance.",
+    "RGB compares both pretransparent and final world-buffer bytes with independent source geometry and declared texels; observed GPU light or framebuffer bytes never set expected truth.",
+    "Five after-hole faces are mandatory for both GPU and RGB coverage; ordinary floor coverage cannot substitute for a missing inner face."
+  ],
+  "native_cases": [
+    {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-preinspect-hole-five-face-20261120-native",
+      "source": "4a6bec3fd4847583dc07aed982dbc78c5be308b1",
+      "world": "EngineSmoke_1ed10e7a616c42faac844db177774502",
+      "native_exit": 0,
+      "source_status": "UNTESTED",
+      "components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "draw": "UNTESTED"
+      },
+      "original_smoke_status": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "draw": {
+        "schema": "engine-source-hole-draw-reference.v1",
+        "status": "UNTESTED",
+        "reason": "frame_bound_source_hole_transport",
+        "scope": "One verified glowstone-to-AIR action: declared-voxel light transport, ordinary floor and five new hole faces, same-frame GPU binding and independently witnessed constant opaque normal-color RGB; no roof/wall/whole-screen/wet/transparency/backend/latency acceptance",
+        "action_frame": 1232,
+        "world_epoch": 4,
+        "counts": {
+          "before": {
+            "rows": 2100,
+            "field_checked": 1007,
+            "field_faults": 0,
+            "field_unjoined": 0,
+            "missing_bound": 0,
+            "source_effect": 271,
+            "rgb_checked": 959,
+            "rgb_faults": 0,
+            "unwitnessed": 0,
+            "geometry_faults": 0
+          },
+          "after": {
+            "rows": 21800,
+            "field_checked": 7957,
+            "field_faults": 0,
+            "field_unjoined": 0,
+            "missing_bound": 0,
+            "source_effect": 465,
+            "rgb_checked": 6958,
+            "rgb_faults": 0,
+            "unwitnessed": 0,
+            "geometry_faults": 0
+          }
+        },
+        "unordered_action_rows": 0,
+        "field_hole_faces": [
+          0,
+          2,
+          3,
+          4
+        ],
+        "rgb_hole_faces": [
+          0,
+          2,
+          3,
+          4
+        ],
+        "draw_sources": {
+          "before": {
+            "2": 1007
+          },
+          "after": {
+            "2": 7957
+          }
+        },
+        "missing_coverage": [
+          "after_gpu_hole_face_1",
+          "after_rgb_hole_face_1"
+        ],
+        "examples": []
+      },
+      "actions": {
+        "api": "UWorld::ReplaceBlockAt",
+        "failed": false,
+        "observations": [
+          {
+            "after_id": 0,
+            "api_called": true,
+            "api_success": true,
+            "before_id": 376,
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "expected_id": 376,
+            "frame_epoch": 1232,
+            "incarnation": 2,
+            "phase": "initial",
+            "reach_blocks": 3.0923590660095215,
+            "resident": true,
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "steady_tick_ms": 746960486,
+            "success": true,
+            "target_id": 0,
+            "waypoints_visited": 1
+          },
+          {
+            "after_id": 0,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 0,
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "expected_id": 376,
+            "frame_epoch": 9196,
+            "incarnation": 4821,
+            "phase": "final",
+            "reach_blocks": null,
+            "resident": true,
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "steady_tick_ms": 747129065,
+            "success": true,
+            "target_id": 0,
+            "waypoints_visited": 3
+          }
+        ],
+        "saved_world_label": "World_261",
+        "schema": "engine-world-actions-observation.v1",
+        "started": true,
+        "storage_matches_isolated_world": true,
+        "world": "EngineSmoke_1ed10e7a616c42faac844db177774502",
+        "world_folder": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_1ed10e7a616c42faac844db177774502"
+      },
+      "report_sha256": "0e09d4b6450b59c00398b3b0ef7b6801db9b385cd4960a95803ddd1fc7c075ba",
+      "source_acceptance_sha256": "7a13f76a6500ce8678c16e2856470f6098fa999c895cb4caed8a6863712c85e9",
+      "draw_sha256": "747e48e9797b09c532fbc125871a582bf78d704efa3df432041c8abcfff7f27e"
+    },
+    {
+      "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\engine-source-preinspect-hole-centered-20261120-native",
+      "source": "4bd856bed525e486ee74166b1ebd5b2f63cde44b",
+      "world": "EngineSmoke_02cafc32b5604d1c84b53d43e1293209",
+      "native_exit": 0,
+      "source_status": "PASS",
+      "components": {
+        "material": "PASS",
+        "camera": "PASS",
+        "startup": "PASS",
+        "air_return": "PASS",
+        "draw": "PASS"
+      },
+      "original_smoke_status": "UNTESTED",
+      "provenance": {
+        "exe": true,
+        "config_restored": true,
+        "source_world": true,
+        "runtime_shader_assets": true,
+        "source_commit": true,
+        "reference_contract": true,
+        "reference_fixture": true
+      },
+      "draw": {
+        "schema": "engine-source-hole-draw-reference.v1",
+        "status": "PASS",
+        "reason": "frame_bound_source_hole_transport",
+        "scope": "One verified glowstone-to-AIR action: declared-voxel light transport, ordinary floor and five new hole faces, same-frame GPU binding and independently witnessed constant opaque normal-color RGB; no roof/wall/whole-screen/wet/transparency/backend/latency acceptance",
+        "action_frame": 1210,
+        "world_epoch": 4,
+        "counts": {
+          "before": {
+            "rows": 2100,
+            "field_checked": 1106,
+            "field_faults": 0,
+            "field_unjoined": 0,
+            "missing_bound": 0,
+            "source_effect": 302,
+            "rgb_checked": 1063,
+            "rgb_faults": 0,
+            "unwitnessed": 0,
+            "geometry_faults": 0
+          },
+          "after": {
+            "rows": 21480,
+            "field_checked": 7518,
+            "field_faults": 0,
+            "field_unjoined": 0,
+            "missing_bound": 0,
+            "source_effect": 377,
+            "rgb_checked": 6584,
+            "rgb_faults": 0,
+            "unwitnessed": 0,
+            "geometry_faults": 0
+          }
+        },
+        "unordered_action_rows": 0,
+        "field_hole_faces": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "rgb_hole_faces": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ],
+        "draw_sources": {
+          "before": {
+            "2": 1106
+          },
+          "after": {
+            "2": 7518
+          }
+        },
+        "missing_coverage": [],
+        "examples": []
+      },
+      "actions": {
+        "api": "UWorld::ReplaceBlockAt",
+        "failed": false,
+        "observations": [
+          {
+            "after_id": 0,
+            "api_called": true,
+            "api_success": true,
+            "before_id": 376,
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "expected_id": 376,
+            "frame_epoch": 1210,
+            "incarnation": 2,
+            "phase": "initial",
+            "reach_blocks": 3.1897902488708496,
+            "resident": true,
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "steady_tick_ms": 747441686,
+            "success": true,
+            "target_id": 0,
+            "waypoints_visited": 1
+          },
+          {
+            "after_id": 0,
+            "api_called": false,
+            "api_success": false,
+            "before_id": 0,
+            "cell": [
+              22,
+              -49,
+              51
+            ],
+            "expected_id": 376,
+            "frame_epoch": 8830,
+            "incarnation": 4821,
+            "phase": "final",
+            "reach_blocks": null,
+            "resident": true,
+            "section": [
+              1,
+              -4,
+              3
+            ],
+            "steady_tick_ms": 747612340,
+            "success": true,
+            "target_id": 0,
+            "waypoints_visited": 3
+          }
+        ],
+        "saved_world_label": "World_261",
+        "schema": "engine-world-actions-observation.v1",
+        "started": true,
+        "storage_matches_isolated_world": true,
+        "world": "EngineSmoke_02cafc32b5604d1c84b53d43e1293209",
+        "world_folder": "C:\\Projects\\Cubatarium\\bin\\worlds\\EngineSmoke_02cafc32b5604d1c84b53d43e1293209"
+      },
+      "report_sha256": "3c33173160a8c44aabf91b3694dd3fae6811eb0b3813b9c5ae74816ee130bad8",
+      "source_acceptance_sha256": "b86dc37b0876fdd83ebf069593f7b190e7a1d419a8b83ca8ef6848c99fabdb8a",
+      "draw_sha256": "cece7510fdfbf2489ae92b30d6860bb7b325e3e1d982a212c45c6bc64c4690e6"
+    }
+  ],
+  "counterexample_and_fix": {
+    "original": "First new native run had zero numerical/geometry faults but missed face1 in both GPU and RGB. Source acceptance remained UNTESTED.",
+    "observed_return": [
+      21.4832,
+      -44.6193,
+      51
+    ],
+    "cause": "General arrival radius0.65 admitted camera X21.4832, outside hole opening X21.5..22.5, so the near lip hid its left inner wall.",
+    "red_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-inspection-arrival-red-test-20261120.log",
+    "correction": "Directed inspection points additionally require horizontal error<=0.35, matching the existing forward motor dead zone. Panoramas and non-inspection waypoints keep general arrival behavior; no teleport/camera writer or API reach relaxation.",
+    "green_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-inspection-arrival-green-test-20261120.log",
+    "corrected_return": [
+      21.7672,
+      -44.6197,
+      51
+    ],
+    "before_gpu": 1106,
+    "after_gpu": 7518,
+    "before_rgb": 1063,
+    "after_rgb": 6584,
+    "field_hole_faces": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "rgb_hole_faces": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "verification": {
+    "python_engine_tests": 194,
+    "release_ctests": 2,
+    "python_log": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-draw-engine-tests-20261120.log",
+    "desktop_build_logs": [
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-release-build-20261120.log",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-centered-release-build-20261120.log"
+    ],
+    "prior_addition_and_stone_removal_recomputed": "Both PASS; exactly matched cached source-draw-reference.json after shared RGB material validation refactor."
+  },
+  "actual_trace_controls": {
+    "baseline": "PASS",
+    "stale_opaque_shortcut_field": "FAIL",
+    "zero_final_rgb": "FAIL",
+    "stale_former_top": "FAIL",
+    "missing_capture": "UNTESTED",
+    "drop_hole_face_1": "UNTESTED"
+  },
+  "assessment": {
+    "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\source-hole-native-assessment-20261120.json",
+    "sha256": "ecbe5b636eaba3560b2482f0f86248641fd5f76a753e6ccae4b98b46eb1c63ae"
+  },
+  "limits": [
+    "Controls mutate/drop retained native trace records in memory; they are not faulty native executions.",
+    "Successful AIR-hole run observed packed GPU draws only; no new CPU/MDI/GLES or solver/backend parity acceptance.",
+    "Original smoke remains UNTESTED. No whole-screen/roof/wall/wet/transparency/performance/memory or full S0..S6 acceptance.",
+    "All before/after field/RGB/geometry fault counts and missing-bound/material counters were zero in the successful run. This is scoped sampled evidence, not a universal action-to-publication latency guarantee.",
+    "Protected added-source world remains unchanged under all seven provenance checks. Both private result worlds and the earlier four-face UNTESTED artifacts remain retained.",
+    "Full S0..S6 still requires producer/data-column AIR ownership, cancellation/catalog lifecycle, persisted certificates, unknown/first-publication delivery bounds, CPU/GPU solver/backend parity, wet/transparency, seeds/R8 and controlled performance/memory matrix."
+  ],
+  "next": [
+    "Exercise AIR-hole reference on actual CPU/MDI/GLES consumers where supported; do not count packed-only trace as full backend parity.",
+    "Continue unresolved full S0..S6 AIR-only/procedural producer and column lifecycle ownership, certificates and cancellation/catalog semantics.",
+    "Continue independent wet/transparency references and full startup/return/edit/seed/R8/performance/memory matrix."
+  ]
 }
 }
