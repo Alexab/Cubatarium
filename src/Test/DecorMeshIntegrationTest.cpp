@@ -17,6 +17,7 @@
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Mesh/GreedyMeshEmitter.h"
 #include "Render/Mesh/GreedyMesher.h"
 #include "Render/Mesh/IUChunkMesher.h"
 #include "Render/Mesh/MeshCaptureToken.h"
@@ -2446,8 +2447,16 @@ static void TestCachedPreviewAfterProofOnlyCompletion(
 class CountingPhysicalMesher final : public cutum::IUChunkMesher
 {
 public:
+  bool deferred{false};
+  bool extract_batches{false};
   std::atomic<unsigned> builds{0};
   const char *BackendName() const override { return "counting-physical-cpu"; }
+  bool CanDeferGpuExtract(const cutum::ChunkMeshSnapshot &,
+                          cutum::UBlockRegistry &,
+                          const cutum::BlockDefinitionCatalog *) const override
+  {
+    return deferred;
+  }
   std::vector<cutum::GreedyQuad>
   BuildChunkMesh(const cutum::UBlockWorld &world, glm::ivec3 coord,
                  cutum::UBlockRegistry &registry,
@@ -2470,6 +2479,25 @@ public:
     const std::lock_guard<std::mutex> lock(CountsMutex);
     const auto it = BuildsByCoord.find(coord);
     return it == BuildsByCoord.end() ? 0 : it->second;
+  }
+  bool TryExtractOpaqueToBatches(
+      const cutum::ChunkMeshSnapshot &snapshot, cutum::UBlockRegistry &registry,
+      glm::ivec3 coord, std::vector<cutum::GreedyMeshBatch> &batches, bool,
+      bool, const cutum::BlockDefinitionCatalog *catalog) override
+  {
+    if (!extract_batches)
+      return false;
+    batches.clear();
+    std::unordered_map<cutum::BlockId, cutum::GreedyMeshBatch> by_id;
+    for (const auto &quad : BuildChunkMesh(snapshot, registry, catalog))
+    {
+      auto &batch = by_id[quad.Id];
+      batch.blockId = quad.Id;
+      cutum::AppendGreedyQuad(quad, coord, batch.vertices, batch.indices);
+    }
+    for (auto &entry : by_id)
+      batches.push_back(std::move(entry.second));
+    return true;
   }
 
 private:
@@ -3913,7 +3941,8 @@ static void TestPublishedLightRefreshFairness(
 static void TestGeometryWaitsForPhysicalLight(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions, bool use_gpu = false,
-    bool synchronous = false)
+    bool synchronous = false, bool deferred = false,
+    bool extract_batches = false)
 {
   using namespace cutum;
   const glm::ivec3 root(0);
@@ -3928,9 +3957,13 @@ static void TestGeometryWaitsForPhysicalLight(
     auto *chunk = world.GetChunkManager().GetChunk(root);
     SectionRenderLightBindings resources;
     CountingPhysicalMesher mesher;
+    mesher.deferred = deferred;
+    mesher.extract_batches = extract_batches;
     UChunkMeshCache cache;
     auto settings = MakeFrustumMeshSettings();
     settings.AsyncMeshing = !synchronous;
+    if (deferred)
+      settings.GpuPackedMeshing = false;
     settings.FrustumCulling = false;
     cache.SetRenderSettings(settings);
     cache.SetMesherBackend(&mesher);
@@ -6942,6 +6975,10 @@ int main(int argc, char **argv)
   TestPublishedLightRefreshLifecycle(registry, definitions.get());
   TestPublishedLightRefreshFairness(registry, definitions.get());
   TestGeometryWaitsForPhysicalLight(registry, definitions.get());
+  TestGeometryWaitsForPhysicalLight(registry, definitions.get(), false, false,
+                                    true);
+  TestGeometryWaitsForPhysicalLight(registry, definitions.get(), false, false,
+                                    true, true);
   TestGeometryWaitsForPhysicalLight(registry, definitions.get(), false, true);
   TestGeometryLightQueueCapacity(registry, definitions.get());
   TestFirstComputedLightPublication(registry, definitions.get());

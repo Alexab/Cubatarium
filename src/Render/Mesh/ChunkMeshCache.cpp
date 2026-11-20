@@ -9272,7 +9272,6 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
   }
 
   apply_profile.Enter(UMeshApplyProfileRecorder::Phase::LegacyFallback);
-  ActiveMeshSourceRevision.erase(revisionIt);
 
   // Legacy GPF1 readback path (fallback).
   if (result.GpuExtractPending && result.PendingSnapshot && MesherBackend)
@@ -9313,7 +9312,16 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
     }
     result.PendingSnapshot.reset();
     result.GpuExtractPending = false;
+    // Deferred extraction has only now produced completed vertex geometry.
+    // Re-enter the normal completed-result validation while its executable
+    // owner is still retained: pair the current physical field, or keep one
+    // GeometryAwaitingLight owner. Publishing the raw capture's zero light
+    // here otherwise bypasses both paths and repeatedly rejects first meshes.
+    // Pending flags are cleared, so this conversion re-entry occurs once.
+    ApplyMeshResult(world, registry, std::move(result));
+    return;
   }
+  ActiveMeshSourceRevision.erase(revisionIt);
 
   if (result.ProvisionalLightPreview || result.IndependentPhysicalField)
   {
