@@ -1,3 +1,5 @@
+#include "Render/Mesh/GpuFluidColumnScan.h"
+#include "World/Mesh/WorldMeshService.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Jobs/PipelineAdmission.h"
@@ -2124,6 +2126,53 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
     TestPackedLightArtifactOwnership(registry, definitions);
   }
 #endif
+}
+
+static void TestFluidMapMutationDelivery(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  const glm::ivec3 cell(15, -33, 15), column(0);
+  SetPreferGpuFluidColumnScan(true); // existing deterministic CPU scan backend
+  for (const bool waterlogged : {false, true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetBlock(cell, waterlogged ? kTallGrass : kWater);
+    if (waterlogged)
+      world.SetFluidState(cell, FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+    UWorldMeshService service;
+    const auto *before = service.GetCache().GetFluidSurfaceSlice(
+        world, registry, column, cell.y);
+    Expect(before && (waterlogged || before->HasSurface(15, 15)),
+           "fluid map fixture caches a slice and represents ordinary water");
+    if (waterlogged)
+      world.SetFluidState(cell, {});
+    else
+      world.SetBlock(cell, BLOCK_AIR);
+    service.NotifyFluidSurfaceDirtyAtBlock(world, &registry, cell);
+    Expect(service.GetCache().GetFluidSurfaceDirtyGroundChunks().count(column),
+           "last-fluid removal must invalidate its cached surface immediately");
+    const auto *after = service.GetCache().GetFluidSurfaceSlice(
+        world, registry, column, cell.y);
+    Expect(after && !after->HasSurface(15, 15),
+           "invalidated surface map removes the last fluid before a mesh rebuild");
+  }
+  UBlockWorld world;
+  UWorldMeshService service;
+  std::unordered_set<glm::ivec3, IVec3Hash> modified;
+  const std::vector<glm::ivec3> changed{{15,-33,15}, {16,-32,15}, {15,-33,16}};
+  service.MarkBlocksChunkDirtyBatchFromEdit(
+      world, nullptr, changed, modified, true, false);
+  for (const auto pos : changed)
+  {
+    const auto chunk = UChunkManager::WorldToChunk(pos);
+    Expect(service.GetCache().GetFluidSurfaceDirtyGroundChunks().count(
+               {chunk.x, 0, chunk.z}) && modified.count(chunk),
+           "batch seam mutation retains both fluid-map and dirty-save obligations without immediate meshing");
+  }
+  SetPreferGpuFluidColumnScan(false);
 }
 
 static void TestOccludedMeshDependencyRepair(cutum::UBlockRegistry &registry)
@@ -7016,6 +7065,7 @@ int main(int argc, char **argv)
     return 0;
   }
 #endif
+  TestFluidMapMutationDelivery(registry, definitions.get());
   TestCrossGrassVisibleWithFrustum(world, registry);
   TestCampfireStoneMesh(world, registry);
   TestGreedyAlphaCutoutIsMaterialScoped(world, registry);

@@ -16775,8 +16775,6 @@ void UWorld::MarkBlockChunkDirty(glm::ivec3 blockPos, bool sync_neighbor_chunks,
   MeshService->MarkBlockChunkDirtyFromEdit(
       BlockWorld, BlockRegistry.get(), blockPos, ModifiedChunks,
       sync_neighbor_chunks, sync_light_ring);
-  MeshService->NotifyFluidSurfaceDirtyAtBlock(BlockWorld, BlockRegistry.get(),
-                                              blockPos);
   // Player/world edits remesh immediately but used to leave ChunkOccupancyMask
   // stale — visible stone with walk-through collision (prefab buildings).
   if (ChunkDirtyService)

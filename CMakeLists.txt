@@ -2451,6 +2451,9 @@ cubatarium_add_test(NAME fluid_placement_liquid_decor_test
 
 cubatarium_add_test(NAME decor_mesh_integration_test
     SOURCES
+        src/World/Mesh/WorldMeshService.cpp
+        src/World/Mesh/EditMeshRemeshPolicy.cpp
+        src/Test/WorldMeshServiceCameraStub.cpp
         src/World/IO/BinaryChunkSerializer.cpp
         src/Render/Engine/ShaderManager.cpp
         src/App/Platform/IUPlatformPaths.cpp
@@ -2490,7 +2493,7 @@ cubatarium_add_test(NAME decor_mesh_integration_test
         src/Render/Mesh/GpuMeshPipeline.cpp
         src/Render/Mesh/GpuMeshSlotAllocator.cpp
         src/Render/Backend/RenderBackendCaps.cpp
-        src/Test/GpuFluidColumnScanHostStub.cpp
+        src/Test/GpuFluidColumnScanPreferStub.cpp
         src/Render/Mesh/GreedyMesher.cpp
         src/World/Core/FluidColumnSurfaceQuery.cpp
         src/World/Physics/FluidSpreadSystem.cpp

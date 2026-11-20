@@ -486,28 +486,10 @@ void UWorldMeshService::NotifyFluidSurfaceDirtyAtBlock(const UBlockWorld &world,
                                                        UBlockRegistry *registry,
                                                        glm::ivec3 block_pos)
 {
-  if (!registry)
-  {
-    return;
-  }
-  auto touches_liquid = [&](glm::ivec3 p)
-  { return registry->IsLiquid(world.GetBlock(p)); };
-  if (!touches_liquid(block_pos))
-  {
-    bool neighbor_liquid = false;
-    for (const glm::ivec3 &offset : NEIGHBOR_OFFSETS)
-    {
-      if (touches_liquid(block_pos + offset))
-      {
-        neighbor_liquid = true;
-        break;
-      }
-    }
-    if (!neighbor_liquid)
-    {
-      return;
-    }
-  }
+  // This notification follows a mutation. Its new dry contents cannot prove
+  // the old cached surface was dry (including waterlogged non-liquid blocks).
+  (void)world;
+  (void)registry;
   Cache.InvalidateFluidSurfaceForChunk(UChunkManager::WorldToChunk(block_pos));
 }
 
@@ -1768,6 +1750,9 @@ void UWorldMeshService::MarkBlocksChunkDirtyBatchFromEdit(
   {
     return;
   }
+
+  for (const glm::ivec3 block_pos : block_positions)
+    NotifyFluidSurfaceDirtyAtBlock(block_world, registry, block_pos);
 
   EditMeshRemeshInput policy_in;
   policy_in.BlockPositions = block_positions;
