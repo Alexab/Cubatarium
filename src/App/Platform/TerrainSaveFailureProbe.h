@@ -100,10 +100,11 @@ inline void RunTerrainSaveFailureProbe()
       std::ofstream(folder / "users.json") << "{\"fixture\":true}\n";
       std::ofstream(folder / "world_data.json") << "{\"fixture\":true}\n";
       const fs::path light = UChunkStorageService::ColumnLightFilePath(folder.string(), column);
+      const fs::path blocker = light.string() + ".tmp";
       if (io_failure)
       {
-        require(fs::remove(light), "remove only the new fixture receipt");
-        require(fs::create_directory(light), "directory blocks metadata replacement");
+        require(fs::create_directory(blocker), "directory blocks temp-file open");
+        std::ofstream(blocker / "fixture-blocker") << "keep this file";
       }
       const auto before = capture(folder);
       Progress failed;
@@ -123,7 +124,11 @@ inline void RunTerrainSaveFailureProbe()
               "failed save lost RAM edit or owner");
       for (const auto &phase : failed.phases)
         require(phase != "done" && phase != "save_metadata", "failure claimed completion");
-      if (io_failure) require(fs::remove(light), "remove only empty fixture blocker");
+      if (io_failure)
+      {
+        require(fs::remove(blocker / "fixture-blocker"), "remove only fixture blocker file");
+        require(fs::remove(blocker), "remove only empty fixture blocker directory");
+      }
       require(storage.LoadTerrainColumn(column, world.BlockWorld, folder.string(),
                                        *world.BlockRegistry, -17, -64) > 0, "recover disk base");
       Progress recovered;
