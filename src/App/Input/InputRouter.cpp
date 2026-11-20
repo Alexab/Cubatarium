@@ -462,6 +462,11 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
   if (action == GLFW_PRESS && app.State == AppState::MainMenu &&
       key == GLFW_KEY_ESCAPE)
   {
+    if (app.ProgressScreen)
+    {
+      app.ScheduleDeferredMenuAction([&app]() { app.ShowMainMenu(); });
+      return true;
+    }
     if (app.MainMenuScreen && app.MainMenuScreen->IsQuitConfirmationVisible())
     {
       app.MainMenuScreen->ShowQuitConfirmation(false);

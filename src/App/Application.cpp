@@ -399,7 +399,9 @@ void UApplication::ScheduleQuit()
 void UApplication::BeginShutdownOperation(const bool saveSession,
                                           const bool closeAfter)
 {
-  if (!Core || !World || State == AppState::Loading)
+  if (State == AppState::Loading)
+    return; // The active operation still owns unsaved data and completion.
+  if (!Core || !World)
   {
     RequestQuit();
     return;
@@ -439,8 +441,7 @@ bool UApplication::TryBeginShutdownFromWindowClose()
   }
   if (State == AppState::Loading)
   {
-    RequestQuit();
-    return false;
+    return true; // Consume repeated close; never bypass the active save.
   }
   BeginShutdownOperation(HasWorldSession(), true);
   return true;
@@ -469,6 +470,7 @@ void UApplication::RequestEnterGame()
 
 void UApplication::ShowWorldProgressScreen()
 {
+  MainMenuScreen = nullptr;
   ConsoleOpen = false;
   PaletteOpen = false;
   FreeCursor = true;
@@ -532,8 +534,28 @@ void UApplication::OnWorldOperationFinished()
     if (World)
       World->ResumeAfterSessionSave();
     WorldOpOnComplete = nullptr;
-    ShowMainMenu();
     State = AppState::MainMenu;
+    FreeCursor = true;
+    if (ProgressScreen)
+    {
+      ProgressScreen->SetFailureActions(
+          [this]()
+          {
+            ScheduleDeferredMenuAction(
+                [this]()
+                {
+                  WorldRunnerRequest retry;
+                  retry.op = WorldRunnerOp::Save;
+                  retry.saveConfigAfter = false;
+                  BeginWorldOperation(std::move(retry));
+                });
+          },
+          [this]()
+          { ScheduleDeferredMenuAction([this]() { ShowMainMenu(); }); });
+      ProgressScreen->ApplySnapshot(ProgressSink.Get());
+    }
+    else
+      ShowMainMenu();
     return;
   }
   if (WorldOpRunner && WorldOpRunner->IsShutdownOperation())

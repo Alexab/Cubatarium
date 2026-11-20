@@ -1,11 +1,13 @@
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Layout/GuiLayout.h"
+#include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiProgressBar.h"
-#include "Gui/Layout/GuiLayout.h"
 #include <algorithm>
+#include <sstream>
 
 namespace cutum
 {
@@ -72,6 +74,15 @@ void UWorldProgressScreen::Build(UGuiContext &ctx)
   ProgressBar = bar.get();
   card->AddChild(std::move(bar));
 
+  auto retry = std::make_unique<UGuiButton>(&ctx.GetTheme(), "Retry save");
+  retry->SetVisible(false);
+  RetryButton = retry.get();
+  card->AddChild(std::move(retry));
+  auto back = std::make_unique<UGuiButton>(&ctx.GetTheme(), "Back to menu");
+  back->SetVisible(false);
+  BackButton = back.get();
+  card->AddChild(std::move(back));
+
   backdrop->AddChild(std::move(card));
   Root = std::move(backdrop);
   LayoutCentered();
@@ -91,6 +102,27 @@ void UWorldProgressScreen::LayoutCentered()
   }
   Root->SetBounds(GuiRect{0, 0, ViewportW, ViewportH});
   UGuiWidget *card = Root->GetChildren().front().get();
+  const int cardW = std::min(Scaled(kCardWDesign), std::max(1, ViewportW));
+  if (!FailureMessage.empty() && Context && PhaseLabel)
+  {
+    const int width = std::max(1, cardW - 2 * Scaled(kStackPaddingDesign) -
+                                      2 * Context->GetTheme().Padding);
+    std::istringstream words(FailureMessage);
+    std::string word, line, wrapped;
+    while (words >> word)
+    {
+      const auto candidate = line.empty() ? word : line + " " + word;
+      if (!line.empty() &&
+          Context->GetRenderer().MeasureTextWidth(candidate) > width)
+      {
+        wrapped += line + '\n';
+        line = word;
+      }
+      else
+        line = candidate;
+    }
+    PhaseLabel->SetText(wrapped + line);
+  }
 
   std::vector<UGuiWidget *> stackChildren;
   stackChildren.reserve(card->GetChildren().size());
@@ -104,7 +136,6 @@ void UWorldProgressScreen::LayoutCentered()
 
   const int spacing = Scaled(kStackSpacingDesign);
   const int padding = Scaled(kStackPaddingDesign);
-  const int cardW = std::min(Scaled(kCardWDesign), std::max(1, ViewportW));
   const int contentH = UGuiLayout::StackVerticalMeasure(
       {0, 0, cardW, 100000}, spacing, padding, stackChildren);
   const int cardH =
@@ -117,9 +148,11 @@ void UWorldProgressScreen::LayoutCentered()
 
 void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
 {
+  const bool failed = !snapshot.active && !snapshot.succeeded;
+  FailureMessage = failed ? snapshot.errorMessage : std::string{};
   if (TitleLabel)
   {
-    TitleLabel->SetText(TitleForKind(snapshot.kind));
+    TitleLabel->SetText(failed ? "Save failed" : TitleForKind(snapshot.kind));
   }
   if (PhaseLabel)
   {
@@ -128,14 +161,15 @@ void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
   if (SubstageLabel)
   {
     // Structured counters from the snapshot - no message-string parsing.
-    SubstageLabel->SetText(
-        snapshot.subTotal > 0
-            ? std::to_string(std::max(0, snapshot.subDone)) + "/" +
-                  std::to_string(snapshot.subTotal)
-            : std::string(" "));
+    SubstageLabel->SetText(failed ? "Your changes are still in memory."
+                           : snapshot.subTotal > 0
+                               ? std::to_string(std::max(0, snapshot.subDone)) +
+                                     "/" + std::to_string(snapshot.subTotal)
+                               : std::string(" "));
   }
   if (ProgressBar)
   {
+    ProgressBar->SetVisible(!failed);
     if (snapshot.fraction < 0.f)
     {
       ProgressBar->SetIndeterminate(true);
@@ -144,6 +178,22 @@ void UWorldProgressScreen::ApplySnapshot(const ProgressSnapshot &snapshot)
     {
       ProgressBar->SetValue(snapshot.fraction);
     }
+  }
+  LayoutCentered();
+}
+
+void UWorldProgressScreen::SetFailureActions(std::function<void()> retry,
+                                             std::function<void()> back)
+{
+  if (RetryButton)
+  {
+    RetryButton->SetOnClick(std::move(retry));
+    RetryButton->SetVisible(true);
+  }
+  if (BackButton)
+  {
+    BackButton->SetOnClick(std::move(back));
+    BackButton->SetVisible(true);
   }
   LayoutCentered();
 }
