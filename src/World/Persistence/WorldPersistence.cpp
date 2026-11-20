@@ -6417,13 +6417,12 @@ void UWorldPersistence::SaveUsers(UWorld &world, const std::string &file_name)
     objects[user_name] = user_json;
   }
 
-  std::ofstream file(file_name);
-  if (!file)
-    throw std::runtime_error("Cannot open user ownership snapshot");
-  file << objects.dump(4);
-  file.flush();
-  if (!file)
-    throw std::runtime_error("Cannot write user ownership snapshot");
+  const auto text = objects.dump(4);
+  std::error_code failure;
+  if (!world.GetChunkStorage().WriteBytesAtomically(
+          file_name, std::vector<uint8_t>(text.begin(), text.end()), &failure))
+    throw std::filesystem::filesystem_error(
+        "Cannot save user ownership snapshot", file_name, failure);
 }
 
 void UWorldPersistence::LoadWorldData(UWorld &world,
@@ -6746,12 +6745,12 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
   WriteWorldDifficulty(world_data, world.GetDifficulty());
   WriteHardcoreWorldCompleted(world_data, world.IsHardcoreDead());
 
-  std::ofstream file(file_name);
-  if (file.is_open())
-  {
-    file << world_data.dump(4);
-    file.close();
-  }
+  const auto text = world_data.dump(4);
+  std::error_code failure;
+  if (!world.GetChunkStorage().WriteBytesAtomically(
+          file_name, std::vector<uint8_t>(text.begin(), text.end()), &failure))
+    throw std::filesystem::filesystem_error(
+        "Cannot save world metadata", file_name, failure);
 }
 
 } // namespace cutum

@@ -7,9 +7,16 @@
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
+#include <cerrno>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace cutum
 {
@@ -267,38 +274,75 @@ int UChunkStorageService::ApplyBufferToWorld(const UChunkBuffer &buffer,
 }
 
 bool UChunkStorageService::WriteBytesAtomically(
-    const std::string &filePath, const std::vector<uint8_t> &bytes) const
+    const std::string &filePath, const std::vector<uint8_t> &bytes,
+    std::error_code *failure) const
 {
+  if (failure)
+    failure->clear();
+  const auto fail = [failure](std::error_code error)
+  {
+    if (failure)
+      *failure = error ? error : std::make_error_code(std::errc::io_error);
+    return false;
+  };
   if (bytes.empty())
   {
-    return false;
+    return fail(std::make_error_code(std::errc::invalid_argument));
   }
   const std::filesystem::path target(filePath);
-  std::filesystem::create_directories(target.parent_path());
+  std::error_code directoryError;
+  std::filesystem::create_directories(target.parent_path(), directoryError);
+  if (directoryError)
+    return fail(directoryError);
   const std::filesystem::path tempPath = filePath + ".tmp";
   {
+    errno = 0;
     std::ofstream file(tempPath, std::ios::binary);
     if (!file.is_open())
     {
-      return false;
+      return fail(std::error_code(errno, std::generic_category()));
     }
     file.write(reinterpret_cast<const char *>(bytes.data()),
                static_cast<std::streamsize>(bytes.size()));
+    // Buffered writes can succeed while the eventual flush fails (for example
+    // when the destination runs out of space). Never publish that temp file.
+    file.flush();
     if (!file.good())
     {
-      std::filesystem::remove(tempPath);
-      return false;
+      const std::error_code writeError(errno, std::generic_category());
+      file.close();
+      std::error_code cleanupError;
+      std::filesystem::remove(tempPath, cleanupError);
+      return fail(writeError);
+    }
+    file.close();
+    if (file.fail())
+    {
+      const std::error_code closeError(errno, std::generic_category());
+      std::error_code cleanupError;
+      std::filesystem::remove(tempPath, cleanupError);
+      return fail(closeError);
     }
   }
-  std::error_code ec;
-  std::filesystem::rename(tempPath, target, ec);
-  if (ec)
+  // Never delete the last committed file to make room for its replacement.
+#ifdef _WIN32
+  const bool replaced = MoveFileExW(tempPath.c_str(), target.c_str(),
+                                   MOVEFILE_REPLACE_EXISTING |
+                                       MOVEFILE_WRITE_THROUGH) != 0;
+  const std::error_code replaceError = replaced ? std::error_code{} :
+      std::error_code(GetLastError(), std::system_category());
+#else
+  std::error_code replaceError;
+  std::filesystem::rename(tempPath, target, replaceError);
+  const bool replaced = !replaceError;
+#endif
+  if (!replaced)
   {
-    std::filesystem::remove(target, ec);
-    ec.clear();
-    std::filesystem::rename(tempPath, target, ec);
+    std::error_code cleanupError;
+    std::filesystem::remove(tempPath, cleanupError);
+    return fail(replaceError);
   }
-  return !ec;
+  return replaced;
 }
 
 bool UChunkStorageService::ReadBytesFromFile(
@@ -316,13 +360,14 @@ bool UChunkStorageService::ReadBytesFromFile(
 
 bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                                      const std::string &worldFolder,
-                                     UBlockRegistry &registry)
+                                     UBlockRegistry &registry,
+                                     std::error_code *failure)
 {
   const SerializedChunk serialized =
       SerializeChunk(chunkCoord, chunk, registry);
   const std::string filePath =
       ChunkFilePath(worldFolder, chunkCoord, serialized.format);
-  if (!WriteBytesAtomically(filePath, serialized.bytes))
+  if (!WriteBytesAtomically(filePath, serialized.bytes, failure))
   {
     return false;
   }
@@ -709,8 +754,10 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
 
 bool UChunkStorageService::WriteColumnLight(
     const std::string &worldFolder, glm::ivec3 column,
-    const PersistedColumnLight &receipts) const
+    const PersistedColumnLight &receipts, std::error_code *failure) const
 {
+  if (failure)
+    *failure = std::make_error_code(std::errc::invalid_argument);
   if (receipts.size() > kMaxColumnLightSections)
     return false;
   json fields = json::array();
@@ -735,10 +782,13 @@ bool UChunkStorageService::WriteColumnLight(
   try
   {
     return WriteBytesAtomically(ColumnLightFilePath(worldFolder, column),
-                                std::vector<uint8_t>(text.begin(), text.end()));
+                                std::vector<uint8_t>(text.begin(), text.end()),
+                                failure);
   }
-  catch (const std::filesystem::filesystem_error &)
+  catch (const std::filesystem::filesystem_error &error)
   {
+    if (failure)
+      *failure = error.code();
     return false;
   }
 }
@@ -801,8 +851,11 @@ bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
                                              const UBlockWorld &world,
                                              const std::string &worldFolder,
                                              UBlockRegistry &registry,
-                                             int maxWorldY, int minWorldY)
+                                             int maxWorldY, int minWorldY,
+                                             std::error_code *failure)
 {
+  if (failure)
+    *failure = std::make_error_code(std::errc::state_not_recoverable);
   if (world.GetChunkManager().HasUnresolvedTerrainColumnRead(groundCoord))
     return false; // Unknown disk data cannot authorize overwrite/truncation.
   if (groundCoord.y != 0)
@@ -826,7 +879,7 @@ bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   if (highestToSave == kNoTerrainChunkSlice)
   {
     const auto light = CaptureColumnLight(groundCoord, world, registry);
-    return WriteColumnLight(worldFolder, groundCoord, *light);
+    return WriteColumnLight(worldFolder, groundCoord, *light, failure);
   }
   highestToSave = std::clamp(highestToSave, minCy, maxCy);
 
@@ -842,7 +895,7 @@ bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
       return false;
   }
   const auto light = CaptureColumnLight(groundCoord, world, registry);
-  if (!WriteColumnLight(worldFolder, groundCoord, *light))
+  if (!WriteColumnLight(worldFolder, groundCoord, *light, failure))
     return false;
 
   for (int cy = minCy; cy <= highestToSave; ++cy)
@@ -852,13 +905,13 @@ bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
         world.GetChunkManager().MakeTerrainSaveSnapshot(slice);
     if (snapshot)
     {
-      if (!SaveChunk(slice, *snapshot, worldFolder, registry))
+      if (!SaveChunk(slice, *snapshot, worldFolder, registry, failure))
         return false;
     }
     else
     {
       const UChunk empty_slice(slice);
-      if (!SaveChunk(slice, empty_slice, worldFolder, registry))
+      if (!SaveChunk(slice, empty_slice, worldFolder, registry, failure))
         return false;
     }
   }
@@ -867,7 +920,11 @@ bool UChunkStorageService::SaveTerrainColumn(glm::ivec3 groundCoord,
   {
     if (!RemoveChunkSliceFromDisk(
             worldFolder, glm::ivec3(groundCoord.x, cy, groundCoord.z)))
+    {
+      if (failure)
+        *failure = std::make_error_code(std::errc::io_error);
       return false;
+    }
   }
   return true;
 }
@@ -943,19 +1000,18 @@ int UChunkStorageService::LoadTerrainColumn(glm::ivec3 groundCoord,
   return total > 0 ? total : 1;
 }
 
-void UChunkStorageService::WriteStorageMarker(
-    const std::string &worldFolder) const
+bool UChunkStorageService::WriteStorageMarker(
+    const std::string &worldFolder, std::error_code *failure) const
 {
   json marker;
   marker["format_version"] = 4;
   marker["storage"] = ChunkWriteFormatToString(Settings.writeFormat);
   marker["legacy_json"] = true;
   const std::string chunks_file = worldFolder + "/chunks.json";
-  std::ofstream markerFile(chunks_file);
-  if (markerFile.is_open())
-  {
-    markerFile << marker.dump();
-  }
+  const auto text = marker.dump();
+  return WriteBytesAtomically(chunks_file,
+                              std::vector<uint8_t>(text.begin(), text.end()),
+                              failure);
 }
 
 void UChunkStorageService::ApplyStorageMarkerFromDisk(

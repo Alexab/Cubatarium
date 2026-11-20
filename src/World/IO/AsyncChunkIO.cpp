@@ -538,14 +538,15 @@ void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
             }
           }
           ec.clear();
+#ifdef _WIN32
+          const std::filesystem::path targetPath(done.filePath);
+          const std::filesystem::path temporaryPath(tempPath);
+          if (!MoveFileExW(temporaryPath.c_str(), targetPath.c_str(),
+                           MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+            ec = std::error_code(GetLastError(), std::system_category());
+#else
           std::filesystem::rename(tempPath, done.filePath, ec);
-          if (ec)
-          {
-            std::error_code remove_ec;
-            std::filesystem::remove(done.filePath, remove_ec);
-            ec.clear();
-            std::filesystem::rename(tempPath, done.filePath, ec);
-          }
+#endif
           if (ec)
           {
             std::error_code cleanup_ec;

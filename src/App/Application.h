@@ -107,6 +107,7 @@ public:
   void SetTouchInputBridge(UTouchInputBridge *bridge) { TouchBridge = bridge; }
   UTouchInputBridge *GetTouchInputBridge() const { return TouchBridge; }
   bool IsQuitRequested() const { return QuitRequested; }
+  void ShowFatalSaveFailure(const std::string &message);
   void HandleWindowFocus(bool focused);
 
   void Update(double dt);

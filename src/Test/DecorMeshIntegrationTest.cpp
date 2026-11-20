@@ -3738,6 +3738,9 @@ static void TestPublishedLightRefreshLifecycle(
                      !cache.IsChunkMeshDirty(root),
                  "unavailable field resource retains one fair retry without "
                  "remeshing");
+          Expect(!cache.IsPublishedMeshCurrentForInputs(root, world),
+                 "retained predecessor cannot certify an unavailable "
+                 "replacement field");
         }
         binding->reject_refresh = false;
         break;
@@ -3792,6 +3795,10 @@ static void TestPublishedLightRefreshLifecycle(
                  mesher.builds == 1,
              "field-refresh cancellation source identity and callback "
              "lifecycle are respected");
+      if (lifecycle == 13 || lifecycle == 15)
+        Expect(!cache.IsPublishedMeshCurrentForInputs(root, world),
+               "changed geometry or dead binding cannot certify a physical "
+               "publication after field refresh");
       if (lifecycle == 1 || lifecycle == 2 || lifecycle == 14)
       {
         Expect(cache.GetGreedyCacheSize() == 0 &&
@@ -3803,6 +3810,10 @@ static void TestPublishedLightRefreshLifecycle(
              "field refresh never changes the geometry publication count");
       if (updated)
       {
+        if (lifecycle == 0)
+          Expect(cache.IsPublishedMeshCurrentForInputs(root, world),
+                 "light-only refresh leaves physical publication current "
+                 "without rebuilding legacy baked-light stamps");
         const auto current = world.CaptureRenderLightSnapshot(root);
         const auto *chunk = world.GetChunkManager().GetChunk(root);
         Expect(
@@ -4530,6 +4541,18 @@ static void TestGpuCapturePolicyTransitions(
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
+  {
+    UChunkMeshCache cache;
+    cache.SetDeferMeshUntilLitFn([](glm::ivec3) { return true; });
+    cache.GetCaptureStore().SetLightInputsPolicy(MeshLightInputs::Baked);
+    Expect(cache.ShouldDeferMeshRepairUntilLit({0, 0, 0}),
+           "baked repair retains the legacy lighting admission gate");
+    cache.GetCaptureStore().SetLightInputsPolicy(MeshLightInputs::PhysicalField);
+    Expect(cache.IsDeferMeshUntilLit({0, 0, 0}) &&
+               !cache.ShouldDeferMeshRepairUntilLit({0, 0, 0}),
+           "physical geometry repair uses publication policy despite raw "
+           "column lighting deferral");
+  }
   for (const bool kicked : {false, true})
   {
     UBlockWorld world;

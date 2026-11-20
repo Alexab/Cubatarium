@@ -1,5 +1,6 @@
 #ifndef WORLD_H
 #define WORLD_H
+#include <system_error>
 
 #include "Activity/IUWorldPerception.h"
 #include "App/Settings/RenderSettings.h"
@@ -369,6 +370,8 @@ public:
   /// Returns terminal status; inspect GetCooperativeSaveError for success.
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
   const std::string &GetCooperativeSaveError() const;
+  std::error_code GetCooperativeSaveErrorCode() const;
+  bool IsCooperativeSaveDiskFull() const;
   void BeginCooperativeCreate(const std::string &world_name,
                               bool prepare_visuals = true);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);

@@ -3679,6 +3679,44 @@ bool UChunkMeshCache::IsPublishedMeshCurrentForInputs(
            HasMeshSatisfyingColumnReady(chunk_coord) &&
            it->second.PublishedNoSurface->Matches(
                world.CaptureCurrentGeometryRenderInputs(chunk_coord));
+  if (it != GreedyCache.end() &&
+      CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+  {
+    const auto &mesh = it->second;
+    const auto *chunk = world.GetChunkManager().GetChunk(chunk_coord);
+    if (!chunk || mesh.ProvisionalLightPreview || !mesh.RenderLight ||
+        !HasMeshSatisfyingColumnReady(chunk_coord) ||
+        !mesh.RenderGeometryInputs.valid ||
+        !mesh.RenderGeometryInputs.Matches(
+            world.CaptureCurrentGeometryRenderInputs(chunk_coord)) ||
+        !world.HasCompleteLightSamplingCalculation(
+            chunk_coord, mesh.RenderGeometryInputs.catalog) ||
+        mesh.MeshedLightRevision != chunk->GetLightFieldRevision() ||
+        mesh.PublishRevs.light_rev != chunk->GetLightFieldRevision())
+      return false;
+    const auto light = world.CaptureRenderLightSnapshot(chunk_coord);
+    if (!light || !light->MatchesGeometry(mesh.RenderGeometryInputs))
+      return false;
+    const auto same_field = [&](const SectionRenderLightSnapshot &snapshot)
+    {
+      return snapshot.FieldIncarnation() == light->FieldIncarnation() &&
+             snapshot.FieldRevision() == light->FieldRevision() &&
+             snapshot.Volume() && light->Volume() &&
+             (snapshot.Volume() == light->Volume() ||
+              snapshot.Volume()->cells == light->Volume()->cells);
+    };
+    const auto current_binding = [&](const auto &binding)
+    {
+      return binding && binding->IsLive() &&
+             binding->Matches(CaptureStore.WorldEpoch(),
+                              mesh.RenderGeometryInputs, *light) &&
+             same_field(binding->LightSnapshot());
+    };
+    return same_field(*mesh.RenderLight) &&
+           current_binding(mesh.RenderLightBinding) &&
+           (!(mesh.GpuResident && mesh.GpuQuadCount > 0) ||
+            current_binding(mesh.GpuRenderLightBinding));
+  }
   if (it == GreedyCache.end() || !it->second.PublishedGeomStampsValid ||
       !it->second.MeshedLightHaloSignaturesValid ||
       it->second.ProvisionalLightPreview)
@@ -10091,6 +10129,9 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     case SnapshotAcquireDeferReason::StoreCommitRejected:
       ++LastMeshSnapshotDeferStats.StoreCommitRejected;
       break;
+    case SnapshotAcquireDeferReason::MissingNeighborFaces:
+      ++LastMeshSnapshotDeferStats.MissingNeighborFaces;
+      break;
     case SnapshotAcquireDeferReason::None:
       break;
     }
@@ -11486,7 +11527,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         NoteFaceDebtOverlayMask(*it,
                                 snapshot.boundaryOverlay.missingNeighborFaces);
-        note_snapshot_defer(SnapshotAcquireDeferReason::DependencyChanged);
+        note_snapshot_defer(SnapshotAcquireDeferReason::MissingNeighborFaces);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
         return std::next(it);
@@ -12604,7 +12645,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         NoteFaceDebtOverlayMask(*it,
                                 snapshot.boundaryOverlay.missingNeighborFaces);
-        note_snapshot_defer(SnapshotAcquireDeferReason::DependencyChanged);
+        note_snapshot_defer(SnapshotAcquireDeferReason::MissingNeighborFaces);
         ++LastMeshDirtyScheduleSkipN;
         ++LastMeshDirtyScheduleSkipSnapshotN;
         ++it;

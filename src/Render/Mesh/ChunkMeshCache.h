@@ -68,6 +68,7 @@ struct MeshSnapshotDeferStats
   int DependencyChanged{0};
   int PublicationRejected{0};
   int StoreCommitRejected{0};
+  int MissingNeighborFaces{0};
 };
 
 struct FaceInstance
@@ -676,6 +677,11 @@ public:
   bool IsSoftDeferHeld(glm::ivec3 chunk_coord) const
   {
     return SoftDeferHeld.count(chunk_coord) > 0;
+  }
+  /// Use the same lighting policy for repair admission and mesh publication.
+  bool ShouldDeferMeshRepairUntilLit(glm::ivec3 chunk_coord) const
+  {
+    return ShouldDeferBakedMeshUntilLit(chunk_coord);
   }
   /// Raw legacy column-light callback, retained for diagnostics.
   bool IsDeferMeshUntilLit(glm::ivec3 chunk_coord) const
@@ -1499,6 +1505,7 @@ private:
     DependencyChanged,
     PublicationRejected,
     StoreCommitRejected,
+    MissingNeighborFaces,
   };
   struct SnapshotAcquireResult
   {

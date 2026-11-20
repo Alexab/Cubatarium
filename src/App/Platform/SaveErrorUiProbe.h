@@ -244,6 +244,23 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
             cold.GetBlock(cell) == BLOCK_AIR,
         "clicked retry persists edit without closing session");
     report["retry_via_mouse"] = true;
+    application.State = AppState::InGame;
+    application.ShowFatalSaveFailure(
+        "The save disk is full. Your latest changes remain in memory. "
+        "Free disk space before saving again.");
+    require(application.State == AppState::MainMenu &&
+                application.World == world && application.WorldSessionActive &&
+                !application.QuitRequested && application.ProgressScreen &&
+                application.GuiContext->GetScreen() == application.ProgressScreen,
+            "fatal autosave screen retains the world and leaves gameplay");
+    require(application.WantsCaptureMouse(),
+            "fatal save menu captures mouse input");
+    capture("disk-full-menu-1280.png", 1280, 720);
+    capture("disk-full-menu-640.png", 640, 480);
+    report["fatal_save_menu"] = "PASS";
+    report["fatal_save_scope"] =
+        "Direct application fatal-save handler; no disk-full injection or "
+        "WindowManager autosave scheduler acceptance";
     report["status"] = "PASS";
   }
   catch (const std::exception &error)

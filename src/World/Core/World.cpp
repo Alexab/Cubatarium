@@ -5306,7 +5306,7 @@ void UWorld::EnsureVisualRepairDirtyPriority(glm::ivec3 coord)
   // must not recreate Dirty immediately after that rejection: relight owns the
   // executable successor until the gate opens.
   if (!ShouldAdmitVisualMeshRepairUnderLitGate(
-          MeshService->GetCache().IsDeferMeshUntilLit(coord)))
+          MeshService->GetCache().ShouldDeferMeshRepairUntilLit(coord)))
   {
     return;
   }
@@ -12271,6 +12271,15 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
         {"skip_other", cache.GetLastMeshDirtyScheduleSkipOtherN()},
         {"snapshot_budget_ms", cache.GetMeshSnapshotBudgetMs()},
         {"emerge_budget_ms", cache.GetMeshEmergeTotalBudgetMs()}};
+    const auto &snapshotDefers = cache.GetLastMeshSnapshotDeferStats();
+    row["snapshot_defers"] = {
+        {"refresh_count_budget", snapshotDefers.RefreshCountBudget},
+        {"pipeline_bytes", snapshotDefers.PipelineBytes},
+        {"missing_capture_band", snapshotDefers.MissingCaptureBand},
+        {"dependency_changed", snapshotDefers.DependencyChanged},
+        {"missing_neighbor_faces", snapshotDefers.MissingNeighborFaces},
+        {"publication_rejected", snapshotDefers.PublicationRejected},
+        {"store_commit_rejected", snapshotDefers.StoreCommitRejected}};
     row["blockers"] = json::array();
     const auto focus =
         UChunkManager::WorldToChunk(GetPreferredLoadFocusBlock());
@@ -12288,6 +12297,7 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
           const glm::ivec3 coord(x, cy, z);
           const auto *chunk = BlockWorld.GetChunkManager().GetChunk(coord);
           if (!chunk || chunk->IsAirOnly() ||
+              HasCurrentNoSurfaceProof(coord) ||
               CurrentSlicePublicationReadyForWarmup(*this, coord))
             continue;
           const auto *demand = GetRenderDemandStore().Find(coord);
@@ -12312,8 +12322,13 @@ bool UWorld::ValidateRequiredEnterPresentation(double elapsed_ms)
               {"gpu_pending", mesh.IsPendingGpuApply(coord)},
               {"extract_inflight", mesh.IsGpuExtractInFlight(coord)},
               {"capture_pending", cache.HasPendingCaptureWork(coord)},
+              {"published_light_refresh_pending",
+               cache.IsPublishedLightRefreshPending(coord)},
               {"provisional", cache.HasProvisionalLightPreview(coord)},
               {"stable_face_debt", HasStablePublishedFaceDebt(coord)},
+              {"occluded_publication", HasCurrentOccludedSlicePublication(coord)},
+              {"defer_until_lit", cache.IsDeferMeshUntilLit(coord)},
+              {"repair_defer_until_lit", cache.ShouldDeferMeshRepairUntilLit(coord)},
               {"field_light", chunk->GetLightFieldRevision()},
               {"meshed_light", cache.GetMeshedLightRevision(coord)},
               {"published_light", published.light_rev},
@@ -15240,6 +15255,16 @@ const std::string &UWorld::GetCooperativeSaveError() const
 {
   static const std::string empty;
   return CoopSession ? CoopSession->SaveError() : empty;
+}
+
+std::error_code UWorld::GetCooperativeSaveErrorCode() const
+{
+  return CoopSession ? CoopSession->SaveErrorCode() : std::error_code{};
+}
+
+bool UWorld::IsCooperativeSaveDiskFull() const
+{
+  return GetCooperativeSaveErrorCode() == std::errc::no_space_on_device;
 }
 
 void UWorld::BeginCooperativeCreate(const std::string &world_name,

@@ -23,6 +23,12 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace cutum
 {
@@ -1460,6 +1466,79 @@ int main()
   definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
   UBlockRegistry registry(nullptr, definitions);
   UChunkStorageService storage;
+  const auto atomicTarget = world_folder / "atomic-write-probe.bin";
+  const std::vector<uint8_t> firstBytes{1, 2, 3};
+  const std::vector<uint8_t> replacementBytes{4, 5, 6, 7};
+  Expect(storage.WriteBytesAtomically(atomicTarget.string(), firstBytes),
+         "initial atomic file write succeeds");
+  Expect(storage.WriteBytesAtomically(atomicTarget.string(), replacementBytes),
+         "atomic write replaces an existing committed file");
+  // A directory at the temporary path deterministically rejects opening it.
+  const auto blockedTemp = std::filesystem::path(atomicTarget.string() + ".tmp");
+  std::filesystem::create_directory(blockedTemp);
+  std::error_code atomicFailure;
+  Expect(!storage.WriteBytesAtomically(atomicTarget.string(), firstBytes,
+                                       &atomicFailure),
+         "temporary-file open failure is reported");
+  Expect(bool(atomicFailure), "failed atomic write retains its error code");
+  std::ifstream committed(atomicTarget, std::ios::binary);
+  const std::vector<uint8_t> retained((std::istreambuf_iterator<char>(committed)),
+                                      std::istreambuf_iterator<char>());
+  committed.close();
+  Expect(retained == replacementBytes,
+         "failed write retains the previous committed bytes");
+  std::filesystem::remove(blockedTemp);
+  Expect(storage.WriteBytesAtomically(atomicTarget.string(), firstBytes,
+                                      &atomicFailure) && !atomicFailure,
+         "successful retry clears the previous write error");
+#ifdef _WIN32
+  Expect(std::error_code(ERROR_DISK_FULL, std::system_category()) ==
+             std::errc::no_space_on_device,
+         "Windows disk-full error classifies as no space");
+  Expect(std::error_code(ERROR_HANDLE_DISK_FULL, std::system_category()) ==
+             std::errc::no_space_on_device,
+         "Windows handle disk-full error classifies as no space");
+  const HANDLE lockedTarget = CreateFileW(
+      atomicTarget.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  Expect(lockedTarget != INVALID_HANDLE_VALUE,
+         "replacement failure fixture locks the committed file");
+  const bool lockedWrite = storage.WriteBytesAtomically(
+      atomicTarget.string(), replacementBytes, &atomicFailure);
+  CloseHandle(lockedTarget);
+  Expect(!lockedWrite && bool(atomicFailure),
+         "locked target replacement reports a filesystem error");
+  std::ifstream lockedResult(atomicTarget, std::ios::binary);
+  const std::vector<uint8_t> lockedBytes(
+      (std::istreambuf_iterator<char>(lockedResult)),
+      std::istreambuf_iterator<char>());
+  lockedResult.close();
+  Expect(lockedBytes == firstBytes,
+         "failed replacement preserves the last committed target");
+  Expect(!std::filesystem::exists(blockedTemp),
+         "failed replacement cleans its unpublished temporary file");
+#endif
+  Expect(storage.WriteStorageMarker(world_folder.string(), &atomicFailure) &&
+             !atomicFailure,
+         "storage marker commits successfully");
+  const auto markerPath = world_folder / "chunks.json";
+  std::ifstream originalMarker(markerPath, std::ios::binary);
+  const std::string markerBefore((std::istreambuf_iterator<char>(originalMarker)),
+                                 std::istreambuf_iterator<char>());
+  originalMarker.close();
+  const auto blockedMarker =
+      std::filesystem::path(markerPath.string() + ".tmp");
+  std::filesystem::create_directory(blockedMarker);
+  Expect(!storage.WriteStorageMarker(world_folder.string(), &atomicFailure) &&
+             bool(atomicFailure),
+         "storage marker reports temporary-file failure");
+  std::ifstream retainedMarker(markerPath, std::ios::binary);
+  const std::string markerAfter((std::istreambuf_iterator<char>(retainedMarker)),
+                                std::istreambuf_iterator<char>());
+  retainedMarker.close();
+  Expect(!markerBefore.empty() && markerAfter == markerBefore,
+         "failed storage marker write preserves previous format metadata");
+  std::filesystem::remove(blockedMarker);
   UBlockWorld source;
   const glm::ivec3 ground(2, 0, -3);
   source.SetBlock(glm::ivec3(ground.x * CHUNK_SIZE + 4, kMinY,

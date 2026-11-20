@@ -33262,5 +33262,13 @@
     ]
   },
   "next": "Verify WindowManager autosave scheduling, failed-save notification/retry and pending lifecycle transitions; continue every remaining original S0..S6 requirement."
-}
+},
+  "save_failure_and_physical_publication_checkpoint_20261120": {
+    "status": "IN_PROGRESS",
+    "detail": "save_failure_recovery_wip_2026_11_20.json",
+    "full_scope": "All original S0..S6 remain active; no audit restart or scope reduction",
+    "verified": "Release decor integration/lifetime regression PASS; native RD4 first-world-paint 81 columns/1944 sections zero debt; direct failure menu/mouse retry PASS",
+    "limitations": "RD4 startup-only repeat PASS with 40 stationary samples and zero drift; no autosave scheduler/disk-full injection/relocation/full route or RGB acceptance",
+    "next_work": "Native frontier route PASS: 11 chunks, 1311 outside-cohort samples, 24 verified inspection PNGs, zero relocations; independent RGB AIR-border run now running. Continue lifecycle/field consumers and persistence recovery"
+  }
 }

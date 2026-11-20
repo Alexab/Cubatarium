@@ -1,4 +1,5 @@
 #pragma once
+#include <system_error>
 
 #include "World/Chunks/ChunkManager.h"
 #include "World/IO/BinaryChunkSerializer.h"
@@ -68,7 +69,8 @@ public:
                               glm::ivec3 coord) const;
 
   bool SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
-                 const std::string &worldFolder, UBlockRegistry &registry);
+                 const std::string &worldFolder, UBlockRegistry &registry,
+                 std::error_code *failure = nullptr);
   int LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
                 const std::string &worldFolder, UBlockRegistry &registry);
 
@@ -98,14 +100,16 @@ public:
   bool SaveTerrainColumn(glm::ivec3 groundCoord, const UBlockWorld &world,
                          const std::string &worldFolder,
                          UBlockRegistry &registry, int maxWorldY,
-                         int minWorldY = 0);
+                         int minWorldY = 0,
+                         std::error_code *failure = nullptr);
   static std::string ColumnLightFilePath(const std::string &worldFolder,
                                          glm::ivec3 column);
   std::shared_ptr<const PersistedColumnLight>
   CaptureColumnLight(glm::ivec3 column, const UBlockWorld &world,
                      UBlockRegistry &registry) const;
   bool WriteColumnLight(const std::string &worldFolder, glm::ivec3 column,
-                        const PersistedColumnLight &receipts) const;
+                        const PersistedColumnLight &receipts,
+                        std::error_code *failure = nullptr) const;
   std::shared_ptr<const PersistedColumnLight>
   ReadColumnLight(const std::string &worldFolder, glm::ivec3 column) const;
   int LoadTerrainColumn(glm::ivec3 groundCoord, UBlockWorld &world,
@@ -121,11 +125,13 @@ public:
   int ApplyBufferToWorld(const UChunkBuffer &buffer, UBlockWorld &world) const;
 
   bool WriteBytesAtomically(const std::string &filePath,
-                            const std::vector<uint8_t> &bytes) const;
+                            const std::vector<uint8_t> &bytes,
+                            std::error_code *failure = nullptr) const;
   bool ReadBytesFromFile(const std::string &filePath,
                          std::vector<uint8_t> &outBytes) const;
 
-  void WriteStorageMarker(const std::string &worldFolder) const;
+  bool WriteStorageMarker(const std::string &worldFolder,
+                          std::error_code *failure = nullptr) const;
   void ApplyStorageMarkerFromDisk(const std::string &worldFolder);
 
   uint64_t GetKnownAirEvidenceRevision() const

@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <cerrno>
+#include <system_error>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -29,18 +31,30 @@ inline void WriteOwnershipJson(const std::filesystem::path &path,
   auto tmp = path;
   tmp += ".tmp";
   {
+    errno = 0;
     std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
     if (!out)
-      throw std::runtime_error("Cannot open ownership snapshot");
+      throw std::filesystem::filesystem_error(
+          "Cannot open ownership snapshot", tmp,
+          std::error_code(errno ? errno : EIO, std::generic_category()));
     out << j.dump();
     out.flush();
     if (!out)
-      throw std::runtime_error("Cannot write ownership snapshot");
+      throw std::filesystem::filesystem_error(
+          "Cannot write ownership snapshot", tmp,
+          std::error_code(errno ? errno : EIO, std::generic_category()));
+    out.close();
+    if (!out)
+      throw std::filesystem::filesystem_error(
+          "Cannot close ownership snapshot", tmp,
+          std::error_code(errno ? errno : EIO, std::generic_category()));
   }
 #ifdef _WIN32
   if (!MoveFileExW(tmp.c_str(), path.c_str(),
                    MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
-    throw std::runtime_error("Cannot commit ownership snapshot");
+    throw std::filesystem::filesystem_error(
+        "Cannot commit ownership snapshot", tmp, path,
+        std::error_code(GetLastError(), std::system_category()));
 #else
   std::filesystem::rename(tmp, path);
 #endif

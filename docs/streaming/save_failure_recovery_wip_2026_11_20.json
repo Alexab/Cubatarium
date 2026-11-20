@@ -1,0 +1,189 @@
+{
+  "status": "IN_PROGRESS",
+  "scope": "Full S0..S6 remains active; this checkpoint covers storage failure recovery only",
+  "implemented": [
+    "Check synchronous flush and close before publishing temp file",
+    "Replace existing Windows terrain files without deleting committed predecessor first",
+    "Propagate optional error_code through chunk, light and column writes into cooperative session",
+    "Reject failed per-section cooperative writes",
+    "Send disk-full autosave to menu error screen; transient failures remain silent",
+    "Atomic marker/users/world metadata/creature writes with typed filesystem errors",
+    "Cooperative save catches metadata exceptions and retains failure status",
+    "Ownership snapshot close failures and system error codes preserved"
+  ],
+  "evidence": {
+    "release_build": "build/desktop-msvc/save-ownership-app-build-20261120.log",
+    "storage_test": "negative_height_storage_test PASS 0.82s; build/desktop-msvc/save-replace-lock-test-build-20261120.log",
+    "ownership_test": "ownership_snapshot_test PASS 0.12s; build/desktop-msvc/save-ownership-test-build-20261120.log",
+    "disk_full_mapping_test": "negative_height_storage_test PASS 0.90s; both Windows disk-full codes map to no_space_on_device"
+  },
+  "pending": [
+    "Native fatal autosave UI acceptance and transient silent retry acceptance",
+    "Safe whole-world relocation and folder selection",
+    "Metadata and async failure classification coverage",
+    "Deterministic flush/disk-full fault controls; locked-target replacement failure now covered",
+    "All remaining original S0..S6 gates"
+  ],
+  "limitations": [
+    "Single-file replacement is not a world-wide transaction",
+    "Storage regression proves replacement, temp-open failure, locked-target replacement failure retention and marker failure; no disk-full or forced-exit durability acceptance"
+  ],
+  "native_rd4": {
+    "status": "FAIL",
+    "runtime": "timeout exit 124; no native report",
+    "startup": "UNTESTED; missing first-frame witness",
+    "fatal_ui": "UNTESTED; probe not reached",
+    "config_restored": true,
+    "artifacts": "build/desktop-msvc/save-fatal-menu-20261120-native",
+    "remaining": "Investigate startup backlog; RD3 UI result cannot close RD4 readiness"
+  },
+  "native_rd3": {
+    "status": "FAIL",
+    "artifacts": "build/desktop-msvc/save-fatal-menu-rd3-20261120-native",
+    "runtime": "timeout exit 124; no native report",
+    "fatal_ui": "UNTESTED; probe not reached",
+    "config_restored": true
+  },
+  "startup_publication_investigation": {
+    "rd4_last_witness": "build/desktop-msvc/save-fatal-menu-20261120-native/last-required-witness.json",
+    "rd4": {
+      "light_unready": 0,
+      "missing_data_columns": 0,
+      "publication_unready": 8,
+      "snapshot_skips": 69
+    },
+    "rd3": {
+      "light_unready": 0,
+      "missing_data_columns": 0,
+      "publication_unready": 2,
+      "snapshot_skips": 6
+    },
+    "diagnostic_fix": "Skip certified NoSurface entries in capped publication blocker list; report separate snapshot defer causes",
+    "fix_status": "Release build running; no corrected native evidence yet",
+    "inference_limit": "Deferred light counts alone did not identify the gate blockers",
+    "diagnostic_run": {
+      "artifacts": "build\\desktop-msvc\\publication-blockers-rd4-20261120-native",
+      "status": "FAIL: timeout exit 124",
+      "config_restored": true,
+      "witness": "latest-witness.json",
+      "blockers": 8,
+      "inputs_current": false,
+      "dirty": false,
+      "snapshot_defers": {
+        "dependency_changed": 71
+      },
+      "limitation": "DependencyChanged combines dependency mismatch and missing-neighbor faces in this executable; next build splits them"
+    },
+    "physical_current_fix": {
+      "status": "unit_and_scoped_native_verified",
+      "implementation": "Physical publication validates current geometry certificate, complete field, incarnation/revision/bytes and live CPU/GPU bindings; baked path retains legacy stamps",
+      "regression": "decor_mesh_integration_test PASS 2.55s",
+      "test_log": "build/desktop-msvc/physical-publication-current-test-20261120.log",
+      "app_build": "build/desktop-msvc/physical-publication-current-app-build-20261120.log PASS",
+      "scope_limit": "No native startup or full S0..S6 completion proven",
+      "lifetime_regression": "PASS 3.88s; unavailable replacement field, geometry mutation and dead binding rejected; build/desktop-msvc/physical-current-lifetime-test-20261120.log"
+    },
+    "defer_cause_run": {
+      "artifacts": "build/desktop-msvc/publication-defer-causes-rd4-20261120-native",
+      "status": "FAIL: timeout exit 124",
+      "observation": "Established blockers had raw lit gate false; missing_neighbor_faces=71, dependency_changed=0",
+      "scope_limit": "Snapshot skips are scheduler aggregate, not a per-blocker causal certificate"
+    }
+  },
+  "fixed_native": {
+    "artifacts": "build/desktop-msvc/physical-current-fixed-rd4-20261120-native",
+    "runtime": "PASS exit 0",
+    "startup": "PASS 81 columns /1944 sections; zero data/light/publication debt",
+    "save_error_ui": "PASS mouse retry and direct fatal handler",
+    "config_restored": true,
+    "overall_smoke": "UNTESTED: only one stationary observation",
+    "limitations": [
+      "No scheduler or disk-full injection acceptance",
+      "No route/performance/independent RGB acceptance",
+      "Folder relocation remains incomplete"
+    ],
+    "visual_review": "640x480 fatal menu PNG inspected; text and buttons fit"
+  },
+  "startup_observation_correction": {
+    "cause": "Agent invoked stop-seconds 0, prematurely ending empty startup route after one observation; no harness defect proven",
+    "previous_repeat": "physical-current-startup-rd4-20261120-native: runtime/startup PASS; observation UNTESTED",
+    "current_repeat": "PASS: runtime/startup/40 stationary samples; drift 0; config restored"
+  },
+  "verified_artifact_hashes": {
+    "build/desktop-msvc/physical-publication-current-app-build-20261120.log": "e053ef5cc75a98e2e129dcc7c12fab4b29d759ab72d72aa5ae4391899dc4bb65",
+    "build/desktop-msvc/physical-current-lifetime-test-20261120.log": "7d4cd0c7c4d8b4bd23e03948186e9eb9bd7260aaf035242377c1b4a9ec0546a9",
+    "build/desktop-msvc/physical-current-fixed-rd4-20261120-native/smoke-verdict.json": "331005d57c2e9c85b524483c0e136bce4e1fd13d35fed0dfc9d436c55d9a8acb",
+    "build/desktop-msvc/physical-current-fixed-rd4-20261120-native/terrain-save-probe/save-error-ui/report.json": "d8443ffd3e6b5a19ec13310a9e3a199a5864d1d05dc494e6d1aed69f803dbe66"
+  },
+  "startup_smoke_pass": {
+    "artifacts": "build\\desktop-msvc\\physical-current-startup-observed-rd4-20261120-native",
+    "wall_seconds": 114.485,
+    "columns": 81,
+    "sections": 1944,
+    "observation_samples": 40,
+    "config_restored": true,
+    "verdict_sha256": "0b3e5b02c5a649ea1611ca88e58f5d6458e19d12c033682f4b01a2c22f7e5841",
+    "scope": "Startup only; route, RGB and performance acceptance remain open"
+  },
+  "frontier_followup": {
+    "status": "UNTESTED",
+    "artifacts": "build\\desktop-msvc\\physical-current-frontier-rd4-20261120-native",
+    "components": {
+      "runtime": "PASS",
+      "route": "PASS",
+      "startup": "PASS",
+      "visual": "UNTESTED",
+      "inspection": "PASS"
+    },
+    "displacement_chunks": 11,
+    "outside_initial_resident_samples": 1311,
+    "verified_inspection_frames": 24,
+    "diagnostic_relocations": 0,
+    "config_restored": true,
+    "remaining": "Independent visual reference absent; no RGB/full-screen/performance/backend parity or full S0..S6 acceptance"
+  },
+  "rgb_air_followup": {
+    "status": "UNTESTED",
+    "artifacts": "build\\desktop-msvc\\physical-current-rgb-air-rd4-20261120-native",
+    "config_restored": true,
+    "components": {
+      "runtime": "PASS",
+      "route": "PASS",
+      "startup": "PASS",
+      "visual": "UNTESTED",
+      "inspection": "PASS",
+      "fixture": "PASS",
+      "fixture_opaque_depth": "PASS",
+      "fixture_floor_draw_source_light": "PASS",
+      "fixture_air_light_service": "PASS",
+      "fixture_camera_field_light": "PASS",
+      "fixture_floor_rgb": "PASS"
+    },
+    "rgb_checked": 3355,
+    "bound_draw_checked": 4066,
+    "camera_air_frames": 2980,
+    "faults": 0,
+    "verified_inspections": 26,
+    "scope_limit": "Sampled opaque floor/AIR transport only; no whole-screen/wet/transparency/backend parity acceptance",
+    "verdict_sha256": "6ea7e095966cadf847c7525067d150b49f4ed2269a0ddd4e9c399f9e3d15839f"
+  },
+  "wet_followup": {
+    "status": "UNTESTED",
+    "artifacts": "build\\desktop-msvc\\physical-current-wet-rd4-20261120-native",
+    "components": {
+      "runtime": "PASS",
+      "route": "PASS",
+      "startup": "PASS",
+      "visual": "UNTESTED",
+      "inspection": "PASS",
+      "fixture": "PASS",
+      "fixture_opaque_depth": "PASS"
+    },
+    "displacement_chunks": 11,
+    "verified_inspections": 24,
+    "depth_checked": 9310,
+    "depth_faults": 0,
+    "config_restored": true,
+    "scope_limit": "Underwater camera state and sampled opaque depth; no underwater RGB/transparency/full-screen acceptance"
+  }
+}

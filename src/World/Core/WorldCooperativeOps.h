@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <string>
+#include <system_error>
 #include <unordered_map>
 #include <vector>
 
@@ -48,6 +49,7 @@ public:
   /// Era31 I-T4: force-complete EnterGame load when visual cap reached.
   bool ForceCapEnterGameVisual(UWorld &world, IUProgressSink &sink);
   const std::string &SaveError() const { return ErrorMessage; }
+  std::error_code SaveErrorCode() const { return SaveFailureCode; }
   void Cancel();
   void CancelBackgroundWorkers();
 
@@ -297,6 +299,7 @@ private:
   bool NeedsProceduralFill{false};
   bool Failed{false};
   std::string ErrorMessage;
+  std::error_code SaveFailureCode;
   Phase LastDiagPhase{Phase::Done};
   CooperativeParallelGenState *ParallelGen{nullptr};
 };

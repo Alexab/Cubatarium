@@ -30,6 +30,7 @@
 #include "Render/Primitives/Cube.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/World.h"
+#include "World/IO/ChunkStorageService.h"
 #include "World/Math/CollisionVolume.h"
 #include "World/Math/GridMath.h"
 #include "World/Raycast/BlockRaycast.h"
@@ -1321,46 +1322,13 @@ void UWorldEnvironment::SaveCreatures(const std::string &file_name)
   USurvivalSystems::Instance().Serialize(root);
   UWorldItemSystem::Instance().Serialize(root);
 
-  // Atomic write: dump to a sibling temp file, then rename over the target so
-  // a crash mid-save cannot truncate an existing creatures.json.
-  const std::filesystem::path target(file_name);
-  const std::filesystem::path tmp =
-      target.parent_path() / (target.filename().string() + ".tmp");
-  {
-    std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
-    if (!file.is_open())
-    {
-      std::cerr << "SaveCreatures: cannot open " << tmp.string()
-                << " for writing" << std::endl;
-      throw std::runtime_error("Cannot write creature ownership snapshot");
-    }
-    file << root.dump(2);
-    file.flush();
-    if (!file.good())
-    {
-      std::cerr << "SaveCreatures: write to " << tmp.string() << " failed"
-                << std::endl;
-      file.close();
-      std::error_code ignored;
-      std::filesystem::remove(tmp, ignored);
-      throw std::runtime_error("Cannot write creature ownership snapshot");
-    }
-  }
-  std::error_code ec;
-  std::filesystem::rename(tmp, target, ec);
-  if (ec)
-  {
-    // Windows rename refuses to replace some destination states; fall back to
-    // remove+rename, which is not atomic but still leaves one complete file.
-    std::filesystem::remove(target, ec);
-    std::filesystem::rename(tmp, target, ec);
-  }
-  if (ec)
-  {
-    std::cerr << "SaveCreatures: could not move " << tmp.string() << " to "
-              << target.string() << ": " << ec.message() << std::endl;
-    throw std::runtime_error("Cannot commit creature ownership snapshot");
-  }
+  const auto text = root.dump(2);
+  std::error_code failure;
+  if (!Owner.GetChunkStorage().WriteBytesAtomically(
+          file_name, std::vector<uint8_t>(text.begin(), text.end()), &failure))
+    throw std::filesystem::filesystem_error(
+        "Cannot save creature ownership snapshot", file_name, failure);
+
 }
 
 void UWorldEnvironment::ReloadAllCreatureVisuals()

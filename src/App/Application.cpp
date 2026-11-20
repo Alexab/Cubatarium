@@ -526,6 +526,33 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
   WorldOpRunner->Start(std::move(request));
 }
 
+void UApplication::ShowFatalSaveFailure(const std::string &message)
+{
+  WorldOpOnComplete = nullptr;
+  State = AppState::MainMenu;
+  ShowWorldProgressScreen();
+  ProgressSink.Begin(WorldOperationKind::Save);
+  ProgressSink.End(false, message);
+  if (ProgressScreen)
+  {
+    ProgressScreen->SetFailureActions(
+        [this]()
+        {
+          ScheduleDeferredMenuAction([this]()
+          {
+            WorldRunnerRequest retry;
+            retry.op = WorldRunnerOp::Save;
+            retry.saveConfigAfter = false;
+            BeginWorldOperation(std::move(retry));
+          });
+        },
+        [this]()
+        { ScheduleDeferredMenuAction([this]() { ShowMainMenu(); }); });
+    ProgressScreen->ApplySnapshot(ProgressSink.Get());
+  }
+  SyncCursorVisibility();
+}
+
 void UApplication::OnWorldOperationFinished()
 {
   const bool success = WorldOpRunner && WorldOpRunner->Succeeded();

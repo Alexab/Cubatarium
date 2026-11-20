@@ -1388,6 +1388,7 @@ void UWorldCooperativeSession::SealFluidInGenerationPatch(UWorld &world)
 
 bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
                                     int chunkBudget)
+try
 {
   if (!Active || Failed)
   {
@@ -1608,7 +1609,13 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
     // go (10-100s ms+ with inventories) - one file per tick now, each with
     // an indeterminate marquee report.
     CubatariumLogInfo("Save", "save_metadata begin");
-    world.GetChunkStorage().WriteStorageMarker(FolderPath);
+    if (!world.GetChunkStorage().WriteStorageMarker(FolderPath,
+                                                   &SaveFailureCode))
+    {
+      FailSave(world, sink,
+               "Cannot save world metadata. Local changes remain in memory.");
+      break;
+    }
     CurrentPhase = Phase::SaveMetadataUsers;
     Report(sink, "save_metadata", -1.f, "Saving world metadata...");
     break;
@@ -1701,6 +1708,22 @@ bool UWorldCooperativeSession::Tick(UWorld &world, IUProgressSink &sink,
   RecordPhaseTiming(world);
 
   return CurrentPhase == Phase::Done;
+}
+catch (const std::system_error &error)
+{
+  if (Kind != WorldCoopKind::Save)
+    throw;
+  SaveFailureCode = error.code();
+  FailSave(world, sink, error.what());
+  return true;
+}
+catch (const std::exception &error)
+{
+  if (Kind != WorldCoopKind::Save)
+    throw;
+  SaveFailureCode = std::make_error_code(std::errc::io_error);
+  FailSave(world, sink, error.what());
+  return true;
 }
 
 void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
@@ -3267,7 +3290,8 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
           kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight);
       const bool written = complete && world.GetChunkStorage().SaveTerrainColumn(
           coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
-          world.ProceduralTemplate.MaxHeight, world.ProceduralTemplate.MinHeight);
+          world.ProceduralTemplate.MaxHeight, world.ProceduralTemplate.MinHeight,
+          &SaveFailureCode);
       if (!written)
       {
         --Save.SaveChunkIndex;
@@ -3283,8 +3307,15 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
       const UChunk *chunk = world.BlockWorld.GetChunkManager().GetChunk(coord);
       if (chunk)
       {
-        world.GetChunkStorage().SaveChunk(coord, *chunk, FolderPath,
-                                          *world.BlockRegistry);
+        if (!world.GetChunkStorage().SaveChunk(coord, *chunk, FolderPath,
+                                               *world.BlockRegistry,
+                                               &SaveFailureCode))
+        {
+          --Save.SaveChunkIndex;
+          FailSave(world, sink,
+                   "Terrain save failed. Local edits remain in memory.");
+          return;
+        }
       }
     }
     ++saved;
