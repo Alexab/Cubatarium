@@ -1,11 +1,15 @@
 #include "World/Lighting/GpuLightTransport.h"
 #include "Render/GlIncludes.h"
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <limits>
 
 namespace cutum
 {
+namespace { std::atomic<uint64_t> DispatchCount{0}; }
+uint64_t GpuLightTransportDispatchCount()
+{ return DispatchCount.load(std::memory_order_relaxed); }
 bool TryGpuTransportLight(const LightTransportInput &input,
                            std::vector<uint8_t> &output,
                            GpuLightTransportWork &work, std::string &reason)
@@ -27,9 +31,12 @@ bool TryGpuTransportLight(const LightTransportInput &input,
   reason = "desktop_compute_unavailable";
   return false;
 #else
-  if (!glGetString(GL_VERSION) || !GLEW_VERSION_4_3 || !glDispatchCompute)
+  if (!glGetString(GL_VERSION) ||
+      (!GLEW_VERSION_4_3 && !(GLEW_ARB_compute_shader &&
+          GLEW_ARB_shader_storage_buffer_object && GLEW_ARB_shading_language_420pack)) ||
+      !glDispatchCompute)
   {
-    reason = "no_current_gl43_context";
+    reason = "no_current_compute_context";
     return false;
   }
   const auto cells = static_cast<uint32_t>(input.seeds.size());
@@ -98,7 +105,18 @@ void main() {
 }
 )";
   resources.shader = glCreateShader(GL_COMPUTE_SHADER);
-  glShaderSource(resources.shader, 1, &source, nullptr);
+  std::string extension_source;
+  const char *shader_source = source;
+  if (!GLEW_VERSION_4_3)
+  {
+    extension_source = "#version 330 core\n"
+        "#extension GL_ARB_compute_shader : require\n"
+        "#extension GL_ARB_shader_storage_buffer_object : require\n"
+        "#extension GL_ARB_shading_language_420pack : require\n";
+    extension_source += std::string(source).substr(std::string(source).find('\n') + 1);
+    shader_source = extension_source.c_str();
+  }
+  glShaderSource(resources.shader, 1, &shader_source, nullptr);
   glCompileShader(resources.shader);
   GLint ok = 0;
   glGetShaderiv(resources.shader, GL_COMPILE_STATUS, &ok);
@@ -133,6 +151,7 @@ void main() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, resources.buffers[2 + (pass & 1)]);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, resources.buffers[3 - (pass & 1)]);
     glDispatchCompute((cells + 127) / 128, 1, 1);
+    DispatchCount.fetch_add(1, std::memory_order_relaxed);
     ++work.dispatches;
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
   }

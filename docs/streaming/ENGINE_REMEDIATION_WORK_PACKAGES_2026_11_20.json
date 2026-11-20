@@ -298,9 +298,10 @@
         {
           "id": "S3.06",
           "action": "Отдельно проверить реальный GPU dispatch, CPU и fallback; отсутствие GPU реализации остаётся незакрытым требованием.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md; ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         }
       ]
     },
@@ -490,7 +491,7 @@
       ]
     }
   ],
-  "current_step": "S3.06",
+  "current_step": "S4.01",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

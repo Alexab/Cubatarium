@@ -406,6 +406,7 @@ set(SOURCES
     src/Render/Mesh/GpuFluidColumnScan.cpp
     src/World/Lighting/GpuSkylightColumnSeed.cpp
     src/World/Lighting/GpuBlocklightFlood.cpp
+    src/World/Lighting/GpuLightTransport.cpp
     src/Render/Engine/MdiVertexPoolStore.cpp
     src/Render/Engine/DistanceFog.cpp
     src/Render/Engine/HorizonFogColor.cpp
@@ -3478,6 +3479,8 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
     src/Blocks/BlockDefinitionStorage.cpp
     src/World/Lighting/LightUtil.cpp
     src/World/Lighting/ChunkRelightSnapshot.cpp
+    src/World/Lighting/ChunkLighting.cpp
+    src/World/Lighting/FullLightingPipeline.cpp
     src/World/Lighting/GpuLightTransport.cpp
     src/Test/GpuRelightSnapshotDriverTest.cpp)
   target_include_directories(gpu_relight_snapshot_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -3489,6 +3492,10 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   endif()
   add_test(NAME gpu_relight_snapshot_driver_test COMMAND $<TARGET_FILE:gpu_relight_snapshot_driver_test>)
   set_tests_properties(gpu_relight_snapshot_driver_test PROPERTIES
+    LABELS "gpu;integration;lighting;streaming" SKIP_RETURN_CODE 77 TIMEOUT 30)
+  add_test(NAME gpu_relight_snapshot_gl33_driver_test
+    COMMAND $<TARGET_FILE:gpu_relight_snapshot_driver_test> --gl33)
+  set_tests_properties(gpu_relight_snapshot_gl33_driver_test PROPERTIES
     LABELS "gpu;integration;lighting;streaming" SKIP_RETURN_CODE 77 TIMEOUT 30)
   add_executable(gpu_light_transport_driver_test
     src/World/Lighting/GpuLightTransport.cpp

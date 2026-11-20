@@ -19,10 +19,12 @@ struct GpuLightTransportWork
 };
 using GpuLightTransportExecutor = bool (*)(const LightTransportInput &,
     std::vector<uint8_t> &, GpuLightTransportWork &, std::string &);
-/// Current desktop GL 4.3 context only. Never performs CPU fallback or modifies
+/// Current desktop GL4.3 or GL3.3+ARB compute/SSBO context. Never performs CPU fallback or modifies
 /// output on failure. Per-call resources retire before return; no global GL
 /// objects may survive a context. Caller owns snapshot validation/publication.
 bool TryGpuTransportLight(const LightTransportInput &input,
                            std::vector<uint8_t> &output,
                            GpuLightTransportWork &work, std::string &reason);
+/// Count of actual submitted compute dispatch calls, including failed attempts.
+uint64_t GpuLightTransportDispatchCount();
 }

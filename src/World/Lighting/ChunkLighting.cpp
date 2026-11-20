@@ -55,7 +55,7 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
   auto snapshot = UChunkRelightSnapshot::CaptureSections(world, spec, coords);
   snapshot.SetInputCatalog(registry.GetDefinitionsCatalogSnapshot());
   const auto captured_at = std::chrono::steady_clock::now();
-  const auto result = snapshot.Compute(registry);
+  const auto result = snapshot.Compute(registry, SyncRelightTransport);
   const auto computed_at = std::chrono::steady_clock::now();
   // Validate the complete batch before publishing any domain. Unknown inputs
   // remain a transient result, never a completion certificate.
@@ -81,6 +81,12 @@ RelightChunkCoords(UBlockWorld &world, UBlockRegistry &registry,
             " include_block=" + std::to_string(include_block_light) +
             " inputs_complete=" + std::to_string(result.inputs_complete) +
             " unknown_inputs=" + std::to_string(result.unknown_input_chunks) +
+            " transport=" +
+            (result.transport == RelightComputeResult::Transport::Gpu ? "gpu" :
+             result.transport == RelightComputeResult::Transport::CpuFallback ? "cpu_fallback" : "cpu") +
+            " dispatches=" + std::to_string(result.transport_work.dispatches) +
+            " readbacks=" + std::to_string(result.transport_work.readbacks) +
+            " fallback=" + result.transport_fallback_reason +
             " capture_ms=" +
             std::to_string(std::chrono::duration<double, std::milli>(
                                captured_at - capture_started)

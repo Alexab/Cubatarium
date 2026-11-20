@@ -1,8 +1,16 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S3.06",
+  "current_package": "S4.01",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
+    {
+      "id": "S3.06",
+      "status": "COMPLETE",
+      "card": "S3_06_GPU_TRANSPORT_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s3-gpu-backend-acceptance-20261120.json",
+      "receipt_sha256": "3fc4875104b71be66cec02d8f0b6f750adb686b06bc7b46e2184714beb930d47",
+      "scope": "Real GPU transport and publication via desktop factory, CPU/no-context/cap/failure fallback, exact fields and certificate compatibility. Native source/config retained, normal EXE exact. S4/S5/S6 and parent-stage matrix remain open."
+    },
     {
       "id": "S3.06.snapshot-transport",
       "status": "PARTIAL_OPEN",

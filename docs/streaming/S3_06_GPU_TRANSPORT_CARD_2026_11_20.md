@@ -1,6 +1,6 @@
 # S3.06: реальные CPU/GPU/fallback пути
 
-Статус OPEN. Исходный объём не сокращается. Проверки renderer atlas не доказывают solver, host stubs не доказывают GPU.
+Статус COMPLETE в пределах S3.06. Родительский S3 и исходный S0..S6 остаются OPEN до финальной матрицы. Проверки renderer atlas не заменяют solver, host stubs не являются GPU evidence. Ниже сохранена история реализации.
 
 ## Проверенная карта реализации
 
@@ -44,3 +44,36 @@ H2 initial PASS: real Radeon GL4.3, четыре phases по 16,000 padded cells
 H2 edges и final source PASS: `s3-gpu-snapshot-edges-test-20261120.log`, затем final rebuild после explicit exception include: `s3-gpu-snapshot-final-build-20261120.log` / `s3-gpu-snapshot-final-test-20261120.log`, 3/3 PASS в 1.04 s. Snapshot driver 0.44 s. Все четыре primary phases, оба selected domains, field-only AIR, partial profile, over-budget и exception fallback прошли. Частичный GPU output не меняет CPU seeds; fallback bytes совпадают с CPU.
 
 Полная app Release build PASS (`s3-gpu-snapshot-app-build-20261120.log`), provenance сохранён в `s3-gpu-snapshot-app-provenance-20261120.json`. Driver receipt `s3-gpu-snapshot-receipt-20261120.json` связывает final source hashes и проверки. Приложение пока не передаёт executor: actual runtime GPU dispatch ещё UNTESTED, async workers сохраняют default CPU путь. Следующий шаг 3 — main-thread desktop adapter owner и native dispatch evidence; GPU/CPU equivalence не означает, что GPU уже используется приложением.
+
+## H3: desktop caller-thread owner
+
+UGpuFullLightingPipeline устанавливает ScopedSyncRelightTransport только вокруг synchronous Relight*; ChunkLighting передаёт этот executor в immutable snapshot. RAII восстанавливает предыдущий выбор, thread_local не наследуется worker threads. AsyncRelightBuilder не читает scope и вызывает CPU Compute по умолчанию. Actual submitted dispatch counter отделён от backend success; sync audit пишет transport/dispatches/readbacks/fallback. Host-only tests явно отвергают GPU backend и не дают GPU evidence.
+
+Runtime capability discovery: приложение создаёт GL3.3, native RenderBackendCaps сообщает compute=1/ssbo=1 через ARB extensions на Radeon. Поэтому transport поддерживает desktop core4.3 либо GL3.3 + ARB_compute_shader/ARB_shader_storage_buffer_object/ARB_shading_language_420pack с соответствующим GLSL prefix. Без возможностей остаётся CPU fallback. Нельзя менять окно на новый backend ради PASS.
+
+Driver H3: actual desktop adapter (не direct snapshot injection) должен отправить 15 dispatch, установить padded field/certificate, записать transport=gpu и восстановить scope. До GLFW context тот же adapter должен дать CPU fallback и 0 dispatch; отдельный thread не наследует выбор. Запускаются GL4.3 и GL3.3 contexts на одинаковых fixtures; CTest timeout 30 s.
+
+Native H3: opt-in API case desktop_gpu_relight_owner в реальном app frame, отдельный UWorld profile -48..47, root (-1,-3,-1), roof Y32, emitter14. Factory-selected pipeline должен отправить ровно 15 dispatch, получить exact CPU-reference padded bytes и current certificate. Scope после вызова nullptr. Release runner startup-only, World_261 copy, rd4, --probe-terrain-save-failure, process timeout 600 s, каталог `s3-desktop-gpu-owner-20261120-native`. Это не вся visual/performance matrix. После FAIL сначала точный require/compile/fallback reason.
+
+H3 driver PASS: s3-gpu-owner-configured-test-20261120.log, GL4.3 и app-compatible GL3.3 на Radeon; snapshot phases/edges, desktop owner GPU, no-context CPU fallback, scope/thread isolation и CPU propagation: 3/3 PASS, 1.38 s. Auto ChunkLightingTestStubs сначала конфликтовал с driver logger; явный frame epoch stub и повторный cmake configure исключили auto dependency. Link failures/Not Run сохранены отдельно и не считаются GPU-результатами.
+
+## Итог H3 и приёмка S3.06
+
+Native `s3-desktop-gpu-owner-20261120-native`: desktop_gpu_relight_owner PASS, ровно 15 actual dispatch, exact CPU-reference padded bytes, current certificate, восстановленный scope. Полный API probe 19/19 PASS; native exit 0, startup/build provenance PASS. Source World_261/config сохранены, lease освобождён. Оригинальный общий smoke UNTESTED не переписан: renderer/route/performance и отсутствующие component readers остаются исходными обязательствами.
+
+Дополнительный codec control в driver: результат actual desktop GPU и actual no-context CPU fallback экспортирован через CaptureSectionLight, Encode/Decode и RestoreSectionLight под новым catalog/field identity с exact padded bytes и current certificate. `s3-gpu-owner-certificate-test-20261120.log`: GL4.3/GL3.3 owners и CPU propagation, 3/3 PASS, 1.02 s. Disk writer/reader этого же opaque receipt доказан S3.05; транспортный backend не записывается как runtime identity в cache. Семантика solver не менялась: GPU bytes совпадают с CPU, версия light-v6 сохраняется.
+
+Final Release build/provenance PASS (`s3-gpu-owner-final-app-build-20261120.log`, `s3-gpu-owner-final-provenance-20261120.json`). EXE hash побайтно совпал с native verified EXE. Единственная source difference после native — добавленный codec control в test file; production sources не менялись, новый native повтор не нужен. Shader literal body побайтно совпадает с body реального shader-loss negative control; GL3.3 prefix не меняет проверенную арифметику.
+
+| Шаг пакета | Доказательство |
+|---|---|
+| Реальный GPU transport и независимый oracle | Primitive receipt, 180180 packed cells, actual shader fault обнаружен |
+| Immutable export/import, full-height context и halo | Snapshot driver, все interiors/padded bytes, roof Y32, water, negative/partial profiles, AIR, domains/removal |
+| Production owner | Desktop adapter scope, GL4.3/GL3.3 driver и actual app factory dispatch |
+| CPU/GPU parity | Общие geometry inputs, exact fields, literal roof/water/source checks; CPU independent dense evidence S3.02 переиспользовано |
+| CPU fallback и lifetime | Actual no-context backend, dense-cap, partial/error/exception controls, scope/thread isolation, GL bindings/fence cleanup |
+| Persisted contract | GPU/CPU receipt codec restore с fresh identities + реальный disk path S3.05 |
+
+Итоговый `s3-gpu-backend-acceptance-20261120.json` связывает артефакты, hashes и границы scope. Desktop путь является hybrid: CPU готовит full-height geometry seeds, GPU выполняет authoritative sky/block transport и readback. Async workers остаются CPU; GLES renderer и draw consumers проверяются отдельно в S5. No-context/failure не считается GPU success. Legacy no-readback blocklight shim не вызывается production snapshot/adapter и не входит в GPU evidence.
+
+После достаточного PASS пакет завершён; следующие повторы только при изменении зависимого кода. S4.01 теперь активен; остальные queues/atomic publication, S5 consumers и S6 visual/performance остаются открытыми.

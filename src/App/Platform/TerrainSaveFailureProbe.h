@@ -75,6 +75,46 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    // S3.06: actual factory-selected desktop owner on the app's GL context.
+    {
+      UWorld world(nullptr, nullptr);
+      world.BlockWorld.SetVerticalProfile({-48,47,-17});
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone, torch;
+      stone.Name = "stone"; stone.Physics = BlockPhysicsProfile::Solid();
+      torch.Name = "torch"; torch.Render.Style = BlockRenderStyle::Cross;
+      torch.Lighting.Emission = 14;
+      definitions->ReplaceAll({{8,stone},{50,torch}},{{"stone",8},{"torch",50}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr,definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+      world.BlockWorld.SetBlock({-1,-40,-8},50);
+      for(int x=-32;x<16;++x)
+        for(int z=-32;z<16;++z) world.BlockWorld.SetBlock({x,32,z},8);
+      auto &pipeline = world.GetLightingPipeline();
+      RelightJobSpec spec;
+      spec.min_world_y=-48; spec.max_world_y=47;
+      auto snapshot=UChunkRelightSnapshot::CaptureSections(
+          world.BlockWorld,spec,{{-1,-3,-1}});
+      snapshot.SetInputCatalog(world.BlockRegistry->GetDefinitionsCatalogSnapshot());
+      const auto expected=snapshot.Compute(*world.BlockRegistry);
+      require(expected.inputs_complete && expected.chunks.size()==1,
+              "desktop GPU owner probe has complete CPU reference");
+      const auto before=GpuLightTransportDispatchCount();
+      pipeline.RelightChunk(world.BlockWorld,*world.BlockRegistry,{-1,-3,-1},true,true);
+      const auto dispatched=GpuLightTransportDispatchCount()-before;
+      const auto field=world.BlockWorld.GetChunkManager().GetSectionLightField({-1,-3,-1});
+      require(dispatched==15 && field && field->GetPaddedData() &&
+                  field->GetPaddedData()->cells==expected.chunks[0].padded_light->cells &&
+                  world.BlockWorld.HasCompleteLightSamplingCalculation(
+                      {-1,-3,-1},world.BlockRegistry->GetDefinitionsCatalogSnapshot()),
+              "app desktop owner must dispatch real GPU and publish exact certified field");
+      require(SyncRelightTransport==nullptr,"app desktop owner restores transport scope");
+      report["cases"].push_back({{"kind","desktop_gpu_relight_owner"},
+          {"status","PASS"},{"actual_dispatches",dispatched},
+          {"cpu_padded_bytes_match",true},{"current_certificate",true},
+          {"scope_restored",true}});
+    }
     // S3.04: real World lifecycle; no live player/world or disk data involved.
     {
       UWorld world(nullptr, nullptr);

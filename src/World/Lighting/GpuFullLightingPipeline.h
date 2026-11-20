@@ -13,8 +13,9 @@ namespace cutum
 
 using UCpuFullLightingPipeline = UFullLightingPipeline;
 
-/// Desktop lighting adapter. Completed relights use the full-context solver;
-/// blocklight acceleration remains an implementation detail of that solver.
+/// Desktop synchronous GPU transport after full-context geometry seeding.
+/// Missing compute context/capacity/failure uses the same CPU solver. Async
+/// jobs have independent CPU ownership and do not inherit this thread scope.
 class UGpuFullLightingPipeline final : public IULightingPipeline
 {
 public:
@@ -40,6 +41,7 @@ public:
   {
     // Section-local preview seeds cannot replace full-height vertical
     // propagation: their incoming sky is independent of roofs/water above.
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightChunk(world, registry, chunk_coord, include_block_light,
                        include_skylight);
   }
@@ -47,6 +49,7 @@ public:
   void RelightChunkBlockLight(UBlockWorld &world, UBlockRegistry &registry,
                               glm::ivec3 chunk_coord) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightChunkBlockLight(world, registry, chunk_coord);
   }
 
@@ -55,6 +58,7 @@ public:
       int min_y, int max_y, bool include_block_light, bool include_skylight,
       std::vector<glm::ivec3> *out_relit_chunks) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightColumnWithFrontier(world, registry, world_x, world_z, min_y,
                                     max_y, include_block_light, include_skylight,
                                     out_relit_chunks);
@@ -65,6 +69,7 @@ public:
                      bool include_block_light = true,
                      bool include_skylight = true) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightColumn(world, registry, world_x, world_z, min_y, max_y,
                         include_block_light, include_skylight);
   }
@@ -73,6 +78,7 @@ public:
       UBlockWorld &world, UBlockRegistry &registry,
       const std::vector<glm::ivec3> &block_positions) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightBlocksAroundEdit(world, registry, block_positions);
   }
 
@@ -82,6 +88,7 @@ public:
       int max_world_y, bool include_block_light,
       int frontier_iterations) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     return Inner.RelightBlocksAroundAllEx(
         world, registry, block_positions, min_world_y, max_world_y,
         include_block_light, frontier_iterations);
@@ -90,13 +97,14 @@ public:
   void RelightAllLoadedChunks(UBlockWorld &world,
                               UBlockRegistry &registry) override
   {
+    ScopedSyncRelightTransport transport(TryGpuTransportLight);
     Inner.RelightAllLoadedChunks(world, registry);
   }
 
-  const char *BackendName() const { return "cpu_full_light"; }
+  const char *BackendName() const { return "gpu_transport_with_cpu_fallback"; }
   uint64_t GetComputeDispatchCount() const
   {
-    return GpuSkylightSeedDispatchCount();
+    return GpuLightTransportDispatchCount();
   }
 
 private:

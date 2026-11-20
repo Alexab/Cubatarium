@@ -1,13 +1,28 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/RelightInputValidation.h"
 #include "World/Lighting/RelightResultInstall.h"
+#include "World/Lighting/PersistedSectionLight.h"
+#include "World/Lighting/GpuFullLightingPipeline.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Core/BlockWorld.h"
+#include "World/Diagnostics/JobStageTrace.h"
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
+#include <cstdlib>
+
+namespace cutum
+{
+uint64_t UJobStageTrace::GetStreamingFrameEpoch() { return 0; }
+std::string LastSyncTransportAudit;
+void CubatariumLogInfo(const char *, const std::string &message)
+{
+  if(message.find("sync_geometry event=apply")==0) LastSyncTransportAudit=message;
+}
+}
 
 namespace
 {
@@ -79,6 +94,46 @@ struct Fixture
     return snapshot;
   }
 };
+void PipelineOwner(bool expect_gpu)
+{
+  Fixture f; f.SetPhase(0);
+  auto reference=UChunkRelightSnapshot::CaptureSections(f.world,f.spec,{f.targets[0]});
+  reference.SetInputCatalog(f.registry.GetDefinitionsCatalogSnapshot());
+  const auto cpu=reference.Compute(f.registry);
+  const auto before=GpuLightTransportDispatchCount();
+  UGpuFullLightingPipeline pipeline;
+  pipeline.RelightChunk(f.world,f.registry,f.targets[0],true,true);
+  Require(SyncRelightTransport==nullptr,"pipeline executor scope restores caller selection");
+  const auto field=f.world.GetChunkManager().GetSectionLightField(f.targets[0]);
+  Require(field && field->GetPaddedData() &&
+              field->GetPaddedData()->cells==cpu.chunks[0].padded_light->cells &&
+              f.world.HasCompleteLightSamplingCalculation(f.targets[0],f.registry.GetDefinitionsCatalogSnapshot()),
+          "actual desktop pipeline publishes exact field and certificate");
+  Require(GpuLightTransportDispatchCount()-before==(expect_gpu?15u:0u),
+          "actual desktop owner dispatch count matches selected execution");
+  Require(LastSyncTransportAudit.find(expect_gpu?"transport=gpu":"transport=cpu_fallback")!=std::string::npos,
+          "actual sync audit identifies GPU or CPU fallback");
+  const auto receipt=CaptureSectionLight(f.world,f.targets[0],f.registry.GetDefinitionsCatalogSnapshot());
+  Require(bool(receipt),"actual desktop result exports frozen content certificate");
+  const auto decoded=DecodeSectionLight(EncodeSectionLight(*receipt));
+  Require(bool(decoded),"desktop result certificate codec accepts all padded bytes");
+  Fixture cold; cold.SetPhase(0);
+  const auto cold_catalog=cold.registry.GetDefinitionsCatalogSnapshot();
+  Require(cold_catalog!=f.registry.GetDefinitionsCatalogSnapshot() &&
+              RestoreSectionLight(cold.world,*decoded,cold_catalog)==SectionLightRestoreResult::Restored &&
+              cold.world.HasCompleteLightSamplingCalculation(cold.targets[0],cold_catalog) &&
+              cold.world.GetChunkManager().GetSectionLightField(cold.targets[0])->GetPaddedData()->cells==
+                  field->GetPaddedData()->cells,
+          "GPU/CPU fallback certificate restores under fresh compatible identities");
+  bool worker_cpu=false;
+  {
+    ScopedSyncRelightTransport scope(TryGpuTransportLight);
+    std::thread worker([&]{worker_cpu=SyncRelightTransport==nullptr;});
+    worker.join();
+  }
+  Require(worker_cpu && SyncRelightTransport==nullptr,"GPU selection cannot leak into worker or caller");
+  std::cout<<"desktop_owner="<<(expect_gpu?"gpu":"no_context_cpu_fallback")<<" PASS\n";
+}
 void Run(Fixture &fixture)
 {
   for(int phase=0;phase<4;++phase)
@@ -155,8 +210,10 @@ void Run(Fixture &fixture)
   std::cout<<"snapshot_edges=field_only_air,partial_profile,dense_cap,backend_exception PASS\n";
 }
 }
-int main()
+int main(int argc,char **argv)
 {
+  _putenv_s("CUBATARIUM_RELIGHT_AUDIT","1");
+  const bool gl33=argc==2 && std::string(argv[1])=="--gl33";
   Fixture fixture; fixture.SetPhase(0);
   auto initial=fixture.Capture(), cpu_snapshot=initial;
   const auto cpu=cpu_snapshot.Compute(fixture.registry);
@@ -167,10 +224,11 @@ int main()
     Require(no_context.transport==RelightComputeResult::Transport::CpuFallback &&
                 no_context.transport_work.dispatches==0 && no_context.transport_work.readbacks==0,
             "missing GL context runs exact CPU fallback without GPU success");
+    PipelineOwner(false);
   }
   catch(const std::exception &e) { std::cerr<<e.what()<<'\n'; return 1; }
   if(!glfwInit()) return 77;
-  glfwWindowHint(GLFW_VISIBLE,GLFW_FALSE); glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,4);
+  glfwWindowHint(GLFW_VISIBLE,GLFW_FALSE); glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,gl33?3:4);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3); glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
   auto *window=glfwCreateWindow(32,32,"GPU snapshot",nullptr,nullptr);
   if(!window) { glfwTerminate(); return 77; }
@@ -179,7 +237,7 @@ int main()
   while(glGetError()!=GL_NO_ERROR) {}
   std::cout<<"GPU: "<<glGetString(GL_RENDERER)<<" GL: "<<glGetString(GL_VERSION)<<'\n';
   int result=0;
-  try { Run(fixture); Require(glGetError()==GL_NO_ERROR,"snapshot driver GL state clean"); }
+  try { Run(fixture); PipelineOwner(true); Require(glGetError()==GL_NO_ERROR,"snapshot driver GL state clean"); }
   catch(const std::exception &e) { std::cerr<<e.what()<<'\n'; result=1; }
   glfwDestroyWindow(window); glfwTerminate(); return result;
 }

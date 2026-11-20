@@ -3,12 +3,29 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include "World/Lighting/GpuLightTransport.h"
 
 namespace cutum
 {
 
 class UBlockRegistry;
 class UBlockWorld;
+
+// Synchronous caller-thread selection only. Async snapshot jobs never consult
+// this scope. The backend itself requires a current compute context or falls
+// back to CPU without publishing partial output.
+inline thread_local GpuLightTransportExecutor SyncRelightTransport = nullptr;
+class ScopedSyncRelightTransport
+{
+public:
+  explicit ScopedSyncRelightTransport(GpuLightTransportExecutor executor)
+      : Previous(SyncRelightTransport) { SyncRelightTransport = executor; }
+  ~ScopedSyncRelightTransport() { SyncRelightTransport = Previous; }
+  ScopedSyncRelightTransport(const ScopedSyncRelightTransport &) = delete;
+  ScopedSyncRelightTransport &operator=(const ScopedSyncRelightTransport &) = delete;
+private:
+  GpuLightTransportExecutor Previous;
+};
 
 constexpr int kRelightFrontierIterationsFull = 4;
 constexpr int kRelightFrontierIterationsEdit = 2;

@@ -1,4 +1,5 @@
 #include "World/Lighting/GpuBlocklightFlood.h"
+#include "World/Lighting/GpuLightTransport.h"
 
 namespace cutum
 {
@@ -16,5 +17,15 @@ bool TryGpuPropagateBlocklight(UBlockWorld & /*world*/,
 uint64_t ConsumeGpuBlocklightFloodCount() { return 0; }
 
 void NoteGpuBlocklightFlood() {}
+
+// Explicit host-only backend rejection; these tests never claim GPU parity.
+bool TryGpuTransportLight(const LightTransportInput &, std::vector<uint8_t> &,
+                          GpuLightTransportWork &work, std::string &reason)
+{
+  work = {};
+  reason = "host_test_no_gpu_backend";
+  return false;
+}
+uint64_t GpuLightTransportDispatchCount() { return 0; }
 
 } // namespace cutum
