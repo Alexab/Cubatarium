@@ -1553,6 +1553,8 @@ void UWindowManager::TickBudgetedAutosave()
   UNullProgressSink sink;
   if (World->TickCooperativeSave(sink, /*chunkBudget=*/1))
   {
+    if (!World->GetCooperativeSaveError().empty())
+      CubatariumLogError("Autosave", World->GetCooperativeSaveError());
     World->ResumeAfterSessionSave();
     AutosaveInProgress = false;
     LastAutosaveTime = std::chrono::steady_clock::now();

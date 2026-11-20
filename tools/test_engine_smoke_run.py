@@ -13,6 +13,38 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_save_probe_requires_explicit_startup_and_boolean(self):
+        for options in (dict(probe_terrain_save_failure=True),
+                        dict(probe_terrain_save_failure=1, startup_only=True)):
+            with self.assertRaisesRegex(ValueError, "terrain save probe"):
+                engine_smoke_run.run("Saved", Path("unused"), **options)
+
+    def test_save_probe_scrubs_inherited_hook_and_sets_only_explicit_artifact(self):
+        import os
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        fingerprint = world_fingerprint(self.world)
+        for enabled in (False, True):
+            artifacts = self.artifacts / str(enabled)
+            def fail_launch(*args, **kwargs):
+                env = kwargs["env"]
+                if enabled:
+                    self.assertEqual(Path(env["CUBA_FLIGHT_QA_TERRAIN_SAVE"]),
+                                     (artifacts / "terrain-save-probe").resolve())
+                else:
+                    self.assertNotIn("CUBA_FLIGHT_QA_TERRAIN_SAVE", env)
+                raise RuntimeError("controlled save probe launch failure")
+            with patch.object(engine_smoke_run, "ROOT", self.root), \
+                 patch.dict(os.environ, {"CUBA_FLIGHT_QA_TERRAIN_SAVE": "foreign"}), \
+                 patch("flight_sim_run.exe_writable", return_value=True), \
+                 patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+                 patch.object(engine_smoke_run.subprocess, "Popen", side_effect=fail_launch):
+                with self.assertRaisesRegex(RuntimeError, "controlled save probe launch failure"):
+                    engine_smoke_run.run("Saved", artifacts, startup_only=True,
+                                         probe_terrain_save_failure=enabled)
+            self.assertEqual(self.config.read_bytes(), self.original)
+            self.assertEqual(world_fingerprint(self.world), fingerprint)
+            self.assertFalse((self.runtime / ".engine-smoke.lock").exists())
+
     def test_read_probe_requires_column_boolean_and_no_cancel_probe(self):
         for options in (dict(probe_disk_read_failure=True),dict(probe_disk_read_failure=1),
                         dict(probe_disk_read_failure=True,secondary_residency_column=(1,5),probe_partial_air_cancellation=True)):

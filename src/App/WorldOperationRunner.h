@@ -54,10 +54,11 @@ public:
   bool Tick(IUProgressSink &sink, int chunkBudgetPerFrame);
   bool Succeeded() const { return Success; }
   const std::string &ErrorMessage() const { return Error; }
+  bool HasSaveFailure() const { return SaveFailure; }
   bool ShouldEnterGame() const { return Request.enterGameAfter; }
   bool ShouldCloseApplication() const
   {
-    return Request.op == WorldRunnerOp::Shutdown &&
+    return Success && Request.op == WorldRunnerOp::Shutdown &&
            Request.shutdownCloseApplication;
   }
   bool IsShutdownOperation() const
@@ -83,6 +84,7 @@ public:
   bool IsEnterGameAbortDrainMode() const { return EnterGameAbortDrainMode; }
 
 private:
+  bool SaveFailure{false};
   const char *CurrentStageName() const;
   void UpdateEnterGameWarmupPeaks(const EnterLitSample &lit_sample,
                                   int fov_debt);

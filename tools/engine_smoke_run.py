@@ -355,7 +355,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         source_observation_scene: dict | None = None, unpacked_meshing: bool = False,
         secondary_residency_column: tuple[int, int] | None = None,
         probe_partial_air_cancellation: bool = False,
-        probe_disk_read_failure: bool = False) -> dict:
+        probe_disk_read_failure: bool = False,
+        probe_terrain_save_failure: bool = False) -> dict:
+    if type(probe_terrain_save_failure) is not bool or (probe_terrain_save_failure and not startup_only):
+        raise ValueError("terrain save probe requires an explicit startup-only scenario")
     if type(probe_disk_read_failure) is not bool or (probe_disk_read_failure and (
             secondary_residency_column is None or probe_partial_air_cancellation)):
         raise ValueError("disk read probe requires a secondary column and excludes cancellation probe")
@@ -473,6 +476,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                         "CUBA_CHUNK_RESIDENCY_TRACE_SECONDARY_FILE": str((artifacts / "secondary-column-residency.log").resolve())})
         if probe_partial_air_cancellation:
             env["CUBA_DISK_AIR_CANCEL_PROBE"] = ",".join(map(str, secondary_residency_column))
+        if probe_terrain_save_failure:
+            env["CUBA_FLIGHT_QA_TERRAIN_SAVE"] = str((artifacts / "terrain-save-probe").resolve())
         if probe_disk_read_failure:
             env["CUBA_DISK_READ_FAILURE_PROBE"] = ",".join(map(str, secondary_residency_column))
             env["CUBA_DISK_READ_FAILURE_ARTIFACTS"] = str((artifacts / "disk-read-save").resolve())
@@ -574,6 +579,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "secondary_residency_column": secondary_residency_column,
                  "probe_partial_air_cancellation": probe_partial_air_cancellation,
                  "probe_disk_read_failure": probe_disk_read_failure,
+                 "probe_terrain_save_failure": probe_terrain_save_failure,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -781,6 +787,8 @@ def main() -> int:
                         help="one-shot real returning disk-demand cancellation/reissue for the secondary column; requires actual evidence")
     parser.add_argument("--probe-disk-read-failure", action="store_true",
                         help="corrupt five returning upper-frame read buffers then recover; controlled local edit and save rejection exercise")
+    parser.add_argument("--probe-terrain-save-failure", action="store_true",
+                        help="startup-only isolated UWorld save failure/retry API probe")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -828,6 +836,7 @@ def main() -> int:
                   secondary_residency_column=args.secondary_residency_column,
                   probe_partial_air_cancellation=args.probe_partial_air_cancellation,
                   probe_disk_read_failure=args.probe_disk_read_failure,
+                  probe_terrain_save_failure=args.probe_terrain_save_failure,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)

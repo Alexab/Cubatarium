@@ -44,6 +44,7 @@ public:
   bool Tick(UWorld &world, IUProgressSink &sink, int chunkBudget);
   /// Era31 I-T4: force-complete EnterGame load when visual cap reached.
   bool ForceCapEnterGameVisual(UWorld &world, IUProgressSink &sink);
+  const std::string &SaveError() const { return ErrorMessage; }
   void Cancel();
   void CancelBackgroundWorkers();
 

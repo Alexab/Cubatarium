@@ -364,7 +364,9 @@ public:
   bool ForceCapEnterGameLoad(class IUProgressSink &sink);
   void BeginCooperativeSave(const std::string &world_folder_path,
                             bool resume_streaming_after_save = true);
+  /// Returns terminal status; inspect GetCooperativeSaveError for success.
   bool TickCooperativeSave(class IUProgressSink &sink, int chunkBudget);
+  const std::string &GetCooperativeSaveError() const;
   void BeginCooperativeCreate(const std::string &world_name,
                               bool prepare_visuals = true);
   bool TickCooperativeCreate(class IUProgressSink &sink, int columnBudget);
@@ -1662,6 +1664,7 @@ private:
   void EnsureVisualRepairDirtyPriority(glm::ivec3 coord);
 
   friend class UWorldCooperativeSession;
+  friend void RunTerrainSaveFailureProbe();
   friend class UWorldStreaming;
   friend class UWorldPersistence;
   friend class UChunkEmergeCoordinator;

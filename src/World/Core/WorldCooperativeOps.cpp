@@ -3198,20 +3198,25 @@ void UWorldCooperativeSession::HandlePhaseSaveChunks(UWorld &world,
     }
     if (save_by_ground_column)
     {
-      if (IsTerrainChunkComplete(
-              world.BlockWorld, coord, world.ProceduralTemplate.MaxHeight,
-              kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight))
+      const bool complete = IsTerrainChunkComplete(
+          world.BlockWorld, coord, world.ProceduralTemplate.MaxHeight,
+          kNoTerrainChunkSlice, world.ProceduralTemplate.MinHeight);
+      const bool written = complete && world.GetChunkStorage().SaveTerrainColumn(
+          coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
+          world.ProceduralTemplate.MaxHeight, world.ProceduralTemplate.MinHeight);
+      if (!written)
       {
-        world.GetChunkStorage().SaveTerrainColumn(
-            coord, world.BlockWorld, FolderPath, *world.BlockRegistry,
-            world.ProceduralTemplate.MaxHeight,
-            world.ProceduralTemplate.MinHeight);
-      }
-      else
-      {
-        world.GetChunkStorage().RemoveTerrainColumnFromDisk(
-            FolderPath, coord, world.ProceduralTemplate.MaxHeight, nullptr,
-            world.ProceduralTemplate.MinHeight);
+        --Save.SaveChunkIndex;
+        Failed = true;
+        Active = false;
+        CurrentPhase = Phase::Done;
+        ErrorMessage = complete
+            ? "Terrain save failed. Local edits remain in memory; retry saving before leaving."
+            : "Terrain is incomplete. Local edits and saved terrain were preserved; retry saving before leaving.";
+        if (ResumeStreamingAfterSave)
+          world.EnsureStreamingActiveAfterBackgroundQuiesce();
+        Report(sink, "save_failed", -1.f, ErrorMessage);
+        return;
       }
     }
     else

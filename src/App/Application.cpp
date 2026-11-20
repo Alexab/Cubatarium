@@ -527,6 +527,15 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
 void UApplication::OnWorldOperationFinished()
 {
   const bool success = WorldOpRunner && WorldOpRunner->Succeeded();
+  if (WorldOpRunner && WorldOpRunner->HasSaveFailure())
+  {
+    if (World)
+      World->ResumeAfterSessionSave();
+    WorldOpOnComplete = nullptr;
+    ShowMainMenu();
+    State = AppState::MainMenu;
+    return;
+  }
   if (WorldOpRunner && WorldOpRunner->IsShutdownOperation())
   {
     if (success && WorldOpOnComplete)

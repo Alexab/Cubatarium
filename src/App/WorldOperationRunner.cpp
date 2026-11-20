@@ -71,6 +71,7 @@ void UWorldOperationRunner::Start(WorldRunnerRequest request)
   Active = true;
   AnnouncedStage = Stage::Idle;
   Success = false;
+  SaveFailure = false;
   Error.clear();
   PendingWorldName.clear();
   SaveBeforeOp = false;
@@ -154,6 +155,11 @@ bool UWorldOperationRunner::TickWorldOp(IUProgressSink &sink, int chunkBudget)
     }
     if (World.TickCooperativeSave(sink, budget))
     {
+      if (!World.GetCooperativeSaveError().empty())
+      {
+        SaveFailure = true;
+        Fail(World.GetCooperativeSaveError(), sink);
+      }
       return true;
     }
     return false;
@@ -550,6 +556,9 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       return false;
     }
 
+    if (!Active)
+      return true;
+
     if (PendingWorldOp == WorldRunnerOp::Save &&
         (Request.op == WorldRunnerOp::SaveThenLoad ||
          Request.op == WorldRunnerOp::SaveThenCreate))
@@ -640,6 +649,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
     {
       return false;
     }
+    if (!Active)
+      return true;
     Core.RefreshWorldListAfterSave();
     World.RefreshPersistedTerrainAfterSave();
     if (Request.saveConfigAfter)
@@ -761,6 +772,12 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
       if (!World.TickCooperativeSave(sink, budget))
       {
         return false;
+      }
+      if (!World.GetCooperativeSaveError().empty())
+      {
+        SaveFailure = true;
+        Fail(World.GetCooperativeSaveError(), sink);
+        return true;
       }
     }
     CurrentStage = Stage::ShutdownFinalize;

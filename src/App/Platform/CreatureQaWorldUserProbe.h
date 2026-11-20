@@ -84,6 +84,8 @@ inline void RunCreatureQaWorldUserProbe(UCore &core,UWorld &world)
     if(++ticks>100000 || std::chrono::steady_clock::now()-started>std::chrono::seconds(120))
       throw std::runtime_error("User QA cooperative save exceeded bounded observation time");
   }
+  if(!world.GetCooperativeSaveError().empty())
+    throw std::runtime_error(world.GetCooperativeSaveError());
   report["save_ticks"]=ticks;report["save_phases"]=progress.phases;
   report["save_seconds"]=std::chrono::duration<double>(std::chrono::steady_clock::now()-started).count();
   report["after_save"]=capture();

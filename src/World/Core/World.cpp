@@ -15082,6 +15082,8 @@ void UWorld::Save(const std::string &world_folder_path)
   while (!TickCooperativeSave(sink, 64))
   {
   }
+  if (!GetCooperativeSaveError().empty())
+    throw std::runtime_error(GetCooperativeSaveError());
 }
 
 void UWorld::SaveSessionSnapshotMetadataOnly(
@@ -15150,26 +15152,14 @@ void UWorld::SaveSessionSnapshot(const std::string &world_folder_path,
     }
     for (const glm::ivec3 &ground : grounds)
     {
-      if (BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(ground))
-      {
-        CubatariumLogError("Save",
-                           "unresolved_disk_read: terrain column preserved");
-        continue;
-      }
-      if (IsTerrainChunkComplete(
+      if (!IsTerrainChunkComplete(
               BlockWorld, ground, ProceduralTemplate.MaxHeight,
-              kNoTerrainChunkSlice, ProceduralTemplate.MinHeight))
-      {
-        GetChunkStorage().SaveTerrainColumn(
-            ground, BlockWorld, world_folder_path, *BlockRegistry,
-            ProceduralTemplate.MaxHeight, ProceduralTemplate.MinHeight);
-      }
-      else
-      {
-        GetChunkStorage().RemoveTerrainColumnFromDisk(
-            world_folder_path, ground, ProceduralTemplate.MaxHeight, nullptr,
-            ProceduralTemplate.MinHeight);
-      }
+              kNoTerrainChunkSlice, ProceduralTemplate.MinHeight) ||
+          !GetChunkStorage().SaveTerrainColumn(
+              ground, BlockWorld, world_folder_path, *BlockRegistry,
+              ProceduralTemplate.MaxHeight, ProceduralTemplate.MinHeight))
+        throw std::runtime_error(
+            "Terrain save failed or incomplete; local edits were preserved");
     }
   }
 
@@ -15241,6 +15231,12 @@ bool UWorld::TickCooperativeSave(IUProgressSink &sink, int chunkBudget)
     return true;
   }
   return CoopSession->Tick(*this, sink, chunkBudget);
+}
+
+const std::string &UWorld::GetCooperativeSaveError() const
+{
+  static const std::string empty;
+  return CoopSession ? CoopSession->SaveError() : empty;
 }
 
 void UWorld::BeginCooperativeCreate(const std::string &world_name,
