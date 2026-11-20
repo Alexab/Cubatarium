@@ -3526,14 +3526,150 @@ static void TestCacheMeshRemovalLifetime(
   Expect(published_all, "fresh cache demand after eviction publishes current geometry");
 }
 
+static void TestCacheMeshCancellationLifetime(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool retired_all = true;
+  bool published_all = true;
+  for (const bool keep_dirty : {false, true})
+    for (const bool completed : {false, true})
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      const glm::ivec3 root(0);
+      world.SetBlock({8, 8, 8}, kStone);
+      GatedPhysicalMesher mesher;
+      if (completed) mesher.Release();
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = true;
+      settings.FrustumCulling = false;
+      settings.Lighting = LightingMode::Flat;
+      cache.SetRenderSettings(settings);
+      cache.SetMesherBackend(&mesher);
+      cache.SetMeshRebuildFocus(root, 4, 1);
+      const auto schedule = [&]() {
+        UFlatLightingPipeline flat;
+        flat.FillAllLoadedChunks(world);
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        const auto revision = cache.GetChunkMeshRevision(root);
+        const auto epoch = cache.GetCaptureStore().WorldEpoch();
+        cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+            0, 1.0, epoch, chunk->GetIncarnation());
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+            chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                   cache, world, root, revision).has_value(),
+               "cache eviction fixture captures exact target");
+        const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(tick.Scheduled == 1 && cache.HasCpuMeshBuildInFlight(root),
+               "cache eviction fixture owns exact actual worker");
+      };
+      cache.MarkDirtyPriority(root);
+      schedule();
+      Expect(mesher.WaitEntered(), "cache eviction worker reaches gate");
+      if (completed)
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+               "cache eviction completed job awaits apply");
+      if (keep_dirty) cache.CancelAsyncInFlightKeepDirty();
+      else cache.CancelAsyncMeshWork();
+      // Advance a real cache tick so old ScheduledThisFrame cannot hide a late retry.
+      cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
+      const bool owner_retired = !cache.HasCpuMeshBuildInFlight(root);
+      mesher.Release();
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+             "cache eviction releases actual worker");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      const bool clean = owner_retired && cache.IsChunkMeshDirty(root) == keep_dirty &&
+          !cache.HasInflightMeshBuild(root) && !cache.HasDrawableGreedyMesh(root);
+      retired_all = retired_all && clean;
+      std::cout << "cache_mesh_cancellation keep_dirty=" << keep_dirty << " completed=" << completed
+                << " owner_retired=" << owner_retired << " clean=" << clean << '\n';
+      if (!keep_dirty)
+      {
+        world.SetBlock({12, 8, 8}, kStone);
+        cache.MarkDirtyPriority(root);
+      } // KeepDirty successor must consume returned debt without new ingress.
+      schedule();
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+             "fresh cache demand completes actual worker after eviction");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      std::cout << "cache_cancel_successor drawable=" << cache.HasDrawableGreedyMesh(root)
+                << " current=" << cache.IsPublishedMeshCurrentForInputs(root, world)
+                << " publications=" << cache.GetPublishCount(root)
+                << " dirty=" << cache.IsChunkMeshDirty(root)
+                << " active=" << cache.HasInflightMeshBuild(root)
+                << " stale=" << cache.GetMeshApplyStaleCount()
+                << " stale_rev=" << cache.GetMeshApplyStaleRevCount()
+                << " no_active=" << cache.GetMeshApplyDropNoActiveCount() << '\n';
+      published_all = published_all && cache.HasDrawableGreedyMesh(root) &&
+                      cache.IsPublishedMeshCurrentForInputs(root, world);
+    }
+  Expect(retired_all, "cache cancellation preserves only the explicitly transferred dirty obligation");
+  Expect(published_all, "cache cancellation successor publishes current geometry without invented debt");
+}
+
+static void TestCancelledMeshRetryReceipts(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool outcomes = true;
+  for (int mode = 0; mode < 3; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 victim(2, 0, 0), newer(3, 0, 0);
+    for (const auto coord : {victim, newer})
+      world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(8), kStone);
+    GatedPhysicalMesher mesher;
+    mesher.Release();
+    UAsyncMeshBuilder builder(2);
+    builder.SetMesher(&mesher);
+    builder.SetCompletedCapacity(1);
+    const auto submit = [&](glm::ivec3 coord, uint64_t revision) {
+      return builder.Enqueue(ChunkMeshSnapshot::Capture(world, coord, revision,
+          nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
+    };
+    Expect(submit(victim, 921) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
+               submit(newer, 922) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
+               builder.GetCompletedDiscardedOverflow() == 1,
+           "cancel receipt fixture produces a real overflow retry before cancellation");
+    if (mode == 0) builder.CancelPending();
+    else builder.CancelPendingOutsideHorizontalRadius(mode == 2 ? victim : glm::ivec3(0), 0);
+    const auto retry = builder.TakeOverflowCoords();
+    const bool expected_retry = mode == 2;
+    const bool good = expected_retry ? retry.size() == 1 && retry[0] == victim : retry.empty();
+    outcomes = outcomes && good;
+    std::cout << "cancel_mesh_receipt mode=" << mode << " retry_count=" << retry.size()
+              << " expected=" << expected_retry << '\n';
+    Expect(builder.DrainCompleted(4).empty() && !builder.IsInFlight(newer),
+           "cancel receipts retire outside completion owners");
+    Expect(submit(victim, 923) && builder.WaitIdleFor(std::chrono::seconds(5)),
+           "protected retry or fresh post-cancel demand reaches actual worker");
+    auto result = builder.DrainCompleted(1);
+    Expect(result.size() == 1 && result[0].coord == victim &&
+               result[0].sourceRevision == 923 && !result[0].batches.empty(),
+           "post-cancel receipt policy permits actual current geometry completion");
+  }
+  Expect(outcomes, "cancellation retires abandoned retry receipts and preserves protected receipts");
+}
+
 static void TestForgottenMeshJobLifetime(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
   bool no_retired_retry = true;
-  for (int scenario = 0; scenario < 4; ++scenario)
+  for (int scenario = 0; scenario < 10; ++scenario)
   {
+    const bool queued_target = scenario == 0 || scenario >= 8;
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
@@ -3542,23 +3678,28 @@ static void TestForgottenMeshJobLifetime(
       world.SetBlock(coord * CHUNK_SIZE + glm::ivec3(8), kStone);
     GatedPhysicalMesher mesher;
     if (scenario == 2) mesher.Release();
-    UAsyncMeshBuilder builder(scenario == 0 ? 1 : 2);
+    UAsyncMeshBuilder builder(queued_target ? 1 : 2);
     builder.SetMesher(&mesher);
     builder.SetCompletedCapacity(4);
     const auto submit = [&](glm::ivec3 coord, uint64_t revision) {
       return builder.Enqueue(ChunkMeshSnapshot::Capture(world, coord, revision,
           nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
     };
-    if (scenario == 0)
+    if (queued_target)
       Expect(submit(blocker, 910) && mesher.WaitEntered(),
              "forget queued fixture holds unrelated worker");
     Expect(submit(target, 911), "forget fixture accepts target job");
-    if (scenario != 0)
+    if (!queued_target)
       Expect(mesher.WaitEntered(), "forget fixture enters target worker");
     if (scenario == 2)
       Expect(builder.WaitIdleFor(std::chrono::seconds(5)),
              "forget completed fixture reaches completed queue");
-    if (scenario == 3)
+    if (scenario >= 4)
+    {
+      if (scenario == 4 || scenario == 6 || scenario == 8) builder.CancelPending();
+      else builder.CancelPendingOutsideHorizontalRadius({0, 0, 0}, 0);
+    }
+    if (scenario == 3 || scenario == 4 || scenario == 5)
     {
       world.SetBlock(target * CHUNK_SIZE + glm::ivec3(12, 8, 8), kStone);
       Expect(submit(target, 912), "post-retirement successor accepted");
@@ -3570,7 +3711,7 @@ static void TestForgottenMeshJobLifetime(
                  !builder.IsInFlight(target),
              "newer same-key job fully retires before old worker release");
     }
-    else
+    else if (scenario < 4)
       builder.ForgetInflight(target);
     mesher.Release();
     Expect(builder.WaitIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
@@ -3590,8 +3731,10 @@ static void TestForgottenMeshJobLifetime(
     Expect(current.size() == 1 && current[0].coord == target &&
                current[0].sourceRevision == 913 && !current[0].batches.empty(),
            "fresh demand after retirement completes actual geometry");
+    if (scenario >= 8)
+      Expect(mesher.builds == 2, "cancelled queued target never enters mesher before fresh demand");
   }
-  Expect(no_retired_retry, "forgotten or fully superseded jobs never resurrect executable debt");
+  Expect(no_retired_retry, "forgotten cancelled or fully superseded jobs never resurrect executable debt");
 }
 
 static void TestMeshSameKeySupersession(
@@ -7413,8 +7556,10 @@ int main(int argc, char **argv)
   TestCachedPreviewAfterProofOnlyCompletion(registry, definitions.get());
   TestSelectiveMeshLeaseWorkerLifecycle(registry, definitions.get());
   TestMeshSameKeySupersession(registry, definitions.get());
+  TestCancelledMeshRetryReceipts(registry, definitions.get());
   TestForgottenMeshJobLifetime(registry, definitions.get());
   TestCacheMeshRemovalLifetime(registry, definitions.get());
+  TestCacheMeshCancellationLifetime(registry, definitions.get());
   TestCertifiedGeometrySurvivesInflightLight(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get());
   TestScreenRayFirstPublication(registry, definitions.get(), 1);

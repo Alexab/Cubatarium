@@ -563,12 +563,20 @@ bool UAsyncMeshBuilder::WaitIdleFor(const std::chrono::milliseconds timeout)
 
 void UAsyncMeshBuilder::CancelPending()
 {
-  Epoch.fetch_add(1, std::memory_order_acq_rel);
-  Pool.CancelPendingJobs();
   {
     std::lock_guard<std::mutex> lock(InFlightMutex);
+    Epoch.fetch_add(1, std::memory_order_acq_rel);
+    // Cancellation retires these jobs. KeepDirty transfers their obligations
+    // at the cache owner before calling us; late workers must not recreate them.
+    for (const auto &entry : InFlight)
+      entry.second.retry_allowed->store(false, std::memory_order_relaxed);
     InFlight.clear();
+    std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+    OverflowCoords.clear();
+    std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
+    DiscardedCoords.clear();
   }
+  Pool.CancelPendingJobs();
   const uint64_t current_epoch = Epoch.load(std::memory_order_acquire);
   for (MeshBuildResult &result : Completed.DrainAll())
   {
@@ -639,8 +647,24 @@ void UAsyncMeshBuilder::CancelPendingOutsideHorizontalRadius(glm::ivec3 focus,
         protected_jobs.insert(it->second.id);
         ++it;
       }
-      else it = InFlight.erase(it);
+      else
+      {
+        it->second.retry_allowed->store(false, std::memory_order_relaxed);
+        it = InFlight.erase(it);
+      }
     }
+    const auto outside = [&](glm::ivec3 coord) {
+      return std::max(std::abs(coord.x - focus.x),
+                      std::abs(coord.z - focus.z)) > keep_radius;
+    };
+    // Already-produced retries have the same cancellation boundary as jobs.
+    // Protected retries remain owned even when overflow retired their CPU job.
+    std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+    OverflowCoords.erase(std::remove_if(OverflowCoords.begin(), OverflowCoords.end(), outside),
+                         OverflowCoords.end());
+    std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
+    DiscardedCoords.erase(std::remove_if(DiscardedCoords.begin(), DiscardedCoords.end(), outside),
+                          DiscardedCoords.end());
   }
   Pool.CancelPendingJobsIf([&](uint64_t id) { return !protected_jobs.count(id); });
   Completed.EraseIf([&](const MeshBuildResult &result) {

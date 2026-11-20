@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q04-C2.1/.2 explicit Forget/direct supersession and actual cache removal/current same-frame successor accepted: s4-mesh-retirement-acceptance-20261121.json. Next Q04-C2.3: whole-cache cancellation queued/running/completed and cancelled old worker after fully drained successor; distinguish abandonment from KeepDirty debt transfer. Then Q04-C2.4 outside-radius CPU policy. Ledger retains 17 CHECK groups, full S0..S6 OPEN; no new audit or repeated accepted cases without dependency changes.",
+  "next_action": "S4.02 Q04-C2.3 accepted in s4-mesh-cancellation-acceptance-20261121.json: full/selective cancelled jobs and ready retry receipts retire without resurrection; actual cache KeepDirty debt publishes without new ingress. Next Q04-C2.4: actual outside-radius CPU abandonment/lease policy with valid retained demand/current successor versus explicit abandonment. Reuse accepted .1/.2/.3; mixed GPU/field remains Q06-C2. Ledger still 17 CHECK groups; full S0..S6 OPEN, no audit restart.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

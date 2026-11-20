@@ -124,8 +124,10 @@
         },
         {
           "id": "Q04-C2.3",
-          "status": "CHECK",
-          "scope": "Whole-builder/whole-cache cancellation queued/running/completed and cancelled predecessor released after a fully drained new successor; verify explicit abandonment vs KeepDirty owner transfer."
+          "status": "REUSE",
+          "scope": "Whole-builder/whole-cache cancellation queued/running/completed and cancelled predecessor released after a fully drained new successor; verify explicit abandonment vs KeepDirty owner transfer.",
+          "evidence": "build/desktop-msvc/s4-mesh-cancellation-acceptance-20261121.json",
+          "coverage_note": "Builder queue cancellation is exercised directly. Cache transfer is stage-independent: CancelAsyncInFlightKeepDirty iterates ActiveMeshSourceRevision, never tests queued/running state; whole-cache cancellation clears the same owner set. Cache running/completed fixtures prove actual handoff/current publication; no direct cache queued scene is claimed."
         },
         {
           "id": "Q04-C2.4",
@@ -316,5 +318,5 @@
       "observed": "Legacy Enqueue for background IO; completed load/save queues and separate light-flags pool. Must inspect producer envelope before claiming bounded memory."
     }
   ],
-  "checkpoint": "Q04-C1 accepted; Q04-C2.1/.2 explicit Forget and cache removal accepted with current-EXE native regression. Q04-C2 remains CHECK for .3 full cancellation and .4 outside-radius abandonment. 17 CHECK groups/13 REUSE groups/1 disabled production path; full S0..S6 OPEN."
+  "checkpoint": "Q04-C2.1/.2/.3 accepted: explicit retirement, cache removal, full/selective builder cancellation and cache KeepDirty transfer. Q04-C2 remains CHECK only for .4 outside-radius CPU abandonment/lease policy. 17 CHECK groups/13 REUSE groups/1 disabled production path; full S0..S6 OPEN."
 }

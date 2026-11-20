@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-cancel-leaves-retry-permission-and-abandoned-receipts",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Full/selective cancellation erases current owner but leaves old retry permission: running cancelled jobs with/without fully drained successor return retry_count1. Pre-existing outside overflow receipts also survive abandonment.",
+      "fix": "Revoke retry permission before clearing owners; retire abandoned overflow/discard receipts under same owner boundary, preserve protected receipts. Cache KeepDirty transfers accepted Active debt before builder cancellation.",
+      "evidence": "build/desktop-msvc/s4-mesh-cancellation-acceptance-20261121.json",
+      "next_action": "Q04-C2.4 actual outside-radius cache policy; whole S4.02 and mixed GPU/field remain open."
+    },
+    {
       "id": "mesh-explicit-retirement-resurrects-debt",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
