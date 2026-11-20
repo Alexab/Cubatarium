@@ -2,6 +2,22 @@
 
 Статус: OPEN. Продолжение после S4.01 (`3b84e6581`). Это список обязательств для адресных проверок, а не новый общий аудит. Наличие API или тестового файла не считается доказательством исполнения. REUSE требует сохранённого receipt; CHECK остаётся открытым до проверки actual owner и актуального преемника. Пустая очередь сама по себе не terminal outcome.
 
+## Исполнимый остаток от 2026-11-21
+
+`S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json` фиксирует 18 CHECK, 12 property-specific REUSE и 1 INAPPLICABLE (disabled worker capture). CHECK — группы явно перечисленных сценариев, не число запусков. Отсутствующие source caps остаются отдельным LIMIT-C1; drain budget не считается cap. Старые CHECK в обзорной таблице ниже уточняются этим ledger и последующими receipts, а исторические гипотезы не являются очередью повторов.
+
+### Q04-C1 / capacity reduction after same-key replacement
+
+Predeclare: reuse actual two-worker builder, two completed snapshots901/902, one coord and two-cube newer input. Reduce completed capacity2→1 before drain. PASS: newer exact owner902/completion survives, old drops, TakeOverflowCoords empty (newer owns obligation), current geometry returns once. Existing unowned overflow publication receipt remains required; no blanket suppression of overflow retry. Local Release decor test, each wait5s. Repro logs `s4-mesh-capacity-supersession-repro-build/test-20261121.log`. No production change before repro. If confirmed, fix exact overflow debt emission in SetCompletedCapacity and PushDropOldest using same owner rule; one verification plus necessary current-EXE native overflow successor regression.
+
+Initial capacity fixture stopped before debt assertion: SetCapacity legitimately increments completed discard count1, while inherited assertion expected0. Correct fixture expectation to1 for capacity reduction (owner check unchanged); no production defect claim from that run. Corrected repro logs `s4-mesh-capacity-supersession-corrected-repro-build/test-20261121.log`.
+
+Corrected reproduction CONFIRMED duplicate overflow debt with newer owner/result preserved. Fix exact current-owner gating in SetCompletedCapacity and worker PushDropOldest: retire/retry only victim-owned or unowned coordinates; skip retry if replacement owns key. Verification extends fixed case set with same-key PushDropOldest at capacity1 (no separate pre-fix reproduction claimed for this added case). Logs `s4-mesh-capacity-supersession-fixed-build/test-20261121.log`. Existing unrelated-coordinate overflow must still return debt and publish in current-EXE native regression.
+
+Four same-key Release cases PASS. Before acceptance add the complementary distinct-coordinate capacity victim: complete903/904 in fixed order, shrink2→1, require exactly victim903 retry and kept904 owner/result, then actual retry905 geometry completes. This specifically checks that replacement suppression does not erase genuine capacity-reduction debt; current native ordinary overflow publication covers downstream cache. Final local logs `s4-mesh-capacity-supersession-final-build/test-20261121.log`.
+
+Acceptance: all four same-key cases and distinct capacity-victim retry PASS (`s4-mesh-capacity-supersession-final-output-20261121.log`). Current native regression API PASS, overflow/current successor and cancel/protected cases PASS; runtime exit0/startup/provenance PASS, config byte-restored, overall smoke UNTESTED. Receipt `s4-mesh-capacity-supersession-acceptance-20261121.json`. Q04-C1 → REUSE. Ledger now 17 CHECK/13 REUSE/1 INAPPLICABLE; next Q04-C2, no package-wide closure.
+
 ## Реестр
 
 | ID | Ключ и production owner | Лимит / coalescing | Требуемые исходы и доказательства |

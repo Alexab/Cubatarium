@@ -313,16 +313,15 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
           UJobStageTrace::NoteTerminal(
               dropped.stageTrace, JobStage::Retired,
               JobTerminalReason::CompletedQueueOverflow);
+          std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+          const auto it = InFlight.find(dropped.coord);
+          if (it == InFlight.end() || it->second == dropped.jobId)
           {
-            std::lock_guard<std::mutex> lock(InFlightMutex);
-            const auto it = InFlight.find(dropped.coord);
-            if (it != InFlight.end() && it->second == dropped.jobId)
-            {
+            if (it != InFlight.end())
               InFlight.erase(it);
-            }
+            std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+            OverflowCoords.push_back(dropped.coord);
           }
-          std::lock_guard<std::mutex> olock(OverflowMutex);
-          OverflowCoords.push_back(dropped.coord);
         }
           }, jobId))
   {
@@ -348,14 +347,16 @@ void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)
     UJobStageTrace::NoteTerminal(
         dropped.stageTrace, JobStage::Retired,
         JobTerminalReason::CompletedQueueCapacityReduced);
+    std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+    const auto it = InFlight.find(dropped.coord);
+    // Shrinking the queue retires the victim, not a newer job with its key.
+    if (it == InFlight.end() || it->second == dropped.jobId)
     {
-      std::lock_guard<std::mutex> lock(InFlightMutex);
-      const auto it = InFlight.find(dropped.coord);
-      if (it != InFlight.end() && it->second == dropped.jobId)
+      if (it != InFlight.end())
         InFlight.erase(it);
+      std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+      OverflowCoords.push_back(dropped.coord);
     }
-    std::lock_guard<std::mutex> lock(OverflowMutex);
-    OverflowCoords.push_back(dropped.coord);
   }
 }
 

@@ -255,6 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02: same-key old running/completed result versus live newer owner verified in s4-mesh-same-key-acceptance-20261121.json. Next: finite outstanding Q01..Q12 outcome/cap ledger (REUSE/CHECK/BLOCKED/inapplicable with reason), then remaining Q04 eviction/coalescing and other uncovered owners. Reuse accepted receipts; preserve full S0..S6; no new audit.",
-  "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма."
+  "next_action": "S4.02 ledger S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json: 17 CHECK groups, 13 REUSE, 1 INAPPLICABLE. Q04-C1 capacity/overflow supersession accepted. Next Q04-C2: actual ForgetInflight/eviction queued/running/completed and late predecessor after successor fully drained, prove demand retirement or actual current completion. Predeclare fixed scene/terminal outcome before execution; preserve full S0..S6, reuse accepted receipts, no new audit.",
+  "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
+  "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

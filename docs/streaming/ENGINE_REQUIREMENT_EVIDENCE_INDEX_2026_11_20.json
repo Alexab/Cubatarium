@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q04.capacity-overflow-supersession",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json#Q04-C1",
+      "receipt": "build/desktop-msvc/s4-mesh-capacity-supersession-acceptance-20261121.json",
+      "scope": "Actual CPU builder capacity/overflow terminal ownership. Current EXE native ordinary overflow debt-to-publication/cancel/protected regression PASS. Does not claim native capacity-shrink-specific publication, GPU/field eviction, post-retirement late results or all S4.02."
+    },
+    {
       "id": "S4.02.Q04.same-key-supersession-live-owner",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

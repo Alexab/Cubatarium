@@ -3447,9 +3447,12 @@ static void TestMeshSameKeySupersession(
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
-  for (const bool running_old : {false, true})
+  for (const int scenario : {0, 1, 2, 3})
   {
-    std::cout << "mesh_same_key_case running_old=" << running_old << " START\n";
+    const bool running_old = scenario == 1;
+    const bool reduce_capacity = scenario == 2;
+    const bool push_overflow = scenario == 3;
+    std::cout << "mesh_same_key_case push_overflow=" << push_overflow << " capacity_reduction=" << reduce_capacity << " running_old=" << running_old << " START\n";
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
@@ -3459,7 +3462,7 @@ static void TestMeshSameKeySupersession(
     if (!running_old) mesher.Release();
     UAsyncMeshBuilder builder(2);
     builder.SetMesher(&mesher);
-    builder.SetCompletedCapacity(2);
+    builder.SetCompletedCapacity(push_overflow ? 1 : 2);
     const auto submit = [&](uint64_t revision) {
       return builder.Enqueue(ChunkMeshSnapshot::Capture(world, coord, revision,
           nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
@@ -3472,7 +3475,7 @@ static void TestMeshSameKeySupersession(
     world.SetBlock(origin + glm::ivec3(12, 8, 8), kStone);
     Expect(submit(902), "same-key newer input request accepted");
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    const auto ready_count = running_old ? 1u : 2u;
+    const auto ready_count = (running_old || push_overflow) ? 1u : 2u;
     while (builder.GetCompletedSize() < ready_count && std::chrono::steady_clock::now() < deadline)
       std::this_thread::yield();
     Expect(builder.GetCompletedSize() == ready_count && builder.IsInFlight(coord),
@@ -3480,12 +3483,16 @@ static void TestMeshSameKeySupersession(
     mesher.Release();
     Expect(builder.WaitIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
            "same-key workers retire after barrier release");
-    if (!running_old)
+    if (reduce_capacity)
+      builder.SetCompletedCapacity(1);
+    else if (!running_old && !push_overflow)
       Expect(builder.DrainCompleted(1).empty(), "superseded old completion rejected");
-    Expect(builder.IsInFlight(coord) && builder.GetCompletedDiscardedOverflow() == 0,
+    Expect(builder.IsInFlight(coord) && builder.GetCompletedDiscardedOverflow() == ((reduce_capacity || push_overflow) ? 1u : 0u),
            "old retirement preserves newer same-key owner and result");
     Expect(builder.TakeDiscardedCoords().empty(),
            "superseded same-key result does not return duplicate executable debt");
+    Expect(builder.TakeOverflowCoords().empty(),
+           "superseded same-key capacity victim does not return duplicate executable debt");
     auto results = builder.DrainCompleted(1);
     std::size_t indices = 0;
     if (results.size() == 1)
@@ -3495,8 +3502,45 @@ static void TestMeshSameKeySupersession(
            "same-key current result preserves newer two-cube inputs and retires owner once");
     Expect(builder.DrainCompleted(1).empty() && builder.TakeDiscardedCoords().empty(),
            "same-key terminal result and retry debt drain exactly once");
-    std::cout << "mesh_same_key_supersession running_old=" << running_old << " PASS\n";
+    std::cout << "mesh_same_key_supersession push_overflow=" << push_overflow << " capacity_reduction=" << reduce_capacity << " running_old=" << running_old << " PASS\n";
   }
+  // A real victim without a replacement must still return its retry debt.
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  const glm::ivec3 victim(2, 0, 0), kept(3, 0, 0);
+  world.SetBlock(victim * CHUNK_SIZE + glm::ivec3(8), kStone);
+  world.SetBlock(kept * CHUNK_SIZE + glm::ivec3(8), kStone);
+  GatedPhysicalMesher mesher;
+  mesher.Release();
+  UAsyncMeshBuilder builder(2);
+  builder.SetMesher(&mesher);
+  builder.SetCompletedCapacity(2);
+  const auto submit = [&](glm::ivec3 coord, uint64_t revision) {
+    return builder.Enqueue(ChunkMeshSnapshot::Capture(world, coord, revision,
+        nullptr, nullptr, MeshLightInputs::PhysicalField), registry);
+  };
+  Expect(submit(victim, 903) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
+             submit(kept, 904) && builder.WaitIdleFor(std::chrono::seconds(5)),
+         "distinct capacity victims complete in fixed order");
+  builder.SetCompletedCapacity(1);
+  const auto retry = builder.TakeOverflowCoords();
+  Expect(retry.size() == 1 && retry[0] == victim &&
+             !builder.IsInFlight(victim) && builder.IsInFlight(kept),
+         "capacity shrink returns exact unowned victim debt and preserves kept owner");
+  auto result = builder.DrainCompleted(1);
+  Expect(result.size() == 1 && result[0].coord == kept &&
+             result[0].sourceRevision == 904,
+         "capacity shrink keeps actual newest distinct completion");
+  result.clear();
+  Expect(submit(retry[0], 905) && builder.WaitIdleFor(std::chrono::seconds(5)),
+         "capacity victim retry reaches actual worker");
+  result = builder.DrainCompleted(1);
+  Expect(result.size() == 1 && result[0].coord == victim &&
+             result[0].sourceRevision == 905 && !result[0].batches.empty() &&
+             builder.TakeOverflowCoords().empty() && !builder.IsInFlight(victim),
+         "capacity victim retry completes real current geometry exactly once");
+  std::cout << "mesh_capacity_distinct_victim_retry PASS\n";
 }
 
 static void TestCertifiedGeometrySurvivesInflightLight(

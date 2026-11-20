@@ -1,0 +1,296 @@
+{
+  "schema": "s4-queue-outcome-ledger.v1",
+  "status": "OPEN",
+  "baseline_commit": "c9bdd51ad",
+  "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
+  "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
+  "execution_order": [
+    "Q04-C2",
+    "Q04-C3",
+    "Q02-C1",
+    "Q02-C2",
+    "Q03-C1",
+    "Q05-C1",
+    "Q06-C1",
+    "Q06-C2",
+    "Q08-C1",
+    "Q08-C2",
+    "Q09-C1",
+    "Q11-C1",
+    "Q10-C1",
+    "Q10-C2",
+    "Q12-C1",
+    "Q01-C1",
+    "LIMIT-C1"
+  ],
+  "rows": [
+    {
+      "id": "Q01-R1",
+      "queue": "Q01",
+      "status": "REUSE",
+      "required_result": "Zero admission retains unpublished demand without ghost running token; reissue publishes; seam no-op retires without token.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-fixed-20261121-native/terrain-save-probe/report.json"
+    },
+    {
+      "id": "Q01-C1",
+      "queue": "Q01",
+      "status": "CHECK",
+      "required_result": "Upgrade/replace coalesces signed Y bands without losing requested work; remove/clear retires old ticket; repeated current demand completes."
+    },
+    {
+      "id": "Q02-R1",
+      "queue": "Q02",
+      "status": "REUSE",
+      "required_result": "Completed CPU overflow/cancel returns dirty and actual current successor publishes; protected lease survives.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-acceptance-20261121.json"
+    },
+    {
+      "id": "Q02-C1",
+      "queue": "Q02",
+      "status": "CHECK",
+      "required_result": "Work-slot, snapshot-byte and result-byte refusal retain exact dirty obligation, remove no newer owner, then publish without fresh ingress."
+    },
+    {
+      "id": "Q02-C2",
+      "queue": "Q02",
+      "status": "CHECK",
+      "required_result": "Dirty/deferred coalescing and outside-keep eviction: retain required demand or explicitly retire abandoned demand; later return/repeated demand publishes."
+    },
+    {
+      "id": "Q03-C1",
+      "queue": "Q03",
+      "status": "CHECK",
+      "required_result": "Production main-thread capture credit refusal, retained-store capacity/pressure eviction and stale input each recapture current input and complete demanded publication."
+    },
+    {
+      "id": "Q03-N1",
+      "queue": "Q03",
+      "status": "INAPPLICABLE",
+      "required_result": "Optional worker capture admission/cancel is unreachable in production while kWorkerCaptureEnabled=false; optional tests cannot substitute production proof. Reopen if enabled.",
+      "evidence": "src/Render/Mesh/MeshCaptureWorker.h"
+    },
+    {
+      "id": "Q04-R1",
+      "queue": "Q04",
+      "status": "REUSE",
+      "required_result": "Completed overflow returns exact current publication debt.",
+      "evidence": "build/desktop-msvc/s4-mesh-overflow-acceptance-20261121.json"
+    },
+    {
+      "id": "Q04-R2",
+      "queue": "Q04",
+      "status": "REUSE",
+      "required_result": "Full completed cancellation keeps replacement debt; successor publishes without MarkDirty.",
+      "evidence": "build/desktop-msvc/s4-mesh-cancel-acceptance-20261121.json"
+    },
+    {
+      "id": "Q04-R3",
+      "queue": "Q04",
+      "status": "REUSE",
+      "required_result": "Selective cancellation preserves protected queued/running/completed identities; outside queued credits release; late outside cannot overflow protected result.",
+      "evidence": "build/desktop-msvc/s4-mesh-lease-worker-acceptance-20261121.json"
+    },
+    {
+      "id": "Q04-R4",
+      "queue": "Q04",
+      "status": "REUSE",
+      "required_result": "Old running/completed result retires while newer same-key owner/result remains, without duplicate discarded-coordinate retry.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-acceptance-20261121.json"
+    },
+    {
+      "id": "Q04-C1",
+      "queue": "Q04",
+      "status": "REUSE",
+      "required_result": "Completed-capacity reduction/overflow with superseded same-key entries preserves newer owner/result and emits no duplicate executable retry; genuinely dropped unowned job retains retry.",
+      "evidence": "build/desktop-msvc/s4-mesh-capacity-supersession-acceptance-20261121.json"
+    },
+    {
+      "id": "Q04-C2",
+      "queue": "Q04",
+      "status": "CHECK",
+      "required_result": "ForgetInflight/eviction of queued/running/completed job rejects late result; valid current demand completes, abandoned demand retires explicitly; include late arrival after successor drained."
+    },
+    {
+      "id": "Q04-C3",
+      "queue": "Q04",
+      "status": "CHECK",
+      "required_result": "WorkSlotRejected/SnapshotBudgetRejected/WorkerPoolRejected/ResultMemoryBudgetRejected return credits and exact debt; no overwritten newer owner. Share downstream evidence with Q02-C1."
+    },
+    {
+      "id": "Q05-C1",
+      "queue": "Q05",
+      "status": "CHECK",
+      "required_result": "Bind existing container/credit Release outputs to exact tested mechanisms: TryEnqueue rejection, tagged queued cancellation, completed drop/capacity reduction and release-on-idle. Reuse compatible logs; run only missing mechanism proof."
+    },
+    {
+      "id": "Q06-R1",
+      "queue": "Q06",
+      "status": "REUSE",
+      "required_result": "Actual CPU-to-GPU ownership/current publication and AIR/Cross retirement, scoped to accepted paths.",
+      "evidence": "build/desktop-msvc/s4-section-owner-acceptance-20261120.json"
+    },
+    {
+      "id": "Q06-C1",
+      "queue": "Q06",
+      "status": "CHECK",
+      "required_result": "GPU pending admission/slot/byte refusal and extraction failure return demand to actual owner; successor publishes on actual GPU path."
+    },
+    {
+      "id": "Q06-C2",
+      "queue": "Q06",
+      "status": "CHECK",
+      "required_result": "GPU pending cancel/eviction/reset and late completion preserve newer mixed CPU/GPU/field owners; current demand completes, abandoned owner retires. Pair permutations S4.03, ABA S5.02."
+    },
+    {
+      "id": "Q07-R1",
+      "queue": "Q07",
+      "status": "REUSE",
+      "required_result": "Exact relight specs survive queued/running/completed cancellation/overflow; stale epoch/incarnation rejected; actual successor completes and world retirement does not leak old debt.",
+      "evidence": "build/desktop-msvc/s3-world-relight-lifecycle-receipt-20261120.json"
+    },
+    {
+      "id": "Q08-R1",
+      "queue": "Q08",
+      "status": "REUSE",
+      "required_result": "Persisted compatible certificates accepted; incompatible/legacy light rebuilt without losing world edits; no-op does not erase physical debt.",
+      "evidence": "build/desktop-msvc/s3-persisted-certificate-acceptance-20261120.json"
+    },
+    {
+      "id": "Q08-C1",
+      "queue": "Q08",
+      "status": "CHECK",
+      "required_result": "FIFO admission refusal/promotion/coalescing preserves exact signed Y band for column/player/boundary/draw-gate/FirstMesh requests, then actual light install completes."
+    },
+    {
+      "id": "Q08-C2",
+      "queue": "Q08",
+      "status": "CHECK",
+      "required_result": "FIFO trimming/eviction/quiesce/reset transfers valid demand to deferred/restore owner; section restore retries current target; no debt crosses world retirement."
+    },
+    {
+      "id": "Q09-R1",
+      "queue": "Q09",
+      "status": "REUSE",
+      "required_result": "Warm fluid cache invalidated before readiness for actual generation-owner callbacks; actual desktop CPU packed surface matches direct query at negative Y.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-fixed-20261121-native/terrain-save-probe/report.json"
+    },
+    {
+      "id": "Q09-C1",
+      "queue": "Q09",
+      "status": "CHECK",
+      "required_result": "Generation reject/cancel/reset/eviction and stale ready-commit reject old generation, preserve live demand and install actual current arrival."
+    },
+    {
+      "id": "Q10-R1",
+      "queue": "Q10",
+      "status": "REUSE",
+      "required_result": "Actual incremental disk slice invalidates fluid map before finalize and final surface matches direct query.",
+      "evidence": "build/desktop-msvc/s4-mesh-same-key-fixed-20261121-native/terrain-save-probe/report.json"
+    },
+    {
+      "id": "Q10-C1",
+      "queue": "Q10",
+      "status": "CHECK",
+      "required_result": "Load cancellation/retry/reject/stale snapshot: no old slice erases newer state; pending completion and retry exhaustion terminate explicitly; current reissue loads fully."
+    },
+    {
+      "id": "Q10-C2",
+      "queue": "Q10",
+      "status": "CHECK",
+      "required_result": "Save admission/completion failure or stale snapshot cannot clear newer dirty-save; unload/world-switch respects pending save ownership; cold read proves latest mutation. Fatal/menu/relocation remains S4.06."
+    },
+    {
+      "id": "Q11-C1",
+      "queue": "Q11",
+      "status": "CHECK",
+      "required_result": "Physics-seed/shore-seal dedupe coalesces required work; eviction/reset retires abandoned work while live terrain arrival receives seed/seal and preserves current fluid-map/light/save obligations. Reuse S2.05 only where path matches."
+    },
+    {
+      "id": "Q12-R1",
+      "queue": "Q12",
+      "status": "REUSE",
+      "required_result": "Current publication and retained presentation debt have section-owned evidence, including repeated demand/incarnation.",
+      "evidence": "build/desktop-msvc/s4-section-owner-acceptance-20261120.json"
+    },
+    {
+      "id": "Q12-C1",
+      "queue": "Q12",
+      "status": "CHECK",
+      "required_result": "Face-repair dedupe/cancel/eviction/reset and repeated presentation demand preserve exact repair owner or explicitly retire demand; actual successor clears debt."
+    },
+    {
+      "id": "LIMIT-C1",
+      "queue": "Q01..Q12",
+      "status": "CHECK",
+      "required_result": "Resolve production caps/admission envelope at actual producers for Q02/Q06/Q08/Q09/Q10/Q11/Q12. Explicitly distinguish uncapped storage from frame drain budgets; implement required bound where original contract requires it."
+    }
+  ],
+  "source_limits": [
+    {
+      "queues": [
+        "Q01"
+      ],
+      "source": "src/World/Streaming/ColumnFlowScheduler.h",
+      "observed": "One live map entry per XZ; lazy heap tombstones. No numeric cap exposed in this class; producer envelope and compaction require LIMIT-C1."
+    },
+    {
+      "queues": [
+        "Q02"
+      ],
+      "source": "src/Render/Mesh/ChunkDirtySet.h",
+      "observed": "ReserveCapacity is reservation, not hard cap. Deferred/dirty producer bounds require LIMIT-C1."
+    },
+    {
+      "queues": [
+        "Q03"
+      ],
+      "source": "src/Render/Mesh/MeshCaptureStore.h",
+      "observed": "kMaxRetainedEntries=512; snapshot byte credits shared with Q05; capacity and pressure eviction. Worker capture disabled."
+    },
+    {
+      "queues": [
+        "Q04",
+        "Q05"
+      ],
+      "source": "src/Core/Jobs/PipelineAdmission.h",
+      "observed": "Defaults: snapshot96MiB, result128MiB, GPU256MiB, shared work slots8. Runtime setters exist; record actual fixture settings in receipts."
+    },
+    {
+      "queues": [
+        "Q04"
+      ],
+      "source": "src/Render/Mesh/AsyncMeshBuilder.h",
+      "observed": "Pipeline depth workers*6; completed default runtime MeshCompletedSlots or workers*6; completed capacity mutable."
+    },
+    {
+      "queues": [
+        "Q05"
+      ],
+      "source": "src/Core/Jobs/JobThreadPool.h",
+      "observed": "TryEnqueue default pending256; legacy Enqueue lossless/unbounded. Do not claim boundedness of all callers from TryEnqueue alone."
+    },
+    {
+      "queues": [
+        "Q06"
+      ],
+      "source": "src/Render/Mesh/GpuMeshPipeline.h",
+      "observed": "Default packed slots2048; readback ring8; GPU byte credits256MiB default. Cache pending/extract envelope requires LIMIT-C1."
+    },
+    {
+      "queues": [
+        "Q08",
+        "Q10"
+      ],
+      "source": "src/World/Persistence/WorldPersistence.h",
+      "observed": "Load retry max4; FIFO priority/normal and deferred Y-band maps; pending load/save maps. Retry count/drain budget is not memory cap; production limits require LIMIT-C1."
+    },
+    {
+      "queues": [
+        "Q10"
+      ],
+      "source": "src/World/IO/AsyncChunkIO.h",
+      "observed": "Legacy Enqueue for background IO; completed load/save queues and separate light-flags pool. Must inspect producer envelope before claiming bounded memory."
+    }
+  ],
+  "checkpoint": "Q04-C1 actual capacity reduction/drop-oldest exact-owner proof accepted. 17 CHECK groups, 13 REUSE, 1 production-disabled INAPPLICABLE. Current native receipt preserves overall UNTESTED."
+}

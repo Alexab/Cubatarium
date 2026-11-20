@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mesh-capacity-victim-duplicates-new-owner-retry",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Completed capacity2-to-1 evicts obsolete same-key result and unconditionally emits overflow debt although newer job owns current result. Initial fixture discard-count expectation corrected separately before confirmed repro.",
+      "fix": "SetCompletedCapacity and worker PushDropOldest emit retry only for victim-owned or unowned coordinates under owner lock; newer owner suppresses obsolete retry.",
+      "evidence": "build/desktop-msvc/s4-mesh-capacity-supersession-acceptance-20261121.json",
+      "next_action": "Q04-C2 ForgetInflight/eviction and post-retirement late completion; other ledger rows stay OPEN."
+    },
+    {
       "id": "mesh-old-result-duplicates-new-owner-retry",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
