@@ -52,4 +52,44 @@ FramebufferSurfaceCandidateCells(glm::vec3 point, glm::vec3 unit_ray)
       }
   return result;
 }
+
+struct FramebufferSourceRecovery
+{
+  glm::ivec3 coord{0};
+  size_t tried{1}, matches{0};
+  bool Unique() const { return matches == 1; }
+};
+
+// The probe counts actual submitted draw owners, not known voxels. A CPU
+// vertex owner and a packed owner at the same candidate are distinct matches.
+// Deduplicate section coordinates before probing seam/corner candidates.
+template <typename Probe>
+FramebufferSourceRecovery
+RecoverFramebufferSurfaceSource(const FramebufferSurfaceCandidates &candidates,
+                                Probe probe)
+{
+  FramebufferSourceRecovery result;
+  std::array<glm::ivec3, 8> tried{};
+  const auto section = [](glm::ivec3 cell)
+  {
+    return glm::ivec3(FloorDiv(cell.x, 16), FloorDiv(cell.y, 16),
+                      FloorDiv(cell.z, 16));
+  };
+  tried[0] = section(candidates.cells[0]);
+  for (size_t i = 1; i < candidates.count; ++i)
+  {
+    const auto coord = section(candidates.cells[i]);
+    bool duplicate = false;
+    for (size_t j = 0; j < result.tried; ++j)
+      duplicate |= tried[j] == coord;
+    if (duplicate)
+      continue;
+    tried[result.tried++] = coord;
+    const size_t matches = probe(coord);
+    result.matches += matches;
+    if (matches)
+      result.coord = coord;
+  }
+  return result;
+}
 } // namespace cutum

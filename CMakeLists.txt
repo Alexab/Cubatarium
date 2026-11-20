@@ -1027,7 +1027,7 @@ add_test(NAME diagnostic_world_actions_test COMMAND $<TARGET_FILE:diagnostic_wor
 set_tests_properties(diagnostic_world_actions_test PROPERTIES LABELS "unit;streaming")
 
 cubatarium_add_test(NAME framebuffer_surface_cell_test
-    SOURCES src/Test/FramebufferSurfaceCellTest.cpp
+    SOURCES src/Test/FramebufferSurfaceCellTest.cpp src/World/Math/GridMath.cpp
     LIBRARIES glm::glm)
 add_test(NAME framebuffer_surface_cell_test COMMAND $<TARGET_FILE:framebuffer_surface_cell_test>)
 set_tests_properties(framebuffer_surface_cell_test PROPERTIES LABELS "unit;rendering")

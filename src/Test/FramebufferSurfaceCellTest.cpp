@@ -31,6 +31,32 @@ int main()
     std::cerr << "native grazing-depth floor owner must remain a candidate\n";
     return 1;
   }
+  // Retained unpacked native failure: AIR primary, CPU/MDI floor neighbor.
+  // Either representation must be eligible after its actual draw probe, while
+  // multiple draws/candidate sections can never certify a unique owner.
+  for (const size_t owners : {size_t(0), size_t(1), size_t(2)})
+  {
+    int calls = 0;
+    const auto recovered =
+        RecoverFramebufferSurfaceSource(native_candidates,
+                                        [&](glm::ivec3 coord)
+                                        {
+                                          ++calls;
+                                          Expect(coord, {-18, -4, 2});
+                                          return owners;
+                                        });
+    if (calls != 1 || recovered.tried != 2 || recovered.matches != owners ||
+        recovered.Unique() != (owners == 1))
+      return 1;
+    if (recovered.Unique())
+      Expect(recovered.coord, {-18, -4, 2});
+  }
+  const auto corner = FramebufferSurfaceCandidateCells(
+      {15.5f, -32.5f, 47.5f}, glm::normalize(glm::vec3(1, -1, 1)));
+  const auto ambiguous = RecoverFramebufferSurfaceSource(corner, [](glm::ivec3)
+                                                         { return size_t(1); });
+  if (ambiguous.Unique() || ambiguous.tried != 8 || ambiguous.matches != 7)
+    return 1;
   // Native counterexample: a floor pixel centered at z48 belongs to chunk3,
   // even when its reconstructed z lies in [47.5,48), with negative X/Y too.
   Expect(FramebufferSurfaceCell({15.8f, -31.5f, 47.8f}, {0, -1, 0}),

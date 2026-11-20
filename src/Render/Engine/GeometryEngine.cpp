@@ -1852,6 +1852,82 @@ void CaptureTransparentPixelProbe(
     return source;
   };
 
+  struct CpuSurfaceSource
+  {
+    GreedyVertexLightMatch match;
+    uint32_t index_count{0};
+  };
+  const auto cpu_surface_source =
+      [&](glm::ivec3 coord, glm::vec3 surface, glm::vec3 ray_origin,
+          glm::vec3 ray_direction, bool require_drawn_ray_hit)
+  {
+    CpuSurfaceSource source;
+    const auto collect = [&](const std::vector<GreedyBatchRef> &refs)
+    {
+      for (const auto &ref : refs)
+      {
+        if (ref.chunkCoord != coord)
+          continue;
+        const auto *batch = cache.TryGetGreedyBatch(ref);
+        if (!batch)
+          continue;
+        const auto captured = g_cpu_bound_light_witnesses.find(
+            {coord.x, coord.y, coord.z, ref.batchIndex, batch->blockId});
+        const auto bound =
+            captured != g_cpu_bound_light_witnesses.end() &&
+                    captured->second.first == batch->renderLightBinding
+                ? captured->second.second
+                : nullptr;
+        // Recovery needs an actual same-frame submitted draw, not merely a
+        // resident CPU batch near a voxel guessed from framebuffer depth.
+        if (require_drawn_ray_hit &&
+            (!bound || !bound->captured || !bound->valid ||
+             !bound->cpu_matches || bound->frame_epoch != frame_epoch ||
+             bound->world_epoch != cache.GetCaptureStore().WorldEpoch()))
+          continue;
+        source.index_count += static_cast<uint32_t>(batch->indices.size());
+        for (size_t i = 0; i + 2 < batch->indices.size(); i += 3)
+        {
+          const auto ia = batch->indices[i], ib = batch->indices[i + 1],
+                     ic = batch->indices[i + 2];
+          if (ia >= batch->vertices.size() || ib >= batch->vertices.size() ||
+              ic >= batch->vertices.size())
+            continue;
+          const auto &a = batch->vertices[ia], &b = batch->vertices[ib],
+                     &c = batch->vertices[ic];
+          glm::vec3 ray_point{};
+          if (require_drawn_ray_hit)
+          {
+            RayTriangleHit hit;
+            if (!IntersectRayTriangle(ray_origin, ray_direction,
+                                      {a.px, a.py, a.pz}, {b.px, b.py, b.pz},
+                                      {c.px, c.py, c.pz}, hit))
+              continue;
+            ray_point = ray_origin + ray_direction * hit.distance;
+            const auto normal = glm::vec3(
+                GreedyFaceNormal(static_cast<int>(a.faceIndex + .5f)));
+            if (glm::length(ray_point - surface) >
+                    kOpaqueVertexLightMatchDistance ||
+                std::abs(glm::dot(ray_point - surface, normal)) > .002f)
+              continue;
+          }
+          const auto previous = source.match.distance;
+          ConsiderGreedyVertexLightTriangle(surface, *batch, a, b, c,
+                                            source.match);
+          if (source.match.distance < previous)
+          {
+            source.match.bound_light = bound;
+            if (require_drawn_ray_hit)
+              source.match.surface = ray_point;
+          }
+        }
+      }
+    };
+    collect(opaque_refs);
+    collect(transparent_refs);
+    return source;
+  };
+
   for (int row = 0; row < rows; ++row)
   {
     const int local_y =
@@ -2024,11 +2100,10 @@ void CaptureTransparentPixelProbe(
           auto packed_source = packed_surface_source(
               opaque_chunk, opaque_point, voxel_ray_origin, voxel_ray_direction,
               false);
-          std::array<glm::ivec3, 8> tried_chunks;
+          std::optional<CpuSurfaceSource> recovered_cpu;
           size_t tried_count = 1;
-          tried_chunks[0] = opaque_chunk;
-          // Only recover a missing packed source (or an AIR primary with no
-          // CPU source). Ownership needs an actual same-frame drawn triangle
+          // Recover a missing packed source or an AIR primary with no CPU
+          // source. Ownership needs an actual same-frame drawn triangle
           // intersected by the original ray, not a voxel/material guess.
           if (!packed_source.match.valid &&
               (packed_opaque_chunks.count(opaque_chunk) ||
@@ -2036,35 +2111,37 @@ void CaptureTransparentPixelProbe(
                 !transparent_ref_chunks.count(opaque_chunk))))
           {
             PackedSurfaceSource recovered;
-            glm::ivec3 recovered_coord = opaque_chunk;
-            uint8_t recovery_matches = 0;
-            for (size_t i = 1; i < opaque_cells.count; ++i)
-            {
-              const auto candidate =
-                  UChunkManager::WorldToChunk(opaque_cells.cells[i]);
-              bool tried = false;
-              for (size_t j = 0; j < tried_count; ++j)
-                tried |= tried_chunks[j] == candidate;
-              if (tried)
-                continue;
-              tried_chunks[tried_count++] = candidate;
-              auto alternative = packed_surface_source(
-                  candidate, opaque_point, voxel_ray_origin,
-                  voxel_ray_direction, true);
-              if (alternative.match.valid)
-              {
-                ++recovery_matches;
-                recovered = std::move(alternative);
-                recovered_coord = candidate;
-              }
-            }
+            std::optional<CpuSurfaceSource> cpu;
+            const auto recovery = RecoverFramebufferSurfaceSource(
+                opaque_cells,
+                [&](glm::ivec3 candidate)
+                {
+                  auto alternative = packed_surface_source(
+                      candidate, opaque_point, voxel_ray_origin,
+                      voxel_ray_direction, true);
+                  auto vertices = cpu_surface_source(candidate, opaque_point,
+                                                     voxel_ray_origin,
+                                                     voxel_ray_direction, true);
+                  const size_t matches = size_t(alternative.match.valid) +
+                                         size_t(vertices.match.valid);
+                  if (matches)
+                  {
+                    recovered = std::move(alternative);
+                    cpu = vertices.match.valid
+                              ? std::make_optional(std::move(vertices))
+                              : std::nullopt;
+                  }
+                  return matches;
+                });
+            tried_count = recovery.tried;
             record.renderer_pixel_opaque_source_neighbor_matches =
-                recovery_matches;
+                static_cast<uint8_t>(recovery.matches);
             // Multiple plausible owners are not a certificate of this pixel.
-            if (recovery_matches == 1)
+            if (recovery.Unique())
             {
               packed_source = std::move(recovered);
-              opaque_chunk = recovered_coord;
+              recovered_cpu = std::move(cpu);
+              opaque_chunk = recovery.coord;
               record.renderer_pixel_opaque_source_neighbor_recovered = 1;
             }
           }
@@ -2117,56 +2194,14 @@ void CaptureTransparentPixelProbe(
                 opaque_chunk_data->GetLightFieldRevision();
           }
 
-          GreedyVertexLightMatch opaque_vertex_light{};
-          const glm::vec3 opaque_surface(opaque_point);
-          const auto collect_opaque_source =
-              [&](const std::vector<GreedyBatchRef> &refs)
-          {
-            for (const GreedyBatchRef &ref : refs)
-            {
-              if (ref.chunkCoord != opaque_chunk)
-              {
-                continue;
-              }
-              const GreedyMeshBatch *batch = cache.TryGetGreedyBatch(ref);
-              if (!batch)
-              {
-                continue;
-              }
-              record.renderer_pixel_opaque_source_index_count +=
-                  static_cast<uint32_t>(batch->indices.size());
-              const auto captured = g_cpu_bound_light_witnesses.find(
-                  {ref.chunkCoord.x, ref.chunkCoord.y, ref.chunkCoord.z,
-                   ref.batchIndex, batch->blockId});
-              const auto bound =
-                  captured != g_cpu_bound_light_witnesses.end() &&
-                          captured->second.first == batch->renderLightBinding
-                      ? captured->second.second
-                      : nullptr;
-              for (size_t index = 0; index + 2u < batch->indices.size();
-                   index += 3u)
-              {
-                const uint32_t ia = batch->indices[index];
-                const uint32_t ib = batch->indices[index + 1u];
-                const uint32_t ic = batch->indices[index + 2u];
-                if (ia >= batch->vertices.size() ||
-                    ib >= batch->vertices.size() ||
-                    ic >= batch->vertices.size())
-                {
-                  continue;
-                }
-                const auto previous_distance = opaque_vertex_light.distance;
-                ConsiderGreedyVertexLightTriangle(
-                    opaque_surface, *batch, batch->vertices[ia],
-                    batch->vertices[ib], batch->vertices[ic],
-                    opaque_vertex_light);
-                if (opaque_vertex_light.distance < previous_distance)
-                  opaque_vertex_light.bound_light = bound;
-              }
-            }
-          };
-          collect_opaque_source(opaque_refs);
-          collect_opaque_source(transparent_refs);
+          const auto cpu_source =
+              recovered_cpu ? *recovered_cpu
+                            : cpu_surface_source(opaque_chunk, opaque_point,
+                                                 voxel_ray_origin,
+                                                 voxel_ray_direction, false);
+          auto opaque_vertex_light = cpu_source.match;
+          record.renderer_pixel_opaque_source_index_count =
+              cpu_source.index_count;
           if (opaque_vertex_light.valid)
             record.renderer_pixel_opaque_light_source_kind = 1;
           if (packed_opaque_chunks.count(opaque_chunk))
