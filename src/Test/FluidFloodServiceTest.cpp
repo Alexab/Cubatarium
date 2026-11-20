@@ -112,6 +112,64 @@ static void TestEightPassBoxFloodStopsAtPassLimit()
                     kTestName, "9th air cell remains after 8-pass limit");
 }
 
+static void TestFloodReportsExactBoundaryMutations()
+{
+  using namespace cutum;
+  for (int mode = 0; mode < 3; ++mode)
+  {
+    auto definitions = FluidTest::MakeTestFluidDecorDefinitions();
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions.get());
+    for (int x = 13; x <= 18; ++x)
+      for (int y = -35; y <= -30; ++y)
+        for (int z = 13; z <= 18; ++z)
+          world.SetBlock({x, y, z}, kStone);
+    const glm::ivec3 center(15, -33, 15);
+    for (const auto p : {center, glm::ivec3(16, -33, 15),
+                         glm::ivec3(15, -33, 16), glm::ivec3(16, -33, 14),
+                         glm::ivec3(14, -33, 16)})
+      world.SetBlock(p, BLOCK_AIR);
+    for (const auto p : {glm::ivec3(15, -32, 15), glm::ivec3(16, -32, 15)})
+      world.SetBlock(p, 10); // permeable grass in the upper section
+    world.SetBlock({14, -33, 14}, 10); // shared spill target of both sources
+    world.SetBlock({14, -33, 15}, kWater);
+    world.SetBlock({15, -33, 14}, kWater);
+    struct Before { glm::ivec3 position; BlockId block; uint32_t fluid; };
+    std::vector<Before> before;
+    for (int x = 13; x <= 18; ++x)
+      for (int y = -35; y <= -30; ++y)
+        for (int z = 13; z <= 18; ++z)
+          before.push_back({{x,y,z}, world.GetBlock({x,y,z}),
+                            PackFluidCellState(world.GetFluidState({x,y,z}))});
+    std::vector<glm::ivec3> reported;
+    const auto options = MakeFloodOptions(kWater);
+    int filled;
+    if (mode == 0)
+      filled = UFluidFloodService::FloodBreakSiteFromWetNeighbors(
+          world, *definitions, center, options, &reported);
+    else if (mode == 1)
+      filled = UFluidFloodService::FloodWetPocketsInBox(
+          world, *definitions, {14,-33,14}, {16,-32,16}, options, &reported);
+    else
+      filled = UFluidFloodService::FloodWetPocketsLocal(
+          world, *definitions, center, 2, options, &reported);
+    std::unordered_set<glm::ivec3, IVec3Hash> actual, emitted(reported.begin(), reported.end());
+    for (const auto &cell : before)
+      if (world.GetBlock(cell.position) != cell.block ||
+          PackFluidCellState(world.GetFluidState(cell.position)) != cell.fluid)
+        actual.insert(cell.position);
+    FluidTest::Expect(emitted.size() == reported.size(), kTestName,
+                      "flood mutation report must not duplicate an already wet decor cell");
+    FluidTest::Expect(emitted == actual && static_cast<size_t>(filled) == actual.size(),
+                      kTestName, "flood report and count must equal actual block/fluid mutations");
+    FluidTest::Expect(actual.count(center) && actual.count({15,-32,15}) &&
+                          actual.count({16,-33,14}) && actual.count({14,-33,16}),
+                      kTestName, "exact mutations cover X/Z and negative-Y section seams");
+    FluidTest::Expect(world.GetBlock({15,-32,15}) == 10, kTestName,
+                      "waterlogging preserves the upper permeable decor block");
+  }
+}
+
 } // namespace
 
 int main()
@@ -120,6 +178,7 @@ int main()
   TestOneHopBreakFloodStaysLocal();
   TestEightPassBoxFloodFillsChain();
   TestEightPassBoxFloodStopsAtPassLimit();
+  TestFloodReportsExactBoundaryMutations();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

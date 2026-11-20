@@ -806,6 +806,57 @@
         "Current two Release policy/storage tests PASS. Historical native decode-failure preservation/recovery PASS retained as supplementary evidence for actual stored holders, with original executable scope."
       ],
       "scope_limit": "Unknown versus computed/decoded/producer-proven AIR knowledge. Test-only addition; no new native run or full EXE rebuild needed. Does not certify physical light merely from AIR, arbitrary external save edits, all cancellation/lifecycle/backend cases or S3..S6 completion."
+    },
+    {
+      "id": "S2.05",
+      "status": "OPEN",
+      "evidence": [
+        {
+          "path": "src\\World\\Physics\\FluidFloodService.cpp",
+          "sha256": "7894ec31260b51a13063fc719e3118483e19af8bf8020d056eca1c4f8488bc2b"
+        },
+        {
+          "path": "src\\Test\\FluidFloodServiceTest.cpp",
+          "sha256": "ccc8f749afe2302eb907b16792091a0da0857daaee9cb615a4f50e1f80dc1f6e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-repro-test-20261120.log",
+          "sha256": "d0bd664700620cbabbb72d2a04bf14b3cb5e48f7612eb937401bbbd8410b8c2e"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-fixed-test-20261120.log",
+          "sha256": "d839a765938629bd5d983c338ca05c2ea3db4348ae89ba1b24c42e6bc66b9666"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-regression-build-20261120.log",
+          "sha256": "65a568e946fac2c8415918bf157fda7c033a30b4b8a4b20182c73b90fddfbd19"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-regression-test-20261120.log",
+          "sha256": "4daeaf75d26f12aa52e9eb994ca2b8e9633b270b6f691fc63319290b842f2abc"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-release-build-20261120.log",
+          "sha256": "7319b0aaa33b6cea6c7b2a58e4738d35227fb467b1730757312eaf04b997d3e4"
+        },
+        {
+          "path": "build\\desktop-msvc\\s2-fluid-report-release-provenance-20261120.json",
+          "sha256": "c7f0ec3fd9d7e6a3037e0a0d1580e26c1790c4fadf47585c8600dfa708e74b44"
+        }
+      ],
+      "reproduced": "Two wet neighbors revisited a shared permeable decor cell. Break-site flood counted/reported an identical second waterlog write as a new mutation.",
+      "fixed": "Break-site flood treats already waterlogged decor as filled, consistent with existing ordinary-liquid and box candidate handling.",
+      "verified": [
+        "Before/after BlockWorld block+packed-fluid-state diff equals reported unique cells and returned count for break-site, box and local flood.",
+        "Fixture crosses X/Z section boundaries and negative Y=-33/-32; upper permeable decor remains intact while receiving fluid state.",
+        "Three Release fluid flood/gameplay/liquid-decor tests PASS; prescribed Cubatarium Release build and provenance PASS."
+      ],
+      "remaining": [
+        "Verify exact mutation delivery to mesh, light, fluid-surface cache and dirty-save consumers, including removal of the last fluid and waterlogged decor at a seam.",
+        "Inspect/fix WorldChunkDirtyService::DrainRebuildQueues visual PopBudgeted suffix: time-cap break currently has no visible requeue path. This directly affects downstream fluid visual/save obligations and is not covered by the population queue S2.02 proof.",
+        "Verify whether batch edit and physics change paths invalidate fluid-surface cache after a last-fluid removal; current NotifyFluidSurfaceDirtyAtBlock infers from post-mutation liquid IDs/neighbors. Require an executable consumer regression before claiming a defect/fix."
+      ],
+      "scope_limit": "Exact flood producer reports proven. S2.05 remains OPEN; no claim downstream mesh/light/fluid-map/persistence delivery, native wet/transparency references or complete fluid lifecycle."
     }
   ],
   "completed_handoff": {

@@ -150,7 +150,11 @@ int FloodBreakSiteFromWetNeighborsImpl(
     {
       return;
     }
-    if (IsLiquidId(definitions, blockWorld.GetBlock(pos)))
+    // Permeable decor can be reached from several wet neighbors. Once
+    // waterlogged it is already filled, just like an ordinary liquid cell.
+    // Counting a second identical write would duplicate mutation obligations.
+    if (IsLiquidId(definitions, blockWorld.GetBlock(pos)) ||
+        PackFluidCellState(blockWorld.GetFluidState(pos)) != 0)
     {
       return;
     }
