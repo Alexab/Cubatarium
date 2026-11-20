@@ -6,6 +6,7 @@
 #include "Core/Progress/IUProgressSink.h"
 #include "World/Core/World.h"
 #include "World/Core/RuntimeTuning.h"
+#include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
@@ -96,6 +97,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                   URenderBackendFactory::Select(caps).Mesher==MesherBackendKind::CpuGreedy,
               "Flat probe requires an actually CPU-selected application session");
       UWorld world(nullptr,nullptr);
+      world.SetSpawnPoint({8.0f,-40.0f,8.0f});
       world.ProceduralTemplate.MinHeight=-48;
       world.ProceduralTemplate.MaxHeight=-33;
       world.ProceduralTemplate.SeaLevel=-40;
@@ -123,8 +125,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       {
         struct ScanRestore {
           bool previous=PreferGpuFluidColumnScan();
-          ~ScanRestore() { SetPreferGpuFluidColumnScan(previous); }
+          UFrameDeadline deadline=UFrameDeadline::Get();
+          ~ScanRestore() { SetPreferGpuFluidColumnScan(previous); UFrameDeadline::Get()=deadline; }
         } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
         SetPreferGpuFluidColumnScan(false);
         bool all_invalidated=true;
         for(int path=0;path<3;++path) {
@@ -151,12 +155,26 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             mesh.MarkTerrainChunkMeshDirtySeamedPriority(ground,-48,-33,false);
           }
           const bool invalidated=cache.GetFluidSurfaceDirtyGroundChunks().count(ground)!=0;
+          // The desktop PreferGpu API actually runs the production CPU packed
+          // scan. Exercise it, rather than the hitch-gated empty fallback.
+          SetPreferGpuFluidColumnScan(true);
+          const auto direct=FindFluidColumnSurfaceAt(world.BlockWorld,*world.BlockRegistry,
+                                                     cell.x,cell.z,-40);
+          const auto *current=cache.GetFluidSurfaceSlice(world.BlockWorld,*world.BlockRegistry,ground,-40);
+          const bool surface_current=current && direct.valid && current->HasSurface(8,8) &&
+              current->SurfaceBlockY[8][8]==direct.surfaceBlockY &&
+              current->BottomBlockY[8][8]==direct.bottomBlockY &&
+              current->FluidId[8][8]==direct.fluidId && direct.surfaceBlockY==-40 &&
+              direct.fluidId==9 && !cache.GetFluidSurfaceDirtyGroundChunks().count(ground);
+          SetPreferGpuFluidColumnScan(false);
           report["terrain_arrival_fluid_maps"].push_back({{"path",path},
               {"cy",-3},{"invalidated_before_publication",invalidated},
+              {"actual_surface_current",surface_current},
+              {"scan_backend","desktop_cpu_packed_scan"},
               {"publications",cache.GetPublishCount({ground.x,-3,ground.z})}});
-          all_invalidated &= invalidated;
+          all_invalidated &= invalidated && surface_current;
         }
-        require(all_invalidated,"terrain arrival invalidates warm fluid maps before publication");
+        require(all_invalidated,"terrain arrival invalidates and recomputes warm fluid maps before publication");
       }
       const auto physical=[&] {return world.BlockWorld.HasCompleteLightSamplingCalculation(
           coord,world.BlockRegistry->GetDefinitionsCatalogSnapshot());};
@@ -194,6 +212,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const int admitted=executor.DrainBudget(world,1,{0,0,0},1,1);
         executor.SyncColumnJobStageFromWorld(world,{0,0});
         report["flow_unpublished_demand"]={{"refused_dispatch",refused},
+            {"focus_x",world.GetPreferredLoadFocusBlock().x},
+            {"focus_z",world.GetPreferredLoadFocusBlock().z},
             {"debt_retained",debt_retained},{"successor_queued",successor_queued},
             {"admitted_dispatch",admitted},{"dirty",mesh.IsChunkMeshDirty(coord)},
             {"pending_stage",static_cast<int>(executor.GetColumnJobStage({0,0}))}};

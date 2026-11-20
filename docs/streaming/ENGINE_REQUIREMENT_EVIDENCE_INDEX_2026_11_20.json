@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.terrain-arrival-fluid-map.surface-successor",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-arrival-surface-focus-20261121-native/terrain-save-probe/report.json",
+      "scope": "All3 receipt paths: real desktop CPU packed scan rebuild matches direct surface/bottom/fluidID at Y=-40, dirty retired before publication. Explicit fixture spawn removes uncontrolled admission focus; whole Flat API PASS. Actual disk per-slice callback remains OPEN; no GPU/framebuffer acceptance."
+    },
+    {
       "id": "S4.02.terrain-arrival-fluid-map.receipt",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

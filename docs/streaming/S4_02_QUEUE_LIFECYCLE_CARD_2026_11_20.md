@@ -38,6 +38,18 @@
 
 ## Критерий закрытия
 
+### Terrain-arrival / actual surface successor, H2
+
+Предварительно: те же три H1 пути/координаты/вода Y=-40, без нового production изменения. После проверенного invalidation вызвать actual GetFluidSurfaceSlice и сравнить surface/bottom/fluid ID с direct FindFluidColumnSurfaceAt. На desktop API PreferGpuFluidColumnScan использует production CPU packed scan (GpuFluidColumnScan.cpp), а не GPU dispatch; его явно включить с RAII restore. FrameDeadline резерв5000ms с восстановлением; это отсутствие искусственной перегрузки, не обход статического CPU hitch gate. PASS: все3 actual_surface_current=true, surfaceY=-40, fluidId=9, dirty снят только после актуального rebuild, publications=0. GPU parity этим не подтверждается.
+
+Команда после Release build: `python tools/engine_smoke_run.py --world World_261 --artifacts build/desktop-msvc/s4-arrival-surface-20261121-native --startup-only --probe-terrain-save-failure --flat-publication`; timeout штатного startup runner. При FAIL не повторять без локализации последнего перехода pack → scan → install → cache.
+
+Первый H2 report: actual_surface_current=true во всех3 строках, но общий API FAIL в последующем FirstMesh admitted→dirty. Карта: producer public Enqueue PASS → scheduler successor_queued PASS → DrainBudget admitted_dispatch1 → dirty=false/stageLitReady; admission использует GetPreferredLoadFocusBlock(), а фикстура не задавала SpawnPoint. Исправление входов отдельно от production: SetSpawnPoint(8,-40,8), фиксированный focus XZ0,0; добавить focus_x/z в receipt. Не объявлять новый production-дефект по этому падению. Проверочный artifacts=`build/desktop-msvc/s4-arrival-surface-focus-20261121-native`; остальные входы H2 сохранены. Это одна новая локализованная гипотеза после анализа артефакта, не слепой повтор.
+
+H2 API verification PASS: fixed-focus report status PASS, paths0/1/2 actual_surface_current=true, publication0, затем FirstMesh successor dirty=true/focus_x=z=8 и actual publication PASS. Это production desktop CPU packed scan, не GPU. Полный disk callback остаётся OPEN.
+
+Следующая конечная проверка Q09/Q10: отдельный сохранённый столбец с несколькими signed-Y slices; прогреть сухую карту; actual RequestAsyncTerrainColumnLoad, затем TickAsyncChunkIo(world,1,...) до первой установленной секции (deadline10s). Пока IsTerrainColumnDiskLoadPending=true и column не finalized, карта уже обязана быть dirty. Завершить загрузку и сравнить actual cache surface с direct query. Source подозрения: per-slice ApplyTerrainSliceLoad → QueueMeshDependencyInvalidations не инвалидирует fluid cache напрямую; seamed invalidation при finalize может быть слишком поздней. До этой репродукции persistence production путь не менять.
+
 ### Terrain-arrival / warm fluid map, H1
 
 SOURCE SUSPICION: generation FlushColumnDirty → MarkColumnMeshDirty и streaming arrival → MarkTerrainChunkMeshDirtySeamed[Priority] ставят mesh dirty, но это не обязано инвалидировать FluidSurfaceCache. Проверка receipt owners, не алгоритма генератора и не surface recompute: CPU/Flat fixture, профиль -48..-33, три разнесённых XZ, warm settled dry map; actual water/source arrival Y=-40; вызов generation Flush с callback на production UWorld.MarkColumnMeshDirty либо production seamed/priority owner. PASS: каждый ground fluid map dirty до любой публикации (publish count0). GPU scan preference временно false и восстановлен RAII; dry initial map не выдаётся за proof GPU scan. Отдельное доказательство актуального surface recompute и полного generation/disk callback остаётся обязательным.
