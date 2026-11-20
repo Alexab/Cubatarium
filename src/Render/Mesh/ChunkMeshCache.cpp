@@ -2025,6 +2025,11 @@ int UChunkMeshCache::MaybeDropFarthestDirty(glm::ivec3 focus_ground_chunk,
                                  { return !HasGreedyMesh(c); });
 }
 
+bool UChunkMeshCache::HasCpuMeshBuildInFlight(glm::ivec3 chunk_coord) const
+{
+  return AsyncBuilder && AsyncBuilder->IsInFlight(chunk_coord);
+}
+
 bool UChunkMeshCache::HasInflightMeshBuild(glm::ivec3 chunk_coord) const
 {
   return PublishedLightRefreshPending_.count(chunk_coord) ||

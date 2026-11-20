@@ -25,6 +25,9 @@
 #include "Render/Lighting/SectionRenderLightBindings.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Backend/RenderBackendFactory.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
+#include "Core/FrameDeadline.h"
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -147,6 +150,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     }
     // S4.01: section physical truth versus surviving coarse column state.
     {
+      UGpuGreedyMesher gpu_mesher;
       UWorld world(nullptr,nullptr);
       world.ProceduralTemplate.MinHeight=-48;
       world.ProceduralTemplate.MaxHeight=-33;
@@ -293,7 +297,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       mesh.SetRenderSettings(settings);
       cache.SetPrepareRenderLightFn([&](uint64_t epoch,
           const SectionGeometryRenderInputs &geometry,const SectionRenderLightSnapshot &light) {
-        return bindings.Prepare(epoch,geometry,light);
+        auto prepared=bindings.Prepare(epoch,geometry,light);
+        report["section_owner_resource_prepares"].push_back({{"cy",geometry.coord.y},
+            {"geometry_matches",light.MatchesGeometry(geometry)},
+            {"field_revision",light.FieldRevision()},{"prepared",static_cast<bool>(prepared)}});
+        return prepared;
       });
       int callbacks=0, promotions=0;
       mesh.SetOnLitDrawableCommittedFn([&](glm::ivec3) {
@@ -344,6 +352,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       require(cache.GetPublishCount({0,-2,0})>0 && mesh.HasDrawableGreedyMesh({0,-2,0}) &&
                   callbacks==2 && promotions==1 && world.IsColumnRenderReady({0,0,0}),
               "actual complete publications promote through real cache callback");
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      require(section_executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+              "actual current CPU publications project RenderReady without GPU identity");
       const auto predecessor=cache.GetPublishedRenderLightBinding(coord);
       const auto old_publication=cache.GetPublishCount(coord);
       world.BlockWorld.SetBlock({3,-40,3},8);
@@ -424,6 +435,115 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                   world.SampleRequiredPresentationCoverage().publication_unready_sections==0 &&
                   world.HasCurrentChunkSlicePublication({0,-2,0}) && world.IsColumnRenderReady({0,0,0}),
               "actual cross retirement restores completion");
+      // H7: actual worker -> deferred GPU apply -> packed publication. The
+      // registered production drain is withheld, never a synthetic queue flag.
+      struct DeadlineRestore {
+        UFrameDeadline previous=UFrameDeadline::Get();
+        ~DeadlineRestore() { UFrameDeadline::Get()=previous; }
+      } restore_deadline;
+      UFrameDeadline::Get().BeginFrame(5000);
+      const glm::ivec3 gpu_target(0,-2,0);
+      world.BlockWorld.SetBlock({4,-24,4},8);
+      settle_all();
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      settings.AsyncMeshing=true; settings.GpuPackedMeshing=true;
+      mesh.SetRenderSettings(settings);
+      mesh.SetMesherBackend(&gpu_mesher);
+      mesh.SetMeshRebuildFocus({0,0,0},4,1);
+      mesh.SetMeshSnapshotBudgetMs(1000);
+      mesh.SetMeshEmergeTotalBudgetMs(1000);
+      auto *gpu_pipeline=cache.GetGpuMeshPipeline();
+      report["section_owner_gpu_context"]={{"version",GetActiveRenderBackendCaps().GlVersion},
+          {"renderer",GetActiveRenderBackendCaps().GlRenderer},
+          {"pipeline_ready",gpu_pipeline && gpu_pipeline->IsReady()}};
+      require(gpu_pipeline && gpu_pipeline->IsReady(),"actual GPU mesh pipeline initializes on app context");
+      cache.MarkDirtyPriority(gpu_target);
+      const auto gpu_revision=cache.GetChunkMeshRevision(gpu_target);
+      cache.PrefetchMeshCapture(world.BlockWorld,gpu_target,world.BlockRegistry.get());
+      const auto capture_deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+      bool captured=false;
+      do {
+        cache.PumpCaptureWorkerCommits(&world.BlockWorld,world.BlockRegistry.get());
+        captured=cache.GetCaptureStore().TryGet(world.BlockWorld,gpu_target,gpu_revision).has_value();
+        if(!captured) std::this_thread::yield();
+      } while(!captured && std::chrono::steady_clock::now()<capture_deadline);
+      checkpoint("gpu_capture_ready");
+      require(captured,"actual GPU target capture completes within bounded wait");
+      const auto scheduled=cache.RebuildDirtyChunksWithStats(
+          world.BlockWorld,*world.BlockRegistry,0,1,false,0,1000,true);
+      report["section_owner_gpu_schedule"]={{"scheduled",scheduled.Scheduled},
+          {"skip_pipeline",cache.GetLastMeshDirtyScheduleSkipPipelineN()},
+          {"skip_snapshot",cache.GetLastMeshDirtyScheduleSkipSnapshotN()},
+          {"skip_other",cache.GetLastMeshDirtyScheduleSkipOtherN()}};
+      require(scheduled.Scheduled==1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+              "one actual GPU-eligible mesh worker job completes");
+      mesh.DrainAsyncMeshResults(world.BlockWorld,*world.BlockRegistry,1);
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      checkpoint("gpu_queued");
+      report["section_owner_gpu_pending"]={{"queued",cache.GetPendingGpuQueuedCount()},
+          {"pending",cache.IsPendingGpuApply(gpu_target)},
+          {"extract",cache.IsGpuExtractInFlight(gpu_target)},
+          {"cpu_worker",cache.HasCpuMeshBuildInFlight(gpu_target)},
+          {"column_complete",world.IsColumnRenderReady({0,0,0})},
+          {"section_current",world.HasCurrentChunkSlicePublication(gpu_target)}};
+      report["section_owner_gpu_pending"]["job_stage"]=
+          ColumnJobStageName(section_executor.GetColumnJobStage({0,0}));
+      require(cache.GetPendingGpuQueuedCount()==1 && cache.IsPendingGpuApply(gpu_target) &&
+                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::GpuPending &&
+                  !world.HasCurrentChunkSlicePublication(gpu_target) && !world.IsColumnRenderReady({0,0,0}) &&
+                  !UChunkEmergeCoordinator::TryPromoteLitColumn(world,{0,0},section_executor),
+              "actual queued GPU publication cannot certify completion");
+      for(int pass=0;pass<16 && (cache.GetPendingGpuAppliesCount() ||
+                               cache.IsGeometryAwaitingLight(gpu_target));++pass) {
+        glFinish();
+        bindings.CollectRetired();
+        cache.DrainPendingGpuMeshes(world.BlockWorld,*world.BlockRegistry,1,1000);
+        glFinish();
+        report["section_owner_gpu_owner_steps"].push_back({{"pass",pass},
+            {"gpu_pending",cache.GetPendingGpuAppliesCount()},
+            {"awaiting_field",cache.IsGeometryAwaitingLight(gpu_target)},
+            {"field_settled",world.HasCurrentChunkSliceLightSettlement(gpu_target)},
+            {"kick",cache.GetLastGpuKickN()},{"finish",cache.GetLastGpuFinishN()}});
+      }
+      checkpoint("gpu_published");
+      const auto *gpu_slot=gpu_pipeline->GetAllocator().GetSlot(gpu_target);
+      report["section_owner_gpu_result"]={{"pending",cache.GetPendingGpuAppliesCount()},
+          {"kick",cache.GetLastGpuKickN()},{"finish",cache.GetLastGpuFinishN()},
+          {"quads",gpu_slot ? gpu_slot->QuadCount : 0},
+          {"residency",cache.QueryLiveGpuResidencyToken(gpu_target)},
+          {"column_complete",world.IsColumnRenderReady({0,0,0})}};
+      require(cache.GetPendingGpuAppliesCount()==0 && cache.GetLastGpuKickN()>0 && cache.GetLastGpuFinishN()>0 &&
+                  gpu_slot && gpu_slot->QuadCount>0 && gpu_pipeline->HasGpuMesh(gpu_target) &&
+                  cache.QueryLiveGpuResidencyToken(gpu_target)!=0 && world.IsColumnRenderReady({0,0,0}),
+              "actual packed GPU successor publishes current geometry and field");
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      require(section_executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+              "actual GPU publication projects current completion");
+      const auto retained_gpu=cache.QueryLiveGpuResidencyToken(gpu_target);
+      world.BlockWorld.SetBlock({5,-24,4},8);
+      settle_all();
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,coord);
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      checkpoint("gpu_predecessor_not_current");
+      report["section_owner_record_projection"]={
+          {"retained_gpu",cache.QueryLiveGpuResidencyToken(gpu_target)},
+          {"previous_gpu",retained_gpu},
+          {"column_complete",world.IsColumnRenderReady({0,0,0})},
+          {"job_stage",ColumnJobStageName(section_executor.GetColumnJobStage({0,0}))},
+          {"record_gpu",world.GetColumnRecords().GetOrCreate({0,0}).published.gpu_handle}};
+      require(retained_gpu!=0 && cache.QueryLiveGpuResidencyToken(gpu_target)==retained_gpu &&
+                  world.GetColumnRecords().GetOrCreate({0,0}).published.gpu_handle==retained_gpu &&
+                  !world.IsColumnRenderReady({0,0,0}) &&
+                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::LitReady,
+              "real retained GPU resource cannot confirm current replacement in record projection");
+      mesh.SetMesherBackend(nullptr);
+      mesh.RebuildChunkImmediate(world.BlockWorld,*world.BlockRegistry,gpu_target);
+      section_executor.SyncColumnJobStageFromWorld(world,{0,0});
+      checkpoint("cpu_successor_after_gpu");
+      require(world.IsColumnRenderReady({0,0,0}) && !gpu_pipeline->HasGpuMesh(gpu_target) &&
+                  world.GetColumnRecords().GetOrCreate({0,0}).published.gpu_handle==0 &&
+                  section_executor.GetColumnJobStage({0,0})==ColumnJobStage::RenderReady,
+              "actual CPU successor replaces GPU and remains ready without a GPU handle");
       mesh.SetOnLitDrawableCommittedFn({});
       cache.SetPrepareRenderLightFn({});
       report["cases"].push_back({{"kind","section_owner_column_aggregate"},{"status","PASS"},
@@ -434,7 +554,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"publication_current_light_recovers",true},
           {"partial_draw_not_complete",true},{"actual_publication_recovers",true},
           {"retained_geometry_not_complete",true},{"no_surface_requires_retirement",true},
-          {"retained_cross_not_complete",true},{"actual_cross_retirement_recovers",true}});
+          {"retained_cross_not_complete",true},{"actual_cross_retirement_recovers",true},
+          {"actual_gpu_pending_not_complete",true},{"actual_gpu_successor_recovers",true},
+          {"record_retained_gpu_not_current",true},{"record_cpu_completion_without_gpu",true}});
     }
     // S3.06: actual factory-selected desktop owner on the app's GL context.
     {

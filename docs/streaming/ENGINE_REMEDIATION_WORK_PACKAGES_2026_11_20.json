@@ -322,9 +322,10 @@
         {
           "id": "S4.01",
           "action": "Свести requested/running/computed/validated/published к единому секционному владельцу; колонка только агрегирует.",
-          "status": "OPEN",
+          "status": "COMPLETE",
           "deliverable": "Изменение кода либо ссылка на существующую реализацию; regression/fault evidence; scoped native evidence где требуется",
-          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены"
+          "close_when": "Критерий исходного требования выполнен; отрицательный контроль обнаруживает соответствующую ошибку; доказательства сохранены",
+          "evidence": "S4_01_SECTION_OWNER_CARD_2026_11_20.md; build/desktop-msvc/s4-section-owner-acceptance-20261120.json; ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json"
         },
         {
           "id": "S4.02",
@@ -491,7 +492,7 @@
       ]
     }
   ],
-  "current_step": "S4.01",
+  "current_step": "S4.02",
   "finish_checklist": "ENGINE_REMEDIATION_FINISH_CHECKLIST_2026_11_20.json",
   "evidence_index": "ENGINE_REQUIREMENT_EVIDENCE_INDEX_2026_11_20.json",
   "package_execution_contract": {

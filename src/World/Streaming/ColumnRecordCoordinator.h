@@ -18,7 +18,8 @@ struct ColumnWorldTruth
   bool lit_ready{false};
   bool meshing{false};
   bool gpu_pending{false};
-  /// Valid published draw handle (independent of pending replacement).
+  /// Canonical current section publication aggregate. A retained predecessor
+  /// draw is stored separately and cannot certify a current replacement.
   bool render_ready{false};
   /// Real GPU residency token when mesh service exposes one; else 0.
   uint64_t published_gpu_handle{0};
@@ -52,7 +53,8 @@ public:
   static ColumnJobStage SyncFromWorldTruth(ColumnRecord &rec,
                                             const ColumnWorldTruth &truth);
 
-  /// Derive scheduler stage from record (published + pending independent).
+  /// Derive scheduler stage from canonical projections and actual pending facts;
+  /// retained publication resources remain independent of current completion.
   static ColumnJobStage DeriveJobStageFromRecord(const ColumnRecord &rec);
 
   /// Record-side enqueue wants: keep-until-replace only (reject in-flight

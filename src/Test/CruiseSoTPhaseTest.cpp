@@ -84,6 +84,38 @@ int main()
   Expect(shadow_rec.published.gpu_handle == 42, "real gpu handle wired");
   Expect(!shadow_rec.published.shadow_synthetic, "real handle clears shadow");
 
+  // A retained resource and current completion are separate projections. Real
+  // queue facts do not need a fabricated legacy ticket token to be observed.
+  ColumnRecord retained{};
+  retained.published.gpu_handle = 42;
+  ColumnWorldTruth queued{};
+  queued.has_chunk = true;
+  queued.lit_ready = true;
+  queued.gpu_pending = true;
+  Expect(UColumnRecordCoordinator::SyncFromWorldTruth(retained, queued) ==
+             ColumnJobStage::GpuPending,
+         "actual GPU queue outranks retained publication without a legacy token");
+  Expect(retained.pending.token == 0 && retained.published.gpu_handle == 42,
+         "observing queue facts neither invents a token nor destroys predecessor");
+  queued.gpu_pending = false;
+  Expect(UColumnRecordCoordinator::SyncFromWorldTruth(retained, queued) ==
+             ColumnJobStage::LitReady,
+         "retained predecessor alone cannot certify current publication");
+  ColumnRecord cpu_only{};
+  ColumnWorldTruth cpu_current{};
+  cpu_current.has_chunk = true;
+  cpu_current.lit_ready = true;
+  cpu_current.render_ready = true;
+  Expect(UColumnRecordCoordinator::SyncFromWorldTruth(cpu_only, cpu_current) ==
+             ColumnJobStage::RenderReady,
+         "current CPU publication needs no synthetic GPU or mesh version");
+  Expect(cpu_only.published.gpu_handle == 0 && cpu_only.published.mesh_version == 0,
+         "CPU current projection does not mint resource versions");
+  cpu_current.render_ready = false;
+  Expect(UColumnRecordCoordinator::SyncFromWorldTruth(cpu_only, cpu_current) ==
+             ColumnJobStage::LitReady,
+         "current completion projection closes when actual publication loses validity");
+
   UColumnRecordCoordinator::ResetShadowMismatchCount();
   UColumnRecordCoordinator::SetCutoverStage(ColumnCutoverStage::ShadowCompare);
   Expect(UColumnRecordCoordinator::DecideFirstMeshEnqueue(true, false),

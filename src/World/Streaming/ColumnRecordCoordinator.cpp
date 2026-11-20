@@ -94,6 +94,8 @@ ColumnJobStage UColumnRecordCoordinator::SyncFromWorldTruth(
     ColumnRecord &rec, const ColumnWorldTruth &truth)
 {
   rec.resident = truth.has_chunk;
+  rec.current_light = truth.has_chunk && truth.lit_ready;
+  rec.current_publication = truth.has_chunk && truth.render_ready;
   if (!truth.has_chunk)
   {
     rec.published = {};
@@ -157,8 +159,9 @@ ColumnJobStage UColumnRecordCoordinator::DeriveJobStageFromRecord(
   {
     return ColumnJobStage::Absent;
   }
-  if (ColumnHasActivePending(rec) &&
-      rec.pending.stage != ColumnJobStage::Absent &&
+  // A world scan observes real queue/worker owners even when the compatibility
+  // ticket domain has no token for them. Do not fabricate one to expose stage.
+  if (rec.pending.stage != ColumnJobStage::Absent &&
       rec.pending.stage != ColumnJobStage::RenderReady)
   {
     return rec.pending.stage;
@@ -167,9 +170,13 @@ ColumnJobStage UColumnRecordCoordinator::DeriveJobStageFromRecord(
   {
     return ColumnJobStage::PendingLight;
   }
-  if (ColumnHasPublishedRender(rec))
+  if (rec.current_publication)
   {
     return ColumnJobStage::RenderReady;
+  }
+  if (rec.current_light)
+  {
+    return ColumnJobStage::LitReady;
   }
   return ColumnJobStage::Gen;
 }

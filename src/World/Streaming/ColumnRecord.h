@@ -57,6 +57,10 @@ struct ColumnRecord
   bool raa_pending{false};
   /// Column has resident voxel data (ground chunk present).
   bool resident{false};
+  /// Scheduling projections refreshed by SyncFromWorldTruth from canonical
+  /// section proofs. Retained resource identity alone is not current completion.
+  bool current_light{false};
+  bool current_publication{false};
   ColumnPublishedState published{};
   ColumnPendingState pending{};
   ColumnDebtState debt{};

@@ -1,8 +1,24 @@
 {
   "schema": "engine-requirement-evidence-index.v1",
-  "current_package": "S4.01",
+  "current_package": "S4.02",
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
+    {
+      "id": "S4.01",
+      "status": "COMPLETE",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-acceptance-20261120.json",
+      "receipt_sha256": "fc537871cee76472da960a88bcbac47e644fda64963d12f990df493bac731117",
+      "scope": "Single section proof owners and derived readiness/scheduling, stale/incarnation/repeat, real CPU/GPU publication, retained/Cross retirement and Flat. Current Release Full20/20 + Flat1/1 + policy2/2 PASS. All original S4.02..S6 and final stage matrix remain open."
+    },
+    {
+      "id": "S4.01.gpu-pending",
+      "status": "PARTIAL_OPEN",
+      "card": "S4_01_SECTION_OWNER_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-section-owner-h7-receipt-20261120.json",
+      "receipt_sha256": "a297f38ac54653f6c83b80c5acd600e0dcf5d49f881340d273e7f1e370c1dbaa",
+      "scope": "H7 GPU queue negative/current successor PASS: real GL3.3 pipeline, worker1, queued1, kick1/finish1, packed6 quads, live nonzero residency, native20/20. Source/config retained. Final ColumnRecord projection review remains; no framebuffer closure."
+    },
     {
       "id": "S4.01.flat-publication",
       "status": "PARTIAL_OPEN",

@@ -951,6 +951,9 @@ public:
     return MeshRevisions.Current(chunk_coord);
   }
   bool HasInflightMeshBuild(glm::ivec3 chunk_coord) const;
+  /// Actual async CPU worker/completed ownership; unlike the compatibility
+  /// source-revision owner, this ends when the result transfers to GPU apply.
+  bool HasCpuMeshBuildInFlight(glm::ivec3 chunk_coord) const;
   /// Drop stale async apply for this chunk (revision bump + clear
   /// RemeshAfterApply).
   void InvalidateInFlightMeshBuild(glm::ivec3 chunk_coord);

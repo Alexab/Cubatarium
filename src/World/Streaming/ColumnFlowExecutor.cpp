@@ -155,11 +155,18 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   for (int cy = min_cy; cy <= max_cy; ++cy)
   {
     const glm::ivec3 coord(column.x, cy, column.y);
-    if (mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord))
+    const bool gpu_owned = mesh.IsPendingGpuApply(coord) || mesh.IsGpuExtractInFlight(coord);
+    if (gpu_owned)
     {
       gpu_pending = true;
     }
-    if (mesh.IsChunkMeshDirty(coord) || mesh.HasInflightMeshBuild(coord))
+    // ActiveMeshSourceRevision spans CPU compute and GPU publication. Its
+    // continued ownership after transfer is not a second CPU worker. A newer
+    // real CPU/capture job can still coexist with an older GPU ticket.
+    if (mesh.IsChunkMeshDirty(coord) ||
+        mesh.GetCache().HasCpuMeshBuildInFlight(coord) ||
+        mesh.GetCache().HasPendingCaptureWork(coord) ||
+        (!gpu_owned && mesh.HasInflightMeshBuild(coord)))
     {
       meshing = true;
     }
@@ -170,11 +177,6 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
     }
   }
 
-  const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
-  if (emerge == ColumnEmergeState::Meshing)
-  {
-    meshing = true;
-  }
   // Missing queue metadata does not settle a section's calculation debt.
   // Coarse column labels are scheduling projections, not light certificates.
   const bool lit_ready = world.IsColumnLitReady(ground);
