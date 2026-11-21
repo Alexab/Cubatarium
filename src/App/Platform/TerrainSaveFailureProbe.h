@@ -1466,6 +1466,78 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"shared_async_owner",shared},{"mixed_count",streaming.DeferredShoreSealQueue.size()}};
         require(sync_deduped && shared,"sync shore arrival shares one dedupe owner with async arrival");
       }
+      {
+        struct DrainEnvironmentRestore {
+          UFrameDeadline deadline=UFrameDeadline::Get();
+          bool scan=PreferGpuFluidColumnScan();
+          ~DrainEnvironmentRestore() { UFrameDeadline::Get()=deadline; SetPreferGpuFluidColumnScan(scan); }
+        } restore;
+        auto drain_owner=std::make_unique<UWorld>(nullptr,nullptr);
+        auto &drain=*drain_owner;
+        drain.SetSpawnPoint({8,-40,8});
+        drain.ProceduralTemplate.MinHeight=-48; drain.ProceduralTemplate.MaxHeight=-33;
+        drain.ProceduralTemplate.SeaLevel=-40; drain.ProceduralTemplate.FillWater=true;
+        drain.ProceduralTemplate.AsyncRelight=false;
+        drain.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        drain.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        drain.BlockWorld.SetFluidDefinitions(definitions.get());
+        drain.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        drain.SetRenderSettings(settings);
+        PhysicsFeatureFlags flags; flags.EnableFluids=true; flags.LiquidShadowMode=false;
+        drain.SetPhysicsProfile(PhysicsProfile::Standard); drain.SetPhysicsFeatureFlags(flags);
+        drain.SetLastMovementFrameMs(1);
+        for(int x=0;x<CHUNK_SIZE;++x) for(int z=0;z<CHUNK_SIZE;++z)
+          drain.BlockWorld.SetBlock({x,-48,z},8);
+        drain.BlockWorld.SetBlock({8,-40,8},9);
+        drain.BlockWorld.SetFluidState({8,-40,8},FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        auto &streaming=*drain.Streaming;
+        auto &drain_mesh=*drain.MeshService;
+        auto &drain_cache=drain_mesh.GetCache();
+        UFrameDeadline::Get().BeginFrame(5000);
+        drain_mesh.RebuildChunkImmediate(drain.BlockWorld,*drain.BlockRegistry,{0,-3,0});
+        require(drain_mesh.HasDrawableGreedyMesh({0,-3,0}),"drain starts with actual healthy mesh");
+        SetPreferGpuFluidColumnScan(true);
+        const auto *before=drain_cache.GetFluidSurfaceSlice(drain.BlockWorld,*drain.BlockRegistry,{0,0,0},-40);
+        require(before && before->HasSurface(8,8) && before->BottomBlockY[8][8]==-40,
+                "drain starts with actual warm pre-seal fluid map");
+        // Accepted pending-owner adapter; actual producer boundaries are covered
+        // by the three ingress receipts. Do not invoke seed/seal by hand here.
+        streaming.DeferredPhysicsSeedQueue.push_back({0,-3,0});
+        streaming.DeferredShoreSealQueue.push_back({0,0,0});
+        streaming.DeferredShoreSealQueued.insert({0,0,0});
+        streaming.DeferredIntraChunkSealNeeded.insert({0,0,0});
+        bool seed_seen=false,mutation=false,save=false,light=false,map_invalidated=false;
+        int ticks=0;
+        for(;ticks<16;++ticks) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          drain.DrainRelightQueuesBudget(0,8);
+          drain_mesh.RebuildChunkImmediate(drain.BlockWorld,*drain.BlockRegistry,{0,-3,0});
+          streaming.TickAsyncChunkSystems(drain);
+          seed_seen=seed_seen || drain.BlockPhysicsService->GetFluidQueueStats().Depth>0;
+          mutation=mutation || drain.BlockWorld.GetBlock({8,-41,8})==9;
+          save=save || drain.ModifiedChunks.count({0,-3,0})==1;
+          light=light || drain.HasPendingLightBeforeMeshNear({0,0,0},0) ||
+              drain.Persistence->GetPendingTerrainColumnRelightCount()>0;
+          map_invalidated=map_invalidated || drain_cache.GetFluidSurfaceDirtyGroundChunks().count({0,0,0})==1;
+          if(streaming.DeferredPhysicsSeedQueue.empty() && streaming.DeferredShoreSealQueue.empty() &&
+              streaming.DeferredShoreSealQueued.empty() && streaming.DeferredIntraChunkSealNeeded.empty()) break;
+        }
+        const bool terminal=streaming.DeferredPhysicsSeedQueue.empty() && streaming.DeferredShoreSealQueue.empty() &&
+            streaming.DeferredShoreSealQueued.empty() && streaming.DeferredIntraChunkSealNeeded.empty();
+        const auto direct=FindFluidColumnSurfaceAt(drain.BlockWorld,*drain.BlockRegistry,8,8,-40);
+        const auto *current=drain_cache.GetFluidSurfaceSlice(drain.BlockWorld,*drain.BlockRegistry,{0,0,0},-40);
+        const bool current_map=current && direct.valid && current->BottomBlockY[8][8]==direct.bottomBlockY &&
+            current->SurfaceBlockY[8][8]==direct.surfaceBlockY && direct.bottomBlockY<-40;
+        report["seed_seal_streaming_drain"]={{"ticks",ticks+1},{"terminal",terminal},
+            {"seed_seen",seed_seen},{"actual_seal_mutation",mutation},{"save_owner",save},
+            {"light_owner",light},{"map_invalidated",map_invalidated},{"current_map",current_map},
+            {"seed_pending",streaming.DeferredPhysicsSeedQueue.size()},
+            {"shore_pending",streaming.DeferredShoreSealQueue.size()},
+            {"focus_dirty",drain.PhysicsTelemetryData.FocusDirtyChunks},
+            {"focus_missing",drain.PhysicsTelemetryData.FocusMissingMesh}};
+        require(terminal && seed_seen && mutation && save && light && map_invalidated && current_map,
+                "actual streaming tick drains accepted seed/seal and retains downstream mutation owners");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

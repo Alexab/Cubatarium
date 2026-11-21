@@ -529,8 +529,10 @@
         },
         {
           "id": "Q11-C1.DRAIN",
-          "status": "CHECK",
-          "scope": "Actual seed/seal terminal outcome and current arrival/downstream fluid-map/light/save obligations. Reuse S2.05 only matching property/source."
+          "status": "REUSE",
+          "scope": "Actual seed/seal terminal outcome and current arrival/downstream fluid-map/light/save obligations. Reuse S2.05 only matching property/source.",
+          "evidence": "build/desktop-msvc/s4-seed-seal-drain-acceptance-20261121.json",
+          "coverage_note": "Direct accepted pending-owner adapter composed with actual ingress receipts. Actual TickAsyncChunkSystems consumes work in2 ticks; actual relight drain and CPU immediate mesh rebuild between ticks release healthy policy gates. Actual seed frontier, intra/shore fill, downstream save/light/map owners and current recomputed map. No direct seed/seal call in this fixture. Not paused-drain/far-lane/general fairness/cold save/Full physical-light/framebuffer/backend/performance/full memory acceptance. Q11 ABANDONMENT and LIMIT-C1 remain; full S0..S6 OPEN."
         },
         {
           "id": "Q11-C1.ABANDONMENT",
@@ -633,5 +635,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE accepted by scoped receipts. Next actual streaming DRAIN, then ABANDONMENT. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE/DRAIN accepted by scoped receipts. Next ABANDONMENT actual unload/eviction/return and permanent replacement successor. Top-level6 CHECK; full scope OPEN."
 }
