@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.selector-mutable-registry-names",
+      "status": "SCOPED_PASS_COLD_LOADER_AND_CATALOG_OWNERS_OPEN",
+      "receipt": "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json",
+      "scope": "LoadPackId borrows explicit/default selector text and builds exactly one pre-reserved scoped directory string. Mutable merge ResolveName/ResolveBlockName owner-prefix and local-fallback plus synthetic tier-check local names use the same preallocation guard as read lookups; local extraction borrows the source slice and never copies discarded qualified prefixes. String allocation/free-before-refund semantics reuse UGenerationString. Existing ID precedence/local fallback/synthetic creation remain available; quota refusal precedes catalog mutation."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.biome-result-key-owners",
       "status": "SCOPED_PASS_CATALOG_LOAD_TEXT_AND_CATALOG_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",

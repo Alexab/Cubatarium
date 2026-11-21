@@ -474,8 +474,9 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
     return NameToId.at(name);
   }
 
-  const std::string local = LocalBlockName(name);
-  if (kTierAWorldgenNames.count(local) != 0)
+  const auto separator=name.find(kQualifiedBlockSeparator);
+  const UGenerationString local({std::string_view(name).substr(separator==std::string::npos ? 0 : separator+2)});
+  if (kTierAWorldgenNames.count(local.Get()) != 0)
   {
     if (LoggedTierAMissing().insert(name).second)
     {
@@ -560,9 +561,8 @@ BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
   }
   if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
   {
-    const std::string qualified =
-        MakeQualifiedBlockName(WorldgenOwnerPackId, name);
-    const auto qualifiedIt = NameToId.find(qualified);
+    const UGenerationString qualified({WorldgenOwnerPackId,kQualifiedBlockSeparator,name});
+    const auto qualifiedIt = NameToId.find(qualified.Get());
     if (qualifiedIt != NameToId.end())
     {
       return qualifiedIt->second;
@@ -575,8 +575,8 @@ BlockId UBlockMergeRegistry::ResolveBlockName(const std::string &name)
   }
   if (IsQualifiedBlockName(name))
   {
-    const std::string local = LocalBlockName(name);
-    const auto localIt = NameToId.find(local);
+    const UGenerationString local({std::string_view(name).substr(name.find(kQualifiedBlockSeparator)+2)});
+    const auto localIt = NameToId.find(local.Get());
     if (localIt != NameToId.end())
     {
       return localIt->second;

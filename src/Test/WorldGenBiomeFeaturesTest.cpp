@@ -2,6 +2,7 @@
 
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
+#include "Core/Memory/BufferAllocationBudget.h"
 
 #include <chrono>
 #include <cmath>
@@ -60,6 +61,41 @@ static void TestAllBiomesHaveVegetationWeights()
     FluidTest::Expect(hasVegetationPool, kTestName,
                       "biome has positive feature weights");
   }
+}
+
+static void TestPackSelectorBudget()
+{
+  size_t refused=0;
+  const std::string long_id(64*1024,'p');
+  for(const std::string &id:{std::string("default"),long_id}) {
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(id.size()>1024 ? 1024 : 1);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    const auto before=cutum::UWorldGenPack::GetSnapshot();
+    bool denied=false,filesystem_reached=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)cutum::UWorldGenPack::LoadPackId(id);}
+      catch(const cutum::UBufferBudgetExceeded &) {denied=true;}
+      catch(const fs::filesystem_error &) {filesystem_reached=true;}
+    }
+    std::cout << "pack_selector_bytes=" << id.size() << " refused=" << denied
+        << " filesystem_reached=" << filesystem_reached << " remaining=" << budget->UsedBytes() << std::endl;
+    FluidTest::Expect(budget->UsedBytes()==1 && cutum::UWorldGenPack::GetSnapshot()==before,
+        kTestName,"selector refusal preserves active catalog and competing credit");
+    budget->Release(*peer,1); refused+=denied;
+  }
+  FluidTest::Expect(refused==2,kTestName,"pack selector path reserves before construction and filesystem work");
+  auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1024);
+  auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+  {
+    cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+    const auto before=cutum::UWorldGenPack::GetSnapshot();
+    FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("") && cutum::UWorldGenPack::LoadPackId("default") &&
+        cutum::UWorldGenPack::GetSnapshot()==before,kTestName,"empty and explicit default selector preserve warm catalog identity");
+  }
+  FluidTest::Expect(budget->UsedBytes()==1,kTestName,"warm selector scratch fully retires");
+  budget->Release(*peer,1);
+  std::cout << "pack_selector_refusals=" << refused << " peak=" << budget->PeakBytes() << " final=" << budget->UsedBytes() << std::endl;
 }
 
 static void TestForestTreeWeightApplies()
@@ -161,13 +197,17 @@ static void TestPackScopedBiomeHandlesAndFailClosedValidation()
 
 } // namespace
 
-int main()
+int main(int argc,char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
   std::error_code ec;
   fs::current_path(repo_root, ec);
   FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"), kTestName,
                     "worldgen pack load failed");
+
+  if(argc>1 && std::string(argv[1])=="--selector-budget-only") {
+    TestPackSelectorBudget(); return 0;
+  }
 
   TestAllBiomesHaveVegetationWeights();
   TestForestTreeWeightApplies();

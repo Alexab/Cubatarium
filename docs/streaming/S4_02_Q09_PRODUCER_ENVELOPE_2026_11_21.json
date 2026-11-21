@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -101,7 +101,7 @@
       "id": "E10",
       "owner": "Active-job heap scratch and transient settings",
       "status": "PARTIAL_WORKING_CONTAINERS_AND_DIAGNOSTICS_ACCEPTED",
-      "bound_or_observation": "Dense scratch chunk payload and9 metadata container allocation requests pre-reserve shared budget; field allocate_shared exact nodes now separately charged through last strong/weak allocation owner (5056bytes measured). Metadata cleanup returns1240-byte fixed baseline; resource roots/upstream bookkeeping separate. Identified local/context/selector/private-sampler external text copies now pre-reserve active generation budget and release after actual copy text lifetime; source-capacity bounds checked on current STL. Original admission-candidate exclusion is now closed by pre-copy reservation; remaining algorithm temporaries are still open. Five numerical working-vector routes now reserve exact shared job credit before allocation, retain owner through escaped copies/moves and refund after actual free. Ore catalog no longer copied per column. Object tree/shrub staging and indices, pool candidates now share exact allocation quota. Lazy TLS scatter map binds each current job and is destroyed on chunk-scope begin/end, including unwind; no idle scatter allocations/job owner remain. Four diagnostic name/history stores replaced by quota-owned stable numeric job frames and catalog-owned counters/warning aliases. Synchronous borrowed name selection restores through nested calls; chunk fold performs no allocation. No retired global name/version history; report v2 explicitly current catalog lifetime. Flora rank staging now quota-owned through returned lifetime and pointer/count transfer; derived qualified/suffix/local read names pre-reserve before one fresh allocation. Borrowed biome matching/weight arguments avoid copies; fallback resolver removes visited-name heap/recursion using coherent refs snapshot and exact reachable-cycle bound. Context refresh name refusal now frees actual text before reservation refund. Runtime surface/cave result keys now alias registry-owned strings with explicit shared owner, fixed builtin table and16-byte reference values; sample/callback copies create no text/control blocks. Legacy explicit string queries retained; exact output and last-registry retirement verified.",
+      "bound_or_observation": "Dense scratch chunk payload and9 metadata container allocation requests pre-reserve shared budget; field allocate_shared exact nodes now separately charged through last strong/weak allocation owner (5056bytes measured). Metadata cleanup returns1240-byte fixed baseline; resource roots/upstream bookkeeping separate. Identified local/context/selector/private-sampler external text copies now pre-reserve active generation budget and release after actual copy text lifetime; source-capacity bounds checked on current STL. Original admission-candidate exclusion is now closed by pre-copy reservation; remaining algorithm temporaries are still open. Five numerical working-vector routes now reserve exact shared job credit before allocation, retain owner through escaped copies/moves and refund after actual free. Ore catalog no longer copied per column. Object tree/shrub staging and indices, pool candidates now share exact allocation quota. Lazy TLS scatter map binds each current job and is destroyed on chunk-scope begin/end, including unwind; no idle scatter allocations/job owner remain. Four diagnostic name/history stores replaced by quota-owned stable numeric job frames and catalog-owned counters/warning aliases. Synchronous borrowed name selection restores through nested calls; chunk fold performs no allocation. No retired global name/version history; report v2 explicitly current catalog lifetime. Flora rank staging now quota-owned through returned lifetime and pointer/count transfer; derived qualified/suffix/local read names pre-reserve before one fresh allocation. Borrowed biome matching/weight arguments avoid copies; fallback resolver removes visited-name heap/recursion using coherent refs snapshot and exact reachable-cycle bound. Context refresh name refusal now frees actual text before reservation refund. Runtime surface/cave result keys now alias registry-owned strings with explicit shared owner, fixed builtin table and16-byte reference values; sample/callback copies create no text/control blocks. Legacy explicit string queries retained; exact output and last-registry retirement verified. Pack selector ID now borrowed, derived directory and mutable merge owner/local/synthetic-tier-check temporaries pre-reserved;6/6 real-path refusals before catalog mutation, lookup IDs and legacy synthetic behavior preserved.",
       "evidence": [
         "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
         "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
@@ -115,10 +115,11 @@
         "build/desktop-msvc/s4-placement-working-containers-acceptance-20261121.json",
         "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
         "build/desktop-msvc/s4-rank-derived-name-acceptance-20261121.json",
-        "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json"
+        "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",
+        "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json"
       ],
       "remaining": [
-        "Catalog-load selector/path and mutating-registry name temporaries: compose actual input/source bounds and lifetimes; read lookup names already covered by this receipt.",
+        "Cold LoadFromDirectory: compose root/child filesystem paths, JSON DOM/derived parser strings, image load and compiled catalog transient versus published lifetimes with E11. Selector derived directory is now covered separately.",
         "Compose fixed copy-wrapper/context/field/allocator-handle/static fallback/resource-root overhead in E12; do not infer total RSS from requested payload counters."
       ]
     },
@@ -130,10 +131,12 @@
       "evidence": [
         "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
         "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
-        "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json"
+        "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",
+        "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json"
       ],
       "remaining": [
-        "Trace request/pin/reload retirement and separate shared payload from per-job handles."
+        "Trace request/pin/reload retirement and separate shared payload from per-job handles.",
+        "Mutable block catalog payload and LoggedTierAMissing static full-name history: replace unbounded cross-registry warning retention with a bounded registry/catalog owner, preserving no-synthetic Tier A resolution and diagnostic usefulness. Include catalog construction/publication source bounds; scratch name guards do not charge persistent synthetic entries."
       ]
     },
     {
