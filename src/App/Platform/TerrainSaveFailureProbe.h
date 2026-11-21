@@ -20,6 +20,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
@@ -1091,6 +1092,63 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"negative_and_positive_installed",installed()},{"pending",fifo.GetPendingTerrainColumnRelightCount()}});
         require(installed(),"quiesced FIFO/deferred request completes actual current install after resume");
         }
+      }
+      {
+        // Controlled payload production isolates scheduler ownership; the real
+        // pool, ready queue, generation registry and buffer ApplyTo are used.
+        struct OwnershipPopulator final : IUChunkPopulator {
+          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+            ChunkPopulateResult result;
+            result.coord=request.chunkCoord; result.token=request.token;
+            result.discarded=request.shouldCancel && request.shouldCancel();
+            if(!result.discarded) result.buffer.SetBlock(
+                {8+static_cast<int>(request.token.sequence-1)*2,-40,8},8);
+            return result;
+          }
+        } populator;
+        UChunkGenerationRegistry generation;
+        UChunkLoadScheduler scheduler(populator,generation);
+        UBlockWorld terrain;
+        terrain.SetFluidDefinitions(definitions.get());
+        terrain.SetVerticalProfile({-48,-33,-40});
+        const glm::ivec3 column(0);
+        generation.Bump(column);
+        ProceduralSettings generation_settings;
+        generation_settings.MinHeight=-48; generation_settings.MaxHeight=-33;
+        const auto wait_ready=[&]() {
+          const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+          while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+            std::this_thread::yield();
+          return scheduler.GetCompletedReadyCount()==1;
+        };
+        unsigned arrivals=0;
+        scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+        scheduler.RequestLoad(column,1,generation_settings);
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            wait_ready() &&
+            scheduler.GetCompletedReadyCount()==1,"actual generation worker owns a completed payload");
+        scheduler.Tick(terrain,0,0);
+        require(scheduler.GetState(column)==ChunkLoadState::Ready && arrivals==0,
+            "zero commit budget retains actual ready generation result");
+        const auto successor_sequence=generation.Bump(column);
+        terrain.SetBlock({8,-40,8},9);
+        scheduler.Tick(terrain,1,0);
+        const bool stale_rejected=terrain.GetBlock({8,-40,8})==9 && arrivals==0 &&
+            !scheduler.IsPending(column) && !scheduler.IsCommitted(column) &&
+            generation.Current(column).sequence==successor_sequence;
+        report["generation_stale_ready"]={{"stale_rejected",stale_rejected},
+            {"block",terrain.GetBlock({8,-40,8})},{"arrivals",arrivals}};
+        require(stale_rejected,"expired registry token must reject ready buffer without overwriting new terrain or token");
+        scheduler.RequestLoad(column,0,generation_settings);
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            wait_ready(),
+            "current generation request starts without extra cancellation");
+        scheduler.Tick(terrain,1,0);
+        const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
+            terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
+            generation.Current(column).sequence==successor_sequence;
+        report["generation_stale_ready"]["current_arrival"]=current;
+        require(current,"actual current generation buffer applies and notifies once after stale retirement");
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

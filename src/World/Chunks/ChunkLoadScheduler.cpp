@@ -506,6 +506,30 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
           pending.demandId, "stage=apply");
       continue;
     }
+    // ActiveTokens records this scheduler's submission, not the current
+    // cross-owner authority. Disk loading or another owner may advance the
+    // registry after generation finished and before this ready buffer applies.
+    if (!pending.result.token.IsValidFor(
+            pending.result.coord, Tokens.Current(pending.result.coord).sequence))
+    {
+      LogProceduralRequest("stale_worker_result", pending.result.coord,
+                           pending.requestId, pending.demandId,
+                           "stage=apply_registry");
+      // The preceding identity check proved this is still our exact old
+      // submission. Retire its metadata without bumping the newer registry
+      // token or interfering with another owner's terrain.
+      States.erase(pending.result.coord);
+      ActiveTokens.erase(tokenIt);
+      ActiveRequestIds.erase(pending.result.coord);
+      RequestPriorities.erase(pending.result.coord);
+      InitialRequestPriorities.erase(pending.result.coord);
+      RequestPriorityRefreshCounts.erase(pending.result.coord);
+      const auto queued = QueuedRequests.find(pending.result.coord);
+      if (queued != QueuedRequests.end() &&
+          queued->second.token.sequence == pending.result.token.sequence)
+        QueuedRequests.erase(queued);
+      continue;
+    }
     if (pending.result.discarded)
     {
       LogProceduralRequest(

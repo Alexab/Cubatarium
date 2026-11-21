@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "generation-ready-commit-ignores-authoritative-registry-token",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q09_C1_OPEN",
+      "observed": "Generation ready commit checked only internal ActiveTokens and overwrote live sentinel9→8/called arrival after authoritative registry advanced.",
+      "fix": "Validate Tokens.Current before apply; after exact old internal identity confirmed retire only old metadata without Cancel/Bump or newer registry change. New request accepted directly.",
+      "evidence": "build/desktop-msvc/s4-generation-stale-ready-acceptance-20261121.json",
+      "next_action": "Q09-C1 CANCEL_RESET/OUTSIDE/ADMISSION; no parent closure."
+    },
+    {
       "id": "relight-persistence-owners-cleared-on-quiesce-retained-on-world-replace",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q08_C2_OPEN",
