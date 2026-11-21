@@ -423,23 +423,25 @@
         "src/World/Streaming/ColumnFlowExecutor.cpp"
       ],
       "status": "OPEN",
-      "wip": "1024 count cap, all identified owned ingress/internal retry/deferred/policy transfer and bounded replay connected. Local/native saturation and exact two-section current successor PASS. Allocator byte envelope still required, so step not yet complete.",
+      "wip": "1024 admitted tickets; owned retained refusal and actual automatic readmission/current successor PASS. Both scheduler containers allocator-accounted: MSVC inline184+empty16512+128 per live ticket; measured full/peak147584 requested bytes. World-record retained demand cardinality remains Q01.L2 dependency; Q01 group not closed.",
       "local_evidence": "build/desktop-msvc/s4-flow-intent-test-20261121.log",
       "cursor_evidence": "build/desktop-msvc/s4-flow-intent-cursor-test-20261121.log",
       "connection_build": "build/desktop-msvc/s4-flow-intent-connect-build-20261121.log",
       "connection_test": "build/desktop-msvc/s4-flow-intent-connect-test-20261121.log",
       "retirement_test": "build/desktop-msvc/s4-flow-intent-retire-test-20261121.log",
       "owned_ingress_build": "build/desktop-msvc/s4-flow-owned-ingress-build-20261121.log",
-      "capacity_receipt": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
+      "capacity_receipt": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json",
+      "allocator_evidence": "build/desktop-msvc/s4-scheduler-allocator-acceptance-20261121.json"
     },
     {
       "id": "Q01.L2",
       "action": "Stage ownership envelope",
       "done_when": "Store only current-world live column projections, define numeric/producer-derived peak storage and release points including unload veto, absent, world retirement. Cache eviction must not falsely report readiness or suppress live repair.",
       "status": "OPEN",
-      "wip": "World-owned stage/intent lifetime and real allocator-request byte charge/release verified. MSVC store inline64+sentinel280+280 per record, OS heap overhead excluded explicitly. Current record cardinality N not bounded; step OPEN.",
+      "wip": "World-owned stage/intent and allocator charge/release verified. Bounded old-interest retirement accepted: all8 live guards preserved,100 orphan records retired,max32 visits,fresh actual publication. No bound on live-owner cardinality yet; resident/save-veto and other queue envelopes remain dependencies. MSVC charge64+280*(N+1), excluding OS heap overhead.",
       "partial_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json",
-      "allocator_evidence": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json"
+      "allocator_evidence": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json",
+      "interest_retirement_evidence": "build/desktop-msvc/s4-world-record-interest-acceptance-20261121.json"
     },
     {
       "id": "Q01.L3",
@@ -449,7 +451,7 @@
       "partial_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
     }
   ],
-  "next_action": "Establish live world-record cardinality N from current data/IO/light/intent owners and interest retirement without dropping unsaved/live demand; measured node bytes now available. Reuse accepted admission/projection/allocator tests absent dependent change.",
+  "next_action": "Derive world-record N from interest/resident/save-veto/IO/generation/light owners and ingress-versus-retirement rates; reuse scheduler allocator/native acceptance absent dependent changes. Other LIMIT groups stay OPEN.",
   "verified_one_shot_paths": [
     {
       "file": "src/World/Core/MarkRelitInstall.cpp",

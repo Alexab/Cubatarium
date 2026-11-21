@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Math/GridMath.h"
+#include "Core/Memory/AllocationCountingResource.h"
 
 #include <cstdint>
 #include <glm/glm.hpp>
@@ -71,6 +72,33 @@ struct ColumnCoordHash
 class UColumnFlowScheduler
 {
 public:
+  UColumnFlowScheduler() : Heap(&Memory), Live(&Memory)
+  {
+    Live.reserve(kMaxLiveTickets);
+  }
+  // Diagnostic executor snapshots copy tickets into a distinct resource;
+  // never copy the resource identity or point containers at the source owner.
+  UColumnFlowScheduler(const UColumnFlowScheduler &other) : UColumnFlowScheduler()
+  {
+    *this = other;
+  }
+  UColumnFlowScheduler &operator=(const UColumnFlowScheduler &other)
+  {
+    if (this == &other) return *this;
+    Heap = other.Heap;
+    Live = other.Live;
+    next_generation_ = other.next_generation_;
+    next_sequence_ = other.next_sequence_;
+    denied_n_ = other.denied_n_;
+    upgrade_n_ = other.upgrade_n_;
+    superseded_n_ = other.superseded_n_;
+    capacity_refused_n_ = other.capacity_refused_n_;
+    return *this;
+  }
+  UAllocationCountingResource::Snapshot GetAllocationSnapshot() const
+  {
+    return Memory.GetSnapshot();
+  }
   static constexpr size_t kMaxLiveTickets = 1024;
   uint64_t CapacityRefusedCount() const { return capacity_refused_n_; }
   /// True means this scope transferred to the live ticket; false leaves it
@@ -161,8 +189,11 @@ private:
   void PushLive(const ColumnWorkItem &item);
 
   // Historical HeapCount accessor reports this exact removable priority index.
-  std::set<HeapEntry, Compare> Heap;
-  std::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> Live;
+  // Resource outlives both containers. Reserve once for the declared admission
+  // limit so bucket growth cannot add transient rehash allocations at capacity.
+  UAllocationCountingResource Memory;
+  std::pmr::set<HeapEntry, Compare> Heap;
+  std::pmr::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> Live;
   uint64_t next_generation_{1};
   uint64_t next_sequence_{1};
   uint64_t denied_n_{0};

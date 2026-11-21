@@ -32,6 +32,50 @@ int main()
 
   UColumnFlowScheduler s;
   {
+    UColumnFlowScheduler bounded;
+    const auto empty=bounded.GetAllocationSnapshot();
+    size_t full_bytes=0,peak_bytes=0;
+    for(int round=0;round<2;++round) {
+      for(size_t n=0;n<UColumnFlowScheduler::kMaxLiveTickets;++n)
+        Expect(bounded.Enqueue({static_cast<int>(n),17},ColumnWorkKind::FirstMesh,1),
+               "allocator cohort admitted through actual cap");
+      const auto full=bounded.GetAllocationSnapshot();
+      Expect(full.live_allocations==empty.live_allocations+2*UColumnFlowScheduler::kMaxLiveTickets,
+             "scheduler accounts live-map and priority-index nodes");
+      if(round==0) full_bytes=full.live_bytes;
+      else Expect(full.live_bytes==full_bytes,"scheduler repeated cohort has same byte charge");
+      Expect(!bounded.Enqueue({9000,17},ColumnWorkKind::FirstMesh,1),"full scheduler refuses new allocation");
+      Expect(bounded.GetAllocationSnapshot().live_bytes==full_bytes,"refusal allocates no overflow storage");
+      for(int n=0;n<10000;++n)
+        bounded.Enqueue({n%static_cast<int>(UColumnFlowScheduler::kMaxLiveTickets),17},ColumnWorkKind::FirstMesh,2+n%3);
+      const auto merged=bounded.GetAllocationSnapshot();
+      Expect(merged.live_bytes==full_bytes,"reranking at saturation retains exact live byte charge");
+      if(round==0) peak_bytes=merged.peak_bytes;
+      else Expect(merged.peak_bytes==peak_bytes,"reranking peak does not accumulate across cohorts");
+      bounded.Clear();
+      Expect(bounded.GetAllocationSnapshot().live_bytes==empty.live_bytes,
+             "clear releases all ticket nodes retaining only reserved empty containers");
+    }
+    std::cout << "scheduler_empty_allocator_bytes=" << empty.live_bytes
+              << " scheduler_full_allocator_bytes=" << full_bytes
+              << " scheduler_peak_allocator_bytes=" << peak_bytes
+              << " scheduler_inline_bytes=" << sizeof(UColumnFlowScheduler) << '\n';
+    {
+      UColumnFlowScheduler source;
+      source.Enqueue({-7,11},ColumnWorkKind::FirstMesh,9);
+      UColumnFlowScheduler copy(source);
+      source.Clear();
+      Expect(copy.ContainsColumn({-7,11}) &&
+          source.GetAllocationSnapshot().live_bytes==empty.live_bytes,
+          "copied scheduler owns allocations independently of source clear");
+      bounded=copy;
+    }
+    ColumnWorkItem copied;
+    Expect(bounded.DrainOne(copied) && copied.column==glm::ivec2(-7,11) &&
+        bounded.GetAllocationSnapshot().live_bytes==empty.live_bytes,
+        "assigned scheduler survives source destruction and releases own nodes");
+  }
+  {
     cutum::UColumnRecordStore records;
     const auto empty=records.GetAllocationSnapshot();
     constexpr size_t count=2048;
