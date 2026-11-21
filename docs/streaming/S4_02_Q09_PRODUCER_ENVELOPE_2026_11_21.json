@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -99,15 +99,16 @@
     {
       "id": "E10",
       "owner": "Active-job heap scratch and transient settings",
-      "status": "PARTIAL_PAYLOAD_ADMISSION_ACCEPTED",
-      "bound_or_observation": "Actual scratch chunk+SectionLightField payload now reserves shared generation budget before materialization, including AIR-only writes. Current fixture prevents8th section under256KiB with64KiB competitor; cleanup releases credit0. Buffer-only quota was insufficient. Other active allocations still require composition.",
+      "status": "PARTIAL_PAYLOAD_AND_METADATA_ADMISSION_ACCEPTED",
+      "bound_or_observation": "Dense scratch chunk/field payload plus actual9 manager container allocation requests reserve shared generation budget before allocation. Scope cleanup returns container storage to fresh1240-byte baseline in current fixture; root fixed empty storage is separate from active-job credit.",
       "evidence": [
         "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
         "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
-        "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json"
+        "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
+        "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json"
       ],
       "remaining": [
-        "Account scratch manager container/shared-control storage and retained capacity, composed with preallocated section-payload count.",
+        "Account SectionLightField shared-control allocation and compose root/allocator overhead with accepted payload/container charges.",
         "Account other algorithm temporary containers and active settings/factory/helper copies; preserve legitimate-input floors."
       ]
     },

@@ -5,6 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <new>
+#include <functional>
 
 namespace cutum
 {
@@ -16,9 +17,14 @@ public:
   UAllocationCountingResource::Snapshot GetSnapshot() const {
     std::lock_guard<std::mutex> lock(Mutex); return Memory.GetSnapshot();
   }
+  void SetBeforeAllocationFn(std::function<void(size_t)> fn) {
+    std::lock_guard<std::mutex> lock(Mutex); BeforeAllocation=std::move(fn);
+  }
 private:
   void *do_allocate(size_t bytes,size_t alignment) override {
-    std::lock_guard<std::mutex> lock(Mutex); return Memory.allocate(bytes,alignment);
+    std::lock_guard<std::mutex> lock(Mutex);
+    if(BeforeAllocation) BeforeAllocation(bytes);
+    return Memory.allocate(bytes,alignment);
   }
   void do_deallocate(void *ptr,size_t bytes,size_t alignment) override {
     std::lock_guard<std::mutex> lock(Mutex); Memory.deallocate(ptr,bytes,alignment);
@@ -26,14 +32,23 @@ private:
   bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override {return this==&other;}
   mutable std::mutex Mutex;
   UAllocationCountingResource Memory;
+  std::function<void(size_t)> BeforeAllocation;
 };
 
 template<class T> struct USharedCountingAllocator
 {
   using value_type=T;
+  using propagate_on_container_move_assignment=std::true_type;
+  using propagate_on_container_swap=std::true_type;
   std::shared_ptr<UConcurrentAllocationCountingResource> resource;
   explicit USharedCountingAllocator(std::shared_ptr<UConcurrentAllocationCountingResource> owner)
       : resource(std::move(owner)) {}
+  USharedCountingAllocator(const USharedCountingAllocator &)=default;
+  USharedCountingAllocator &operator=(const USharedCountingAllocator &)=default;
+  // A moved-from container must still have a usable allocator.
+  USharedCountingAllocator(USharedCountingAllocator &&other) noexcept : resource(other.resource) {}
+  USharedCountingAllocator &operator=(USharedCountingAllocator &&other) noexcept
+  {resource=other.resource; return *this;}
   template<class U> USharedCountingAllocator(const USharedCountingAllocator<U> &other) noexcept
       : resource(other.resource) {}
   T *allocate(size_t count) {

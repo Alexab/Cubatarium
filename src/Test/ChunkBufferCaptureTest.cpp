@@ -24,6 +24,44 @@ void Expect(bool ok, const char *msg)
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--scratch-metadata-only") {
+    using namespace cutum;
+    UBlockWorld scratch;
+    const auto baseline=scratch.GetChunkManager().GetMetadataAllocationSnapshot();
+    size_t full=0;
+    {
+      UPopulationScratchBudget scope(scratch.GetChunkManager(),{});
+      for(int n=0;n<64;++n) scratch.SetBlock({n*CHUNK_SIZE,-40,0},BLOCK_AIR);
+      full=scratch.GetChunkManager().GetMetadataAllocationSnapshot().live_bytes;
+    }
+    const auto after=scratch.GetChunkManager().GetMetadataAllocationSnapshot();
+    std::cout << "scratch_metadata baseline=" << baseline.live_bytes << " full=" << full
+        << " after=" << after.live_bytes << std::endl;
+    Expect(full>baseline.live_bytes && after.live_bytes==baseline.live_bytes,
+        "generation scope releases retained scratch container capacity");
+    for(int cycle=0;cycle<32;++cycle) {
+      {UPopulationScratchBudget scope(scratch.GetChunkManager(),{});
+       for(int n=0;n<64;++n) scratch.SetBlock({n*CHUNK_SIZE,-40,cycle*CHUNK_SIZE},BLOCK_AIR);}
+      Expect(scratch.GetChunkManager().GetMetadataAllocationSnapshot().live_bytes==baseline.live_bytes,
+          "repeated generation scopes return metadata to fresh baseline");
+    }
+    UChunkManager destination;
+    destination.SetBlock({1,1,1},8);
+    auto old_resource=destination.GetMetadataAllocationResource();
+    {
+      auto source=std::make_unique<UChunkManager>(); source->SetBlock({-17,-40,3},9);
+      UChunkManager moved(std::move(*source)); source.reset();
+      Expect(moved.GetBlock({-17,-40,3})==9 && moved.GetMetadataAllocationSnapshot().live_bytes>baseline.live_bytes,
+          "moved container resource survives source destruction");
+      destination=std::move(moved);
+    }
+    Expect(destination.GetBlock({-17,-40,3})==9 && old_resource->GetSnapshot().live_bytes==0,
+        "move assignment releases old allocator family and preserves new payload");
+    destination.Clear(); destination.ReleaseEmptyMetadataStorage();
+    Expect(destination.GetMetadataAllocationSnapshot().live_bytes==baseline.live_bytes,
+        "moved metadata allocation family returns to empty baseline");
+    std::cout << "scratch metadata allocation PASS" << std::endl; return 0;
+  }
   if(argc>1 && std::string(argv[1])=="--scratch-budget-only") {
     using namespace cutum;
     auto budget=std::make_shared<UBufferAllocationBudget>(256*1024);

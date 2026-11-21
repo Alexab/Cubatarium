@@ -12,20 +12,24 @@ class UPopulationScratchBudget
 {
 public:
   UPopulationScratchBudget(UChunkManager &manager,BufferBudgetContext context)
-      : Manager(manager),Context(std::move(context))
+      : Manager(manager),Context(std::move(context)),Metadata(manager.GetMetadataAllocationResource())
   {
     if(Manager.GetResidentChunkCount()!=0 || Manager.GetFreeListSize()!=0)
       throw std::logic_error("Population scratch budget requires a cleared manager");
-    Manager.SetBeforeChunkAllocationFn([this] {
-      if(!Context.budget) return;
-      constexpr size_t bytes=sizeof(UChunk)+sizeof(SectionLightField);
-      Context.budget->Reserve(*Context.job,bytes);
-      Credit+=bytes;
-    });
+    try {
+      Manager.SetBeforeChunkAllocationFn([this] {Reserve(sizeof(UChunk)+sizeof(SectionLightField));});
+      Metadata->SetBeforeAllocationFn([this](size_t bytes) {Reserve(bytes);});
+    } catch(...) {
+      Manager.SetBeforeChunkAllocationFn({}); Metadata->SetBeforeAllocationFn({}); throw;
+    }
   }
   ~UPopulationScratchBudget() {
     Manager.SetBeforeChunkAllocationFn({});
+    Metadata->SetBeforeAllocationFn({});
     Manager.Clear();
+    // Fresh empty sentinels are fixed manager overhead, not active-job debt.
+    // Reset after detaching quota callbacks so recovery cannot refuse itself.
+    Manager.ReleaseEmptyMetadataStorage();
     if(Context.budget && Credit) Context.budget->Release(*Context.job,Credit);
   }
   UPopulationScratchBudget(const UPopulationScratchBudget &)=delete;
@@ -33,6 +37,11 @@ public:
 private:
   UChunkManager &Manager;
   BufferBudgetContext Context;
+  std::shared_ptr<UConcurrentAllocationCountingResource> Metadata;
   size_t Credit{0};
+  void Reserve(size_t bytes) {
+    if(!Context.budget) return;
+    Context.budget->Reserve(*Context.job,bytes); Credit+=bytes;
+  }
 };
 } // namespace cutum

@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.scratch-metadata-admission",
+      "status": "SCOPED_PASS_OTHER_ACTIVE_HEAP_OPEN",
+      "receipt": "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
+      "scope": "All9 ChunkManager metadata containers allocate through shared-owner counted allocator:6 coordinate maps,1 coordinate set,scan deque,free-list vector. Generation-only counter callback reserves shared budget before actual allocator request. Scope detaches callbacks before cleanup, clears payloads, then releases empty container high-water storage with same allocator before credit release. Fresh empty sentinel storage is fixed manager overhead outside active-job charge. Ordinary live-world Clear retention policy remains unchanged. Allocator move copies resource ownership and propagation traits keep allocator families valid through move/swap."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.scratch-payload-admission",
       "status": "SCOPED_PASS_OTHER_ACTIVE_HEAP_OPEN",
       "receipt": "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",

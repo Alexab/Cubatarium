@@ -5,6 +5,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/LoadedAirSlice.h"
 #include "World/Math/BlockTypes.h"
+#include "Core/Memory/SharedCountingAllocator.h"
 #include <deque>
 #include <functional>
 #include <glm/glm.hpp>
@@ -33,6 +34,11 @@ struct ChunkGenerationToken;
 class UChunkManager
 {
 public:
+  std::shared_ptr<UConcurrentAllocationCountingResource> GetMetadataAllocationResource() const
+  {return Chunks.get_allocator().resource;}
+  UAllocationCountingResource::Snapshot GetMetadataAllocationSnapshot() const
+  {return GetMetadataAllocationResource()->GetSnapshot();}
+  void ReleaseEmptyMetadataStorage();
   BlockId GetBlock(glm::ivec3 worldPos) const;
   /// Phase 4: Unloaded ≠ AIR for raycast/place contracts.
   BlockQueryResult QueryBlock(glm::ivec3 worldPos) const;
@@ -211,22 +217,27 @@ private:
   std::shared_ptr<uint64_t> InputRevision{std::make_shared<uint64_t>(0)};
   std::shared_ptr<uint64_t> GeometryInputRevision{
       std::make_shared<uint64_t>(0)};
-  std::unordered_map<glm::ivec3, std::unique_ptr<UChunk>, IVec3Hash> Chunks;
-  std::unordered_map<glm::ivec3, std::shared_ptr<SectionLightField>, IVec3Hash>
-      LightFields;
-  std::unordered_map<glm::ivec3, LoadedAirSlice, IVec3Hash> LoadedAirSlices;
+  std::shared_ptr<UConcurrentAllocationCountingResource> MetadataMemory{
+      std::make_shared<UConcurrentAllocationCountingResource>()};
+  template<class T> using ColumnMap=std::unordered_map<glm::ivec3,T,IVec3Hash,
+      std::equal_to<glm::ivec3>,USharedCountingAllocator<std::pair<const glm::ivec3,T>>>;
+  ColumnMap<std::unique_ptr<UChunk>> Chunks{ColumnMap<std::unique_ptr<UChunk>>::allocator_type{MetadataMemory}};
+  ColumnMap<std::shared_ptr<SectionLightField>> LightFields{ColumnMap<std::shared_ptr<SectionLightField>>::allocator_type{MetadataMemory}};
+  ColumnMap<LoadedAirSlice> LoadedAirSlices{ColumnMap<LoadedAirSlice>::allocator_type{MetadataMemory}};
   struct DecodedTerrainOwner
   {
     bool geometry{false};
     uint64_t incarnation{0};
   };
-  std::unordered_map<glm::ivec3, DecodedTerrainOwner, IVec3Hash>
-      DecodedTerrainSlices;
-  std::unordered_set<glm::ivec3, IVec3Hash> UnresolvedTerrainColumnReads;
-  std::deque<std::pair<glm::ivec3, uint64_t>> AbsentLightFieldScan;
-  std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnChunkCounts;
-  std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnTerrainCounts;
-  std::vector<std::unique_ptr<UChunk>> FreeList;
+  ColumnMap<DecodedTerrainOwner> DecodedTerrainSlices{ColumnMap<DecodedTerrainOwner>::allocator_type{MetadataMemory}};
+  using ColumnSet=std::unordered_set<glm::ivec3,IVec3Hash,std::equal_to<glm::ivec3>,USharedCountingAllocator<glm::ivec3>>;
+  ColumnSet UnresolvedTerrainColumnReads{ColumnSet::allocator_type{MetadataMemory}};
+  using LightScan=std::deque<std::pair<glm::ivec3,uint64_t>,USharedCountingAllocator<std::pair<glm::ivec3,uint64_t>>>;
+  LightScan AbsentLightFieldScan{LightScan::allocator_type{MetadataMemory}};
+  ColumnMap<size_t> ResidentColumnChunkCounts{ColumnMap<size_t>::allocator_type{MetadataMemory}};
+  ColumnMap<size_t> ResidentColumnTerrainCounts{ColumnMap<size_t>::allocator_type{MetadataMemory}};
+  using RecycleList=std::vector<std::unique_ptr<UChunk>,USharedCountingAllocator<std::unique_ptr<UChunk>>>;
+  RecycleList FreeList{RecycleList::allocator_type{MetadataMemory}};
   size_t MaxFreeListChunks{256};
   std::function<void()> BeforeChunkAllocation;
 };

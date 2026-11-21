@@ -733,6 +733,7 @@
           "coarse_lake_evidence": "build/desktop-msvc/s4-coarse-lake-memo-acceptance-20261121.json",
           "configuration_text_evidence": "build/desktop-msvc/s4-config-text-acceptance-20261121.json",
           "scratch_payload_evidence": "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
+          "scratch_metadata_evidence": "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
           "producer_envelope": "S4_02_Q09_PRODUCER_ENVELOPE_2026_11_21.json"
         },
         {

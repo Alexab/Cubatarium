@@ -4,9 +4,28 @@
 #include "World/Math/GridMath.h"
 #include <algorithm>
 #include <vector>
+#include <stdexcept>
 
 namespace cutum
 {
+
+void UChunkManager::ReleaseEmptyMetadataStorage()
+{
+  if(!Chunks.empty() || !LightFields.empty() || !LoadedAirSlices.empty() ||
+      !DecodedTerrainSlices.empty() || !UnresolvedTerrainColumnReads.empty() ||
+      !AbsentLightFieldScan.empty() || !ResidentColumnChunkCounts.empty() ||
+      !ResidentColumnTerrainCounts.empty() || !FreeList.empty())
+    throw std::logic_error("Metadata storage release requires cleared chunk manager");
+  const auto release=[](auto &storage) {
+    using Storage=std::decay_t<decltype(storage)>;
+    Storage empty(storage.get_allocator());
+    storage.swap(empty);
+  };
+  release(Chunks); release(LightFields); release(LoadedAirSlices);
+  release(DecodedTerrainSlices); release(UnresolvedTerrainColumnReads);
+  release(AbsentLightFieldScan); release(ResidentColumnChunkCounts);
+  release(ResidentColumnTerrainCounts); release(FreeList);
+}
 
 glm::ivec3 UChunkManager::WorldToChunk(glm::ivec3 worldPos)
 {
