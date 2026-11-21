@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.admission-settings-before-copy",
+      "status": "SCOPED_PASS_ALGORITHM_TEMPORARIES_OPEN",
+      "receipt": "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json",
+      "scope": "Owner-thread settings admission reserves both immutable snapshot and future worker text before constructing the first snapshot. Current MSVC fresh-copy size/rounding envelope ignores caller excess capacity; post-copy accounting uses actual external capacities. Move-only reservation declared before settings value releases after string destruction and unwinds on constructor failure. Explicit WorkerInput owner-before-value member order retains reservation through actual worker-request destruction independently of lambda capture order."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.active-settings-text-copies",
       "status": "SCOPED_PASS_ALGORITHM_TEMPORARIES_OPEN",
       "receipt": "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json",

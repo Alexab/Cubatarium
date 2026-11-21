@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -21,9 +21,10 @@
       "id": "E02",
       "owner": "Immutable input settings",
       "status": "PROPERTY_ACCEPTED",
-      "bound_or_observation": "16MiB base with explicit largest-single-input floor; shared snapshot and moved worker copy charged through owner lifetime. Does not include arbitrary active helper copies.",
+      "bound_or_observation": "16MiB base with explicit largest-single-input floor; shared snapshot and moved worker copy charged through owner lifetime. Does not include arbitrary active helper copies. Admission now pre-reserves fresh snapshot plus worker copy before first text allocation; owner-before-value member order protects both snapshot and worker destruction. Excess caller reserve capacity does not raise the input floor on verified MSVC.",
       "evidence": [
-        "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json"
+        "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json",
+        "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json"
       ]
     },
     {
@@ -100,7 +101,7 @@
       "id": "E10",
       "owner": "Active-job heap scratch and transient settings",
       "status": "PARTIAL_SCRATCH_AND_ACTIVE_SETTINGS_TEXT_ACCEPTED",
-      "bound_or_observation": "Dense scratch chunk payload and9 metadata container allocation requests pre-reserve shared budget; field allocate_shared exact nodes now separately charged through last strong/weak allocation owner (5056bytes measured). Metadata cleanup returns1240-byte fixed baseline; resource roots/upstream bookkeeping separate. Identified local/context/selector/private-sampler external text copies now pre-reserve active generation budget and release after actual copy text lifetime; source-capacity bounds checked on current STL.",
+      "bound_or_observation": "Dense scratch chunk payload and9 metadata container allocation requests pre-reserve shared budget; field allocate_shared exact nodes now separately charged through last strong/weak allocation owner (5056bytes measured). Metadata cleanup returns1240-byte fixed baseline; resource roots/upstream bookkeeping separate. Identified local/context/selector/private-sampler external text copies now pre-reserve active generation budget and release after actual copy text lifetime; source-capacity bounds checked on current STL. Original admission-candidate exclusion is now closed by pre-copy reservation; remaining algorithm temporaries are still open.",
       "evidence": [
         "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
         "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
@@ -108,11 +109,11 @@
         "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
         "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
         "build/desktop-msvc/s4-context-transfer-acceptance-20261121.json",
-        "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json"
+        "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json",
+        "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json"
       ],
       "remaining": [
         "Account remaining algorithm temporary containers and stage/resolve-derived helper strings using source-specific data-dependent envelopes; preserve legitimate-input floors.",
-        "Compose single owner-thread admission candidate settings snapshot with input-floor bounds; original settings-byte receipt explicitly excludes this temporary.",
         "Compose fixed copy-wrapper/context/field/resource/allocator-root overhead in E12; do not infer total RSS from requested payload counters."
       ]
     },

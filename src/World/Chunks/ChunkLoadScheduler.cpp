@@ -37,6 +37,29 @@ size_t SettingsStringCharge(const ProceduralSettings &settings)
   return charge;
 }
 
+size_t FreshSettingsTextBound(const ProceduralSettings &settings)
+{
+  size_t bytes=0;
+  const size_t inline_capacity=std::string{}.capacity();
+  for(const auto *value:{&settings.SeedText,&settings.WorldGenPackId,&settings.WorldGenPresetId}) {
+    if(value->size()<=inline_capacity) continue;
+    // MSVC xstring::_Construct starts from SSO and _Calculate_growth rounds
+    // char capacity with mask15. It copies size(), never caller reserve().
+#ifdef _MSVC_STL_VERSION
+    const size_t capacity=value->size()|size_t{15};
+    if(capacity==std::numeric_limits<size_t>::max()) return capacity;
+    const size_t next=capacity+1;
+#else
+    // Conservative fresh-copy envelope for the other supported desktop STLs.
+    if(value->size()>=std::numeric_limits<size_t>::max()/2) return std::numeric_limits<size_t>::max();
+    const size_t next=2*(value->size()+1);
+#endif
+    if(next>std::numeric_limits<size_t>::max()-bytes) return std::numeric_limits<size_t>::max();
+    bytes+=next;
+  }
+  return bytes;
+}
+
 bool IsWorldColumnSourceTraceEnabled()
 {
   return WorldColumnSourceTraceEnabled();
@@ -160,21 +183,32 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
     ++CapacityRefused;
     return false;
   }
-  auto owned=std::make_shared<OwnedSettings>(settings);
   const size_t fixed=sizeof(OwnedSettings)+sizeof(ProceduralSettings);
+  const size_t text_bound=FreshSettingsTextBound(settings);
+  if(text_bound>(std::numeric_limits<size_t>::max()-fixed)/2) return false;
+  // Both snapshot and future worker copy are covered before the first copy.
+  const size_t initial=fixed+2*text_bound;
+  auto reserve=[&](size_t total, size_t additional) {
+    SettingsBudget->largest_single=std::max(SettingsBudget->largest_single,total);
+    size_t used=SettingsBudget->used.load(std::memory_order_relaxed);
+    do {
+      const size_t limit=SettingsPayloadLimit();
+      if(used>limit || additional>limit-used) { ++CapacityRefused; return false; }
+    } while(!SettingsBudget->used.compare_exchange_weak(used,used+additional,std::memory_order_relaxed));
+    size_t peak=SettingsBudget->peak.load(std::memory_order_relaxed);
+    while(peak<used+additional && !SettingsBudget->peak.compare_exchange_weak(
+        peak,used+additional,std::memory_order_relaxed)) {}
+    return true;
+  };
+  if(!reserve(initial,initial)) return false;
+  SettingsReservation credit(SettingsBudget,initial);
+  auto owned=std::make_shared<OwnedSettings>(settings,std::move(credit));
   const size_t strings=SettingsStringCharge(owned->value);
   if(strings>(std::numeric_limits<size_t>::max()-fixed)/2) return false;
   const size_t charge=fixed+2*strings; // immutable snapshot and one worker value copy
-  SettingsBudget->largest_single=std::max(SettingsBudget->largest_single,charge);
-  size_t used=SettingsBudget->used.load(std::memory_order_relaxed);
-  do {
-    const size_t limit=SettingsPayloadLimit();
-    if(used>limit || charge>limit-used) { ++CapacityRefused; return false; }
-  } while(!SettingsBudget->used.compare_exchange_weak(used,used+charge,std::memory_order_relaxed));
-  owned->budget=SettingsBudget; owned->charge=charge;
-  size_t peak=SettingsBudget->peak.load(std::memory_order_relaxed);
-  while(peak<used+charge && !SettingsBudget->peak.compare_exchange_weak(
-      peak,used+charge,std::memory_order_relaxed)) {}
+  if(charge>initial && !reserve(charge,charge-initial)) return false;
+  if(charge<initial) SettingsBudget->used.fetch_sub(initial-charge,std::memory_order_relaxed);
+  owned->reservation.charge=charge;
   PendingRequest pending;
   pending.coord = coord;
   pending.requestId = IsWorldColumnSourceTraceEnabled()
@@ -437,7 +471,15 @@ bool UChunkLoadScheduler::ScheduleWorker(
     ~WorkSlotGuard() { UPipelineAdmission::Get().ReleaseWorkSlot(); }
   };
   auto work_slot = std::allocate_shared<WorkSlotGuard>(USharedCountingAllocator<WorkSlotGuard>{ControlMemory});
-  ChunkPopulateRequest populateRequest;
+  struct WorkerInput
+  {
+    // This member order, unlike lambda capture order, guarantees that settings
+    // credit outlives the actual worker copy even if every other owner retires.
+    std::shared_ptr<const OwnedSettings> owner;
+    ChunkPopulateRequest value;
+  };
+  WorkerInput worker_input{request.settings,{}};
+  auto &populateRequest=worker_input.value;
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
   populateRequest.settings = request.settings->value;
@@ -461,7 +503,7 @@ bool UChunkLoadScheduler::ScheduleWorker(
   const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
   const std::size_t worker_count = Pool.GetWorkerCount();
   auto worker =
-      [this, populateRequest = std::move(populateRequest), settings_owner = request.settings,
+      [this, worker_input = std::move(worker_input),
        retry_request=request, buffer_budget=BufferBudget, control_memory=ControlMemory,
        requested_at, scheduled_at, priority,
        request_id, demand_id,
@@ -470,6 +512,7 @@ bool UChunkLoadScheduler::ScheduleWorker(
        worker_active_at_submit, worker_count,
        generation_start_cap_per_frame, work_slot = std::move(work_slot), result_slot]() mutable
       {
+        auto &populateRequest=worker_input.value;
         PendingResult pending;
         pending.resultSlot = result_slot;
         pending.requestId = request_id;

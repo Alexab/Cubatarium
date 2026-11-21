@@ -2826,6 +2826,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         scheduler.SetMetadataCapacity(2048);
         require(scheduler.SettingsPayloadBytes()==0,"settings leases release after all preceding owners retire");
         auto byte_settings=long_settings; byte_settings.SeedText=std::string(8192,'b');
+        const auto copies_before=scheduler.SettingsBudget->snapshots_created.load();
         size_t byte_admitted=0;
         glm::ivec3 byte_refused(0);
         for(size_t n=0;n<=UChunkLoadScheduler::kMaxActiveGenerationRequests;++n) {
@@ -2834,6 +2835,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           ++byte_admitted;
         }
         const auto charged_before=scheduler.SettingsPayloadBytes();
+        const auto copies_for_admission=scheduler.SettingsBudget->snapshots_created.load()-copies_before;
+        const bool refusal_before_copy=copies_for_admission==byte_admitted;
         const auto normal_byte_peak=scheduler.SettingsPayloadPeak();
         const auto *first_snapshot=scheduler.QueuedRequests.at({7000,0,0}).settings.get();
         const bool byte_refusal=byte_admitted>0 && byte_admitted<1024 &&
@@ -2878,6 +2881,44 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             terrain.GetBlock({byte_refused.x*CHUNK_SIZE+8,-40,8})==8;
         scheduler.CancelAllPending();
         const bool byte_released=scheduler.SettingsPayloadBytes()==0;
+        auto spare_settings=byte_settings;
+        spare_settings.SeedText.reserve(UChunkLoadScheduler::kSettingsPayloadBudget*2);
+        const auto external_text=[](const ProceduralSettings &s) {
+          size_t bytes=0;
+          for(const auto *text:{&s.SeedText,&s.WorldGenPackId,&s.WorldGenPresetId}) {
+            const auto data=reinterpret_cast<uintptr_t>(text->data());
+            const auto object=reinterpret_cast<uintptr_t>(text);
+            if(data<object || data-object>=sizeof(*text)) bytes+=text->capacity()+1;
+          }
+          return bytes;
+        };
+        bool canonical_charge=true,caller_capacity_ignored=true;
+        size_t boundary_cases=0;
+        for(const size_t length:{0u,1u,15u,16u,17u,31u,32u,47u,48u,255u,256u,65536u}) {
+          spare_settings.SeedText.assign(length,'s');
+          spare_settings.WorldGenPackId.assign(length,'p');
+          spare_settings.WorldGenPresetId.assign(length,'r');
+          const ProceduralSettings canonical(spare_settings);
+          const auto before=scheduler.SettingsBudget->snapshots_created.load();
+          const bool accepted=scheduler.RequestLoad({8999,0,0},0,spare_settings);
+          if(accepted) {
+            const auto &snapshot=*scheduler.QueuedRequests.at({8999,0,0}).settings;
+            const size_t expected=sizeof(UChunkLoadScheduler::OwnedSettings)+sizeof(ProceduralSettings)+
+                2*external_text(canonical);
+            canonical_charge=canonical_charge && snapshot.value.SeedText==canonical.SeedText &&
+                snapshot.value.WorldGenPackId==canonical.WorldGenPackId &&
+                snapshot.value.WorldGenPresetId==canonical.WorldGenPresetId &&
+                external_text(snapshot.value)==external_text(canonical) &&
+                snapshot.reservation.charge==expected && scheduler.SettingsPayloadBytes()==expected &&
+                scheduler.SettingsBudget->snapshots_created.load()==before+1;
+          }
+          caller_capacity_ignored=caller_capacity_ignored && accepted &&
+              scheduler.SettingsPayloadLimit()==UChunkLoadScheduler::kSettingsPayloadBudget &&
+              spare_settings.SeedText.capacity()>=UChunkLoadScheduler::kSettingsPayloadBudget*2;
+          scheduler.Cancel({8999,0,0});
+          canonical_charge=canonical_charge && scheduler.SettingsPayloadBytes()==0;
+          ++boundary_cases;
+        }
         auto oversized=byte_settings;
         oversized.SeedText=std::string(UChunkLoadScheduler::kSettingsPayloadBudget/2+128,'h');
         const bool oversized_first=scheduler.RequestLoad({9000,0,0},0,oversized);
@@ -2890,12 +2931,15 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         scheduler.CancelAllPending();
         report["generation_settings_bytes"]={{"base_budget",UChunkLoadScheduler::kSettingsPayloadBudget},
             {"accepted_before_byte_refusal",byte_admitted},{"normal_peak_charge",normal_byte_peak},
+            {"snapshots_created",copies_for_admission},{"refusal_before_copy",refusal_before_copy},
+            {"copy_boundary_cases",boundary_cases},{"canonical_capacity_charge",canonical_charge},
+            {"caller_spare_capacity_ignored",caller_capacity_ignored},
             {"refusal_without_owner",byte_refusal},{"same_snapshot_merge",byte_merge},
             {"cancelled_worker_holds_charge",running_holds},{"normal_producer_readmission",byte_readmitted},
             {"actual_successor",byte_installed},{"normal_reset_releases",byte_released},
             {"one_oversized_request_floor",single_floor},{"oversized_reentry",oversized_reentry},
             {"oversized_limit",oversized_limit},{"final_charge",scheduler.SettingsPayloadBytes()}};
-        require(byte_refusal && byte_merge && running_holds && byte_readmitted && byte_installed &&
+        require(canonical_charge && caller_capacity_ignored && refusal_before_copy && byte_refusal && byte_merge && running_holds && byte_readmitted && byte_installed &&
             byte_released && single_floor && oversized_reentry && scheduler.SettingsPayloadBytes()==0,
             "settings payload budget retains exact demand through pending worker and normal replay");
         report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},

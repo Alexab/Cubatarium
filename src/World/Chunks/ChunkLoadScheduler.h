@@ -118,15 +118,28 @@ private:
   struct SettingsBudgetState
   {
     std::atomic<size_t> used{0},peak{0};
+    std::atomic<size_t> snapshots_created{0};
     size_t largest_single{0}; // owner thread; no worker writes this limit
+  };
+  struct SettingsReservation
+  {
+    std::shared_ptr<SettingsBudgetState> budget;
+    size_t charge{0};
+    SettingsReservation(std::shared_ptr<SettingsBudgetState> owner, size_t bytes)
+        : budget(std::move(owner)), charge(bytes) {}
+    SettingsReservation(SettingsReservation &&other) noexcept
+        : budget(std::move(other.budget)), charge(other.charge) {}
+    SettingsReservation(const SettingsReservation &) = delete;
+    ~SettingsReservation() { if(budget) budget->used.fetch_sub(charge,std::memory_order_relaxed); }
   };
   struct OwnedSettings
   {
-    explicit OwnedSettings(const ProceduralSettings &source) : value(source) {}
+    // Reverse member destruction frees text before publishing available credit.
+    SettingsReservation reservation;
     ProceduralSettings value;
-    std::shared_ptr<SettingsBudgetState> budget;
-    size_t charge{0};
-    ~OwnedSettings() { if(budget) budget->used.fetch_sub(charge,std::memory_order_relaxed); }
+    OwnedSettings(const ProceduralSettings &source, SettingsReservation credit)
+        : reservation(std::move(credit)), value(source)
+    { reservation.budget->snapshots_created.fetch_add(1,std::memory_order_relaxed); }
   };
   struct PendingRequest
   {

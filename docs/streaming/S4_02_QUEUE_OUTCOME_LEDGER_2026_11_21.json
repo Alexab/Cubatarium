@@ -713,7 +713,7 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Count/lifetime/settings admission and metadata accounting accepted. Actual UChunkBuffer allocation ownership now stable through deep copy/move/vector/Ready requeue/stale/apply; native8 Ready41664 bytes ->exact1 release ->0 after install. Capture/negative-height/fluid IO and scoped existing tree-boundary/rank checks PASS; full vegetation ecology precondition FAIL retained S6.05. Compute/Ready buffer byte enforcement now scoped PASS: shared128MiB base/explicit sole-job floor; actual preallocation refusal, exact automatic retry, cancellation/new-owner, oversized floor and final release verified. Queue/control/worker/Tick/memo/idle-configuration owners now property-accepted in the linked producer envelope. Remaining E10 active scratch/transient settings, E11 catalog payloads and E12 platform/S6 process-memory dependency stay OPEN.",
+          "partial_result": "Count/lifetime/settings admission and metadata accounting accepted. Actual UChunkBuffer allocation ownership now stable through deep copy/move/vector/Ready requeue/stale/apply; native8 Ready41664 bytes ->exact1 release ->0 after install. Capture/negative-height/fluid IO and scoped existing tree-boundary/rank checks PASS; full vegetation ecology precondition FAIL retained S6.05. Compute/Ready buffer byte enforcement now scoped PASS: shared128MiB base/explicit sole-job floor; actual preallocation refusal, exact automatic retry, cancellation/new-owner, oversized floor and final release verified. Queue/control/worker/Tick/memo/idle-configuration owners now property-accepted in the linked producer envelope. Remaining E10 active scratch/transient settings, E11 catalog payloads and E12 platform/S6 process-memory dependency stay OPEN. Admission candidate now pre-reserved before copy:952 accepted/952 actual snapshots,12 canonical-capacity boundaries,32MiB caller spare capacity ignored, gated cancellation/replay/oversized/final0 PASS. Owner-before-value struct members retain credit through actual snapshot and worker strings destruction; E10 algorithm temporaries still OPEN.",
           "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
           "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
           "token_retirement_evidence": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",
@@ -737,7 +737,8 @@
           "scratch_field_evidence": "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
           "context_transfer_evidence": "build/desktop-msvc/s4-context-transfer-acceptance-20261121.json",
           "active_settings_text_evidence": "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json",
-          "producer_envelope": "S4_02_Q09_PRODUCER_ENVELOPE_2026_11_21.json"
+          "producer_envelope": "S4_02_Q09_PRODUCER_ENVELOPE_2026_11_21.json",
+          "admission_settings_evidence": "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",
