@@ -635,6 +635,51 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           require(current,"new terrain after actual UWorld teardown publishes current mesh");
         }
       }
+      {
+        struct FifoDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~FifoDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({8,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({8,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({8,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        fifo.EnqueueTerrainColumnRelight(0,0,false,-48,-33,"q08_column_negative",&fifo_world);
+        fifo.EnqueueTerrainColumnRelight(0,0,true,16,31,"q08_column_positive",&fifo_world);
+        fifo.PromoteTerrainColumnRelight({0,0});
+        fifo.PromoteTerrainColumnRelight({0,0});
+        const auto info=fifo.GetTerrainColumnRelightQueueInfo({0,0});
+        const bool exact=info.keyed && info.priority && info.in_deque && info.y_band_defined &&
+            info.min_world_y==-48 && info.max_world_y==31 &&
+            fifo.GetPendingTerrainColumnRelightCount()==1;
+        require(exact,"column FIFO coalescing/promotion preserves signed union exactly once");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,1,0},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        report["relight_fifo_column_band"]={{"exact_signed_union",exact},
+            {"negative_and_positive_installed",installed()},
+            {"pending",fifo.GetPendingTerrainColumnRelightCount()}};
+        require(installed(),"actual FIFO consumer installs current light in both signed bands");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

@@ -338,7 +338,41 @@
       "id": "Q08-C1",
       "queue": "Q08",
       "status": "CHECK",
-      "required_result": "FIFO admission refusal/promotion/coalescing preserves exact signed Y band for column/player/boundary/draw-gate/FirstMesh requests, then actual light install completes."
+      "required_result": "FIFO admission refusal/promotion/coalescing preserves exact signed Y band for column/player/boundary/draw-gate/FirstMesh requests, then actual light install completes.",
+      "subcases": [
+        {
+          "id": "Q08-C1.COLUMN",
+          "status": "REUSE",
+          "scope": "Actual isolated Full CPU UWorld profile[-48,31], resident sectionsY-40/+24. Normal column enqueue[-48,-33], priority enqueue[16,31], repeated Promote: one exact signed[-48,31] priority key/deque. Real FIFO drain installs current sampling certificates for both requested sections and pending0.",
+          "evidence": "build/desktop-msvc/s4-fifo-column-band-acceptance-20261121.json",
+          "coverage_note": "No pressure refusal/deferred admission, PLAYER/BOUNDARY/DRAW_GATE/FIRST_MESH producer acceptance from this case. S3 solver correctness/worker cancellation reused only at exact transport properties. Full scoped calculation fixture within outer Flat CPU startup session, no Full framebuffer or GPU solver claim. Q08-C2 trim/reset and LIMIT-C1 memory bounds remain separate."
+        },
+        {
+          "id": "Q08-C1.PRESSURE",
+          "status": "CHECK",
+          "scope": "Actual FIFO backpressure admission refusal retains signed band in deferred owner; re-admission installs current target without new ingress."
+        },
+        {
+          "id": "Q08-C1.PLAYER",
+          "status": "CHECK",
+          "scope": "Player position coalescing/admission preserves requested signed vertical work through actual light install."
+        },
+        {
+          "id": "Q08-C1.BOUNDARY",
+          "status": "CHECK",
+          "scope": "Boundary dependency producer preserves exact signed band and bypasses only correct no-op guard; actual install."
+        },
+        {
+          "id": "Q08-C1.DRAW_GATE",
+          "status": "CHECK",
+          "scope": "Visible draw-gate admission/coalescing retains exact signed target band through actual capture/install."
+        },
+        {
+          "id": "Q08-C1.FIRST_MESH",
+          "status": "CHECK",
+          "scope": "FirstMesh exact signed band survives surface-range selection/coalescing through actual install."
+        }
+      ]
     },
     {
       "id": "Q08-C2",
@@ -478,5 +512,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2 GPU lifecycle/newer CPU/GPU/field ownership accepted with property-specific composition and limits. 9 CHECK groups/21 REUSE groups/1 disabled path. Next Q08-C1 signed Y-band FIFO admission/promotion/coalescing and actual light install. Full S4.02/S0..S6 OPEN."
+  "checkpoint": "Q08-C1.COLUMN coalescing/promotion and actual signed target install accepted. Next PRESSURE backpressure/deferred re-admission, then PLAYER/BOUNDARY/DRAW_GATE/FIRST_MESH. Top-level9 CHECK groups; full scope OPEN."
 }
