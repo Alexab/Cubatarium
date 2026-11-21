@@ -4,13 +4,44 @@
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnVisualState.h"
+#include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/VisualObligationPolicy.h"
 #include <cstdint>
+#include <array>
+#include <algorithm>
 #include <glm/glm.hpp>
 #include <unordered_map>
 
 namespace cutum
 {
+// Admission intent belongs to the world record, not an overflow work queue.
+// Each kind has one losslessly coalesced scope; accepting a ticket transfers
+// just that kind to its executable admission owner.
+struct ColumnFlowIntent
+{
+  bool pending{false};
+  int cy{kColumnWorkWholeRemeshBandCy};
+  int priority{0};
+  bool scan_full_focus{false};
+
+  void Merge(const ColumnWorkItem &item)
+  {
+    if (!pending)
+    {
+      cy = item.cy;
+      priority = item.priority;
+      scan_full_focus = item.scan_full_focus;
+    }
+    else
+    {
+      if (cy != item.cy)
+        cy = kColumnWorkWholeColumnCy;
+      priority = std::max(priority, item.priority);
+      scan_full_focus = scan_full_focus || item.scan_full_focus;
+    }
+    pending = true;
+  }
+};
 
 /// Published draw residency (independent of pending replacement work).
 struct ColumnPublishedState
@@ -44,6 +75,7 @@ struct ColumnDebtState
 /// Dual-written with legacy ColumnEmergeStates until cutover.
 struct ColumnRecord
 {
+  std::array<ColumnFlowIntent, 4> flow_intent{};
   ColumnEmergeState emerge{ColumnEmergeState::Empty};
   ColumnDesiredStage desired{ColumnDesiredStage::None};
   uint32_t content_rev{0};

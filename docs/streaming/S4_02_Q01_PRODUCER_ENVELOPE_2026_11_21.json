@@ -422,7 +422,9 @@
         "src/World/Streaming/ColumnFlowScheduler.cpp",
         "src/World/Streaming/ColumnFlowExecutor.cpp"
       ],
-      "status": "OPEN"
+      "status": "OPEN",
+      "wip": "Fixed per-kind ColumnRecord retained-intent slots and lossless scope merge implemented; local Release storage tests PASS. No producer/admission/replay connection yet. Per-record overhead/cardinality must be budgeted; cap not installed.",
+      "local_evidence": "build/desktop-msvc/s4-flow-intent-test-20261121.log"
     },
     {
       "id": "Q01.L2",

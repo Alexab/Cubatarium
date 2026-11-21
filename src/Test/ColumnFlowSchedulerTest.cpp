@@ -1,6 +1,7 @@
 #include "World/Streaming/ColumnFlowScheduler.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRenderablePolicy.h"
+#include "World/Streaming/ColumnRecord.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -30,6 +31,30 @@ int main()
   using cutum::UColumnFlowScheduler;
 
   UColumnFlowScheduler s;
+  {
+    cutum::UColumnRecordStore records;
+    const glm::ivec2 column{-7,9};
+    auto &record=records.GetOrCreate(column);
+    ColumnWorkItem a{}; a.cy=-3; a.priority=90; a.scan_full_focus=true;
+    auto b=a; b.cy=2; b.priority=20; b.scan_full_focus=false;
+    auto &intent=record.flow_intent[static_cast<size_t>(ColumnWorkKind::FirstMesh)];
+    intent.Merge(a); intent.Merge(b);
+    Expect(intent.pending && intent.cy==cutum::kColumnWorkWholeColumnCy &&
+        intent.priority==90 && intent.scan_full_focus,"world intent retains both signed scopes and urgency");
+    auto &relight=record.flow_intent[static_cast<size_t>(ColumnWorkKind::RelightThenMesh)];
+    relight.Merge(a);
+    intent={};
+    Expect(!intent.pending && relight.pending,"admitting one kind preserves another pending intent");
+    for(int n=0;n<10000;++n) relight.Merge(b);
+    Expect(records.Size()==1,"repeated admission intent does not allocate overflow entries");
+    records.Erase(column);
+    const auto &replacement=records.GetOrCreate(column);
+    bool empty=true;
+    for(const auto &item:replacement.flow_intent) empty=empty && !item.pending;
+    Expect(empty,"column retirement does not transfer old intent to replacement");
+    records.Clear();
+    Expect(records.Size()==0,"world clear retires admission intent with record");
+  }
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 10);
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // refresh urgency
   Expect(s.Size() == 1, "same column+kind refreshes to one live ticket");
