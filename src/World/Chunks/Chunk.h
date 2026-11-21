@@ -2,6 +2,7 @@
 #define CHUNK_H
 
 #include "World/Lighting/SectionLightField.h"
+#include "Core/Memory/ScopedSharedAllocation.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include <array>
@@ -149,10 +150,10 @@ private:
   struct LightFieldBinding
   {
     std::shared_ptr<SectionLightField> field{
-        std::make_shared<SectionLightField>()};
+        MakeScopedShared<SectionLightField>()};
     LightFieldBinding() = default;
     LightFieldBinding(const LightFieldBinding &other)
-        : field(std::make_shared<SectionLightField>(*other.field))
+        : field(MakeScopedShared<SectionLightField>(*other.field))
     {
     }
     LightFieldBinding &operator=(const LightFieldBinding &other)

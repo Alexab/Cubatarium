@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.shared-field-node-lifetime",
+      "status": "SCOPED_PASS_OTHER_ACTIVE_TEMPORARIES_OPEN",
+      "receipt": "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
+      "scope": "Scratch scope installs thread-local shared-allocation resource, restoring previous resource on exit. Default/deep-copy chunk field binding and manager AIR/reuse field paths use allocate_shared through this resource; ordinary threads retain std::make_shared. Each job field resource captures budget/job by value; before-allocation hook reserves exact rebound-node bytes and after-deallocation hook releases them after actual memory free. Allocation failure rolls back only a successful pre-reservation. Chunk preallocation hook now charges only sizeof(UChunk), avoiding double field charge. Metadata scope charge remains separate/conservative."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.scratch-metadata-admission",
       "status": "SCOPED_PASS_OTHER_ACTIVE_HEAP_OPEN",
       "receipt": "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",

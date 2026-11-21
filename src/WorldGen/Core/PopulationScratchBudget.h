@@ -12,12 +12,17 @@ class UPopulationScratchBudget
 {
 public:
   UPopulationScratchBudget(UChunkManager &manager,BufferBudgetContext context)
-      : Manager(manager),Context(std::move(context)),Metadata(manager.GetMetadataAllocationResource())
+      : Manager(manager),Context(std::move(context)),Metadata(manager.GetMetadataAllocationResource()),
+        Fields(std::make_shared<UConcurrentAllocationCountingResource>()),FieldScope(Fields)
   {
     if(Manager.GetResidentChunkCount()!=0 || Manager.GetFreeListSize()!=0)
       throw std::logic_error("Population scratch budget requires a cleared manager");
     try {
-      Manager.SetBeforeChunkAllocationFn([this] {Reserve(sizeof(UChunk)+sizeof(SectionLightField));});
+      if(Context.budget) {
+        Fields->SetBeforeAllocationFn([context=Context](size_t bytes) {context.budget->Reserve(*context.job,bytes);});
+        Fields->SetAfterDeallocationFn([context=Context](size_t bytes) {context.budget->Release(*context.job,bytes);});
+      }
+      Manager.SetBeforeChunkAllocationFn([this] {Reserve(sizeof(UChunk));});
       Metadata->SetBeforeAllocationFn([this](size_t bytes) {Reserve(bytes);});
     } catch(...) {
       Manager.SetBeforeChunkAllocationFn({}); Metadata->SetBeforeAllocationFn({}); throw;
@@ -34,10 +39,13 @@ public:
   }
   UPopulationScratchBudget(const UPopulationScratchBudget &)=delete;
   UPopulationScratchBudget &operator=(const UPopulationScratchBudget &)=delete;
+  std::shared_ptr<UConcurrentAllocationCountingResource> GetFieldAllocationResource() const {return Fields;}
 private:
   UChunkManager &Manager;
   BufferBudgetContext Context;
   std::shared_ptr<UConcurrentAllocationCountingResource> Metadata;
+  std::shared_ptr<UConcurrentAllocationCountingResource> Fields;
+  UScopedSharedAllocationResource FieldScope;
   size_t Credit{0};
   void Reserve(size_t bytes) {
     if(!Context.budget) return;

@@ -24,6 +24,60 @@ void Expect(bool ok, const char *msg)
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--scratch-field-only") {
+    using namespace cutum;
+    auto budget=std::make_shared<UBufferAllocationBudget>(512*1024);
+    UBlockWorld scratch; std::shared_ptr<const SectionLightField> retained;
+    std::shared_ptr<UConcurrentAllocationCountingResource> fields;
+    {
+      UBufferBudgetScope active({budget,std::make_shared<BufferBudgetJob>()});
+      UPopulationScratchBudget scope(scratch.GetChunkManager(),ActiveBufferBudget);
+      fields=scope.GetFieldAllocationResource();
+      struct Throws {Throws(){throw std::runtime_error("test construction failure");}};
+      bool rolled_back=false;
+      try {(void)MakeScopedShared<Throws>();} catch(const std::runtime_error &) {rolled_back=true;}
+      Expect(rolled_back && fields->GetSnapshot().live_bytes==0 && budget->UsedBytes()==0,
+          "failed shared construction rolls back reservation and allocation");
+      scratch.SetBlock({1,-40,1},BLOCK_AIR);
+      retained=scratch.GetChunkManager().GetSectionLightField({0,-3,0});
+      auto *original=scratch.GetChunkManager().GetChunk({0,-3,0});
+      original->SetLightLocal({1,8,1},3,4);
+      {
+        auto copy=std::make_unique<UChunk>(*original);
+        Expect(fields->GetSnapshot().live_allocations==2 &&
+            copy->GetLightPackedLocal({1,8,1})==original->GetLightPackedLocal({1,8,1}),
+            "deep chunk copy owns separately counted field node");
+        copy->SetLightLocal({1,8,1},1,1);
+        Expect(copy->GetLightPackedLocal({1,8,1})!=original->GetLightPackedLocal({1,8,1}),"copied field is independent");
+      }
+      Expect(fields->GetSnapshot().live_allocations==1,"temporary copied field retires its allocation");
+    }
+    std::cout << "retained_field_budget_bytes=" << budget->UsedBytes() << " field_alive=" << bool(retained) << std::endl;
+    Expect(retained && budget->UsedBytes()>sizeof(SectionLightField),
+        "retained scratch field payload and control allocation remain charged after job exit");
+    const auto node_bytes=fields->GetSnapshot().live_bytes;
+    Expect(budget->UsedBytes()==node_bytes,"only escaped field allocation retains quota after job cleanup");
+    std::weak_ptr<const SectionLightField> weak=retained;
+    retained.reset();
+    Expect(weak.expired() && budget->UsedBytes()>0,"weak field owner keeps shared control allocation charged");
+    weak.reset();
+    Expect(budget->UsedBytes()==0 && fields->GetSnapshot().live_bytes==0,"last weak field owner releases exact quota credit");
+    auto limited=std::make_shared<UBufferAllocationBudget>(node_bytes);
+    auto peer=std::make_shared<BufferBudgetJob>(); limited->Reserve(*peer,1);
+    {
+      UPopulationScratchBudget scope(scratch.GetChunkManager(),{limited,std::make_shared<BufferBudgetJob>()});
+      bool refused=false;
+      try {(void)MakeScopedShared<SectionLightField>();} catch(const UBufferBudgetExceeded &) {refused=true;}
+      Expect(refused && limited->UsedBytes()==1 && scope.GetFieldAllocationResource()->GetSnapshot().live_bytes==0,
+          "field quota refusal occurs before allocation without false credit release");
+    }
+    limited->Release(*peer,1);
+    auto normal=MakeScopedShared<SectionLightField>();
+    Expect(!ActiveScopedSharedResource && limited->UsedBytes()==0 && fields->GetSnapshot().live_bytes==0,
+        "ordinary field allocation restores default path after scratch scope");
+    std::cout << "shared_field_node_bytes=" << node_bytes << " final_budget_bytes=" << budget->UsedBytes() << std::endl;
+    std::cout << "scratch shared field allocation PASS" << std::endl; return 0;
+  }
   if(argc>1 && std::string(argv[1])=="--scratch-metadata-only") {
     using namespace cutum;
     UBlockWorld scratch;

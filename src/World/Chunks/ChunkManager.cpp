@@ -193,7 +193,7 @@ bool UChunkManager::InstallLoadedAirSlice(const LoadedAirSlice &slice,
     return false;
   // Never inherit a computed proof from an earlier field-only owner. Loading
   // legacy light bytes is not a new physical calculation.
-  auto field = std::make_shared<SectionLightField>();
+  auto field = MakeScopedShared<SectionLightField>();
   if (slice.LegacyLight)
     field->Replace(*slice.LegacyLight);
   LightFields[coord] = field;
@@ -265,7 +265,7 @@ UChunkManager::EnsureSectionLightField(glm::ivec3 coord)
 {
   const auto found = LightFields.find(coord);
   if (found != LightFields.end()) return found->second;
-  auto field = std::make_shared<SectionLightField>();
+  auto field = MakeScopedShared<SectionLightField>();
   LightFields.emplace(coord, field);
   if (!HasChunk(coord))
     AbsentLightFieldScan.emplace_back(coord, field->GetIncarnation());
@@ -411,7 +411,7 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     chunk = std::move(FreeList.back());
     FreeList.pop_back();
-    chunk->Light.field = std::make_shared<SectionLightField>();
+    chunk->Light.field = MakeScopedShared<SectionLightField>();
     chunk->ResetForReuse(chunkCoord);
   }
   else

@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -99,17 +99,18 @@
     {
       "id": "E10",
       "owner": "Active-job heap scratch and transient settings",
-      "status": "PARTIAL_PAYLOAD_AND_METADATA_ADMISSION_ACCEPTED",
-      "bound_or_observation": "Dense scratch chunk/field payload plus actual9 manager container allocation requests reserve shared generation budget before allocation. Scope cleanup returns container storage to fresh1240-byte baseline in current fixture; root fixed empty storage is separate from active-job credit.",
+      "status": "PARTIAL_SCRATCH_PAYLOAD_METADATA_SHARED_NODES_ACCEPTED",
+      "bound_or_observation": "Dense scratch chunk payload and9 metadata container allocation requests pre-reserve shared budget; field allocate_shared exact nodes now separately charged through last strong/weak allocation owner (5056bytes measured). Metadata cleanup returns1240-byte fixed baseline; resource roots/upstream bookkeeping separate.",
       "evidence": [
         "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
         "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
         "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
-        "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json"
+        "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
+        "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json"
       ],
       "remaining": [
-        "Account SectionLightField shared-control allocation and compose root/allocator overhead with accepted payload/container charges.",
-        "Account other algorithm temporary containers and active settings/factory/helper copies; preserve legitimate-input floors."
+        "Account other algorithm temporary containers and active settings/factory/helper copies; preserve legitimate-input floors.",
+        "Compose field/resource/allocator-root overhead with accepted owners in E12; do not infer total RSS from requested payload counters."
       ]
     },
     {

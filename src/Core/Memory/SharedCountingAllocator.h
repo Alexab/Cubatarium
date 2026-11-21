@@ -20,19 +20,26 @@ public:
   void SetBeforeAllocationFn(std::function<void(size_t)> fn) {
     std::lock_guard<std::mutex> lock(Mutex); BeforeAllocation=std::move(fn);
   }
+  // Hooks run under the resource mutex and must not reenter this resource.
+  void SetAfterDeallocationFn(std::function<void(size_t)> fn) {
+    std::lock_guard<std::mutex> lock(Mutex); AfterDeallocation=std::move(fn);
+  }
 private:
   void *do_allocate(size_t bytes,size_t alignment) override {
     std::lock_guard<std::mutex> lock(Mutex);
     if(BeforeAllocation) BeforeAllocation(bytes);
-    return Memory.allocate(bytes,alignment);
+    try {return Memory.allocate(bytes,alignment);}
+    catch(...) {if(AfterDeallocation) AfterDeallocation(bytes); throw;}
   }
   void do_deallocate(void *ptr,size_t bytes,size_t alignment) override {
     std::lock_guard<std::mutex> lock(Mutex); Memory.deallocate(ptr,bytes,alignment);
+    if(AfterDeallocation) AfterDeallocation(bytes);
   }
   bool do_is_equal(const std::pmr::memory_resource &other) const noexcept override {return this==&other;}
   mutable std::mutex Mutex;
   UAllocationCountingResource Memory;
   std::function<void(size_t)> BeforeAllocation;
+  std::function<void(size_t)> AfterDeallocation;
 };
 
 template<class T> struct USharedCountingAllocator
