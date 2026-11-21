@@ -5,8 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q03-C1",
-    "Q05-C1",
     "Q06-C1",
     "Q06-C2",
     "Q08-C1",
@@ -88,8 +86,10 @@
     {
       "id": "Q03-C1",
       "queue": "Q03",
-      "status": "CHECK",
-      "required_result": "Production main-thread capture credit refusal, retained-store capacity/pressure eviction and stale input each recapture current input and complete demanded publication."
+      "status": "REUSE",
+      "required_result": "Production main-thread capture credit refusal, retained-store capacity/pressure eviction and stale input each recapture current input and complete demanded publication.",
+      "evidence": "build/desktop-msvc/s4-capture-lifetime-acceptance-20261121.json",
+      "coverage_note": "Capture producer invoked through existing test adapter that configures actual cache policy; denied capture itself is not a full runtime scheduler refusal scene. Existing Q02-C1 separately proves scheduler snapshot refusal/current successor. Capacity fixture uses actual captures of absent sections, not512 demanded residents. No GPU/framebuffer/performance proof."
     },
     {
       "id": "Q03-N1",
@@ -180,8 +180,10 @@
     {
       "id": "Q05-C1",
       "queue": "Q05",
-      "status": "CHECK",
-      "required_result": "Bind existing container/credit Release outputs to exact tested mechanisms: TryEnqueue rejection, tagged queued cancellation, completed drop/capacity reduction and release-on-idle. Reuse compatible logs; run only missing mechanism proof."
+      "status": "REUSE",
+      "required_result": "Bind existing container/credit Release outputs to exact tested mechanisms: TryEnqueue rejection, tagged queued cancellation, completed drop/capacity reduction and release-on-idle. Reuse compatible logs; run only missing mechanism proof.",
+      "evidence": "build/desktop-msvc/s4-container-credit-acceptance-20261121.json",
+      "coverage_note": "Mechanism-specific source reuse, not identical whole historical source tree. Legacy Enqueue remains unbounded. Numeric producer envelopes LIMIT-C1; performance S6. No new test run necessary."
     },
     {
       "id": "Q06-R1",
@@ -360,5 +362,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q02-C2 all4 CPU dirty/deferred/coalescing subcases accepted. 13 CHECK groups/17 REUSE groups/1 disabled production path. Next Q03-C1 production main-thread capture refusal/store capacity/pressure/stale-current successor. Full S4.02/S0..S6 OPEN; no mixed GPU/field/performance acceptance."
+  "checkpoint": "Q03-C1 actual main-thread capture outcomes/current successor and Q05-C1 compatible container/credit mechanisms accepted. 11 CHECK groups/19 REUSE groups/1 disabled production path. Next Q06-C1 actual GPU refusal/extraction failure/current publication. Full S4.02/S0..S6 OPEN."
 }

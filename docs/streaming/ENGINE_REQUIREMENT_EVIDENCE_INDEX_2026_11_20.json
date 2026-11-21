@@ -4,6 +4,20 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q05.container-credit-lifetime",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-container-credit-acceptance-20261121.json",
+      "scope": "Mechanism-specific source reuse, not identical whole historical source tree. Legacy Enqueue remains unbounded. Numeric producer envelopes LIMIT-C1; performance S6. No new test run necessary."
+    },
+    {
+      "id": "S4.02.Q03.capture-store-lifetime",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-capture-lifetime-acceptance-20261121.json",
+      "scope": "Capture producer invoked through existing test adapter that configures actual cache policy; denied capture itself is not a full runtime scheduler refusal scene. Existing Q02-C1 separately proves scheduler snapshot refusal/current successor. Capacity fixture uses actual captures of absent sections, not512 demanded residents. No GPU/framebuffer/performance proof."
+    },
+    {
       "id": "S4.02.Q02.old-retry-new-owner-real-raa",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

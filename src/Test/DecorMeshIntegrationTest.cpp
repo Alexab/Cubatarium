@@ -4154,6 +4154,97 @@ static bool TestCacheMeshAdmissionDebt(
   return all;
 }
 
+static bool TestCaptureStoreDemandLifetime(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  auto &credits = UPipelineAdmission::Get();
+  bool all = true;
+  for (int mode = 0; mode < 4; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    const glm::ivec3 root(0);
+    world.SetBlock({8, 8, 8}, kStone);
+    GatedPhysicalMesher mesher;
+    mesher.Release();
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    settings.Lighting = LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    UFlatLightingPipeline flat;
+    flat.FillAllLoadedChunks(world);
+    cache.MarkDirtyPriority(root);
+    const auto revision = cache.GetChunkMeshRevision(root);
+    const auto *chunk = world.GetChunkManager().GetChunk(root);
+    const auto epoch = cache.GetCaptureStore().WorldEpoch();
+    cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+        0, 1.0, epoch, chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+        chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+    auto &store = cache.GetCaptureStore();
+    const auto baseline = credits.SnapshotPendingBytes();
+    bool boundary = false;
+    if (mode == 0)
+    {
+      credits.SetSnapshotCap(baseline);
+      boundary = !ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+          cache, world, root, revision) && store.Size() == 0;
+    }
+    else
+    {
+      Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+          cache, world, root, revision).has_value(), "capture lifecycle initial capture");
+      if (mode == 1)
+      {
+        const auto evictions = store.CapacityEvictions();
+        for (size_t n = 0; n < UMeshCaptureStore::kMaxRetainedEntries; ++n)
+          Expect(store.CaptureAndStore(world, {static_cast<int>(n + 4), 0, 0}, 1).has_value(),
+                 "capacity fixture uses actual main-thread captures");
+        boundary = store.Size() == UMeshCaptureStore::kMaxRetainedEntries &&
+            store.CapacityEvictions() == evictions + 1 && !store.TryGet(world, root, revision);
+      }
+      else if (mode == 2)
+      {
+        const auto evictions = store.PressureEvictions();
+        credits.SetSnapshotCap(baseline + kEstimatedChunkSnapshotBytes);
+        boundary = store.CaptureAndStore(world, {4, 0, 0}, 1).has_value() &&
+            store.PressureEvictions() == evictions + 1 && !store.TryGet(world, root, revision);
+      }
+      else
+      {
+        const auto evictions = store.StaleEntryEvictions();
+        world.SetBlock({10, 8, 8}, kStone);
+        flat.FillAllLoadedChunks(world);
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+            chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        boundary = !store.TryGet(world, root, revision) &&
+            store.StaleEntryEvictions() == evictions + 1;
+      }
+    }
+    credits.SetSnapshotCap(96 * 1024 * 1024);
+    const bool retained = cache.IsChunkMeshDirty(root) &&
+        cache.GetChunkMeshRevision(root) == revision && !cache.HasInflightMeshBuild(root);
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+        cache, world, root, revision).has_value(), "capture lifecycle recaptures without new dirty ingress");
+    const auto retry = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "capture lifecycle successor finishes");
+    cache.DrainAsyncMeshResults(world, registry, 8);
+    const bool current = retry.Scheduled == 1 && cache.IsPublishedMeshCurrentForInputs(root, world);
+    std::cout << "capture_store_lifetime mode=" << mode << " boundary=" << boundary
+              << " retained=" << retained << " current=" << current << '\n';
+    all = all && boundary && retained && current;
+  }
+  return all;
+}
+
 static void TestOutsideRadiusCpuMeshLifetime(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
@@ -8211,6 +8302,7 @@ int main(int argc, char **argv)
   Expect(same_frame_ok && deferred_ok && deferred_capacity_ok && retry_raa_ok, "dirty and deferred owners survive zero quota and retire on explicit removal/reset");
   const bool admission_owner_ok = TestMeshAdmissionOwnerLifetime(registry, definitions.get());
   const bool admission_debt_ok = TestCacheMeshAdmissionDebt(registry, definitions.get());
+  Expect(TestCaptureStoreDemandLifetime(registry, definitions.get()), "capture store outcomes retain demand and publish current successor");
   Expect(admission_owner_ok && admission_debt_ok, "mesh admission rejects preserve credits owner and executable current debt");
   TestForgottenMeshJobLifetime(registry, definitions.get());
   TestCacheMeshRemovalLifetime(registry, definitions.get());
