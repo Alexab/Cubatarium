@@ -79,6 +79,7 @@ struct ColumnRecord
 {
   std::array<ColumnFlowIntent, 4> flow_intent{};
   uint64_t flow_intent_epoch{0};
+  uint64_t flow_intent_generation{0};
   ColumnEmergeState emerge{ColumnEmergeState::Empty};
   ColumnDesiredStage desired{ColumnDesiredStage::None};
   uint32_t content_rev{0};
@@ -149,6 +150,42 @@ public:
     const auto it = Records.find(PackColumnKey(xz));
     return it == Records.end() ? nullptr : &it->second;
   }
+
+  ColumnFlowIntent &NoteFlowIntent(const ColumnWorkItem &item, uint64_t epoch)
+  {
+    auto &record = GetOrCreate(item.column);
+    if (record.flow_intent_epoch != epoch ||
+        record.flow_intent_generation != FlowIntentGeneration)
+    {
+      record.flow_intent = {};
+      record.flow_intent_epoch = epoch;
+      record.flow_intent_generation = FlowIntentGeneration;
+    }
+    auto &intent = record.flow_intent[static_cast<size_t>(item.kind)];
+    intent.Merge(item);
+    return intent;
+  }
+
+  const ColumnRecord *FindFlowIntents(glm::ivec2 column, uint64_t epoch) const
+  {
+    const auto *record = Find(column);
+    return record && record->flow_intent_epoch == epoch &&
+        record->flow_intent_generation == FlowIntentGeneration ? record : nullptr;
+  }
+
+  bool ForgetFlowIntents(glm::ivec2 column)
+  {
+    const auto it = Records.find(PackColumnKey(column));
+    if (it == Records.end()) return false;
+    bool pending = false;
+    for (const auto &intent : it->second.flow_intent)
+      pending = pending || intent.pending;
+    it->second.flow_intent = {};
+    return pending;
+  }
+
+  // Retire the admission domain in O(1), without scanning world records.
+  void InvalidateFlowIntents() { ++FlowIntentGeneration; }
 
   void SetEmerge(glm::ivec2 xz, ColumnEmergeState state)
   {
@@ -258,7 +295,7 @@ public:
 
   void Erase(glm::ivec2 xz) { Records.erase(PackColumnKey(xz)); }
 
-  void Clear() { Records.clear(); }
+  void Clear() { Records.clear(); InvalidateFlowIntents(); }
 
   size_t Size() const { return Records.size(); }
 
@@ -299,6 +336,7 @@ private:
   // Ordered world records support bounded fair key traversal without an
   // additional uncapped retry index or rehash-invalidated iterators.
   std::map<uint64_t, ColumnRecord> Records;
+  uint64_t FlowIntentGeneration{1};
 };
 
 } // namespace cutum

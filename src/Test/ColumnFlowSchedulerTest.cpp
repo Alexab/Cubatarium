@@ -33,6 +33,23 @@ int main()
   UColumnFlowScheduler s;
   {
     cutum::UColumnRecordStore records;
+    ColumnWorkItem a{}; a.column={-2,7}; a.cy=-3;
+    ColumnWorkItem b=a; b.column={8,-4}; b.cy=2;
+    records.NoteFlowIntent(a,11); records.NoteFlowIntent(b,11);
+    Expect(records.ForgetFlowIntents(a.column),"forget retires retained intent for exact column");
+    Expect(!records.FindFlowIntents(a.column,11)->flow_intent[1].pending &&
+        records.FindFlowIntents(b.column,11)->flow_intent[1].pending,"forget preserves neighbour intent");
+    records.InvalidateFlowIntents();
+    Expect(!records.FindFlowIntents(b.column,11),"clear generation prevents retained work resurrection");
+    records.NoteFlowIntent(a,11);
+    Expect(records.FindFlowIntents(a.column,11) && !records.FindFlowIntents(b.column,11),
+        "fresh intent re-enters same world epoch without reviving other retired columns");
+    records.NoteFlowIntent(a,12);
+    Expect(!records.FindFlowIntents(a.column,11) && records.FindFlowIntents(a.column,12),
+        "world epoch replacement rejects predecessor intent");
+  }
+  {
+    cutum::UColumnRecordStore records;
     const glm::ivec2 column{-7,9};
     auto &record=records.GetOrCreate(column);
     ColumnWorkItem a{}; a.cy=-3; a.priority=90; a.scan_full_focus=true;

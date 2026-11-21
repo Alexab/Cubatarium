@@ -46,6 +46,27 @@ void UColumnFlowExecutor::BeginFrame()
   promote_column_ = glm::ivec2(0);
 }
 
+void UColumnFlowExecutor::Clear()
+{
+  if (decide_world_)
+    decide_world_->GetColumnRecords().InvalidateFlowIntents();
+  SchedulerState.Clear();
+  last_dispatch_frame_.clear();
+  dispatch_expiry_.clear();
+  relight_retry_after_frame_.clear();
+  retry_expiry_.clear();
+  column_job_stage_.clear();
+  intent_cursor_.reset();
+  promote_pending_ = false;
+  promote_enqueued_ = false;
+  promote_priority_ = 0;
+  promote_hold_valid_ = false;
+  capture_pin_valid_ = false;
+  capture_pin_hold_ = false;
+  capture_pin_age_ = 0;
+  decide_world_ = nullptr;
+}
+
 void UColumnFlowExecutor::AdvanceCooldownFrame()
 {
   ++frame_counter_;
@@ -78,6 +99,8 @@ void UColumnFlowExecutor::SetRelightRetryCooldown(const CooldownKey &key)
 bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
 {
   bool forgot_work = SchedulerState.RemoveColumn(column);
+  if (decide_world_)
+    forgot_work = decide_world_->GetColumnRecords().ForgetFlowIntents(column) || forgot_work;
   // Exactly four structural keys can belong to this column. Retirement must
   // not scan the history of every other column on each successful unload.
   for (const auto kind : {ColumnWorkKind::RelightThenMesh,
@@ -453,15 +476,8 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &incoming)
   ColumnFlowIntent *intent = nullptr;
   if (decide_world_)
   {
-    auto &record = decide_world_->GetColumnRecords().GetOrCreate(item.column);
     const auto epoch = decide_world_->GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
-    if (record.flow_intent_epoch != epoch)
-    {
-      record.flow_intent = {};
-      record.flow_intent_epoch = epoch;
-    }
-    intent = &record.flow_intent[static_cast<size_t>(item.kind)];
-    intent->Merge(item);
+    intent = &decide_world_->GetColumnRecords().NoteFlowIntent(item, epoch);
     item.cy = intent->cy;
     item.priority = intent->priority;
     item.scan_full_focus = intent->scan_full_focus;
@@ -495,9 +511,9 @@ void UColumnFlowExecutor::ReplayAdmissionIntents(UWorld &world)
   world.GetColumnRecords().CollectKeysAfter(intent_cursor_, 64, keys);
   for (const auto column : keys)
   {
-    const auto *record = world.GetColumnRecords().Find(column);
-    if (!record || record->flow_intent_epoch !=
-        world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch()) continue;
+    const auto *record = world.GetColumnRecords().FindFlowIntents(column,
+        world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch());
+    if (!record) continue;
     for (size_t kind = 0; kind < record->flow_intent.size(); ++kind)
     {
       const auto intent = record->flow_intent[kind];

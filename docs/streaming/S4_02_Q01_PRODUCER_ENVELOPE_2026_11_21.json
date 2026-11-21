@@ -423,11 +423,12 @@
         "src/World/Streaming/ColumnFlowExecutor.cpp"
       ],
       "status": "OPEN",
-      "wip": "Scheduler explicit ownership result and bound executor retained-intent capture/clear-on-acceptance wired; DrainBudget bounded64-record replay added with world epoch check. Local Release test/full app compile PASS. Clear/Forget retained-intent retirement and pre-bind owned ingress still incomplete; no cap yet; runtime saturation proof pending.",
+      "wip": "Bound capture/explicit acceptance/bounded replay connected. Clear uses store generation invalidation and Forget clears exact kind slots; local Release storage/lifecycle tests PASS. Pre-bind owned ingress and numeric cap remain incomplete, runtime saturation acceptance pending.",
       "local_evidence": "build/desktop-msvc/s4-flow-intent-test-20261121.log",
       "cursor_evidence": "build/desktop-msvc/s4-flow-intent-cursor-test-20261121.log",
       "connection_build": "build/desktop-msvc/s4-flow-intent-connect-build-20261121.log",
-      "connection_test": "build/desktop-msvc/s4-flow-intent-connect-test-20261121.log"
+      "connection_test": "build/desktop-msvc/s4-flow-intent-connect-test-20261121.log",
+      "retirement_test": "build/desktop-msvc/s4-flow-intent-retire-test-20261121.log"
     },
     {
       "id": "Q01.L2",

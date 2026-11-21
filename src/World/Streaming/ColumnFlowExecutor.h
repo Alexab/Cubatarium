@@ -37,24 +37,7 @@ public:
 
   void Enqueue(const ColumnWorkItem &item);
 
-  void Clear()
-  {
-    SchedulerState.Clear();
-    last_dispatch_frame_.clear();
-    dispatch_expiry_.clear();
-    relight_retry_after_frame_.clear();
-    retry_expiry_.clear();
-    column_job_stage_.clear();
-    intent_cursor_.reset();
-    promote_pending_ = false;
-    promote_enqueued_ = false;
-    promote_priority_ = 0;
-    promote_hold_valid_ = false;
-    capture_pin_valid_ = false;
-    capture_pin_hold_ = false;
-    capture_pin_age_ = 0;
-    decide_world_ = nullptr;
-  }
+  void Clear();
 
   /// Drop queued/cooldown ownership for a column removed from streaming
   /// interest. Async workers have separate stale-result validation.
