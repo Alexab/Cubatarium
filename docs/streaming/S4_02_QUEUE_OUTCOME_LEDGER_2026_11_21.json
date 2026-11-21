@@ -389,7 +389,31 @@
       "id": "Q08-C2",
       "queue": "Q08",
       "status": "CHECK",
-      "required_result": "FIFO trimming/eviction/quiesce/reset transfers valid demand to deferred/restore owner; section restore retries current target; no debt crosses world retirement."
+      "required_result": "FIFO trimming/eviction/quiesce/reset transfers valid demand to deferred/restore owner; section restore retries current target; no debt crosses world retirement.",
+      "subcases": [
+        {
+          "id": "Q08-C2.TRIM",
+          "status": "REUSE",
+          "scope": "Actual public normal/priority FIFO target column9 signed[-48,31] plus protected survivor0. Public farthest trim cap1/focus0 transfers only target to DeferredFar exact signed band. Explicit survivor retirement then public re-admission at9 preserves original priority/band without target ingress. Actual Full CPU FIFO drain installs current target negative/positive certificates, pending0.",
+          "evidence": "build/desktop-msvc/s4-fifo-trim-acceptance-20261121.json",
+          "coverage_note": "No private container injection/sleeps. Deliberate survivor cancellation is not its execution/fairness proof. Automatic soft-cap/visible-victim eviction, quiesce/reset/world retirement and section restore remain Q08-C2 mechanisms; memory caps LIMIT-C1. Scoped Full CPU calculation inside Flat outer startup, not framebuffer/backend parity. No production change."
+        },
+        {
+          "id": "Q08-C2.EVICTION",
+          "status": "CHECK",
+          "scope": "Automatic soft-cap and visible-reserve/far-victim replacement preserve exact valid band/deferred owner; actual current successor. Reuse common transfer mechanism only at exact property."
+        },
+        {
+          "id": "Q08-C2.QUIESCE_RESET",
+          "status": "CHECK",
+          "scope": "Queued/deferred FIFO obligations survive quiesce/resume or explicitly retire on reset/world replacement; no old debt crosses worlds. Reuse accepted exact S3 worker retry lifecycle."
+        },
+        {
+          "id": "Q08-C2.RESTORE",
+          "status": "CHECK",
+          "scope": "Section light restore retries only current target, retires stale world/incarnation, preserves pending obligation through actual current restore/install."
+        }
+      ]
     },
     {
       "id": "Q09-R1",
@@ -523,5 +547,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C1 all6 producer/pressure subcases accepted. 8 CHECK groups/22 REUSE groups/1 disabled path. Next Q08-C2 FIFO trim/eviction/quiesce/reset and restore current target/world retirement; reuse exact S3 retry lifecycle. Full S4.02/S0..S6 OPEN."
+  "checkpoint": "Q08-C2.TRIM normal/priority deferred transfer/current signed install accepted. Remaining EVICTION, QUIESCE_RESET, RESTORE with S3 matching reuse. Top-level8 CHECK; full scope OPEN."
 }

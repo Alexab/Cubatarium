@@ -893,6 +893,60 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(submitted>0 && installed(),"visible exact bands survive async surface selection and actual install");
         }
       }
+      {
+        struct TrimDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~TrimDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        for(const bool priority : {false,true}) {
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({152,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({152,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({152,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        fifo.EnqueueTerrainColumnRelight(144,0,priority,-48,31,"q08_trim_target",&fifo_world);
+        fifo.EnqueueTerrainColumnRelight(0,0,false,-48,-33,"q08_trim_protected");
+        require(fifo.GetPendingTerrainColumnRelightCount()==2,"trim fixture owns target and protected survivor");
+        const int trimmed=fifo.TrimFarRelightFifoFarthest({0,0,0},1,0);
+        const auto deferred=fifo.GetTerrainColumnRelightQueueInfo({144,0});
+        const bool retained=trimmed==1 && !deferred.keyed && deferred.deferred_far &&
+            deferred.y_band_defined && deferred.min_world_y==-48 && deferred.max_world_y==31 &&
+            fifo.IsTerrainColumnRelightQueued({0,0}) && fifo.GetPendingTerrainColumnRelightCount()==1;
+        require(retained,"normal or priority trim transfers exact signed target while protected survivor stays");
+        fifo.CancelTerrainColumnRelight({0,0});
+        const int admitted=fifo.AdmitDeferredFarRelightColumns(fifo_world,{9,0,0},4);
+        const auto readmitted=fifo.GetTerrainColumnRelightQueueInfo({144,0});
+        const bool exact=admitted==1 && readmitted.keyed && !readmitted.deferred_far &&
+            readmitted.priority==priority && readmitted.y_band_defined &&
+            readmitted.min_world_y==-48 && readmitted.max_world_y==31;
+        require(exact,"trim successor retains signed interval and priority without new target ingress");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({9,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({9,1,0},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        report["relight_fifo_trim"].push_back({{"priority",priority},{"deferred_exact",retained},
+            {"readmitted_exact",exact},{"negative_and_positive_installed",installed()},
+            {"pending",fifo.GetPendingTerrainColumnRelightCount()}});
+        require(installed(),"trimmed actual FIFO target eventually installs both signed sections");
+        }
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
