@@ -3,6 +3,18 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "relight-persistence-owners-cleared-on-quiesce-retained-on-world-replace",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q08_C2_OPEN",
+      "observed": [
+        "AbandonTerrainForWorldReplace kept persistence FIFO/deferred/player requests across terrain retirement.",
+        "Streaming::QuiesceBackgroundWork unconditionally cleared persistence requests during temporary save/resume."
+      ],
+      "fix": "Permanent Abandon explicitly ClearPendingRelights before clearing terrain; temporary streaming quiesce retains persistence requests. Worker retry cancellation/transfer unchanged.",
+      "evidence": "build/desktop-msvc/s4-fifo-quiesce-reset-acceptance-20261121.json",
+      "next_action": "Q08-C2 RESTORE; remaining subsystem world lifetimes retain original rows."
+    },
+    {
       "id": "visible-relight-side-lane-replacement-loses-accepted-band",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q08_C2_OPEN",

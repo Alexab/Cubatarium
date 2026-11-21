@@ -11800,6 +11800,10 @@ void UWorld::AbandonTerrainForWorldReplace()
 
   // Outstanding requests belong to the retired world, not its replacement.
   DeferredRelightRetries.Clear();
+  if (Persistence)
+  {
+    Persistence->ClearPendingRelights("world_replacement");
+  }
   BlockWorld.Clear();
   if (MeshService)
   {

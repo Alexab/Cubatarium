@@ -407,8 +407,10 @@
         },
         {
           "id": "Q08-C2.QUIESCE_RESET",
-          "status": "CHECK",
-          "scope": "Queued/deferred FIFO obligations survive quiesce/resume or explicitly retire on reset/world replacement; no old debt crosses worlds. Reuse accepted exact S3 worker retry lifecycle."
+          "status": "REUSE",
+          "scope": "Queued/deferred FIFO obligations survive quiesce/resume or explicitly retire on reset/world replacement; no old debt crosses worlds. Reuse accepted exact S3 worker retry lifecycle.",
+          "evidence": "build/desktop-msvc/s4-fifo-quiesce-reset-acceptance-20261121.json",
+          "coverage_note": "Quiesce fixture does not explicitly drain while paused or separately gate running worker; accepted S3 exact worker cancel/quiesce/resume receipt reused at matching scope. Only persistence relight owners/markers in this row, not whole generation/IO/physics/flow world-switch acceptance (their original rows remain). Section restore RESTORE still open. Scoped calculation/ownership, no framebuffer/performance/full memory claim."
         },
         {
           "id": "Q08-C2.RESTORE",
@@ -549,5 +551,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C2 TRIM/EVICTION accepted; bounded visible side-lane victim loss fixed. Remaining QUIESCE_RESET and RESTORE. Top-level8 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C2 TRIM/EVICTION/QUIESCE_RESET accepted; permanent world persistence clear and transient quiesce preservation fixed. Last Q08-C2 RESTORE current target retry/retirement. Top-level8 CHECK; full scope OPEN."
 }

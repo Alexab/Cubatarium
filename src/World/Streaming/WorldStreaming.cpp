@@ -5467,7 +5467,9 @@ void UWorldStreaming::QuiesceBackgroundWork(
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
-    world.Persistence->ClearPendingRelights("streaming_quiesce");
+    // Quiesce is also used for session save/resume. Retain accepted relight
+    // FIFO/deferred/player requests; permanent world replacement retires them
+    // explicitly in UWorld::AbandonTerrainForWorldReplace.
     for (int pass = 0; pass < 64; ++pass)
     {
       if (world.Persistence->TickDrainAsyncChunkIo(world, 8))

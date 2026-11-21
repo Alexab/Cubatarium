@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.fifo-quiesce-vs-world-retirement",
+      "status": "SCOPED_PASS_Q08_C2_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-fifo-quiesce-reset-acceptance-20261121.json",
+      "scope": "Quiesce fixture does not explicitly drain while paused or separately gate running worker; accepted S3 exact worker cancel/quiesce/resume receipt reused at matching scope. Only persistence relight owners/markers in this row, not whole generation/IO/physics/flow world-switch acceptance (their original rows remain). Section restore RESTORE still open. Scoped calculation/ownership, no framebuffer/performance/full memory claim."
+    },
+    {
       "id": "S4.02.Q08.eviction-exact-deferred-owner",
       "status": "SCOPED_PASS_Q08_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

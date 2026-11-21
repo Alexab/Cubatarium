@@ -609,7 +609,23 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               rc.GetMeshCompletedSize()==1;
           require(old_accepted,"world replacement retains actual old accepted work");
           const auto old_epoch=rc.GetCaptureStore().WorldEpoch();
+          auto &old_fifo=*replaced.Persistence;
+          old_fifo.EnqueueBoundaryDependencyRelight(replaced,0,0,-48,-33);
+          old_fifo.NoteVisibleFirstMeshRelight({0,0},-48,-33);
+          old_fifo.DeferFarRelightColumn({3,0},-48,-33,true,"q08_world_retirement");
+          old_fifo.EnqueuePlayerRelight({{8,-40,8}});
+          require(old_fifo.IsTerrainColumnRelightQueued({0,0}) &&
+              old_fifo.GetTerrainColumnRelightQueueInfo({48,0}).deferred_far &&
+              old_fifo.GetPendingPlayerRelightCount()==1,"world retirement has actual queued/deferred/player work");
           replaced.AbandonTerrainForWorldReplace();
+          const auto old_queue=old_fifo.GetTerrainColumnRelightQueueInfo({0,0});
+          const bool relight_retired=old_fifo.GetPendingTerrainColumnRelightCount()==0 &&
+              old_fifo.GetPendingPlayerRelightCount()==0 && !old_queue.boundary_dependency &&
+              !old_queue.y_band_defined && !old_fifo.GetTerrainColumnRelightQueueInfo({48,0}).deferred_far;
+          report["relight_world_retirement"].push_back({{"gpu",gpu},{"retired",relight_retired},
+              {"queued",old_fifo.GetPendingTerrainColumnRelightCount()},
+              {"player",old_fifo.GetPendingPlayerRelightCount()}});
+          require(relight_retired,"actual world replacement retires persistence relight owners");
           const bool retired=rc.GetCaptureStore().WorldEpoch()!=old_epoch &&
               rc.GetPendingGpuAppliesCount()==0 && rc.GetMeshCompletedSize()==0 &&
               !rc.HasInflightMeshBuild(coord) && !rc.HasPendingDirty() &&
@@ -1023,6 +1039,57 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["relight_fifo_eviction"].back()["negative_and_positive_installed"]=installed();
         report["relight_fifo_eviction"].back()["pending"]=fifo.GetPendingTerrainColumnRelightCount();
         require(installed(),"evicted actual FIFO target installs both signed sections");
+        }
+      }
+      {
+        struct QuiesceFifoDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~QuiesceFifoDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        for(const bool deferred : {false,true}) {
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({8,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({8,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({8,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        if(deferred) fifo.DeferFarRelightColumn({0,0},-48,31,true,"q08_quiesce");
+        else fifo.EnqueueTerrainColumnRelight(0,0,true,-48,31,"q08_quiesce",&fifo_world);
+        const auto before=fifo.GetTerrainColumnRelightQueueInfo({0,0});
+        require(before.y_band_defined && before.min_world_y==-48 && before.max_world_y==31 &&
+            (deferred?before.deferred_far:before.keyed),"quiesce fixture owns exact queued or deferred band");
+        const auto next_job=fifo_world.NextAsyncRelightJobId;
+        fifo_world.QuiesceBackgroundWork(std::chrono::milliseconds(100));
+        const auto paused=fifo.GetTerrainColumnRelightQueueInfo({0,0});
+        const bool retained=paused.y_band_defined && paused.min_world_y==-48 && paused.max_world_y==31 &&
+            (deferred?paused.deferred_far:paused.keyed) && fifo_world.NextAsyncRelightJobId==next_job;
+        require(retained,"temporary quiesce retains FIFO/deferred owner without dispatch");
+        fifo_world.ResumeAfterSessionSave();
+        if(deferred) require(fifo.AdmitDeferredFarRelightColumns(fifo_world,{0,0,0},4)==1,
+            "resumed deferred target re-admits without new ingress");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,1,0},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        report["relight_fifo_quiesce"].push_back({{"deferred",deferred},{"retained",retained},
+            {"negative_and_positive_installed",installed()},{"pending",fifo.GetPendingTerrainColumnRelightCount()}});
+        require(installed(),"quiesced FIFO/deferred request completes actual current install after resume");
         }
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
