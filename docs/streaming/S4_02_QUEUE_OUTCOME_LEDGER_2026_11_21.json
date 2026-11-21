@@ -500,7 +500,7 @@
         },
         {
           "id": "Q11-C1.PRODUCER_DEDUPE",
-          "status": "CHECK",
+          "status": "REUSE",
           "scope": "Actual async/sync/seal mutation ingress and same-column dedupe retain all required seed and intra/shore obligations.",
           "subcases": [
             {
@@ -511,15 +511,21 @@
             },
             {
               "id": "Q11-C1.PRODUCER_DEDUPE.SYNC_ARRIVAL",
-              "status": "CHECK",
-              "scope": "Actual synchronous generation-lighting hook shore enqueue/dedupe and retained obligations."
+              "status": "REUSE",
+              "scope": "Actual synchronous generation-lighting hook shore enqueue/dedupe and retained obligations.",
+              "evidence": "build/desktop-msvc/s4-seal-sync-acceptance-20261121.json",
+              "coverage_note": "Friend invokes actual installed sync/async production callbacks at controlled arrival boundaries; actual sync intra seal invoked on small signed fixture, not sync generation algorithm/camera travel. Queue/dedupe only, no actual deferred shore drain/current physical successor proof. Q11 DRAIN/ABANDONMENT remain; caps LIMIT-C1. No framebuffer/backend/performance/full memory acceptance."
             },
             {
               "id": "Q11-C1.PRODUCER_DEDUPE.SEAL_MUTATION",
-              "status": "CHECK",
-              "scope": "Match actual seal mutation ingress and current downstream source to accepted S2.05 evidence; fill exact missing property only."
+              "status": "REUSE",
+              "scope": "Match actual seal mutation ingress and current downstream source to accepted S2.05 evidence; fill exact missing property only.",
+              "evidence": "build/desktop-msvc/s4-seal-mutation-reuse-20261121.json",
+              "coverage_note": "Actual near/far mutation receipts native prove ModifiedChunks/save ownership, exact changed input light obligations and warm fluid map invalidation before visual admission. Function unchanged since accepted actual build (git_sha records pre-WIP; committed fixed blob separately matched to recorded file hash). Seed push per deduped changed chunk is source composition at same executed loop, not independently asserted historical seed count. Physical seed mechanism separately current-tested in async arrival fixture. Property-specific historical reuse, not current whole-source/EXE claim; no actual shore algorithm completion, streaming queue drain, cold save or framebuffer proof. Q11 DRAIN/ABANDONMENT remain."
             }
-          ]
+          ],
+          "evidence": "build/desktop-msvc/s4-seal-sync-acceptance-20261121.json",
+          "coverage_note": "Composed exact ingress receipts, not physical streaming drain/abandonment. Child limits retained."
         },
         {
           "id": "Q11-C1.DRAIN",
@@ -627,5 +633,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11 RETENTION and async arrival signed seed/scoped real seed transfer accepted. Next sync seal ingress, mutation ingress, actual streaming drain/abandonment. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE accepted by scoped receipts. Next actual streaming DRAIN, then ABANDONMENT. Top-level6 CHECK; full scope OPEN."
 }

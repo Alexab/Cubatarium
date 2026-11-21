@@ -6196,7 +6196,11 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
                                          settings, world.WorldgenOwnerPackId,
                                          ground, /*include_shore_air=*/false,
                                          &seal_changes);
-          DeferredShoreSealQueue.push_back(ground);
+          if (DeferredShoreSealQueued.insert(
+                  glm::ivec3(ground.x, 0, ground.z)).second)
+          {
+            DeferredShoreSealQueue.push_back(ground);
+          }
         }
         world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
         const glm::ivec3 focus_ground =

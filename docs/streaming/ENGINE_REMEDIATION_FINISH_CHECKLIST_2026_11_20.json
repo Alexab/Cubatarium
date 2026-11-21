@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q11 RETENTION/ASYNC_ARRIVAL signed seed band accepted; actual seed transfer to fluid frontier proven in controlled drain. Next SYNC_ARRIVAL/SEAL_MUTATION ingress, actual streaming DRAIN and ABANDONMENT. Top-level6 CHECK; full S0..S6 OPEN.",
+  "next_action": "S4.02 Q11 RETENTION/PRODUCER_DEDUPE accepted with per-property limits. Next actual streaming DRAIN then ABANDONMENT. Top-level6 CHECK; full S0..S6 OPEN.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

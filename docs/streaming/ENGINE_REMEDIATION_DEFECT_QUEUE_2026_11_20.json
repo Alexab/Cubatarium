@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "sync-shore-seal-ingress-bypasses-shared-dedupe-owner",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "observed": "Two actual sync arrival callbacks queued2 without marker; following actual async callback appended third for same XZ.",
+      "fix": "Sync arrival gates shore push on shared normalized XZ DeferredShoreSealQueued insertion, matching actual async owner.",
+      "evidence": "build/desktop-msvc/s4-seal-sync-acceptance-20261121.json",
+      "next_action": "Q11 actual DRAIN and ABANDONMENT; parent OPEN."
+    },
+    {
       "id": "generation-arrival-seeds-column-y0-instead-of-result-sections",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q11_C1_OPEN",

@@ -1437,6 +1437,35 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(bands && shore && depth==2,
                 "actual generation arrival seeds both signed sections and coalesces shore obligation");
       }
+      {
+        auto sync_world_owner=std::make_unique<UWorld>(nullptr,nullptr);
+        auto &sync_world=*sync_world_owner;
+        sync_world.SetSpawnPoint({8,-40,8});
+        sync_world.ProceduralTemplate.MinHeight=-48; sync_world.ProceduralTemplate.MaxHeight=-33;
+        sync_world.ProceduralTemplate.SeaLevel=-40; sync_world.ProceduralTemplate.FillWater=true;
+        sync_world.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        sync_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        sync_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        sync_world.SetRenderSettings(settings);
+        sync_world.BlockWorld.SetBlock({8,-48,8},8);
+        auto &streaming=*sync_world.Streaming;
+        streaming.EnsureStreamer(sync_world.BlockWorld,*sync_world.BlockRegistry,17,
+                                 sync_world.ProceduralTemplate);
+        streaming.InitStreamerCallbacks(sync_world);
+        require(streaming.Streamer->OnRelightTerrainColumn && streaming.ChunkScheduler->MarkDirty,
+                "actual sync and async production arrival callbacks installed");
+        streaming.Streamer->OnRelightTerrainColumn({0,0,0});
+        streaming.Streamer->OnRelightTerrainColumn({0,0,0});
+        const bool sync_deduped=streaming.DeferredShoreSealQueue.size()==1 &&
+            streaming.DeferredShoreSealQueued.count({0,0,0})==1;
+        const auto sync_count=streaming.DeferredShoreSealQueue.size();
+        streaming.ChunkScheduler->MarkDirty({0,0,0},-48,-33,true);
+        const bool shared=streaming.DeferredShoreSealQueue.size()==1 &&
+            streaming.DeferredShoreSealQueued.count({0,0,0})==1;
+        report["seal_sync_ingress"]={{"sync_deduped",sync_deduped},{"sync_count",sync_count},
+            {"shared_async_owner",shared},{"mixed_count",streaming.DeferredShoreSealQueue.size()}};
+        require(sync_deduped && shared,"sync shore arrival shares one dedupe owner with async arrival");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

@@ -22,6 +22,7 @@ namespace cutum
 
 class UBlockRegistry;
 class UBlockWorld;
+class UCore;
 
 /// H1 SoT 185830: EnsureChunkLoaded never advances a full 256-subcol column in
 /// one Sync Update slice — budget matches collision sync.
@@ -254,6 +255,7 @@ public:
   }
 
 private:
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
                          bool *out_async_queued = nullptr);
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,

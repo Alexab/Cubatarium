@@ -4,6 +4,19 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q11.sync-shore-shared-owner",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-seal-sync-acceptance-20261121.json",
+      "scope": "Friend invokes actual installed sync/async production callbacks at controlled arrival boundaries; actual sync intra seal invoked on small signed fixture, not sync generation algorithm/camera travel. Queue/dedupe only, no actual deferred shore drain/current physical successor proof. Q11 DRAIN/ABANDONMENT remain; caps LIMIT-C1. No framebuffer/backend/performance/full memory acceptance."
+    },
+    {
+      "id": "S4.02.Q11.seal-mutation-property-reuse",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "receipt": "build/desktop-msvc/s4-seal-mutation-reuse-20261121.json",
+      "scope": "Actual near/far mutation receipts native prove ModifiedChunks/save ownership, exact changed input light obligations and warm fluid map invalidation before visual admission. Function unchanged since accepted actual build (git_sha records pre-WIP; committed fixed blob separately matched to recorded file hash). Seed push per deduped changed chunk is source composition at same executed loop, not independently asserted historical seed count. Physical seed mechanism separately current-tested in async arrival fixture. Property-specific historical reuse, not current whole-source/EXE claim; no actual shore algorithm completion, streaming queue drain, cold save or framebuffer proof. Q11 DRAIN/ABANDONMENT remain."
+    },
+    {
       "id": "S4.02.Q11.async-arrival-signed-seed-band",
       "status": "SCOPED_PASS_Q11_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
