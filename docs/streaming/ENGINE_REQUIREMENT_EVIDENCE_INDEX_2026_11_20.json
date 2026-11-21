@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.exact-priority-index",
+      "status": "SCOPED_PASS_GLOBAL_COUNT_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
+      "scope": "Replace stale lazy heap with exact removable ordered priority/original-time/revision index. One full PendingRequest index entry per authoritative QueuedRequests key. Rerank erases old entry; cancel/radius/stale retirement erase by key; reset clears. No full live-map heap compaction remains. Refused admission reinserts same key. Native10000-rerank and current successor PASS; foreign-work fixture FAIL classified/retained, strict final zero-slot criteria PASS."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.retained-result-count",
       "status": "SCOPED_PASS_BYTES_REQUESTED_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",

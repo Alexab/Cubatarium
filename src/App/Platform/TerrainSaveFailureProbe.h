@@ -2493,12 +2493,32 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         scheduler.RequestLoad(target,10,request);
         const auto original=scheduler.QueuedRequests.at(target);
         auto &credits=UPipelineAdmission::Get();
+        const auto background_slots=credits.WorkSlotsInUse();
+        const auto idle_deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+        // The real loaded world may still own compute leases. Main-thread
+        // probe execution prevents new application submissions during this
+        // bounded wait; do not mistake those existing owners for our leak.
+        while(credits.WorkSlotsInUse()!=0 && std::chrono::steady_clock::now()<idle_deadline)
+          std::this_thread::yield();
+        report["generation_pressure_details"]["background_work_slots_before_isolation"]=background_slots;
+        require(credits.WorkSlotsInUse()==0,"generation pressure fixture starts with idle shared compute");
         struct RestoreSlots { ~RestoreSlots(){UPipelineAdmission::Get().SetWorkSlotCap(8);} } restore;
         credits.SetWorkSlotCap(0);
         const bool slot_refused=scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(target)==ChunkLoadState::Requested && populator.calls==0 &&
             scheduler.GetPendingQueueCount()==1 && credits.WorkSlotsInUse()==0;
+        report["generation_pressure_details"]["slot"]={{"calls",populator.calls.load()},
+            {"state",static_cast<int>(scheduler.GetState(target))},
+            {"index",scheduler.GetPendingQueueCount()},{"live",scheduler.QueuedRequests.size()},
+            {"global_work_slots",credits.WorkSlotsInUse()},
+            {"own_result_slots",scheduler.GetRetainedGenerationResultCount()}};
         auto duplicate=request; duplicate.Seed=99;
+        bool exact_index=true;
+        for(int refresh=0;refresh<10000;++refresh) {
+          scheduler.RequestLoad(target,refresh%7-3,duplicate);
+          exact_index=exact_index && scheduler.GetPendingQueueCount()==1 &&
+              scheduler.QueuedRequests.size()==1;
+        }
         scheduler.RequestLoad(target,-10,duplicate);
         const auto reranked=scheduler.QueuedRequests.at(target);
         const bool exact=reranked.settings.Seed==original.settings.Seed &&
@@ -2521,6 +2541,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const bool pool_refused=scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(target)==ChunkLoadState::Requested && populator.calls==0 &&
             scheduler.QueuedRequests.size()==1 && credits.WorkSlotsInUse()==0;
+        report["generation_pressure_details"]["pool"]={{"calls",populator.calls.load()},
+            {"state",static_cast<int>(scheduler.GetState(target))},
+            {"index",scheduler.GetPendingQueueCount()},{"live",scheduler.QueuedRequests.size()},
+            {"global_work_slots",credits.WorkSlotsInUse()},
+            {"own_result_slots",scheduler.GetRetainedGenerationResultCount()}};
         release_guard.Release();
         require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"generation pressure barriers released");
         unsigned arrivals=0; scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
@@ -2530,6 +2555,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const bool successor=populator.calls==1 && populator.seed==17 && arrivals==1 &&
             terrain.GetBlock({8,-40,8})==8 && scheduler.GetState(target)==ChunkLoadState::Committed &&
             credits.WorkSlotsInUse()==0;
+        report["generation_pressure_details"]["successor"]={{"calls",populator.calls.load()},
+            {"seed",populator.seed.load()},{"arrivals",arrivals},
+            {"state",static_cast<int>(scheduler.GetState(target))},
+            {"block",terrain.GetBlock({8,-40,8})},{"global_work_slots",credits.WorkSlotsInUse()},
+            {"own_result_slots",scheduler.GetRetainedGenerationResultCount()}};
         credits.SetWorkSlotCap(0); scheduler.RequestLoad(peer,0,request);
         scheduler.Tick(terrain,1,1); scheduler.Cancel(peer);
         credits.SetWorkSlotCap(8); scheduler.Tick(terrain,1,1);
@@ -2537,8 +2567,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             scheduler.GetPendingQueueCount()==0;
         report["generation_shared_admission"]={{"slot_refused_retained",slot_refused},
             {"pool_refused_retained",pool_refused},{"immutable_request_reranked",exact},
+            {"exact_priority_index_after_10000_refreshes",exact_index},
             {"automatic_current_terrain_successor",successor},{"cancelled_refused_request",cancelled}};
-        require(slot_refused && pool_refused && exact && successor && cancelled,
+        require(slot_refused && pool_refused && exact && exact_index && successor && cancelled,
             "generation shared admission retains exact request and normal tick installs successor");
         bool cohort=true;
         for(size_t n=0;n<UChunkLoadScheduler::kMaxRetainedGenerationResults;++n) {

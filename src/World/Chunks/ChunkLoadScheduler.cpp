@@ -92,14 +92,14 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
         PendingRequest updated = queuedIt->second;
         updated.priority = priority;
         updated.queueRevision = NextRequestQueueRevision++;
+        Queue.erase(queuedIt->second);
         queuedIt->second = updated;
         RequestPriorities[coord] = priority;
         ++RequestPriorityRefreshCounts[coord];
-        Queue.push(std::move(updated));
+        Queue.insert(std::move(updated));
         LogProceduralRequest(
             "priority_refreshed", coord, queuedIt->second.requestId,
             demand_id, "state=requested priority=" + std::to_string(priority));
-        CompactRequestQueueIfStale();
         return;
       }
     }
@@ -158,10 +158,9 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   InitialRequestPriorities[coord] = priority;
   RequestPriorityRefreshCounts[coord] = 0;
   QueuedRequests[coord] = pending;
-  Queue.push(std::move(pending));
+  Queue.insert(std::move(pending));
   LogProceduralRequest("requested", coord, request_id, demand_id,
                        "priority=" + std::to_string(priority));
-  CompactRequestQueueIfStale();
 }
 
 void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
@@ -188,8 +187,7 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
   RequestPriorities.erase(coord);
   InitialRequestPriorities.erase(coord);
   RequestPriorityRefreshCounts.erase(coord);
-  QueuedRequests.erase(coord);
-  CompactRequestQueueIfStale();
+  EraseQueuedRequest(coord);
 }
 
 int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
@@ -252,31 +250,17 @@ int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
     RequestPriorities.erase(coord);
     InitialRequestPriorities.erase(coord);
     RequestPriorityRefreshCounts.erase(coord);
-    QueuedRequests.erase(coord);
+    EraseQueuedRequest(coord);
   }
-  CompactRequestQueueIfStale();
   return static_cast<int>(stale.size());
 }
 
-void UChunkLoadScheduler::CompactRequestQueueIfStale()
+void UChunkLoadScheduler::EraseQueuedRequest(glm::ivec3 coord)
 {
-  // Priority refreshes leave obsolete heap nodes behind. Compact only after
-  // stale nodes exceed the live set by a wide margin, bounding memory and the
-  // number of stale pops performed in one frame.
-  constexpr std::size_t kStaleQueueSlack = 64;
-  const std::size_t live = QueuedRequests.size();
-  if (!Queue.empty() &&
-      (live == 0 || Queue.size() > live * 2 + kStaleQueueSlack))
-  {
-    std::priority_queue<PendingRequest, std::vector<PendingRequest>,
-                        RequestCompare>
-        compacted;
-    for (const auto &entry : QueuedRequests)
-    {
-      compacted.push(entry.second);
-    }
-    Queue.swap(compacted);
-  }
+  const auto request = QueuedRequests.find(coord);
+  if (request == QueuedRequests.end()) return;
+  Queue.erase(request->second);
+  QueuedRequests.erase(request);
 }
 
 void UChunkLoadScheduler::CancelAllPending(
@@ -330,8 +314,7 @@ void UChunkLoadScheduler::CancelAllPending(
         id_it != ActiveRequestIds.end() ? id_it->second : 0, 0,
         "reason=" + std::string(reason ? reason : "cancelled_all"));
   }
-  Queue = std::priority_queue<PendingRequest, std::vector<PendingRequest>,
-                              RequestCompare>();
+  Queue.clear();
   std::vector<glm::ivec3> bump_coords;
   bump_coords.reserve(ActiveTokens.size() + States.size());
   for (const auto &entry : ActiveTokens)
@@ -554,7 +537,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       const auto queued = QueuedRequests.find(pending.result.coord);
       if (queued != QueuedRequests.end() &&
           queued->second.token.sequence == pending.result.token.sequence)
-        QueuedRequests.erase(queued);
+        EraseQueuedRequest(pending.result.coord);
       continue;
     }
     if (pending.result.discarded)
@@ -688,8 +671,8 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxStarts)
   {
-    const PendingRequest next = Queue.top();
-    Queue.pop();
+    const PendingRequest next = *Queue.begin();
+    Queue.erase(Queue.begin());
     const auto stateIt = States.find(next.coord);
     const auto queuedIt = QueuedRequests.find(next.coord);
     if (stateIt == States.end() ||
@@ -709,7 +692,7 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
     {
       // Keep the exact immutable request and its rank. A future normal Tick
       // retries admission; do not spin on the same refused head this frame.
-      Queue.push(next);
+      Queue.insert(next);
       break;
     }
     QueuedRequests.erase(queuedIt);

@@ -9,7 +9,7 @@
 #include <memory>
 #include <cstdint>
 #include <functional>
-#include <queue>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -127,13 +127,15 @@ private:
   {
     bool operator()(const PendingRequest &a, const PendingRequest &b) const
     {
-      return a.priority > b.priority;
+      if (a.priority != b.priority) return a.priority < b.priority;
+      if (a.requestedAt != b.requestedAt) return a.requestedAt < b.requestedAt;
+      return a.queueRevision < b.queueRevision;
     }
   };
 
   bool ScheduleWorker(const PendingRequest &request,
                       int generation_start_cap_per_frame);
-  void CompactRequestQueueIfStale();
+  void EraseQueuedRequest(glm::ivec3 coord);
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
@@ -146,11 +148,8 @@ private:
   UJobThreadPool Pool;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
-  std::priority_queue<PendingRequest, std::vector<PendingRequest>,
-                      RequestCompare>
-      Queue;
-  // Queue is a heap and cannot update an entry in place. Keep the current
-  // request separately so priority changes can invalidate old heap entries.
+  std::set<PendingRequest, RequestCompare> Queue;
+  // One exact removable ordered index entry per authoritative live request.
   std::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests;
   std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
