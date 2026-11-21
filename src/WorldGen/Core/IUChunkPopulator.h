@@ -110,6 +110,9 @@ struct ChunkPopulateSummary
 
 struct ChunkPopulateDiagnostics
 {
+  struct ThreadScratchSnapshot { size_t resident_chunks{0}; bool coarse_cache_active{false}; };
+  // Calling-thread diagnostic only; no cross-worker traversal.
+  static ThreadScratchSnapshot GetThreadScratchSnapshot();
   static void Record(const ChunkPopulateTiming &timing, bool discarded = false);
   static ChunkPopulateTiming GetLast();
   static ChunkPopulateSummary GetSummary();

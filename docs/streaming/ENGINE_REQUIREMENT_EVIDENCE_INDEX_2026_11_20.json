@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.population-scratch-release",
+      "status": "SCOPED_PASS_PEAK_OVERHEAD_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
+      "scope": "Population scope now ends coarse/density caches and clears scratch terrain chunks on success, cancellation and typed quota exception. Capture scope detaches first; independent transfer buffer remains valid. Pipeline configuration and container bucket capacities remain cached. No bound on active-job peak scratch, configuration payload or total RSS is claimed."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.buffer-byte-enforcement",
       "status": "SCOPED_PASS_OVERHEAD_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",

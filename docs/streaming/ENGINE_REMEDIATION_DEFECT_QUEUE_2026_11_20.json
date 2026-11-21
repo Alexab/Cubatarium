@@ -3,6 +3,14 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "population-diagnostic-sample-history-unbounded",
+      "stage": "S4.02.LIMIT.Q09",
+      "status": "OPEN_SOURCE_CONFIRMED",
+      "observed": "PipelineChunkPopulator.cpp AppendPopulateMetric pushes each completion into global vectors; GetSummary sorts full history. No cap or reset found in the actual owner; six base metrics plus detailed stage metrics grow with completed generation count.",
+      "evidence": "src/WorldGen/Core/PipelineChunkPopulator.cpp: PopulateMetricSamples/AppendPopulateMetric/FinalizePopulateMetric/Record/GetSummary",
+      "next_action": "Bound retained distribution samples and summary cost; keep cumulative totals/count/max semantics explicit, label distribution sample window, exercise >cap completions and negative/history checks. Reuse existing Q09 work; no new audit."
+    },
+    {
       "id": "worldgen-ecology-coral-range-fixture-mismatch",
       "stage": "S6.05",
       "status": "OPEN_EXISTING_FIXTURE_MISMATCH",

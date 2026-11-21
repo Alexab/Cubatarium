@@ -1744,6 +1744,48 @@ int main(int argc, char **argv)
       cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
       "aquifer configuration loads from the active worldgen pack");
   TestPackDefaultsRespectUserFieldsInProfile3();
+  if (argc > 1 && std::string(argv[1]) == "--population-scratch-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    cutum::UPipelineChunkPopulator populator(registry,nullptr,"minetest_default_16");
+    cutum::ChunkPopulateRequest request;
+    request.chunkCoord={5,0,9}; request.settings=MakeVegetationSettings();
+    request.settings.MinHeight=-48; request.settings.MaxHeight=127;
+    request.settings.EnableTrees=false; request.settings.EnableGroundCover=false;
+    request.settings.EnableDecoration=false; request.settings.EnableCaves=false;
+    const auto empty=[] {
+      const auto state=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot();
+      return state.resident_chunks==0 && !state.coarse_cache_active;
+    };
+    auto baseline=populator.Populate(request);
+    FluidTest::Expect(baseline.buffer.GetOwnedAllocationBytes()>0 && empty(),kTestName,
+        "real successful population releases thread scratch and coarse cache");
+    auto quota=std::make_shared<cutum::UBufferAllocationBudget>(128*1024);
+    auto competitor=std::make_shared<cutum::BufferBudgetJob>();
+    quota->Reserve(*competitor,32*1024);
+    bool refused=false;
+    try {
+      cutum::UBufferBudgetScope scope({quota,std::make_shared<cutum::BufferBudgetJob>()});
+      (void)populator.Populate(request);
+    } catch(const cutum::UBufferBudgetExceeded &) { refused=true; }
+    FluidTest::Expect(refused && quota->UsedBytes()==32*1024 && empty(),kTestName,
+        "actual pipeline quota exception releases partial transfer and thread scratch");
+    quota->Release(*competitor,32*1024);
+    auto recovered=populator.Populate(request);
+    cutum::UBlockWorld expected,actual;
+    baseline.buffer.ApplyTo(expected); recovered.buffer.ApplyTo(actual);
+    bool same=expected.CountNonAir()==actual.CountNonAir();
+    expected.ForEachBlock([&](glm::ivec3 pos,cutum::BlockId id) {same=same && actual.GetBlock(pos)==id;});
+    FluidTest::Expect(same && empty(),kTestName,"real population after quota failure matches baseline");
+    unsigned cancel_checks=0;
+    request.shouldCancel=[&] {return ++cancel_checks>=3;};
+    auto cancelled=populator.Populate(request);
+    FluidTest::Expect(cancelled.discarded && cancelled.buffer.GetOwnedAllocationBytes()==0 && empty(),
+        kTestName,"partial population cancellation releases scratch and transfer");
+    std::cout << kTestName << ": population scratch success/quota/recovery/cancel PASS" << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--buffer-boundary-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");

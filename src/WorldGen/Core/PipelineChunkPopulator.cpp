@@ -452,7 +452,6 @@ static void FinishPopulationCacheStats(
     {
       sampling_cache_stats = sampler->GetSamplingCacheStats();
     }
-    composable->EndChunkCoarseCache();
   }
 }
 
@@ -505,6 +504,14 @@ static void LogChunkPopulation(const Request &request, const Timing &timing,
   (void)s_last_log_ms;
 }
 
+ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot()
+{
+  auto &tls=GetThreadLocalPipeline();
+  auto *composable=dynamic_cast<UComposableWorldGenerator *>(tls.pipeline.get());
+  return {tls.world.GetChunkManager().GetResidentChunkCount(),
+      composable && composable->GetChunkCoarseCache()!=nullptr};
+}
+
 ChunkPopulateResult
 UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 {
@@ -544,6 +551,18 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
+  auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
+  // The transferred buffer owns its data independently. Retain pipeline
+  // configuration between jobs, but never an idle job's terrain or cache.
+  // This guard precedes capture so capture detaches before terrain clears.
+  struct ReleasePopulationScratch {
+    UBlockWorld &world;
+    UComposableWorldGenerator *pipeline;
+    ~ReleasePopulationScratch() {
+      if(pipeline) pipeline->EndChunkCoarseCache();
+      world.GetChunkManager().Clear();
+    }
+  } release_scratch{genWorld,composable};
   ResetScatterChunkCounts();
   ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
@@ -592,7 +611,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   std::array<std::array<ColumnSampleContext, CHUNK_SIZE>, CHUNK_SIZE> samples{};
   std::array<std::array<bool, CHUNK_SIZE>, CHUNK_SIZE> sample_valid{};
 
-  auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
   bool cancelled = false;
   if (composable)
   {
@@ -648,10 +666,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   if (cancelled || (request.shouldCancel && request.shouldCancel()))
   {
-    if (composable)
-    {
-      composable->EndChunkCoarseCache();
-    }
     result.discarded = true;
     result.buffer.Clear();
     timing.totalMs = ElapsedMs(populate_start);
@@ -780,10 +794,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
     if (cancelled || (request.shouldCancel && request.shouldCancel()))
     {
-      if (composable)
-      {
-        composable->EndChunkCoarseCache();
-      }
       result.discarded = true;
       result.buffer.Clear();
       timing.totalMs = ElapsedMs(populate_start);
@@ -846,10 +856,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
     if (seal_cancelled())
     {
-      if (composable)
-      {
-        composable->EndChunkCoarseCache();
-      }
       result.discarded = true;
       result.buffer.Clear();
       timing.sealMs = ElapsedMs(seal_start);

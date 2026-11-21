@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 LIMIT.Q09: compute/Ready UChunkBuffer byte reservation accepted with shared128MiB base and explicit largest sole-job floor; exact automatic retry/cancel/new-owner/oversized progress PASS. Next finish producer envelope for remaining generator scratch, control/task/pool/transient/upstream overhead using existing Q09 ownership/count receipts; do not restart audit. Other LIMIT groups and S6.05 ecology fixture FAIL/full S0..S6 remain OPEN.",
+  "next_action": "S4.02 LIMIT.Q09: buffer bytes and job-exit scratch retirement accepted. Next finite fix: bound global population diagnostic sample history and GetSummary work (source-confirmed vectors append every completion). Preserve cumulative totals/count/max and declare bounded distribution sample semantics. Then remaining active scratch/configuration/control/task/pool/transient/upstream envelope using existing receipts. Other LIMIT groups, full vegetation ecology FAIL and full S0..S6 remain OPEN.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }
