@@ -476,7 +476,31 @@
       "id": "Q10-C1",
       "queue": "Q10",
       "status": "CHECK",
-      "required_result": "Load cancellation/retry/reject/stale snapshot: no old slice erases newer state; pending completion and retry exhaustion terminate explicitly; current reissue loads fully."
+      "required_result": "Load cancellation/retry/reject/stale snapshot: no old slice erases newer state; pending completion and retry exhaustion terminate explicitly; current reissue loads fully.",
+      "subcases": [
+        {
+          "id": "Q10-C1.RETRY_EXHAUSTION",
+          "status": "REUSE",
+          "scope": "Actual bounded retry exhaustion retains data/local edits/unresolved state/cooldown; current reissue fully recovers.",
+          "evidence": "build/desktop-msvc/s4-load-retry-acceptance-20261121.json",
+          "coverage_note": "Actual serializer/storage files and WorldPersistence/AsyncChunkIo workers/results/retries; existing production diagnostic injects five upper19 returning failures. Actual local lower deletion retained through retries/current24-section recovery. Explicit clock adapter expires retry deadline; not wall-clock one-second timing or OS open/read fault. No actual queued/running cancellation/newer owner race/outside/reset/cold save/Full light/backend/framebuffer/performance/memory claim. Remaining Q10 subcases and full S0..S6 OPEN."
+        },
+        {
+          "id": "Q10-C1.ADMISSION",
+          "status": "CHECK",
+          "scope": "Actual missing dependency/save-pending/disk-miss/cooldown rejection and duplicate request preserve explicit owner/current completion. Legacy Enqueue unbounded capacity LIMIT-C1."
+        },
+        {
+          "id": "Q10-C1.CANCEL_STALE",
+          "status": "CHECK",
+          "scope": "Exact queued/running/ready/partial cancel and old result vs newer owner; current reissue completes, old slice cannot erase new terrain/edit."
+        },
+        {
+          "id": "Q10-C1.OUTSIDE_RESET",
+          "status": "CHECK",
+          "scope": "Actual outside-radius/abort/world replacement retires abandoned load owner and current reissue completes without stale state resurrection."
+        }
+      ]
     },
     {
       "id": "Q10-C2",
@@ -653,5 +677,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11-C1 all4 subcases accepted; actual replacement current successor ticks2. Next Q10-C1 load lifecycle. Top-level5 CHECK; full scope OPEN."
+  "checkpoint": "Q10-C1 RETRY_EXHAUSTION actual4 retries/5 demands/current24-section recovery accepted. Next ADMISSION, CANCEL_STALE, OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
 }

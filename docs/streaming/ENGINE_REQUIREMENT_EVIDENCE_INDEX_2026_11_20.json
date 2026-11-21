@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q10.load-retry-exhaustion-current-recovery",
+      "status": "SCOPED_PASS_Q10_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-load-retry-acceptance-20261121.json",
+      "scope": "Actual serializer/storage files and WorldPersistence/AsyncChunkIo workers/results/retries; existing production diagnostic injects five upper19 returning failures. Actual local lower deletion retained through retries/current24-section recovery. Explicit clock adapter expires retry deadline; not wall-clock one-second timing or OS open/read fault. No actual queued/running cancellation/newer owner race/outside/reset/cold save/Full light/backend/framebuffer/performance/memory claim. Remaining Q10 subcases and full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q11.world-replacement-current-successor-and-closure",
       "status": "SCOPED_PASS_Q11_C1_CLOSED_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

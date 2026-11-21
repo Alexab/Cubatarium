@@ -44,6 +44,17 @@
 
 namespace cutum
 {
+template <typename Phase>
+#if defined(_MSC_VER)
+__declspec(noinline)
+#elif defined(__GNUC__)
+__attribute__((noinline))
+#endif
+inline void RunTerrainProbePhase(Phase phase)
+{
+  phase();
+}
+
 #if defined(_MSC_VER)
 __declspec(noinline)
 #elif defined(__GNUC__)
@@ -1636,6 +1647,90 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         }
         require(all_retired,"unload veto preserves owners; successful unload retires only old column and permits fresh reissue");
       }
+      RunTerrainProbePhase([&] {
+        auto load_owner=std::make_unique<UWorld>(nullptr,nullptr);
+        auto &load_world=*load_owner;
+        load_world.SetSpawnPoint({8,-63,8});
+        load_world.ProceduralTemplate.MinHeight=-64; load_world.ProceduralTemplate.MaxHeight=319;
+        load_world.ProceduralTemplate.SeaLevel=63; load_world.ProceduralTemplate.AsyncChunkIo=true;
+        load_world.ProceduralTemplate.AsyncRelight=false;
+        load_world.BlockWorld.SetVerticalProfile({-64,319,63});
+        load_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        load_world.BlockWorld.SetFluidDefinitions(definitions.get()); load_world.SetRenderSettings(settings);
+        const glm::ivec3 column(0),lower(0,-4,0),edit(1,-63,1);
+        const auto folder=root/"load-retry-exhaustion"; fs::create_directories(folder);
+        load_world.SetWorldFolderPath(folder.string());
+        UBlockWorld saved; saved.SetVerticalProfile({-64,319,63});
+        saved.SetFluidDefinitions(definitions.get());
+        UBinaryChunkSerializer serializer;
+        for(int cy=-4;cy<=19;++cy) {
+          const glm::ivec3 slice(0,cy,0);
+          auto frame=std::make_unique<UChunk>(slice);
+          if(cy==-4) {
+            for(int x=0;x<CHUNK_SIZE;++x) for(int z=0;z<CHUNK_SIZE;++z)
+              frame->SetBlockLocal({x,0,z},8);
+            frame->SetBlockLocal({1,1,1},8);
+          }
+          if(cy==19) frame->SetBlockLocal({8,8,8},8);
+          const auto decoded=serializer.Deserialize(serializer.Serialize(slice,*frame,*load_world.BlockRegistry).bytes,
+                                                    slice,*load_world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(saved,slice,&decoded,nullptr,{column,1},1,false),
+                  "retry fixture has24 real decoded terrain frames including AIR");
+        }
+        auto &persistence=*load_world.Persistence;
+        require(persistence.GetChunkStorage().SaveTerrainColumn(column,saved,folder.string(),
+                    *load_world.BlockRegistry,319,-64),"retry fixture persisted by actual storage");
+        persistence.ReadFailureProbe=DiskReadFailureProbe(glm::ivec2(0,0));
+        persistence.ReadFailureProbe.ObserveFocus({16,0,0});
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96101);
+        require(persistence.IsTerrainColumnDiskLoadPending(column),"retry request admitted");
+        const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+        bool edited=false; uint64_t incarnation=0; int max_retry=0;
+        std::unordered_set<uint64_t> demands;
+        while(persistence.IsTerrainColumnDiskLoadPending(column)) {
+          const auto &pending=persistence.PendingAsyncColumnLoadSlices.at(column);
+          max_retry=std::max(max_retry,pending.retry_generation); demands.insert(pending.demand_id);
+          persistence.TickAsyncChunkIo(load_world,1,0);
+          if(!edited && load_world.BlockWorld.GetChunkManager().HasDecodedTerrainSlice(lower)) {
+            load_world.BlockWorld.SetBlock(edit,BLOCK_AIR);
+            load_world.ModifiedChunks.insert(lower);
+            incarnation=load_world.BlockWorld.GetChunkManager().GetChunk(lower)->GetIncarnation(); edited=true;
+          }
+          require(std::chrono::steady_clock::now()<deadline,"actual failed disk batch terminates in10s");
+          std::this_thread::yield();
+        }
+        const auto retained=[&] {
+          return edited && load_world.BlockWorld.GetBlock(edit)==BLOCK_AIR &&
+              load_world.BlockWorld.GetChunkManager().GetChunk(lower)->GetIncarnation()==incarnation &&
+              load_world.ModifiedChunks.count(lower)==1;
+        };
+        const bool exhausted=max_retry==4 && demands.size()==5 && retained() &&
+            load_world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+            persistence.FailedColumnRetryAfter.count(column)==1;
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96102);
+        const bool cooldown=!persistence.IsTerrainColumnDiskLoadPending(column);
+        require(exhausted && cooldown,"retry exhaustion preserves edit/unresolved owner and throttles reissue");
+        // Explicit clock adapter: prove expired-gate recovery without sleeping.
+        persistence.FailedColumnRetryAfter[column]=std::chrono::steady_clock::now();
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96103);
+        require(persistence.IsTerrainColumnDiskLoadPending(column),"expired cooldown permits new current load");
+        const auto recovered_by=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+        while(persistence.IsTerrainColumnDiskLoadPending(column)) {
+          persistence.TickAsyncChunkIo(load_world,1,0);
+          require(std::chrono::steady_clock::now()<recovered_by,"current disk reissue completes in10s");
+          std::this_thread::yield();
+        }
+        int decoded_count=0;
+        for(int cy=-4;cy<=19;++cy) decoded_count+=load_world.BlockWorld.GetChunkManager().HasDecodedTerrainSlice({0,cy,0});
+        const bool recovered=decoded_count==24 && retained() &&
+            !load_world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+            persistence.FailedColumnRetryAfter.count(column)==0 &&
+            load_world.BlockWorld.GetBlock({8,19*CHUNK_SIZE+8,8})==8;
+        report["disk_load_retry_exhaustion"]={{"max_retry",max_retry},{"failed_demands",demands.size()},
+            {"exhausted_retained",exhausted},{"cooldown_rejected",cooldown},
+            {"decoded_sections",decoded_count},{"current_recovered",recovered}};
+        require(recovered,"actual current disk load fully recovers without replaying local deletion");
+      });
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
