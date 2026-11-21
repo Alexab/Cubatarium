@@ -437,8 +437,9 @@
       "action": "Stage ownership envelope",
       "done_when": "Store only current-world live column projections, define numeric/producer-derived peak storage and release points including unload veto, absent, world retirement. Cache eviction must not falsely report readiness or suppress live repair.",
       "status": "OPEN",
-      "wip": "Separate stage map removed; world-owned generation projection lifetime/current native regression PASS. Payload240/intent16 measured, node/allocator overhead excluded. World record cardinality/full bytes remain OPEN.",
-      "partial_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json"
+      "wip": "World-owned stage/intent lifetime and real allocator-request byte charge/release verified. MSVC store inline64+sentinel280+280 per record, OS heap overhead excluded explicitly. Current record cardinality N not bounded; step OPEN.",
+      "partial_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json",
+      "allocator_evidence": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json"
     },
     {
       "id": "Q01.L3",
@@ -448,7 +449,7 @@
       "partial_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
     }
   ],
-  "next_action": "Resolve L2 world-record/stage cardinality and allocator-byte envelope without merely shifting uncapped overflow into records. Existing capacity/lifetime native receipts reusable unless dependent source changes.",
+  "next_action": "Establish live world-record cardinality N from current data/IO/light/intent owners and interest retirement without dropping unsaved/live demand; measured node bytes now available. Reuse accepted admission/projection/allocator tests absent dependent change.",
   "verified_one_shot_paths": [
     {
       "file": "src/World/Core/MarkRelitInstall.cpp",

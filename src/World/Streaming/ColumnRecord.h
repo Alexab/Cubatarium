@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Memory/AllocationCountingResource.h"
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
 #include "World/Streaming/ColumnJobGraph.h"
@@ -142,6 +143,17 @@ inline bool ColumnHasActivePending(const ColumnRecord &rec)
 class UColumnRecordStore
 {
 public:
+  UColumnRecordStore() : Records(&Memory) {}
+  UColumnRecordStore(const UColumnRecordStore &) = delete;
+  UColumnRecordStore &operator=(const UColumnRecordStore &) = delete;
+  // Embedded resource identity must stay at this world's stable address.
+  UColumnRecordStore(UColumnRecordStore &&) = delete;
+  UColumnRecordStore &operator=(UColumnRecordStore &&) = delete;
+
+  UAllocationCountingResource::Snapshot GetAllocationSnapshot() const
+  {
+    return Memory.GetSnapshot();
+  }
   ColumnRecord &GetOrCreate(glm::ivec2 xz)
   {
     return Records[PackColumnKey(xz)];
@@ -353,7 +365,9 @@ public:
 private:
   // Ordered world records support bounded fair key traversal without an
   // additional uncapped retry index or rehash-invalidated iterators.
-  std::map<uint64_t, ColumnRecord> Records;
+  // Resource outlives the map and tracks every node/sentinel allocation.
+  UAllocationCountingResource Memory;
+  std::pmr::map<uint64_t, ColumnRecord> Records;
   uint64_t FlowIntentGeneration{1};
 };
 

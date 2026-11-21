@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.actual-record-allocator-accounting",
+      "status": "SCOPED_PASS_CARDINALITY_OPEN",
+      "receipt": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json",
+      "scope": "LIMIT.Q01 world-record allocator-request accounting: embedded PMR resource includes actual node/sentinel allocate/deallocate bytes and tracks current/peak. Local two2048-node cohorts,10000 duplicate updates, exact Erase and Clear return to baseline; cruise SoT test PASS. Current native3 actual public world retirements return280-byte empty baseline; normal flow/current successor regression PASS. MSVC Release requested container charge=64 inline+280*(N+1); payload240 included in node. Excludes upstream OS heap headers/fragmentation/retained pages, covered later process-memory matrix. N cardinality still unbounded/unproven; no full LIMIT closure."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.world-owned-stage-projection",
       "status": "SCOPED_PASS_LIMIT_OPEN",
       "receipt": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json",

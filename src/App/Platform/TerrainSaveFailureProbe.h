@@ -2457,6 +2457,19 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             require(foreign_preserved && retired && world_records_retired && successor && retargeted && destructor_retired,
                 "global flow retires only its world and replacement publishes actual current successor");
           }
+          UColumnRecordStore empty_records;
+          const auto baseline=empty_records.GetAllocationSnapshot();
+          const auto live_records=flow.GetColumnRecords().Size();
+          const auto before_memory=flow.GetColumnRecords().GetAllocationSnapshot();
+          flow.AbandonTerrainForWorldReplace();
+          const auto after_memory=flow.GetColumnRecords().GetAllocationSnapshot();
+          const bool released=flow.GetColumnRecords().Size()==0 &&
+              after_memory.live_bytes==baseline.live_bytes &&
+              after_memory.live_allocations==baseline.live_allocations;
+          report["world_record_allocator"].push_back({{"mode",mode},{"records_before",live_records},
+              {"bytes_before",before_memory.live_bytes},{"bytes_after",after_memory.live_bytes},
+              {"empty_baseline_bytes",baseline.live_bytes},{"returned_to_baseline",released}});
+          require(released,"actual world retirement releases record nodes to allocator baseline");
         }
       });
       if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});

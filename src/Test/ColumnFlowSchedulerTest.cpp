@@ -33,6 +33,37 @@ int main()
   UColumnFlowScheduler s;
   {
     cutum::UColumnRecordStore records;
+    const auto empty=records.GetAllocationSnapshot();
+    constexpr size_t count=2048;
+    size_t full_bytes=0;
+    for(int round=0;round<2;++round) {
+      for(size_t n=0;n<count;++n) records.GetOrCreate({static_cast<int>(n),-17});
+      const auto full=records.GetAllocationSnapshot();
+      Expect(full.live_bytes>=empty.live_bytes+count*sizeof(cutum::ColumnRecord),
+             "allocator charge includes all record payload and node storage");
+      Expect(full.live_allocations==empty.live_allocations+count,
+             "each world record has one accounted ordered node");
+      if(round==0) full_bytes=full.live_bytes;
+      else Expect(full.live_bytes==full_bytes && full.peak_bytes==full_bytes,
+                  "repeated world cohorts do not retain prior allocation history");
+      for(int n=0;n<10000;++n) records.GetOrCreate({n%static_cast<int>(count),-17});
+      records.InvalidateFlowIntents();
+      Expect(records.GetAllocationSnapshot().live_bytes==full.live_bytes,
+             "coalescing and generation reset allocate no overflow storage");
+      records.Erase({0,-17});
+      Expect(records.GetAllocationSnapshot().live_bytes<full.live_bytes,
+             "exact column retirement releases allocator charge");
+      records.Clear();
+      const auto cleared=records.GetAllocationSnapshot();
+      Expect(cleared.live_bytes==empty.live_bytes && cleared.live_allocations==empty.live_allocations,
+             "world clear releases all nodes back to empty-container baseline");
+    }
+    std::cout << "world_record_empty_allocator_bytes=" << empty.live_bytes
+              << " world_record_node_bytes=" << (full_bytes-empty.live_bytes)/count
+              << " world_record_store_inline_bytes=" << sizeof(cutum::UColumnRecordStore) << '\n';
+  }
+  {
+    cutum::UColumnRecordStore records;
     for(int x=0;x<2000;++x) records.SetFlowJobStage({x,9},cutum::ColumnJobStage::Absent);
     Expect(records.Size()==0,"absent stage projection creates no world records");
     records.SetFlowJobStage({-2,7},cutum::ColumnJobStage::Meshing);
