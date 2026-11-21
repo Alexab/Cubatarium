@@ -9215,7 +9215,7 @@ int UWorld::ClearPendingLightAfterMeshCommitted(int max_columns)
           }
           if (any_drawable && !has_lit_drawable)
           {
-            GetColumnFlowExecutor().Enqueue(key,
+            GetColumnFlowExecutor().EnqueueForWorld(*this, key,
                                             ColumnWorkKind::RelightThenMesh,
                                             /*priority=*/80);
           }
@@ -13741,7 +13741,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         !GetColumnFlowExecutor().Scheduler().Contains(
             col, ColumnWorkKind::FirstMesh))
     {
-      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+      GetColumnFlowExecutor().EnqueueForWorld(*this, col, ColumnWorkKind::FirstMesh,
                                       /*priority=*/100);
     }
     if (IsPendingLightBeforeMesh(col) ||
@@ -13796,7 +13796,7 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
         StickyRemeshAfterLight.erase(col);
       }
       EnterVisualGateCtrl.NoteVoidRelightProbed(col);
-      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+      GetColumnFlowExecutor().EnqueueForWorld(*this, col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
       EnqueueVoidDarkColumnRelightNote(col);
       ++scheduled;
@@ -14032,14 +14032,14 @@ void UWorld::BeginEnterLitGate()
       const uint64_t open_sky_event =
           EnterVisualGateCtrl.NoteOpenSkyApplied(col);
       NoteOpenSkyRepairTargets(col, dirty_min, dirty_max, open_sky_event);
-      GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,
+      GetColumnFlowExecutor().EnqueueForWorld(*this, col, ColumnWorkKind::RelightThenMesh,
                                       /*priority=*/80);
       // OpenSky inject is a light delta — remesh via ColumnFlow (not direct
       // MarkDirty).
       if (MeshService && ColumnFullyDarkSolidDrawable(col))
       {
         StickyRemeshAfterLight.erase(col);
-        GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,
+        GetColumnFlowExecutor().EnqueueForWorld(*this, col, ColumnWorkKind::FirstMesh,
                                         /*priority=*/85);
       }
     }
@@ -15595,7 +15595,7 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
       item.kind = ColumnWorkKind::FirstMesh;
       item.priority = 110;
       item.cy = place_chunk.y;
-      GetColumnFlowExecutor().Enqueue(item);
+      GetColumnFlowExecutor().EnqueueForWorld(*this, item);
     }
   }
   PhysicsTelemetryData.EditToFirstMeshMs =

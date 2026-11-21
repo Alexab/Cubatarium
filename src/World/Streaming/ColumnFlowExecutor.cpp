@@ -385,6 +385,16 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 }
 } // namespace
 
+void UColumnFlowExecutor::EnqueueForWorld(UWorld &world, const ColumnWorkItem &item)
+{
+  const auto epoch = world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+  world.GetColumnRecords().NoteFlowIntent(item, epoch);
+  // A callback for another/staging world must not retarget the active queue.
+  // Its intent is picked up when that world's consumer binds normally.
+  if (decide_world_ == &world)
+    Enqueue(item);
+}
+
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &incoming)
 {
   ColumnWorkItem item = incoming;

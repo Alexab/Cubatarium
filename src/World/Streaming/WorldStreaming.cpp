@@ -547,7 +547,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
               fm.priority = 105;
               fm.cy =
                   FloorDiv(world.GetPreferredLoadFocusBlock().y, CHUNK_SIZE);
-              exec.Enqueue(fm);
+              exec.EnqueueForWorld(world, fm);
             }
             else if (admit_far_dirty)
             {
@@ -661,7 +661,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 relight.priority = 95;
                 relight.scan_full_focus = false;
                 relight.cy = kColumnWorkWholeRemeshBandCy;
-                exec.Enqueue(relight);
+                exec.EnqueueForWorld(world, relight);
                 if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||
                     world.PhysicsTelemetryData.FocusMissingMesh != 0)
                 {
@@ -686,7 +686,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
                 fm.scan_full_focus =
                     world.PhysicsTelemetryData.FocusMissingMesh != 0;
                 fm.cy = pin_cy;
-                exec.Enqueue(fm);
+                exec.EnqueueForWorld(world, fm);
               }
             };
             if (seed_decision.try_sync_seed)
@@ -738,7 +738,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
             fm.kind = ColumnWorkKind::FirstMesh;
             fm.priority = 105;
             fm.cy = focus_cy;
-            exec.Enqueue(fm);
+            exec.EnqueueForWorld(world, fm);
           }
         }
         else if (LastPressureCaps.level == StreamingPressureLevel::Green)
@@ -2092,7 +2092,7 @@ void UWorldStreaming::RefreshStreamingPressure(
             relight.priority = 116;
             relight.scan_full_focus = false;
             relight.cy = coord.y;
-            exec.Enqueue(relight);
+            exec.EnqueueForWorld(world, relight);
             flow_after = exec.Scheduler().Contains(
                 column, ColumnWorkKind::RelightThenMesh);
             flow_kind = "relight";
@@ -2135,7 +2135,7 @@ void UWorldStreaming::RefreshStreamingPressure(
         fm.cy = coord.y;
         const bool flow_before =
             exec.Scheduler().Contains(column, ColumnWorkKind::FirstMesh);
-        exec.Enqueue(fm);
+        exec.EnqueueForWorld(world, fm);
         const bool flow_after =
             exec.Scheduler().Contains(column, ColumnWorkKind::FirstMesh);
         int direct_slice_marked = 0;
@@ -4721,11 +4721,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // SOTA: enqueue only — TickMeshEmerge DrainBudget is the single owner.
     if (rim_first_mesh_sla && ingress.first_mesh_admit > 0)
     {
-      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);
+      exec.EnqueueForWorld(world, repair_xz, ColumnWorkKind::FirstMesh, 100);
     }
     else if (ingress.first_mesh_admit > 0)
     {
-      exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);
+      exec.EnqueueForWorld(world, repair_xz, ColumnWorkKind::FirstMesh, 80);
     }
     if (!rim_first_mesh_sla)
     {
@@ -5152,7 +5152,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
           item.priority = 90;
           item.scan_full_focus = missing_focus_mesh;
           item.cy = repair_cy;
-          exec.Enqueue(item);
+          exec.EnqueueForWorld(world, item);
         }
       }
     }
@@ -5560,6 +5560,7 @@ void UWorldStreaming::ResumeStreamerAfterQuiesce()
 
 void UWorldStreaming::TickMeshEmerge(UWorld &world)
 {
+  GetColumnFlowExecutor().BindDecideWorld(&world);
   CUBA_ZONE("TickMeshEmerge");
   const auto emerge_function_t0 = std::chrono::high_resolution_clock::now();
   auto emerge_elapsed_ms = [&]()

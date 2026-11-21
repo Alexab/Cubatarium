@@ -562,7 +562,7 @@ void UWorld::ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &col
                                       plan.first_mesh_column.y != 0
                                   ? plan.first_mesh_column
                                   : column;
-    GetColumnFlowExecutor().Enqueue(fm_col, ColumnWorkKind::FirstMesh,
+    GetColumnFlowExecutor().EnqueueForWorld(*this, fm_col, ColumnWorkKind::FirstMesh,
                                     /*priority=*/70);
     ++PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN;
   }
@@ -1210,7 +1210,7 @@ void UWorld::MarkRelitChunksForMesh(const std::vector<glm::ivec3> &relit_chunks,
     if (!GetColumnFlowExecutor().Scheduler().Contains(key,
                                                      ColumnWorkKind::FirstMesh))
     {
-      GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,
+      GetColumnFlowExecutor().EnqueueForWorld(*this, key, ColumnWorkKind::FirstMesh,
                                       /*priority=*/65);
     }
     if (UMeshCaptureWorker::kWorkerCaptureEnabled && MeshService)

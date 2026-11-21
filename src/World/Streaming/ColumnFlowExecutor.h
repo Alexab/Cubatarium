@@ -36,6 +36,16 @@ public:
   }
 
   void Enqueue(const ColumnWorkItem &item);
+  void EnqueueForWorld(UWorld &world, const ColumnWorkItem &item);
+  void EnqueueForWorld(UWorld &world, glm::ivec2 column,
+                       ColumnWorkKind kind, int priority)
+  {
+    ColumnWorkItem item{};
+    item.column = column;
+    item.kind = kind;
+    item.priority = priority;
+    EnqueueForWorld(world, item);
+  }
 
   void Clear();
 

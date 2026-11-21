@@ -157,7 +157,7 @@ void UChunkEmergeCoordinator::OnSoftDeferHeld(glm::ivec3 chunk_coord)
   item.kind = ColumnWorkKind::FirstMesh;
   item.priority = 100;
   item.cy = chunk_coord.y;
-  GetColumnFlowExecutor().Enqueue(item);
+  GetColumnFlowExecutor().EnqueueForWorld(world_ref, item);
 }
 
 void UChunkEmergeCoordinator::ResetFaceDebtEpoch(UWorld &world)
@@ -823,7 +823,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // Scheduler dedupes same column+kind, so one FirstMesh carries admit_n.
         const int admit_n = std::min(2, visual_drain.budget);
         auto &exec = GetColumnFlowExecutor();
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+        exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 40 + admit_n);
         note_column_flow_drain(4, admit_n);
       }
@@ -1581,7 +1581,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           item.priority = ColumnFlowFirstMeshPriority(105, horiz, heal_r);
           item.scan_full_focus = missing_visible_mesh;
           item.cy = coord.y;
-          exec.Enqueue(item);
+          exec.EnqueueForWorld(world, item);
         }
         if (allow_own && !stable_face_debt)
         {
@@ -1634,7 +1634,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                   95, horiz, heal_r, missing_visible_mesh);
               relight.scan_full_focus = missing_visible_mesh;
               relight.cy = coord.y;
-              exec.Enqueue(relight);
+              exec.EnqueueForWorld(world, relight);
             }
             if (phys_telem.DarkFaceVoidNearN > 200 &&
                 ShouldSoftDeferEmptyAllowParallelRelight(horiz, fifo_n,
@@ -1667,7 +1667,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             item.priority = 110;
             item.scan_full_focus = missing_visible_mesh;
             item.cy = coord.y;
-            exec.Enqueue(item);
+            exec.EnqueueForWorld(world, item);
             if (!age_drain_done)
             {
               note_column_flow_drain(1, 1);
@@ -1835,7 +1835,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         pin.priority = 114;
         pin.scan_full_focus = false;
         pin.cy = owned.y;
-        exec_uf.Enqueue(pin);
+        exec_uf.EnqueueForWorld(world, pin);
         note_column_flow_drain(2, 1);
       }
     }
@@ -1907,7 +1907,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         pin.priority = priority;
         pin.scan_full_focus = missing_visible_mesh;
         pin.cy = stuck.y;
-        exec.Enqueue(pin);
+        exec.EnqueueForWorld(world, pin);
         SoftDeferEmptyOwned.insert(stuck);
         SoftDeferEmptyAgeFrames[stuck] = 0;
       }
@@ -1927,7 +1927,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     pin.priority = priority;
     pin.scan_full_focus = false;
     pin.cy = stuck.y;
-    exec.Enqueue(pin);
+    exec.EnqueueForWorld(world, pin);
     SoftDeferEmptyOwned.insert(stuck);
     note_column_flow_drain(2, 2);
     --stuck_escape_fm_budget;
@@ -2053,7 +2053,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   if (underfeet_undrawn)
   {
     auto &exec = GetColumnFlowExecutor();
-    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+    exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 110);
   }
   UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.underfeet_gap_recovery");
@@ -2116,7 +2116,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     }
     if (forced)
     {
-      GetColumnFlowExecutor().Enqueue(uf, ColumnWorkKind::FirstMesh, 120);
+      GetColumnFlowExecutor().EnqueueForWorld(world, uf, ColumnWorkKind::FirstMesh, 120);
     }
   }
 
@@ -3285,7 +3285,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     // Hide⇒Ticket drain: sticky/stale-dark unfinished needs SyncIdle, not only
     // Dirty schedule (async can sit on remesh while draw_ok stays false).
     auto &exec = GetColumnFlowExecutor();
-    exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+    exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                  ColumnWorkKind::FirstMesh, 80);
     // Audit16 R1: also ticket SoftDefer empty-stuck witness so rim holes get
     // a FirstMesh column job when focus xz already has mesh.
@@ -3294,7 +3294,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         (pt_cu.SoftDeferEmptyStuckCx != focus_ground_horiz.x ||
          pt_cu.SoftDeferEmptyStuckCz != focus_ground_horiz.z))
     {
-      exec.Enqueue(
+      exec.EnqueueForWorld(world,
           glm::ivec2(pt_cu.SoftDeferEmptyStuckCx, pt_cu.SoftDeferEmptyStuckCz),
           ColumnWorkKind::FirstMesh, 85);
     }
@@ -3568,7 +3568,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // admit (land-cruise miss_stuck 6–12s).
           const int relight_prio =
               missing_visible_mesh ? 55 : (recover_n + 100);
-          exec.Enqueue(focus_xz, ColumnWorkKind::RelightThenMesh, relight_prio);
+          exec.EnqueueForWorld(world, focus_xz, ColumnWorkKind::RelightThenMesh, relight_prio);
         }
       }
       // Era19: hitch drain via FrameStreamingBudget — FirstMesh/no_ticket only
@@ -3642,7 +3642,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
       if (cold.first_mesh_admit > 0)
       {
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+        exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 80);
       }
     }
@@ -3652,7 +3652,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       auto &exec = GetColumnFlowExecutor();
       exec.RequestPromoteRelight(
           glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z), 40);
-      exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+      exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                    ColumnWorkKind::FirstMesh, 60);
     }
     else if (!moving && (missing_visible_mesh || focus_not_render_ready > 0) &&
@@ -3668,7 +3668,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       {
         const int sticky_sync =
             std::clamp(4 + (focus_not_render_ready > 16 ? 4 : 0), 4, 12);
-        exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
+        exec.EnqueueForWorld(world, glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
                      ColumnWorkKind::FirstMesh, 40);
         note_column_flow_drain(sticky_sync, 1);
       }
@@ -3735,7 +3735,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         mesh_service.MarkMissingSlicesDirtyPriority(
             world.GetBlockWorld(), hole, hole.y * CHUNK_SIZE,
             hole.y * CHUNK_SIZE + CHUNK_SIZE - 1);
-        GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
+        GetColumnFlowExecutor().EnqueueForWorld(world, glm::ivec2(hole.x, hole.z),
                                         ColumnWorkKind::FirstMesh, 110);
       }
     }
@@ -3878,12 +3878,12 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             // missing slice — only remesh stays SoftDefer-gated.
             if (world.IsPendingLightBeforeMesh(glm::ivec2(coord.x, coord.z)))
             {
-              GetColumnFlowExecutor().Enqueue(glm::ivec2(coord.x, coord.z),
+              GetColumnFlowExecutor().EnqueueForWorld(world, glm::ivec2(coord.x, coord.z),
                                               ColumnWorkKind::PromoteRelight,
                                               100);
             }
             // ColPipe P4: no underfeet Immediate — DirtyPriority + FirstMesh.
-            GetColumnFlowExecutor().Enqueue(glm::ivec2(coord.x, coord.z),
+            GetColumnFlowExecutor().EnqueueForWorld(world, glm::ivec2(coord.x, coord.z),
                                             ColumnWorkKind::FirstMesh, 110);
             mesh_service.MarkMissingSlicesDirtyPriority(
                 world.GetBlockWorld(), coord, coord.y * CHUNK_SIZE,
@@ -4080,7 +4080,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         exec.RequestPromoteRelight(glm::ivec2(hole.x, hole.z), 90);
         if (moving && ingress.first_mesh_admit > 0)
         {
-          exec.Enqueue(glm::ivec2(hole.x, hole.z), ColumnWorkKind::FirstMesh,
+          exec.EnqueueForWorld(world, glm::ivec2(hole.x, hole.z), ColumnWorkKind::FirstMesh,
                        70 + ingress.first_mesh_admit * 10);
         }
         // Orphan Active (HasInflight) without builder flight — ColumnFlow only.
@@ -4091,7 +4091,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               !exec.Scheduler().Contains(hole_xz,
                                          ColumnWorkKind::RelightThenMesh))
           {
-            exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 85);
+            exec.EnqueueForWorld(world, hole_xz, ColumnWorkKind::FirstMesh, 85);
           }
         }
         else
@@ -4127,7 +4127,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             if (!mesh_service.IsChunkMeshDirty(hole) &&
                 !mesh_service.HasInflightMeshBuild(hole))
             {
-              exec.Enqueue(glm::ivec2(hole.x, hole.z),
+              exec.EnqueueForWorld(world, glm::ivec2(hole.x, hole.z),
                            ColumnWorkKind::FirstMesh, 75);
             }
             // Nudge only *missing* underfeet-ring slices via ColumnFlow
@@ -4148,7 +4148,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                       !mesh_service.IsPendingGpuApply(neighbor) &&
                       mesh_service.TryConsumeDirtyAdmit())
                   {
-                    exec.Enqueue(glm::ivec2(neighbor.x, neighbor.z),
+                    exec.EnqueueForWorld(world, glm::ivec2(neighbor.x, neighbor.z),
                                  ColumnWorkKind::FirstMesh, 65);
                   }
                 }
@@ -4382,7 +4382,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.MarkMissingSlicesDirtyPriority(
           world.GetBlockWorld(), hole, hole.y * CHUNK_SIZE,
           hole.y * CHUNK_SIZE + CHUNK_SIZE - 1);
-      GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),
+      GetColumnFlowExecutor().EnqueueForWorld(world, glm::ivec2(hole.x, hole.z),
                                       ColumnWorkKind::FirstMesh, 100);
       note_column_flow_drain(1, 1);
       s_last_carve_hole = hole;
@@ -4720,7 +4720,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           escalate.priority = 108;
           escalate.scan_full_focus = false;
           escalate.cy = isolated_hole.y;
-          exec.Enqueue(escalate);
+          exec.EnqueueForWorld(world, escalate);
           ++world.GetPhysicsTelemetryMutable().MissSlaKickN;
         }
         if (hole_stage != ColumnJobStage::RenderReady &&
@@ -4733,7 +4733,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           hole_work.priority = stop_tail_ownership_mode ? 118 : 100;
           hole_work.scan_full_focus = false;
           hole_work.cy = stop_tail_ownership_mode ? -2 : isolated_hole.y;
-          exec.Enqueue(hole_work);
+          exec.EnqueueForWorld(world, hole_work);
         }
         exec.RequestPromoteRelight(hole_col, /*priority=*/55);
       }
@@ -4745,7 +4745,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         hole.priority = stop_tail_ownership_mode ? 118 : 100;
         hole.scan_full_focus = false;
         hole.cy = stop_tail_ownership_mode ? -2 : isolated_hole.y;
-        exec.Enqueue(hole);
+        exec.EnqueueForWorld(world, hole);
       }
     }
     // N0b: never cut Drain when known far miss (nh≥4); async≥12 alone still
@@ -4796,7 +4796,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       tail_scan.priority = 104;
       tail_scan.scan_full_focus = true;
       tail_scan.cy = kColumnWorkWholeColumnCy;
-      exec.Enqueue(tail_scan);
+      exec.EnqueueForWorld(world, tail_scan);
       note_column_flow_drain(5, 4);
     }
     else if (full_scan)
@@ -4808,7 +4808,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       focus_scan.priority = 95;
       focus_scan.scan_full_focus = true;
       focus_scan.cy = kColumnWorkWholeRemeshBandCy;
-      exec.Enqueue(focus_scan);
+      exec.EnqueueForWorld(world, focus_scan);
       FocusScanCd =
           (far_rim_force_scan || adm.mode == MeshWorkAdmission::Mode::Normal)
               ? 0
@@ -4871,7 +4871,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             xfer.kind = ColumnWorkKind::FirstMesh;
             xfer.priority = first_mesh_prio;
             xfer.cy = isolated_hole.y;
-            exec.Enqueue(xfer);
+            exec.EnqueueForWorld(world, xfer);
           }
           return;
         }
@@ -4888,7 +4888,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             if (!exec.Scheduler().Contains(miss_xz,
                                            ColumnWorkKind::RelightThenMesh))
             {
-              exec.Enqueue(miss_xz, ColumnWorkKind::RelightThenMesh,
+              exec.EnqueueForWorld(world, miss_xz, ColumnWorkKind::RelightThenMesh,
                            first_mesh_prio);
             }
             return;
@@ -4906,7 +4906,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               xfer.kind = ColumnWorkKind::FirstMesh;
               xfer.priority = first_mesh_prio;
               xfer.cy = isolated_hole.y;
-              exec.Enqueue(xfer);
+              exec.EnqueueForWorld(world, xfer);
             }
             return;
           }
@@ -4915,7 +4915,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         // KEEP).
         if (!fm_ticket)
         {
-          exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
+          exec.EnqueueForWorld(world, miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);
         }
         return;
       }
@@ -4932,7 +4932,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             xfer.kind = ColumnWorkKind::FirstMesh;
             xfer.priority = first_mesh_prio;
             xfer.cy = isolated_hole.y;
-            exec.Enqueue(xfer);
+            exec.EnqueueForWorld(world, xfer);
           }
         }
         return;
@@ -4946,7 +4946,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         xfer.kind = ColumnWorkKind::FirstMesh;
         xfer.priority = first_mesh_prio;
         xfer.cy = isolated_hole.y;
-        exec.Enqueue(xfer);
+        exec.EnqueueForWorld(world, xfer);
       }
       // Ticket-only without Dirty is incomplete ownership — transfer to Dirty.
       if (!ShouldPinIsolatedMissMarkDirty(
@@ -4963,7 +4963,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         xfer.kind = ColumnWorkKind::FirstMesh;
         xfer.priority = first_mesh_prio;
         xfer.cy = isolated_hole.y;
-        exec.Enqueue(xfer);
+        exec.EnqueueForWorld(world, xfer);
       }
     };
     if (world.IsEnterLitGateActive() && found_nearest_missing)
@@ -5062,7 +5062,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             owned.priority = 110;
             owned.scan_full_focus = false;
             owned.cy = isolated_hole.y;
-            exec.Enqueue(owned);
+            exec.EnqueueForWorld(world, owned);
           }
         }
         // I10-C2: nh==0 moving undrawn miss — pin every frame.
@@ -5094,7 +5094,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           renew.priority = 118;
           renew.scan_full_focus = false;
           renew.cy = isolated_hole.y;
-          exec.Enqueue(renew);
+          exec.EnqueueForWorld(world, renew);
         }
         // I9-D1: nh≤1 stuck miss — pin when age>60 frames without owner.
         if (moving && missing_visible_mesh && nh <= 1 && no_drawable &&
@@ -5138,7 +5138,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // the slice-pin first (scheduler is single-ticket-per-column).
           if (!force_full_column_pin)
           {
-            exec.Enqueue(pin);
+            exec.EnqueueForWorld(world, pin);
           }
           if (queued_stuck || kicked_stuck)
           {
@@ -5162,7 +5162,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             owned.priority = 116;
             owned.scan_full_focus = false;
             owned.cy = isolated_hole.y;
-            exec.Enqueue(owned);
+            exec.EnqueueForWorld(world, owned);
           }
         }
         if (ShouldGuaranteeResidentWitnessFirstMesh(miss_resident, no_drawable,
@@ -5219,7 +5219,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
                 fm.priority = 118;
                 fm.scan_full_focus = false;
                 fm.cy = isolated_hole.y;
-                exec.Enqueue(fm);
+                exec.EnqueueForWorld(world, fm);
               }
             }
             if (ShouldPreferKickMissWitnessGpu(
@@ -5265,7 +5265,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               fm.priority = 114;
               fm.scan_full_focus = false;
               fm.cy = isolated_hole.y;
-              exec.Enqueue(fm);
+              exec.EnqueueForWorld(world, fm);
               note_column_flow_drain(2, 1);
             }
           }
@@ -5285,7 +5285,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               fm.priority = 112;
               fm.scan_full_focus = false;
               fm.cy = isolated_hole.y;
-              exec.Enqueue(fm);
+              exec.EnqueueForWorld(world, fm);
               note_column_flow_drain(2, 1);
               mesh_service.SetFmDirtyEnqueueReserve(1);
             }
@@ -5350,7 +5350,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
               rim_pin.priority = 112;
               rim_pin.scan_full_focus = false;
               rim_pin.cy = isolated_hole.y;
-              exec.Enqueue(rim_pin);
+              exec.EnqueueForWorld(world, rim_pin);
               note_column_flow_drain(2, 1);
             }
           }
@@ -5443,7 +5443,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // remesh-band. This targets stuck unfinished_visual that can span
           // above remesh_max.
           heal_scan.cy = kColumnWorkWholeColumnCy;
-          exec.Enqueue(heal_scan);
+          exec.EnqueueForWorld(world, heal_scan);
           note_column_flow_drain(3, 3);
         }
 
@@ -5461,7 +5461,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
           // Full column pin: prevent "single-slice" rebuild that doesn't
           // eliminate focus_missing_mesh for stuck holes.
           pin.cy = kColumnWorkWholeColumnCy;
-          exec.Enqueue(pin);
+          exec.EnqueueForWorld(world, pin);
           if (stop_tail_ownership_mode)
           {
             note_column_flow_drain(4, 4);
@@ -5540,7 +5540,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
     focus_scan.priority = 90;
     focus_scan.scan_full_focus = true;
     focus_scan.cy = kColumnWorkWholeRemeshBandCy;
-    exec.Enqueue(focus_scan);
+    exec.EnqueueForWorld(world, focus_scan);
     note_column_flow_drain(moving ? 2 : 3, moving ? 2 : 3);
   }
   UFrameStageWatchdog::MarkCurrentStage("mesh_emerge.cruise_budget_clamp");
@@ -5637,7 +5637,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
       mesh_service.GetLastMeshDirtyScheduleOkN() < 4)
   {
     note_column_flow_drain(std::max(column_flow_drain_n, 2), 2);
-    GetColumnFlowExecutor().Enqueue(
+    GetColumnFlowExecutor().EnqueueForWorld(world,
         glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),
         ColumnWorkKind::FirstMesh, 105);
   }
@@ -6405,7 +6405,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         bump.kind = ColumnWorkKind::FirstMesh;
         bump.priority = 110;
         bump.scan_full_focus = true;
-        exec.Enqueue(bump);
+        exec.EnqueueForWorld(world, bump);
       }
       else if (!exec.Scheduler().ContainsColumn(col_xz))
       {
@@ -6414,7 +6414,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
         fm.kind = ColumnWorkKind::FirstMesh;
         fm.priority = 110;
         fm.scan_full_focus = true;
-        exec.Enqueue(fm);
+        exec.EnqueueForWorld(world, fm);
       }
     };
 
@@ -6559,7 +6559,7 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
             fm.priority = 113;
             fm.scan_full_focus = false;
             fm.cy = isolated_hole.y;
-            exec_stuck.Enqueue(fm);
+            exec_stuck.EnqueueForWorld(world, fm);
           }
         }
       }
@@ -6911,7 +6911,7 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         {
           return;
         }
-        GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,
+        GetColumnFlowExecutor().EnqueueForWorld(world_ref, key, ColumnWorkKind::RelightThenMesh,
                                         /*priority=*/70);
         if (GetColumnFlowExecutor().HasRepairTicket(key))
         {

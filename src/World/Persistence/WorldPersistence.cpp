@@ -4666,7 +4666,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
           {
             continue;
           }
-          GetColumnFlowExecutor().Enqueue(n, ColumnWorkKind::RelightThenMesh,
+          GetColumnFlowExecutor().EnqueueForWorld(world, n, ColumnWorkKind::RelightThenMesh,
                                           /*priority=*/50);
           ++world.GetPhysicsTelemetryMutable().DiskLightRepairedN;
           break;
