@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q10.actual-disk-cancel-stale-current-successor",
+      "status": "SCOPED_PASS_Q10_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-load-cancel-stale-acceptance-20261121.json",
+      "scope": "Actual disk24-frame cohorts/IO pool/real decoded payloads and WorldPersistence cancel/current commit. Queued workers promise-held; running actual read/decode demand-specific probe before final cancellation check; Ready/partial exact actual returned payloads delayed outside queue/requeued while new jobs held. Timeouts asserted false. Known lower base/local deletion retains incarnation; partial AIR in resident geometry column deliberately retained for save integrity. Not AIR-only retirement proof, OS-blocked read/decoder algorithm/backend/framebuffer/cold-save/performance/memory acceptance. AIR-only safety existing source-specific mechanism; OUTSIDE_RESET remains. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q10.load-admission-and-duplicate-owner",
       "status": "SCOPED_PASS_Q10_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

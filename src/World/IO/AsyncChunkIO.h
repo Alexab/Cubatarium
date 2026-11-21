@@ -69,6 +69,15 @@ struct AsyncSaveWriteProbeGate
   std::chrono::milliseconds limit{5000};
 };
 
+// Opt-in native lifecycle probe: park one demand after real read/decode,
+// before the final cancellation check. Ordinary reads have no gate.
+struct AsyncLoadReadProbeGate
+{
+  uint64_t demandId{0};
+  std::atomic<bool> entered{false}, released{false}, timedOut{false};
+  std::chrono::milliseconds limit{5000};
+};
+
 struct AsyncChunkSaveRequest
 {
   uint64_t saveBatchId{0};
@@ -100,6 +109,7 @@ class UAsyncChunkIO
 private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
   std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
+  std::shared_ptr<AsyncLoadReadProbeGate> LoadReadProbeGate;
   static std::size_t ChunkIoWorkerBudget()
   {
     return ComputeWorkerThreadCount(JobPoolKind::ChunkIo);

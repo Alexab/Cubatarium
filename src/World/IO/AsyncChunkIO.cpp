@@ -273,10 +273,11 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   const std::string filePath =
       storage.ChunkFilePath(worldFolder, coord, format);
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
+  const auto read_probe_gate = LoadReadProbeGate;
   LoadPool.Enqueue(
       [this, coord, filePath, token, format, submitted_at, format_detect_ms,
        trace_io, cancellation, demandId, &registry, worker_storage_settings,
-       includeColumnLight, worldFolder, injectInvalidFrame]()
+       includeColumnLight, worldFolder, injectInvalidFrame, read_probe_gate]()
       {
         const auto is_cancelled = [&]()
         {
@@ -385,6 +386,20 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                     deserialize_started)
                                     .count();
           std::vector<uint8_t>().swap(result.payload);
+        }
+        if (read_probe_gate && read_probe_gate->demandId == demandId)
+        {
+          read_probe_gate->entered.store(true, std::memory_order_release);
+          const auto deadline = std::chrono::steady_clock::now() + read_probe_gate->limit;
+          while (!read_probe_gate->released.load(std::memory_order_acquire) &&
+                 std::chrono::steady_clock::now() < deadline)
+            std::this_thread::yield();
+          if (!read_probe_gate->released.load(std::memory_order_acquire))
+          {
+            read_probe_gate->timedOut.store(true, std::memory_order_release);
+            result.success = false;
+            result.decodedBuffer.reset();
+          }
         }
         if (is_cancelled())
         {

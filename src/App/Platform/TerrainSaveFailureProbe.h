@@ -1767,6 +1767,115 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"decoded_sections",decoded_count},{"current_recovered",recovered}};
         report["disk_load_admission"]["current_completion_after_release"]=recovered;
         require(recovered,"actual current disk load fully recovers without replaying local deletion");
+        for(int phase=0;phase<4;++phase) {
+          auto cancel_owner=std::make_unique<UWorld>(nullptr,nullptr);
+          auto &cancel_world=*cancel_owner;
+          cancel_world.SetSpawnPoint({8,-63,8});
+          cancel_world.ProceduralTemplate.MinHeight=-64; cancel_world.ProceduralTemplate.MaxHeight=319;
+          cancel_world.ProceduralTemplate.SeaLevel=63; cancel_world.ProceduralTemplate.AsyncChunkIo=true;
+          cancel_world.ProceduralTemplate.AsyncRelight=false;
+          cancel_world.BlockWorld.SetVerticalProfile({-64,319,63});
+          cancel_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          cancel_world.BlockWorld.SetFluidDefinitions(definitions.get()); cancel_world.SetRenderSettings(settings);
+          cancel_world.SetWorldFolderPath(folder.string());
+          const auto base=serializer.Deserialize(serializer.Serialize(lower,*saved.GetChunkManager().GetChunk(lower),
+                    *cancel_world.BlockRegistry).bytes,lower,*cancel_world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(cancel_world.BlockWorld,lower,&base,nullptr,{column,0},0,false),
+                  "cancel fixture starts with owned complete lower base");
+          auto &pending=*cancel_world.Persistence; pending.EnsureChunkIoInitialized();
+          auto &io=*pending.AsyncChunkIo;
+          struct PoolGate {
+            std::shared_ptr<std::atomic<int>> entered=std::make_shared<std::atomic<int>>(0);
+            std::shared_ptr<std::atomic<bool>> timedOut=std::make_shared<std::atomic<bool>>(false);
+            std::promise<void> release;
+            std::shared_future<void> resume=release.get_future().share();
+            bool released=false;
+            void Release() { if(!released) { released=true; release.set_value(); } }
+            ~PoolGate() { Release(); }
+          };
+          std::unique_ptr<PoolGate> pool_gate;
+          const auto block_pool=[&] {
+            pool_gate=std::make_unique<PoolGate>();
+            const auto workers=io.GetLoadWorkerCount();
+            for(size_t n=0;n<workers;++n) {
+              auto entered=pool_gate->entered; auto resume=pool_gate->resume; auto timed_out=pool_gate->timedOut;
+              io.LoadPool.Enqueue([entered,resume,timed_out] {
+                ++*entered;
+                if(resume.wait_for(std::chrono::seconds(5))!=std::future_status::ready) timed_out->store(true);
+              });
+            }
+            const auto until=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(size_t(pool_gate->entered->load())!=workers && std::chrono::steady_clock::now()<until)
+              std::this_thread::yield();
+            require(size_t(pool_gate->entered->load())==workers,"actual load pool workers held before queued requests");
+          };
+          const uint64_t old_demand=98000+phase*2,new_demand=old_demand+1;
+          std::shared_ptr<AsyncLoadReadProbeGate> read_gate;
+          if(phase==0) block_pool();
+          if(phase==1) {
+            read_gate=std::make_shared<AsyncLoadReadProbeGate>(); read_gate->demandId=old_demand;
+            io.LoadReadProbeGate=read_gate;
+          }
+          pending.RequestAsyncTerrainColumnLoad(cancel_world,column,old_demand);
+          const auto old_owner=pending.PendingAsyncColumnLoadSlices.at(column).cancellation;
+          if(phase==0) require(io.GetLoadPendingJobCount()==24,"old disk work is actually pool queued");
+          if(phase==1) {
+            const auto until=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(!read_gate->entered.load() && std::chrono::steady_clock::now()<until) std::this_thread::yield();
+            require(read_gate->entered.load() && !read_gate->timedOut.load(),"actual old read/decode held running");
+          }
+          if(phase>=2) {
+            require(io.WaitIdleFor(std::chrono::seconds(5)) && io.GetLoadResultQueueDepth()==24,
+                    "actual old disk completion cohort ready");
+            if(phase==3) {
+              for(int n=0;n<24 && !cancel_world.BlockWorld.GetChunkManager().HasLoadedAirSlice({0,-3,0});++n)
+                pending.TickAsyncChunkIo(cancel_world,1,0);
+              require(cancel_world.BlockWorld.GetChunkManager().HasLoadedAirSlice({0,-3,0}) &&
+                  pending.IsTerrainColumnDiskLoadPending(column),"actual old cohort partially installed AIR");
+            }
+          }
+          auto late=phase>=2?io.DrainLoads():std::vector<AsyncChunkLoadResult>{};
+          const auto late_count=late.size();
+          pending.CancelAsyncTerrainColumnLoad(cancel_world,column);
+          require(old_owner->load() && !pending.IsTerrainColumnDiskLoadPending(column),"cancel retires exact disk owner");
+          cancel_world.BlockWorld.SetBlock(edit,BLOCK_AIR); cancel_world.ModifiedChunks.insert(lower);
+          const auto edited_incarnation=cancel_world.BlockWorld.GetChunkManager().GetChunk(lower)->GetIncarnation();
+          io.LoadReadProbeGate.reset();
+          if(phase>=2) block_pool();
+          pending.RequestAsyncTerrainColumnLoad(cancel_world,column,new_demand);
+          const auto new_owner=pending.PendingAsyncColumnLoadSlices.at(column).cancellation;
+          require(new_owner!=old_owner,"current disk request owns independent cancellation identity");
+          if(phase>=2) {
+            io.RequeueLoads(std::move(late)); // delayed actual old payloads, no fabricated buffer
+            for(size_t n=0;n<late_count;++n) pending.TickAsyncChunkIo(cancel_world,1,0);
+            const auto &current=pending.PendingAsyncColumnLoadSlices.at(column);
+            require(current.cancellation==new_owner && current.demand_id==new_demand && current.remaining_results==24 &&
+                cancel_world.BlockWorld.GetBlock(edit)==BLOCK_AIR,
+                "late old disk payload cannot consume or erase newer pending owner/edit");
+          }
+          if(pool_gate) pool_gate->Release();
+          if(read_gate) read_gate->released.store(true);
+          require(io.WaitIdleFor(std::chrono::seconds(5)) && (!read_gate || !read_gate->timedOut.load()) &&
+                  (!pool_gate || !pool_gate->timedOut->load()),
+                  "actual cancelled/current disk workers finish after barriers release");
+          const auto current_by=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+          while(pending.IsTerrainColumnDiskLoadPending(column)) {
+            pending.TickAsyncChunkIo(cancel_world,1,0);
+            require(std::chrono::steady_clock::now()<current_by,"current disk successor completes after cancellation");
+            std::this_thread::yield();
+          }
+          int decoded_sections=0;
+          for(int cy=-4;cy<=19;++cy) decoded_sections+=cancel_world.BlockWorld.GetChunkManager().HasDecodedTerrainSlice({0,cy,0});
+          const bool successor=decoded_sections==24 && cancel_world.BlockWorld.GetBlock(edit)==BLOCK_AIR &&
+              cancel_world.BlockWorld.GetChunkManager().GetChunk(lower)->GetIncarnation()==edited_incarnation &&
+              cancel_world.ModifiedChunks.count(lower)==1 &&
+              cancel_world.BlockWorld.GetBlock({8,19*CHUNK_SIZE+8,8})==8 &&
+              !cancel_world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(column);
+          report["disk_load_cancel_stale"].push_back({{"phase",phase},{"late_results",late_count},
+              {"old_cancelled",old_owner->load()},{"new_owner_distinct",new_owner!=old_owner},
+              {"decoded_sections",decoded_sections},{"current_successor",successor}});
+          require(successor,"actual current load completes and retains local deletion after old cancellation");
+        }
       });
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

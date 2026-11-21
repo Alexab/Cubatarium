@@ -494,8 +494,10 @@
         },
         {
           "id": "Q10-C1.CANCEL_STALE",
-          "status": "CHECK",
-          "scope": "Exact queued/running/ready/partial cancel and old result vs newer owner; current reissue completes, old slice cannot erase new terrain/edit."
+          "status": "REUSE",
+          "scope": "Exact queued/running/ready/partial cancel and old result vs newer owner; current reissue completes, old slice cannot erase new terrain/edit.",
+          "evidence": "build/desktop-msvc/s4-load-cancel-stale-acceptance-20261121.json",
+          "coverage_note": "Actual disk24-frame cohorts/IO pool/real decoded payloads and WorldPersistence cancel/current commit. Queued workers promise-held; running actual read/decode demand-specific probe before final cancellation check; Ready/partial exact actual returned payloads delayed outside queue/requeued while new jobs held. Timeouts asserted false. Known lower base/local deletion retains incarnation; partial AIR in resident geometry column deliberately retained for save integrity. Not AIR-only retirement proof, OS-blocked read/decoder algorithm/backend/framebuffer/cold-save/performance/memory acceptance. AIR-only safety existing source-specific mechanism; OUTSIDE_RESET remains. Full S0..S6 OPEN."
         },
         {
           "id": "Q10-C1.OUTSIDE_RESET",
@@ -679,5 +681,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q10-C1 RETRY_EXHAUSTION/ADMISSION accepted. Next CANCEL_STALE, then OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
+  "checkpoint": "Q10-C1 RETRY_EXHAUSTION/ADMISSION/CANCEL_STALE accepted. Next OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
 }
