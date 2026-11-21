@@ -1095,7 +1095,7 @@ SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
     float Threshold;
     SubBiomeId Id;
   };
-  std::vector<ThresholdEntry> entries;
+  GenerationVector<ThresholdEntry> entries;
   entries.reserve(pack_def->SubBiomes.size());
   for (const auto &entry : pack_def->SubBiomes)
   {
@@ -1434,7 +1434,7 @@ BiomeKey UBiomeSampler::At3DKey(int x, int y, int z, int surfaceY, int SeaLevel,
   }
 
   const ClimateSample climate = SampleClimate(x, z, Seed);
-  std::vector<BiomeBlendEntry> candidates;
+  GenerationVector<BiomeBlendEntry> candidates;
   float total = 0.0f;
   for (const BiomeHandle handle : pack.CaveClimateBiomes)
   {

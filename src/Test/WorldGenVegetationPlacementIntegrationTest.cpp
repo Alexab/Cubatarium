@@ -10,6 +10,9 @@
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Features/OreVeinPlacer.h"
+#include "WorldGen/Features/ValleyCarver.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/WorldGenRefs.h"
@@ -1809,6 +1812,171 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": population metrics bounded-window PASS count=" << count << std::endl;
     std::cout << "population_metrics_storage_bytes=" << summary.sampleStorageBytes
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
+    return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--algorithm-budget-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    cutum::UBlockWorld world;
+    auto settings=MakeVegetationSettings(); settings.EnableOres=true;
+    settings.MinHeight=0; settings.MaxHeight=63;
+    cutum::WorldGenContext ctx(world,registry,settings);
+    ctx.WorldgenOwnerPackId="minetest_default_16"; ctx.ResolveBlockIds();
+    auto pack=std::make_shared<cutum::WorldGenPack>(*cutum::UWorldGenPack::GetSnapshot());
+    std::vector<cutum::BiomeKey> cave_keys;
+    for(size_t i=0;i<512;++i) {
+      auto key="budget_cave_"+std::to_string(i);
+      cave_keys.push_back(key);
+      pack->Biomes[key].Climate.Enabled=true;
+      pack->Biomes["forest"].SubBiomes["ignored_"+std::to_string(i)].NoiseThreshold=-1;
+    }
+    pack->BiomeRegistry=std::make_shared<cutum::UBiomeDefinitionRegistry>(cave_keys);
+    pack->CaveClimateBiomes.clear();
+    for(const auto &key:cave_keys) pack->CaveClimateBiomes.push_back(pack->BiomeRegistry->Find(key));
+    pack->Ores.Loaded=true;
+    pack->Ores.Rules.resize(512);
+    for(auto &rule:pack->Ores.Rules) rule.Slot=std::string(8192,'x');
+    auto &coal=pack->Ores.Rules.front(); coal.Slot="ore_coal";
+    coal.YPeak=24; coal.YSpread=24; coal.VeinSize=24; coal.Rarity=1;
+    auto content=cutum::CaptureWorldGenContentSnapshot(); content.Pack=pack; content.Biomes=pack->BiomeRegistry;
+    cutum::UWorldGenContentPinScope pin(std::move(content));
+    cutum::UBiomeSampler sampler(kSeed,settings.Tuning,3);
+    auto quota=std::make_shared<cutum::UBufferAllocationBudget>(1024);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); quota->Reserve(*peer,1);
+    size_t refused=0,cases=0;
+    const auto pressure=[&](const char *name,auto operation) {
+      bool denied=false;
+      {
+        cutum::UBufferBudgetScope active({quota,std::make_shared<cutum::BufferBudgetJob>()});
+        try {operation();} catch(const cutum::UBufferBudgetExceeded &) {denied=true;}
+      }
+      std::cout << "algorithm_budget_case=" << name << " refused=" << denied
+          << " remaining=" << quota->UsedBytes() << std::endl;
+      FluidTest::Expect(quota->UsedBytes()==1,kTestName,"algorithm temporary unwind preserves only competing credit");
+      refused+=denied; ++cases;
+    };
+    pressure("biome_blend",[] {cutum::BiomeBlend blend; for(uint32_t n=0;n<512;++n) blend.AddWeight({n},1);});
+    pressure("subbiome_thresholds",[] {(void)cutum::SubBiomeFor(-7,13,cutum::BiomeId::Forest,kSeed);});
+    pressure("cave_candidates",[&] {(void)sampler.At3DKey(-7,8,13,40,settings.SeaLevel,settings.MaxHeight);});
+    pressure("ore_resolution",[&] {cutum::FillOreVeins(ctx,-7,13,32,kSeed,1);});
+    pressure("valley_surface",[&] {
+      cutum::ValleyParams params; params.lowlandOnly=true;
+      cutum::CarveChunkValleys(ctx,-16,-16,kSeed,params,settings.SeaLevel,1,
+          [](int,int){return 10000;});
+    });
+    quota->Release(*peer,1);
+    auto roomy=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+    auto roomy_peer=std::make_shared<cutum::BufferBudgetJob>(); roomy->Reserve(*roomy_peer,1);
+    std::weak_ptr<cutum::BufferBudgetJob> escaped_job;
+    {
+      cutum::BiomeBlend escaped;
+      {
+        auto job=std::make_shared<cutum::BufferBudgetJob>(); escaped_job=job;
+        cutum::UBufferBudgetScope active({roomy,job});
+        cutum::BiomeBlend local;
+        for(uint32_t n=0;n<512;++n) local.AddWeight({n},1);
+        escaped=std::move(local);
+        local.AddWeight({9999},2);
+        FluidTest::Expect(roomy->UsedBytes()==1+sizeof(cutum::BiomeBlendEntry)*
+            (escaped.entries.capacity()+local.entries.capacity()),kTestName,
+            "moved-from result allocator remains usable and retains original job");
+      }
+      const size_t owned=escaped.entries.capacity()*sizeof(cutum::BiomeBlendEntry);
+      FluidTest::Expect(!escaped_job.expired() && roomy->UsedBytes()==owned+1,kTestName,
+          "returned biome blend retains exact allocation credit outside budget scope");
+      auto copied=escaped;
+      FluidTest::Expect(roomy->UsedBytes()==1+owned+copied.entries.capacity()*sizeof(cutum::BiomeBlendEntry),
+          kTestName,"copy outside scope charges original owner and independent storage");
+      auto other=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+      auto other_peer=std::make_shared<cutum::BufferBudgetJob>(); other->Reserve(*other_peer,1);
+      cutum::BiomeBlend target;
+      {
+        cutum::UBufferBudgetScope active({other,std::make_shared<cutum::BufferBudgetJob>()});
+        cutum::BiomeBlend initial; initial.AddWeight({42},7); target=std::move(initial);
+      }
+      FluidTest::Expect(other->UsedBytes()>1,kTestName,"move target starts with distinct allocation owner");
+      target=copied;
+      FluidTest::Expect(other->UsedBytes()==1 && target.Weight({42})==1,kTestName,
+          "copy assignment retires old owner's storage and adopts original source owner");
+      copied=std::move(target);
+      FluidTest::Expect(other->UsedBytes()==1 && copied.Weight({511})==1,kTestName,
+          "move assignment releases old storage and transfers independently retained result");
+      other->Release(*other_peer,1);
+      const auto before=roomy->UsedBytes();
+      bool grow_refused=false;
+      try {escaped.entries.reserve(1024*1024);} catch(const cutum::UBufferBudgetExceeded &) {grow_refused=true;}
+      FluidTest::Expect(grow_refused && roomy->UsedBytes()==before && escaped.Weight({511})==1,kTestName,
+          "failed reallocation preserves old entries and exact original reservation");
+      {
+        cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+        struct alignas(64) Aligned {char bytes[64];};
+        cutum::GenerationVector<Aligned> aligned(16);
+        FluidTest::Expect(reinterpret_cast<uintptr_t>(aligned.data())%64==0,kTestName,
+            "generation allocator preserves over-alignment");
+        struct Throwing {Throwing(){throw 7;}};
+        const auto before_throw=roomy->UsedBytes(); bool threw=false;
+        try {cutum::GenerationVector<Throwing> values(8);} catch(int) {threw=true;}
+        FluidTest::Expect(threw && roomy->UsedBytes()==before_throw,kTestName,
+            "element construction failure frees actual allocation before returning credit");
+      }
+    }
+    FluidTest::Expect(escaped_job.expired() && roomy->UsedBytes()==1,kTestName,
+        "last escaped result and allocator destruction retire job owner and all payload credit");
+    size_t ore_count=0;
+    for(bool configured:{true,false}) {
+      pack->Ores.Loaded=configured; // private fixture snapshot; no concurrent users
+      const auto generate_ores=[&](bool budgeted) {
+        cutum::UBlockWorld ore_world;
+        cutum::WorldGenContext ore_ctx(ore_world,registry,settings);
+        ore_ctx.WorldgenOwnerPackId="minetest_default_16"; ore_ctx.ResolveBlockIds();
+        FluidTest::Expect(ore_ctx.Blocks.Stone!=cutum::BLOCK_AIR && ore_ctx.Blocks.OreCoal!=cutum::BLOCK_AIR,
+            kTestName,"ore fixture resolves real stone and coal block identities");
+        for(int x=-4;x<4;++x) for(int z=-4;z<4;++z) for(int y=0;y<49;++y)
+          ore_world.SetBlock({x,y,z},ore_ctx.Blocks.Stone);
+        const auto fill=[&] {
+          for(int x=-4;x<4;++x) for(int z=-4;z<4;++z)
+            cutum::FillOreVeins(ore_ctx,x,z,50,kSeed,2);
+        };
+        if(budgeted) {
+          cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()}); fill();
+        } else fill();
+        std::vector<cutum::BlockId> blocks;
+        for(int x=-4;x<4;++x) for(int z=-4;z<4;++z) for(int y=0;y<49;++y) {
+          const auto id=ore_world.GetBlock({x,y,z}); blocks.push_back(id);
+          if(budgeted && id!=ore_ctx.Blocks.Stone) ++ore_count;
+        }
+        return blocks;
+      };
+      const auto baseline=generate_ores(false);
+      FluidTest::Expect(generate_ores(true)==baseline && roomy->UsedBytes()==1,kTestName,
+          "configured and default ore rules preserve every voxel under budgeted allocation");
+    }
+    FluidTest::Expect(ore_count>0,kTestName,"ore parity covers actual replacements of stone");
+    auto floor_budget=std::make_shared<cutum::UBufferAllocationBudget>(16);
+    {
+      cutum::UBufferBudgetScope active({floor_budget,std::make_shared<cutum::BufferBudgetJob>()});
+      cutum::ValleyParams params; params.lowlandOnly=true;
+      cutum::CarveChunkValleys(ctx,-16,-16,kSeed,params,settings.SeaLevel,1,
+          [](int,int){return 10000;});
+    }
+    FluidTest::Expect(floor_budget->UsedBytes()==0 && floor_budget->PeakBytes()==22*22*sizeof(int) &&
+        floor_budget->LimitBytes()==floor_budget->PeakBytes(),kTestName,
+        "one valid oversized numerical working set grows sole-job floor and returns all credit");
+    std::cout << "algorithm_lifetime_peak=" << roomy->PeakBytes() << " ore_replacements=" << ore_count
+        << " valley_single_input_floor=" << floor_budget->LimitBytes() << std::endl;
+    roomy->Release(*roomy_peer,1);
+    uint64_t cave_hash=1469598103934665603ULL;
+    for(int n=0;n<64;++n) {
+      const auto key=sampler.At3DKey(n*7-200,8,n*3-100,40,settings.SeaLevel,settings.MaxHeight);
+      for(unsigned char c:key) cave_hash=(cave_hash^c)*1099511628211ULL;
+    }
+    std::cout << "algorithm_cave_parity_hash=" << cave_hash << " cases=" << cases
+        << " refused=" << refused << " final=" << quota->UsedBytes() << std::endl;
+    FluidTest::Expect(cave_hash==1685353360627598411ULL,kTestName,
+        "actual cave selection matches retained pre-fix64-position output");
+    FluidTest::Expect(refused==cases && quota->UsedBytes()==0 && roomy->UsedBytes()==0,kTestName,
+        "all five actual numeric working vectors reserve shared quota before allocation");
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--settings-text-budget-only")

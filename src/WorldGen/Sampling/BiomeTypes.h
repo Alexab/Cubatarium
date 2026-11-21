@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Memory/GenerationAllocator.h"
 
 #include <algorithm>
 #include <cmath>
@@ -33,7 +34,7 @@ struct BiomeBlendEntry
 
 struct BiomeBlend
 {
-  std::vector<BiomeBlendEntry> entries;
+  GenerationVector<BiomeBlendEntry> entries;
 
   float Weight(BiomeHandle handle) const
   {

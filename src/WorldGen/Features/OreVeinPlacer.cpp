@@ -1,4 +1,5 @@
 #include "WorldGen/Features/OreVeinPlacer.h"
+#include "Core/Memory/GenerationAllocator.h"
 #include "Blocks/BlockRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Core/BlockWorld.h"
@@ -105,25 +106,28 @@ BlockId ResolveOreBlockId(WorldGenContext &ctx, const std::string &slot)
   return BLOCK_AIR;
 }
 
-std::vector<PackOreRule> DefaultOreRules()
+const std::vector<PackOreRule> &DefaultOreRules()
 {
-  PackOreRule coal;
-  coal.Slot = "ore_coal";
-  coal.YPeak = 42;
-  coal.YSpread = 36;
-  coal.VeinSize = 6;
-  coal.Rarity = 0.12f;
-  coal.MaxSurfaceOffset = 5;
+  static const auto rules=[] {
+    PackOreRule coal;
+    coal.Slot = "ore_coal";
+    coal.YPeak = 42;
+    coal.YSpread = 36;
+    coal.VeinSize = 6;
+    coal.Rarity = 0.12f;
+    coal.MaxSurfaceOffset = 5;
 
-  PackOreRule iron;
-  iron.Slot = "ore_iron";
-  iron.YPeak = 24;
-  iron.YSpread = 28;
-  iron.VeinSize = 4;
-  iron.Rarity = 0.08f;
-  iron.BelowSeaLevel = true;
+    PackOreRule iron;
+    iron.Slot = "ore_iron";
+    iron.YPeak = 24;
+    iron.YSpread = 28;
+    iron.VeinSize = 4;
+    iron.Rarity = 0.08f;
+    iron.BelowSeaLevel = true;
 
-  return {coal, iron};
+    return std::vector<PackOreRule>{coal, iron};
+  }();
+  return rules;
 }
 
 struct VeinAnchor
@@ -252,7 +256,7 @@ void FillOreVeins(WorldGenContext &ctx, int x, int z, int surfaceY,
   }
 
   const PackOresConfig &pack_ores = UWorldGenPack::OresConfig();
-  const std::vector<PackOreRule> rules =
+  const std::vector<PackOreRule> &rules =
       pack_ores.Loaded ? pack_ores.Rules : DefaultOreRules();
   if (rules.empty())
   {
@@ -263,7 +267,7 @@ void FillOreVeins(WorldGenContext &ctx, int x, int z, int surfaceY,
   const int max_y = std::max(min_y, surfaceY - 3);
   const float density = std::clamp(oreDensity, 0.0f, 2.0f);
   const std::array<BlockId, 6> host_ids = ResolveOreHostIds(ctx);
-  std::vector<std::pair<const PackOreRule *, BlockId>> resolved_rules;
+  GenerationVector<std::pair<const PackOreRule *, BlockId>> resolved_rules;
   resolved_rules.reserve(rules.size());
   for (const PackOreRule &rule : rules)
   {

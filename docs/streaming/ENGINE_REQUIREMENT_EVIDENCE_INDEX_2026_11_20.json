@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.numeric-working-vectors",
+      "status": "SCOPED_PASS_OBJECT_FEATURE_CONTAINERS_OPEN",
+      "receipt": "build/desktop-msvc/s4-numeric-working-vectors-acceptance-20261121.json",
+      "scope": "GenerationVector uses an allocator owning original shared budget/job context: exact count*sizeof(T) reserve before std::allocator allocation; upstream failure rollback; actual deallocate before release. Copy/move/swap propagate owner; moved-from allocator remains reusable. Applied to BiomeBlend entries, SubBiomeFor thresholds, At3DKey cave candidates, ore resolved-rule pointer/ID vector and valley surface cache. Ore catalog is borrowed immutably rather than deep-copied per column; default two-rule catalog is initialized once."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.admission-settings-before-copy",
       "status": "SCOPED_PASS_ALGORITHM_TEMPORARIES_OPEN",
       "receipt": "build/desktop-msvc/s4-admission-settings-text-acceptance-20261121.json",

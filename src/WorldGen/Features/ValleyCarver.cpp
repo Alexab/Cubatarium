@@ -1,4 +1,5 @@
 #include "WorldGen/Features/ValleyCarver.h"
+#include "Core/Memory/GenerationAllocator.h"
 #include "WorldGen/Features/RiverField.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
@@ -214,7 +215,7 @@ void CarveChunkValleys(WorldGenContext &ctx, int base_x, int base_z,
   // the 3-block fade reach so each height is evaluated once.
   constexpr int kReach = 3;
   constexpr int kSpan = CHUNK_SIZE + 2 * kReach;
-  std::vector<int> surface_cache(static_cast<size_t>(kSpan) * kSpan,
+  GenerationVector<int> surface_cache(static_cast<size_t>(kSpan) * kSpan,
                                  std::numeric_limits<int>::min());
   const ValleySurfaceYCallback cached_surface_y =
       get_surface_y
