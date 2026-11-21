@@ -23,9 +23,11 @@ public:
   static bool LoadFromFile(const std::filesystem::path &path);
   static const WorldGenSlotSpec *GetSlot(const std::string &slotName);
   static std::shared_ptr<const WorldGenRefsCatalog> GetSnapshot();
+  static std::shared_ptr<const WorldGenRefsCatalog> GetThreadReadSnapshot();
   static bool IsLoaded();
 
 private:
+  static std::shared_ptr<const WorldGenRefsCatalog> &ThreadReadKeep();
   static std::shared_ptr<const WorldGenRefsCatalog> Active;
 };
 

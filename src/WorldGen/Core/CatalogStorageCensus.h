@@ -3,13 +3,28 @@
 #include "WorldGen/Core/RuntimeSettingsText.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
+#include "Render/Textures/TextureCube.h"
+#include "Blocks/BlockRegistry.h"
 #include <array>
 #include <limits>
 #include <list>
 
 namespace cutum
 {
-enum class CatalogObjectKind {Pack,Biomes,Features,Refs,Image,Diagnostics,Blocks,PrefabIndex,Prefab,Count};
+enum class CatalogObjectKind {Pack,Biomes,Features,Refs,Image,Diagnostics,Blocks,PrefabIndex,Prefab,
+  Merge,Placeholder,TextureBases,TextureCubes,BlockStorage,Registry,RegistryIdentity,Count};
+
+struct CatalogResourceRoots
+{
+  std::shared_ptr<const UBlockMergeRegistry> merge;
+  std::shared_ptr<const UPlaceholderTextureCache> placeholder;
+  std::shared_ptr<const UTextureBaseStorage> texture_bases;
+  std::shared_ptr<const UTextureCubeStorage> texture_cubes;
+  std::shared_ptr<const UBlockDefinitionStorage> block_storage;
+  const UBlockRegistry *registry{nullptr}; // caller keeps the owning world live
+  bool active_pack_directory{false},calling_thread_reads{false};
+};
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
 inline constexpr bool kCatalogMsvcUnorderedModel=true;
 #else
@@ -25,6 +40,8 @@ struct CatalogStorageCensus
   size_t known_storage_bytes{0},object_bytes{0},vector_bytes{0},map_value_bytes{0};
   size_t text_bytes{0},diagnostic_bytes{0},vectors{0},tables{0},nodes{0},bucket_slots{0},strings{0};
   size_t shared_owners{0},input_snapshot_handle_bytes{0},vector_allocations{0},msvc_unordered_extra_bytes{0};
+  size_t list_value_bytes{0},tree_tables{0},tree_nodes{0},lists{0},list_nodes{0};
+  size_t msvc_tree_extra_bytes{0},msvc_list_extra_bytes{0},calling_thread_inline_bytes{0};
   std::array<size_t,static_cast<size_t>(CatalogObjectKind::Count)> objects{};
   bool overflow{false};
   bool unordered_model_supported{kCatalogMsvcUnorderedModel};
@@ -49,15 +66,17 @@ class CatalogStorageInspector
   void Bytes(size_t &column,size_t count,size_t width=1) {
     const auto bytes=Multiply(count,width);Add(column,bytes);Add(Result.known_storage_bytes,bytes);
   }
+  bool Object(CatalogObjectKind kind,const void *address,size_t bytes) {
+    if(!address) return false;
+    for(const auto &seen:Seen) if(seen.kind==kind && seen.address==address) return false;
+    Seen.push_back({kind,address});++Result.objects[static_cast<size_t>(kind)];Bytes(Result.object_bytes,bytes);return true;
+  }
   template<class T> bool Shared(CatalogObjectKind kind,const std::shared_ptr<T> &value) {
-    if(!value) return false;
-    for(const auto &seen:Seen) if(seen.kind==kind && seen.address==value.get()) return false;
-    Seen.push_back({kind,value.get()});
+    if(!value || !Object(kind,value.get(),sizeof(T))) return false;
     std::shared_ptr<const void> owner=value;
     bool owner_seen=owner.use_count()==0;
     for(const auto &previous:Owners) if(!previous.owner_before(owner) && !owner.owner_before(previous)) {owner_seen=true;break;}
     if(!owner_seen) {Owners.push_back(owner);++Result.shared_owners;}
-    ++Result.objects[static_cast<size_t>(kind)];Bytes(Result.object_bytes,1,sizeof(T));
     return true;
   }
   void Rule(const ObjectFeatureRule &rule) {
@@ -66,6 +85,7 @@ class CatalogStorageInspector
     Vector(rule.Biomes);Vector(rule.BiomeKeys);Vector(rule.SubBiomes);
     for(const auto &key:rule.BiomeKeys) Text(key);
   }
+public:
   void Definition(const BlockDefinition &definition) {
     Text(definition.Name);Text(definition.DisplayName);Vector(definition.Types);Map(definition.DigGroups);
     for(const auto &type:definition.Types) Text(type);
@@ -73,7 +93,18 @@ class CatalogStorageInspector
   }
 public:
   CatalogStorageCensus Result;
-  void Text(const std::string &text) {++Result.strings;Bytes(Result.text_bytes,ExternalStringCapacityBytes(text));}
+  template<class C,class T,class A> void Text(const std::basic_string<C,T,A> &text) {
+    ++Result.strings;const auto data=reinterpret_cast<uintptr_t>(text.data()),object=reinterpret_cast<uintptr_t>(&text);
+    if(data<object || data-object>=sizeof(text)) Bytes(Result.text_bytes,text.capacity()+1,sizeof(C));
+  }
+  void Path(const std::filesystem::path &path) {
+    // Current MSVC path owns only its native string. Other STL path component
+    // caches, if any, are outside this native-string census.
+#if defined(_MSVC_STL_VERSION)
+    static_assert(sizeof(std::filesystem::path)==sizeof(std::filesystem::path::string_type));
+#endif
+    Text(path.native());
+  }
   template<class T,class A> void Vector(const std::vector<T,A> &values) {
     ++Result.vectors;if(values.capacity()) ++Result.vector_allocations;
     Bytes(Result.vector_bytes,values.capacity(),sizeof(T));
@@ -94,6 +125,36 @@ public:
     Add(Result.msvc_unordered_extra_bytes,Multiply(values.bucket_count(),2*sizeof(typename MapType::iterator)));
 #endif
   }
+  template<class TreeType> void Tree(const TreeType &values) {
+    ++Result.tree_tables;Add(Result.tree_nodes,values.size());
+    Bytes(Result.map_value_bytes,values.size(),sizeof(typename TreeType::value_type));
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+    using Value=typename TreeType::value_type;
+    using VoidPointer=typename std::allocator_traits<typename TreeType::allocator_type>::void_pointer;
+    static_assert(std::is_same_v<VoidPointer,void*>);
+    using Node=std::_Tree_node<Value,VoidPointer>;
+    Add(Result.msvc_tree_extra_bytes,Multiply(values.size(),sizeof(Node)-sizeof(Value)));
+    Add(Result.msvc_tree_extra_bytes,sizeof(Node));
+#endif
+  }
+  template<class ListType> void List(const ListType &values) {
+    ++Result.lists;Add(Result.list_nodes,values.size());Bytes(Result.list_value_bytes,values.size(),sizeof(typename ListType::value_type));
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+    using Value=typename ListType::value_type;
+    using VoidPointer=typename std::allocator_traits<typename ListType::allocator_type>::void_pointer;
+    static_assert(std::is_same_v<VoidPointer,void*>);
+    using Node=std::_List_node<Value,VoidPointer>;
+    Add(Result.msvc_list_extra_bytes,Multiply(values.size(),sizeof(Node)-sizeof(Value)));
+    Add(Result.msvc_list_extra_bytes,sizeof(Node));
+#endif
+  }
+  void Manifest(const ResourcePackManifest &pack) {
+    Text(pack.Id);Text(pack.Name);Text(pack.License);Text(pack.MinGameVersion);Path(pack.Root);
+    Vector(pack.Depends);Vector(pack.Conflicts);
+    for(const auto &name:pack.Depends) Text(name);
+    for(const auto &name:pack.Conflicts) Text(name);
+  }
+  void Descriptor(const MergedCubeDesc &desc) {Text(desc.Name);for(const auto &stem:desc.Stems) Text(stem);}
   void Biomes(const std::shared_ptr<const UBiomeDefinitionRegistry> &registry) {
     if(Shared(CatalogObjectKind::Biomes,registry)) registry->InspectStorage(*this);
   }
@@ -148,6 +209,44 @@ public:
   void Library(const std::shared_ptr<const UObjectLibrary> &library) {
     if(Shared(CatalogObjectKind::PrefabIndex,library)) library->InspectStorage(*this);
   }
+  void BlockStorage(const std::shared_ptr<const UBlockDefinitionStorage> &storage) {
+    if(Shared(CatalogObjectKind::BlockStorage,storage)) Blocks(storage->GetCatalogSnapshot());
+  }
+  void RegistryIdentity(const std::shared_ptr<const void> &identity) {
+    // UBlockRegistry creates this exact const-byte tag; it owns no registry data.
+    (void)Shared(CatalogObjectKind::RegistryIdentity,std::static_pointer_cast<const unsigned char>(identity));
+  }
+  void Registry(const UBlockRegistry *registry) {
+    if(Object(CatalogObjectKind::Registry,registry,sizeof(UBlockRegistry))) registry->InspectStorage(*this);
+  }
+  void Placeholder(const std::shared_ptr<const UPlaceholderTextureCache> &cache) {
+    if(Shared(CatalogObjectKind::Placeholder,cache)) cache->InspectStorage(*this);
+  }
+  void Merge(const std::shared_ptr<const UBlockMergeRegistry> &merge) {
+    if(Shared(CatalogObjectKind::Merge,merge)) merge->InspectStorage(*this);
+  }
+  void TextureBases(const std::shared_ptr<const UTextureBaseStorage> &bases) {
+    if(Shared(CatalogObjectKind::TextureBases,bases)) bases->InspectStorage(*this);
+  }
+  void TextureCubes(const std::shared_ptr<const UTextureCubeStorage> &cubes) {
+    if(Shared(CatalogObjectKind::TextureCubes,cubes)) cubes->InspectStorage(*this);
+  }
+  void CallingThreadReads() {
+    Pack(UWorldGenPack::GetThreadReadSnapshot());Features(UObjectFeatureConfigStorage::GetThreadReadSnapshot());
+    Refs(UWorldGenRefs::GetThreadReadSnapshot());Prefab(UObjectLibrary::GetThreadReadSnapshot());
+    for(const auto &catalog:UBlockDefinitionStorage::GetThreadReadSnapshots()) Blocks(catalog);
+    // Four single shared keep-alives plus the three block read slots/fast key,
+    // and one cached registry name. Only this calling thread is inspected.
+    Result.calling_thread_inline_bytes=4*sizeof(std::shared_ptr<const void>)+UBlockDefinitionStorage::ThreadReadInlineBytes()+sizeof(std::string);
+    Bytes(Result.object_bytes,Result.calling_thread_inline_bytes);Text(UBlockRegistry::GetThreadNameForCensus());
+  }
+  void Resources(const CatalogResourceRoots &roots) {
+    Merge(roots.merge);Placeholder(roots.placeholder);TextureCubes(roots.texture_cubes);
+    TextureBases(roots.texture_bases);BlockStorage(roots.block_storage);
+    Registry(roots.registry);
+    if(roots.active_pack_directory) {Bytes(Result.object_bytes,sizeof(std::string));Text(UWorldGenPack::GetActiveDirectoryForCensus());}
+    if(roots.calling_thread_reads) CallingThreadReads();
+  }
   void Snapshot(const WorldGenContentSnapshot &snapshot) {Pack(snapshot.Pack);Biomes(snapshot.Biomes);Features(snapshot.Features);Refs(snapshot.Refs);}
   void HandleBytes(size_t count) {Result.input_snapshot_handle_bytes=Multiply(count,sizeof(WorldGenContentSnapshot));}
 };
@@ -159,11 +258,11 @@ public:
 inline CatalogStorageCensus MeasureCatalogStorage(
     const WorldGenContentSnapshot *snapshots,size_t snapshot_count,
     const std::shared_ptr<const BlockDefinitionCatalog> *blocks=nullptr,size_t block_count=0,
-    const std::shared_ptr<const UObjectLibrary> &library={})
+    const std::shared_ptr<const UObjectLibrary> &library={},const CatalogResourceRoots &resources={})
 {
   detail::CatalogStorageInspector out;out.HandleBytes(snapshot_count);
   for(size_t n=0;n<snapshot_count;++n) out.Snapshot(snapshots[n]);
   for(size_t n=0;n<block_count;++n) out.Blocks(blocks[n]);
-  out.Library(library);return out.Result;
+  out.Library(library);out.Resources(resources);return out.Result;
 }
 } // namespace cutum

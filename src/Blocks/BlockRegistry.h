@@ -45,6 +45,7 @@ public:
   BlockId GetIdByTypeName(const std::string &Name) const;
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
+  static const std::string &GetThreadNameForCensus();
 
   bool IsSolid(BlockId Id) const;
   bool BlocksMovement(BlockId Id) const;
@@ -65,8 +66,17 @@ public:
   uint32_t GetBlockAtlasTexture(BlockId Id) const;
   /// True when the block has a merged cube descriptor and loaded GPU texture.
   bool HasRenderableTexture(BlockId Id) const;
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    std::shared_lock lock(MapsMutex);
+    out.Map(NameToId);out.Map(IdToName);
+    for(const auto &entry:NameToId) out.Text(entry.first);
+    for(const auto &entry:IdToName) out.Text(entry.second);
+    out.BlockStorage(Definitions);out.TextureCubes(Textures);out.Merge(MergeRegistry);
+    out.RegistryIdentity(LifetimeIdentity);
+  }
 
 private:
+  static std::string &ThreadNameKeep();
   const std::shared_ptr<const void> LifetimeIdentity{std::make_shared<const unsigned char>(0)};
   void RebuildMaps();
   std::shared_ptr<UTextureCubeStorage> Textures;

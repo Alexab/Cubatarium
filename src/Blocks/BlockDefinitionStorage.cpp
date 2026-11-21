@@ -25,6 +25,14 @@ uint64_t UBlockDefinitionStorage::NextRevision()
   return counter.fetch_add(1, std::memory_order_relaxed);
 }
 
+UBlockDefinitionStorage::ReadCaches &UBlockDefinitionStorage::ThreadReads()
+{thread_local ReadCaches caches;return caches;}
+
+std::array<std::shared_ptr<const BlockDefinitionCatalog>,3> UBlockDefinitionStorage::GetThreadReadSnapshots()
+{const auto &caches=ThreadReads();return {caches.byId,caches.byName,caches.fast};}
+
+size_t UBlockDefinitionStorage::ThreadReadInlineBytes() {return sizeof(ReadCaches);}
+
 const std::shared_ptr<const BlockDefinitionCatalog> &
 UBlockDefinitionStorage::ThreadSnapshot() const
 {
@@ -32,21 +40,15 @@ UBlockDefinitionStorage::ThreadSnapshot() const
   // pointers returned by Get* stay valid for synchronous reads (same pattern
   // as UObjectLibrary::Get). The catalog is only re-fetched when the storage
   // publishes a new one: GetById sits on per-block hot paths (chunk commit).
-  struct Cache
-  {
-    const UBlockDefinitionStorage *owner{nullptr};
-    uint64_t revision{0};
-    std::shared_ptr<const BlockDefinitionCatalog> snapshot;
-  };
-  thread_local Cache cache;
+  auto &cache=ThreadReads();
   const uint64_t revision = Revision.load(std::memory_order_acquire);
   if (cache.owner != this || cache.revision != revision)
   {
-    cache.snapshot = std::atomic_load_explicit(&Active, std::memory_order_acquire);
+    cache.fast = std::atomic_load_explicit(&Active, std::memory_order_acquire);
     cache.owner = this;
     cache.revision = revision;
   }
-  return cache.snapshot;
+  return cache.fast;
 }
 
 void UBlockDefinitionStorage::Publish(
@@ -62,7 +64,7 @@ const BlockDefinition *UBlockDefinitionStorage::GetById(BlockId Id) const
   // Keep the RCU snapshot alive for this thread until the next Get* call so
   // returned pointers remain valid for synchronous reads (same pattern as
   // UObjectLibrary::Get).
-  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  auto &keep=ThreadReads().byId;
   keep = GetCatalogSnapshot();
   if (!keep)
   {
@@ -90,7 +92,7 @@ const BlockDefinition *UBlockDefinitionStorage::GetByIdFast(BlockId Id) const
 const BlockDefinition *
 UBlockDefinitionStorage::GetByName(const std::string &Name) const
 {
-  thread_local std::shared_ptr<const BlockDefinitionCatalog> keep;
+  auto &keep=ThreadReads().byName;
   keep = GetCatalogSnapshot();
   if (!keep)
   {

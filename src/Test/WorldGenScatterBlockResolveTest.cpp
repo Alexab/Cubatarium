@@ -5,6 +5,7 @@
 #include "ResourcePacks/ResourcePack.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "Core/Memory/BufferAllocationBudget.h"
+#include "WorldGen/Core/CatalogStorageCensus.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -288,10 +289,55 @@ static void TestRealPackScatterBlocksResolve()
                     "dandelion is absent from pack and must not resolve");
 }
 
+static void TestResourceCatalogCensus()
+{
+  const auto root=FindRepoRoot();
+  const auto manifest=cutum::UResourcePack::LoadManifest(root/"resource_packs"/"minetest_default_16");
+  FluidTest::Expect(manifest.has_value(),kTestName,"resource census real manifest loads");
+  auto cache=std::make_shared<cutum::UPlaceholderTextureCache>(root/".resource_census_cache_test",16,glm::vec3(0.4f),3);
+  auto merge=std::make_shared<cutum::UBlockMergeRegistry>();merge->Rebuild({*manifest},cache,16);
+  merge->SetWorldgenOwnerPackId(std::string(64*1024,'o'));
+  for(int n=0;n<9;++n) (void)cache->GetOrCreateStem("census_probe_"+std::to_string(n),n%6,16);
+  FluidTest::Expect(cache->GetEntryCount()==3,kTestName,"resource census fixture exercises bounded LRU eviction");
+  auto definitions=std::make_shared<cutum::UBlockDefinitionStorage>();merge->PopulateBlockDefinitionStorage(*definitions);
+  auto bases=std::make_shared<cutum::UTextureBaseStorage>();
+  auto cubes=std::make_shared<cutum::UTextureCubeStorage>(bases);cubes->SetBlockDefinitions(definitions);
+  cutum::UBlockRegistry registry(nullptr,definitions);registry.SetMergeRegistry(merge);
+  cutum::CatalogResourceRoots resources;
+  resources.merge=merge;resources.placeholder=cache;resources.texture_bases=bases;resources.texture_cubes=cubes;resources.block_storage=definitions;
+  resources.registry=&registry;
+  const auto block_snapshot=definitions->GetCatalogSnapshot();
+  const auto before=cutum::MeasureCatalogStorage(nullptr,0,&block_snapshot,1,{},resources);
+  cache->RegisterAll(*bases);
+  const auto after=cutum::MeasureCatalogStorage(nullptr,0,&block_snapshot,1,{},resources);
+  FluidTest::Expect(!after.overflow && after.Objects(cutum::CatalogObjectKind::Merge)==1 &&
+      after.Objects(cutum::CatalogObjectKind::Placeholder)==1 && after.Objects(cutum::CatalogObjectKind::TextureBases)==1 &&
+      after.Objects(cutum::CatalogObjectKind::TextureCubes)==1 && after.Objects(cutum::CatalogObjectKind::BlockStorage)==1 &&
+      after.Objects(cutum::CatalogObjectKind::Blocks)==1 && after.Objects(cutum::CatalogObjectKind::Registry)==1 &&
+      after.Objects(cutum::CatalogObjectKind::RegistryIdentity)==1 && after.shared_owners==7,kTestName,
+      "merge/direct placeholder and cube/direct base/definition roots deduplicate exact shared objects");
+  FluidTest::Expect(after.vector_bytes-before.vector_bytes==3*16*16*4 && after.list_nodes==3 && after.lists==1,
+      kTestName,"registered base pixels are independent copied storage and LRU contains only three entries");
+  cutum::BlockDefinition overlay;overlay.Name=std::string(64*1024,'r');overlay.Physics=cutum::BlockPhysicsProfile::Solid();
+  (void)merge->RegisterRuntimeBlock(overlay,{});
+  const auto pending=cutum::MeasureCatalogStorage(nullptr,0,&block_snapshot,1,{},resources);
+  FluidTest::Expect(merge->HasRuntimeOverlay() && pending.known_storage_bytes>after.known_storage_bytes &&
+      pending.text_bytes>=after.text_bytes+64*1024+1,kTestName,"pending runtime overlay capacity and long owned names are included without flushing");
+  const auto repeated=cutum::MeasureCatalogStorage(nullptr,0,&block_snapshot,1,{},resources);
+  FluidTest::Expect(repeated.known_storage_bytes==pending.known_storage_bytes && repeated.msvc_tree_extra_bytes==pending.msvc_tree_extra_bytes &&
+      repeated.msvc_list_extra_bytes==pending.msvc_list_extra_bytes && cache->GetEntryCount()==3,kTestName,
+      "census does not evict/cache new pixels, flush overlays or allocate GPU textures");
+  std::cout << "resource_census_known_bytes=" << pending.known_storage_bytes << " unordered_extra=" << pending.msvc_unordered_extra_bytes
+      << " tree_extra=" << pending.msvc_tree_extra_bytes << " list_extra=" << pending.msvc_list_extra_bytes
+      << " shared_owners=" << pending.shared_owners << " cache_entries=" << cache->GetEntryCount()
+      << " pixel_copy_bytes=" << after.vector_bytes-before.vector_bytes << " overlay_pending=1" << std::endl;
+}
+
 } // namespace
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--resource-census-only") {TestResourceCatalogCensus();return 0;}
   if(argc>1 && std::string(argv[1])=="--tier-a-warning-owner-only") {
     TestTierAWarningOwnership(); return 0;
   }
@@ -303,6 +349,7 @@ int main(int argc,char **argv)
   TestMutatingRegistryNameBudget();
   TestTierAWarningOwnership();
   TestRealPackScatterBlocksResolve();
+  TestResourceCatalogCensus();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

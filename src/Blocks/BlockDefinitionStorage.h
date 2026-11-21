@@ -3,6 +3,7 @@
 
 #include "Blocks/BlockDefinition.h"
 #include <atomic>
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
@@ -50,8 +51,15 @@ public:
   /// per-call snapshot semantics.
   const BlockDefinition *GetByIdFast(BlockId Id) const;
   const BlockDefinition *GetByName(const std::string &Name) const;
+  static std::array<std::shared_ptr<const BlockDefinitionCatalog>,3> GetThreadReadSnapshots();
+  static size_t ThreadReadInlineBytes();
 
 private:
+  struct ReadCaches {
+    std::shared_ptr<const BlockDefinitionCatalog> byId,byName,fast;
+    const UBlockDefinitionStorage *owner{nullptr};uint64_t revision{0};
+  };
+  static ReadCaches &ThreadReads();
   /// Globally unique id of the currently published catalog (changes on every
   /// Load/ReplaceAll) so per-thread snapshot caches can skip the shared_ptr
   /// atomic load on the hot GetById path.

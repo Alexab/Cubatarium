@@ -181,10 +181,16 @@ BlockId UBlockRegistry::GetIdByTypeName(const std::string &Name) const
   return BLOCK_AIR;
 }
 
+std::string &UBlockRegistry::ThreadNameKeep()
+{thread_local std::string name;return name;}
+
+const std::string &UBlockRegistry::GetThreadNameForCensus()
+{return ThreadNameKeep();}
+
 const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;
-  thread_local std::string cached_name;
+  auto &cached_name=ThreadNameKeep();
 #ifndef CUTUM_PHYSICS_LIGHT_REGISTRY
   if (MergeRegistry)
   {

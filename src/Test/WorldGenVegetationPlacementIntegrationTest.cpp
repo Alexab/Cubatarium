@@ -2575,6 +2575,76 @@ int main(int argc, char **argv)
     std::cout << "settings_text_peak_bytes=" << roomy->PeakBytes() << " final_bytes=" << roomy->UsedBytes() << std::endl;
     std::cout << kTestName << ": active settings text budget PASS" << std::endl; return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--catalog-thread-reads-only")
+  {
+    const auto original=cutum::CaptureWorldGenContentSnapshot();
+    (void)cutum::UWorldGenPack::Get();(void)cutum::UObjectFeatureConfigStorage::Get();(void)cutum::UWorldGenRefs::GetSlot("stone");
+    const auto root=fs::temp_directory_path()/("cubatarium_tls_census_"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(root);
+    {std::ofstream file(root/"pack.json");file << R"({"id":"tls_census_fixture"})";}
+    {std::ofstream file(root/"features.json");file << "{}";}
+    {std::ofstream file(root/"refs.json");file << R"({"slots":{"stone":{"block_names":["stone"]}}})";}
+    FluidTest::Expect(cutum::UWorldGenPack::LoadFromDirectory(root.string()) &&
+        cutum::UObjectFeatureConfigStorage::LoadFromFile(root/"features.json") && cutum::UWorldGenRefs::LoadFromFile(root/"refs.json"),
+        kTestName,"TLS census replacement publications load");
+    const auto current=cutum::CaptureWorldGenContentSnapshot();
+    cutum::CatalogResourceRoots roots;roots.calling_thread_reads=true;roots.active_pack_directory=true;
+    const auto retained=cutum::MeasureCatalogStorage(&current,1,nullptr,0,{},roots);
+    FluidTest::Expect(retained.Objects(cutum::CatalogObjectKind::Pack)==2 && retained.Objects(cutum::CatalogObjectKind::Features)==2 &&
+        retained.Objects(cutum::CatalogObjectKind::Refs)==2,kTestName,"calling-thread readers expose old versions retained across publication");
+    (void)cutum::UWorldGenPack::Get();(void)cutum::UObjectFeatureConfigStorage::Get();(void)cutum::UWorldGenRefs::GetSlot("stone");
+    {
+      cutum::UWorldGenContentPinScope pin(original);
+      FluidTest::Expect(&cutum::UWorldGenPack::Get()==original.Pack.get() && &cutum::UObjectFeatureConfigStorage::Get()==original.Features.get() &&
+          cutum::UWorldGenRefs::GetSlot("stone")==&original.Refs->at("stone"),kTestName,"pinned reads still use captured data");
+      FluidTest::Expect(cutum::UWorldGenPack::GetThreadReadSnapshot()==current.Pack &&
+          cutum::UObjectFeatureConfigStorage::GetThreadReadSnapshot()==current.Features &&
+          cutum::UWorldGenRefs::GetThreadReadSnapshot()==current.Refs,kTestName,"pinned reads do not overwrite unrelated convenience keep-alives");
+    }
+    const auto refreshed=cutum::MeasureCatalogStorage(&current,1,nullptr,0,{},roots);
+    FluidTest::Expect(refreshed.Objects(cutum::CatalogObjectKind::Pack)==1 && refreshed.Objects(cutum::CatalogObjectKind::Features)==1 &&
+        refreshed.Objects(cutum::CatalogObjectKind::Refs)==1,kTestName,"refreshed TLS/current roots share one payload each");
+
+    auto definitions=std::make_shared<cutum::UBlockDefinitionStorage>();
+    cutum::BlockDefinition first;first.Name=std::string(64*1024,'n');first.Physics=cutum::BlockPhysicsProfile::Solid();
+    definitions->ReplaceAll({{8,first}},{{first.Name,8}});
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    const auto *old_id=definitions->GetById(8);const auto *old_name=definitions->GetByName(first.Name);
+    (void)definitions->GetByIdFast(8);(void)registry.GetTypeNameById(8);
+    std::weak_ptr<const cutum::BlockDefinitionCatalog> old=definitions->GetCatalogSnapshot();
+    cutum::BlockDefinition next;next.Name="after";next.Physics=cutum::BlockPhysicsProfile::Solid();
+    definitions->ReplaceAll({{9,next}},{{next.Name,9}});
+    roots.block_storage=definitions;
+    const auto three_slots=cutum::MeasureCatalogStorage(&current,1,nullptr,0,{},roots);
+    FluidTest::Expect(!old.expired() && old_id->Name==first.Name && old_name->Name==first.Name &&
+        three_slots.Objects(cutum::CatalogObjectKind::Blocks)==2,kTestName,"three independent block reader slots retain old valid pointers and census counts that old catalog once");
+    (void)definitions->GetById(9);FluidTest::Expect(!old.expired(),kTestName,"by-id refresh leaves other old readers alive");
+    (void)definitions->GetByName(next.Name);FluidTest::Expect(!old.expired(),kTestName,"by-name refresh leaves fast old reader alive");
+    (void)definitions->GetByIdFast(9);FluidTest::Expect(old.expired(),kTestName,"last block reader refresh retires old dynamic payload");
+    const auto retired=cutum::MeasureCatalogStorage(&current,1,nullptr,0,{},roots);
+    FluidTest::Expect(retired.Objects(cutum::CatalogObjectKind::Blocks)==1 && retired.text_bytes>=64*1024+1,
+        kTestName,"registry cached name remains a separate owned text buffer after its source catalog retires");
+
+    const auto full_definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry full_registry(nullptr,full_definitions);
+    auto library=std::make_shared<cutum::UObjectLibrary>();library->LoadMerged(repo_root/"objects",{},full_registry);
+    const auto name=library->ListNames().front();const auto *borrowed=library->Get(name);
+    std::weak_ptr<const cutum::WorldObjectDefinition> old_prefab=cutum::UObjectLibrary::GetThreadReadSnapshot();
+    library->LoadMerged(repo_root/"objects",{},full_registry);
+    FluidTest::Expect(!old_prefab.expired() && library->GetShared(name).get()!=borrowed,kTestName,"prefab convenience read preserves old definition across reload");
+    const auto live_library=cutum::MeasureCatalogStorage(&current,1,nullptr,0,library);
+    const auto kept_library=cutum::MeasureCatalogStorage(&current,1,nullptr,0,library,roots);
+    FluidTest::Expect(kept_library.Objects(cutum::CatalogObjectKind::Prefab)==live_library.Objects(cutum::CatalogObjectKind::Prefab)+1,
+        kTestName,"calling-thread prefab root accounts for a retired object outside the live index");
+    (void)library->Get(name);FluidTest::Expect(old_prefab.expired(),kTestName,"next convenience read releases the old prefab payload");
+    FluidTest::Expect(fs::equivalent(root.parent_path(),fs::temp_directory_path()) && root.filename().string().find("cubatarium_tls_census_")==0,
+        kTestName,"TLS fixture cleanup confined to its own generated temporary directory");
+    fs::remove_all(root,ec);
+    std::cout << "thread_catalog_old_versions=3 refreshed=3 block_slots=3 retired_block=1 cached_name_bytes="
+        << cutum::ExternalStringCapacityBytes(cutum::UBlockRegistry::GetThreadNameForCensus())
+        << " retired_prefab=1 thread_inline_bytes=" << refreshed.calling_thread_inline_bytes << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--catalog-storage-only")
   {
     const auto content=cutum::CaptureWorldGenContentSnapshot();
@@ -2654,7 +2724,7 @@ int main(int argc, char **argv)
         with_assets.known_storage_bytes>one.known_storage_bytes && with_assets.tables>one.tables,kTestName,
         "real block catalog and prefab library/index contribute nested storage to the same census");
     auto node_budget=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
-    size_t node_cases=0;
+    size_t node_cases=0,tree_cases=0,list_cases=0;
     if(cutum::kCatalogMsvcUnorderedModel) {
       cutum::UBufferBudgetScope active({node_budget,std::make_shared<cutum::BufferBudgetJob>()});
       using Entry=std::pair<const std::string,int>;
@@ -2670,13 +2740,31 @@ int main(int argc, char **argv)
       table.clear();table.rehash(0);check();
     }
     FluidTest::Expect(node_budget->UsedBytes()==0,kTestName,"counted table proof retires all actual node and bucket allocations");
+    if(cutum::kCatalogMsvcUnorderedModel) {
+      cutum::UBufferBudgetScope active({node_budget,std::make_shared<cutum::BufferBudgetJob>()});
+      using Entry=std::pair<const std::string,int>;
+      std::map<std::string,int,std::less<std::string>,cutum::UGenerationAllocator<Entry>> tree;
+      const auto check=[&] {cutum::detail::CatalogStorageInspector out;out.Tree(tree);
+        FluidTest::Expect(out.Result.map_value_bytes+out.Result.msvc_tree_extra_bytes==node_budget->UsedBytes(),kTestName,"tree model equals actual allocation requests");++tree_cases;};
+      check();for(int n=0;n<100;++n) tree.emplace(std::to_string(n),n);check();
+      for(int n=0;n<50;++n) tree.erase(std::to_string(n));check();tree.clear();check();
+    }
+    if(cutum::kCatalogMsvcUnorderedModel) {
+      cutum::UBufferBudgetScope active({node_budget,std::make_shared<cutum::BufferBudgetJob>()});
+      std::list<int,cutum::UGenerationAllocator<int>> list;
+      const auto check=[&] {cutum::detail::CatalogStorageInspector out;out.List(list);
+        FluidTest::Expect(out.Result.list_value_bytes+out.Result.msvc_list_extra_bytes==node_budget->UsedBytes(),kTestName,"list model equals actual allocation requests");++list_cases;};
+      check();for(int n=0;n<100;++n) list.push_back(n);check();
+      for(int n=0;n<50;++n) list.pop_front();check();list.clear();check();
+    }
+    FluidTest::Expect(node_budget->UsedBytes()==0,kTestName,"all tree/list nodes and sentinels retire");
     std::cout << "catalog_known_storage_bytes=" << one.known_storage_bytes << " shared_snapshots=128 deduplicated=1"
         << " retained_text_capacity=" << pack->Id.capacity()+1 << " image_capacity=" << image->Pixels.capacity()
         << " diagnostic_bytes=" << prepared.diagnostic_bytes << " asset_known_bytes=" << with_assets.known_storage_bytes
         << " blocks=1 prefabs=" << with_assets.Objects(cutum::CatalogObjectKind::Prefab)
         << " tables=" << with_assets.tables << " nodes=" << with_assets.nodes << " buckets=" << with_assets.bucket_slots
         << " unordered_extra_bytes=" << with_assets.msvc_unordered_extra_bytes << " allocation_model_cases=" << node_cases
-        << " final_model_credits=" << node_budget->UsedBytes() << std::endl;
+        << " tree_model_cases=" << tree_cases << " list_model_cases=" << list_cases << " final_model_credits=" << node_budget->UsedBytes() << std::endl;
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--pipeline-cache-owner-only")

@@ -1281,6 +1281,12 @@ std::shared_ptr<const WorldGenPack> UWorldGenPack::GetSnapshot()
   return std::atomic_load_explicit(&Active, std::memory_order_acquire);
 }
 
+std::shared_ptr<const WorldGenPack> &UWorldGenPack::ThreadReadKeep()
+{thread_local std::shared_ptr<const WorldGenPack> keep;return keep;}
+
+std::shared_ptr<const WorldGenPack> UWorldGenPack::GetThreadReadSnapshot()
+{return ThreadReadKeep();}
+
 const WorldGenPack &UWorldGenPack::Get()
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
@@ -1290,7 +1296,7 @@ const WorldGenPack &UWorldGenPack::Get()
       return *pin->Pack;
     }
   }
-  thread_local std::shared_ptr<const WorldGenPack> keep;
+  auto &keep=ThreadReadKeep();
   keep = GetSnapshot();
   return *keep;
 }

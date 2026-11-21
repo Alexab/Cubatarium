@@ -91,6 +91,26 @@ public:
 
   std::string ComputeCatalogFingerprint() const;
 
+  // Quiescent diagnostic walk; outer read lock also excludes synthetic writes.
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    std::shared_lock lock(CatalogMutex);
+    out.Vector(ActivePacks);for(const auto &pack:ActivePacks) out.Manifest(pack);
+    out.Vector(PrimaryPackIds);for(const auto &name:PrimaryPackIds) out.Text(name);
+    out.Text(WorldgenOwnerPackId);out.Map(BlocksByName);out.Map(NameToId);out.Map(IdToName);
+    for(const auto &entry:BlocksByName) {
+      out.Text(entry.first);out.Definition(entry.second.Definition);out.Text(entry.second.OwnerPackId);
+      for(const auto &stem:entry.second.Stems) out.Text(stem);
+    }
+    for(const auto &entry:NameToId) out.Text(entry.first);
+    for(const auto &entry:IdToName) out.Text(entry.second);
+    out.Vector(CubeDescs);for(const auto &desc:CubeDescs) out.Descriptor(desc);
+    out.Vector(RuntimeOverlay);for(const auto &entry:RuntimeOverlay) {
+      out.Definition(entry.first);for(const auto &stem:entry.second) out.Text(stem);
+    }
+    out.Map(RuntimeOverlayRemoved);for(const auto &name:RuntimeOverlayRemoved) out.Text(name);
+    out.Placeholder(PlaceholderCache);
+  }
+
 private:
   struct MergedEntry
   {

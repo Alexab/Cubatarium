@@ -78,6 +78,12 @@ std::shared_ptr<const WorldGenRefsCatalog> UWorldGenRefs::GetSnapshot()
   return std::atomic_load_explicit(&Active, std::memory_order_acquire);
 }
 
+std::shared_ptr<const WorldGenRefsCatalog> &UWorldGenRefs::ThreadReadKeep()
+{thread_local std::shared_ptr<const WorldGenRefsCatalog> keep;return keep;}
+
+std::shared_ptr<const WorldGenRefsCatalog> UWorldGenRefs::GetThreadReadSnapshot()
+{return ThreadReadKeep();}
+
 const WorldGenSlotSpec *UWorldGenRefs::GetSlot(const std::string &slotName)
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
@@ -92,7 +98,7 @@ const WorldGenSlotSpec *UWorldGenRefs::GetSlot(const std::string &slotName)
       return &it->second;
     }
   }
-  thread_local std::shared_ptr<const WorldGenRefsCatalog> keep;
+  auto &keep=ThreadReadKeep();
   keep = GetSnapshot();
   const auto it = keep->find(slotName);
   if (it == keep->end())

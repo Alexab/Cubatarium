@@ -36,6 +36,9 @@ public:
 
   GLuint GetTexture() const;
   void SetTexture(GLuint value);
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Text(Name);out.Vector(TextureNames);for(const auto &name:TextureNames) out.Text(name);
+  }
 
 private:
   std::string Name;
@@ -63,6 +66,14 @@ public:
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
   size_t GetTypeIdByName(const std::string &Name) const;
+
+  // CPU-side catalog only; GL names do not describe GPU allocation bytes.
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Tree(Textures);out.Tree(TexturesNames);
+    for(const auto &entry:Textures) entry.second.InspectStorage(out);
+    for(const auto &entry:TexturesNames) out.Text(entry.first);
+    out.TextureBases(TextureBaseStorageInstance);out.BlockStorage(BlockDefinitions);
+  }
 
 private:
   struct CubeAtlasPixels

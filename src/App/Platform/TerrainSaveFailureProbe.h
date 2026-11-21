@@ -129,16 +129,27 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   {
     const auto catalog_content=CaptureWorldGenContentSnapshot();
     const auto catalog_blocks=core.BlockDefinitionsInstance ? core.BlockDefinitionsInstance->GetCatalogSnapshot() : nullptr;
-    const auto storage=MeasureCatalogStorage(&catalog_content,1,&catalog_blocks,1,core.ObjectLibraryInstance);
+    CatalogResourceRoots catalog_resources;
+    catalog_resources.merge=core.BlockMergeRegistryInstance;catalog_resources.placeholder=core.PlaceholderCacheInstance;
+    catalog_resources.texture_bases=core.TextureBaseStorageInstance;catalog_resources.texture_cubes=core.TextureCubeStorageInstance;
+    catalog_resources.block_storage=core.BlockDefinitionsInstance;
+    catalog_resources.registry=core.WorldInstance ? core.WorldInstance->BlockRegistry.get() : nullptr;
+    catalog_resources.active_pack_directory=true;catalog_resources.calling_thread_reads=true;
+    const auto storage=MeasureCatalogStorage(&catalog_content,1,&catalog_blocks,1,core.ObjectLibraryInstance,catalog_resources);
     const std::array<WorldGenContentSnapshot,2> catalog_duplicates={catalog_content,catalog_content};
-    const auto duplicate_storage=MeasureCatalogStorage(catalog_duplicates.data(),catalog_duplicates.size(),&catalog_blocks,1,core.ObjectLibraryInstance);
+    const auto duplicate_storage=MeasureCatalogStorage(catalog_duplicates.data(),catalog_duplicates.size(),&catalog_blocks,1,core.ObjectLibraryInstance,catalog_resources);
     require(!storage.overflow && duplicate_storage.known_storage_bytes==storage.known_storage_bytes &&
-        duplicate_storage.shared_owners==storage.shared_owners,"catalog storage census duplicates shared payload");
-    report["catalog_storage"]={{"schema","catalog-storage-census.v1"},
-        {"scope","Supplied current worldgen/definition/prefab roots; known storage excludes map links/buckets, shared control/upstream, mutable merge/texture indices and unsupplied TLS/retired roots. Not total heap/RSS or a cap."},
+        duplicate_storage.shared_owners==storage.shared_owners && duplicate_storage.msvc_unordered_extra_bytes==storage.msvc_unordered_extra_bytes &&
+        duplicate_storage.msvc_tree_extra_bytes==storage.msvc_tree_extra_bytes && duplicate_storage.msvc_list_extra_bytes==storage.msvc_list_extra_bytes,
+        "catalog storage census duplicates shared payload or container metadata");
+    report["catalog_storage"]={{"schema","catalog-storage-census.v2"},
+        {"scope","Supplied worldgen/definition/prefab/merge/texture/placeholder roots, active directory and calling-thread reads. Known storage excludes separate container metadata, shared control/upstream, GPU allocations and unsupplied other-thread/retired roots. Not total heap/RSS or a cap."},
         {"known_storage_bytes",storage.known_storage_bytes},{"object_bytes",storage.object_bytes},
         {"vector_bytes",storage.vector_bytes},{"map_value_bytes",storage.map_value_bytes},
         {"text_bytes",storage.text_bytes},{"diagnostic_bytes",storage.diagnostic_bytes},
+        {"list_value_bytes",storage.list_value_bytes},{"tree_tables",storage.tree_tables},{"tree_nodes",storage.tree_nodes},
+        {"lists",storage.lists},{"list_nodes",storage.list_nodes},{"msvc_tree_extra_bytes",storage.msvc_tree_extra_bytes},
+        {"msvc_list_extra_bytes",storage.msvc_list_extra_bytes},{"calling_thread_inline_bytes",storage.calling_thread_inline_bytes},
         {"vectors",storage.vectors},{"tables",storage.tables},{"nodes",storage.nodes},{"bucket_slots",storage.bucket_slots},
         {"vector_allocations",storage.vector_allocations},{"unordered_model_supported",storage.unordered_model_supported},
         {"msvc_unordered_extra_bytes",storage.msvc_unordered_extra_bytes},
@@ -147,6 +158,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         {"feature_configs",storage.Objects(CatalogObjectKind::Features)},{"refs",storage.Objects(CatalogObjectKind::Refs)},
         {"images",storage.Objects(CatalogObjectKind::Image)},{"diagnostic_catalogs",storage.Objects(CatalogObjectKind::Diagnostics)},
         {"block_catalogs",storage.Objects(CatalogObjectKind::Blocks)},{"prefab_indexes",storage.Objects(CatalogObjectKind::PrefabIndex)},
+        {"merge_registries",storage.Objects(CatalogObjectKind::Merge)},{"placeholder_caches",storage.Objects(CatalogObjectKind::Placeholder)},
+        {"texture_base_stores",storage.Objects(CatalogObjectKind::TextureBases)},{"texture_cube_stores",storage.Objects(CatalogObjectKind::TextureCubes)},
+        {"block_stores",storage.Objects(CatalogObjectKind::BlockStorage)},
+        {"block_registries",storage.Objects(CatalogObjectKind::Registry)},{"registry_tags",storage.Objects(CatalogObjectKind::RegistryIdentity)},
         {"prefabs",storage.Objects(CatalogObjectKind::Prefab)},{"duplicate_snapshot_deduplicated",true}};
     const char *variant=std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT");
     if(variant && std::string(variant)=="flat_publication")

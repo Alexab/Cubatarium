@@ -28,6 +28,9 @@ public:
   const std::string &GetFileName() const;
   bool HasPixelData() const;
   const TexturePixelData *GetPixelData() const;
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Text(Name);out.Text(FileName);if(Pixels) out.Vector(Pixels->Rgba);
+  }
 
 private:
   std::string Name;
@@ -44,6 +47,9 @@ public:
   void RegisterPixels(const std::string &stem, TexturePixelData pixels);
 
   const std::map<std::string, UTextureBase> &GetBaseTextures() const;
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Tree(BaseTextures);for(const auto &entry:BaseTextures) {out.Text(entry.first);entry.second.InspectStorage(out);}
+  }
 
 private:
   std::map<std::string, UTextureBase> BaseTextures;

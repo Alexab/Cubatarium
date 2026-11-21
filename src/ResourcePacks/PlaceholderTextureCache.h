@@ -23,6 +23,15 @@ public:
   size_t GetEntryCount() const { return KeyToStem.size(); }
   size_t GetMaxEntries() const { return MaxEntries; }
 
+  // Caller excludes cache creation/eviction during this diagnostic walk.
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Path(CacheDir);out.Map(KeyToStem);out.Map(StemPixels);out.Map(LruIt);out.List(LruOrder);
+    for(const auto &entry:KeyToStem) {out.Text(entry.first);out.Text(entry.second);}
+    for(const auto &entry:StemPixels) {out.Text(entry.first);out.Vector(entry.second.Rgba);}
+    for(const auto &name:LruOrder) out.Text(name);
+    for(const auto &entry:LruIt) out.Text(entry.first);
+  }
+
 private:
   void TouchLru(const std::string &key);
   void EvictIfNeeded();

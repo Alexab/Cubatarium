@@ -696,6 +696,12 @@ UObjectFeatureConfigStorage::GetSnapshot()
   return std::atomic_load_explicit(&Active, std::memory_order_acquire);
 }
 
+std::shared_ptr<const ObjectFeatureConfig> &UObjectFeatureConfigStorage::ThreadReadKeep()
+{thread_local std::shared_ptr<const ObjectFeatureConfig> keep;return keep;}
+
+std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::GetThreadReadSnapshot()
+{return ThreadReadKeep();}
+
 const ObjectFeatureConfig &UObjectFeatureConfigStorage::Get()
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
@@ -705,7 +711,7 @@ const ObjectFeatureConfig &UObjectFeatureConfigStorage::Get()
       return *pin->Features;
     }
   }
-  thread_local std::shared_ptr<const ObjectFeatureConfig> keep;
+  auto &keep=ThreadReadKeep();
   keep = GetSnapshot();
   return *keep;
 }

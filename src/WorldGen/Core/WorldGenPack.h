@@ -287,6 +287,8 @@ public:
   /// Prefer GetSnapshot() for cross-thread / long-lived readers.
   static const WorldGenPack &Get();
   static std::shared_ptr<const WorldGenPack> GetSnapshot();
+  static std::shared_ptr<const WorldGenPack> GetThreadReadSnapshot();
+  static const std::string &GetActiveDirectoryForCensus() {return ActivePackDir;}
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();
   static const PackOresConfig &OresConfig();
@@ -314,6 +316,7 @@ public:
   static BiomeId BiomeAtImage(int worldX, int worldZ);
 
 private:
+  static std::shared_ptr<const WorldGenPack> &ThreadReadKeep();
   static void Publish(std::shared_ptr<const WorldGenPack> pack);
   // Published via atomic load/store for cross-thread readers.
   static std::shared_ptr<const WorldGenPack> Active;

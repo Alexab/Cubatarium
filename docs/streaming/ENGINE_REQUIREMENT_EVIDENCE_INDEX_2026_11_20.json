@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C04.resources-and-thread-reads",
+      "status": "SCOPED_RESOURCE_CALLING_THREAD_AND_HOST_MODEL_PASS_FULL_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-resource-census-acceptance-20261121.json",
+      "scope": "Extend supplied-root storage census to merge registry manifests/indices/descriptors/runtime overlays, block registry name maps/lifetime tag, base/cube texture CPU indices, placeholder pixels/LRU and active Pack directory. Follow shared links once and expose calling-thread ownership-bearing convenience caches without changing their supported read/pin lifetime. Map/tree/list requested STL metadata is reported separately and checked against allocator requests; CPU catalog census does not infer GPU/process memory."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.catalog-storage-census",
       "status": "SCOPED_CENSUS_AND_HOST_TABLE_MODEL_PASS_FULL_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-storage-acceptance-20261121.json",

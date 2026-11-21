@@ -69,6 +69,7 @@ public:
   GetShared(const std::string &Name) const;
   /// Convenience for main-thread short reads. Holds a TLS shared_ptr keep-alive.
   const WorldObjectDefinition *Get(const std::string &Name) const;
+  static std::shared_ptr<const WorldObjectDefinition> GetThreadReadSnapshot() {return ThreadReadKeep();}
   std::vector<std::string> ListNames() const;
   std::string GetDisplayName(const std::string &Name) const;
   std::vector<std::string> GetTags(const std::string &Name) const;
@@ -83,6 +84,9 @@ public:
   }
 
 private:
+  static std::shared_ptr<const WorldObjectDefinition> &ThreadReadKeep() {
+    thread_local std::shared_ptr<const WorldObjectDefinition> keep;return keep;
+  }
   bool LoadFile(const std::string &path, UBlockRegistry &registry,
                 const std::string &registerName, ObjectOrigin origin,
                 const std::string &sourcePackId = {});

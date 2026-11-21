@@ -244,9 +244,11 @@ public:
   static bool LoadFromFile(const std::filesystem::path &path);
   static const ObjectFeatureConfig &Get();
   static std::shared_ptr<const ObjectFeatureConfig> GetSnapshot();
+  static std::shared_ptr<const ObjectFeatureConfig> GetThreadReadSnapshot();
   static bool IsLoaded();
 
 private:
+  static std::shared_ptr<const ObjectFeatureConfig> &ThreadReadKeep();
   static std::shared_ptr<const ObjectFeatureConfig> Active;
 };
 

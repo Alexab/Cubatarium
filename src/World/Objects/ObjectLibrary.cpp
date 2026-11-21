@@ -323,7 +323,7 @@ UObjectLibrary::GetShared(const std::string &Name) const
 
 const WorldObjectDefinition *UObjectLibrary::Get(const std::string &Name) const
 {
-  thread_local std::shared_ptr<const WorldObjectDefinition> keep;
+  auto &keep=ThreadReadKeep();
   keep = GetShared(Name);
   return keep.get();
 }
