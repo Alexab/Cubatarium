@@ -262,7 +262,21 @@
                 {
                   "id": "Q06-C2.2b.2",
                   "status": "CHECK",
-                  "scope": "Actual ConfigureCapturePolicy/full UWorld retirement with old live work and current successor; preserve full original lifecycle scope."
+                  "scope": "Actual ConfigureCapturePolicy and full UWorld retirement with old live work/current successor.",
+                  "subcases": [
+                    {
+                      "id": "Q06-C2.2b.2-policy",
+                      "status": "REUSE",
+                      "scope": "Actual ConfigureCapturePolicy selected through public settings/world identity/prepare callback and public DrainPendingGpuMeshes(max0). At queued/dispatched/kicked old pending/credits released, Dirty retained, generation advanced with stable world epoch. Real return to Flat cannot reuse original generation; same request actual GPU successor publishes current with no new MarkDirty/no tails. All3 boundary/current1.",
+                      "evidence": "build/desktop-msvc/s4-gpu-config-policy-acceptance-20261121.json",
+                      "coverage_note": "Intermediate prepare callback intentionally refuses physical resource allocation; no Full physical publication claim. Complete UWorld teardown/replacement/live old worker and mixed CPU-field owners remain open."
+                    },
+                    {
+                      "id": "Q06-C2.2b.2-world",
+                      "status": "CHECK",
+                      "scope": "Full UWorld teardown/replacement while old work exists: no old debt/publication, current world demand completes."
+                    }
+                  ]
                 }
               ]
             }
@@ -433,5 +447,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2.2b.1 policy ABA rejection now completes actual GPU current successor; .2b.2 real policy/world transition and .3 mixed late owners remain. Top-level10 CHECK unchanged; full scope OPEN."
+  "checkpoint": "Actual configuration policy queued/dispatched/kicked/current successor accepted. Q06-C2 remaining: full UWorld replacement/live old work and mixed late newer CPU-field owners. Top-level10 CHECK; full scope OPEN."
 }

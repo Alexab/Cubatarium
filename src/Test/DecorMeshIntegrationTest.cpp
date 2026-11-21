@@ -1924,7 +1924,7 @@ static void TestGpuPendingCancellationLifetime(
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
-  for (int mode = 0; mode < 6; ++mode)
+  for (int mode = 0; mode < 7; ++mode)
     for (int phase = 0; phase < 3; ++phase)
   {
   const auto baseline = UPipelineAdmission::Get().GpuPendingBytes();
@@ -1999,6 +1999,34 @@ static void TestGpuPendingCancellationLifetime(
   if (mode == 3) cache.CancelInFlightOutsideHorizontalRadius({4, 0, 0}, 0, -1);
   if (mode == 4) cache.CancelAsyncInFlightKeepDirty(root, 0);
   if (mode == 5) cache.MarkAllDirty();
+  if (mode == 6)
+  {
+    const auto generation = cache.GetCaptureStore().CapturePolicyGeneration();
+    settings.Lighting = LightingMode::Full;
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Full));
+    cache.SetPrepareRenderLightFn([](uint64_t, const SectionGeometryRenderInputs &,
+                                    const SectionRenderLightSnapshot &)
+        -> std::shared_ptr<SectionRenderLightBinding> { return nullptr; });
+    cache.SetRenderSettings(settings);
+    cache.DrainPendingGpuMeshes(world, registry, 0, 0);
+    Expect(cache.GetCaptureStore().LightInputsPolicy() == MeshLightInputs::PhysicalField &&
+               cache.GetCaptureStore().CapturePolicyGeneration() != generation &&
+               cache.GetCaptureStore().WorldEpoch() == epoch &&
+               cache.GetPendingGpuAppliesCount() == 0 &&
+               UPipelineAdmission::Get().GpuPendingBytes() == baseline &&
+               cache.IsChunkMeshDirty(root),
+           "actual policy transition retires pending payload and retains demand");
+    settings.Lighting = LightingMode::Flat;
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    cache.SetPrepareRenderLightFn({});
+    cache.SetRenderSettings(settings);
+    cache.DrainPendingGpuMeshes(world, registry, 0, 0);
+    Expect(cache.GetCaptureStore().LightInputsPolicy() == MeshLightInputs::Baked &&
+               cache.GetCaptureStore().CapturePolicyGeneration() != generation &&
+               cache.GetCaptureStore().WorldEpoch() == epoch,
+           "actual policy return cannot reuse old same-mode capture generation");
+  }
+
   const bool protected_job = mode == 4;
   const bool boundary = protected_job
       ? cache.GetPendingGpuAppliesCount() == 1 && cache.HasInflightMeshBuild(root) &&
@@ -2006,13 +2034,13 @@ static void TestGpuPendingCancellationLifetime(
       : cache.GetPendingGpuAppliesCount() == 0 && !cache.HasInflightMeshBuild(root) &&
           !cache.IsGpuExtractInFlight(root) &&
           UPipelineAdmission::Get().GpuPendingBytes() == baseline &&
-          cache.IsChunkMeshDirty(root) == (mode == 1);
+          cache.IsChunkMeshDirty(root) == (mode == 1 || mode == 6);
   Expect(boundary, "GPU cancellation retires exact pending resource or preserves protected owner");
   if (!protected_job)
   {
     cache.DrainPendingGpuMeshes(world, registry, 8, 1000);
     Expect(cache.GetPublishCount(root) == 0, "cancelled GPU result cannot publish late");
-    if (mode != 1) cache.MarkDirtyPriority(root); // explicit new demand after abandonment
+    if (mode != 1 && mode != 6) cache.MarkDirtyPriority(root); // explicit new demand after abandonment
     else Expect(cache.GetChunkMeshRevision(root) == revision,
                 "KeepDirty retains original request revision");
     schedule();
