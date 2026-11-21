@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <functional>
 #include <set>
+#include <map>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -35,6 +37,10 @@ public:
   static constexpr size_t kMaxRetainedGenerationResults = 8;
   static constexpr size_t kMaxActiveGenerationRequests = 1024;
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
+  void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
+  size_t MetadataCount() const { return States.size(); }
+  size_t RetireCommittedOutsideInterest(glm::ivec3 center,int radius,
+      const std::function<bool(glm::ivec3)> &has_owner,size_t budget=32);
   size_t GetRetainedGenerationResultCount() const
   { return RetainedResults->load(std::memory_order_relaxed); }
   using MarkChunkDirtyFn =
@@ -140,6 +146,16 @@ private:
                       int generation_start_cap_per_frame);
   void EraseQueuedRequest(glm::ivec3 coord);
 
+  struct StateRecord
+  {
+    ChunkLoadState state{ChunkLoadState::Absent};
+    uint64_t sequence{0};
+  };
+  struct CoordinateLess
+  {
+    bool operator()(glm::ivec3 a,glm::ivec3 b) const
+    { return a.x!=b.x ? a.x<b.x : a.z!=b.z ? a.z<b.z : a.y<b.y; }
+  };
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   // A result keeps its slot while queued/running/ready or held by Tick.
@@ -154,7 +170,9 @@ private:
   std::set<PendingRequest, RequestCompare> Queue;
   // One exact removable ordered index entry per authoritative live request.
   std::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests;
-  std::unordered_map<glm::ivec3, ChunkLoadState, IVec3Hash> States;
+  std::map<glm::ivec3,StateRecord,CoordinateLess> States;
+  size_t MetadataCapacity{2*kMaxActiveGenerationRequests};
+  std::optional<glm::ivec3> MetadataRetirementCursor;
   std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveRequestIds;
   std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;

@@ -6191,6 +6191,14 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           return false;
         if (ChunkScheduler)
         {
+          const auto focus=UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+          const int radius=std::max(Streamer->GetAsyncRequestRetentionRadius(focus),
+                                    world.GetRequiredPresentationRadius()+1);
+          const uint64_t side=2*uint64_t(std::max(0,radius))+1;
+          const uint64_t reserve=UChunkLoadScheduler::kMaxActiveGenerationRequests;
+          const uint64_t available=std::numeric_limits<size_t>::max()-reserve;
+          const uint64_t area=side>available/side ? available : side*side;
+          ChunkScheduler->SetMetadataCapacity(static_cast<size_t>(area+reserve));
           glm::ivec2 column_origin(0);
           bool has_origin = false;
           if (auto camera = world.GetCurrentUserCamera())
@@ -7539,6 +7547,14 @@ void UWorldStreaming::UpdateStreaming(
   RetireUnownedColumnRecords(world, GetColumnFlowExecutor(), record_focus,
       std::max(Streamer->GetAsyncRequestRetentionRadius(record_focus),
                world.GetRequiredPresentationRadius() + 1), 32);
+  if(ChunkScheduler)
+    ChunkScheduler->RetireCommittedOutsideInterest(record_focus,
+        std::max(Streamer->GetAsyncRequestRetentionRadius(record_focus),
+                 world.GetRequiredPresentationRadius()+1),[&](glm::ivec3 ground) {
+          return world.BlockWorld.GetChunkManager().HasResidentTerrainColumn(ground) ||
+              world.Persistence->HasTerrainColumnMetadataOwner(ground) ||
+              world.IsAsyncRelightColumnInFlight({ground.x,ground.z});
+        },32);
   if (update_core_ran)
   {
     world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs =

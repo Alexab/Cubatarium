@@ -77,7 +77,7 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   const auto stateIt = States.find(coord);
   if (stateIt != States.end())
   {
-    if (stateIt->second == ChunkLoadState::Requested)
+    if (stateIt->second.state == ChunkLoadState::Requested)
     {
       const auto queuedIt = QueuedRequests.find(coord);
       if (queuedIt != QueuedRequests.end())
@@ -103,8 +103,8 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
         return true;
       }
     }
-    else if (stateIt->second == ChunkLoadState::Generating ||
-             stateIt->second == ChunkLoadState::Ready)
+    else if (stateIt->second.state == ChunkLoadState::Generating ||
+             stateIt->second.state == ChunkLoadState::Ready)
     {
       // Job already running / ready: refresh live priority in either direction
       // so stale near-focus work cannot retain its old commit preference.
@@ -125,16 +125,16 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
       LogProceduralRequest(
           "priority_refreshed", coord,
           idIt != ActiveRequestIds.end() ? idIt->second : 0, demand_id,
-          "state=" + std::to_string(static_cast<int>(stateIt->second)) +
+          "state=" + std::to_string(static_cast<int>(stateIt->second.state)) +
               " priority=" + std::to_string(priority));
       return true;
     }
-    else if (stateIt->second != ChunkLoadState::Absent)
+    else if (stateIt->second.state != ChunkLoadState::Absent)
     {
       return true;
     }
   }
-  if (ActiveTokens.size() >= kMaxActiveGenerationRequests)
+  if (ActiveTokens.size() >= kMaxActiveGenerationRequests || States.size() >= MetadataCapacity)
   {
     ++CapacityRefused;
     return false;
@@ -153,7 +153,7 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.columnOrigin = column_origin;
   pending.hasColumnOrigin = has_column_origin;
   const uint64_t request_id = pending.requestId;
-  States[coord] = ChunkLoadState::Requested;
+  States[coord] = {ChunkLoadState::Requested,pending.token.sequence};
   ActiveTokens[coord] = pending.token;
   if (pending.requestId != 0)
   {
@@ -184,6 +184,8 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
   const auto token_it = ActiveTokens.find(coord);
   if (token_it != ActiveTokens.end())
     Tokens.Retire(coord, token_it->second.sequence);
+  const auto state = States.find(coord);
+  if (state != States.end()) Tokens.Retire(coord,state->second.sequence);
   States.erase(coord);
   ActiveTokens.erase(coord);
   ActiveRequestIds.erase(coord);
@@ -222,7 +224,7 @@ int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
     const auto state_it = States.find(coord);
     const int state = state_it == States.end()
                           ? static_cast<int>(ChunkLoadState::Absent)
-                          : static_cast<int>(state_it->second);
+                          : static_cast<int>(state_it->second.state);
     const auto priority_it = RequestPriorities.find(coord);
     const int priority = priority_it == RequestPriorities.end()
                              ? 0
@@ -277,7 +279,7 @@ void UChunkLoadScheduler::CancelAllPending(
     std::size_t committed = 0;
     for (const auto &entry : States)
     {
-      switch (entry.second)
+      switch (entry.second.state)
       {
       case ChunkLoadState::Requested:
         ++requested;
@@ -322,10 +324,11 @@ void UChunkLoadScheduler::CancelAllPending(
     Tokens.Retire(entry.first,entry.second.sequence);
   for (const auto &entry : States)
   {
-    if (entry.second == ChunkLoadState::Committed)
-      Tokens.Retire(entry.first,Tokens.Current(entry.first).sequence);
+    if (entry.second.state == ChunkLoadState::Committed)
+      Tokens.Retire(entry.first,entry.second.sequence);
   }
   States.clear();
+  MetadataRetirementCursor.reset();
   ActiveTokens.clear();
   ActiveRequestIds.clear();
   RequestPriorities.clear();
@@ -452,7 +455,7 @@ bool UChunkLoadScheduler::ScheduleWorker(
                 " generation_ms=" + std::to_string(pending.generationMs));
         Completed.Push(std::move(pending));
       })) return false;
-  States[request.coord] = ChunkLoadState::Generating;
+  States[request.coord].state = ChunkLoadState::Generating;
   LogProceduralRequest(
       "worker_submitted", request.coord, request.requestId,
       request.demandId, "priority=" + std::to_string(request.priority));
@@ -551,7 +554,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       RequestPriorityRefreshCounts.erase(pending.result.coord);
       continue;
     }
-    States[pending.result.coord] = ChunkLoadState::Ready;
+    States[pending.result.coord].state = ChunkLoadState::Ready;
     const bool apply_budget_exhausted =
         committed > 0 && maxApplyMsPerFrame > 0.0 &&
         LastTickApplyMs >= maxApplyMsPerFrame;
@@ -582,7 +585,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
             : 0;
     const auto apply_t0 = std::chrono::high_resolution_clock::now();
     pending.result.buffer.ApplyTo(world);
-    States[pending.result.coord] = ChunkLoadState::Committed;
+    States[pending.result.coord].state = ChunkLoadState::Committed;
     ActiveTokens.erase(pending.result.coord);
     ActiveRequestIds.erase(pending.result.coord);
     RequestPriorities.erase(pending.result.coord);
@@ -674,7 +677,7 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
     const auto stateIt = States.find(next.coord);
     const auto queuedIt = QueuedRequests.find(next.coord);
     if (stateIt == States.end() ||
-        stateIt->second != ChunkLoadState::Requested ||
+        stateIt->second.state != ChunkLoadState::Requested ||
         queuedIt == QueuedRequests.end() ||
         queuedIt->second.queueRevision != next.queueRevision)
     {
@@ -709,10 +712,33 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
       retained < kMaxRetainedGenerationResults ? kMaxRetainedGenerationResults-retained : size_t{0}));
 }
 
+size_t UChunkLoadScheduler::RetireCommittedOutsideInterest(glm::ivec3 center,int radius,
+    const std::function<bool(glm::ivec3)> &has_owner,size_t budget)
+{
+  const size_t count=std::min({budget,size_t{32},States.size()});
+  if(count==0) return 0;
+  auto it=MetadataRetirementCursor ? States.upper_bound(*MetadataRetirementCursor) : States.begin();
+  if(it==States.end()) it=States.begin();
+  std::vector<glm::ivec3> keys; keys.reserve(count);
+  for(size_t n=0;n<count;++n) {
+    keys.push_back(it->first); MetadataRetirementCursor=it->first;
+    if(++it==States.end()) it=States.begin();
+  }
+  size_t retired=0;
+  for(const auto key:keys) {
+    const auto state=States.find(key);
+    if(state==States.end() || state->second.state!=ChunkLoadState::Committed) continue;
+    const int64_t distance=std::max(std::abs(int64_t(key.x)-center.x),std::abs(int64_t(key.z)-center.z));
+    if(distance<=std::max(0,radius) || (has_owner && has_owner(key))) continue;
+    Cancel(key,"abandoned_interest"); ++retired;
+  }
+  return retired;
+}
+
 bool UChunkLoadScheduler::IsCommitted(glm::ivec3 coord) const
 {
   const auto it = States.find(coord);
-  return it != States.end() && it->second == ChunkLoadState::Committed;
+  return it != States.end() && it->second.state == ChunkLoadState::Committed;
 }
 
 bool UChunkLoadScheduler::IsPending(glm::ivec3 coord) const
@@ -722,8 +748,8 @@ bool UChunkLoadScheduler::IsPending(glm::ivec3 coord) const
   {
     return false;
   }
-  return it->second != ChunkLoadState::Absent &&
-         it->second != ChunkLoadState::Committed;
+  return it->second.state != ChunkLoadState::Absent &&
+         it->second.state != ChunkLoadState::Committed;
 }
 
 ChunkLoadState UChunkLoadScheduler::GetState(glm::ivec3 coord) const
@@ -733,7 +759,7 @@ ChunkLoadState UChunkLoadScheduler::GetState(glm::ivec3 coord) const
   {
     return ChunkLoadState::Absent;
   }
-  return it->second;
+  return it->second.state;
 }
 
 int UChunkLoadScheduler::GetPendingQueueCount() const

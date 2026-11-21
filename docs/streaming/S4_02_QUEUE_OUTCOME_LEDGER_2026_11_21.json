@@ -713,11 +713,12 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Accepted active-request1024 cap with bool actual producer refusal/revisit, exact index, shared compute/pool, result quota8 and non-reusing token retirement accepted. Current saturation/Streamer required-data replay/actual install/reset and lifecycle matrix PASS. Committed/resident metadata count+allocator bytes and generated-buffer bytes remain CHECK.",
+          "partial_result": "Count/lifetime domains accepted: active1024, result8, exact priority index, non-reusing token retirement, total States capacity from retention/presentation area+1024; bounded32 abandoned Committed retirement preserves resident/IO/light owners and exact newer token. Native metadata refusal/reclamation/normal producer successor/shrink/current lifecycle PASS. Metadata/settings/token allocator bytes and generated-buffer bytes remain CHECK.",
           "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
           "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
           "token_retirement_evidence": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",
-          "request_capacity_evidence": "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json"
+          "request_capacity_evidence": "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json",
+          "metadata_domain_evidence": "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",

@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.metadata-domain-budget",
+      "status": "SCOPED_PASS_BYTES_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json",
+      "scope": "Total Requested/Generating/Ready/Committed States admission budget. Production source sets (2R+1)^2+1024, R=max(actual async data retention radius,presentation radius+1), checked saturating size_t arithmetic; standalone default2048. Shrink does not evict: live count bounded by max prior admitted capacity until reclamation, new keys refused above current capacity. Active1024/result8 caps remain independent. Ordered full-coordinate key cursor visits<=32 entries/call. Only Committed outside interest with no resident terrain/IO/light owner may retire. Store exact generation sequence with state; Cancel/CancelAll retire that exact identity and preserve newer registry owner. No data removed by maintenance."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.active-request-capacity",
       "status": "SCOPED_PASS_COMMITTED_BYTES_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json",

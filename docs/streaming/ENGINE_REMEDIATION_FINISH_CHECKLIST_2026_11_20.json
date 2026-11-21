@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 LIMIT.Q09: active-request cap1024 and actual Streamer required-data refusal/replay accepted; shared compute/pool, result8, exact index, token retirement already accepted. Next settle Committed/resident registry metadata count+allocator bytes and generated-buffer byte envelope. No global residency/process-memory/fairness closure inferred. Other LIMIT groups and full S0..S6 unchanged/open.",
+  "next_action": "S4.02 LIMIT.Q09 count/lifetime domains accepted incl total metadata budget and bounded abandoned Committed retirement. Next account and bound real request/state/token allocator storage (including settings) and generation buffer bytes. Retention-area count sizing is not total process/resident memory cap; Q01/Q10/S4.06 and other LIMIT groups/full S0..S6 remain unchanged/open. Reuse accepted metadata/refusal/lifecycle scenes absent dependent changes.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

@@ -2667,6 +2667,50 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"current_terrain_installed",current_demand},{"reset_releases_owners",capacity_retired}};
         require(retained_requirement && producer_replayed && current_demand && capacity_retired,
             "generation request capacity retains required-data producer demand without overflow storage");
+        scheduler.SetMetadataCapacity(4);
+        for(int n=0;n<4;++n) {
+          require(scheduler.RequestLoad({6000+n,0,0},0,request),"metadata fixture admits within budget");
+          scheduler.Tick(terrain,1,1);
+          require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"metadata fixture actual buffer ready");
+          scheduler.Tick(terrain,1,0);
+        }
+        const glm::ivec3 fifth(6004,0,0),protected_column(6000,0,0);
+        const bool metadata_full=scheduler.MetadataCount()==4 &&
+            !scheduler.RequestLoad(fifth,0,request) && generation.Current(fifth).sequence==0;
+        const std::vector<glm::ivec3> required_fifth{fifth};
+        producer.EnsureDataColumns(required_fifth,1);
+        const bool metadata_refused=!scheduler.IsPending(fifth);
+        for(int n=1;n<4;++n) terrain.GetChunkManager().RemoveChunk({6000+n,-3,0});
+        const auto has_data=[&](glm::ivec3 c) {
+          return terrain.GetChunkManager().HasResidentTerrainColumn(c);
+        };
+        const auto retired_metadata=scheduler.RetireCommittedOutsideInterest({0,0,0},0,has_data,10000);
+        const bool live_preserved=retired_metadata==3 && scheduler.MetadataCount()==1 &&
+            scheduler.IsCommitted(protected_column) && terrain.GetBlock({6000*CHUNK_SIZE+8,-40,8})==8;
+        producer.EnsureDataColumns(required_fifth,1);
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"metadata release admits required data");
+        scheduler.Tick(terrain,1,0);
+        const bool metadata_successor=scheduler.IsCommitted(fifth) &&
+            terrain.GetBlock({6004*CHUNK_SIZE+8,-40,8})==8;
+        scheduler.SetMetadataCapacity(1);
+        const bool shrink_preserves=scheduler.MetadataCount()==2 &&
+            !scheduler.RequestLoad({6005,0,0},0,request) &&
+            scheduler.RetireCommittedOutsideInterest({0,0,0},0,has_data)==0;
+        const auto newer_identity=generation.Bump(protected_column);
+        terrain.GetChunkManager().RemoveChunk({6000,-3,0});
+        terrain.GetChunkManager().RemoveChunk({6004,-3,0});
+        scheduler.RetireCommittedOutsideInterest({0,0,0},0,has_data);
+        const bool newer_preserved=scheduler.MetadataCount()==0 &&
+            generation.Current(protected_column).sequence==newer_identity;
+        generation.Retire(protected_column,newer_identity);
+        report["generation_metadata_capacity"]={{"test_capacity",4},{"full_refusal",metadata_full && metadata_refused},
+            {"unowned_retired_live_data_preserved",live_preserved},{"required_successor",metadata_successor},
+            {"shrink_does_not_evict",shrink_preserves},{"newer_identity_preserved",newer_preserved},
+            {"final_live_tokens",generation.LiveTokenCount()}};
+        require(metadata_full && metadata_refused && live_preserved && metadata_successor &&
+            shrink_preserves && newer_preserved && generation.LiveTokenCount()==0,
+            "generation metadata budget retains live owners and reclaims abandoned committed history");
         report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},
             {"ready_requeue_holds_credit",held},{"stale_release_exact",stale_released},
             {"automatic_readmission",readmitted},{"actual_install_releases_credit",installed},
