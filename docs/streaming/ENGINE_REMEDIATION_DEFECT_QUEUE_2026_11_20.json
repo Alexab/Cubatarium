@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "generation-arrival-seeds-column-y0-instead-of-result-sections",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "observed": "Actual installed generation callback enqueued ground Y0 despite accepted negative/upper result band; scanner owns only one section. Negative proves wrong seed band, not disabled/calm-fluid downstream failure.",
+      "fix": "Actual generation callback enumerates signed result min/max intersect procedural profile and enqueues each 16-cube physics section instead of column Y0.",
+      "evidence": "build/desktop-msvc/s4-seed-arrival-band-acceptance-20261121.json",
+      "next_action": "Q11 sync/mutation ingress, actual streaming drain/abandonment; parent row OPEN."
+    },
+    {
       "id": "seed-seal-owners-cleared-on-quiesce-retained-on-world-replace",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q11_C1_OPEN",

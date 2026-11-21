@@ -501,7 +501,25 @@
         {
           "id": "Q11-C1.PRODUCER_DEDUPE",
           "status": "CHECK",
-          "scope": "Actual async/sync/seal mutation ingress and same-column dedupe retain all required seed and intra/shore obligations."
+          "scope": "Actual async/sync/seal mutation ingress and same-column dedupe retain all required seed and intra/shore obligations.",
+          "subcases": [
+            {
+              "id": "Q11-C1.PRODUCER_DEDUPE.ASYNC_ARRIVAL",
+              "status": "REUSE",
+              "evidence": "build/desktop-msvc/s4-seed-arrival-band-acceptance-20261121.json",
+              "coverage_note": "Friend invokes actual installed InitChunkScheduler callback at controlled arrival boundaries; Q09 separately proves actual scheduler ApplyTo/callback. Not generator algorithm execution here. Actual queued section requests drained via real SeedPhysicsOnChunkCommitted with fluids enabled and Flowing(3), resulting two distinct fluid-frontier entries. Not streaming frame-budget drain, full physics simulation, full shore/intra seal completion, sync ingress or eviction/new-world successor. Seed queue append semantics, caps LIMIT-C1. No framebuffer/backend/performance acceptance; Q11/full S0..S6 OPEN."
+            },
+            {
+              "id": "Q11-C1.PRODUCER_DEDUPE.SYNC_ARRIVAL",
+              "status": "CHECK",
+              "scope": "Actual synchronous generation-lighting hook shore enqueue/dedupe and retained obligations."
+            },
+            {
+              "id": "Q11-C1.PRODUCER_DEDUPE.SEAL_MUTATION",
+              "status": "CHECK",
+              "scope": "Match actual seal mutation ingress and current downstream source to accepted S2.05 evidence; fill exact missing property only."
+            }
+          ]
         },
         {
           "id": "Q11-C1.DRAIN",
@@ -609,5 +627,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11-C1 RETENTION scoped PASS; actual producer/dedupe/drain/abandonment remain. Next PRODUCER_DEDUPE and actual DRAIN. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11 RETENTION and async arrival signed seed/scoped real seed transfer accepted. Next sync seal ingress, mutation ingress, actual streaming drain/abandonment. Top-level6 CHECK; full scope OPEN."
 }

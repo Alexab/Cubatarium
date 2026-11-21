@@ -419,7 +419,19 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         const bool near_focus =
             std::abs(coord.x - focus_ground.x) <= focus_radius &&
             std::abs(coord.z - focus_ground.z) <= focus_radius;
-        DeferredPhysicsSeedQueue.push_back(coord);
+        // Generation commits an XZ column, but the physics frontier scanner
+        // owns one 16-cube section. Preserve the actual signed result band.
+        const int seed_min_y = std::max(settings.MinHeight, min_y);
+        const int seed_max_y = std::min(settings.MaxHeight, max_y);
+        if (seed_min_y <= seed_max_y)
+        {
+          const int last_seed_cy = FloorDiv(seed_max_y, CHUNK_SIZE);
+          for (int cy = FloorDiv(seed_min_y, CHUNK_SIZE);
+               cy <= last_seed_cy; ++cy)
+          {
+            DeferredPhysicsSeedQueue.push_back({coord.x, cy, coord.z});
+          }
+        }
         if (settings.FillWater)
         {
           // V_fluid: IntraChunkSeal once (populate XOR deferred drain). Never

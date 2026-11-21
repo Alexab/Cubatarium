@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q11.async-arrival-signed-seed-band",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-seed-arrival-band-acceptance-20261121.json",
+      "scope": "Friend invokes actual installed InitChunkScheduler callback at controlled arrival boundaries; Q09 separately proves actual scheduler ApplyTo/callback. Not generator algorithm execution here. Actual queued section requests drained via real SeedPhysicsOnChunkCommitted with fluids enabled and Flowing(3), resulting two distinct fluid-frontier entries. Not streaming frame-budget drain, full physics simulation, full shore/intra seal completion, sync ingress or eviction/new-world successor. Seed queue append semantics, caps LIMIT-C1. No framebuffer/backend/performance acceptance; Q11/full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q11.quiesce-vs-world-retirement",
       "status": "SCOPED_PASS_Q11_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

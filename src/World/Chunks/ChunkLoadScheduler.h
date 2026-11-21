@@ -16,6 +16,7 @@ namespace cutum
 
 class UBlockWorld;
 class UChunkMeshCache;
+class UCore;
 
 enum class ChunkLoadState
 {
@@ -76,6 +77,7 @@ public:
   int GetLastCommitsThisFrame() const { return LastCommitsThisFrame; }
 
 private:
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   struct PendingRequest
   {
     glm::ivec3 coord;

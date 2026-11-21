@@ -13,6 +13,7 @@
 #include "World/Persistence/WorldPersistence.h"
 #include "World/Physics/WorldChunkDirtyService.h"
 #include "World/Physics/WorldBlockPhysicsService.h"
+#include "World/Physics/ChunkPhysicsSeed.h"
 #include "World/Lighting/IULightingPipeline.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "World/Lighting/RelightInputValidation.h"
@@ -1394,6 +1395,47 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           lifecycle_ok=lifecycle_ok && accepted;
         }
         require(lifecycle_ok,"temporary quiesce retains seed/seal owners; permanent world replacement retires them");
+      }
+      {
+        UWorld arrival(nullptr,nullptr);
+        arrival.SetSpawnPoint({8,-40,8});
+        arrival.ProceduralTemplate.MinHeight=-48; arrival.ProceduralTemplate.MaxHeight=31;
+        arrival.ProceduralTemplate.SeaLevel=-40; arrival.ProceduralTemplate.FillWater=true;
+        arrival.BlockWorld.SetVerticalProfile({-48,31,-40});
+        arrival.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        arrival.BlockWorld.SetFluidDefinitions(definitions.get());
+        arrival.SetRenderSettings(settings);
+        arrival.BlockWorld.SetBlock({8,-40,8},9); arrival.BlockWorld.SetBlock({8,24,8},9);
+        arrival.BlockWorld.SetFluidState({8,-40,8},FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        arrival.BlockWorld.SetFluidState({8,24,8},FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        PhysicsFeatureFlags seed_flags;
+        seed_flags.EnableFluids=true; seed_flags.LiquidShadowMode=false;
+        arrival.SetPhysicsProfile(PhysicsProfile::Standard);
+        arrival.SetPhysicsFeatureFlags(seed_flags);
+        auto &streaming=*arrival.Streaming;
+        streaming.InitChunkScheduler(arrival);
+        require(streaming.ChunkScheduler && streaming.ChunkScheduler->MarkDirty,
+                "actual production generation-arrival callback installed");
+        // Simulate two accepted column arrivals; execute the registered actual
+        // consumer, not a replacement lambda. Q09 proves scheduler invocation.
+        streaming.ChunkScheduler->MarkDirty({0,0,0},-40,-40,false);
+        streaming.ChunkScheduler->MarkDirty({0,0,0},24,24,true);
+        const bool bands=streaming.DeferredPhysicsSeedQueue==
+            std::deque<glm::ivec3>{{0,-3,0},{0,1,0}};
+        const bool shore=streaming.DeferredShoreSealQueue.size()==1 &&
+            streaming.DeferredShoreSealQueued.count({0,0,0})==1 &&
+            streaming.DeferredIntraChunkSealNeeded.count({0,0,0})==1;
+        arrival.BlockPhysicsService->ClearFluidQueue();
+        while(!streaming.DeferredPhysicsSeedQueue.empty()) {
+          const auto seed=streaming.DeferredPhysicsSeedQueue.front();
+          streaming.DeferredPhysicsSeedQueue.pop_front();
+          SeedPhysicsOnChunkCommitted(arrival,seed,ChunkPhysicsSeedBudgets{});
+        }
+        const auto depth=arrival.BlockPhysicsService->GetFluidQueueStats().Depth;
+        report["seed_arrival_bands"]={{"signed_sections",bands},{"shore_coalesced",shore},
+            {"fluid_frontier_depth",depth},{"actual_seed_completed",depth==2}};
+        require(bands && shore && depth==2,
+                "actual generation arrival seeds both signed sections and coalesces shore obligation");
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
