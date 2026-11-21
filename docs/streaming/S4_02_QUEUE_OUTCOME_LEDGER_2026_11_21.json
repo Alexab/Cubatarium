@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q08-C2",
     "Q09-C1",
     "Q11-C1",
     "Q10-C1",
@@ -388,7 +387,7 @@
     {
       "id": "Q08-C2",
       "queue": "Q08",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "FIFO trimming/eviction/quiesce/reset transfers valid demand to deferred/restore owner; section restore retries current target; no debt crosses world retirement.",
       "subcases": [
         {
@@ -414,10 +413,14 @@
         },
         {
           "id": "Q08-C2.RESTORE",
-          "status": "CHECK",
-          "scope": "Section light restore retries only current target, retires stale world/incarnation, preserves pending obligation through actual current restore/install."
+          "status": "REUSE",
+          "scope": "Section light restore retries only current target, retires stale world/incarnation, preserves pending obligation through actual current restore/install.",
+          "evidence": "build/desktop-msvc/s4-restore-owner-acceptance-20261121.json",
+          "coverage_note": "Compatible disk content may restore under fresh runtime incarnation; load token and canonical input validation define ownership. No every-backend/framebuffer/complete load-save world-switch/performance proof. Q08-C2 closure is property-specific composition; S4.02/full stages remain OPEN."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-restore-owner-acceptance-20261121.json",
+      "coverage_note": "Composed TRIM/EVICTION/QUIESCE_RESET/RESTORE receipts with producer/source/adapter limits retained; not full backend/performance/load-save acceptance."
     },
     {
       "id": "Q09-R1",
@@ -551,5 +554,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C2 TRIM/EVICTION/QUIESCE_RESET accepted; permanent world persistence clear and transient quiesce preservation fixed. Last Q08-C2 RESTORE current target retry/retirement. Top-level8 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C2 all4 mechanism groups accepted with explicit source composition/reuse limits. 7 CHECK groups/23 REUSE groups/1 disabled path. Next Q09-C1 generation reject/cancel/reset/eviction/stale ready commit and current arrival. Full S4.02/S0..S6 OPEN."
 }

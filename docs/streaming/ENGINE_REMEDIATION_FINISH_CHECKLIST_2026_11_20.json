@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q08-C2.QUIESCE_RESET accepted: permanent world relight owners retired; temporary queued/deferred requests preserved and current install after resume. Last Q08-C2 RESTORE current target retry/stale epoch-incarnation retirement; reuse persisted certificate evidence only at exact property. Top-level8 CHECK; full S0..S6 OPEN.",
+  "next_action": "S4.02 Q08-C2 all4 mechanisms accepted; RESTORE current Release owner replacement/certified successor plus exact S3 source/native reuse. Next Q09-C1 actual generation reject/cancel/reset/eviction/stale ready commit/current arrival; reuse terrain/fluid arrival evidence only at matching scope. Top-level7 CHECK; full S0..S6 OPEN.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

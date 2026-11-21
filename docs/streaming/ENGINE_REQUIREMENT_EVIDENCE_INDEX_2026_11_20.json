@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.restore-current-owner-successor",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-restore-owner-acceptance-20261121.json",
+      "scope": "Compatible disk content may restore under fresh runtime incarnation; load token and canonical input validation define ownership. No every-backend/framebuffer/complete load-save world-switch/performance proof. Q08-C2 closure is property-specific composition; S4.02/full stages remain OPEN."
+    },
+    {
       "id": "S4.02.Q08.fifo-quiesce-vs-world-retirement",
       "status": "SCOPED_PASS_Q08_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

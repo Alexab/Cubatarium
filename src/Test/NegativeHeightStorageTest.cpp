@@ -352,6 +352,18 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
              queue.Size() == 1,
          "new load generation replaces duplicate coordinate without leaking "
          "owners");
+  stats = queue.Drain(cold, catalog, owner_current, on_ready, 1);
+  const bool current_successor = stats.restored + stats.current == 1 &&
+      ready == 3 && queue.Size() == 0 && queue.RetainedBytes() == 0 &&
+      cold.HasCompleteLightSamplingCalculation(root, catalog) &&
+      cold.GetChunkManager().GetSectionLightField(root)->GetPaddedData()->cells ==
+          (*loaded)[0]->volume.cells;
+  Expect(current_successor,
+         "replacement load owner completes current certified target and releases payload");
+  std::cout << "restore_current_successor current=" << current_successor
+            << " restored=" << stats.restored << " already_current=" << stats.current << '\n';
+  Expect(queue.Offer((*loaded)[0], 7),
+         "column cancellation has an actual retained restore owner");
   queue.CancelColumn(column);
   Expect(queue.Size() == 0 && queue.RetainedBytes() == 0,
          "column cancellation retires every retained disk receipt");
