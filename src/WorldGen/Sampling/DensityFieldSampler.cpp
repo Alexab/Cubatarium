@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <limits>
 
 #include <cstdlib>
 
@@ -21,12 +22,6 @@ namespace
 {
 
 constexpr float kSurfaceWobbleScale = 0.35f;
-
-uint64_t SamplingColumnKey(int x, int z)
-{
-  return (static_cast<uint64_t>(static_cast<uint32_t>(x)) << 32U) |
-         static_cast<uint32_t>(z);
-}
 
 class UScopedDensityProfilePhase
 {
@@ -100,43 +95,49 @@ UDensityFieldSampler::UDensityFieldSampler(
 void UDensityFieldSampler::BeginChunkSamplingCache(int base_x, int base_z,
                                                    int pad)
 {
-  SamplingCacheOriginX = base_x - pad;
-  SamplingCacheOriginZ = base_z - pad;
-  SamplingCacheSize = 16 + pad * 2;
-  SamplingCacheEnabled = true;
-  RouteCache.clear();
-  WobbleCache.clear();
+  EndChunkSamplingCache();
   SamplingProfile = {};
+  // The production halo is clamp(blend,0,16)+8. Larger/invalid memo
+  // requests still compute normally without allocating an unbounded cache.
+  if(pad<0 || pad>kMaxChunkCachePad) return;
+  const int64_t origin_x=int64_t(base_x)-pad,origin_z=int64_t(base_z)-pad;
+  if(origin_x<std::numeric_limits<int>::min() || origin_z<std::numeric_limits<int>::min()) return;
+  const int side=16+pad*2;
+  std::vector<SamplingCacheCell> fresh(static_cast<size_t>(side)*side);
+  SamplingCache=std::move(fresh);
+  SamplingCacheOriginX=static_cast<int>(origin_x);
+  SamplingCacheOriginZ=static_cast<int>(origin_z);
+  SamplingCacheSize=side;
+  SamplingCacheEnabled=true;
 }
 
 void UDensityFieldSampler::EndChunkSamplingCache()
 {
   SamplingCacheEnabled = false;
-  RouteCache.clear();
-  WobbleCache.clear();
+  SamplingCacheSize=0;
+  std::vector<SamplingCacheCell>{}.swap(SamplingCache);
 }
 
 DensityRouteParams UDensityFieldSampler::RouteAt(int x, int z) const
 {
   if (SamplingCacheEnabled)
   {
-    const int lx = x - SamplingCacheOriginX;
-    const int lz = z - SamplingCacheOriginZ;
+    const int64_t lx = int64_t(x) - SamplingCacheOriginX;
+    const int64_t lz = int64_t(z) - SamplingCacheOriginZ;
     if (lx < 0 || lz < 0 || lx >= SamplingCacheSize || lz >= SamplingCacheSize)
     {
       ++SamplingProfile.OutOfRange;
       return ComputeRouteAt(x, z);
     }
-    const uint64_t key = SamplingColumnKey(x, z);
-    const auto cached = RouteCache.find(key);
-    if (cached != RouteCache.end())
+    auto &cell=SamplingCache[static_cast<size_t>(lz)*SamplingCacheSize+static_cast<size_t>(lx)];
+    if (cell.route_valid)
     {
       ++SamplingProfile.RouteHits;
-      return cached->second;
+      return cell.route;
     }
     ++SamplingProfile.RouteMisses;
     DensityRouteParams route = ComputeRouteAt(x, z);
-    RouteCache.emplace(key, route);
+    cell.route=route; cell.route_valid=true;
     return route;
   }
   return ComputeRouteAt(x, z);
@@ -305,23 +306,22 @@ float UDensityFieldSampler::HorizontalWobbleAt(
 {
   if (SamplingCacheEnabled)
   {
-    const int lx = x - SamplingCacheOriginX;
-    const int lz = z - SamplingCacheOriginZ;
+    const int64_t lx = int64_t(x) - SamplingCacheOriginX;
+    const int64_t lz = int64_t(z) - SamplingCacheOriginZ;
     if (lx < 0 || lz < 0 || lx >= SamplingCacheSize || lz >= SamplingCacheSize)
     {
       ++SamplingProfile.OutOfRange;
       return ComputeHorizontalWobbleAt(x, z, route);
     }
-    const uint64_t key = SamplingColumnKey(x, z);
-    const auto cached = WobbleCache.find(key);
-    if (cached != WobbleCache.end())
+    auto &cell=SamplingCache[static_cast<size_t>(lz)*SamplingCacheSize+static_cast<size_t>(lx)];
+    if (cell.wobble_valid)
     {
       ++SamplingProfile.WobbleHits;
-      return cached->second;
+      return cell.wobble;
     }
     ++SamplingProfile.WobbleMisses;
     const float wobble = ComputeHorizontalWobbleAt(x, z, route);
-    WobbleCache.emplace(key, wobble);
+    cell.wobble=wobble; cell.wobble_valid=true;
     return wobble;
   }
   return ComputeHorizontalWobbleAt(x, z, route);

@@ -9,6 +9,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -128,6 +129,7 @@ static void TestChunkRouteWobbleParity()
   cutum::UDensityFieldSampler sampler(
       settings.Seed, settings.SeaLevel, settings.MaxHeight,
       settings.Tuning.terrainRoughness, params, settings.Caves);
+  const auto idle_slots=sampler.GetSamplingCacheStorageSlots();
   std::vector<int> direct;
   for (int z = -8; z < 8; ++z)
   {
@@ -157,8 +159,35 @@ static void TestChunkRouteWobbleParity()
   FluidTest::Expect(stats.OutOfRange == 0, kTestName,
                     "route/wobble cache covers requested halo");
   sampler.EndChunkSamplingCache();
+  FluidTest::Expect(sampler.GetSamplingCacheStorageSlots()==idle_slots,kTestName,
+                    "completed sampling releases historical cache capacity");
   FluidTest::Expect(sampler.SurfaceYAt(-8, -8) == direct[0], kTestName,
                     "route/wobble direct result after scope cleanup");
+  const int outside=sampler.SurfaceYAt(-17,-17);
+  sampler.BeginChunkSamplingCache(-8,-8,8);
+  const auto halo_bytes=sampler.GetSamplingCacheStorageBytes();
+  FluidTest::Expect(sampler.SurfaceYAt(-17,-17)==outside && sampler.GetSamplingCacheStats().OutOfRange==2 &&
+      sampler.GetSamplingCacheStorageBytes()==halo_bytes,kTestName,"out-of-halo sampling stays exact without cache growth");
+  sampler.EndChunkSamplingCache();
+  size_t max_bytes=0;
+  for(int cycle=0;cycle<32;++cycle) {
+    sampler.BeginChunkSamplingCache(-8,-8,24);
+    max_bytes=sampler.GetSamplingCacheStorageBytes();
+    FluidTest::Expect(sampler.GetSamplingCacheStorageSlots()==4096 && max_bytes<=4096*32,
+                      kTestName,"max production halo has bounded contiguous cache storage");
+    FluidTest::Expect(sampler.SurfaceYAt(-8,-8)==direct[0],kTestName,"repeated memo scopes preserve exact result");
+    sampler.EndChunkSamplingCache();
+    FluidTest::Expect(sampler.GetSamplingCacheStorageSlots()==0 && sampler.GetSamplingCacheStorageBytes()==0,
+                      kTestName,"sampling scope releases entire contiguous allocation");
+  }
+  for(int pad:{-1,25,std::numeric_limits<int>::max()}) {
+    sampler.BeginChunkSamplingCache(-8,-8,pad);
+    FluidTest::Expect(sampler.GetSamplingCacheStorageBytes()==0 && sampler.SurfaceYAt(-8,-8)==direct[0],
+                      kTestName,"unsupported memo geometry falls back to exact direct sampling");
+  }
+  sampler.BeginChunkSamplingCache(std::numeric_limits<int>::min(),0,24);
+  FluidTest::Expect(sampler.GetSamplingCacheStorageBytes()==0,kTestName,"memo origin overflow allocates no cache");
+  std::cout << "density_memo max_slots=4096 bytes=" << max_bytes << " idle_bytes=0 PASS\n";
 }
 
 } // namespace

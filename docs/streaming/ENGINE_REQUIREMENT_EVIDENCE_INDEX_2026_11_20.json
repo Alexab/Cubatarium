@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.density-memo-envelope",
+      "status": "SCOPED_PASS_OTHER_SCRATCH_OPEN",
+      "receipt": "build/desktop-msvc/s4-density-memo-acceptance-20261121.json",
+      "scope": "Density route/wobble memo uses one dense rectangle of values+independent valid flags, replacing two node hash maps. Production pad=clamp(blend,0,16)+8 so maximum pad24,side64,4096cells; actual Windows cell20bytes ->81920-byte vector. End disables memo and swaps vector empty (no cleanup allocation), releasing entire storage. Unsupported pad or unrepresentable origin disables optional memo; exact direct compute continues. In-range indexing uses64-bit coordinate difference; out-of-range requests compute directly without growing storage."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.retained-seed-text",
       "status": "SCOPED_PASS_CONFIGURATION_PEAK_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-retained-settings-acceptance-20261121.json",

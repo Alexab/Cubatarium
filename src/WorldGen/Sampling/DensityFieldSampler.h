@@ -3,7 +3,7 @@
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Sampling/DensityRouter.h"
 #include <cstdint>
-#include <unordered_map>
+#include <vector>
 
 namespace cutum
 {
@@ -61,6 +61,10 @@ public:
   };
   void BeginChunkSamplingCache(int base_x, int base_z, int pad);
   void EndChunkSamplingCache();
+  static constexpr int kMaxChunkCachePad=24;
+  static constexpr size_t kMaxChunkCacheSlots=(16+2*kMaxChunkCachePad)*(16+2*kMaxChunkCachePad);
+  size_t GetSamplingCacheStorageSlots() const {return SamplingCache.capacity();}
+  size_t GetSamplingCacheStorageBytes() const {return SamplingCache.capacity()*sizeof(SamplingCacheCell);}
   const SamplingCacheStats &GetSamplingCacheStats() const
   {
     return SamplingProfile;
@@ -116,8 +120,12 @@ private:
   int SamplingCacheOriginX{0};
   int SamplingCacheOriginZ{0};
   int SamplingCacheSize{0};
-  mutable std::unordered_map<uint64_t, DensityRouteParams> RouteCache;
-  mutable std::unordered_map<uint64_t, float> WobbleCache;
+  struct SamplingCacheCell {
+    DensityRouteParams route{};
+    float wobble{0};
+    bool route_valid{false},wobble_valid{false};
+  };
+  mutable std::vector<SamplingCacheCell> SamplingCache;
   mutable SamplingCacheStats SamplingProfile;
 };
 
