@@ -7,6 +7,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Math/GridMath.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
@@ -2572,6 +2573,175 @@ int main(int argc, char **argv)
         kTestName,"active temporary text copy has nonzero bounded peak and final release");
     std::cout << "settings_text_peak_bytes=" << roomy->PeakBytes() << " final_bytes=" << roomy->UsedBytes() << std::endl;
     std::cout << kTestName << ": active settings text budget PASS" << std::endl; return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--pipeline-cache-owner-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry first_registry(nullptr,definitions),second_registry(nullptr,definitions);
+    auto content=cutum::CaptureWorldGenContentSnapshot();
+    cutum::ChunkPopulateRequest flat; flat.content=content; flat.chunkCoord={0,0,0};
+    flat.settings=MakeVegetationSettings(); flat.settings.Generator=cutum::ProceduralGenerator::Flat;
+    flat.settings.MinHeight=0;flat.settings.BedrockTopY=0;flat.settings.MaxHeight=127;flat.settings.FlatSurfaceY=6;
+    cutum::UPipelineChunkPopulator first(first_registry,nullptr,""),second(second_registry,nullptr,"");
+    cutum::UBlockWorld first_world,second_world;
+    first.Populate(flat).buffer.ApplyTo(first_world);
+    second.Populate(flat).buffer.ApplyTo(second_world);
+    const bool registry_preserved=first_world.CountNonAir()>0 && first_world.CountNonAir()==second_world.CountNonAir();
+    std::cout << "cache_registry_first_voxels=" << first_world.CountNonAir()
+        << " replacement_voxels=" << second_world.CountNonAir() << " preserved=" << registry_preserved << std::endl;
+
+    auto procedural=std::make_shared<cutum::WorldGenPack>(*content.Pack);
+    procedural->Pipeline=cutum::WorldGenPackPipeline{};procedural->Pipeline.Loaded=true;
+    procedural->BiomeMode=cutum::WorldGenBiomeMode::Procedural;
+    auto image=std::make_shared<cutum::WorldGenPack>(*procedural);
+    image->BiomeMode=cutum::WorldGenBiomeMode::Image;
+    auto pixels=std::make_shared<cutum::WorldGenBiomeMapImage>();
+    pixels->Width=1;pixels->Height=1;pixels->Pixels={0xe8,0xd4,0x6a}; // independent desert marker
+    image->BiomeMapImage=pixels;
+    cutum::ChunkPopulateRequest request; request.content=content; request.content.Pack=procedural;
+    request.settings=MakeVegetationSettings();request.settings.TerrainBackendMode=cutum::TerrainBackend::Heightmap;
+    request.settings.EnableTrees=false;request.settings.EnableGroundCover=false;request.settings.EnableDecoration=false;
+    request.settings.MinHeight=0;request.settings.BedrockTopY=0;request.settings.MaxHeight=127;
+    request.settings.Tuning.biomeForestWeight=0;request.settings.Tuning.biomeDesertWeight=0;
+    request.settings.Tuning.biomeHillsWeight=0;request.settings.Tuning.biomeTundraWeight=0;
+    request.settings.Tuning.biomeSavannaWeight=0;request.settings.Tuning.biomeFoothillsWeight=0;
+    request.settings.Tuning.biomeScrublandWeight=0;request.settings.Tuning.biomeColdSteppeWeight=0;
+    request.settings.Tuning.biomePlainsWeight=1;
+    cutum::UBlockWorld height_world;
+    {
+      cutum::UWorldGenContentPinScope pin(request.content);
+      cutum::WorldGenContext context(height_world,second_registry,request.settings);
+      auto generator=cutum::UProceduralWorldGenFactory::Create(std::move(context));
+      request.chunkCoord={0,cutum::FloorDiv(generator->SurfaceYAt(8,8),cutum::CHUNK_SIZE),0};
+    }
+    (void)second.Populate(request);
+    request.content.Pack=image;
+    auto warm_image=second.Populate(request);
+    cutum::ChunkPopulateResult fresh_image;
+    std::exception_ptr error;
+    std::thread fresh_worker([&] {
+      try {cutum::UPipelineChunkPopulator fresh(second_registry,nullptr,"");fresh_image=fresh.Populate(request);}
+      catch(...) {error=std::current_exception();}
+    });fresh_worker.join();
+    if(error) std::rethrow_exception(error);
+    cutum::UBlockWorld warm_world,fresh_world;
+    warm_image.buffer.ApplyTo(warm_world);fresh_image.buffer.ApplyTo(fresh_world);
+    bool image_preserved=fresh_world.CountNonAir()>0 && warm_world.CountNonAir()==fresh_world.CountNonAir();
+    size_t mismatches=0;
+    fresh_world.ForEachBlock([&](glm::ivec3 position,cutum::BlockId block) {mismatches+=warm_world.GetBlock(position)!=block;});
+    image_preserved=image_preserved && mismatches==0;
+    std::cout << "cache_content_warm_voxels=" << warm_world.CountNonAir() << " fresh_voxels=" << fresh_world.CountNonAir()
+        << " mismatches=" << mismatches << " preserved=" << image_preserved << std::endl;
+    FluidTest::Expect(registry_preserved && image_preserved,kTestName,
+        "TLS cache binds current registry and captured catalog incarnation instead of old references and source strategy");
+    const auto builds=[] {return cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().pipeline_builds;};
+    request.shouldCancel=[] {return true;};
+    const auto before_reuse=builds();
+    for(int n=0;n<8;++n) FluidTest::Expect(second.Populate(request).discarded,kTestName,"cache reuse fixture cancels before terrain");
+    FluidTest::Expect(builds()==before_reuse,kTestName,"unchanged numeric inputs and owners reuse the existing pipeline");
+    const std::vector<std::function<void(cutum::ProceduralSettings &)>> changes={
+      [](auto &s) {++s.SeaLevel;},[](auto &s) {s.MinHeight-=16;},[](auto &s) {++s.BedrockTopY;},
+      [](auto &s) {s.TerrainBackendMode=cutum::TerrainBackend::Density3D;},
+      [](auto &s) {s.WorldGenProfileVersion=2;},[](auto &s) {s.EnableStructures=true;},
+      [](auto &s) {s.EnableOres=true;},[](auto &s) {s.Tuning.terrainRoughness+=0.1f;},
+      [](auto &s) {s.Tuning.biomeBlendRadius+=1;},[](auto &s) {s.Caves.scale+=0.01f;},
+      [](auto &s) {++s.Ravines.gentleRadius;},[](auto &s) {--s.MaxHeight;},
+      [](auto &s) {s.Seed^=4;s.MaxHeight^=1;}, // deliberate collision of old Seed ^ (MaxHeight<<2) key
+      [](auto &s) {s.FillWater=!s.FillWater;},[](auto &s) {s.AsyncRelight=!s.AsyncRelight;}
+    };
+    for(const auto &change:changes) {
+      (void)second.Populate(request);
+      const auto before=builds();auto changed=request;change(changed.settings);
+      (void)second.Populate(changed);(void)second.Populate(changed);
+      FluidTest::Expect(builds()==before+1,kTestName,"numeric input change rebuilds exactly once, including old hash collision");
+    }
+    (void)second.Populate(request);
+    const auto before_labels=builds();
+    auto labels=request;labels.settings.SeedText=std::string(64*1024,'s');
+    labels.settings.WorldGenPresetId=std::string(64*1024,'r');labels.settings.WorldGenPackId=std::string(64*1024,'p');
+    (void)second.Populate(labels);
+    FluidTest::Expect(builds()==before_labels && cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_config_text_capacity_bytes==0,
+        kTestName,"display labels and pinned pack selector create no cache history or unnecessary rebuild");
+
+    for(int kind=0;kind<4;++kind) {
+      (void)second.Populate(request);const auto before=builds();auto changed=request;
+      if(kind==0) changed.content.Pack=std::make_shared<cutum::WorldGenPack>(*request.content.Pack);
+      if(kind==1) changed.content.Biomes=std::make_shared<cutum::UBiomeDefinitionRegistry>(*request.content.Biomes);
+      if(kind==2) changed.content.Features=std::make_shared<cutum::ObjectFeatureConfig>(*request.content.Features);
+      if(kind==3) changed.content.Refs=std::make_shared<cutum::WorldGenRefsCatalog>(*request.content.Refs);
+      (void)second.Populate(changed);(void)second.Populate(changed);
+      FluidTest::Expect(builds()==before+1,kTestName,"each captured catalog owner participates in cache identity");
+    }
+    auto aliases=std::make_shared<std::array<cutum::WorldGenPack,2>>();
+    (*aliases)[0]=*request.content.Pack;(*aliases)[1]=*request.content.Pack;
+    auto alias_request=request;alias_request.content.Pack=std::shared_ptr<const cutum::WorldGenPack>(aliases,&(*aliases)[0]);
+    (void)second.Populate(alias_request);const auto before_alias=builds();
+    alias_request.content.Pack=std::shared_ptr<const cutum::WorldGenPack>(aliases,&(*aliases)[1]);
+    (void)second.Populate(alias_request);
+    FluidTest::Expect(builds()==before_alias+1,kTestName,"aliased catalogs with same control block but distinct values are distinct inputs");
+
+    (void)second.Populate(request);const auto before_definitions=builds();
+    const auto definitions_before=definitions->GetCatalogSnapshot();
+    definitions->ReplaceAll(definitions_before->ById,definitions_before->NameToId);
+    (void)second.Populate(request);(void)second.Populate(request);
+    FluidTest::Expect(builds()==before_definitions+1,kTestName,
+        "same registry with newly published definition catalog rebuilds exactly once");
+
+    std::optional<cutum::UBlockRegistry> address_reuse;
+    address_reuse.emplace(nullptr,definitions);const auto address=&*address_reuse;
+    std::weak_ptr<const void> old_registry_identity=address_reuse->GetLifetimeIdentity();
+    {cutum::UPipelineChunkPopulator temporary(*address_reuse,nullptr,"");(void)temporary.Populate(request);}
+    address_reuse.reset();
+    FluidTest::Expect(old_registry_identity.expired(),kTestName,"idle TLS key never retains registry incarnation strongly");
+    address_reuse.emplace(nullptr,definitions);const auto before_address_reuse=builds();
+    {cutum::UPipelineChunkPopulator temporary(*address_reuse,nullptr,"");(void)temporary.Populate(request);}
+    FluidTest::Expect(&*address_reuse==address && builds()==before_address_reuse+1,kTestName,
+        "same-address registry replacement with shared definitions still rebuilds by exact lifetime owner");
+    address_reuse.reset();
+    (void)second.Populate(request);
+
+    auto retired=request;
+    auto retired_pack=std::make_shared<cutum::WorldGenPack>(*request.content.Pack);
+    retired_pack->BiomeRegistry=std::make_shared<cutum::UBiomeDefinitionRegistry>(*request.content.Biomes);
+    retired.content.Pack=retired_pack;retired.content.Biomes=retired_pack->BiomeRegistry;
+    retired.content.Features=std::make_shared<cutum::ObjectFeatureConfig>(*request.content.Features);
+    retired.content.Refs=std::make_shared<cutum::WorldGenRefsCatalog>(*request.content.Refs);
+    std::weak_ptr<const cutum::WorldGenPack> weak_pack=retired.content.Pack;
+    std::weak_ptr<const cutum::UBiomeDefinitionRegistry> weak_biomes=retired.content.Biomes;
+    std::weak_ptr<const cutum::ObjectFeatureConfig> weak_features=retired.content.Features;
+    std::weak_ptr<const cutum::WorldGenRefsCatalog> weak_refs=retired.content.Refs;
+    (void)second.Populate(retired);retired.content={};retired_pack.reset();
+    FluidTest::Expect(weak_pack.expired() && weak_biomes.expired() && weak_features.expired() && weak_refs.expired(),kTestName,
+        "idle TLS identity keeps only weak catalog owners, so payloads retire after last request/pin");
+    (void)second.Populate(request);
+    auto pressure=request;pressure.settings.Seed^=1;
+    pressure.settings.SeedText=std::string(64*1024,'s');pressure.settings.WorldGenPresetId=std::string(64*1024,'r');
+    pressure.settings.WorldGenPackId=std::string(64*1024,'p');
+    auto quota=std::make_shared<cutum::UBufferAllocationBudget>(2*cutum::RuntimeSettingsTextCapacityBytes(pressure.settings)+1);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>();quota->Reserve(*peer,1);
+    const auto before_refusal=builds();bool refused=false;
+    {
+      cutum::UBufferBudgetScope active({quota,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)second.Populate(pressure);} catch(const cutum::UBufferBudgetExceeded &) {refused=true;}
+    }
+    FluidTest::Expect(refused && builds()==before_refusal && quota->UsedBytes()==1 &&
+        cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_config_text_capacity_bytes==0,kTestName,
+        "replacement constructor refusal retires old pipeline and publishes no partial key or retained context text");
+    quota->Release(*peer,1);
+    {
+      cutum::UBufferBudgetScope active({quota,std::make_shared<cutum::BufferBudgetJob>()});
+      FluidTest::Expect(second.Populate(pressure).discarded,kTestName,"exact replacement retry progresses after competing owner retires");
+    }
+    FluidTest::Expect(builds()==before_refusal+1 && quota->UsedBytes()==0,kTestName,
+        "retry builds one complete replacement and releases all constructor/job credits");
+    auto snapshot=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot();
+    FluidTest::Expect(snapshot.resident_chunks==0 && !snapshot.coarse_cache_active && snapshot.retained_config_text_capacity_bytes==0,
+        kTestName,"replacement/cancellation cache fixture leaves no retained job scratch or text");
+    std::cout << "cache_numeric_change_cases=" << changes.size() << " catalog_owner_cases=4 definitions_publication=1 same_owner_alias=1 registry_address_reuse=1"
+        << " weak_catalog_payloads_retired=1 constructor_refusal_retry=1 final_credits=" << quota->UsedBytes()
+        << " settings_key_bytes=" << snapshot.pipeline_settings_key_inline_bytes
+        << " owner_key_bytes=" << snapshot.pipeline_owner_key_inline_bytes << " builds=" << snapshot.pipeline_builds << std::endl;
+    return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--pinned-factory-catalog-only")
   {

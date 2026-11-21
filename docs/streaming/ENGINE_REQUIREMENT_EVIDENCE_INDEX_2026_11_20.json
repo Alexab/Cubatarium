@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.tls-pipeline-owner-incarnation",
+      "status": "SCOPED_PASS_CATALOG_TOTAL_AND_FULL_LIFECYCLE_MATRIX_OPEN",
+      "receipt": "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json",
+      "scope": "TLS pipeline reuse now requires an exact fixed numeric key and the same registry lifetime identity, definition catalog, four pinned content owners and object-library pointer. Floating settings compare explicit bits, not a lossy32-bit hash; labels are excluded because Seed is already resolved and pinned Pack owns selection. Weak owner identity compares control ownership and object address, distinguishing aliasing and same-address registry reuse without keeping old payloads alive. Mismatch clears old pipeline/key/weak owners before construction, publishing only a complete replacement; warm refresh reapplies the same Pack defaults policy as cold factory."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.biome-image-payload-owners",
       "status": "SCOPED_PASS_CATALOG_CACHE_VERSION_AND_TOTAL_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-biome-image-owner-acceptance-20261121.json",

@@ -40,16 +40,7 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
       UWorldGenPack::LoadPackId("default");
     }
   }
-  // Worldgen profile >= 3: the values from the New World form are
-  // authoritative. Older profiles keep the historical behaviour where the pack
-  // overwrote blend radius, cave depth and ravine settings.
-  const bool userOwned = ctx.Settings.WorldGenProfileVersion >= 3;
-  if (!userOwned && UWorldGenPack::Get().BiomeBlendRadius >= 0.0f)
-  {
-    ctx.Settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
-  }
-  UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings, userOwned);
-  UWorldGenPack::ApplyPackRavineDefaults(ctx.Settings, userOwned);
+  ApplyPackDefaults(ctx.Settings);
 
   const auto generator_id=ctx.Settings.Generator;
   auto pipeline = UWorldGeneratorRegistry::Create(std::move(ctx));
@@ -57,6 +48,20 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
             << ProceduralGeneratorToString(generator_id)
             << " (pack " << UWorldGenPack::Get().Id << ")" << std::endl;
   return pipeline;
+}
+
+void UProceduralWorldGenFactory::ApplyPackDefaults(ProceduralSettings &settings)
+{
+  // Worldgen profile >= 3: the values from the New World form are
+  // authoritative. Older profiles keep the historical behaviour where the pack
+  // overwrote blend radius, cave depth and ravine settings.
+  const bool userOwned = settings.WorldGenProfileVersion >= 3;
+  if (!userOwned && UWorldGenPack::Get().BiomeBlendRadius >= 0.0f)
+  {
+    settings.Tuning.biomeBlendRadius = UWorldGenPack::Get().BiomeBlendRadius;
+  }
+  UWorldGenPack::ApplyPackCaveDefaults(settings, userOwned);
+  UWorldGenPack::ApplyPackRavineDefaults(settings, userOwned);
 }
 
 } // namespace cutum

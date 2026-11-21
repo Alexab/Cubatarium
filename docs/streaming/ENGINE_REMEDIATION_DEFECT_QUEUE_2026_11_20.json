@@ -5,10 +5,12 @@
     {
       "id": "thread-local-pipeline-registry-owner-not-in-cache-key",
       "stage": "S4.02",
-      "status": "OPEN_SOURCE_SUSPICION_NOT_REPRODUCED",
-      "observed": "During existing Q09 retained-context inspection: EnsureThreadLocalPipeline key includes settings/prefabs but not registry identity. Cached WorldGenContext owns Registry reference; RefreshThreadLocalPipelineContext receives registry argument but does not rebind that reference. Same key/prefabs after registry replacement may reuse old registry. Not asserted as observed native failure.",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_LIFECYCLE_MATRIX_OPEN",
+      "observed": "Controlled same-settings/same-prefabs replacement with both registries live produced15616->0 blocks because cached Context.Registry mismatched writer and column service silently returned. Procedural->image Pack switch produced158 voxel mismatches versus a fresh worker. Reproduced in actual Release UPipelineChunkPopulator, then fixed with exact numeric+weak owner identity and incarnation token.",
       "evidence": "src/WorldGen/Core/PipelineChunkPopulator.cpp:PipelineSettingsKey/EnsureThreadLocalPipeline/RefreshThreadLocalPipelineContext; src/WorldGen/Core/WorldGenContext.h:Registry",
-      "next_action": "Address in existing owner/incarnation lifecycle verification with controlled same-settings/same-prefabs registry replacement; one targeted reproduction before any fix. Do not divert current memory package or restart audit."
+      "next_action": "Scoped fix verified, including address reuse/catalog aliases/definition publication/old hash collision/constructor quota unwind+retry and native regression. Retain full catalog construction/lifecycle/backend/performance/memory matrix obligations; no audit restart.",
+      "original_source_suspicion": "During existing Q09 retained-context inspection: EnsureThreadLocalPipeline key includes settings/prefabs but not registry identity. Cached WorldGenContext owns Registry reference; RefreshThreadLocalPipelineContext receives registry argument but does not rebind that reference. Same key/prefabs after registry replacement may reuse old registry. Not asserted as observed native failure.",
+      "acceptance_receipt": "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json"
     },
     {
       "id": "population-diagnostic-sample-history-unbounded",

@@ -64,6 +64,7 @@ protected:
 class UProceduralWorldGenFactory
 {
 public:
+  static void ApplyPackDefaults(ProceduralSettings &settings);
   static std::unique_ptr<IUWorldGenPipeline> Create(WorldGenContext ctx);
 };
 

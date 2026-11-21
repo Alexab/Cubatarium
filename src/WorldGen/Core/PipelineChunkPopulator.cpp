@@ -14,6 +14,7 @@
 #include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/SettingsTextBudget.h"
 #include "WorldGen/Core/PopulationScratchBudget.h"
+#include "WorldGen/Core/PipelineSettingsKey.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -31,6 +32,7 @@
 #include <cstdlib>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace cutum
@@ -144,22 +146,7 @@ bool ChunkPassesCaveGate(int chunkWorldX, int chunkWorldZ, uint32_t seed,
   return gate > params.chunkGateThreshold;
 }
 
-uint32_t PipelineSettingsKey(const ProceduralSettings &settings,
-                             UObjectLibrary *prefabs)
-{
-  uint32_t key = settings.Seed;
-  key ^= static_cast<uint32_t>(settings.Generator) * 2654435761u;
-  key ^= static_cast<uint32_t>(settings.EnableCaves) << 1;
-  key ^= static_cast<uint32_t>(settings.MaxHeight) << 2;
-  key ^= static_cast<uint32_t>(settings.EnableTrees) << 3;
-  key ^= static_cast<uint32_t>(settings.EnableGroundCover) << 4;
-  key ^= static_cast<uint32_t>(settings.EnableDecoration) << 5;
-  key ^= static_cast<uint32_t>(reinterpret_cast<uintptr_t>(prefabs) >> 4);
-  return key;
-}
-
-void RefreshThreadLocalPipelineContext(UBlockRegistry &registry,
-                                       UObjectLibrary *prefabs,
+void RefreshThreadLocalPipelineContext(UObjectLibrary *prefabs,
                                        const std::string &ownerPackId,
                                        const ProceduralSettings &settings,
                                        IUWorldGenPipeline *pipeline)
@@ -178,13 +165,40 @@ void RefreshThreadLocalPipelineContext(UBlockRegistry &registry,
   // Replace from a fresh copy: the job reservation covers one snapshot,
   // not an assignment that can retain/grow a previous string allocation.
   ctx.Settings = ProceduralSettings(settings);
+  UProceduralWorldGenFactory::ApplyPackDefaults(ctx.Settings);
   ctx.WorldgenOwnerPackId = ownerPackId;
   ctx.ResolveBlockIds();
 }
 
+struct PipelineOwnerKey
+{
+  std::weak_ptr<const void> registry;
+  std::weak_ptr<const BlockDefinitionCatalog> definitions;
+  std::weak_ptr<const WorldGenPack> pack;
+  std::weak_ptr<const UBiomeDefinitionRegistry> biomes;
+  std::weak_ptr<const ObjectFeatureConfig> features;
+  std::weak_ptr<const WorldGenRefsCatalog> refs;
+  UObjectLibrary *objects{nullptr};
+
+  template<class T> static bool Same(const std::weak_ptr<T> &previous,const std::shared_ptr<T> &current) {
+    return !previous.owner_before(current) && !current.owner_before(previous) && previous.lock().get()==current.get();
+  }
+  bool Matches(const UBlockRegistry &block_registry,UObjectLibrary *prefabs,const WorldGenContentSnapshot &content) const {
+    return objects==prefabs && Same(registry,block_registry.GetLifetimeIdentity()) &&
+        Same(definitions,block_registry.GetDefinitionsCatalogSnapshot()) && Same(pack,content.Pack) &&
+        Same(biomes,content.Biomes) && Same(features,content.Features) && Same(refs,content.Refs);
+  }
+  void Assign(const UBlockRegistry &block_registry,UObjectLibrary *prefabs,const WorldGenContentSnapshot &content) {
+    registry=block_registry.GetLifetimeIdentity();definitions=block_registry.GetDefinitionsCatalogSnapshot();
+    pack=content.Pack;biomes=content.Biomes;features=content.Features;refs=content.Refs;objects=prefabs;
+  }
+};
+
 struct ThreadLocalPipelineState
 {
-  uint32_t key{0};
+  std::optional<PipelineSettingsKey> key;
+  PipelineOwnerKey owners;
+  uint64_t builds{0};
   UBlockWorld world;
   std::unique_ptr<IUWorldGenPipeline> pipeline;
 };
@@ -198,23 +212,27 @@ ThreadLocalPipelineState &GetThreadLocalPipeline()
 IUWorldGenPipeline *
 EnsureThreadLocalPipeline(UBlockRegistry &registry, UObjectLibrary *prefabs,
                           const std::string &ownerPackId,
-                          const ProceduralSettings &settings)
+                          const ProceduralSettings &settings,const WorldGenContentSnapshot &content)
 {
   ThreadLocalPipelineState &state = GetThreadLocalPipeline();
-  const uint32_t key = PipelineSettingsKey(settings, prefabs);
-  if (!state.pipeline || state.key != key)
+  const auto key=MakePipelineSettingsKey(settings);
+  if (!state.pipeline || !state.key || *state.key!=key || !state.owners.Matches(registry,prefabs,content))
   {
     state.world.Clear();
+    // Retire the old reference/context and identity even if creation refuses.
+    state.pipeline.reset();state.key.reset();state.owners={};
     WorldGenContext ctx{state.world, registry, settings, prefabs};
     ctx.WorldgenOwnerPackId = ownerPackId;
     ctx.ResolveBlockIds();
     state.pipeline = UProceduralWorldGenFactory::Create(std::move(ctx));
     state.key = key;
+    state.owners.Assign(registry,prefabs,content);
+    ++state.builds;
   }
   else
   {
     state.world.Clear();
-    RefreshThreadLocalPipelineContext(registry, prefabs, ownerPackId, settings,
+    RefreshThreadLocalPipelineContext(prefabs, ownerPackId, settings,
                                       state.pipeline.get());
   }
   return state.pipeline.get();
@@ -540,7 +558,8 @@ ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThr
         composable->GetRetainedSampleSettingsTextCapacityBytes());
   }
   return {tls.world.GetChunkManager().GetResidentChunkCount(),
-      composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes,config_text_bytes};
+      composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes,config_text_bytes,
+      tls.builds,sizeof(tls.key),sizeof(tls.owners)};
 }
 
 ChunkPopulateResult
@@ -589,7 +608,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     }
   } release_context_text{tls};
   IUWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
-      Registry, objects, WorldgenOwnerPackId, settings);
+      Registry, objects, WorldgenOwnerPackId, settings,pin.Get());
   if (!pipeline)
   {
     return result;

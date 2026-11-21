@@ -38,6 +38,10 @@ public:
   std::shared_ptr<const BlockDefinitionCatalog>
   GetDefinitionsCatalogSnapshot() const;
 
+  // Opaque owner identity survives address reuse in weak caches; it owns no
+  // registry data, so an idle worker never keeps a retired registry alive.
+  const std::shared_ptr<const void> &GetLifetimeIdentity() const noexcept {return LifetimeIdentity;}
+
   BlockId GetIdByTypeName(const std::string &Name) const;
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
@@ -63,6 +67,7 @@ public:
   bool HasRenderableTexture(BlockId Id) const;
 
 private:
+  const std::shared_ptr<const void> LifetimeIdentity{std::make_shared<const unsigned char>(0)};
   void RebuildMaps();
   std::shared_ptr<UTextureCubeStorage> Textures;
   std::shared_ptr<UBlockDefinitionStorage> Definitions;
