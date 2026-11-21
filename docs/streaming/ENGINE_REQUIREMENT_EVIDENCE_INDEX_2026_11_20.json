@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q11.quiesce-vs-world-retirement",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-seed-seal-lifetime-acceptance-20261121.json",
+      "scope": "Existing friend directly installs already-accepted seed/shore/dedupe/intra pending owners. Actual UWorld temporary quiesce versus permanent Abandon; exact state only. Resume invoked after measurement; no paused drain/current physical successor or actual producer/dedupe/eviction proof. Those remain Q11 PRODUCER_DEDUPE/DRAIN/ABANDONMENT. No framebuffer/backend/performance/full memory acceptance. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q09.admission-and-composed-lifecycle",
       "status": "SCOPED_PASS_Q09_C1_CLOSED_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

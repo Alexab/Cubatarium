@@ -1361,6 +1361,40 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           require(current,"current generation completes after discarded terminal outcome");
         }
       }
+      {
+        bool lifecycle_ok=true;
+        for(const bool replace : {false,true}) {
+          UWorld pending_world(nullptr,nullptr);
+          pending_world.ProceduralTemplate.MinHeight=-48;
+          pending_world.ProceduralTemplate.MaxHeight=-33;
+          pending_world.BlockWorld.SetVerticalProfile({-48,-33,-40});
+          pending_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          pending_world.BlockWorld.SetFluidDefinitions(definitions.get());
+          pending_world.SetRenderSettings(settings);
+          auto &streaming=*pending_world.Streaming;
+          const glm::ivec3 seed(-1,-3,0),shore(-1,0,0);
+          // Lifecycle adapter: install already-accepted pending owners directly.
+          // Producer/dedupe/physical drain are separate Q11 obligations.
+          streaming.DeferredPhysicsSeedQueue.push_back(seed);
+          streaming.DeferredShoreSealQueue.push_back(shore);
+          streaming.DeferredShoreSealQueued.insert(shore);
+          streaming.DeferredIntraChunkSealNeeded.insert(shore);
+          if(replace) pending_world.AbandonTerrainForWorldReplace();
+          else pending_world.QuiesceBackgroundWork(std::chrono::milliseconds(100));
+          const bool retained=streaming.DeferredPhysicsSeedQueue==std::deque<glm::ivec3>{seed} &&
+              streaming.DeferredShoreSealQueue==std::deque<glm::ivec3>{shore} &&
+              streaming.DeferredShoreSealQueued.size()==1 && streaming.DeferredShoreSealQueued.count(shore)==1 &&
+              streaming.DeferredIntraChunkSealNeeded.size()==1 && streaming.DeferredIntraChunkSealNeeded.count(shore)==1;
+          const bool retired=streaming.DeferredPhysicsSeedQueue.empty() && streaming.DeferredShoreSealQueue.empty() &&
+              streaming.DeferredShoreSealQueued.empty() && streaming.DeferredIntraChunkSealNeeded.empty();
+          if(!replace) pending_world.ResumeAfterSessionSave();
+          const bool accepted=replace?retired:retained;
+          report["seed_seal_lifetime"].push_back({{"world_replace",replace},{"retained",retained},
+              {"retired",retired},{"accepted",accepted}});
+          lifecycle_ok=lifecycle_ok && accepted;
+        }
+        require(lifecycle_ok,"temporary quiesce retains seed/seal owners; permanent world replacement retires them");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

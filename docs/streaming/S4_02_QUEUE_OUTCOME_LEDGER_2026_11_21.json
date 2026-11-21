@@ -489,7 +489,31 @@
       "id": "Q11-C1",
       "queue": "Q11",
       "status": "CHECK",
-      "required_result": "Physics-seed/shore-seal dedupe coalesces required work; eviction/reset retires abandoned work while live terrain arrival receives seed/seal and preserves current fluid-map/light/save obligations. Reuse S2.05 only where path matches."
+      "required_result": "Physics-seed/shore-seal dedupe coalesces required work; eviction/reset retires abandoned work while live terrain arrival receives seed/seal and preserves current fluid-map/light/save obligations. Reuse S2.05 only where path matches.",
+      "subcases": [
+        {
+          "id": "Q11-C1.RETENTION",
+          "status": "REUSE",
+          "scope": "Actual temporary UWorld quiesce/resume retains exact accepted seed/shore/dedupe/intra state; permanent world replacement retires all. Direct pending-owner adapter, no actual physical drain claim.",
+          "evidence": "build/desktop-msvc/s4-seed-seal-lifetime-acceptance-20261121.json",
+          "coverage_note": "Existing friend directly installs already-accepted seed/shore/dedupe/intra pending owners. Actual UWorld temporary quiesce versus permanent Abandon; exact state only. Resume invoked after measurement; no paused drain/current physical successor or actual producer/dedupe/eviction proof. Those remain Q11 PRODUCER_DEDUPE/DRAIN/ABANDONMENT. No framebuffer/backend/performance/full memory acceptance. Full S0..S6 OPEN."
+        },
+        {
+          "id": "Q11-C1.PRODUCER_DEDUPE",
+          "status": "CHECK",
+          "scope": "Actual async/sync/seal mutation ingress and same-column dedupe retain all required seed and intra/shore obligations."
+        },
+        {
+          "id": "Q11-C1.DRAIN",
+          "status": "CHECK",
+          "scope": "Actual seed/seal terminal outcome and current arrival/downstream fluid-map/light/save obligations. Reuse S2.05 only matching property/source."
+        },
+        {
+          "id": "Q11-C1.ABANDONMENT",
+          "status": "CHECK",
+          "scope": "Unload/eviction/reset retires old work without new-world resurrection; current repeated demand executes. Count/byte/cost envelopes LIMIT-C1."
+        }
+      ]
     },
     {
       "id": "Q12-R1",
@@ -585,5 +609,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q09-C1 all4 subcases accepted. Next Q11-C1 seed/seal lifecycle. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11-C1 RETENTION scoped PASS; actual producer/dedupe/drain/abandonment remain. Next PRODUCER_DEDUPE and actual DRAIN. Top-level6 CHECK; full scope OPEN."
 }

@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "seed-seal-owners-cleared-on-quiesce-retained-on-world-replace",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "observed": "Actual temporary quiesce erased seed/shore queue, dedupe and intra obligations; actual Abandon retained them across world retirement.",
+      "fix": "Temporary quiesce retains all4 seed/seal containers; explicit RetireDeferredTerrainWorkForWorldReplace clears them only from actual UWorld Abandon.",
+      "evidence": "build/desktop-msvc/s4-seed-seal-lifetime-acceptance-20261121.json",
+      "next_action": "Q11-C1 actual producer/dedupe/drain/abandonment; current physical successor required separately."
+    },
+    {
       "id": "generation-public-cancel-reuses-live-token",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q09_C1_OPEN",

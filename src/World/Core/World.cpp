@@ -11782,6 +11782,7 @@ void UWorld::AbandonTerrainForWorldReplace()
 
   if (Streaming)
   {
+    Streaming->RetireDeferredTerrainWorkForWorldReplace();
     Streaming->CancelChunkGeneration();
     Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
   }

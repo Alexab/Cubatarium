@@ -5453,6 +5453,14 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                         world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs);
 }
 
+void UWorldStreaming::RetireDeferredTerrainWorkForWorldReplace()
+{
+  DeferredPhysicsSeedQueue.clear();
+  DeferredShoreSealQueue.clear();
+  DeferredShoreSealQueued.clear();
+  DeferredIntraChunkSealNeeded.clear();
+}
+
 void UWorldStreaming::QuiesceBackgroundWork(
     UWorld &world, const std::chrono::milliseconds async_io_timeout)
 {
@@ -5460,10 +5468,8 @@ void UWorldStreaming::QuiesceBackgroundWork(
   {
     Streamer->SetEnabled(false);
   }
-  DeferredPhysicsSeedQueue.clear();
-  DeferredShoreSealQueue.clear();
-  DeferredShoreSealQueued.clear();
-  DeferredIntraChunkSealNeeded.clear();
+  // Session save/resume keeps the same terrain and its accepted follow-up
+  // work. Only permanent world replacement retires these obligations.
   PauseChunkGeneration(async_io_timeout);
   if (world.Persistence)
   {
