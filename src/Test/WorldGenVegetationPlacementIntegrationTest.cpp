@@ -1923,6 +1923,123 @@ int main(int argc, char **argv)
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
     return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--biome-key-lifetime-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions); cutum::UBlockWorld world;
+    auto settings=MakeVegetationSettings(); settings.WorldGenProfileVersion=3;
+    settings.MinHeight=0; settings.MaxHeight=128; settings.SeaLevel=48;
+    const std::string surface_key(64*1024,'s'),cave_key(64*1024,'c');
+    cutum::BiomeKeyRef held_surface,held_cave;
+    std::weak_ptr<const cutum::UBiomeDefinitionRegistry> retired_registry;
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    size_t peak=0;
+    {
+    auto pack=std::make_shared<cutum::WorldGenPack>(*cutum::UWorldGenPack::GetSnapshot());
+    std::vector<cutum::BiomeKey> keys;
+    for(uint32_t n=0;n<pack->BiomeRegistry->Size();++n) keys.push_back(*pack->BiomeRegistry->Key({n}));
+    keys.push_back(surface_key); keys.push_back(cave_key);
+    pack->BiomeRegistry=std::make_shared<cutum::UBiomeDefinitionRegistry>(std::move(keys));
+    retired_registry=pack->BiomeRegistry;
+    pack->SurfaceClimateBiomes={pack->BiomeRegistry->Find(surface_key)};
+    pack->CaveClimateBiomes={pack->BiomeRegistry->Find(cave_key)};
+    pack->Biomes[surface_key].Climate.Enabled=true; pack->Biomes[surface_key].Climate.Weight=1000;
+    pack->Biomes[cave_key].Climate.Enabled=true; pack->Biomes[cave_key].Climate.Weight=1000;
+    pack->Biomes[cave_key].Domain=cutum::BiomeDomain::Cave;
+    auto content=cutum::CaptureWorldGenContentSnapshot(); content.Pack=pack; content.Biomes=pack->BiomeRegistry;
+    cutum::UWorldGenContentPinScope pin(std::move(content));
+    cutum::WorldGenContext ctx(world,registry,settings);
+    cutum::ComposableWorldGenConfig config; config.UseBiomeSurface=true;
+    cutum::UComposableWorldGenerator generator(std::move(ctx),config);
+    bool aliased=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      const auto sample=generator.BuildColumnSample(-300,-270);
+      FluidTest::Expect(sample.SurfaceBiomeKey==surface_key,kTestName,"actual column sample selects authored custom biome");
+      aliased=sample.SurfaceBiomeKey.data()==pack->BiomeRegistry->Key(sample.SurfaceBiomeHandle)->data();
+      auto copied=sample;auto moved=std::move(copied);
+      held_surface=moved.SurfaceBiomeKey;
+      std::array<cutum::BiomeKeyRef,256> retained;
+      for(auto &key:retained) key=sample.SurfaceBiomeKey;
+      for(const auto &key:retained) FluidTest::Expect(key.data()==held_surface.data(),kTestName,
+          "sample and array copies alias the same immutable text without text allocation");
+      FluidTest::Expect(moved.SurfaceY==sample.SurfaceY && moved.SurfaceBiomeKey==sample.SurfaceBiomeKey,
+          kTestName,"copy/move of column samples preserves complete key and numeric result");
+      cutum::UBiomeSampler sampler(kSeed,settings.Tuning,3);
+      held_cave=sampler.At3DKeyRef(17,8,-31,80,48,128);
+      FluidTest::Expect(held_cave.Get()==cave_key && held_cave.data()==
+          pack->BiomeRegistry->Key(pack->BiomeRegistry->Find(cave_key))->data(),kTestName,
+          "deep sampler aliases exact authored cave name");
+      cutum::UProceduralClimateBiomeSource climate(sampler);cutum::ImageMapBiomeSource image(sampler);
+      FluidTest::Expect(climate.Sample3DKeyRef(17,8,-31,80,48,128).data()==held_cave.data() &&
+          image.Sample3DKeyRef(17,8,-31,80,48,128).data()==held_cave.data() &&
+          image.Sample3DKeyRef(17,80,-31,80,48,128).Get()==image.Sample3DKey(17,80,-31,80,48,128),
+          kTestName,"both registered biome sources preserve deep/surface reference and legacy selection");
+      FluidTest::Expect(cutum::BiomeKeyRefForHandle({}).empty(),kTestName,"invalid handle yields a safe empty key");
+      for(int n=0;n<18;++n) {
+        const auto id=n<17 ? static_cast<cutum::BiomeId>(n) : cutum::BiomeId::Invalid;
+        const auto builtin=cutum::BiomeKeyRefForId(id);
+        FluidTest::Expect(builtin.Get()==cutum::BiomeIdToString(id) &&
+            cutum::ExternalStringCapacityBytes(builtin.Get())==0,kTestName,
+            "fixed builtin table preserves every legacy name without dynamic text");
+      }
+    }
+    std::cout << "surface_biome_key_aliased=" << aliased << " remaining=" << budget->UsedBytes() << std::endl;
+    FluidTest::Expect(aliased && budget->UsedBytes()==1,kTestName,
+        "column result retains immutable key owner without duplicating arbitrary text");
+    cutum::UBiomeSampler sampler(kSeed,settings.Tuning,3);
+    FluidTest::Expect(sampler.At3DKey(17,8,-31,80,48,128)==held_cave.Get() &&
+        cutum::BiomeKeyForHandle(pack->BiomeRegistry->Find(surface_key))==held_surface.Get(),kTestName,
+        "legacy explicit string materialization retains exact authored output");
+    settings.EnableCaves=true;
+    const auto cave_fixture=[&](bool refs) {
+      cutum::UBlockWorld cave_world; cave_world.SetFluidDefinitions(registry.GetDefinitions());
+      cutum::WorldGenContext cave(cave_world,registry,settings);
+      cave.WorldgenOwnerPackId="minetest_default_16";cave.ResolveBlockIds();
+      cave_world.SetBlock({0,8,0},cave.Blocks.Stone);
+      cutum::ObjectFeatureConfig features;cutum::CaveFeatureRule moss;
+      moss.BiomeKeyName=cave_key;moss.Kind=cutum::CaveFeatureKind::MossPatch;
+      moss.BlockName="mtg_grass_1";moss.Chance=1;moss.Radius=0;
+      features.CaveFeatures.push_back(moss);cave.ObjectFeatures=&features;
+      const auto classify=[](int,int,int,int){return cutum::BiomeId::Invalid;};
+      bool placed=false;
+      {
+        cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+        if(refs) placed=cutum::TryPlaceCaveFeaturesRef(cave,0,0,20,classify,
+            [&](int,int,int,int){return held_cave;});
+        else placed=cutum::TryPlaceCaveFeatures(cave,0,0,20,classify,
+            [&](int,int,int,int){return cave_key;});
+      }
+      const auto block=cave_world.GetBlock({0,8,0});
+      FluidTest::Expect(placed && block!=cave.Blocks.Stone && budget->UsedBytes()==1,kTestName,
+          "actual cave feature matches full custom key and retires callback owner");
+      return block;
+    };
+    FluidTest::Expect(cave_fixture(true)==cave_fixture(false),kTestName,
+        "reference cave pipeline and legacy string callback produce identical feature block");
+    peak=budget->PeakBytes();
+    }
+    FluidTest::Expect(!retired_registry.expired() && held_surface.Get()==surface_key && held_cave.Get()==cave_key,
+        kTestName,"escaped key results remain valid after source pin, pack and generator retire");
+    {
+      auto replacement=std::make_shared<cutum::WorldGenPack>(*cutum::UWorldGenPack::GetSnapshot());
+      replacement->BiomeRegistry=std::make_shared<cutum::UBiomeDefinitionRegistry>(std::vector<cutum::BiomeKey>{surface_key,cave_key});
+      auto content=cutum::CaptureWorldGenContentSnapshot();content.Pack=replacement;content.Biomes=replacement->BiomeRegistry;
+      cutum::UWorldGenContentPinScope pin(std::move(content));
+      const auto fresh=cutum::BiomeKeyRefForHandle(replacement->BiomeRegistry->Find(surface_key));
+      FluidTest::Expect(fresh.Get()==held_surface.Get() && fresh.data()!=held_surface.data() &&
+          held_cave.Get()==cave_key,kTestName,"same-name replacement does not rebind escaped old key identity");
+    }
+    held_surface={};
+    FluidTest::Expect(!retired_registry.expired(),kTestName,"last cave key alone retains its registry");
+    held_cave={};
+    FluidTest::Expect(retired_registry.expired(),kTestName,"last key release retires complete old registry owner");
+    budget->Release(*peer,1);
+    std::cout << "biome_key_owner_retired=1 array_copies=256 builtin_cases=18 cave_callback_parity=1 peak="
+        << peak << " ref_bytes=" << sizeof(cutum::BiomeKeyRef) << " final=" << budget->UsedBytes() << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--rank-name-budget-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");

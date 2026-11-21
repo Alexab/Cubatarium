@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <memory>
+#include <string_view>
 #include <vector>
 
 namespace cutum
@@ -14,6 +16,27 @@ namespace cutum
 /// Stable identifier stored in pack data. Handles are temporary indices into
 /// the immutable registry snapshot that produced them.
 using BiomeKey = std::string;
+
+// Runtime assignments alias a key in an immutable registry (or the fixed
+// builtin table). The shared owner keeps escaped samples valid after reload.
+class BiomeKeyRef
+{
+  std::shared_ptr<const BiomeKey> Key;
+public:
+  BiomeKeyRef()=default;
+  explicit BiomeKeyRef(std::shared_ptr<const BiomeKey> key) noexcept : Key(std::move(key)) {}
+  const BiomeKey &Get() const noexcept {static const BiomeKey empty;return Key ? *Key : empty;}
+  operator const BiomeKey &() const noexcept {return Get();}
+  bool empty() const noexcept {return Get().empty();}
+  const char *data() const noexcept {return Get().data();}
+  size_t size() const noexcept {return Get().size();}
+  friend bool operator==(const BiomeKeyRef &a,const BiomeKeyRef &b) {return a.Get()==b.Get();}
+  friend bool operator!=(const BiomeKeyRef &a,const BiomeKeyRef &b) {return !(a==b);}
+  friend bool operator==(const BiomeKeyRef &a,std::string_view b) {return std::string_view(a.Get())==b;}
+  friend bool operator==(std::string_view a,const BiomeKeyRef &b) {return b==a;}
+  friend bool operator!=(const BiomeKeyRef &a,std::string_view b) {return !(a==b);}
+  friend bool operator!=(std::string_view a,const BiomeKeyRef &b) {return !(b==a);}
+};
 
 struct BiomeHandle
 {

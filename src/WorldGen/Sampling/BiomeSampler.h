@@ -96,6 +96,8 @@ BiomeHandle DominantBiomeHandle(const BiomeWeightSet &weights);
 BiomeHandle PickSurfaceBiomeHandle(int x, int z,
                                    const BiomeWeightSet &weights);
 BiomeKey BiomeKeyForHandle(BiomeHandle handle);
+BiomeKeyRef BiomeKeyRefForHandle(BiomeHandle handle);
+BiomeKeyRef BiomeKeyRefForId(BiomeId biome);
 BiomeId PickSurfaceBiome(int x, int z, const BiomeWeightSet &weights);
 SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed);
 
@@ -114,6 +116,7 @@ public:
                int MaxHeight) const;
   BiomeKey At3DKey(int x, int y, int z, int surfaceY, int SeaLevel,
                    int MaxHeight) const;
+  BiomeKeyRef At3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const;
   BiomeWeightSet WeightsAt(int x, int z, int surfaceY, int SeaLevel,
                            int MaxHeight) const;
   int RefineSurfaceY(int x, int z, int coarseY,

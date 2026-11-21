@@ -32,6 +32,10 @@ bool TryPlaceCaveFeatures(
     WorldGenContext &ctx, int x, int z, int surfaceY,
     const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
     const std::function<BiomeKey(int, int, int, int)> &biome_key_at_3d = {});
+bool TryPlaceCaveFeaturesRef(
+    WorldGenContext &ctx,int x,int z,int surfaceY,
+    const std::function<BiomeId(int,int,int,int)> &biome_at_3d,
+    const std::function<BiomeKeyRef(int,int,int,int)> &biome_key_at_3d);
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome);

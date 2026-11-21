@@ -182,7 +182,7 @@ BiomeHeightProfile BiomeHeightProfileForHandle(BiomeHandle handle)
   {
     return definition->Height;
   }
-  const BiomeId builtin = BiomeIdFromString(BiomeKeyForHandle(handle));
+  const BiomeId builtin = BiomeIdFromString(BiomeKeyRefForHandle(handle).Get());
   if (builtin != BiomeId::Invalid)
   {
     return BiomeHeightProfileFor(builtin);
@@ -1033,7 +1033,7 @@ BiomeWeightSet BlendedBiomeWeights(int x, int z, int coarseY, int seaLevel,
 BiomeId DominantBiome(const BiomeWeightSet &weights)
 {
   const BiomeHandle handle = DominantBiomeHandle(weights);
-  return handle.IsValid() ? BiomeIdFromString(BiomeKeyForHandle(handle))
+  return handle.IsValid() ? BiomeIdFromString(BiomeKeyRefForHandle(handle).Get())
                           : BiomeId::Invalid;
 }
 
@@ -1061,20 +1061,36 @@ BiomeHandle PickSurfaceBiomeHandle(int x, int z, const BiomeWeightSet &weights)
 }
 
 BiomeKey BiomeKeyForHandle(BiomeHandle handle)
+{return BiomeKeyRefForHandle(handle).Get();}
+
+BiomeKeyRef BiomeKeyRefForId(BiomeId biome)
+{
+  static const auto keys=[] {
+    std::array<BiomeKey,18> result;
+    for(size_t n=0;n<17;++n) result[n]=BiomeIdToString(static_cast<BiomeId>(n));
+    result[17]=BiomeIdToString(BiomeId::Invalid);
+    return result;
+  }();
+  const auto index=static_cast<size_t>(biome);
+  return BiomeKeyRef(std::shared_ptr<const BiomeKey>(std::shared_ptr<const BiomeKey>{},&keys[index<17 ? index : 17]));
+}
+
+BiomeKeyRef BiomeKeyRefForHandle(BiomeHandle handle)
 {
   const WorldGenPack &pack = UWorldGenPack::Get();
-  if (!pack.BiomeRegistry)
+  const auto registry=pack.BiomeRegistry;
+  if (!registry)
   {
     return {};
   }
-  const BiomeKey *key = pack.BiomeRegistry->Key(handle);
-  return key ? *key : BiomeKey{};
+  const BiomeKey *key = registry->Key(handle);
+  return key ? BiomeKeyRef(std::shared_ptr<const BiomeKey>(registry,key)) : BiomeKeyRef{};
 }
 
 BiomeId PickSurfaceBiome(int x, int z, const BiomeWeightSet &weights)
 {
   return BiomeIdFromString(
-      BiomeKeyForHandle(PickSurfaceBiomeHandle(x, z, weights)));
+      BiomeKeyRefForHandle(PickSurfaceBiomeHandle(x, z, weights)).Get());
 }
 
 SubBiomeId SubBiomeFor(int x, int z, BiomeId biome, uint32_t seed)
@@ -1419,15 +1435,19 @@ BiomeId UBiomeSampler::At3D(int x, int y, int z, int surfaceY, int SeaLevel,
 
 BiomeKey UBiomeSampler::At3DKey(int x, int y, int z, int surfaceY, int SeaLevel,
                                 int MaxHeight) const
+{return At3DKeyRef(x,y,z,surfaceY,SeaLevel,MaxHeight).Get();}
+
+BiomeKeyRef UBiomeSampler::At3DKeyRef(int x,int y,int z,int surfaceY,int SeaLevel,int MaxHeight) const
 {
   const BiomeId legacy = At3D(x, y, z, surfaceY, SeaLevel, MaxHeight);
-  const BiomeKey legacyKey = BiomeIdToString(legacy);
+  const auto legacyKey = BiomeKeyRefForId(legacy);
   if (ProfileVersion < 2 || y >= surfaceY - 2 || surfaceY - y < 5)
   {
     return legacyKey;
   }
 
   const WorldGenPack &pack = UWorldGenPack::Get();
+  const auto registry=pack.BiomeRegistry;
   if (!pack.BiomeRegistry || pack.CaveClimateBiomes.empty())
   {
     return legacyKey;
@@ -1474,11 +1494,11 @@ BiomeKey UBiomeSampler::At3DKey(int x, int y, int z, int surfaceY, int SeaLevel,
     if (pick < 0.0f)
     {
       const BiomeKey *key = pack.BiomeRegistry->Key(entry.biome);
-      return key ? *key : legacyKey;
+      return key ? BiomeKeyRef(std::shared_ptr<const BiomeKey>(registry,key)) : legacyKey;
     }
   }
   const BiomeKey *key = pack.BiomeRegistry->Key(candidates.back().biome);
-  return key ? *key : legacyKey;
+  return key ? BiomeKeyRef(std::shared_ptr<const BiomeKey>(registry,key)) : legacyKey;
 }
 
 BiomeWeightSet UBiomeSampler::WeightsAt(int x, int z, int surfaceY,
@@ -1705,7 +1725,7 @@ UBiomeSampler::BlendedSurfaceRule(int x, int z, const BiomeWeightSet &weights,
   sample.SurfaceY = surfaceY;
   sample.Biomes = weights;
   sample.SurfaceBiomeHandle = PickSurfaceBiomeHandle(x, z, weights);
-  sample.SurfaceBiomeKey = BiomeKeyForHandle(sample.SurfaceBiomeHandle);
+  sample.SurfaceBiomeKey = BiomeKeyRefForHandle(sample.SurfaceBiomeHandle);
   sample.DominantBiome = DominantBiome(weights);
   sample.SurfaceBiome = PickSurfaceBiome(x, z, weights);
   sample.MacroHeight01 =
@@ -1733,8 +1753,11 @@ BiomeKey UProceduralClimateBiomeSource::Sample3DKey(int x, int y, int z,
                                                     int surfaceY, int seaLevel,
                                                     int maxHeight) const
 {
-  return Sampler.At3DKey(x, y, z, surfaceY, seaLevel, maxHeight);
+  return Sample3DKeyRef(x,y,z,surfaceY,seaLevel,maxHeight).Get();
 }
+
+BiomeKeyRef UProceduralClimateBiomeSource::Sample3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const
+{return Sampler.At3DKeyRef(x,y,z,surfaceY,seaLevel,maxHeight);}
 
 BiomeWeightSet ImageMapBiomeSource::SampleSurfaceWeights(int x, int z,
                                                          int coarseY,
@@ -1762,12 +1785,15 @@ BiomeId ImageMapBiomeSource::Sample3D(int x, int y, int z, int surfaceY,
 
 BiomeKey ImageMapBiomeSource::Sample3DKey(int x, int y, int z, int surfaceY,
                                           int seaLevel, int maxHeight) const
+{return Sample3DKeyRef(x,y,z,surfaceY,seaLevel,maxHeight).Get();}
+
+BiomeKeyRef ImageMapBiomeSource::Sample3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const
 {
   if (y >= surfaceY - 2)
   {
-    return BiomeIdToString(UWorldGenPack::BiomeAtImage(x, z));
+    return BiomeKeyRefForId(UWorldGenPack::BiomeAtImage(x, z));
   }
-  return CaveSampler.At3DKey(x, y, z, surfaceY, seaLevel, maxHeight);
+  return CaveSampler.At3DKeyRef(x, y, z, surfaceY, seaLevel, maxHeight);
 }
 
 } // namespace cutum

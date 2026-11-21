@@ -19,6 +19,7 @@ public:
                            int maxHeight) const = 0;
   virtual BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,
                                int maxHeight) const = 0;
+  virtual BiomeKeyRef Sample3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const = 0;
 };
 
 class UProceduralClimateBiomeSource final : public IWorldGenBiomeSource
@@ -35,6 +36,7 @@ public:
                    int maxHeight) const override;
   BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,
                        int maxHeight) const override;
+  BiomeKeyRef Sample3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const override;
 
 private:
   const UBiomeSampler &Sampler;
@@ -54,6 +56,7 @@ public:
                    int maxHeight) const override;
   BiomeKey Sample3DKey(int x, int y, int z, int surfaceY, int seaLevel,
                        int maxHeight) const override;
+  BiomeKeyRef Sample3DKeyRef(int x,int y,int z,int surfaceY,int seaLevel,int maxHeight) const override;
 
 private:
   const UBiomeSampler &CaveSampler;

@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.biome-result-key-owners",
+      "status": "SCOPED_PASS_CATALOG_LOAD_TEXT_AND_CATALOG_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",
+      "scope": "Runtime BiomeKeyRef aliases immutable registry-owned std::string through shared_ptr aliasing constructor, or a fixed builtin key table. Surface sample fields/copy/move/array and primitive classification use refs; both current biome sources provide reference selection, composable generator and cave stage/callback consumers retain owners without text materialization. Existing string-returning query methods and legacy cave callback signature remain available for explicit caller-owned materialization. Reference cave entry uses the same templated placement logic as legacy callback. No per-key text allocation or shared control block is created by the alias path."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.flora-ranks-derived-lookup-names",
       "status": "SCOPED_PASS_BIOME_OUTPUT_AND_CATALOG_LOAD_TEXT_OPEN",
       "receipt": "build/desktop-msvc/s4-rank-derived-name-acceptance-20261121.json",

@@ -100,7 +100,7 @@ ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
                          Settings.SeaLevel, Settings.MaxHeight);
   ctx.DominantBiome = DominantBiome(ctx.Biomes);
   ctx.SurfaceBiomeHandle = PickSurfaceBiomeHandle(world_x, world_z, ctx.Biomes);
-  ctx.SurfaceBiomeKey = BiomeKeyForHandle(ctx.SurfaceBiomeHandle);
+  ctx.SurfaceBiomeKey = BiomeKeyRefForHandle(ctx.SurfaceBiomeHandle);
   ctx.SurfaceY = BiomeSampler->RefineSurfaceY(
       world_x, world_z, ctx.PreliminarySurfaceY, Settings, ctx.Biomes);
   ctx.HeightNorm =

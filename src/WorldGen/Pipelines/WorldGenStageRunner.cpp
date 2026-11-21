@@ -170,8 +170,8 @@ void RunCaveFeaturesStage(UComposableWorldGenerator &generator,
   const auto biome_at_3d = [&generator](int x, int y, int z, int surface_y)
   { return generator.BiomeAt3D(x, y, z, surface_y); };
   const auto biome_key_at_3d = [&generator](int x, int y, int z, int surface_y)
-  { return generator.BiomeKeyAt3D(x, y, z, surface_y); };
-  TryPlaceCaveFeatures(generator.GetContext(), world_x, world_z,
+  { return generator.BiomeKeyRefAt3D(x, y, z, surface_y); };
+  TryPlaceCaveFeaturesRef(generator.GetContext(), world_x, world_z,
                        sample.SurfaceY, biome_at_3d, biome_key_at_3d);
 }
 

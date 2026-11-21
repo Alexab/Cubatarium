@@ -2161,10 +2161,10 @@ void EnsureBuiltinCaveFeatureStrategies()
 
 } // namespace
 
-bool TryPlaceCaveFeatures(
+template<class KeyFunction> static bool TryPlaceCaveFeaturesImpl(
     WorldGenContext &ctx, int x, int z, int surfaceY,
     const std::function<BiomeId(int, int, int, int)> &biome_at_3d,
-    const std::function<BiomeKey(int, int, int, int)> &biome_key_at_3d)
+    const KeyFunction &biome_key_at_3d)
 {
   if (!ctx.Settings.EnableCaves || !biome_at_3d ||
       surfaceY < ctx.Settings.MinHeight + 12)
@@ -2214,9 +2214,10 @@ bool TryPlaceCaveFeatures(
     }
 
     const BiomeId cave_biome = biome_at_3d(x, floor_y + 1, z, surfaceY);
-    const BiomeKey cave_key = biome_key_at_3d
-                                  ? biome_key_at_3d(x, floor_y + 1, z, surfaceY)
-                                  : BiomeIdToString(cave_biome);
+    std::optional<typename KeyFunction::result_type> sampled_key;
+    if(biome_key_at_3d) sampled_key.emplace(biome_key_at_3d(x,floor_y+1,z,surfaceY));
+    const auto fallback_key=BiomeKeyRefForId(cave_biome);
+    const BiomeKey &cave_key=sampled_key ? static_cast<const BiomeKey &>(*sampled_key) : fallback_key.Get();
     const bool is_builtin_cave = cave_biome == BiomeId::LushCaves ||
                                  cave_biome == BiomeId::DripstoneCaves ||
                                  cave_biome == BiomeId::DeepDark;
@@ -2282,6 +2283,16 @@ bool TryPlaceCaveFeatures(
   }
   return false;
 }
+
+bool TryPlaceCaveFeatures(WorldGenContext &ctx,int x,int z,int surfaceY,
+    const std::function<BiomeId(int,int,int,int)> &biome_at_3d,
+    const std::function<BiomeKey(int,int,int,int)> &biome_key_at_3d)
+{return TryPlaceCaveFeaturesImpl(ctx,x,z,surfaceY,biome_at_3d,biome_key_at_3d);}
+
+bool TryPlaceCaveFeaturesRef(WorldGenContext &ctx,int x,int z,int surfaceY,
+    const std::function<BiomeId(int,int,int,int)> &biome_at_3d,
+    const std::function<BiomeKeyRef(int,int,int,int)> &biome_key_at_3d)
+{return TryPlaceCaveFeaturesImpl(ctx,x,z,surfaceY,biome_at_3d,biome_key_at_3d);}
 
 bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
                       BiomeId biome)
