@@ -36,6 +36,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
+#include "Test/Native/TextureAtlasConstructionProbe.h"
 #include <filesystem>
 #include <atomic>
 #include <fstream>
@@ -127,6 +128,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto catalog_content=CaptureWorldGenContentSnapshot();
     const auto catalog_blocks=core.BlockDefinitionsInstance ? core.BlockDefinitionsInstance->GetCatalogSnapshot() : nullptr;
     CatalogResourceRoots catalog_resources;

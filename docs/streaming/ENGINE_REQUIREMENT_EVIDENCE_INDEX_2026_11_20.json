@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.atlas-construction",
+      "status": "SCOPED_CPU_REAL_GL_ATLAS_AND_DECODE_OWNER_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-atlas-construction-acceptance-20261121.json",
+      "scope": "Adopt STBI output with RAII/shared lifetime;remove pixel vector and second recreation atlas. Unified checked CPU assembly preserves ordinary/strip frames and source extents;7 independent real desktop GL readbacks cover create/update/replacement/frame metadata/invalid-source retention plus legacy BOM/CRLF loader. Actual decoder R_i/D_i,JSON/input/candidate/publication peak,C06/E12 and full S0..S6 remain OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.source-json-copies",
       "status": "SCOPED_JSON_COPY_REMOVAL_PASS_FULL_CONSTRUCTION_ENVELOPE_OPEN",
       "receipt": "build/desktop-msvc/s4-source-json-acceptance-20261121.json",

@@ -13,6 +13,7 @@
 #include <glm/glm.hpp>
 #include <iostream>
 #include <memory>
+#include <limits>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -290,6 +291,86 @@ static void TestRealPackScatterBlocksResolve()
                     "dandelion is absent from pack and must not resolve");
 }
 
+static void TestAtlasCpuConstruction(bool requireFixed)
+{
+  auto bases=std::make_shared<cutum::UTextureBaseStorage>();
+  cutum::UTextureCubeStorage storage(bases);
+  const auto pixel=[](int frame,int face,int x,int y) {
+    return std::array<unsigned char,4>{static_cast<unsigned char>(1+32*frame+face),
+        static_cast<unsigned char>(5+53*x),static_cast<unsigned char>(7+79*y),255};
+  };
+  const auto source=[&](int face,int frames) {
+    cutum::TexturePixelData data;data.Width=2;data.Height=2*frames;
+    for(int f=0;f<frames;++f) for(int y=0;y<2;++y) for(int x=0;x<2;++x) {
+      const auto value=pixel(f,face,x,y);data.Rgba.insert(data.Rgba.end(),value.begin(),value.end());
+    }
+    return data;
+  };
+  std::vector<std::string> plain,strip;
+  for(int f=0;f<2;++f) for(int face=0;face<6;++face) {
+    const auto name="atlas_frame_"+std::to_string(f)+"_face_"+std::to_string(face);
+    auto data=source(face,1);
+    for(size_t i=0;i<data.Rgba.size();i+=4) data.Rgba[i]+=static_cast<unsigned char>(32*f);
+    bases->RegisterPixels(name,std::move(data));plain.push_back(name);
+    if(f==0) {
+      const auto vertical="atlas_strip_"+std::to_string(face);
+      bases->RegisterPixels(vertical,source(face,2));strip.push_back(vertical);
+    }
+  }
+  const auto matches=[&](const cutum::UTextureCubeStorage::CubeAtlasPixels &atlas,int frames) {
+    if(atlas.Width!=12 || atlas.Height!=2*frames || atlas.Rgba.size()!=size_t(12*2*frames*4)) return false;
+    for(int f=0;f<frames;++f) for(int face=0;face<6;++face) for(int y=0;y<2;++y) for(int x=0;x<2;++x) {
+      const auto value=pixel(f,face,x,y);
+      const size_t offset=((f*2+y)*12+face*2+x)*4;
+      for(size_t channel=0;channel<4;++channel) if(atlas.Rgba[offset+channel]!=value[channel]) return false;
+    }
+    return true;
+  };
+  auto single=storage.BuildCubeAtlasPixels("single",{plain.begin(),plain.begin()+6},0);
+  const auto vertical=storage.BuildCubeAtlasPixels("vertical",strip,2);
+  FluidTest::Expect(matches(single,1) && matches(vertical,2),kTestName,"CPU atlas matches independent spatial/frame RGBA patterns");
+  single.Rgba[7]^=1;
+  FluidTest::Expect(!matches(single,1),kTestName,"independent atlas oracle rejects a changed pixel");
+  const auto multi=storage.BuildCubeAtlasPixels("multi",plain,0);
+  const bool explicitFrames=matches(multi,2);
+  std::cout << "atlas_explicit_frames=" << (explicitFrames?2:1) << " expected=2" << std::endl;
+  if(!requireFixed) return;
+  FluidTest::Expect(explicitFrames,kTestName,"ordinary twelve-face list retains two animation frames");
+  const auto file=FindRepoRoot()/"build/desktop-msvc/s4-atlas-source.ppm";
+  {
+    const auto data=source(0,1);std::ofstream image(file,std::ios::binary);image << "P6\n2 2\n255\n";
+    for(size_t i=0;i<data.Rgba.size();i+=4) image.write(reinterpret_cast<const char *>(data.Rgba.data()+i),3);
+  }
+  bases->Register("atlas_file",file.string());
+  const auto decoded=storage.BuildCubeAtlasPixels("file",std::vector<std::string>(6,"atlas_file"),0);
+  FluidTest::Expect(decoded.Width==12 && decoded.Height==2,kTestName,"real STBI decoded file builds CPU atlas without GL");
+  for(int face=0;face<6;++face) for(int y=0;y<2;++y) for(int x=0;x<2;++x) {
+    const auto expected=pixel(0,0,x,y);const size_t offset=(y*12+face*2+x)*4;
+    for(size_t c=0;c<4;++c) FluidTest::Expect(decoded.Rgba[offset+c]==expected[c],kTestName,"all decoded face channels match source pattern");
+  }
+  cutum::TexturePixelData impossible;impossible.Width=std::numeric_limits<int>::max();impossible.Height=2;impossible.Rgba.resize(4);
+  bases->RegisterPixels("atlas_impossible",std::move(impossible));
+  cutum::TexturePixelData shortData;shortData.Width=2;shortData.Height=2;shortData.Rgba.resize(3);
+  bases->RegisterPixels("atlas_short",std::move(shortData));
+  for(const auto &names:{std::vector<std::string>{},std::vector<std::string>(6,"absent"),
+      std::vector<std::string>(6,"atlas_impossible"),std::vector<std::string>(6,"atlas_short")})
+    FluidTest::Expect(storage.BuildCubeAtlasPixels("invalid",names,0).Rgba.empty(),kTestName,"invalid/missing source rejects before atlas allocation");
+  FluidTest::Expect(storage.BuildCubeAtlasPixels("invalid_strip",strip,5).Rgba.empty(),kTestName,"strip with more frames than rows rejects before copying");
+  auto missing=std::vector<std::string>{plain.begin(),plain.begin()+6};missing[1]="absent";
+  const auto partial=storage.BuildCubeAtlasPixels("partial",missing,0);
+  FluidTest::Expect(partial.Width==12 && partial.Height==2,kTestName,"missing secondary face keeps a valid atlas");
+  for(int y=0;y<2;++y) for(int x=2;x<4;++x) for(size_t c=0;c<4;++c)
+    FluidTest::Expect(partial.Rgba[(y*12+x)*4+c]==0,kTestName,"missing face stays transparent zero");
+  cutum::TexturePixelData small;small.Width=1;small.Height=1;small.Rgba={91,92,93,94};
+  bases->RegisterPixels("atlas_small",std::move(small));missing[1]="atlas_small";
+  const auto clipped=storage.BuildCubeAtlasPixels("clipped",missing,0);
+  for(int y=0;y<2;++y) for(int x=2;x<4;++x) for(size_t c=0;c<4;++c)
+    FluidTest::Expect(clipped.Rgba[(y*12+x)*4+c]==(y==0 && x==2 ? 91+c : 0),kTestName,
+        "smaller source copies only its valid pixel and leaves remaining tile zero");
+  std::cout << "atlas_cpu_single=1 strip_frames=2 explicit_frames=2 changed_pixel_rejected=1 stbi_channels=96 invalid_cases=5 missing_face=1 atlas_bytes="
+      << multi.Rgba.capacity() << std::endl;
+}
+
 static void TestSourceJsonLoading()
 {
   const auto root=FindRepoRoot()/"build/desktop-msvc/s4-source-json-resource-fixture";
@@ -373,6 +454,8 @@ static void TestResourceCatalogCensus()
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--atlas-cpu-baseline-only") {TestAtlasCpuConstruction(false);return 0;}
+  if(argc>1 && std::string(argv[1])=="--atlas-cpu-only") {TestAtlasCpuConstruction(true);return 0;}
   if(argc>1 && std::string(argv[1])=="--source-json-load-only") {TestSourceJsonLoading();return 0;}
   if(argc>1 && std::string(argv[1])=="--resource-census-only") {TestResourceCatalogCensus();return 0;}
   if(argc>1 && std::string(argv[1])=="--tier-a-warning-owner-only") {
@@ -388,6 +471,7 @@ int main(int argc,char **argv)
   TestRealPackScatterBlocksResolve();
   TestResourceCatalogCensus();
   TestSourceJsonLoading();
+  TestAtlasCpuConstruction(true);
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

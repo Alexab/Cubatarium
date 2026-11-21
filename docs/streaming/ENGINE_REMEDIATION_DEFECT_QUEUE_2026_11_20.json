@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "texture-atlas-duplicate-construction-and-frame-layout",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_CPU_REAL_GL_PASS_FULL_RENDER_MATRIX_OPEN",
+      "observed": "C05 source inspection:LoadStemRgba retains raw decoder output while copying vector without raw exception guard;dimension-change PatchDescriptors retains first atlas while CreateCubeTexture rebuilds. Existing CPU builder returns1 frame for12 ordinary face names,baseline independent pattern expects2;duplicate builder layout and existing same-size patch frame metadata differ. Raw/control allocation failure was source risk,not fault-injected repro.",
+      "fix": "Adopt decoder output with unique/shared deleter;one CPU builder for all create/update/recreation uploads;checked source/layout/row extents and correct ordinary/strip/same-size frame metadata. Legacy texture JSON streams and borrows array.",
+      "acceptance_receipt": "build/desktop-msvc/s4-atlas-construction-acceptance-20261121.json",
+      "next_action": "Scoped CPU and7 actual desktop GL source-oracle readbacks PASS. Keep C05 actual decoder/JSON construction envelope,C06/E12 and full framebuffer/backend/failure/performance/memory matrix OPEN."
+    },
+    {
       "id": "thread-local-pipeline-registry-owner-not-in-cache-key",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_LIFECYCLE_MATRIX_OPEN",

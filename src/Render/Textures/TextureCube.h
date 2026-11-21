@@ -75,11 +75,12 @@ public:
     out.TextureBases(TextureBaseStorageInstance);out.BlockStorage(BlockDefinitions);
   }
 
-private:
+  // CPU assembly is also available to validation tools without a GL context.
   struct CubeAtlasPixels
   {
     int Width{0};
     int Height{0};
+    int Frames{0};
     std::vector<unsigned char> Rgba;
   };
 
@@ -87,10 +88,15 @@ private:
   BuildCubeAtlasPixels(const std::string &cube_type_name,
                        const std::vector<std::string> &texture_names,
                        int stripFrameCount) const;
+private:
   UTextureCube CreateCubeTexture(const std::string &cube_type_name,
                                  size_t cube_type_id,
                                  const std::vector<std::string> &texture_names,
                                  int stripFrameCount);
+  UTextureCube UploadCubeAtlas(const std::string &cube_type_name,
+                              size_t cube_type_id,
+                              const std::vector<std::string> &texture_names,
+                              const CubeAtlasPixels &atlas);
   GLuint LoadTexture(const std::string &image_path);
 
   bool LoadJson(const std::string &file_name, std::string &Name, size_t &Id,
