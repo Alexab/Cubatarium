@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <glm/glm.hpp>
 #include <iostream>
 #include <memory>
@@ -289,6 +290,41 @@ static void TestRealPackScatterBlocksResolve()
                     "dandelion is absent from pack and must not resolve");
 }
 
+static void TestSourceJsonLoading()
+{
+  const auto root=FindRepoRoot()/"build/desktop-msvc/s4-source-json-resource-fixture";
+  fs::create_directories(root/"blocks");
+  const auto write=[](const fs::path &path,const std::string &text) {
+    std::ofstream file(path,std::ios::binary);file << text;
+  };
+  write(root/"pack.json","\xEF\xBB\xBF{\r\n\"id\":\"source_json\",\"name\":\"Source JSON\",\"depends\":[\"base\"],\"ignored\":\""+
+      std::string(256*1024,'x')+"\"\r\n}");
+  const auto manifest=cutum::UResourcePack::LoadManifest(root);
+  FluidTest::Expect(manifest && manifest->Id=="source_json" && manifest->Name=="Source JSON" &&
+      manifest->Depends==std::vector<std::string>{"base"},kTestName,"streamed BOM/CRLF manifest retains values after source teardown");
+  const std::string block="\xEF\xBB\xBF{\r\n\"name\":\"source_block\",\"id\":548,\"textures\":[\"a\",\"b\",\"c\",\"d\",\"e\",\"f\"],\"ignored\":\""+
+      std::string(256*1024,'x')+"\"\r\n}";
+  write(root/"blocks/valid.json",block);
+  write(root/"blocks/malformed.json","{\"name\":");
+  write(root/"blocks/wrong-textures.json",R"({"name":"bad_textures","id":549,"textures":null})");
+  auto blocks=cutum::UResourcePack::LoadBlocks(*manifest);
+  FluidTest::Expect(blocks.size()==1 && blocks[0].Definition.Name=="source_block" &&
+      blocks[0].Definition.Id==548 && blocks[0].TextureStems[0]=="a" && blocks[0].TextureStems[5]=="f",kTestName,
+      "streamed block source preserves six stems and skips malformed/invalid files");
+  cutum::UBlockDefinitionStorage definitions;
+  definitions.Load((root/"blocks").string());
+  const auto old=definitions.GetCatalogSnapshot();
+  FluidTest::Expect(old->ById.at(548).Name=="source_block" && old->NameToId.at("source_block")==548,kTestName,
+      "definition source parses BOM/CRLF without whole-file staging");
+  write(root/"blocks/valid.json","{");
+  definitions.Load((root/"blocks").string());
+  FluidTest::Expect(definitions.GetCatalogSnapshot()->ById.count(548)==0 && old->ById.at(548).Name=="source_block",kTestName,
+      "definition reload preserves old reader and existing skip-malformed behavior");
+  write(root/"pack.json","{\"id\":");
+  FluidTest::Expect(!cutum::UResourcePack::LoadManifest(root),kTestName,"malformed manifest remains rejected");
+  std::cout << "source_json_stream_routes=3 bom_crlf=3 long_ignored_bytes=262144 rejected_manifest=1 skipped_block=1 old_definition=1" << std::endl;
+}
+
 static void TestResourceCatalogCensus()
 {
   const auto root=FindRepoRoot();
@@ -337,6 +373,7 @@ static void TestResourceCatalogCensus()
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--source-json-load-only") {TestSourceJsonLoading();return 0;}
   if(argc>1 && std::string(argv[1])=="--resource-census-only") {TestResourceCatalogCensus();return 0;}
   if(argc>1 && std::string(argv[1])=="--tier-a-warning-owner-only") {
     TestTierAWarningOwnership(); return 0;
@@ -350,6 +387,7 @@ int main(int argc,char **argv)
   TestTierAWarningOwnership();
   TestRealPackScatterBlocksResolve();
   TestResourceCatalogCensus();
+  TestSourceJsonLoading();
   std::cout << kTestName << ": OK" << std::endl;
   return 0;
 }

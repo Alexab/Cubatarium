@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.source-json-copies",
+      "status": "SCOPED_JSON_COPY_REMOVAL_PASS_FULL_CONSTRUCTION_ENVELOPE_OPEN",
+      "receipt": "build/desktop-msvc/s4-source-json-acceptance-20261121.json",
+      "scope": "Remove5 feature-group,4 WorldGenSets pool and1 texture-array deep copies;3 block/resource routes stream JSON without whole-file staging. Preserve BOM/CRLF,optional kinds,malformed rejection,source teardown and retained-version semantics. Baseline/fix fixtures and Release/native scoped regression PASS. DOM/parser/source bounds,decoder/atlas construction peak,C06/E12/full S0..S6 remain OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C04.resources-and-thread-reads",
       "status": "SCOPED_RESOURCE_CALLING_THREAD_AND_HOST_MODEL_PASS_FULL_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-resource-census-acceptance-20261121.json",

@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include <sstream>
 
 namespace cutum
 {
@@ -127,12 +126,10 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
       {
         continue;
       }
-      std::stringstream buffer;
-      buffer << file.rdbuf();
       json d;
       try
       {
-        d = json::parse(buffer.str());
+        d = json::parse(file);
       }
       catch (const json::exception &e)
       {

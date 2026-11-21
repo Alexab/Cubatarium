@@ -643,16 +643,31 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   try
   {
     const nlohmann::json root = nlohmann::json::parse(in);
-    ParseRuleArray(root.value("vegetation", nlohmann::json::array()),
-                   next->Vegetation);
-    ParseRuleArray(root.value("ground_cover", nlohmann::json::array()),
-                   next->GroundCover);
-    ParseRuleArray(root.value("decoration", nlohmann::json::array()),
-                   next->Decoration);
-    ParseRuleArray(root.value("structures", nlohmann::json::array()),
-                   next->Structures);
-    ParseCaveFeatureArray(root.value("cave_features", nlohmann::json::array()),
-                          next->CaveFeatures);
+    // value<json>() deep-copies the complete group while both the source DOM
+    // and the compiled candidate are live. Borrow members until root dies.
+    // Keep value()'s previous rejection of a non-object root.
+    if (!root.is_object())
+    {
+      std::cerr << "ObjectFeatureConfig: expected object in " << path << std::endl;
+      return false;
+    }
+    const auto parseRules = [&](const char *name, auto &rules)
+    {
+      const auto member = root.find(name);
+      if (member != root.end())
+      {
+        ParseRuleArray(*member, rules);
+      }
+    };
+    parseRules("vegetation", next->Vegetation);
+    parseRules("ground_cover", next->GroundCover);
+    parseRules("decoration", next->Decoration);
+    parseRules("structures", next->Structures);
+    const auto caves = root.find("cave_features");
+    if (caves != root.end())
+    {
+      ParseCaveFeatureArray(*caves, next->CaveFeatures);
+    }
     if (root.contains("spatial_distribution") &&
         root["spatial_distribution"].is_object())
     {

@@ -512,14 +512,18 @@ bool ParseWorldGenSets(const nlohmann::json &root, WorldGenSets &out,
   if (root.contains("objects") && root["objects"].is_object())
   {
     const auto &objects = root["objects"];
-    ParseObjectPool(objects.value("vegetation", nlohmann::json::object()),
-                    out.VegetationSections);
-    ParseObjectPool(objects.value("ground_cover", nlohmann::json::object()),
-                    out.GroundCoverSections);
-    ParseObjectPool(objects.value("decoration", nlohmann::json::object()),
-                    out.DecorationSections);
-    ParseObjectPool(objects.value("structures", nlohmann::json::object()),
-                    out.StructureSections);
+    const auto parsePool = [&](const char *name, auto &sections)
+    {
+      const auto member = objects.find(name);
+      if (member != objects.end())
+      {
+        ParseObjectPool(*member, sections);
+      }
+    };
+    parsePool("vegetation", out.VegetationSections);
+    parsePool("ground_cover", out.GroundCoverSections);
+    parsePool("decoration", out.DecorationSections);
+    parsePool("structures", out.StructureSections);
   }
   if (root.contains("terrain") && root["terrain"].is_object())
   {

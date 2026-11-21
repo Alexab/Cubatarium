@@ -3,6 +3,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "Core/Memory/BufferAllocationBudget.h"
 
 #include <chrono>
@@ -320,6 +321,43 @@ static void TestPackScopedBiomeHandlesAndFailClosedValidation()
 
 } // namespace
 
+static void TestFeatureSourceJsonLoading()
+{
+  const auto path=FindRepoRoot()/"build/desktop-msvc/s4-source-json-feature-fixture.json";
+  const auto write=[&](const std::string &text) {
+    std::ofstream file(path,std::ios::binary);file << text;
+  };
+  write("\xEF\xBB\xBF" R"({
+    "vegetation":[{"object":"source_tree","biomes":["forest"],"weight":3}],
+    "ground_cover":[{"mode":"scatter_blocks","block":"source_grass","biomes":["plains"]}],
+    "decoration":[{"object":"source_flower","biomes":["plains"]}],
+    "structures":[{"object":"source_house","biomes":["plains"]}],
+    "cave_features":[{"biome":"lush_caves","kind":"moss_patch","block":"source_moss"}]
+  })");
+  FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(path),kTestName,"BOM feature source loads all five groups");
+  const auto old=cutum::UObjectFeatureConfigStorage::GetSnapshot();
+  FluidTest::Expect(old->Vegetation.size()==1 && old->Vegetation[0].Weight==3 &&
+      old->GroundCover.size()==1 && old->GroundCover[0].Scatter.BlockName=="source_grass" &&
+      old->Decoration.size()==1 && old->Structures.size()==1 &&
+      old->CaveFeatures.size()==1 && old->CaveFeatures[0].BlockName=="source_moss",kTestName,
+      "loaded feature values survive source DOM destruction");
+  for(const char *bad:{"null","[]","7","\"root\"","{",R"({"vegetation":[{"mode":7}]})"}) {
+    write(bad);
+    FluidTest::Expect(!cutum::UObjectFeatureConfigStorage::LoadFromFile(path) &&
+        cutum::UObjectFeatureConfigStorage::GetSnapshot()==old,kTestName,
+        "non-object/malformed feature source preserves published owner");
+  }
+  write(R"({"vegetation":null,"ground_cover":{},"decoration":7,"structures":"ignored","cave_features":false})");
+  FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(path),kTestName,"wrong-kind optional groups remain ignored");
+  const auto empty=cutum::UObjectFeatureConfigStorage::GetSnapshot();
+  FluidTest::Expect(empty!=old && empty->Vegetation.empty() && empty->GroundCover.empty() &&
+      empty->Decoration.empty() && empty->Structures.empty() && empty->CaveFeatures.empty() &&
+      old->Vegetation[0].ObjectName=="source_tree",kTestName,"replacement does not invalidate retained feature version");
+  write("{}");
+  FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(path),kTestName,"absent groups remain valid");
+  std::cout << "source_json_feature_groups=5 rejected_preserve=6 optional_kinds=5 missing=5 old_version=1" << std::endl;
+}
+
 int main(int argc,char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -331,6 +369,9 @@ int main(int argc,char **argv)
   if(argc>1 && std::string(argv[1])=="--selector-budget-only") {
     TestPackSelectorBudget(); return 0;
   }
+  if(argc>1 && std::string(argv[1])=="--source-json-load-only") {
+    TestFeatureSourceJsonLoading();return 0;
+  }
   if(argc>1 && std::string(argv[1])=="--image-owner-only") {
     TestPinnedBiomeImageReload(); return 0;
   }
@@ -340,6 +381,7 @@ int main(int argc,char **argv)
   TestHillsHasGroundCoverWeight();
   TestPinnedBiomeImageReload();
   TestPackScopedBiomeHandlesAndFailClosedValidation();
+  TestFeatureSourceJsonLoading();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

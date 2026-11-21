@@ -539,11 +539,12 @@ ParsedBlockJson ParseBlockFromJson(const nlohmann::json &j,
   {
     out.Definition.Physics.Movement.Occupancy = 0.0f;
   }
-  const auto textures = j.value("textures", nlohmann::json::array());
-  if (!textures.is_array() || textures.size() < 6)
+  const auto texturesMember = j.find("textures");
+  if (texturesMember == j.end() || !texturesMember->is_array() || texturesMember->size() < 6)
   {
     return out;
   }
+  const auto &textures = *texturesMember;
   for (int i = 0; i < 6; ++i)
   {
     if (!textures[i].is_string())
