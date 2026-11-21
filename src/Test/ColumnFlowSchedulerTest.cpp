@@ -32,6 +32,27 @@ int main()
 
   UColumnFlowScheduler s;
   {
+    cutum::UColumnRecordStore records;
+    for(int x=0;x<2000;++x) records.SetFlowJobStage({x,9},cutum::ColumnJobStage::Absent);
+    Expect(records.Size()==0,"absent stage projection creates no world records");
+    records.SetFlowJobStage({-2,7},cutum::ColumnJobStage::Meshing);
+    records.SetFlowJobStage({8,-4},cutum::ColumnJobStage::PendingLight);
+    Expect(records.Size()==2 && records.GetFlowJobStage({-2,7})==cutum::ColumnJobStage::Meshing,
+           "stage projection shares existing world-column ownership");
+    records.SetFlowJobStage({-2,7},cutum::ColumnJobStage::Absent);
+    Expect(records.GetFlowJobStage({8,-4})==cutum::ColumnJobStage::PendingLight,
+           "retiring stage preserves neighbour projection");
+    records.InvalidateFlowIntents();
+    Expect(records.GetFlowJobStage({8,-4})==cutum::ColumnJobStage::Absent,
+           "flow domain clear retires projection without scanning records");
+    records.SetFlowJobStage({8,-4},cutum::ColumnJobStage::RenderReady);
+    records.Erase({8,-4}); records.GetOrCreate({8,-4});
+    Expect(records.GetFlowJobStage({8,-4})==cutum::ColumnJobStage::Absent,
+           "new column occupancy cannot inherit prior stage");
+    std::cout << "column_record_payload_bytes=" << sizeof(cutum::ColumnRecord)
+              << " intent_slot_bytes=" << sizeof(cutum::ColumnFlowIntent) << '\n';
+  }
+  {
     UColumnFlowScheduler full;
     bool accepted=true;
     for(size_t i=0;i<UColumnFlowScheduler::kMaxLiveTickets;++i)

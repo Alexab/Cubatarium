@@ -2248,7 +2248,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               // Keep a neighbouring ticket/stage while retiring this exact
               // column's real dispatch cooldown and scheduling metadata.
               executor.Scheduler().Enqueue({1,0},ColumnWorkKind::FirstMesh,1);
-              executor.SetColumnJobStage({1,0},ColumnJobStage::Meshing);
+              executor.SetColumnJobStage(flow,{1,0},ColumnJobStage::Meshing);
               const bool forgotten=executor.ForgetColumnWork({0,0});
               const bool isolated=executor.GetColumnJobStage({0,0})==ColumnJobStage::Absent &&
                   executor.Scheduler().ContainsColumn({1,0}) &&
@@ -2306,12 +2306,14 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               executor.DispatchExpiryCount()==0;
           const bool retry_expired=retry_ages[0]==1 && retry_ages[1]==1 && retry_ages[2]==0 &&
               executor.relight_retry_after_frame_.empty() && executor.retry_expiry_.empty();
-          for(int n=0;n<2000;++n) executor.SetColumnJobStage({n,99},ColumnJobStage::Absent);
-          const bool absent_not_stored=executor.column_job_stage_.size()==1;
+          const auto records_before_absent=flow.GetColumnRecords().Size();
+          for(int n=0;n<2000;++n) executor.SetColumnJobStage(flow,{n,99},ColumnJobStage::Absent);
+          const bool absent_not_stored=flow.GetColumnRecords().Size()==records_before_absent &&
+              executor.GetColumnJobStage({0,0})!=ColumnJobStage::Absent;
           executor.SetPromoteRelightHold({0,0},true);
           executor.SetCaptureWitnessPin({0,0},true,7,true);
           executor.Clear();
-          const bool cleared=executor.column_job_stage_.empty() && !executor.promote_hold_valid_ &&
+          const bool cleared=flow.GetColumnRecords().GetFlowJobStage({0,0})==ColumnJobStage::Absent && !executor.promote_hold_valid_ &&
               !executor.capture_pin_valid_ && !executor.capture_pin_hold_ && executor.decide_world_==nullptr &&
               executor.DispatchExpiryCount()==0 && executor.retry_expiry_.empty();
           report["flow_metadata_lifetime"].push_back({{"mode",mode},{"retry_expired",retry_expired},
@@ -2415,7 +2417,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             global.BindDecideWorld(&flow);
             global.Scheduler().Enqueue({0,0},ColumnWorkKind::FirstMesh,90);
             global.Scheduler().Enqueue({3,0},ColumnWorkKind::FirstMesh,20);
-            global.SetColumnJobStage({3,0},ColumnJobStage::Meshing);
+            global.SetColumnJobStage(flow,{3,0},ColumnJobStage::Meshing);
             global.SetRelightRetryCooldown(UColumnFlowExecutor::MakeCooldownKey({3,0},ColumnWorkKind::RelightThenMesh));
             flow.SetColumnEmergeState({3,0,0},ColumnEmergeState::Lighting);
             ColumnWorkItem retired_intent{}; retired_intent.column={3,0};
@@ -2425,7 +2427,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             const bool foreign_preserved=global.Scheduler().LiveCount()==2 && global.decide_world_==&flow;
             const auto old_inc=flow.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation();
             flow.AbandonTerrainForWorldReplace();
-            const bool retired=global.Scheduler().LiveCount()==0 && global.column_job_stage_.empty() &&
+            const bool retired=global.Scheduler().LiveCount()==0 && global.GetColumnJobStage({3,0})==ColumnJobStage::Absent &&
                 global.relight_retry_after_frame_.empty() && global.retry_expiry_.empty() && global.decide_world_==nullptr;
             const bool world_records_retired=flow.GetColumnRecords().Size()==0 && flow.ColumnEmergeStates.empty() &&
                 flow.ColumnLightingTelemetryN==0 && flow.ColumnMeshingTelemetryN==0 && flow.ColumnRenderReadyTelemetryN==0;
@@ -2443,7 +2445,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                 cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld) &&
                 cache.IsPublishedMeshCurrentForInputs({0,2,0},flow.BlockWorld);
             global.BindDecideWorld(unrelated.get());
-            const bool retargeted=global.Scheduler().LiveCount()==0 && global.column_job_stage_.empty() &&
+            const bool retargeted=global.Scheduler().LiveCount()==0 &&
+                flow.GetColumnRecords().GetFlowJobStage({0,0})==ColumnJobStage::Absent &&
                 global.DispatchCooldownCount()==0 && global.decide_world_==unrelated.get();
             global.Scheduler().Enqueue({7,0},ColumnWorkKind::FirstMesh,10);
             unrelated.reset();

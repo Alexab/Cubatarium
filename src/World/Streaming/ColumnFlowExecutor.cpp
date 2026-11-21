@@ -55,7 +55,6 @@ void UColumnFlowExecutor::Clear()
   dispatch_expiry_.clear();
   relight_retry_after_frame_.clear();
   retry_expiry_.clear();
-  column_job_stage_.clear();
   intent_cursor_.reset();
   promote_pending_ = false;
   promote_enqueued_ = false;
@@ -112,7 +111,12 @@ bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
     forgot_work = last_dispatch_frame_.erase(key) != 0 || forgot_work;
     forgot_work = relight_retry_after_frame_.erase(key) != 0 || forgot_work;
   }
-  forgot_work = column_job_stage_.erase(ColumnKey(column)) != 0 || forgot_work;
+  if (decide_world_)
+  {
+    auto &records = decide_world_->GetColumnRecords();
+    forgot_work = records.GetFlowJobStage(column) != ColumnJobStage::Absent || forgot_work;
+    records.SetFlowJobStage(column, ColumnJobStage::Absent);
+  }
 
   if (promote_pending_ && promote_column_.x == column.x &&
       promote_column_.y == column.y)
@@ -165,21 +169,14 @@ UColumnFlowExecutor::ResolveRelightPromoteColumn(glm::ivec2 fallback) const
 
 ColumnJobStage UColumnFlowExecutor::GetColumnJobStage(glm::ivec2 column) const
 {
-  const auto it = column_job_stage_.find(ColumnKey(column));
-  if (it == column_job_stage_.end())
-  {
-    return ColumnJobStage::Absent;
-  }
-  return it->second;
+  return decide_world_ ? decide_world_->GetColumnRecords().GetFlowJobStage(column)
+                       : ColumnJobStage::Absent;
 }
 
-void UColumnFlowExecutor::SetColumnJobStage(glm::ivec2 column,
+void UColumnFlowExecutor::SetColumnJobStage(UWorld &world, glm::ivec2 column,
                                             ColumnJobStage stage)
 {
-  if (stage == ColumnJobStage::Absent)
-    column_job_stage_.erase(ColumnKey(column));
-  else
-    column_job_stage_[ColumnKey(column)] = stage;
+  world.GetColumnRecords().SetFlowJobStage(column, stage);
 }
 
 bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
@@ -193,7 +190,7 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
       glm::ivec3(column.x, min_cy, column.y));
   if (!has_chunk)
   {
-    SetColumnJobStage(column, ColumnJobStage::Absent);
+    SetColumnJobStage(world, column, ColumnJobStage::Absent);
     return false;
   }
 
@@ -264,7 +261,7 @@ bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
   // Stage diffs counted once per SyncFocusRing (gauge). Do not
   // LogShadowMismatch here — that exploded to ~10k+/flight (211857) and is not
   // Decide* cutover SoT.
-  SetColumnJobStage(column, from_record);
+  SetColumnJobStage(world, column, from_record);
   return from_record != legacy;
 }
 
@@ -608,12 +605,12 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
   case ColumnWorkKind::RelightThenMesh:
   case ColumnWorkKind::PromoteRelight:
     requested = ColumnEmergeState::Lighting;
-    SetColumnJobStage(work.column, ColumnJobStage::PendingLight);
+    SetColumnJobStage(world, work.column, ColumnJobStage::PendingLight);
     break;
   case ColumnWorkKind::FirstMesh:
   case ColumnWorkKind::RemeshSeam:
     requested = ColumnEmergeState::Meshing;
-    SetColumnJobStage(work.column, ColumnJobStage::Meshing);
+    SetColumnJobStage(world, work.column, ColumnJobStage::Meshing);
     break;
   }
   const glm::ivec3 ground(work.column.x, 0, work.column.y);

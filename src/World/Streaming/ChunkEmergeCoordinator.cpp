@@ -101,7 +101,7 @@ bool UChunkEmergeCoordinator::TryPromoteLitColumn(
     if (!sibling_fully_dark && world.IsColumnRenderReady(ground))
     {
       world.SetColumnEmergeState(ground, ColumnEmergeState::RenderReady);
-      executor.SetColumnJobStage(col, ColumnJobStage::RenderReady);
+      executor.SetColumnJobStage(world, col, ColumnJobStage::RenderReady);
       return true;
     }
   }

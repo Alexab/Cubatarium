@@ -116,7 +116,7 @@ public:
   void DrainRemeshSeamBudget(UWorld &world, int max_columns);
 
   ColumnJobStage GetColumnJobStage(glm::ivec2 column) const;
-  void SetColumnJobStage(glm::ivec2 column, ColumnJobStage stage);
+  void SetColumnJobStage(UWorld &world, glm::ivec2 column, ColumnJobStage stage);
   /// R2.7: derive stage from world/mesh truth and sync stored map.
   /// Returns true when legacy Derive ≠ record Derive (stage shadow disagree).
   bool SyncColumnJobStageFromWorld(UWorld &world, glm::ivec2 column);
@@ -218,13 +218,6 @@ private:
   glm::ivec2 capture_pin_col_{0};
   int capture_pin_age_{0};
   UWorld *decide_world_{nullptr};
-  std::unordered_map<int64_t, ColumnJobStage> column_job_stage_{};
-
-  static int64_t ColumnKey(glm::ivec2 column)
-  {
-    return (static_cast<int64_t>(column.x) << 32) ^
-           static_cast<uint32_t>(column.y);
-  }
 };
 
 UColumnFlowExecutor &GetColumnFlowExecutor();

@@ -80,6 +80,8 @@ struct ColumnRecord
   std::array<ColumnFlowIntent, 4> flow_intent{};
   uint64_t flow_intent_epoch{0};
   uint64_t flow_intent_generation{0};
+  ColumnJobStage flow_job_stage{ColumnJobStage::Absent};
+  uint64_t flow_job_stage_generation{0};
   ColumnEmergeState emerge{ColumnEmergeState::Empty};
   ColumnDesiredStage desired{ColumnDesiredStage::None};
   uint32_t content_rev{0};
@@ -186,6 +188,22 @@ public:
 
   // Retire the admission domain in O(1), without scanning world records.
   void InvalidateFlowIntents() { ++FlowIntentGeneration; }
+
+  ColumnJobStage GetFlowJobStage(glm::ivec2 column) const
+  {
+    const auto *record = Find(column);
+    return record && record->flow_job_stage_generation == FlowIntentGeneration
+        ? record->flow_job_stage : ColumnJobStage::Absent;
+  }
+
+  void SetFlowJobStage(glm::ivec2 column, ColumnJobStage stage)
+  {
+    if (stage == ColumnJobStage::Absent && !Find(column))
+      return;
+    auto &record = GetOrCreate(column);
+    record.flow_job_stage = stage;
+    record.flow_job_stage_generation = FlowIntentGeneration;
+  }
 
   void SetEmerge(glm::ivec2 xz, ColumnEmergeState state)
   {
