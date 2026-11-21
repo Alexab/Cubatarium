@@ -1,6 +1,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Math/FluidCellState.h"
+#include "WorldGen/Core/PopulationScratchBudget.h"
 
 #include <iostream>
 #include <vector>
@@ -21,8 +22,35 @@ void Expect(bool ok, const char *msg)
 
 } // namespace
 
-int main()
+int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--scratch-budget-only") {
+    using namespace cutum;
+    auto budget=std::make_shared<UBufferAllocationBudget>(256*1024);
+    auto peer=std::make_shared<BufferBudgetJob>(); budget->Reserve(*peer,64*1024);
+    UBlockWorld scratch; UChunkBuffer transfer;
+    bool refused=false; size_t sections=0;
+    {
+      UBufferBudgetScope scope({budget,std::make_shared<BufferBudgetJob>()});
+      UPopulationScratchBudget scratch_budget(scratch.GetChunkManager(),ActiveBufferBudget);
+      scratch.SetCaptureBuffer(&transfer);
+      try {
+        for(int n=0;n<64;++n) scratch.SetBlock({n*CHUNK_SIZE,-40,0},BLOCK_AIR);
+      } catch(const UBufferBudgetExceeded &) {refused=true;}
+      sections=scratch.GetChunkManager().GetResidentChunkCount();
+      std::cout << "scratch_air_sections=" << sections << " transfer_owned=" << transfer.GetOwnedAllocationBytes()
+          << " reserved=" << budget->UsedBytes() << " refused=" << refused << std::endl;
+      scratch.SetCaptureBuffer(nullptr); scratch.Clear(); transfer.Clear();
+    }
+    budget->Release(*peer,64*1024);
+    Expect(refused && sections<64 && budget->UsedBytes()==0 && budget->PeakBytes()<=256*1024 &&
+        budget->LimitBytes()==256*1024,"AIR-only scratch allocation obeys generation quota");
+    scratch.SetBlock({1000,-40,0},BLOCK_AIR);
+    Expect(budget->UsedBytes()==0 && scratch.GetChunkManager().GetResidentChunkCount()==1,
+        "scratch hook detaches and ordinary AIR materialization remains unchanged");
+    scratch.Clear();
+    std::cout << "scratch allocation budget PASS" << std::endl; return 0;
+  }
   cutum::UBlockWorld world;
   cutum::UChunkBuffer buffer;
   world.SetCaptureBuffer(&buffer);

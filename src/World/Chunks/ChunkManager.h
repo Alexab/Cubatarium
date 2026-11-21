@@ -175,6 +175,9 @@ public:
   /// Cap recycled chunks retained after unload (0 = destroy immediately).
   void SetMaxFreeListChunks(size_t cap) { MaxFreeListChunks = cap; }
   size_t GetFreeListSize() const { return FreeList.size(); }
+  // Owner-thread generation scratch hook; runs before a new resident chunk
+  // and its light field are allocated. Ordinary worlds leave this empty.
+  void SetBeforeChunkAllocationFn(std::function<void()> fn) {BeforeChunkAllocation=std::move(fn);}
 
   static glm::ivec3 WorldToChunk(glm::ivec3 world_pos);
   static glm::ivec3 WorldToLocal(glm::ivec3 world_pos);
@@ -225,6 +228,7 @@ private:
   std::unordered_map<glm::ivec3, size_t, IVec3Hash> ResidentColumnTerrainCounts;
   std::vector<std::unique_ptr<UChunk>> FreeList;
   size_t MaxFreeListChunks{256};
+  std::function<void()> BeforeChunkAllocation;
 };
 
 } // namespace cutum

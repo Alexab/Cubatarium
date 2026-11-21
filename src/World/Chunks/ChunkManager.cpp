@@ -386,6 +386,7 @@ UChunk &UChunkManager::GetOrCreateChunk(glm::ivec3 chunkCoord)
   {
     return *it->second;
   }
+  if(BeforeChunkAllocation) BeforeChunkAllocation();
   std::unique_ptr<UChunk> chunk;
   if (!FreeList.empty())
   {

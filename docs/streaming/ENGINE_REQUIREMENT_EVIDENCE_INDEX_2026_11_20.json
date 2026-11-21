@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.scratch-payload-admission",
+      "status": "SCOPED_PASS_OTHER_ACTIVE_HEAP_OPEN",
+      "receipt": "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
+      "scope": "Generation-only scratch scope installs owner-thread preallocation hook at actual ChunkManager missing-chunk boundary. Before make_unique<UChunk> and default SectionLightField allocation, shared generation budget reserves sizeof(UChunk)+sizeof(SectionLightField). Conservative credit remains until scope detaches hook and Clear destroys scratch chunks/light fields. Capture detaches and cache/context cleanup run first. Ordinary managers leave hook empty; known-AIR semantics unchanged. Same typed quota failure unwinds into existing exact scheduler retry."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.configuration-text-and-owner-envelope",
       "status": "SCOPED_PASS_ENVELOPE_E10_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-config-text-acceptance-20261121.json",

@@ -12,6 +12,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
+#include "WorldGen/Core/PopulationScratchBudget.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -578,12 +579,12 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
 
   ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
+  UPopulationScratchBudget scratch_budget(genWorld.GetChunkManager(),ActiveBufferBudget);
   auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
   // The transferred buffer owns its data independently. Retain pipeline
   // configuration between jobs, but never an idle job's terrain or cache.
   // This guard precedes capture so capture detaches before terrain clears.
   struct ReleasePopulationScratch {
-    UBlockWorld &world;
     UComposableWorldGenerator *pipeline;
     ~ReleasePopulationScratch() {
       if(pipeline) {
@@ -594,9 +595,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
         ReleaseRuntimeSettingsText(pipeline->GetContext().Settings);
         std::string{}.swap(pipeline->GetContext().WorldgenOwnerPackId);
       }
-      world.GetChunkManager().Clear();
     }
-  } release_scratch{genWorld,composable};
+  } release_scratch{composable};
   ResetScatterChunkCounts();
   ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
