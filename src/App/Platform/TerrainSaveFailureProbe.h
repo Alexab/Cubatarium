@@ -129,6 +129,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   try
   {
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
+    const auto stbi_process=GetStbiProcessAllocationSnapshot();
+    report["stbi_process_allocation"]={{"schema","stbi-allocation-requests.v1"},
+        {"live_payload_bytes",stbi_process.live_payload_bytes},{"live_request_bytes",stbi_process.live_request_bytes},
+        {"live_allocations",stbi_process.live_allocations},{"reserved_request_bytes",stbi_process.reserved_request_bytes},
+        {"peak_admitted_request_bytes",stbi_process.peak_admitted_request_bytes},
+        {"header_bytes_per_allocation",StbiAllocationHeaderBytes()},{"ledger_inline_bytes",sizeof(UStbiAllocationLedger)},
+        {"scope","All linked STBI hooks only; admitted peak includes pending malloc reservations and prefix,not total heap/RSS/GPU/streams"}};
     const auto catalog_content=CaptureWorldGenContentSnapshot();
     const auto catalog_blocks=core.BlockDefinitionsInstance ? core.BlockDefinitionsInstance->GetCatalogSnapshot() : nullptr;
     CatalogResourceRoots catalog_resources;

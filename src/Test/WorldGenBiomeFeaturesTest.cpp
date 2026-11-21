@@ -5,6 +5,9 @@
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "Core/Memory/BufferAllocationBudget.h"
+#include "Core/Memory/StbiAllocation.h"
+#include "ThirdParty/stb_image.h"
+#include "Test/StbiAllocationFixture.h"
 
 #include <chrono>
 #include <cmath>
@@ -358,6 +361,158 @@ static void TestFeatureSourceJsonLoading()
   std::cout << "source_json_feature_groups=5 rejected_preserve=6 optional_kinds=5 missing=5 old_version=1" << std::endl;
 }
 
+static void TestStbiAllocationEnvelope()
+{
+  using namespace cutum;
+  const auto before=GetStbiProcessAllocationSnapshot();
+  const size_t header=StbiAllocationHeaderBytes();
+  auto parent=std::make_shared<UStbiAllocationLedger>();
+  std::weak_ptr<UStbiAllocationLedger> parentWeak=parent;
+  void *escaped=nullptr;
+  {
+    UStbiAllocationScope outer(parent);
+    auto *original=static_cast<unsigned char *>(StbiAllocate(17));
+    FluidTest::Expect(original && reinterpret_cast<uintptr_t>(original)%alignof(std::max_align_t)==0 &&
+        (sizeof(void*)!=8 || reinterpret_cast<uintptr_t>(original)%16==0),kTestName,"STBI request prefix preserves malloc alignment");
+    for(int i=0;i<17;++i) original[i]=static_cast<unsigned char>(i+1);
+    auto child=std::make_shared<UStbiAllocationLedger>(1);
+    {
+      UStbiAllocationScope inner(child);
+      escaped=StbiReallocate(original,100);
+      FluidTest::Expect(escaped && InspectStbiAllocation(escaped).owner.get()==parent.get() && !StbiAllocate(1),kTestName,
+          "nested realloc keeps original ledger while new nested requests respect child limit");
+    }
+    for(int i=0;i<17;++i) FluidTest::Expect(static_cast<unsigned char *>(escaped)[i]==i+1,kTestName,"realloc preserves original bytes");
+    const auto counts=parent->GetSnapshot();
+    FluidTest::Expect(counts.live_request_bytes==header+100 && counts.live_payload_bytes==100 &&
+        counts.peak_admitted_request_bytes==2*header+117 && counts.peak_live_request_bytes==header+100 &&
+        counts.reallocations==1 && counts.live_allocations==1 &&
+        child->GetSnapshot().refusals==1,kTestName,"realloc peak includes simultaneous old/new requests and both prefixes");
+  }
+  parent.reset();
+  FluidTest::Expect(!parentWeak.expired(),kTestName,"escaped output owns original ledger after scope and caller retire");
+  auto observed=parentWeak.lock();
+  std::thread release([escaped]{StbiFree(escaped);});release.join();
+  FluidTest::Expect(observed->GetSnapshot().live_request_bytes==0 && observed->GetSnapshot().live_allocations==0,kTestName,
+      "cross-thread free returns original owner credit after physical free");
+  observed.reset();FluidTest::Expect(parentWeak.expired(),kTestName,"no global allocation-owner history retains retired ledger payload");
+  auto refused=std::make_shared<UStbiAllocationLedger>(2*header+16+32-1);
+  {
+    UStbiAllocationScope active(refused);
+    auto *p=static_cast<unsigned char *>(StbiAllocate(16));p[0]=73;
+    FluidTest::Expect(!StbiReallocate(p,32) && p[0]==73 && InspectStbiAllocation(p).payload_bytes==16,kTestName,
+        "failed realloc preserves original allocation and bytes");
+    StbiFree(p);
+    FluidTest::Expect(!StbiAllocate(std::numeric_limits<size_t>::max()),kTestName,"prefix size overflow refuses without allocation");
+  }
+  FluidTest::Expect(refused->GetSnapshot().live_request_bytes==0 && refused->GetSnapshot().reserved_request_bytes==0 &&
+      refused->GetSnapshot().failed_reallocations==1 && refused->GetSnapshot().refusals==2,kTestName,"failed/overflow requests leave no reservations");
+#if defined(_WIN64)
+  const auto systemFailure=std::make_shared<UStbiAllocationLedger>();
+  {
+    UStbiAllocationScope active(systemFailure);auto *p=static_cast<unsigned char *>(StbiAllocate(16));p[0]=91;
+    // Above the Windows user address space, below the CRT invalid-size limit:
+    // reaches realloc's failure path without consuming a real large buffer.
+    FluidTest::Expect(!StbiReallocate(p,std::numeric_limits<size_t>::max()/4) && p[0]==91 &&
+        InspectStbiAllocation(p).owner.get()==systemFailure.get(),kTestName,"CRT realloc failure reconstructs original prefix/owner/payload");
+    FluidTest::Expect(systemFailure->GetSnapshot().system_failures==1 &&
+        systemFailure->GetSnapshot().reserved_request_bytes==0,kTestName,"CRT failure returns pending request credit");
+    StbiFree(p);
+  }
+  FluidTest::Expect(systemFailure->GetSnapshot().live_request_bytes==0,kTestName,"CRT rollback output can be freed normally");
+#endif
+
+  const auto png=test::MakeStbiAllocationPng();
+  const auto check=[&](const unsigned char *pixels,int components) {
+    for(int y=0;y<64;++y) for(int x=0;x<64;++x) {
+      const auto rgb=test::StbiFixtureRgb(x,y);const size_t offset=(y*64+x)*components;
+      for(int c=0;c<3;++c) FluidTest::Expect(pixels[offset+c]==rgb[c],kTestName,"actual PNG decode matches independent RGB source");
+      if(components==4) FluidTest::Expect(pixels[offset+3]==255,kTestName,"actual PNG normalized alpha is opaque");
+    }
+  };
+  auto decoder=std::make_shared<UStbiAllocationLedger>();
+  unsigned char *pixels=nullptr;int w=0,h=0,c=0;
+  {
+    UStbiAllocationScope active(decoder);
+    pixels=stbi_load_from_memory(png.data(),static_cast<int>(png.size()),&w,&h,&c,4);
+    FluidTest::Expect(pixels && w==64 && h==64 && c==3,kTestName,"authored split-IDAT PNG decodes through real allocator hooks");
+    check(pixels,4);
+    const auto info=InspectStbiAllocation(pixels);const auto counts=decoder->GetSnapshot();
+    FluidTest::Expect(info.payload_bytes==64*64*4 && info.request_bytes==64*64*4+header && info.owner.get()==decoder.get() &&
+        counts.live_request_bytes==info.request_bytes && counts.live_allocations==1 && counts.reallocations>=2 &&
+        counts.peak_admitted_request_bytes>counts.live_request_bytes,kTestName,"actual returned R_i and internal/realloc D_i are distinct measured requests");
+  }
+  const auto retained=decoder->GetSnapshot();
+  std::thread decoderFree([pixels]{stbi_image_free(pixels);});decoderFree.join();
+  FluidTest::Expect(decoder->GetSnapshot().live_request_bytes==0,kTestName,"actual decoded output frees outside scope and on another thread");
+  size_t allocationFailures=0;
+  for(size_t allowed=0;allowed<retained.allocation_attempts;++allowed) {
+    auto fault=std::make_shared<UStbiAllocationLedger>(std::numeric_limits<size_t>::max(),allowed);
+    {UStbiAllocationScope active(fault);
+      auto *result=stbi_load_from_memory(png.data(),static_cast<int>(png.size()),&w,&h,&c,4);
+      if(result) {check(result,4);stbi_image_free(result);} else ++allocationFailures;
+    }
+    const auto counts=fault->GetSnapshot();
+    FluidTest::Expect(counts.refusals>0 && counts.live_request_bytes==0 && counts.reserved_request_bytes==0 &&
+        counts.live_allocations==0,kTestName,"each real PNG allocation failure cleans original blocks and reservations");
+  }
+  auto retry=std::make_shared<UStbiAllocationLedger>();
+  {
+    UStbiAllocationScope active(retry);
+    auto *result=stbi_load_from_memory(png.data(),static_cast<int>(png.size()),&w,&h,&c,3);
+    FluidTest::Expect(result && InspectStbiAllocation(result).payload_bytes==64*64*3,kTestName,"normal RGB retry after faults retains exact returned allocation");
+    check(result,3);stbi_image_free(result);
+    auto *wide=stbi_load_16_from_memory(png.data(),static_cast<int>(png.size()),&w,&h,&c,3);
+    FluidTest::Expect(wide && InspectStbiAllocation(wide).payload_bytes==64*64*3*sizeof(stbi_us),kTestName,"16-bit conversion uses same allocation ownership");
+    stbi_image_free(wide);
+    auto *floating=stbi_loadf_from_memory(png.data(),static_cast<int>(png.size()),&w,&h,&c,3);
+    FluidTest::Expect(floating && InspectStbiAllocation(floating).payload_bytes==64*64*3*sizeof(float),kTestName,"float conversion uses same aligned allocation ownership");
+    stbi_image_free(floating);
+    FluidTest::Expect(!stbi_load_from_memory(png.data(),25,&w,&h,&c,4),kTestName,"truncated PNG remains rejected");
+  }
+  FluidTest::Expect(retry->GetSnapshot().live_request_bytes==0 && retry->GetSnapshot().reserved_request_bytes==0,kTestName,
+      "retry/conversion/malformed decoder exits release all credited buffers");
+  auto parallel=std::make_shared<UStbiAllocationLedger>();
+  std::mutex gate;std::condition_variable ready;size_t readers=0;bool finish=false;
+  std::vector<std::thread> workers;
+  for(int i=0;i<4;++i) workers.emplace_back([&] {
+    UStbiAllocationScope active(parallel);int width=0,height=0,channels=0;
+    auto *output=stbi_load_from_memory(png.data(),static_cast<int>(png.size()),&width,&height,&channels,4);
+    FluidTest::Expect(output && width==64 && height==64,kTestName,"parallel decoder output is valid");check(output,4);
+    {std::unique_lock<std::mutex> lock(gate);++readers;ready.notify_all();ready.wait(lock,[&]{return finish;});}
+    stbi_image_free(output);
+  });
+  {std::unique_lock<std::mutex> lock(gate);ready.wait(lock,[&]{return readers==4;});}
+  const auto concurrent=parallel->GetSnapshot();
+  FluidTest::Expect(concurrent.live_allocations==4 && concurrent.live_payload_bytes==4*64*64*4 &&
+      concurrent.live_request_bytes==4*(64*64*4+header) && concurrent.reserved_request_bytes==0,kTestName,
+      "shared ledger observes exactly four retained decoder allocations at barrier");
+  {std::lock_guard<std::mutex> lock(gate);finish=true;}ready.notify_all();for(auto &worker:workers) worker.join();
+  FluidTest::Expect(parallel->GetSnapshot().live_request_bytes==0 && parallel->GetSnapshot().live_allocations==0,kTestName,
+      "parallel decoder free returns all shared requested credits");
+  const auto root=FindRepoRoot()/"build/desktop-msvc/s4-stbi-pack-fixture";fs::create_directories(root);
+  {std::ofstream image(root/"map.png",std::ios::binary);image.write(reinterpret_cast<const char *>(png.data()),png.size());}
+  {std::ofstream pack(root/"pack.json");pack << R"({"id":"stbi_accounting","biome_mode":"image","biome_map_image":"map.png"})";}
+  auto packLedger=std::make_shared<UStbiAllocationLedger>();
+  {UStbiAllocationScope active(packLedger);FluidTest::Expect(UWorldGenPack::LoadFromDirectory(root.string()),kTestName,"actual image Pack loads through STBI accounting");}
+  const auto loaded=UWorldGenPack::GetSnapshot();
+  FluidTest::Expect(loaded->BiomeMapImage && loaded->BiomeMapImage->Pixels.size()==64*64*3 &&
+      packLedger->GetSnapshot().live_request_bytes==0 && packLedger->GetSnapshot().reallocations>=2,kTestName,
+      "Pack owns copied RGB vector while decoder allocation and internals have retired");
+  check(loaded->BiomeMapImage->Pixels.data(),3);
+  FluidTest::Expect(UWorldGenPack::LoadPackId("default"),kTestName,"restore default Pack through normal loader");
+  const auto after=GetStbiProcessAllocationSnapshot();
+  FluidTest::Expect(after.live_request_bytes==before.live_request_bytes && after.live_allocations==before.live_allocations &&
+      after.reserved_request_bytes==0,kTestName,"all STBI hook paths return process live/request credits to baseline");
+  std::cout << "stbi_header_bytes=" << header << " ledger_bytes=" << sizeof(UStbiAllocationLedger)
+      << " scope_bytes=" << sizeof(UStbiAllocationScope) << " rgba_retained_request=" << retained.live_request_bytes
+      << " decode_admitted_peak=" << retained.peak_admitted_request_bytes << " reallocations=" << retained.reallocations
+      << " allocation_failure_cases=" << retained.allocation_attempts << " failed_decodes=" << allocationFailures
+      << " pack_decode_peak=" << packLedger->GetSnapshot().peak_admitted_request_bytes
+      << " pack_rgb_capacity=" << loaded->BiomeMapImage->Pixels.capacity()
+      << " concurrent_retained_request=" << concurrent.live_request_bytes << " final_live_delta=0" << std::endl;
+}
+
 int main(int argc,char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -369,6 +524,7 @@ int main(int argc,char **argv)
   if(argc>1 && std::string(argv[1])=="--selector-budget-only") {
     TestPackSelectorBudget(); return 0;
   }
+  if(argc>1 && std::string(argv[1])=="--stbi-allocation-only") {TestStbiAllocationEnvelope();return 0;}
   if(argc>1 && std::string(argv[1])=="--source-json-load-only") {
     TestFeatureSourceJsonLoading();return 0;
   }
@@ -382,6 +538,7 @@ int main(int argc,char **argv)
   TestPinnedBiomeImageReload();
   TestPackScopedBiomeHandlesAndFailClosedValidation();
   TestFeatureSourceJsonLoading();
+  TestStbiAllocationEnvelope();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

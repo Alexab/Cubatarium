@@ -6,6 +6,7 @@
 #include "WorldGen/Core/WorldGenBlockResolver.h"
 #include "Core/Memory/BufferAllocationBudget.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
+#include "Core/Memory/StbiAllocation.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -342,7 +343,12 @@ static void TestAtlasCpuConstruction(bool requireFixed)
     for(size_t i=0;i<data.Rgba.size();i+=4) image.write(reinterpret_cast<const char *>(data.Rgba.data()+i),3);
   }
   bases->Register("atlas_file",file.string());
-  const auto decoded=storage.BuildCubeAtlasPixels("file",std::vector<std::string>(6,"atlas_file"),0);
+  const auto decodeLedger=std::make_shared<cutum::UStbiAllocationLedger>();
+  cutum::UTextureCubeStorage::CubeAtlasPixels decoded;
+  {cutum::UStbiAllocationScope active(decodeLedger);decoded=storage.BuildCubeAtlasPixels("file",std::vector<std::string>(6,"atlas_file"),0);}
+  const auto decodeCounts=decodeLedger->GetSnapshot();
+  FluidTest::Expect(decodeCounts.successful_allocations>0 && decodeCounts.live_request_bytes==0 &&
+      decodeCounts.reserved_request_bytes==0,kTestName,"CPU atlas adoption retires decoder owner after copied atlas completes");
   FluidTest::Expect(decoded.Width==12 && decoded.Height==2,kTestName,"real STBI decoded file builds CPU atlas without GL");
   for(int face=0;face<6;++face) for(int y=0;y<2;++y) for(int x=0;x<2;++x) {
     const auto expected=pixel(0,0,x,y);const size_t offset=(y*12+face*2+x)*4;
@@ -368,7 +374,7 @@ static void TestAtlasCpuConstruction(bool requireFixed)
     FluidTest::Expect(clipped.Rgba[(y*12+x)*4+c]==(y==0 && x==2 ? 91+c : 0),kTestName,
         "smaller source copies only its valid pixel and leaves remaining tile zero");
   std::cout << "atlas_cpu_single=1 strip_frames=2 explicit_frames=2 changed_pixel_rejected=1 stbi_channels=96 invalid_cases=5 missing_face=1 atlas_bytes="
-      << multi.Rgba.capacity() << std::endl;
+      << multi.Rgba.capacity() << " decoded_admitted_peak=" << decodeCounts.peak_admitted_request_bytes << " decoded_final_live=0" << std::endl;
 }
 
 static void TestSourceJsonLoading()

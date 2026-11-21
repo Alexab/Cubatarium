@@ -2,6 +2,8 @@
 #include "Render/GlIncludes.h"
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
+#include "Core/Memory/StbiAllocation.h"
+#include "Test/StbiAllocationFixture.h"
 #include <array>
 #include <filesystem>
 #include <fstream>
@@ -107,12 +109,39 @@ inline nlohmann::json RunTextureAtlasConstructionProbe(const std::filesystem::pa
   {std::ofstream file(root/"invalid.json");file << R"({"name":"_qa_bad_atlas","id":60002,"textures":null})";}
   storage.Load(root.string());read(60001,5,2,2,2);
   require(storage.GetTextures().size()==2,"legacy atlas loader installed invalid texture JSON");
+  const auto encoded=test::MakeStbiAllocationPng();
+  const auto imagePath=root/"decoder.png";
+  {std::ofstream file(imagePath,std::ios::binary);file.write(reinterpret_cast<const char *>(encoded.data()),encoded.size());}
+  bases->Register("_qa_decoded_png",imagePath.string());
+  MergedCubeDesc decoded;decoded.Name="_qa_decoded_cube";decoded.Id=60003;decoded.Stems.fill("_qa_decoded_png");
+  const auto decoder=std::make_shared<UStbiAllocationLedger>();
+  {UStbiAllocationScope active(decoder);storage.PatchDescriptors({decoded});}
+  const auto decoderCounts=decoder->GetSnapshot();
+  require(decoderCounts.reallocations>=2 && decoderCounts.live_request_bytes==0 && decoderCounts.reserved_request_bytes==0,
+      "native decoded atlas batch left STBI allocations/reservations behind");
+  glBindTexture(GL_TEXTURE_2D,storage.GetTextures().at(decoded.Id).GetTexture());
+  GLint decodedWidth{},decodedHeight{};
+  glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&decodedWidth);
+  glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_HEIGHT,&decodedHeight);
+  require(decodedWidth==384 && decodedHeight==64,"native decoded atlas dimensions differ from PNG source");
+  std::vector<unsigned char> decodedPixels(384*64*4);glGetTexImage(GL_TEXTURE_2D,0,GL_RGBA,GL_UNSIGNED_BYTE,decodedPixels.data());
+  for(int face=0;face<6;++face) for(int y=0;y<64;++y) for(int x=0;x<64;++x) {
+    const auto expected=test::StbiFixtureRgb(x,y);const size_t offset=(y*384+face*64+x)*4;
+    require(decodedPixels[offset+3]==255,"native decoded PNG alpha differs from source");
+    for(size_t c=0;c<3;++c) require(decodedPixels[offset+c]==expected[c],"native decoded PNG atlas differs from independent source");
+  }
   data[0]^=1;require(!matches(data,0,2,2,1),"native atlas independent oracle accepted changed pixel");
   return {{"schema","texture-atlas-construction-native.v1"},{"status","PASS"},
-      {"real_GL_readbacks",7},{"same_size_reused",true},{"dimension_replacement",true},
+      {"real_GL_readbacks",8},{"same_size_reused",true},{"dimension_replacement",true},
       {"same_size_frame_metadata_updated",true},{"invalid_replacement_retained",true},
       {"explicit_list_frames",2},{"negative_pixel_control",true},
       {"legacy_loader_bom_crlf",true},{"invalid_legacy_descriptor_skipped",true},
+      {"stbi_decode_allocation",{{"header_bytes",StbiAllocationHeaderBytes()},
+          {"successful_allocations",decoderCounts.successful_allocations},{"reallocations",decoderCounts.reallocations},
+          {"peak_admitted_request_bytes",decoderCounts.peak_admitted_request_bytes},
+          {"peak_live_request_bytes",decoderCounts.peak_live_request_bytes},
+          {"final_live_request_bytes",decoderCounts.live_request_bytes},{"readback_vector_capacity",decodedPixels.capacity()},
+          {"scope","STBI requested payload+prefix only; atlas readback buffer is separate,not a process/GPU cap"}}},
       {"scope","Isolated real desktop GL texture transfers, not framebuffer/backend/performance/GPU-memory acceptance"}};
 #endif
 }

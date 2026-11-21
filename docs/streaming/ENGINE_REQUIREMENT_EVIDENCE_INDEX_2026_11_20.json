@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.stbi-allocation-envelope",
+      "status": "SCOPED_REQUEST_OWNER_FAILURE_CONCURRENCY_AND_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-stbi-allocation-acceptance-20261121.json",
+      "scope": "All linked STBI allocation/free hooks,exact retained prefix request R_i,conservative admitted/realloc D_i,optional byte/fail-after ledger and escaped original-owner lifetime.6 actual PNG persistent failure prefixes,real CRT rollback,4 concurrent retained outputs,PNG/PPM/8/16/float/Pack and8 real GL readbacks PASS. Production input/all-format limit policy,JSON/candidate/publication,C06/E12/full S0..S6 remain OPEN;not process/GPU/RSS cap."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.atlas-construction",
       "status": "SCOPED_CPU_REAL_GL_ATLAS_AND_DECODE_OWNER_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-atlas-construction-acceptance-20261121.json",
