@@ -1592,6 +1592,9 @@ public:
   mutable int eligibility_calls{0};
 };
 
+static void TestOldGpuNewCpuOwner(cutum::UBlockRegistry &,
+                                  const cutum::UBlockDefinitionStorage *);
+
 static void
 TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
                         cutum::UBlockRegistry &registry,
@@ -2513,6 +2516,7 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
     TestGpuPendingByteAdmission(registry, definitions);
     TestGpuEnqueueQuotaLifetime(registry, definitions);
     TestGpuPendingCancellationLifetime(registry, definitions);
+    TestOldGpuNewCpuOwner(registry, definitions);
     TestPackedLightArtifactOwnership(registry, definitions);
   }
 #endif
@@ -4278,6 +4282,84 @@ static bool TestDeferredRemeshCapacity(
   std::cout << "deferred_capacity edge_publications=" << mesher.builds << " complete=" << complete << '\n';
   return complete;
 }
+
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void TestOldGpuNewCpuOwner(cutum::UBlockRegistry &registry,
+                                  const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (int phase=0; phase<3; ++phase)
+    for (const bool edit : {false,true})
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+    world.SetBlock({8,8,8},kStone);
+    const glm::ivec3 root(0);
+    GatedPhysicalMesher mesher;
+    UChunkMeshCache cache;
+    auto settings=MakeFrustumMeshSettings();
+    settings.AsyncMeshing=true; settings.GpuPackedMeshing=true;
+    settings.FrustumCulling=false; settings.Lighting=LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root,4,1);
+    const auto capture=[&]() {
+      UFlatLightingPipeline flat; flat.FillAllLoadedChunks(world);
+      const auto *chunk=world.GetChunkManager().GetChunk(root);
+      const auto epoch=cache.GetCaptureStore().WorldEpoch();
+      const auto revision=cache.GetChunkMeshRevision(root);
+      auto &d=cache.GetRenderDemandStore();
+      d.NoteDemand(root,revision,chunk->GetLightFieldRevision(),0,1.0,epoch,chunk->GetIncarnation());
+      d.NoteLightCalculationSettled(root,epoch,chunk->GetIncarnation(),
+          chunk->GetLightFieldRevision(),chunk->GetContentRevision());
+      return ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache,world,root);
+    };
+    cache.MarkDirtyPriority(root);
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache,capture(),registry);
+    if(phase>0) {
+      ChunkMeshCaptureAdmissionTestAccess::KickOnly(cache,registry); glFinish();
+      if(phase==2) Expect(ChunkMeshCaptureAdmissionTestAccess::AdvancePackedToKicked(cache,registry),
+          "mixed owner fixture reaches actual Kicked phase");
+    }
+    world.SetBlock({12,8,8},kStone);
+    cache.InvalidateInFlightMeshBuild(root);
+    auto newer=capture();
+    Expect(cache.GetCaptureStore().TryCommit(root,newer.sourceRevision,
+        newer.sourceWorldEpoch,newer,nullptr),"mixed owner retains current capture");
+    Expect(ChunkMeshCaptureAdmissionTestAccess::AdmitCpuThenAdvanceReceiptFrame(
+        cache,newer,registry) && mesher.WaitEntered(),"actual newer CPU owner is held at barrier");
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache,world,registry);
+    const bool preserved=cache.HasCpuMeshBuildInFlight(root) &&
+        cache.GetInflightSourceRevision(root)==newer.sourceRevision &&
+        cache.GetCaptureStore().TryGet(world,root,newer.sourceRevision).has_value() &&
+        !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root) &&
+        cache.GetPendingGpuAppliesCount()==0;
+    if(edit) {world.SetBlock({8,8,12},kStone); cache.MarkDirty(root);}
+    const bool genuine=!edit || cache.IsRemeshAfterApplyPending(root);
+    mesher.Release();
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+           "new CPU worker releases explicit barrier");
+    cache.DrainAsyncMeshResults(world,registry,8);
+    if(edit) {
+      auto latest=capture();
+      Expect(cache.GetCaptureStore().TryCommit(root,latest.sourceRevision,
+          latest.sourceWorldEpoch,latest,nullptr),"real follow-up recaptures input");
+      const auto tick=cache.RebuildDirtyChunksWithStats(world,registry,0,8,false,0);
+      Expect(tick.Scheduled==1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+          "genuine follow-up actual CPU worker completes");
+      cache.DrainAsyncMeshResults(world,registry,8);
+    }
+    const bool current=cache.IsPublishedMeshCurrentForInputs(root,world) &&
+        !cache.HasPendingDirty() && !cache.IsRemeshAfterApplyPending(root) &&
+        mesher.builds==(edit?2u:1u);
+    std::cout<<"old_gpu_new_cpu phase="<<phase<<" edit="<<edit<<" preserved="<<preserved
+             <<" genuine="<<genuine<<" current="<<current<<'\n';
+    Expect(preserved && genuine && current,"old GPU retirement preserves newer CPU and genuine follow-up");
+  }
+}
+#endif
 
 static bool TestRetryReceiptAndRealRaa(
     cutum::UBlockRegistry &registry,

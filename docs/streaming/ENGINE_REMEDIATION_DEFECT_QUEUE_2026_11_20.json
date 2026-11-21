@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "old-gpu-stale-input-invalidates-newer-cpu-capture",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "observed": "Negative old GPU queued/no-edit preserved0/current0: stale old geometry invalidates replacement capture and returns Dirty before checking newer Active.",
+      "fix": "revision_ok classifies newer same-domain Active source revision before old input validation. Superseded old GPU releases own ticket without invalidating new capture or returning duplicate debt.",
+      "evidence": "build/desktop-msvc/s4-mixed-gpu-cpu-acceptance-20261121.json",
+      "next_action": "Q06-C2.3-GPU and FIELD exact owner/resource outcomes; no parent closure."
+    },
+    {
       "id": "mark-all-dirty-retains-old-pending-gpu-credit",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q06_C2_OPEN",

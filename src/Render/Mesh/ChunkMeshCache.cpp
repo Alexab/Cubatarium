@@ -7523,6 +7523,20 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       out_drop = true;
       return false;
     }
+    // Supersession is an ownership outcome, not an input-repair event. An
+    // older GPU capture must not invalidate the newer job's capture or create
+    // Dirty/RAA merely because its own geometry stamps have become stale.
+    const auto newer_owner = ActiveMeshSourceRevision.find(pending.coord);
+    if (newer_owner != ActiveMeshSourceRevision.end() &&
+        ClassifyMeshApplyRevision(true, newer_owner->second, pending.sourceRevision,
+                                 MeshRevisions.Current(pending.coord)) ==
+            MeshApplyRevDecision::DiscardOlderKeepActive)
+    {
+      fail_ticket(pending, JobTerminalReason::SupersededByNewerRevision);
+      ++MeshApplySupersededCount;
+      out_drop = true;
+      return false;
+    }
     if (pending.phase != PendingGpuApply::Phase::Queued &&
         !GpuPipeline->GetAllocator().OwnsStagingSlot(pending.ticket.slotKey))
     {

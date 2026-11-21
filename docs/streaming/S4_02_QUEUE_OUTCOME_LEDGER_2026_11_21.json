@@ -291,7 +291,26 @@
         {
           "id": "Q06-C2.3",
           "status": "CHECK",
-          "scope": "Old GPU outcomes preserve newer mixed CPU/field owner and current publication; genuine follow-up debt survives. Pair permutations S4.03, ABA S5.02."
+          "scope": "Old GPU outcomes preserve newer mixed CPU/field owner and current publication; genuine follow-up debt survives. Pair permutations S4.03, ABA S5.02.",
+          "subcases": [
+            {
+              "id": "Q06-C2.3-CPU",
+              "status": "REUSE",
+              "scope": "All6 old GPU queued/dispatched/exact Kicked × no-edit/genuine-edit preserve newer exact CPU Active/capture without Dirty/RAA manufacture. No edit current in1 build; third cube retains RAA, rejects stale attempt, exactly1 follow-up current (2 builds). No tails.",
+              "evidence": "build/desktop-msvc/s4-mixed-gpu-cpu-acceptance-20261121.json",
+              "coverage_note": "Initial GPU pending via QueuePacked adapter; actual newer bounded cache builder admission and frame adapter, promise-gated real CPU compute/publication. Not claim organically produced full scheduler overlap. New GPU marker/owner and field owner cases remain Q06-C2.3-GPU/FIELD."
+            },
+            {
+              "id": "Q06-C2.3-GPU",
+              "status": "CHECK",
+              "scope": "Old GPU outcome preserves newer actual GPU pending/extract marker/Active/resources and current publication; no duplicate debt."
+            },
+            {
+              "id": "Q06-C2.3-FIELD",
+              "status": "CHECK",
+              "scope": "Old GPU outcome preserves newer field owner/current compatible publication and genuine follow-up debt. Pair permutations S4.03."
+            }
+          ]
         }
       ]
     },
@@ -453,5 +472,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2.2 policy/world retirement/current successor accepted with explicit stage-composition limits. Remaining Q06-C2.3 old GPU versus newer CPU/field owner/current completion. Top-level10 CHECK; full S0..S6 OPEN."
+  "checkpoint": "Q06-C2.3-CPU mixed supersession/follow-up accepted. Remaining newer GPU exact marker/resource and FIELD owner subcases before Q06-C2 closure. Top-level10 CHECK; full scope OPEN."
 }
