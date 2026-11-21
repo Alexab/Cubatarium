@@ -2,6 +2,7 @@
 
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Sampling/BiomeRegistry.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include "Core/Memory/BufferAllocationBudget.h"
 
 #include <chrono>
@@ -9,6 +10,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <array>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 namespace fs = std::filesystem;
 
@@ -113,6 +119,123 @@ static void TestHillsHasGroundCoverWeight()
   FluidTest::Expect(mul > 0.5f, kTestName, "hills bush_common weight applied");
 }
 
+static void TestPinnedBiomeImageReload()
+{
+  const auto root=fs::temp_directory_path()/(
+      "cubatarium_biome_image_"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+  fs::create_directories(root);
+  const auto author=[&](const std::array<unsigned char,6> &pixels,int scale,int width,int height) {
+    std::ofstream pack(root/"pack.json");
+    pack << "{\"id\":\"same_image_fixture\",\"biome_mode\":\"image\",\"biome_map_image\":\"map.ppm\",\"biome_map_block_scale\":" << scale << "}";
+    std::ofstream image(root/"map.ppm",std::ios::binary);
+    image << "P6\n" << width << ' ' << height << "\n255\n";
+    image.write(reinterpret_cast<const char *>(pixels.data()),pixels.size());
+  };
+  author({0x2d,0x8a,0x3f,0xe8,0xd4,0x6a},4,2,1); // forest, desert
+  FluidTest::Expect(cutum::UWorldGenPack::LoadFromDirectory(root.string()),kTestName,"first authored image pack loads");
+  auto first=cutum::CaptureWorldGenContentSnapshot();
+  const auto samples=[&](const cutum::WorldGenContentSnapshot &content) {
+    cutum::UWorldGenContentPinScope pin(content);
+    return std::array<cutum::BiomeId,8>{cutum::UWorldGenPack::BiomeAtImage(0,0),cutum::UWorldGenPack::BiomeAtImage(4,0),
+        cutum::UWorldGenPack::BiomeAtImage(-4,-4),cutum::UWorldGenPack::BiomeAtImage(8,4),
+        cutum::UWorldGenPack::BiomeAtImage(2,0),cutum::UWorldGenPack::BiomeAtImage(0,2),
+        cutum::UWorldGenPack::BiomeAtImage(0,-2),cutum::UWorldGenPack::BiomeAtImage(-1,-1)};
+  };
+  const std::array<cutum::BiomeId,8> first_expected={cutum::BiomeId::Forest,cutum::BiomeId::Desert,
+      cutum::BiomeId::Desert,cutum::BiomeId::Forest,cutum::BiomeId::Forest,cutum::BiomeId::Forest,
+      cutum::BiomeId::Forest,cutum::BiomeId::Forest};
+  FluidTest::Expect(samples(first)==first_expected,kTestName,"authored image colors scale and negative wrapping have independent expected biome values");
+  author({0x7a,0x7a,0x7a,0xd8,0xe8,0xf0},2,1,2); // hills, tundra
+  FluidTest::Expect(cutum::UWorldGenPack::ReloadActive(),kTestName,"same-name replacement image reloads");
+  const auto second=cutum::CaptureWorldGenContentSnapshot();
+  const bool first_preserved=samples(first)==first_expected;
+  const std::array<cutum::BiomeId,8> second_expected={cutum::BiomeId::Hills,cutum::BiomeId::Hills,
+      cutum::BiomeId::Hills,cutum::BiomeId::Hills,cutum::BiomeId::Hills,cutum::BiomeId::Tundra,
+      cutum::BiomeId::Tundra,cutum::BiomeId::Hills};
+  const bool second_correct=samples(second)==second_expected;
+  std::cout << "biome_image_same_name_old_preserved=" << first_preserved
+      << " new_values_correct=" << second_correct << std::endl;
+  FluidTest::Expect(first_preserved && second_correct,kTestName,
+      "pinned image pixels and dimensions belong to their own catalog snapshot across same-name reload");
+  FluidTest::Expect(first.Pack->BiomeMapImage && first.Pack->BiomeMapImage->Width==2 && first.Pack->BiomeMapImage->Height==1 &&
+      second.Pack->BiomeMapImage && second.Pack->BiomeMapImage->Width==1 && second.Pack->BiomeMapImage->Height==2 &&
+      first.Pack->BiomeMapImage!=second.Pack->BiomeMapImage,kTestName,"image dimensions and immutable payload identity are publication-owned");
+  const auto first_data=first.Pack->BiomeMapImage->Pixels.data();
+  const auto image_bytes=first.Pack->BiomeMapImage->Pixels.capacity();
+  std::vector<std::shared_ptr<const cutum::WorldGenPack>> copies;
+  for(int n=0;n<64;++n) {
+    auto copy=std::make_shared<cutum::WorldGenPack>(*first.Pack);
+    FluidTest::Expect(copy->BiomeMapImage==first.Pack->BiomeMapImage && copy->BiomeMapImage->Pixels.data()==first_data,
+        kTestName,"pack copies share exact immutable decoded payload instead of copying pixels");
+    copies.push_back(std::move(copy));
+  }
+  {
+    std::ofstream invalid(root/"pack.json"); invalid << "{";
+  }
+  FluidTest::Expect(!cutum::UWorldGenPack::ReloadActive() && cutum::UWorldGenPack::GetSnapshot()==second.Pack &&
+      samples(first)==first_expected && samples(second)==second_expected,kTestName,
+      "failed JSON reload keeps published snapshot and all old image payloads unchanged");
+  FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"),kTestName,"default restored after image ownership fixture");
+  auto procedural=cutum::CaptureWorldGenContentSnapshot();
+  const auto all_plains=[](const auto &values) {
+    for(const auto value:values) if(value!=cutum::BiomeId::Plains) return false;
+    return true;
+  };
+  FluidTest::Expect(!procedural.Pack->BiomeMapImage && all_plains(samples(procedural)) &&
+      samples(first)==first_expected && samples(second)==second_expected,kTestName,
+      "procedural publication has no stale global image while old pinned images remain available");
+  author({0x7a,0x7a,0x7a,0xd8,0xe8,0xf0},2,1,2);
+  {
+    std::ofstream corrupt(root/"map.ppm",std::ios::binary); corrupt << "broken image";
+  }
+  FluidTest::Expect(cutum::UWorldGenPack::LoadFromDirectory(root.string()),kTestName,
+      "failed image decode preserves existing procedural fallback policy");
+  auto fallback=cutum::CaptureWorldGenContentSnapshot();
+  FluidTest::Expect(fallback.Pack->BiomeMode==cutum::WorldGenBiomeMode::Procedural && !fallback.Pack->BiomeMapImage &&
+      all_plains(samples(fallback)) && samples(first)==first_expected && samples(second)==second_expected,kTestName,
+      "failed image decode cannot clear an old published image owner");
+
+  std::mutex gate; std::condition_variable changed;
+  unsigned phase=0,completed=0;
+  std::atomic<unsigned> mismatches{0};
+  std::array<std::thread,4> readers;
+  for(auto &reader:readers) reader=std::thread([&] {
+    for(unsigned round=1;round<=16;++round) {
+      {std::unique_lock lock(gate);changed.wait(lock,[&] {return phase>=round;});}
+      for(int repeat=0;repeat<64;++repeat) if(samples(first)!=first_expected) ++mismatches;
+      {std::lock_guard lock(gate);++completed;}
+      changed.notify_all();
+    }
+  });
+  for(unsigned round=1;round<=16;++round) {
+    if(round%2) author({0x2d,0x8a,0x3f,0xe8,0xd4,0x6a},4,2,1);
+    else author({0x7a,0x7a,0x7a,0xd8,0xe8,0xf0},2,1,2);
+    {std::lock_guard lock(gate);phase=round;}
+    changed.notify_all();
+    FluidTest::Expect(cutum::UWorldGenPack::LoadFromDirectory(root.string()),kTestName,"concurrent reader publication loads");
+    {std::unique_lock lock(gate);changed.wait(lock,[&] {return completed==4*round;});}
+  }
+  for(auto &reader:readers) reader.join();
+  FluidTest::Expect(mismatches==0,kTestName,"four readers retain old image values across16 alternating same-name publications");
+  FluidTest::Expect(cutum::UWorldGenPack::LoadPackId("default"),kTestName,"procedural catalog restored after reader fixture");
+  std::weak_ptr<const cutum::WorldGenPack> retired_pack=first.Pack;
+  std::weak_ptr<const cutum::WorldGenBiomeMapImage> retired_image=first.Pack->BiomeMapImage;
+  auto escaped_image=first.Pack->BiomeMapImage;
+  first={};
+  FluidTest::Expect(retired_pack.expired() && !retired_image.expired(),kTestName,
+      "escaped payload and pack copies retain pixels without retaining original pack");
+  copies.clear();
+  FluidTest::Expect(!retired_image.expired() && escaped_image->Pixels.data()==first_data,kTestName,
+      "last explicit image owner still owns original allocation after pack copies retire");
+  escaped_image.reset();
+  FluidTest::Expect(retired_image.expired(),kTestName,"last strong image owner retires old decoded payload");
+  std::cout << "biome_image_payload_bytes=" << image_bytes << " shared_pack_copies=64 reader_queries=" << 4*16*64*8
+      << " publications=16 mismatches=" << mismatches.load() << " final_image_owner_expired=" << retired_image.expired() << std::endl;
+  FluidTest::Expect(fs::equivalent(root.parent_path(),fs::temp_directory_path()) && root.filename().string().find("cubatarium_biome_image_")==0,
+      kTestName,"image fixture cleanup stays in its generated temp directory");
+  std::error_code ec;fs::remove_all(root,ec);
+}
+
 static void TestPackScopedBiomeHandlesAndFailClosedValidation()
 {
   const fs::path root =
@@ -208,10 +331,14 @@ int main(int argc,char **argv)
   if(argc>1 && std::string(argv[1])=="--selector-budget-only") {
     TestPackSelectorBudget(); return 0;
   }
+  if(argc>1 && std::string(argv[1])=="--image-owner-only") {
+    TestPinnedBiomeImageReload(); return 0;
+  }
 
   TestAllBiomesHaveVegetationWeights();
   TestForestTreeWeightApplies();
   TestHillsHasGroundCoverWeight();
+  TestPinnedBiomeImageReload();
   TestPackScopedBiomeHandlesAndFailClosedValidation();
 
   std::cout << kTestName << ": OK" << std::endl;

@@ -245,11 +245,20 @@ struct WorldGenPackInfo
   std::string Description;
 };
 
+struct WorldGenBiomeMapImage
+{
+  int Width{0};
+  int Height{0};
+  std::vector<uint8_t> Pixels;
+};
+
 struct WorldGenPack
 {
   std::string Id{"default"};
   WorldGenBiomeMode BiomeMode{WorldGenBiomeMode::Procedural};
   std::string BiomeMapImagePath;
+  // Decoded payload belongs to this immutable publication; pack copies share it.
+  std::shared_ptr<const WorldGenBiomeMapImage> BiomeMapImage;
   int BiomeMapBlockScale{4};
   float BiomeBlendRadius{-1.0f};
   WorldGenPackPipeline Pipeline;

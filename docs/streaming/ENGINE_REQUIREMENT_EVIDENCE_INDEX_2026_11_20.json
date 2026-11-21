@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.biome-image-payload-owners",
+      "status": "SCOPED_PASS_CATALOG_CACHE_VERSION_AND_TOTAL_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-biome-image-owner-acceptance-20261121.json",
+      "scope": "Decoded RGB pixels and dimensions move from mutable process-global storage into a shared const WorldGenBiomeMapImage referenced by the immutable WorldGenPack publication. BiomeAtImage borrows image and scale from the same pinned/current Pack. Pack copies share exactly one decoded payload, and escaped image owners may outlive their original pack. New publication/decode fallback/failed JSON cannot overwrite an old pinned image. Loader owns STB decode output with RAII through pixel-vector construction; byte multiplication checked before copy. Integer division/negative wrapping and authored color mapping remain compatible."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.pinned-factory-no-catalog-load",
       "status": "PROPERTY_PASS_PINNED_PRODUCER_CATALOG_AND_PLATFORM_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",

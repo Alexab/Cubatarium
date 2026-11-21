@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -48,10 +49,6 @@ std::string UWorldGenPack::ActivePackDir;
 namespace
 {
 
-std::vector<uint8_t> gBiomeMapPixels;
-int gBiomeMapW = 0;
-int gBiomeMapH = 0;
-
 RavineFeatherMode ParseRavineFeatherMode(const std::string &mode)
 {
   if (mode == "linear")
@@ -82,26 +79,21 @@ BiomeId BiomeFromMapColor(uint8_t r, uint8_t g, uint8_t b)
   return BiomeId::Plains;
 }
 
-bool LoadBiomeMapImage(const std::string &path)
+std::shared_ptr<const WorldGenBiomeMapImage> LoadBiomeMapImage(const std::string &path)
 {
-  gBiomeMapPixels.clear();
-  gBiomeMapW = 0;
-  gBiomeMapH = 0;
-  int comp = 0;
-  unsigned char *data =
-      stbi_load(path.c_str(), &gBiomeMapW, &gBiomeMapH, &comp, 3);
-  if (!data || gBiomeMapW <= 0 || gBiomeMapH <= 0)
+  int width=0,height=0,comp=0;
+  const std::unique_ptr<unsigned char,decltype(&stbi_image_free)> data(
+      stbi_load(path.c_str(),&width,&height,&comp,3),&stbi_image_free);
+  if (!data || width<=0 || height<=0 ||
+      static_cast<size_t>(width)>std::numeric_limits<size_t>::max()/3/static_cast<size_t>(height))
   {
-    if (data)
-    {
-      stbi_image_free(data);
-    }
-    return false;
+    return {};
   }
-  gBiomeMapPixels.assign(data, data + static_cast<size_t>(gBiomeMapW) *
-                                          static_cast<size_t>(gBiomeMapH) * 3);
-  stbi_image_free(data);
-  return true;
+  auto image=std::make_shared<WorldGenBiomeMapImage>();
+  image->Width=width; image->Height=height;
+  const auto bytes=static_cast<size_t>(width)*static_cast<size_t>(height)*3;
+  image->Pixels.assign(data.get(),data.get()+bytes);
+  return image;
 }
 
 void ParseBiomeHeight(const nlohmann::json &height, BiomeHeightProfile &out)
@@ -1177,7 +1169,8 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
       !pack.BiomeMapImagePath.empty())
   {
     const std::filesystem::path imagePath = root / pack.BiomeMapImagePath;
-    if (!LoadBiomeMapImage(imagePath.string()))
+    pack.BiomeMapImage=LoadBiomeMapImage(imagePath.string());
+    if (!pack.BiomeMapImage)
     {
       std::cerr << "WorldGenPack: failed to load biome map image "
                 << imagePath.string() << std::endl;
@@ -1446,23 +1439,25 @@ float UWorldGenPack::SubBiomePoolWeightMultiplier(const std::string &biomeId,
 
 BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)
 {
-  if (gBiomeMapPixels.empty() || gBiomeMapW <= 0 || gBiomeMapH <= 0)
+  const auto &pack=Get();
+  const auto &image=pack.BiomeMapImage;
+  if (!image || image->Pixels.empty() || image->Width<=0 || image->Height<=0)
   {
     return BiomeId::Plains;
   }
-  const int scale = std::max(1, Get().BiomeMapBlockScale);
-  const int px = ((worldX / scale) % gBiomeMapW + gBiomeMapW) % gBiomeMapW;
-  const int pz = ((worldZ / scale) % gBiomeMapH + gBiomeMapH) % gBiomeMapH;
+  const int scale = std::max(1, pack.BiomeMapBlockScale);
+  const auto wrap=[](int coordinate,int size) {const int remainder=coordinate%size;return remainder<0 ? remainder+size : remainder;};
+  const int px = wrap(worldX/scale,image->Width);
+  const int pz = wrap(worldZ/scale,image->Height);
   const size_t idx =
-      (static_cast<size_t>(pz) * static_cast<size_t>(gBiomeMapW) +
+      (static_cast<size_t>(pz) * static_cast<size_t>(image->Width) +
        static_cast<size_t>(px)) *
       3;
-  if (idx + 2 >= gBiomeMapPixels.size())
+  if (idx + 2 >= image->Pixels.size())
   {
     return BiomeId::Plains;
   }
-  return BiomeFromMapColor(gBiomeMapPixels[idx], gBiomeMapPixels[idx + 1],
-                           gBiomeMapPixels[idx + 2]);
+  return BiomeFromMapColor(image->Pixels[idx],image->Pixels[idx+1],image->Pixels[idx+2]);
 }
 
 } // namespace cutum

@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-biome-image-owner-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -126,19 +126,19 @@
       "id": "E11",
       "owner": "Pinned immutable catalogs",
       "status": "OPEN",
-      "bound_or_observation": "Request content carries4 shared catalog handles; captured jobs are count-bounded. Distinct version/payload lifetime and bytes still need explicit composition with global catalog owners. Derived feature diagnostic payload now catalog-owned:73*N retained numeric bytes plus8*N prepare sorting scratch on current STL, N=decoration rules; full report labels/rows are source-domain bounded temporaries. Include this payload and fixed source roots in the pending catalog/platform composition. Runtime biome key aliases explicitly retain UBiomeDefinitionRegistry across escaped samples/cave results and source replacement; key payload counted once, alias handles separately. Compose this owner path with request/pin/reload retirement rather than assuming job end alone frees registry. Tier A warning history now18 inline flags per mutable registry epoch plus18 constant string_view keys, no external full-name history.32 aliases/cross-registry reset,Rebuild,4608 concurrent resolutions/5 owners/90 warnings and retirement verified. Pinned factory no longer publishes new catalogs during job construction; unpinned loader owns cold construction.",
+      "bound_or_observation": "Request content carries4 shared catalog handles; captured jobs are count-bounded. Distinct version/payload lifetime and bytes still need explicit composition with global catalog owners. Derived feature diagnostic payload now catalog-owned:73*N retained numeric bytes plus8*N prepare sorting scratch on current STL, N=decoration rules; full report labels/rows are source-domain bounded temporaries. Include this payload and fixed source roots in the pending catalog/platform composition. Runtime biome key aliases explicitly retain UBiomeDefinitionRegistry across escaped samples/cave results and source replacement; key payload counted once, alias handles separately. Compose this owner path with request/pin/reload retirement rather than assuming job end alone frees registry. Tier A warning history now18 inline flags per mutable registry epoch plus18 constant string_view keys, no external full-name history.32 aliases/cross-registry reset,Rebuild,4608 concurrent resolutions/5 owners/90 warnings and retirement verified. Pinned factory no longer publishes new catalogs during job construction; unpinned loader owns cold construction. Biome image now immutable Pack-owned shared payload; image scale/pixels/dimensions read from one snapshot.2x1->1x2 same-name reload old result0->1,64 copies exact pointer sharing,4 readers/32768 queries/16 publications/0 mismatches,failed JSON/decode/procedural isolation and last-strong image retirement PASS. Image may outlive original Pack without retaining it. Decoder output RAII spans vector copy; construction overlap and weak control metadata remain explicit composition.",
       "evidence": [
         "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
         "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
         "build/desktop-msvc/s4-biome-key-owner-acceptance-20261121.json",
         "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json",
-        "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json"
+        "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",
+        "build/desktop-msvc/s4-biome-image-owner-acceptance-20261121.json"
       ],
       "remaining": [
-        "Make biome map pixels/dimensions immutable Pack-owned payload; reproduce and verify old pinned image result and last-owner retirement across image/default/failed/same-name reload.",
-        "Compose unpinned catalog construction transient versus published lifetimes: filesystem path/JSON DOM/parser strings/image decoder/compiled registries/mutable block payload; source-sized bound and explicit construction/publication owner, not producer scratch credit.",
-        "Trace request/pin/reload/escaped biome-key owner retirement and separate shared payload from per-job handles; include derived diagnostics and fixed warning flags.",
-        "Verify cached TLS pipeline registry/content incarnation identity with controlled same-settings registry replacement; retain existing source-suspicion defect until reproduced and fixed."
+        "Verify cached TLS pipeline registry/content incarnation identity with controlled same-settings registry replacement and content revision change; retain existing source-suspicion defect until reproduced and fixed.",
+        "Compose unpinned catalog construction transient versus published lifetimes: filesystem path/JSON DOM/parser strings/image decoder+RGB copy/compiled registries/mutable block payload; source-sized bound and explicit construction/publication owner, not producer scratch credit.",
+        "Trace request/pin/reload/escaped biome-key/image owner retirement and separate shared payload from per-job handles; include image weak control metadata, Unpinned Get TLS keep, derived diagnostics and fixed warning flags."
       ]
     },
     {
