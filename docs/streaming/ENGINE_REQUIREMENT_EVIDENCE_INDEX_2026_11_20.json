@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.feature-diagnostic-stores",
+      "status": "SCOPED_PASS_CATALOG_PAYLOAD_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
+      "scope": "Four unbounded name/history stores removed. Worker data is quota-owned stable per-catalog scalar cells/list nodes/sentinels; synchronous selected-profile/name view restores through nested strategies and unwind. Totals and warning flags/duplicate-name aliases belong to the immutable feature catalog, no global version/name retention. Loader prepares arrays before publication; catalog copies start independent revision; custom immutable contexts lazily prepare catalog-owned scalar data. Chunk exit folds existing numeric cells under catalog mutex without allocation or quota reservation. Report v2 snapshots current catalog revision/lifetime and materializes full labels only while reporting."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.object-placement-working-containers",
       "status": "SCOPED_PASS_DIAGNOSTIC_HISTORIES_OPEN",
       "receipt": "build/desktop-msvc/s4-placement-working-containers-acceptance-20261121.json",

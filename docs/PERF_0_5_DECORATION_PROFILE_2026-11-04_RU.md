@@ -120,3 +120,8 @@ PERF-0.5 принят: горячий водный lookup устранён дл�
 без изменения параметров контента. Следующий отдельный этап должен профилировать внутренние
 проходы permeable seal. Независимо от него нужна трассировка publish/readiness/relight и
 edit-remesh пути: именно они остаются кандидатами для наблюдаемых визуальных задержек.
+
+
+## Diagnostic format update (2026-11-21)
+
+The measurements above describe the historical v1 implementation. Current `object_feature_summary` uses `object_feature_rules.v2`: counters cover the lifetime of the current immutable feature catalog, identified by `catalog_revision`. Reloading an identical name/index starts independent counters; old pinned jobs update their original catalog only. `catalog_rule_count` and `catalog_numeric_capacity_bytes` expose the derived catalog array domain, and `missing_warning_count` is scoped once per missing prefab per catalog. Worker profiles use quota-owned numeric cells, with synchronous borrowed selection names; full labels are materialized at report time. Chunk exit folds existing scalar storage without allocation. Warning flags are synchronized and retired with their catalog. Previous catalog history is not joined into the current report.

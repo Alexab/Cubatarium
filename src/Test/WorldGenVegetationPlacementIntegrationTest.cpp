@@ -1922,6 +1922,171 @@ int main(int argc, char **argv)
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
     return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--feature-diagnostics-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions); cutum::UBlockWorld world;
+    auto settings=MakeVegetationSettings(); settings.SeaLevel=48; settings.MaxHeight=128;
+    cutum::WorldGenContext ctx(world,registry,settings); ctx.WorldgenOwnerPackId="minetest_default_16";
+    ctx.ResolveBlockIds(); world.SetBlock({0,51,0},ctx.Blocks.Grass);
+    cutum::ObjectFeatureConfig features; cutum::ObjectFeatureRule rule;
+    rule.Mode=cutum::ObjectFeatureRuleMode::Object; rule.Biomes={cutum::BiomeId::Plains}; rule.Spacing=0;
+    rule.ObjectName=std::string(1024*1024,'d'); features.Decoration.push_back(rule); ctx.ObjectFeatures=&features;
+    auto quota=std::make_shared<cutum::UBufferAllocationBudget>(64);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); quota->Reserve(*peer,1);
+    bool refused=false;
+    {
+      cutum::UBufferBudgetScope active({quota,std::make_shared<cutum::BufferBudgetJob>()});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+      try {(void)cutum::TryPlaceDecorationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);}
+      catch(const cutum::UBufferBudgetExceeded &) {refused=true;}
+    }
+    std::cout << "feature_diagnostic_refused=" << refused << " remaining=" << quota->UsedBytes() << std::endl;
+    uint64_t previous_revision=0;
+    for(int version=0;version<32;++version) {
+      std::weak_ptr<cutum::ObjectFeatureDiagnosticCatalog> retired;
+      {
+        cutum::ObjectFeatureConfig local;
+        rule.ObjectName="diagnostic_version_"+std::to_string(version); local.Decoration.push_back(rule);
+        const auto state=local.Diagnostics.Get(local.Decoration); retired=state;
+        FluidTest::Expect(state->revision>previous_revision,kTestName,"reused catalog address has a fresh diagnostic revision");
+        previous_revision=state->revision;
+        ctx.ObjectFeatures=&local;
+        cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+        (void)cutum::TryPlaceDecorationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);
+      }
+      FluidTest::Expect(retired.expired(),kTestName,"catalog retirement releases all derived diagnostic state");
+    }
+    const auto reported=cutum::ObjectFeatureDiagnostics::GetSummary().size();
+    std::cout << "feature_diagnostic_global_history=" << reported << " current_catalog_expected=0" << std::endl;
+    FluidTest::Expect(refused && quota->UsedBytes()==1 && reported==0,kTestName,
+        "diagnostic scalar job cells are quota-owned and old catalog histories are retired");
+    quota->Release(*peer,1);
+    ctx.ObjectFeatures=&features;
+    const auto state=features.Diagnostics.Get(features.Decoration);
+    auto roomy=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+    auto roomy_peer=std::make_shared<cutum::BufferBudgetJob>(); roomy->Reserve(*roomy_peer,1);
+    auto job=std::make_shared<cutum::BufferBudgetJob>(); std::weak_ptr<cutum::BufferBudgetJob> weak_job=job;
+    size_t exhausted=0;
+    try {
+      cutum::UBufferBudgetScope active({roomy,job});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+      (void)cutum::TryPlaceDecorationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);
+      FluidTest::Expect(cutum::ObjectFeatureDiagnostics::GetThreadScratchBytes()==sizeof(cutum::ObjectFeatureRuleCounters),
+          kTestName,"worker retains numeric diagnostic cell rather than copied feature text");
+      exhausted=roomy->LimitBytes()-roomy->UsedBytes(); roomy->Reserve(*roomy_peer,exhausted);
+      throw 7; // destructor must merge without allocating/reserving any bytes
+    } catch(int) {}
+    job.reset();
+    FluidTest::Expect(weak_job.expired() && roomy->UsedBytes()==1+exhausted &&
+        cutum::ObjectFeatureDiagnostics::GetThreadScratchBytes()==0 && roomy->RefusalCount()==0,kTestName,
+        "full-quota unwind merges cells and releases all job allocation owners without a second refusal");
+    roomy->Release(*roomy_peer,exhausted);
+    auto snapshot=cutum::ObjectFeatureDiagnostics::GetSnapshot(&features);
+    FluidTest::Expect(snapshot.profiles.size()==1 && snapshot.profiles[0].featureKey==features.Decoration[0].ObjectName &&
+        snapshot.profiles[0].evaluated==1 && snapshot.catalogNumericCapacityBytes==73 &&
+        snapshot.catalogRevision==state->revision,kTestName,"long report label stays exact while catalog payload is scalar73 bytes");
+    auto copied=features;
+    const auto copied_state=copied.Diagnostics.Get(copied.Decoration);
+    FluidTest::Expect(copied_state->revision!=state->revision &&
+        cutum::ObjectFeatureDiagnostics::GetSnapshot(&copied).profiles.empty(),kTestName,"copied catalog cannot share counters or revision");
+    std::vector<std::thread> workers;
+    for(int t=0;t<4;++t) workers.emplace_back([&] {
+      cutum::UBlockWorld local_world; cutum::WorldGenContext local(local_world,registry,settings);
+      local.WorldgenOwnerPackId="minetest_default_16"; local.ResolveBlockIds(); local.ObjectFeatures=&features;
+      local_world.SetBlock({0,51,0},local.Blocks.Grass);
+      for(int c=0;c<64;++c) {
+        cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+        cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+        for(int call=0;call<7;++call) (void)cutum::TryPlaceDecorationFeatures(local,0,0,51,cutum::BiomeId::Plains);
+      }
+    });
+    for(auto &worker:workers) worker.join();
+    snapshot=cutum::ObjectFeatureDiagnostics::GetSnapshot(&features);
+    FluidTest::Expect(snapshot.profiles[0].evaluated==1793 && snapshot.profiles[0].candidates==0 &&
+        roomy->UsedBytes()==1,kTestName,"four worker chunk merges retain exact catalog lifetime totals and release credits");
+    for(int x=-32;x<=32;++x) for(int z=-32;z<=32;++z) world.SetBlock({x,51,z},ctx.Blocks.Grass);
+    cutum::ObjectFeatureConfig warnings;
+    rule.ObjectName="missing_diagnostic_fixture"; rule.Spacing=1;
+    warnings.Decoration={rule,rule}; ctx.ObjectFeatures=&warnings;
+    const auto warning_state=warnings.Diagnostics.Get(warnings.Decoration);
+    {
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(false);
+      for(int x=0;x<32;++x) for(int z=0;z<32;++z)
+        (void)cutum::TryPlaceDecorationFeatures(ctx,x,z,51,cutum::BiomeId::Plains);
+    }
+    FluidTest::Expect(warning_state->WarningCount()==1,kTestName,"actual missing-prefab path deduplicates duplicate catalog rules with diagnostics off");
+    auto warning_copy=warnings;
+    const auto race_state=warning_copy.Diagnostics.Get(warning_copy.Decoration);
+    std::atomic<size_t> marked{0}; workers.clear();
+    for(int t=0;t<4;++t) workers.emplace_back([&,t] {for(int n=0;n<1000;++n) marked+=race_state->MarkMissing((n+t)%2);});
+    for(auto &worker:workers) worker.join();
+    FluidTest::Expect(marked==1 && race_state->WarningCount()==1,kTestName,"first missing-name mark is synchronized across workers and aliases");
+    struct Probe final : cutum::IObjectFeaturePlacementStrategy {
+      const cutum::ObjectFeatureConfig *nested{nullptr}; bool fail{false};
+      bool Place(cutum::WorldGenContext &ctx,int x,int z,int y,const cutum::ObjectFeatureRule &r) const override {
+        cutum::RecordObjectFeaturePlacementCheck(r.ObjectName,5,3);
+        cutum::RecordObjectFeaturePlacementCheck("unrelated",999,999);
+        if(nested) {
+          struct Restore {cutum::WorldGenContext &ctx;const cutum::ObjectFeatureConfig *old;~Restore(){ctx.ObjectFeatures=old;}} restore{ctx,ctx.ObjectFeatures};
+          ctx.ObjectFeatures=nested;
+          (void)cutum::TryPlaceDecorationFeatures(ctx,x,z,y,cutum::BiomeId::Plains);
+          cutum::RecordObjectFeaturePlacementCheck(r.ObjectName,7,11);
+        }
+        if(fail) throw cutum::UBufferBudgetExceeded{};
+        return true;
+      }
+    };
+    cutum::ObjectFeatureConfig parent,child;
+    rule.Mode=static_cast<cutum::ObjectFeatureRuleMode>(201); rule.ObjectName="diagnostic_child"; child.Decoration={rule};
+    auto leaf=std::make_shared<Probe>();
+    cutum::UObjectFeaturePlacementStrategyRegistry::Register(rule.Mode,leaf);
+    rule.Mode=static_cast<cutum::ObjectFeatureRuleMode>(200); rule.ObjectName="diagnostic_parent"; parent.Decoration={rule};
+    auto branch=std::make_shared<Probe>(); branch->nested=&child;
+    cutum::UObjectFeaturePlacementStrategyRegistry::Register(rule.Mode,branch);
+    ctx.ObjectFeatures=&parent;
+    int selected_x=0,selected_z=0; bool selected=false;
+    {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+      for(int x=-16;x<16 && !selected;++x) for(int z=-16;z<16 && !selected;++z)
+        if(cutum::TryPlaceDecorationFeatures(ctx,x,z,51,cutum::BiomeId::Plains)) {selected=true;selected_x=x;selected_z=z;}
+    }
+    FluidTest::Expect(selected,kTestName,"nested diagnostic probe reaches actual pool selection");
+    leaf->fail=true; bool aborted=false;
+    try {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);
+      (void)cutum::TryPlaceDecorationFeatures(ctx,selected_x,selected_z,51,cutum::BiomeId::Plains);
+    } catch(const cutum::UBufferBudgetExceeded &) {aborted=true;}
+    auto parent_report=cutum::ObjectFeatureDiagnostics::GetSnapshot(&parent);
+    auto child_report=cutum::ObjectFeatureDiagnostics::GetSnapshot(&child);
+    FluidTest::Expect(aborted && parent_report.profiles[0].placementAttempts==2 && parent_report.profiles[0].placed==1 &&
+        parent_report.profiles[0].prefabVoxelVisits==17 && parent_report.profiles[0].prefabSurfaceScans==17 &&
+        child_report.profiles[0].prefabVoxelVisits==10 && child_report.profiles[0].placed==1 &&
+        roomy->UsedBytes()==1 && ctx.ObjectFeatures==&parent,kTestName,
+        "nested catalog cells stay stable and synchronous selection restores on normal and exceptional return");
+    const auto fixture=repo_root/"build/desktop-msvc/s4-feature-diag-published-fixture-20261121.json";
+    {std::ofstream file(fixture);file << R"({"decoration":[{"object":"published_diag","biomes":["plains"],"spacing":0}]})";}
+    FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(fixture),kTestName,"first diagnostic catalog publication loads");
+    auto old_catalog=cutum::UObjectFeatureConfigStorage::GetSnapshot();
+    std::weak_ptr<cutum::ObjectFeatureDiagnosticCatalog> old_state=old_catalog->Diagnostics.Get(old_catalog->Decoration);
+    ctx.ObjectFeatures=old_catalog.get();
+    {cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);(void)cutum::TryPlaceDecorationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);}
+    const auto old_revision=cutum::ObjectFeatureDiagnostics::GetSnapshot().catalogRevision;
+    FluidTest::Expect(cutum::UObjectFeatureConfigStorage::LoadFromFile(fixture),kTestName,"same-name diagnostic catalog replacement loads");
+    {cutum::ObjectFeatureChunkDiagnosticsScope chunk(true);(void)cutum::TryPlaceDecorationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);}
+    const auto current=cutum::ObjectFeatureDiagnostics::GetSnapshot();
+    FluidTest::Expect(current.catalogRevision!=old_revision && current.profiles.empty() &&
+        cutum::ObjectFeatureDiagnostics::GetSnapshot(old_catalog.get()).profiles[0].evaluated==2,kTestName,
+        "old pinned catalog completions cannot confirm same-name/index replacement counters");
+    old_catalog.reset();
+    FluidTest::Expect(old_state.expired(),kTestName,"diagnostic summary holds no obsolete published catalog owner");
+    roomy->Release(*roomy_peer,1);
+    std::cout << "feature_diagnostics_catalog_bytes=" << state->CapacityBytes() << " concurrent_evaluated=1793 warning_marks=" << marked
+        << " retired_versions=32 nested_unwind=1 published_replacement=1 final=" << roomy->UsedBytes() << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--placement-budget-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");

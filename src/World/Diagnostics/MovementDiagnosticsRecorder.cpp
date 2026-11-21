@@ -94,10 +94,17 @@ json PopulateSummaryToJson(const ChunkPopulateSummary &summary)
 
 json ObjectFeatureSummaryToJson()
 {
-  json root{{"schema", "object_feature_rules.v1"},
+  const auto snapshot=ObjectFeatureDiagnostics::GetSnapshot();
+  json root{{"schema", "object_feature_rules.v2"},
+            {"scope", "current_feature_catalog_lifetime"},
+            {"catalog_revision", snapshot.catalogRevision},
+            {"catalog_rule_count", snapshot.catalogRuleCount},
+            {"catalog_numeric_capacity_bytes", snapshot.catalogNumericCapacityBytes},
+            {"missing_warning_count", snapshot.missingWarningCount},
+            {"warning_scope", "once_per_missing_prefab_per_catalog"},
             {"rules", json::array()}};
   for (const ObjectFeatureRuleProfile &profile :
-       ObjectFeatureDiagnostics::GetSummary())
+       snapshot.profiles)
   {
     root["rules"].push_back(
         {{"pool", profile.pool},

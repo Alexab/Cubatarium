@@ -1,4 +1,5 @@
 #pragma once
+#include "WorldGen/Features/ObjectFeatureDiagnosticState.h"
 
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -224,6 +225,7 @@ public:
 
 struct ObjectFeatureConfig
 {
+  ObjectFeatureDiagnosticStorage Diagnostics;
   std::vector<ObjectFeatureRule> Vegetation;
   std::vector<ObjectFeatureRule> GroundCover;
   std::vector<ObjectFeatureRule> Decoration;

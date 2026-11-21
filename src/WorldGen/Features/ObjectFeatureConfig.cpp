@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <numeric>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -18,6 +19,8 @@ std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::Active =
 
 namespace
 {
+std::mutex DiagnosticPreparationMutex;
+std::atomic<uint64_t> NextDiagnosticRevision{1};
 
 std::unordered_map<std::string, ObjectFeatureRuleMode> &FeatureTypeMap()
 {
@@ -581,6 +584,52 @@ const char *SubBiomeIdToString(SubBiomeId subBiome)
   }
 }
 
+ObjectFeatureDiagnosticCatalog::ObjectFeatureDiagnosticCatalog(const std::vector<ObjectFeatureRule> &rules)
+    : revision(NextDiagnosticRevision.fetch_add(1,std::memory_order_relaxed)),
+      Totals(rules.size()),WarningAliases(rules.size()),Warned(rules.size())
+{
+  std::vector<size_t> sorted(rules.size());
+  std::iota(sorted.begin(),sorted.end(),0);
+  std::sort(sorted.begin(),sorted.end(),[&](size_t a,size_t b) {return rules[a].ObjectName<rules[b].ObjectName;});
+  for(size_t n=0;n<sorted.size();++n)
+    WarningAliases[sorted[n]]=n && rules[sorted[n]].ObjectName==rules[sorted[n-1]].ObjectName
+        ? WarningAliases[sorted[n-1]] : sorted[n];
+}
+
+void ObjectFeatureDiagnosticCatalog::Accumulate(const ObjectFeatureRuleCounters *cells,size_t count) noexcept
+{
+  std::lock_guard<std::mutex> lock(Mutex);
+  for(size_t n=0;n<std::min(count,Totals.size());++n) Totals[n].Add(cells[n]);
+}
+std::vector<ObjectFeatureRuleCounters> ObjectFeatureDiagnosticCatalog::CopyTotals() const
+{std::lock_guard<std::mutex> lock(Mutex);return Totals;}
+bool ObjectFeatureDiagnosticCatalog::MarkMissing(size_t index)
+{
+  std::lock_guard<std::mutex> lock(Mutex);
+  auto &flag=Warned.at(WarningAliases.at(index));
+  if(flag) return false;
+  flag=1; return true;
+}
+size_t ObjectFeatureDiagnosticCatalog::WarningCount() const
+{std::lock_guard<std::mutex> lock(Mutex);return std::count(Warned.begin(),Warned.end(),uint8_t{1});}
+ObjectFeatureDiagnosticStorage &ObjectFeatureDiagnosticStorage::operator=(const ObjectFeatureDiagnosticStorage &other) noexcept
+{
+  if(this!=&other) std::atomic_store_explicit(&State,std::shared_ptr<ObjectFeatureDiagnosticCatalog>{},std::memory_order_release);
+  return *this;
+}
+std::shared_ptr<ObjectFeatureDiagnosticCatalog> ObjectFeatureDiagnosticStorage::Get(const std::vector<ObjectFeatureRule> &rules) const
+{
+  auto state=std::atomic_load_explicit(&State,std::memory_order_acquire);
+  if(state && state->RuleCount()==rules.size()) return state;
+  std::lock_guard<std::mutex> lock(DiagnosticPreparationMutex);
+  state=std::atomic_load_explicit(&State,std::memory_order_acquire);
+  if(!state || state->RuleCount()!=rules.size()) {
+    state=std::make_shared<ObjectFeatureDiagnosticCatalog>(rules);
+    std::atomic_store_explicit(&State,state,std::memory_order_release);
+  }
+  return state;
+}
+
 bool UObjectFeatureConfigStorage::LoadFromFile(
     const std::filesystem::path &path)
 {
@@ -632,6 +681,7 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   const size_t rule_count = next->Vegetation.size() + next->GroundCover.size() +
                             next->Decoration.size() + next->Structures.size() +
                             next->CaveFeatures.size();
+  (void)next->Diagnostics.Get(next->Decoration);
   std::atomic_store_explicit(
       &Active, std::shared_ptr<const ObjectFeatureConfig>(std::move(next)),
       std::memory_order_release);

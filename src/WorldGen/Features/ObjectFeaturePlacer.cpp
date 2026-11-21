@@ -23,8 +23,10 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <list>
 #include <mutex>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -41,44 +43,63 @@ template<class V> using GenerationVoxelMap=std::unordered_map<uint64_t,V,
 // to the first job. Reset destroys nodes, buckets, sentinels and allocator.
 thread_local std::optional<GenerationVoxelMap<int>> ScatterChunkCounts;
 
-std::mutex ObjectFeatureDiagnosticsMutex;
-std::map<std::string, ObjectFeatureRuleProfile> ObjectFeatureRuleTotals;
-thread_local std::map<std::string, ObjectFeatureRuleProfile>
-    ObjectFeatureChunkRules;
-thread_local std::unordered_map<std::string, std::string>
-    ObjectFeatureSelectedRules;
 thread_local bool ObjectFeatureDiagnosticsEnabled = false;
 
-std::string ObjectFeatureRuleKey(ObjectFeaturePool pool, size_t ruleIndex,
-                                 const std::string &featureKey)
+struct ChunkFeatureDiagnostics
 {
-  return std::to_string(static_cast<int>(pool)) + ":" +
-         std::to_string(ruleIndex) + ":" + featureKey;
-}
+  struct CatalogCells {
+    std::shared_ptr<ObjectFeatureDiagnosticCatalog> Catalog;
+    GenerationVector<ObjectFeatureRuleCounters> Cells;
+    explicit CatalogCells(std::shared_ptr<ObjectFeatureDiagnosticCatalog> catalog)
+        : Catalog(std::move(catalog)),Cells(Catalog->RuleCount()) {}
+  };
+  // Stable cells also support nested strategies using another catalog. Nodes,
+  // empty-list sentinel and numeric cells all retain this job's allocator.
+  std::optional<std::list<CatalogCells,UGenerationAllocator<CatalogCells>>> Catalogs;
+  ObjectFeatureRuleCounters *Selected{nullptr};
+  std::string_view SelectedName;
+  void Flush() noexcept {
+    if(Catalogs) for(const auto &frame:*Catalogs) frame.Catalog->Accumulate(frame.Cells.data(),frame.Cells.size());
+  }
+  ObjectFeatureRuleCounters *Bind(const std::shared_ptr<ObjectFeatureDiagnosticCatalog> &catalog,size_t index) {
+    if(!Catalogs) Catalogs.emplace();
+    for(auto &frame:*Catalogs) if(frame.Catalog==catalog) return &frame.Cells.at(index);
+    Catalogs->emplace_back(catalog);
+    return &Catalogs->back().Cells.at(index);
+  }
+};
+thread_local std::optional<ChunkFeatureDiagnostics> ObjectFeatureChunk;
 
-ObjectFeatureRuleProfile *
+ObjectFeatureRuleCounters *
 BeginObjectFeatureRuleEvaluation(ObjectFeaturePool pool, size_t ruleIndex,
-                                 const std::string &featureKey)
+                                 const std::shared_ptr<ObjectFeatureDiagnosticCatalog> &catalog)
 {
   if (!ObjectFeatureDiagnosticsEnabled || pool != ObjectFeaturePool::Decoration)
   {
     return nullptr;
   }
-  ObjectFeatureRuleProfile &profile =
-      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, ruleIndex,
-                                                   featureKey)];
-  profile.pool = "decoration";
-  profile.ruleIndex = ruleIndex;
-  profile.featureKey = featureKey;
-  return &profile;
+  return ObjectFeatureChunk->Bind(catalog,ruleIndex);
 }
+
+// Placement checks run synchronously inside the selected strategy. Borrow its
+// immutable name only for that call and restore the parent selection on unwind.
+struct SelectedFeatureProfileScope
+{
+  ObjectFeatureRuleCounters *Previous;
+  std::string_view PreviousName;
+  SelectedFeatureProfileScope(ObjectFeatureRuleCounters *profile,const std::string &name)
+      : Previous(ObjectFeatureChunk->Selected),PreviousName(ObjectFeatureChunk->SelectedName)
+  {ObjectFeatureChunk->Selected=profile;ObjectFeatureChunk->SelectedName=name;}
+  ~SelectedFeatureProfileScope()
+  {ObjectFeatureChunk->Selected=Previous;ObjectFeatureChunk->SelectedName=PreviousName;}
+};
 
 struct ObjectFeatureEvaluationScope
 {
-  ObjectFeatureRuleProfile *Profile{nullptr};
+  ObjectFeatureRuleCounters *Profile{nullptr};
   std::chrono::steady_clock::time_point Start;
 
-  explicit ObjectFeatureEvaluationScope(ObjectFeatureRuleProfile *profile)
+  explicit ObjectFeatureEvaluationScope(ObjectFeatureRuleCounters *profile)
       : Profile(profile)
   {
     if (Profile)
@@ -1376,7 +1397,7 @@ float SubBiomePoolWeightMultiplier(SubBiomeId subBiome, BiomeId biome,
 }
 
 bool TryPlaceObjectPool(
-    WorldGenContext &ctx, int x, int z, int surfaceY, BiomeId biome,
+    WorldGenContext &ctx, const ObjectFeatureConfig &catalog, int x, int z, int surfaceY, BiomeId biome,
     const std::vector<ObjectFeatureRule> &rules, ObjectFeaturePool pool,
     uint32_t pickSeedOffset, bool useChanceOnly, bool requireTreesEnabled,
     float densityMultiplier, const BiomeKey &biomeKey,
@@ -1386,6 +1407,8 @@ bool TryPlaceObjectPool(
   {
     return false;
   }
+  const auto diagnosticCatalog=pool==ObjectFeaturePool::Decoration
+      ? catalog.Diagnostics.Get(catalog.Decoration) : nullptr;
 
   struct Candidate
   {
@@ -1485,8 +1508,8 @@ bool TryPlaceObjectPool(
         rule.Mode == ObjectFeatureRuleMode::ScatterBlocks
             ? rule.Scatter.BlockName
             : rule.ObjectName;
-    ObjectFeatureRuleProfile *ruleProfile =
-        BeginObjectFeatureRuleEvaluation(pool, ruleIndex, ruleFeatureKey);
+    ObjectFeatureRuleCounters *ruleProfile =
+        BeginObjectFeatureRuleEvaluation(pool, ruleIndex, diagnosticCatalog);
     ObjectFeatureEvaluationScope evaluationScope(ruleProfile);
 
     // These gates depend only on the rule, column and immutable generation
@@ -1586,8 +1609,7 @@ bool TryPlaceObjectPool(
     {
       if (pool == ObjectFeaturePool::Decoration)
       {
-        static std::unordered_set<std::string> warnedMissingDecor;
-        if (warnedMissingDecor.insert(rule.ObjectName).second)
+        if (diagnosticCatalog->MarkMissing(ruleIndex))
         {
           std::cerr << "ObjectFeaturePlacer: missing decoration prefab '"
                     << rule.ObjectName << "'" << std::endl;
@@ -1712,12 +1734,9 @@ bool TryPlaceObjectPool(
       chosen->Mode == ObjectFeatureRuleMode::ScatterBlocks
           ? chosen->Scatter.BlockName
           : chosen->ObjectName;
-  ObjectFeatureRuleProfile &profile =
-      ObjectFeatureChunkRules[ObjectFeatureRuleKey(pool, chosenIndex,
-                                                   chosenKey)];
+  auto &profile=*ObjectFeatureChunk->Bind(diagnosticCatalog,chosenIndex);
   ++profile.placementAttempts;
-  ObjectFeatureSelectedRules[chosenKey] =
-      ObjectFeatureRuleKey(pool, chosenIndex, chosenKey);
+  SelectedFeatureProfileScope selected(&profile,chosenKey);
   const auto placementStart = std::chrono::steady_clock::now();
   const bool placed =
       strategy && strategy->Place(ctx, x, z, strategySurfaceY, *chosen);
@@ -1758,49 +1777,49 @@ ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(
     bool enabled)
 {
   ResetScatterChunkCounts();
+  ObjectFeatureChunk.reset();
   ObjectFeatureDiagnosticsEnabled = enabled;
-  ObjectFeatureChunkRules.clear();
-  ObjectFeatureSelectedRules.clear();
+  if(enabled) ObjectFeatureChunk.emplace();
 }
 
-ObjectFeatureChunkDiagnosticsScope::~ObjectFeatureChunkDiagnosticsScope()
+ObjectFeatureChunkDiagnosticsScope::~ObjectFeatureChunkDiagnosticsScope() noexcept
 {
   ResetScatterChunkCounts();
-  if (ObjectFeatureDiagnosticsEnabled && !ObjectFeatureChunkRules.empty())
-  {
-    std::lock_guard<std::mutex> lock(ObjectFeatureDiagnosticsMutex);
-    for (const auto &entry : ObjectFeatureChunkRules)
-    {
-      ObjectFeatureRuleProfile &total = ObjectFeatureRuleTotals[entry.first];
-      const ObjectFeatureRuleProfile &chunk = entry.second;
-      total.pool = chunk.pool;
-      total.ruleIndex = chunk.ruleIndex;
-      total.featureKey = chunk.featureKey;
-      total.evaluated += chunk.evaluated;
-      total.candidates += chunk.candidates;
-      total.placementAttempts += chunk.placementAttempts;
-      total.placed += chunk.placed;
-      total.evaluationMs += chunk.evaluationMs;
-      total.placementMs += chunk.placementMs;
-      total.prefabVoxelVisits += chunk.prefabVoxelVisits;
-      total.prefabSurfaceScans += chunk.prefabSurfaceScans;
-    }
-  }
+  if(ObjectFeatureChunk) ObjectFeatureChunk->Flush();
   ObjectFeatureDiagnosticsEnabled = false;
-  ObjectFeatureChunkRules.clear();
-  ObjectFeatureSelectedRules.clear();
+  ObjectFeatureChunk.reset();
 }
 
 std::vector<ObjectFeatureRuleProfile> ObjectFeatureDiagnostics::GetSummary()
+{return GetSnapshot().profiles;}
+
+ObjectFeatureDiagnosticSnapshot ObjectFeatureDiagnostics::GetSnapshot(const ObjectFeatureConfig *catalog)
 {
-  std::lock_guard<std::mutex> lock(ObjectFeatureDiagnosticsMutex);
-  std::vector<ObjectFeatureRuleProfile> result;
-  result.reserve(ObjectFeatureRuleTotals.size());
-  for (const auto &entry : ObjectFeatureRuleTotals)
-  {
-    result.push_back(entry.second);
+  const auto current=catalog ? nullptr : UObjectFeatureConfigStorage::GetSnapshot();
+  if(!catalog) catalog=current.get();
+  ObjectFeatureDiagnosticSnapshot result;
+  if(!catalog) return result;
+  const auto state=catalog->Diagnostics.Get(catalog->Decoration);
+  result.catalogRevision=state->revision; result.catalogRuleCount=state->RuleCount();
+  result.catalogNumericCapacityBytes=state->CapacityBytes(); result.missingWarningCount=state->WarningCount();
+  const auto totals=state->CopyTotals();
+  for(size_t index=0;index<totals.size();++index) {
+    if(!totals[index].evaluated && !totals[index].placementAttempts) continue;
+    ObjectFeatureRuleProfile profile;
+    static_cast<ObjectFeatureRuleCounters &>(profile)=totals[index];
+    profile.pool="decoration"; profile.ruleIndex=index;
+    const auto &rule=catalog->Decoration[index];
+    profile.featureKey=rule.Mode==ObjectFeatureRuleMode::ScatterBlocks ? rule.Scatter.BlockName : rule.ObjectName;
+    result.profiles.push_back(std::move(profile));
   }
   return result;
+}
+size_t ObjectFeatureDiagnostics::GetThreadScratchBytes()
+{
+  size_t bytes=0;
+  if(ObjectFeatureChunk && ObjectFeatureChunk->Catalogs)
+    for(const auto &frame:*ObjectFeatureChunk->Catalogs) bytes+=frame.Cells.capacity()*sizeof(ObjectFeatureRuleCounters);
+  return bytes;
 }
 
 void RecordObjectFeaturePlacementCheck(const std::string &prefabName,
@@ -1811,14 +1830,10 @@ void RecordObjectFeaturePlacementCheck(const std::string &prefabName,
   {
     return;
   }
-  const auto selected = ObjectFeatureSelectedRules.find(prefabName);
-  if (selected == ObjectFeatureSelectedRules.end())
-  {
-    return;
+  if(ObjectFeatureChunk->Selected && ObjectFeatureChunk->SelectedName==prefabName) {
+    ObjectFeatureChunk->Selected->prefabVoxelVisits+=voxelVisits;
+    ObjectFeatureChunk->Selected->prefabSurfaceScans+=surfaceScans;
   }
-  ObjectFeatureRuleProfile &profile = ObjectFeatureChunkRules[selected->second];
-  profile.prefabVoxelVisits += voxelVisits;
-  profile.prefabSurfaceScans += surfaceScans;
 }
 
 void ResetScatterChunkCounts() { ScatterChunkCounts.reset(); }
@@ -1917,11 +1932,12 @@ bool TryPlaceVegetationFeatures(WorldGenContext &ctx, int x, int z,
       return false;
     }
   }
-  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
-                            GetObjectFeatures(ctx).Vegetation,
+  const auto &cfg=GetObjectFeatures(ctx);
+  return TryPlaceObjectPool(ctx, cfg, x, z, surfaceY, biome,
+                            cfg.Vegetation,
                             ObjectFeaturePool::Vegetation, 5000, false, true,
                             ctx.Settings.Tuning.vegetationDensity, biomeKey,
-                            &GetObjectFeatures(ctx).VegetationDistribution);
+                            &cfg.VegetationDistribution);
 }
 
 bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
@@ -1942,11 +1958,12 @@ bool TryPlaceGroundCoverFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
+  const auto &cfg=GetObjectFeatures(ctx);
   return TryPlaceObjectPool(
-      ctx, x, z, surfaceY, biome, GetObjectFeatures(ctx).GroundCover,
+      ctx, cfg, x, z, surfaceY, biome, cfg.GroundCover,
       ObjectFeaturePool::GroundCover, 5500, false, true,
       ctx.Settings.Tuning.vegetationDensity * 0.85f, biomeKey,
-      &GetObjectFeatures(ctx).GroundCoverDistribution);
+      &cfg.GroundCoverDistribution);
 }
 
 bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
@@ -1958,8 +1975,9 @@ bool TryPlaceDecorationFeatures(WorldGenContext &ctx, int x, int z,
   {
     return false;
   }
-  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome,
-                            GetObjectFeatures(ctx).Decoration,
+  const auto &cfg=GetObjectFeatures(ctx);
+  return TryPlaceObjectPool(ctx, cfg, x, z, surfaceY, biome,
+                            cfg.Decoration,
                             ObjectFeaturePool::Decoration, 6000, false, false,
                             ctx.Settings.Tuning.decorationDensity, biomeKey);
 }
@@ -2006,7 +2024,7 @@ bool TryPlaceStructureFeatures(WorldGenContext &ctx, int x, int z, int surfaceY,
     return false;
   }
 
-  return TryPlaceObjectPool(ctx, x, z, surfaceY, biome, cfg.Structures,
+  return TryPlaceObjectPool(ctx, cfg, x, z, surfaceY, biome, cfg.Structures,
                             ObjectFeaturePool::Structures, 7001, true, false,
                             ctx.Settings.Tuning.structureDensity, biomeKey);
 }

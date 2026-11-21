@@ -38,19 +38,11 @@ bool TryPlaceLavaPool(WorldGenContext &ctx, int x, int z, int surfaceY,
 bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
                        BiomeId biome, BlockId grassId);
 
-struct ObjectFeatureRuleProfile
+struct ObjectFeatureRuleProfile : ObjectFeatureRuleCounters
 {
   std::string pool;
   size_t ruleIndex{0};
   std::string featureKey;
-  uint64_t evaluated{0};
-  uint64_t candidates{0};
-  uint64_t placementAttempts{0};
-  uint64_t placed{0};
-  double evaluationMs{0.0};
-  double placementMs{0.0};
-  uint64_t prefabVoxelVisits{0};
-  uint64_t prefabSurfaceScans{0};
 };
 
 // Per-worker accumulation is flushed once per chunk. Enabled only by the
@@ -59,12 +51,23 @@ struct ObjectFeatureRuleProfile
 struct ObjectFeatureChunkDiagnosticsScope
 {
   explicit ObjectFeatureChunkDiagnosticsScope(bool enabled);
-  ~ObjectFeatureChunkDiagnosticsScope();
+  ~ObjectFeatureChunkDiagnosticsScope() noexcept;
+  ObjectFeatureChunkDiagnosticsScope(const ObjectFeatureChunkDiagnosticsScope &)=delete;
+  ObjectFeatureChunkDiagnosticsScope &operator=(const ObjectFeatureChunkDiagnosticsScope &)=delete;
+};
+
+struct ObjectFeatureDiagnosticSnapshot
+{
+  uint64_t catalogRevision{0};
+  size_t catalogRuleCount{0},catalogNumericCapacityBytes{0},missingWarningCount{0};
+  std::vector<ObjectFeatureRuleProfile> profiles;
 };
 
 struct ObjectFeatureDiagnostics
 {
   static std::vector<ObjectFeatureRuleProfile> GetSummary();
+  static ObjectFeatureDiagnosticSnapshot GetSnapshot(const ObjectFeatureConfig *catalog=nullptr);
+  static size_t GetThreadScratchBytes();
 };
 
 void RecordObjectFeaturePlacementCheck(const std::string &prefabName,
