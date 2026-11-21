@@ -433,7 +433,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         prepare_read_failure_air: bool = False,
         probe_terrain_save_failure: bool = False, walking: bool = False,
         record_replay: bool = False, debt_target: dict | None = None,
-        flat_publication: bool = False, face_repair_only: bool = False) -> dict:
+        flat_publication: bool = False, face_repair_only: bool = False,
+        flow_only: bool = False) -> dict:
+    if type(flow_only) is not bool or (flow_only and (not flat_publication or face_repair_only)):
+        raise ValueError("Flow isolation requires the standalone Flat probe without face isolation")
     if type(face_repair_only) is not bool or (face_repair_only and not flat_publication):
         raise ValueError("Face repair isolation requires the Flat publication probe")
     if type(flat_publication) is not bool or (flat_publication and (
@@ -631,6 +634,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                 env["CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT"] = "flat_publication"
                 if face_repair_only:
                     env["CUBA_FLIGHT_QA_FACE_REPAIR_ONLY"] = "1"
+                if flow_only:
+                    env["CUBA_FLIGHT_QA_FLOW_ONLY"] = "1"
                 env["CUBATARIUM_FORCE_CPU"] = "1"
         if probe_disk_read_failure:
             env["CUBA_DISK_READ_FAILURE_PROBE"] = ",".join(map(str, secondary_residency_column))
@@ -751,6 +756,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "probe_terrain_save_failure": probe_terrain_save_failure,
                  "flat_publication_requested": flat_publication,
                  "face_repair_only_requested": face_repair_only,
+                 "flow_only_requested": flow_only,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -1046,6 +1052,8 @@ def main() -> int:
                         help="standalone CPU/Flat publication variant of the startup API probe")
     parser.add_argument("--face-repair-only", action="store_true",
                         help="run only face repair lifecycle within the Flat publication probe")
+    parser.add_argument("--flow-only", action="store_true",
+                        help="run only signed-slice flow publication within the Flat probe")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -1098,6 +1106,7 @@ def main() -> int:
                   probe_terrain_save_failure=args.probe_terrain_save_failure,
                   flat_publication=args.flat_publication,
                   face_repair_only=args.face_repair_only,
+                  flow_only=args.flow_only,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)

@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q01-C1",
     "LIMIT-C1"
   ],
   "rows": [
@@ -19,8 +18,10 @@
     {
       "id": "Q01-C1",
       "queue": "Q01",
-      "status": "CHECK",
-      "required_result": "Upgrade/replace coalesces signed Y bands without losing requested work; remove/clear retires old ticket; repeated current demand completes."
+      "status": "REUSE",
+      "required_result": "Upgrade/replace coalesces signed Y bands without losing requested work; remove/clear retires old ticket; repeated current demand completes.",
+      "evidence": "build/desktop-msvc/s4-flow-publication-acceptance-20261121.json",
+      "coverage_note": "Q01-C1: scheduler repro5 violations fixed by lossless scope union; local Release scheduler/audit tests PASS, remove/clear/ABA/exact signed scope/full-focus/urgency. Actual current CPU/Flat native6 cases same-kind/upgrade/dependent replacement x initial/reissue: real executor admission and both cy-3/+2 current drawable publications. Accepted ticket ingress adapter, no derived-producer/backend/Full-light/framebuffer/fairness/heap-cap claim."
     },
     {
       "id": "Q02-R1",
@@ -728,5 +729,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q12 lifecycle closed by peer/current publication, actual removal/world replacement and actual overlay repair. Remaining2 CHECK: Q01-C1 then LIMIT-C1; full S0..S6 OPEN."
+  "checkpoint": "Q01-C1 closed after lossless scope merge fix, local lifecycle and actual6-case two-slice publication. Remaining1 CHECK: LIMIT-C1; full S0..S6 OPEN."
 }

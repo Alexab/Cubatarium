@@ -132,6 +132,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       report["variant"]="flat_publication";
       const char *face_phase=std::getenv("CUBA_FLIGHT_QA_FACE_REPAIR_ONLY");
       const bool face_only=face_phase && std::string(face_phase)=="1";
+      const char *flow_phase=std::getenv("CUBA_FLIGHT_QA_FLOW_ONLY");
+      const bool flow_only=flow_phase && std::string(flow_phase)=="1";
+      report["flow_only"]=flow_only;
       report["face_repair_only"]=face_only;
       report["scope"]="Actual CPU/Flat UWorld section publication/input readiness; no Full solver or framebuffer acceptance";
       const auto &caps=GetActiveRenderBackendCaps();
@@ -157,7 +160,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       settings.Lighting=LightingMode::Flat; settings.LightingModeExplicit=true;
       settings.AsyncMeshing=false; settings.GpuPackedMeshing=false; settings.FrustumCulling=false;
       world.SetRenderSettings(settings);
-      if(!face_only) {
+      if(!face_only && !flow_only) {
       require(world.GetLightingPipeline().GetMode()==LightingMode::Flat && !world.RequiresLightingLitGate(),
               "Flat probe uses actual factory Flat pipeline");
       const glm::ivec3 coord(0,-3,0);
@@ -2057,7 +2060,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             "save admission preserves dirty owner through refusal/duplicate until real ACK and cold latest data");
       });
       }
-      RunTerrainProbePhase([&] {
+      if(!flow_only) RunTerrainProbePhase([&] {
         struct FaceDeadlineRestore {
           UFrameDeadline deadline=UFrameDeadline::Get();
           ~FaceDeadlineRestore() { UFrameDeadline::Get()=deadline; }
@@ -2220,7 +2223,59 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(overlay_published && overlay_waits && overlay_transferred && same_state_refused && overlay_current,
             "actual overlay repair waits, admits peer state once and publishes overlay-free current target");
       });
-      if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
+      if(flow_only) RunTerrainProbePhase([&] {
+        struct FlowDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~FlowDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        for(int mode=0;mode<3;++mode) {
+          auto owner=std::make_unique<UWorld>(nullptr,nullptr); auto &flow=*owner;
+          flow.SetSpawnPoint({8,-40,8});
+          flow.ProceduralTemplate.MinHeight=-48; flow.ProceduralTemplate.MaxHeight=47;
+          flow.ProceduralTemplate.SeaLevel=-40;
+          flow.BlockWorld.SetVerticalProfile({-48,47,-40});
+          flow.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          flow.BlockWorld.SetFluidDefinitions(definitions.get());
+          flow.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+          auto flow_settings=settings; flow_settings.AsyncMeshing=false;
+          flow.SetRenderSettings(flow_settings);
+          flow.BlockWorld.SetBlock({8,-40,8},8); flow.BlockWorld.SetBlock({8,40,8},8);
+          auto &mesh=*flow.MeshService; auto &cache=mesh.GetCache();
+          UColumnFlowExecutor executor;
+          for(int round=0;round<2;++round) {
+            if(round) { mesh.RemoveColumn({0,0,0},-3,2); executor.Clear(); }
+            ColumnWorkItem old{}; old.column={0,0}; old.cy=-3; old.priority=90;
+            old.kind=mode==0 ? ColumnWorkKind::FirstMesh :
+                (mode==1 ? ColumnWorkKind::RemeshSeam : ColumnWorkKind::RelightThenMesh);
+            auto next=old; next.cy=2; next.priority=20; next.kind=ColumnWorkKind::FirstMesh;
+            // Accepted ticket adapter: production scheduler coalescing and real
+            // executor admission are used; derived producer policy is separate.
+            executor.Scheduler().Enqueue(old);
+            if(mode==2) require(executor.Scheduler().ReplaceColumnTicket(next,old.kind),"flow dependent replacement accepted");
+            else executor.Scheduler().Enqueue(next);
+            ColumnWorkItem live{};
+            const bool merged=executor.Scheduler().GetLiveTicket({0,0},live) &&
+                live.cy==kColumnWorkWholeColumnCy && live.priority==90;
+            UFrameDeadline::Get().BeginFrame(5000);
+            const auto dispatched=executor.DrainBudget(flow,1,{0,-3,0},1,1);
+            const bool both_dirty=mesh.IsChunkMeshDirty({0,-3,0}) && mesh.IsChunkMeshDirty({0,2,0});
+            for(int pass=0;pass<8;++pass) {
+              UFrameDeadline::Get().BeginFrame(5000);
+              mesh.RebuildDirtyChunksWithStats(flow.BlockWorld,*flow.BlockRegistry,8,8);
+              if(!mesh.IsChunkMeshDirty({0,-3,0}) && !mesh.IsChunkMeshDirty({0,2,0})) break;
+            }
+            const bool current=cache.GetPublishCount({0,-3,0})>0 && cache.GetPublishCount({0,2,0})>0 &&
+                cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld) &&
+                cache.IsPublishedMeshCurrentForInputs({0,2,0},flow.BlockWorld) &&
+                mesh.HasDrawableGreedyMesh({0,-3,0}) && mesh.HasDrawableGreedyMesh({0,2,0});
+            report["flow_signed_publication"].push_back({{"mode",mode},{"round",round},
+                {"merged",merged},{"dispatched",dispatched},{"both_dirty",both_dirty},{"both_current",current}});
+            require(merged && dispatched==1 && both_dirty && current,"merged flow ticket admits and publishes both signed slices");
+          }
+        }
+      });
+      if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});
+      else if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
       else report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
