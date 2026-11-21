@@ -2540,6 +2540,42 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"automatic_current_terrain_successor",successor},{"cancelled_refused_request",cancelled}};
         require(slot_refused && pool_refused && exact && successor && cancelled,
             "generation shared admission retains exact request and normal tick installs successor");
+        bool cohort=true;
+        for(size_t n=0;n<UChunkLoadScheduler::kMaxRetainedGenerationResults;++n) {
+          const glm::ivec3 c(10+static_cast<int>(n),0,0); generation.Bump(c);
+          scheduler.RequestLoad(c,1,request);
+          cohort=cohort && scheduler.StartQueuedGenerationWorkers(1)==1;
+          require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"bounded generation ready cohort completes");
+        }
+        const glm::ivec3 next(30,0,0); generation.Bump(next); scheduler.RequestLoad(next,2,request);
+        const bool ready_full=cohort && scheduler.GetRetainedGenerationResultCount()==8 &&
+            scheduler.GetCompletedReadyCount()==8 && scheduler.StartQueuedGenerationWorkers(64)==0 &&
+            scheduler.GetState(next)==ChunkLoadState::Requested &&
+            scheduler.GetAvailableGenerationWorkerSlots()==0 && credits.WorkSlotsInUse()==0;
+        scheduler.Tick(terrain,0,64);
+        const bool held=scheduler.GetRetainedGenerationResultCount()==8 && scheduler.GetCompletedReadyCount()==8;
+        scheduler.Cancel({10,0,0});
+        scheduler.Tick(terrain,0,64);
+        const bool stale_released=scheduler.GetRetainedGenerationResultCount()==7 &&
+            scheduler.GetCompletedReadyCount()==7;
+        scheduler.Tick(terrain,0,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"ready credit release admits queued successor");
+        const bool readmitted=scheduler.GetRetainedGenerationResultCount()==8 &&
+            scheduler.GetCompletedReadyCount()==8 && scheduler.IsPending(next);
+        scheduler.Tick(terrain,32,0);
+        const bool installed=scheduler.GetRetainedGenerationResultCount()==0 &&
+            scheduler.GetCompletedReadyCount()==0 && terrain.GetBlock({30*CHUNK_SIZE+8,-40,8})==8 &&
+            terrain.GetBlock({10*CHUNK_SIZE+8,-40,8})==BLOCK_AIR && credits.WorkSlotsInUse()==0;
+        scheduler.RequestLoad({50,0,0},1,request); scheduler.StartQueuedGenerationWorkers(1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"ready retirement fixture completes");
+        scheduler.CancelAllPending();
+        const bool all_retired=scheduler.GetRetainedGenerationResultCount()==0;
+        report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},
+            {"ready_requeue_holds_credit",held},{"stale_release_exact",stale_released},
+            {"automatic_readmission",readmitted},{"actual_install_releases_credit",installed},
+            {"cancel_all_releases_credit",all_retired}};
+        require(ready_full && held && stale_released && readmitted && installed && all_retired,
+            "generation result quota spans compute ready install and exact retirement");
       });
       if(flow_only) RunTerrainProbePhase([&] {
         auto owner=std::make_unique<UWorld>(nullptr,nullptr); auto &test=*owner;

@@ -395,6 +395,14 @@ void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 bool UChunkLoadScheduler::ScheduleWorker(
     const PendingRequest &request, const int generation_start_cap_per_frame)
 {
+  size_t retained = RetainedResults->load(std::memory_order_relaxed);
+  do
+  {
+    if (retained >= kMaxRetainedGenerationResults) return false;
+  } while (!RetainedResults->compare_exchange_weak(retained,retained+1,
+      std::memory_order_relaxed));
+  auto result_slot = std::make_shared<ResultSlotGuard>();
+  result_slot->count = RetainedResults;
   if (!UPipelineAdmission::Get().TryAcquireWorkSlot()) return false;
   struct WorkSlotGuard
   {
@@ -430,9 +438,10 @@ bool UChunkLoadScheduler::ScheduleWorker(
        max_height, request_queue_live_at_schedule,
        request_queue_heap_at_schedule, worker_pending_at_submit,
        worker_active_at_submit, worker_count,
-       generation_start_cap_per_frame, work_slot = std::move(work_slot)]()
+       generation_start_cap_per_frame, work_slot = std::move(work_slot), result_slot]()
       {
         PendingResult pending;
+        pending.resultSlot = result_slot;
         pending.requestId = request_id;
         pending.demandId = demand_id;
         pending.priority = priority;
@@ -713,9 +722,10 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
 {
   const JobThreadPoolSnapshot snapshot = Pool.GetSnapshot();
   const std::size_t occupied = snapshot.pending + snapshot.active;
-  return snapshot.workers > occupied
-             ? static_cast<int>(snapshot.workers - occupied)
-             : 0;
+  const size_t retained = GetRetainedGenerationResultCount();
+  return static_cast<int>(std::min(
+      snapshot.workers > occupied ? snapshot.workers - occupied : size_t{0},
+      retained < kMaxRetainedGenerationResults ? kMaxRetainedGenerationResults-retained : size_t{0}));
 }
 
 bool UChunkLoadScheduler::IsCommitted(glm::ivec3 coord) const

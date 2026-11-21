@@ -5,6 +5,8 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include <chrono>
+#include <atomic>
+#include <memory>
 #include <cstdint>
 #include <functional>
 #include <queue>
@@ -30,6 +32,9 @@ enum class ChunkLoadState
 class UChunkLoadScheduler
 {
 public:
+  static constexpr size_t kMaxRetainedGenerationResults = 8;
+  size_t GetRetainedGenerationResultCount() const
+  { return RetainedResults->load(std::memory_order_relaxed); }
   using MarkChunkDirtyFn =
       std::function<void(glm::ivec3 coord, int minY, int maxY,
                          bool fluidSealed)>;
@@ -92,8 +97,14 @@ private:
     bool hasColumnOrigin{false};
   };
 
+  struct ResultSlotGuard
+  {
+    std::shared_ptr<std::atomic<size_t>> count;
+    ~ResultSlotGuard() { count->fetch_sub(1,std::memory_order_relaxed); }
+  };
   struct PendingResult
   {
+    std::shared_ptr<ResultSlotGuard> resultSlot;
     ChunkPopulateResult result;
     uint64_t requestId{0};
     uint64_t demandId{0};
@@ -126,6 +137,10 @@ private:
 
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
+  // A result keeps its slot while queued/running/ready or held by Tick.
+  // Independent of the shared compute slot, which ends with the worker.
+  std::shared_ptr<std::atomic<size_t>> RetainedResults{
+      std::make_shared<std::atomic<size_t>>(0)};
   // Completed must outlive Pool (members destroy in reverse declaration order).
   UCompletedJobQueue<PendingResult> Completed;
   UJobThreadPool Pool;

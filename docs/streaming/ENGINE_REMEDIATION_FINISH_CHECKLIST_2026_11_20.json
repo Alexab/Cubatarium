@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 LIMIT.Q09: shared compute/pool admission now accepted with real retained-request normal-Tick successor. Next derive/implement Requested/Ready metadata count and generated-buffer byte ownership/admission, then IO Q10 and relight storage Q08. Q03_Q05 shared work-slot producer composition accepted partially, payload-byte domains remain explicit. Q01 live-record N depends on those envelopes. Q04 scoped limit REUSE. Full S0..S6 unchanged/open; no fresh audit.",
+  "next_action": "S4.02 LIMIT.Q09: shared compute/pool and retained generation result-count8 accepted. Next implement/derive Requested/priority-heap/Committed metadata envelope and generated-buffer bytes;8 result slots do not bound bytes. Then IO Q10 and relight storage Q08. Q01 live-record N depends on these domains. Reuse accepted result-lease and shared-admission scenes absent dependent changes. Full S0..S6 unchanged/open.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

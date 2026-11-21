@@ -713,7 +713,8 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Shared compute-slot and actual pool refusal accepted: exact Requested retention/rerank, normal-Tick actual terrain successor, cancel while refused. Requested/Ready/metadata count and generated-buffer bytes remain CHECK."
+          "partial_result": "Shared compute/pool admission and scheduler-local8 queued/running/Ready result leases accepted; exact retained request, zero-commit requeue, stale release, automatic readmission, actual ApplyTo and CancelAll PASS. Requested/heap/Committed metadata and generated-buffer byte envelope remain CHECK.",
+          "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",

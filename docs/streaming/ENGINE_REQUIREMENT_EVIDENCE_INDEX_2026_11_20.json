@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.retained-result-count",
+      "status": "SCOPED_PASS_BYTES_REQUESTED_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
+      "scope": "Scheduler-local result lease reserved before shared compute/pool admission; closure and PendingResult share it through running, Completed, Tick drained batch/requeue. Payload is destroyed before last lease. Apply/stale/discard/reset release by lifetime; available worker slots include result room. Actual8-ready/ninth-retained native matrix PASS; no byte envelope claim."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.shared-compute-admission",
       "status": "SCOPED_PASS_STORAGE_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
