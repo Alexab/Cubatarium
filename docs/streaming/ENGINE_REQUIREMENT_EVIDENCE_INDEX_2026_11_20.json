@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q09.outside-radius-current-return",
+      "status": "SCOPED_PASS_Q09_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-generation-outside-acceptance-20261121.json",
+      "scope": "Controlled payload, actual scheduler/pool/ready/buffer ApplyTo and same radius method used by WorldStreaming. Scheduler queued/running/completed stages; no separate pool saturation or camera travel/generator algorithm/backend/framebuffer/performance claim. Existing cancellation9/stale-ready regression PASS. Q09-C1 ADMISSION and LIMIT-C1 remain; full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q09.cancel-reset-current-successor",
       "status": "SCOPED_PASS_Q09_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

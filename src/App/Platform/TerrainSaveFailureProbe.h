@@ -1152,7 +1152,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(current,"actual current generation buffer applies and notifies once after stale retirement");
       }
       {
-        for(int operation=0;operation<3;++operation) for(int phase=0;phase<3;++phase) {
+        for(int operation=0;operation<4;++operation) for(int phase=0;phase<3;++phase) {
           struct GatePopulator final : IUChunkPopulator {
             std::promise<void> entered,release;
             std::future<void> entered_future=entered.get_future();
@@ -1161,7 +1161,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             void Release() { if(!released) { released=true; release.set_value(); } }
             ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
               ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
-              result.buffer.SetBlock({request.settings.Seed==17?8:10,-40,8},8);
+              result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+
+                  (request.settings.Seed==17?8:10),-40,8},8);
               if(request.settings.Seed==17) {
                 entered.set_value();
                 (void)resume.wait_for(std::chrono::seconds(5));
@@ -1194,6 +1195,19 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               scheduler.Tick(terrain,0,0);
             }
           }
+          const glm::ivec3 retained(1,0,0);
+          uint64_t retained_token=0;
+          if(operation==3) {
+            generation.Bump(retained);
+            auto retained_settings=old_settings; retained_settings.Seed=43;
+            scheduler.RequestLoad(retained,2,retained_settings);
+            retained_token=generation.Current(retained).sequence;
+            // Center Y is deliberately unrelated; generation owns XZ columns.
+            require(scheduler.CancelPendingOutsideRadius({2,400,0},1)==1 &&
+                scheduler.GetState(retained)==ChunkLoadState::Requested &&
+                generation.Current(retained).sequence==retained_token,
+                "outside radius abandons only old owner and preserves boundary demand");
+          }
           if(operation==0) scheduler.Cancel(column);
           if(operation==1) scheduler.Invalidate(column);
           if(operation==2) scheduler.CancelAllPending(std::chrono::milliseconds(0));
@@ -1206,7 +1220,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           const bool preserved=arrivals==0 && terrain.GetBlock({8,-40,8})==9 &&
               scheduler.GetState(column)==ChunkLoadState::Requested &&
               generation.Current(column).sequence==current_token;
-          report["generation_cancel_lifetime"].push_back({{"operation",operation},{"phase",phase},
+          const char *result_key=operation==3?"generation_outside_lifetime":"generation_cancel_lifetime";
+          report[result_key].push_back({{"operation",operation},{"phase",phase},
               {"new_owner_preserved",preserved},{"old_arrivals",arrivals}});
           require(preserved,"cancelled generation cannot install or retire newer queued owner");
           require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
@@ -1215,8 +1230,20 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
               terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
               generation.Current(column).sequence==current_token;
-          report["generation_cancel_lifetime"].back()["current_arrival"]=current;
+          report[result_key].back()["current_arrival"]=current;
           require(current,"cancelled generation successor installs exactly once");
+          if(operation==3) {
+            require(scheduler.GetState(retained)==ChunkLoadState::Requested &&
+                generation.Current(retained).sequence==retained_token &&
+                scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
+                "retained boundary request computes without repeated ingress");
+            scheduler.Tick(terrain,1,0);
+            const bool retained_arrival=scheduler.IsCommitted(retained) && arrivals==2 &&
+                terrain.GetBlock({CHUNK_SIZE+10,-40,8})==8 &&
+                generation.Current(retained).sequence==retained_token;
+            report[result_key].back()["retained_arrival"]=retained_arrival;
+            require(retained_arrival,"outside cancellation preserves actual boundary arrival");
+          }
         }
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
