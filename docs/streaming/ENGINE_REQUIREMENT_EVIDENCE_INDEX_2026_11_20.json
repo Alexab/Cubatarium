@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.04.first-render-barrier-baseline",
+      "status": "BASELINE_PASS_CONTROLLED_WAIT_PENDING",
+      "receipt": "build/desktop-msvc/s4-first-paint-barrier-observation-20261121.json",
+      "scope": "S4.04 candidate final-render admission barrier baseline CPU/Flat Windows: State stays Loading through platform movement/streaming until same RenderFrame readiness check and InGame transition. Actual first witness ready0 debt, no generation commit between barrier and paint. wait_ms0 means late-debt repair/loading branch not exercised. Original13/31 failure cases, Full light, Android runtime and final complete startup acceptance remain OPEN."
+    },
+    {
       "id": "S4.04.controlled-late-generation-invalidates-settled-publication",
       "status": "SCOPED_PASS_FIRST_PAINT_FIX_OPEN",
       "receipt": "build/desktop-msvc/s4-late-first-paint-transition-acceptance-20261121.json",

@@ -483,6 +483,8 @@ void UApplication::ShowWorldProgressScreen()
 void UApplication::BeginWorldOperation(WorldRunnerRequest request,
                                        std::function<void()> onComplete)
 {
+  PendingFirstWorldPaint = false;
+  FirstWorldPaintWaitMs = 0.0;
   if (!Core || !World)
   {
     return;
@@ -613,7 +615,9 @@ void UApplication::OnWorldOperationFinished()
 
   if (WorldOpRunner && WorldOpRunner->ShouldEnterGame())
   {
-    EnterGameAfterWorldChange();
+    World->PrepareEnterGameSession();
+    PendingFirstWorldPaint = true;
+    FirstWorldPaintWaitMs = 0.0;
   }
   else if (WorldOpOnComplete)
   {
@@ -643,7 +647,11 @@ void UApplication::RequestQuit()
 #endif
 }
 
-void UApplication::ShowMainMenu() { ScreenNav.ShowMainMenu(); }
+void UApplication::ShowMainMenu()
+{
+  PendingFirstWorldPaint = false;
+  ScreenNav.ShowMainMenu();
+}
 
 void UApplication::SetHotbarCountSetting(int count)
 {
@@ -750,7 +758,6 @@ void UApplication::EnterGameAfterWorldChange()
     {
       Geometry->SetShowHud(Ui.LegacyHud);
     }
-    World->PrepareEnterGameSession();
     LogWorldLoadDiag("enter_game_after_world_change", *World);
     if (GameSession)
     {
@@ -3335,6 +3342,24 @@ void UApplication::Update(double dt)
 
   if (State == AppState::Loading)
   {
+    if (PendingFirstWorldPaint && World)
+    {
+      FirstWorldPaintWaitMs += dt * 1000.0;
+      if (!World->SampleRequiredPresentationCoverage(
+              RequiredPresentationProbeMode::StopOnDebt).Ready())
+      {
+        if (!World->IsEnterLitGateActive())
+          World->BeginEnterLitGate();
+        World->ValidateRequiredEnterPresentation(FirstWorldPaintWaitMs);
+        World->TickEnterWarmupDrainFrame(EnterWarmupMeshBudgetDefault(),
+            std::max(1, URuntimeTuning::Get().EnterGateMeshDrainIterations), 12.0);
+      }
+      if (ProgressScreen)
+        ProgressScreen->ApplySnapshot(ProgressSink.Get());
+      GuiContext->Update(dt);
+      SyncCursorVisibility();
+      return;
+    }
 #if defined(__ANDROID__)
     constexpr int kAndroidLoadChunkBudget = 4;
     constexpr int kLoadChunkBudget = kAndroidLoadChunkBudget;
@@ -3779,6 +3804,22 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     CubatariumLogError("App",
                        "RenderFrame skipped viewport: zero framebuffer size");
     return;
+  }
+  if (PendingFirstWorldPaint && State == AppState::Loading && World && Geometry)
+  {
+    // Remain Loading through the platform's movement/streaming phase. The
+    // prepared world's current inputs are checked in the same render call
+    // which will paint it, rather than before a normal streaming tick.
+    Geometry->PrepareFrameRendering();
+    if (World->SampleRequiredPresentationCoverage(
+            RequiredPresentationProbeMode::StopOnDebt).Ready())
+    {
+      World->EndEnterLitGate();
+      PendingFirstWorldPaint = false;
+      CubatariumLogInfo("FirstPaintBarrier", "ready_before_render wait_ms=" +
+          std::to_string(FirstWorldPaintWaitMs));
+      EnterGameAfterWorldChange();
+    }
   }
   if (State == AppState::MainMenu || State == AppState::Loading)
   {

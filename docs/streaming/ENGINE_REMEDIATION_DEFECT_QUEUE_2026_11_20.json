@@ -335,7 +335,7 @@
       },
       "blocks_surface_motor_proof": false,
       "blocks_overall_acceptance": true,
-      "next_action": "Inspect first-paint admission versus required presentation witness for the 13 named unready sections; identify the authority mismatch before one targeted fix/verification.",
+      "next_action": "Controlled pending-debt application barrier test (exercise Loading consumer, then render only ready), original Full-light13 scenario and final requirement evidence. Do not close from wait_ms0 baseline.",
       "additional_observation": {
         "artifact": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
         "status": "Startup PASS in debt-target run; does not invalidate original 13-section FAIL or establish a fix."
@@ -358,8 +358,14 @@
           "status": "SCOPED_CAUSAL_TRANSITION_PASS_FIX_OPEN",
           "scope": "S4.04 controlled data/publication transition: actual CPU/Flat settled neighbour, real generation scheduler worker/Ready payload held with zero commit budget then actual buffer ApplyTo. Held payload preserves current publication, late neighbour install invalidates exact target publication/input stamp, real mesh consumer republishes current successor <=8 passes. Payload and arrival counter adapters explicit. Not actual UI first-frame barrier, exact original31/13 section cause, Full/backend/framebuffer or performance acceptance.",
           "next_action": "Design first-paint barrier at final pre-draw boundary with real repair consumer and current required-ring readiness; do not accept earlier warmup sample after normal-frame commits. Retain original13/31 FAIL."
+        },
+        {
+          "evidence": "build/desktop-msvc/s4-first-paint-barrier-observation-20261121.json",
+          "status": "BASELINE_PASS_CONTROLLED_WAIT_PENDING",
+          "scope": "S4.04 candidate final-render admission barrier baseline CPU/Flat Windows: State stays Loading through platform movement/streaming until same RenderFrame readiness check and InGame transition. Actual first witness ready0 debt, no generation commit between barrier and paint. wait_ms0 means late-debt repair/loading branch not exercised. Original13/31 failure cases, Full light, Android runtime and final complete startup acceptance remain OPEN."
         }
-      ]
+      ],
+      "candidate_fix": "Hold Loading after operation; bounded required-input/gate/mesh consumer while waiting. Final same-render readiness check transitions InGame before first Paint, preventing intervening normal streaming tick."
     },
     {
       "id": "surface-packed-floor-sky-zero",

@@ -311,6 +311,8 @@ private:
   bool QuitRequested{false};
 
   UWorldProgressScreen *ProgressScreen{nullptr};
+  bool PendingFirstWorldPaint{false};
+  double FirstWorldPaintWaitMs{0.0};
   std::unique_ptr<UWorldOperationRunner> WorldOpRunner;
   ULatestProgressSink ProgressSink;
 
