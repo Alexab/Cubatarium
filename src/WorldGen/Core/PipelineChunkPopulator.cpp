@@ -259,10 +259,10 @@ struct CaptureBufferScope
   explicit CaptureBufferScope(
       UBlockWorld &world, UChunkBuffer &buffer, glm::ivec3 ownerChunk,
       const UBlockRegistry &registry,
-      const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
+      const GenerationVector<std::pair<BlockId, int>> &treeBlockRanks)
       : World(world)
   {
-    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks);
+    buffer.SetWorldGenOwnerChunk(ownerChunk, registry, treeBlockRanks.data(),treeBlockRanks.size());
     World.SetCaptureBuffer(&buffer);
   }
   ~CaptureBufferScope() { World.SetCaptureBuffer(nullptr); }
@@ -273,12 +273,12 @@ struct CaptureBufferScope
 } // namespace
 
 /// Carry deterministic priorities for all flora voxels across chunk borders.
-std::vector<std::pair<BlockId, int>>
+GenerationVector<std::pair<BlockId, int>>
 CollectFloraFeatureBlockRanks(UBlockRegistry &registry, UObjectLibrary *objects,
                               const std::string &ownerPackId,
                               const ObjectFeatureConfig *features)
 {
-  std::vector<std::pair<BlockId, int>> ranks;
+  GenerationVector<std::pair<BlockId, int>> ranks;
   if (!features)
   {
     return ranks;
@@ -576,6 +576,18 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   UObjectLibrary *objects = request.objects ? request.objects : Objects;
   // Context cleanup runs before this lease ends, including on quota unwind.
   USettingsTextBudget context_settings_budget(settings,ExternalStringCapacityBytes(WorldgenOwnerPackId));
+  ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
+  // Refresh can refuse during block-name resolution after copying settings.
+  // Install text cleanup before Ensure, while its reservation is still alive.
+  struct ReleaseContextText {
+    ThreadLocalPipelineState &state;
+    ~ReleaseContextText() {
+      if(auto *pipeline=dynamic_cast<UComposableWorldGenerator *>(state.pipeline.get())) {
+        ReleaseRuntimeSettingsText(pipeline->GetContext().Settings);
+        std::string{}.swap(pipeline->GetContext().WorldgenOwnerPackId);
+      }
+    }
+  } release_context_text{tls};
   IUWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
       Registry, objects, WorldgenOwnerPackId, settings);
   if (!pipeline)
@@ -583,7 +595,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     return result;
   }
 
-  ThreadLocalPipelineState &tls = GetThreadLocalPipeline();
   UBlockWorld &genWorld = tls.world;
   UPopulationScratchBudget scratch_budget(genWorld.GetChunkManager(),ActiveBufferBudget);
   auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline);
@@ -595,11 +606,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     ~ReleasePopulationScratch() {
       if(pipeline) {
         pipeline->EndChunkCoarseCache();
-        // Refresh restores the immutable request settings before next use.
-        // Selection and owner lookup have finished; no arbitrary identifier
-        // capacity should survive after the request settings lease retires.
-        ReleaseRuntimeSettingsText(pipeline->GetContext().Settings);
-        std::string{}.swap(pipeline->GetContext().WorldgenOwnerPackId);
       }
     }
   } release_scratch{composable};

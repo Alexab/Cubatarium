@@ -51,6 +51,8 @@ public:
   void SetWorldGenOwnerChunk(
       glm::ivec3 chunkCoord, const UBlockRegistry &registry,
       const std::vector<std::pair<BlockId, int>> &treeBlockRanks = {});
+  void SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,const UBlockRegistry &registry,
+      const std::pair<BlockId,int> *treeBlockRanks,size_t rankCount);
   BlockId GetBlock(glm::ivec3 worldPos) const override;
   uint8_t GetFluidPacked(glm::ivec3 worldPos) const;
   uint8_t GetLightPacked(glm::ivec3 worldPos) const;

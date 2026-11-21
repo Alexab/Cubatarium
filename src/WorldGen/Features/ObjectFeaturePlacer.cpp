@@ -134,7 +134,7 @@ uint32_t FeatureHash(int x, int z, uint32_t Seed)
 bool BiomeMatches(BiomeId biome, const ObjectFeatureRule &rule,
                   const BiomeKey &biomeKey)
 {
-  const std::string key = biomeKey.empty() ? BiomeIdToString(biome) : biomeKey;
+  const std::string_view key = biomeKey.empty() ? std::string_view(BiomeIdToString(biome)) : std::string_view(biomeKey);
   for (const BiomeKey &allowedKey : rule.BiomeKeys)
   {
     if (allowedKey == key)
@@ -1655,8 +1655,9 @@ bool TryPlaceObjectPool(
         continue;
       }
     }
-    const float packMul = UWorldGenPack::FeatureWeightMultiplier(
-        biomeKey.empty() ? BiomeIdToString(biome) : biomeKey, ruleFeatureKey);
+    const std::string legacyBiomeKey=BiomeIdToString(biome);
+    const auto &lookupBiomeKey=biomeKey.empty() ? legacyBiomeKey : biomeKey;
+    const float packMul = UWorldGenPack::FeatureWeightMultiplier(lookupBiomeKey,ruleFeatureKey);
     if (packMul <= 0.0f)
     {
       continue;

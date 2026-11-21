@@ -4,6 +4,7 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ResourcePacks/ResourcePack.h"
 #include "WorldGen/Core/WorldGenBlockResolver.h"
+#include "Core/Memory/BufferAllocationBudget.h"
 
 #include <filesystem>
 #include <glm/glm.hpp>
@@ -97,6 +98,24 @@ static void TestRealPackScatterBlocksResolve()
   auto merge = std::make_shared<cutum::UBlockMergeRegistry>();
   merge->Rebuild({*manifest}, placeholder, 16);
   merge->SetWorldgenOwnerPackId("minetest_default_16");
+  const auto lookup_pressure=[&](const std::string &name) {
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1024);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    bool refused=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)merge->LookupBlockName(name);} catch(const cutum::UBufferBudgetExceeded &) {refused=true;}
+    }
+    FluidTest::Expect(refused && budget->UsedBytes()==1,kTestName,"native merge derived lookup name refuses before allocation and releases credit");
+    budget->Release(*peer,1);
+  };
+  const auto descriptors=merge->GetCubeDescriptors().size();
+  merge->SetWorldgenOwnerPackId(std::string(64*1024,'p'));
+  lookup_pressure("rose");
+  merge->SetWorldgenOwnerPackId("minetest_default_16");
+  lookup_pressure("unknown::"+std::string(64*1024,'n'));
+  FluidTest::Expect(merge->LookupBlockName("unknown::rose")==merge->LookupBlockName("rose") &&
+      merge->GetCubeDescriptors().size()==descriptors,kTestName,"native qualified miss preserves local fallback and never creates registry entries");
 
   cutum::UBlockRegistry registry(nullptr);
   registry.SetMergeRegistry(merge);

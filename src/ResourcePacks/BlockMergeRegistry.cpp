@@ -1,6 +1,7 @@
 #include "Core/UiPump.h"
 #include "Core/StallTimer.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
+#include "Core/Memory/GenerationString.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureBase.h"
 #include "ResourcePacks/BlockNameUtil.h"
@@ -526,9 +527,8 @@ BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
   }
   if (!WorldgenOwnerPackId.empty() && !IsQualifiedBlockName(name))
   {
-    const std::string qualified =
-        MakeQualifiedBlockName(WorldgenOwnerPackId, name);
-    const auto qualifiedIt = NameToId.find(qualified);
+    const UGenerationString qualified({WorldgenOwnerPackId,kQualifiedBlockSeparator,name});
+    const auto qualifiedIt = NameToId.find(qualified.Get());
     if (qualifiedIt != NameToId.end())
     {
       return qualifiedIt->second;
@@ -541,8 +541,8 @@ BlockId UBlockMergeRegistry::LookupBlockName(const std::string &name) const
   }
   if (IsQualifiedBlockName(name))
   {
-    const std::string local = LocalBlockName(name);
-    const auto localIt = NameToId.find(local);
+    const UGenerationString local({std::string_view(name).substr(name.find(kQualifiedBlockSeparator)+2)});
+    const auto localIt = NameToId.find(local.Get());
     if (localIt != NameToId.end())
     {
       return localIt->second;

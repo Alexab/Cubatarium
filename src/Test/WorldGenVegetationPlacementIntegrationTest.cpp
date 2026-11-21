@@ -1,6 +1,7 @@
 #include "Test/FluidTestHelpers.h"
 
 #include "Blocks/BlockRegistry.h"
+#include "Core/Memory/GenerationString.h"
 #include "ResourcePacks/ResourcePack.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -1922,6 +1923,158 @@ int main(int argc, char **argv)
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
     return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--rank-name-budget-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    cutum::ObjectFeatureConfig features; cutum::ObjectFeatureRule scatter;
+    scatter.Mode=cutum::ObjectFeatureRuleMode::ScatterBlocks; scatter.Scatter.BlockName="mtg_tree";
+    features.Decoration.push_back(scatter);
+    size_t refused=0;
+    const auto pressure=[&](const char *name,size_t limit,auto operation) {
+      auto budget=std::make_shared<cutum::UBufferAllocationBudget>(limit);
+      auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+      bool denied=false;
+      {
+        cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+        try {operation();} catch(const cutum::UBufferBudgetExceeded &) {denied=true;}
+      }
+      std::cout << "rank_name_case=" << name << " refused=" << denied << " remaining=" << budget->UsedBytes() << std::endl;
+      FluidTest::Expect(budget->UsedBytes()==1,kTestName,"rank and name failure returns to competing credit");
+      budget->Release(*peer,1); refused+=denied;
+    };
+    pressure("flora_ranks",1,[&] {
+      const auto ranks=cutum::CollectFloraFeatureBlockRanks(registry,nullptr,"",&features);
+      FluidTest::Expect(ranks.size()==1,kTestName,"rank fixture resolves one non-AIR feature block");
+    });
+    const std::string long_owner(64*1024,'p');
+    pressure("qualified_lookup",1024,[&] {
+      FluidTest::Expect(cutum::ResolvePackScatterBlockId(registry,long_owner,"mtg_tree")!=cutum::BLOCK_AIR,
+          kTestName,"qualified miss retains local block lookup fallback");
+    });
+    const std::string long_feature(64*1024,'f');
+    pressure("mapgen_suffix",1024,[&] {(void)cutum::UWorldGenPack::FeatureWeightMultiplier("plains",long_feature);});
+    std::cout << "rank_name_refusals=" << refused << "/3" << std::endl;
+    FluidTest::Expect(refused==3,kTestName,"flora staging and derived lookup names reserve before allocation");
+    auto roomy=std::make_shared<cutum::UBufferAllocationBudget>(8*1024*1024);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); roomy->Reserve(*peer,1);
+    size_t boundaries=0;
+    {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      for(size_t length:{0u,1u,15u,16u,17u,31u,32u,47u,48u,255u,256u,65536u}) {
+        const std::string source(length,'s');
+        {
+          const cutum::UGenerationString text({source});
+          const auto actual=cutum::ExternalStringCapacityBytes(text.Get());
+          FluidTest::Expect(text.Get()==source && actual<=roomy->UsedBytes()-1,kTestName,
+              "fresh derived-name allocation fits pre-reserved envelope at capacity boundaries");
+        }
+        FluidTest::Expect(roomy->UsedBytes()==1,kTestName,"derived name frees before reservation retires");
+        ++boundaries;
+      }
+      const cutum::UGenerationString qualified({"pack","::","local"});
+      FluidTest::Expect(qualified.Get()=="pack::local",kTestName,"derived name concatenation preserves separators exactly");
+    }
+    features.Decoration.push_back(scatter);
+    cutum::ObjectFeatureRule tree; tree.Mode=cutum::ObjectFeatureRuleMode::ProceduralTree;
+    tree.Tree.TrunkBlock="mtg_tree"; tree.Tree.LeavesBlock="mtg_leaves";
+    features.Vegetation.push_back(tree);
+    scatter.Scatter.BlockName="mtg_mossycobble"; features.Structures.push_back(scatter);
+    {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      const auto ranks=cutum::CollectFloraFeatureBlockRanks(registry,nullptr,"",&features);
+      FluidTest::Expect(ranks.size()==3 && ranks[0].second==3 && ranks[1].second==1 && ranks[2].second==1,
+          kTestName,"rank staging keeps first-seen order, maximum priority and duplicate elimination");
+      cutum::UChunkBuffer left,right;
+      left.SetWorldGenOwnerChunk({0,0,0},registry,ranks.data(),ranks.size());
+      const std::vector<std::pair<cutum::BlockId,int>> legacy(ranks.begin(),ranks.end());
+      right.SetWorldGenOwnerChunk({1,0,0},registry,legacy);
+      left.SetBlock({16,8,8},ranks[0].first); right.SetBlock({16,8,8},ranks[1].first);
+      cutum::UBlockWorld a,b;
+      left.ApplyTo(a);right.ApplyTo(a);right.ApplyTo(b);left.ApplyTo(b);
+      FluidTest::Expect(a.GetBlock({16,8,8})==ranks[0].first && b.GetBlock({16,8,8})==ranks[0].first,
+          kTestName,"pointer/count and legacy rank adapters preserve cross-chunk commit order independence");
+    }
+    FluidTest::Expect(roomy->UsedBytes()==1,kTestName,"rank vectors and retained buffer rank copies all retire");
+    std::weak_ptr<cutum::BufferBudgetJob> escaped_job;
+    {
+      cutum::GenerationVector<std::pair<cutum::BlockId,int>> escaped;
+      {
+        auto job=std::make_shared<cutum::BufferBudgetJob>(); escaped_job=job;
+        cutum::UBufferBudgetScope active({roomy,job});
+        escaped=cutum::CollectFloraFeatureBlockRanks(registry,nullptr,"",&features);
+      }
+      FluidTest::Expect(!escaped_job.expired() && roomy->UsedBytes()>1,kTestName,
+          "returned rank staging retains actual original job credit beyond the active scope");
+    }
+    FluidTest::Expect(escaped_job.expired() && roomy->UsedBytes()==1,kTestName,"escaped rank result retires final job owner and credit");
+    const auto tree_id=registry.GetPackBlockIdByTypeName("mtg_tree");
+    for(int kind=0;kind<4;++kind) {
+      auto refs=std::make_shared<cutum::WorldGenRefsCatalog>(*cutum::UWorldGenRefs::GetSnapshot());
+      for(auto &[key,spec]:*refs) {spec.BlockNames={"mtg_tree"};spec.FallbackSlot.clear();}
+      std::vector<std::string> keys;
+      for(int n=0;n<8192;++n) keys.push_back(std::string(32,'r')+std::to_string(n));
+      (*refs)["stone"].BlockNames.clear(); (*refs)["stone"].FallbackSlot=keys[0];
+      for(size_t n=0;n<keys.size();++n)
+        (*refs)[keys[n]].FallbackSlot=n+1<keys.size() ? keys[n+1] : "";
+      if(kind==0) (*refs)[keys.back()].BlockNames={"mtg_tree"};
+      if(kind==1) (*refs)[keys.back()].FallbackSlot="mtg_tree"; // terminal raw block name
+      if(kind==2) (*refs)[keys.back()].FallbackSlot=keys[0];
+      if(kind==3) (*refs)["stone"].FallbackSlot="stone"; // unrelated entries must not prolong cycle
+      auto content=cutum::CaptureWorldGenContentSnapshot();content.Refs=refs;
+      cutum::UWorldGenContentPinScope pin(std::move(content));
+      auto no_heap=std::make_shared<cutum::UBufferAllocationBudget>(1);
+      auto other=std::make_shared<cutum::BufferBudgetJob>(); no_heap->Reserve(*other,1);
+      cutum::WorldGenBlockResolver resolved;
+      {
+        cutum::UBufferBudgetScope active({no_heap,std::make_shared<cutum::BufferBudgetJob>()});
+        resolved.Resolve(registry,"");
+      }
+      FluidTest::Expect(resolved.Stone==(kind<2 ? tree_id : cutum::BLOCK_AIR) && resolved.Grass==tree_id &&
+          no_heap->UsedBytes()==1 && no_heap->RefusalCount()==0,kTestName,
+          "pinned8192-link fallback, raw terminal and cycle preserve results without copied visited names or recursion");
+      no_heap->Release(*other,1);
+    }
+    {
+      auto pack=std::make_shared<cutum::WorldGenPack>(*cutum::UWorldGenPack::GetSnapshot());
+      auto &weights=pack->Biomes["plains"].FeatureWeights;
+      weights["direct"]=0.75f; weights["direct_mapgen"]=0.25f;
+      weights["fallback_mapgen"]=0.25f; weights["negative_mapgen"]=-1;
+      weights[long_feature+"_mapgen"]=0.5f;
+      auto content=cutum::CaptureWorldGenContentSnapshot(); content.Pack=pack;
+      cutum::UWorldGenContentPinScope pin(std::move(content));
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      FluidTest::Expect(cutum::UWorldGenPack::FeatureWeightMultiplier("plains","direct")==0.75f &&
+          cutum::UWorldGenPack::FeatureWeightMultiplier("plains","fallback")==0.25f &&
+          cutum::UWorldGenPack::FeatureWeightMultiplier("plains","negative")==0 &&
+          cutum::UWorldGenPack::FeatureWeightMultiplier("plains",long_feature)==0.5f &&
+          cutum::UWorldGenPack::FeatureWeightMultiplier("plains","missing")==1 && roomy->UsedBytes()==1,
+          kTestName,"direct weight precedence, suffix fallback, clamp, long names and missing default remain unchanged");
+    }
+    roomy->Release(*peer,1);
+    const std::string custom_biome(64*1024,'b');
+    cutum::UBlockWorld flora_world; auto flora_settings=MakeVegetationSettings();
+    flora_settings.SeaLevel=48; flora_settings.MaxHeight=128;
+    cutum::WorldGenContext flora(flora_world,registry,flora_settings);
+    flora.WorldgenOwnerPackId="minetest_default_16"; flora.ResolveBlockIds();
+    for(int x=0;x<32;++x) for(int z=0;z<32;++z) flora_world.SetBlock({x,51,z},flora.Blocks.Grass);
+    cutum::ObjectFeatureConfig custom; scatter.Scatter.BlockName="mtg_grass_1";
+    scatter.Scatter.Radius=0; scatter.Scatter.Attempts=1; scatter.Spacing=1;
+    scatter.BiomeKeys={custom_biome}; custom.Decoration={scatter};
+    (void)custom.Diagnostics.Get(custom.Decoration); flora.ObjectFeatures=&custom;
+    size_t placed=0;
+    {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(false);
+      for(int x=0;x<32;++x) for(int z=0;z<32;++z)
+        placed+=cutum::TryPlaceDecorationFeatures(flora,x,z,51,cutum::BiomeId::Plains,custom_biome);
+    }
+    FluidTest::Expect(placed>0 && roomy->UsedBytes()==0 && custom.Decoration[0].BiomeKeys[0]==custom_biome,
+        kTestName,"borrowed long biome matching and weight lookup preserve actual placement and caller key");
+    std::cout << "rank_name_boundaries=" << boundaries << " fallback_cases=4 chain_links=8192 peak=" << roomy->PeakBytes()
+        << " final=" << roomy->UsedBytes() << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--feature-diagnostics-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
@@ -2402,6 +2555,21 @@ int main(int argc, char **argv)
     auto baseline=populator.Populate(request);
     FluidTest::Expect(baseline.buffer.GetOwnedAllocationBytes()>0 && empty(),kTestName,
         "real successful population releases thread scratch cache and large seed display text");
+    const std::string owner_name="minetest_default_16";
+    auto refresh_quota=std::make_shared<cutum::UBufferAllocationBudget>(
+        2*cutum::RuntimeSettingsTextCapacityBytes(request.settings)+cutum::ExternalStringCapacityBytes(owner_name)+1);
+    auto refresh_peer=std::make_shared<cutum::BufferBudgetJob>(); refresh_quota->Reserve(*refresh_peer,1);
+    bool refresh_refused=false;
+    {
+      cutum::UBufferBudgetScope active({refresh_quota,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)populator.Populate(request);} catch(const cutum::UBufferBudgetExceeded &) {refresh_refused=true;}
+    }
+    const auto refresh_text=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_config_text_capacity_bytes;
+    std::cout << "refresh_name_refused=" << refresh_refused << " retained_text=" << refresh_text
+        << " credits=" << refresh_quota->UsedBytes() << std::endl;
+    FluidTest::Expect(refresh_refused && empty() && refresh_quota->UsedBytes()==1,kTestName,
+        "quota refusal during context block-name resolution releases actual text before context reservation");
+    refresh_quota->Release(*refresh_peer,1);
     auto sampling_settings=request.settings;
     sampling_settings.WorldGenPackId=std::string(1024*1024,'p');
     cutum::UColumnSampleBuilder sample_builder(nullptr,nullptr,sampling_settings);

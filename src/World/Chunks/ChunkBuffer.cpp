@@ -187,6 +187,12 @@ void UChunkBuffer::SetWorldGenOwnerChunk(
     glm::ivec3 chunkCoord, const UBlockRegistry &registry,
     const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
 {
+  SetWorldGenOwnerChunk(chunkCoord,registry,treeBlockRanks.data(),treeBlockRanks.size());
+}
+
+void UChunkBuffer::SetWorldGenOwnerChunk(glm::ivec3 chunkCoord,const UBlockRegistry &registry,
+    const std::pair<BlockId,int> *treeBlockRanks,size_t rankCount)
+{
   EnsureStorage();
   Payload->State.DecodedFrameValid = false;
   Payload->State.WorldGenOwnerChunk = chunkCoord;
@@ -205,8 +211,9 @@ void UChunkBuffer::SetWorldGenOwnerChunk(
       Payload->WorldGenTreeBlockRanks[id] = rank;
     }
   }
-  for (const auto &[id, rank] : treeBlockRanks)
+  for (size_t index=0;index<rankCount;++index)
   {
+    const auto &[id,rank]=treeBlockRanks[index];
     if (id != BLOCK_AIR && rank > 0)
     {
       Payload->WorldGenTreeBlockRanks[id] = std::max(Payload->WorldGenTreeBlockRanks[id], rank);

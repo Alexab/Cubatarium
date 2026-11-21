@@ -1,4 +1,5 @@
 #pragma once
+#include "Core/Memory/GenerationAllocator.h"
 
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -165,7 +166,7 @@ private:
 /// procedural trees/shrubs/scatter plus object voxels from the vegetation,
 /// ground cover, decoration and structure pools. Blocks absent here fall
 /// back to rank 0 (terrain rules) in cross-chunk conflict resolution.
-std::vector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
+GenerationVector<std::pair<BlockId, int>> CollectFloraFeatureBlockRanks(
     UBlockRegistry &registry, UObjectLibrary *objects,
     const std::string &ownerPackId, const ObjectFeatureConfig *features);
 

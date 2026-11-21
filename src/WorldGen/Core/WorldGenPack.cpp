@@ -1,4 +1,5 @@
 #include "WorldGen/Core/WorldGenPack.h"
+#include "Core/Memory/GenerationString.h"
 #include "ThirdParty/stb_image.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
@@ -1408,8 +1409,8 @@ float UWorldGenPack::FeatureWeightMultiplier(const std::string &biomeId,
   {
     return std::max(0.0f, prefabIt->second);
   }
-  const std::string mapgenKey = prefabName + "_mapgen";
-  const auto mapgenIt = def->FeatureWeights.find(mapgenKey);
+  const UGenerationString mapgenKey({prefabName,"_mapgen"});
+  const auto mapgenIt = def->FeatureWeights.find(mapgenKey.Get());
   if (mapgenIt != def->FeatureWeights.end())
   {
     return std::max(0.0f, mapgenIt->second);

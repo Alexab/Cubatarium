@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.flora-ranks-derived-lookup-names",
+      "status": "SCOPED_PASS_BIOME_OUTPUT_AND_CATALOG_LOAD_TEXT_OPEN",
+      "receipt": "build/desktop-msvc/s4-rank-derived-name-acceptance-20261121.json",
+      "scope": "Flora rank staging uses context-owning GenerationVector; pointer/count buffer transfer overload preserves legacy std::vector API and rank semantics. Scoped UGenerationString reserves a size-derived fresh-copy envelope before reserve/append, destroys text before refund, and forbids copying/assignment. Applied to worldgen qualified lookup, mapgen suffix and native merge read qualified/local fallback; custom biome filter and weight-argument selection borrow input instead of copying it. Slot resolution holds one immutable pinned/global refs snapshot and follows borrowed fallback names iteratively, using Floyd exact reachable-cycle bound after direct lookup failure, with constant stack/workspace and no visited-name history. Early context-text cleanup now covers quota refusal inside Ensure refresh before scratch guards exist."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.feature-diagnostic-stores",
       "status": "SCOPED_PASS_CATALOG_PAYLOAD_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
