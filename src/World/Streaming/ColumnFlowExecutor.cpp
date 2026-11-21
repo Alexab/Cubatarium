@@ -58,6 +58,21 @@ void UColumnFlowExecutor::AdvanceCooldownFrame()
     if (current != last_dispatch_frame_.end() && current->second == receipt.second)
       last_dispatch_frame_.erase(current);
   }
+  while (!retry_expiry_.empty() && retry_expiry_.front().second <= frame_counter_)
+  {
+    const auto receipt = retry_expiry_.front();
+    retry_expiry_.pop_front();
+    const auto current = relight_retry_after_frame_.find(receipt.first);
+    if (current != relight_retry_after_frame_.end() && current->second == receipt.second)
+      relight_retry_after_frame_.erase(current);
+  }
+}
+
+void UColumnFlowExecutor::SetRelightRetryCooldown(const CooldownKey &key)
+{
+  const int deadline = frame_counter_ + kEnqueueCooldownFrames;
+  relight_retry_after_frame_[key] = deadline;
+  retry_expiry_.emplace_back(key, deadline);
 }
 
 bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
@@ -138,7 +153,10 @@ ColumnJobStage UColumnFlowExecutor::GetColumnJobStage(glm::ivec2 column) const
 void UColumnFlowExecutor::SetColumnJobStage(glm::ivec2 column,
                                             ColumnJobStage stage)
 {
-  column_job_stage_[ColumnKey(column)] = stage;
+  if (stage == ColumnJobStage::Absent)
+    column_job_stage_.erase(ColumnKey(column));
+  else
+    column_job_stage_[ColumnKey(column)] = stage;
 }
 
 bool UColumnFlowExecutor::SyncColumnJobStageFromWorld(UWorld &world,
@@ -585,8 +603,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
     {
       const CooldownKey retry_key =
           MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
-      relight_retry_after_frame_[retry_key] =
-          frame_counter_ + kEnqueueCooldownFrames;
+      SetRelightRetryCooldown(retry_key);
       SchedulerState.Enqueue(work);
     }
     else
@@ -630,8 +647,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
       retry.cy = kColumnWorkWholeRemeshBandCy;
       const CooldownKey retry_key =
           MakeCooldownKey(retry.column, ColumnWorkKind::RelightThenMesh);
-      relight_retry_after_frame_[retry_key] =
-          frame_counter_ + kEnqueueCooldownFrames;
+      SetRelightRetryCooldown(retry_key);
       SchedulerState.Enqueue(retry);
     }
     break;

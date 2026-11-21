@@ -14,6 +14,7 @@ namespace cutum
 {
 
 class UWorld;
+class UCore;
 
 /// V4 single owner for focus column Admit / Recover / Promote / idle pending.
 /// ChunkEmergeCoordinator must not call World Admit/Recover/Promote directly —
@@ -41,9 +42,16 @@ public:
     last_dispatch_frame_.clear();
     dispatch_expiry_.clear();
     relight_retry_after_frame_.clear();
+    retry_expiry_.clear();
+    column_job_stage_.clear();
     promote_pending_ = false;
     promote_enqueued_ = false;
     promote_priority_ = 0;
+    promote_hold_valid_ = false;
+    capture_pin_valid_ = false;
+    capture_pin_hold_ = false;
+    capture_pin_age_ = 0;
+    decide_world_ = nullptr;
   }
 
   /// Drop queued/cooldown ownership for a column removed from streaming
@@ -156,11 +164,13 @@ public:
   }
 
 private:
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   void AdvanceColumn(UWorld &world, const ColumnWorkItem &work,
                      glm::ivec3 focus_ground_horiz, int focus_radius,
                      int admit_batch);
   void FlushPromoteRequest();
   void AdvanceCooldownFrame();
+  void SetRelightRetryCooldown(const CooldownKey &key);
 
   UColumnFlowScheduler SchedulerState;
   /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).
@@ -174,6 +184,7 @@ private:
   /// Failed FIFO admission keeps a live relight ticket while backing off.
   std::unordered_map<CooldownKey, int, CooldownKeyHash>
       relight_retry_after_frame_;
+  std::deque<std::pair<CooldownKey, int>> retry_expiry_;
   static constexpr int kEnqueueCooldownFrames = 3;
   /// One PromoteRelight enqueue per streaming+emerge frame (max priority).
   bool promote_pending_{false};

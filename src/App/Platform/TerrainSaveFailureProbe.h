@@ -2292,15 +2292,32 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             report["flow_signed_publication"].push_back({{"mode",mode},{"round",round},
                 {"merged",merged},{"dispatched",dispatched},{"both_dirty",both_dirty},{"both_current",current}});
             require(merged && dispatched==1 && both_dirty && current,"merged flow ticket admits and publishes both signed slices");
+            executor.SetRelightRetryCooldown(UColumnFlowExecutor::MakeCooldownKey({0,0},ColumnWorkKind::RelightThenMesh));
           }
           const auto cooldown_before=executor.DispatchCooldownCount();
           Json ages=Json::array();
+          Json retry_ages=Json::array();
           for(int age=1;age<=3;++age) {
             executor.DrainBudget(flow,0,{0,-3,0},1,1);
             ages.push_back(executor.DispatchCooldownCount());
+            retry_ages.push_back(executor.relight_retry_after_frame_.size());
           }
           const bool expires_exactly=cooldown_before==1 && ages[0]==1 && ages[1]==1 && ages[2]==0 &&
               executor.DispatchExpiryCount()==0;
+          const bool retry_expired=retry_ages[0]==1 && retry_ages[1]==1 && retry_ages[2]==0 &&
+              executor.relight_retry_after_frame_.empty() && executor.retry_expiry_.empty();
+          for(int n=0;n<2000;++n) executor.SetColumnJobStage({n,99},ColumnJobStage::Absent);
+          const bool absent_not_stored=executor.column_job_stage_.size()==1;
+          executor.SetPromoteRelightHold({0,0},true);
+          executor.SetCaptureWitnessPin({0,0},true,7,true);
+          executor.Clear();
+          const bool cleared=executor.column_job_stage_.empty() && !executor.promote_hold_valid_ &&
+              !executor.capture_pin_valid_ && !executor.capture_pin_hold_ && executor.decide_world_==nullptr &&
+              executor.DispatchExpiryCount()==0 && executor.retry_expiry_.empty();
+          report["flow_metadata_lifetime"].push_back({{"mode",mode},{"retry_expired",retry_expired},
+              {"retry_counts_by_age",retry_ages},
+              {"absent_not_stored",absent_not_stored},{"clear_retires_metadata",cleared}});
+          require(retry_expired && absent_not_stored && cleared,"flow retired metadata is not retained as history");
           report["flow_cooldown_expiry"].push_back({{"mode",mode},{"before",cooldown_before},
               {"counts_by_age",ages},{"receipts_after",executor.DispatchExpiryCount()},{"exact",expires_exactly}});
           require(expires_exactly,"old expiry receipt preserves renewed cooldown until its exact deadline");

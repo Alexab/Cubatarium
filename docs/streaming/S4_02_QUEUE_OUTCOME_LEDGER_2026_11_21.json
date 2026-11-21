@@ -657,10 +657,11 @@
         {
           "id": "LIMIT-C1.Q01",
           "status": "CHECK",
-          "required_result": "Ordered priority storage, targeted cooldown retirement and dispatch history expiry PASS. Remaining live producer envelope, retry cooldown/job-stage lifetime and retained map storage. LIMIT remains CHECK.",
+          "required_result": "Priority storage, targeted retirement, dispatch/retry history expiry, Absent erasure and explicit local Clear PASS. Remaining global executor world replacement integration, live-coordinate producer and retained non-Absent stage-map envelope. LIMIT remains CHECK.",
           "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json",
           "retirement_evidence": "build/desktop-msvc/s4-flow-forget-acceptance-20261121.json",
-          "dispatch_expiry_evidence": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json"
+          "dispatch_expiry_evidence": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json",
+          "metadata_evidence": "build/desktop-msvc/s4-flow-metadata-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q02",
