@@ -78,6 +78,7 @@ struct ColumnDebtState
 struct ColumnRecord
 {
   std::array<ColumnFlowIntent, 4> flow_intent{};
+  uint64_t flow_intent_epoch{0};
   ColumnEmergeState emerge{ColumnEmergeState::Empty};
   ColumnDesiredStage desired{ColumnDesiredStage::None};
   uint32_t content_rev{0};

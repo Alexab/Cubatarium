@@ -71,8 +71,10 @@ struct ColumnCoordHash
 class UColumnFlowScheduler
 {
 public:
-  void Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority);
-  void Enqueue(const ColumnWorkItem &item);
+  /// True means this scope transferred to the live ticket; false leaves it
+  /// with the caller (for example a competing higher-rank ticket owns XZ).
+  bool Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority);
+  bool Enqueue(const ColumnWorkItem &item);
   /// Replace a live ticket of a specific kind with a dependent repair kind.
   bool ReplaceColumnTicket(const ColumnWorkItem &item,
                            ColumnWorkKind expected_kind);

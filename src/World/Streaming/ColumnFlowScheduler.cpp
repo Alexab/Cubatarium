@@ -21,7 +21,7 @@ ColumnWorkItem MergeTicketScope(const ColumnWorkItem &item, int old_cy,
 }
 } // namespace
 
-void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
+bool UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
                                    int priority)
 {
   ColumnWorkItem item{};
@@ -30,7 +30,7 @@ void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
   item.priority = priority;
   item.scan_full_focus = false;
   item.cy = kColumnWorkWholeRemeshBandCy;
-  Enqueue(item);
+  return Enqueue(item);
 }
 
 void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
@@ -52,14 +52,14 @@ void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
   Heap.insert(entry);
 }
 
-void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
+bool UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
 {
   const ColumnCoord coord(item.column);
   const auto it = Live.find(coord);
   if (it == Live.end())
   {
     PushLive(item);
-    return;
+    return true;
   }
 
   const LiveTicket &old = it->second;
@@ -70,11 +70,11 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
     if (refreshed.priority == old.priority && refreshed.cy == old.cy &&
         refreshed.scan_full_focus == old.scan_full_focus)
     {
-      return; // Identical demand must not produce unbounded heap tombstones.
+      return true; // Existing live ticket already owns this identical scope.
     }
     ++superseded_n_;
     PushLive(refreshed);
-    return;
+    return true;
   }
 
   if (ColumnWorkKindExclusiveRank(item.kind) >
@@ -83,10 +83,11 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
     ++upgrade_n_;
     ++superseded_n_;
     PushLive(MergeTicketScope(item, old.cy, old.priority, old.scan_full_focus));
-    return;
+    return true;
   }
 
   ++denied_n_;
+  return false;
 }
 
 bool UColumnFlowScheduler::ReplaceColumnTicket(const ColumnWorkItem &item,

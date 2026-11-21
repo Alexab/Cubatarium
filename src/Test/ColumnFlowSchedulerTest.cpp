@@ -79,10 +79,10 @@ int main()
     Expect(keys.size()==1 && keys.front()==glm::ivec2(-1,-2),
            "key cursor safely resumes after world store replacement");
   }
-  s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 10);
+  Expect(s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 10),"new ticket accepts scope ownership");
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // refresh urgency
   Expect(s.Size() == 1, "same column+kind refreshes to one live ticket");
-  s.Enqueue({1, 2}, ColumnWorkKind::RelightThenMesh, 5);
+  Expect(!s.Enqueue({1, 2}, ColumnWorkKind::RelightThenMesh, 5),"competing kind explicitly leaves ownership with caller");
   Expect(s.Size() == 1, "lower-rank RelightThenMesh on FirstMesh denied");
   Expect(s.ContainsColumn({1, 2}), "column occupied");
   Expect(s.DeniedCount() >= 1, "denied competing lower producer");

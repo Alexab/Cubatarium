@@ -423,9 +423,11 @@
         "src/World/Streaming/ColumnFlowExecutor.cpp"
       ],
       "status": "OPEN",
-      "wip": "Fixed per-kind intent slots plus ordered-store key cursor (max64 records/batch) implemented and local Release-tested. Producer/admission/replay consumer still not connected; no cap installed. Budget fixed per-record and ordered-node overhead before closure.",
+      "wip": "Scheduler explicit ownership result and bound executor retained-intent capture/clear-on-acceptance wired; DrainBudget bounded64-record replay added with world epoch check. Local Release test/full app compile PASS. Clear/Forget retained-intent retirement and pre-bind owned ingress still incomplete; no cap yet; runtime saturation proof pending.",
       "local_evidence": "build/desktop-msvc/s4-flow-intent-test-20261121.log",
-      "cursor_evidence": "build/desktop-msvc/s4-flow-intent-cursor-test-20261121.log"
+      "cursor_evidence": "build/desktop-msvc/s4-flow-intent-cursor-test-20261121.log",
+      "connection_build": "build/desktop-msvc/s4-flow-intent-connect-build-20261121.log",
+      "connection_test": "build/desktop-msvc/s4-flow-intent-connect-test-20261121.log"
     },
     {
       "id": "Q01.L2",

@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdint>
 #include <deque>
+#include <optional>
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -44,6 +45,7 @@ public:
     relight_retry_after_frame_.clear();
     retry_expiry_.clear();
     column_job_stage_.clear();
+    intent_cursor_.reset();
     promote_pending_ = false;
     promote_enqueued_ = false;
     promote_priority_ = 0;
@@ -182,6 +184,8 @@ private:
   void FlushPromoteRequest();
   void AdvanceCooldownFrame();
   void SetRelightRetryCooldown(const CooldownKey &key);
+  void ReplayAdmissionIntents(UWorld &world);
+  std::optional<uint64_t> intent_cursor_;
 
   UColumnFlowScheduler SchedulerState;
   /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).

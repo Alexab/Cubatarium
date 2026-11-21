@@ -362,8 +362,9 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
 }
 } // namespace
 
-void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
+void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &incoming)
 {
+  ColumnWorkItem item = incoming;
   const bool targeted_first_mesh_waits_for_light =
       item.kind == ColumnWorkKind::FirstMesh && !item.scan_full_focus &&
       decide_world_ != nullptr &&
@@ -449,6 +450,22 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
       return;
     }
   }
+  ColumnFlowIntent *intent = nullptr;
+  if (decide_world_)
+  {
+    auto &record = decide_world_->GetColumnRecords().GetOrCreate(item.column);
+    const auto epoch = decide_world_->GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+    if (record.flow_intent_epoch != epoch)
+    {
+      record.flow_intent = {};
+      record.flow_intent_epoch = epoch;
+    }
+    intent = &record.flow_intent[static_cast<size_t>(item.kind)];
+    intent->Merge(item);
+    item.cy = intent->cy;
+    item.priority = intent->priority;
+    item.scan_full_focus = intent->scan_full_focus;
+  }
   const auto key = MakeCooldownKey(item.column, item.kind);
   const auto it = last_dispatch_frame_.find(key);
   const bool replace_blocked_first_mesh =
@@ -463,11 +480,37 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &item)
   if (replace_blocked_first_mesh &&
       SchedulerState.ReplaceColumnTicket(item, ColumnWorkKind::FirstMesh))
   {
+    if (intent) *intent = {};
     return;
   }
-  SchedulerState.Enqueue(item);
+  if (SchedulerState.Enqueue(item) && intent)
+    *intent = {};
   // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains
   // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch.
+}
+
+void UColumnFlowExecutor::ReplayAdmissionIntents(UWorld &world)
+{
+  std::vector<glm::ivec2> keys;
+  world.GetColumnRecords().CollectKeysAfter(intent_cursor_, 64, keys);
+  for (const auto column : keys)
+  {
+    const auto *record = world.GetColumnRecords().Find(column);
+    if (!record || record->flow_intent_epoch !=
+        world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch()) continue;
+    for (size_t kind = 0; kind < record->flow_intent.size(); ++kind)
+    {
+      const auto intent = record->flow_intent[kind];
+      if (!intent.pending) continue;
+      ColumnWorkItem item{};
+      item.column = column;
+      item.kind = static_cast<ColumnWorkKind>(kind);
+      item.cy = intent.cy;
+      item.priority = intent.priority;
+      item.scan_full_focus = intent.scan_full_focus;
+      Enqueue(item);
+    }
+  }
 }
 
 void UColumnFlowExecutor::RunPromoteRelightNow(UWorld &world,
@@ -661,6 +704,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   BindDecideWorld(&world);
   FlushPromoteRequest();
   AdvanceCooldownFrame();
+  ReplayAdmissionIntents(world);
   int drained = 0;
   int deferred_n = 0;
   int cooldown_deferred_n = 0;
