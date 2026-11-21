@@ -947,6 +947,84 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(installed(),"trimmed actual FIFO target eventually installs both signed sections");
         }
       }
+      {
+        struct EvictionDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          int previous_cap=URuntimeTuning::Get().RelightFifoSoftCap;
+          ~EvictionDeadlineRestore() { UFrameDeadline::Get()=previous; URuntimeTuning::Get().RelightFifoSoftCap=previous_cap; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        for(int mode=0;mode<3;++mode) {
+        URuntimeTuning::Get().RelightFifoSoftCap=mode==0?1:96;
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({216,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({216,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({216,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        uint8_t outcome=0;
+        if(mode==0) {
+          fifo.EnqueueTerrainColumnRelight(208,0,false,-48,31,"q08_softcap_victim",&fifo_world);
+          fifo.EnqueueTerrainColumnRelight(224,0,false,-48,-33,"q08_softcap_trigger");
+        } else {
+          std::vector<glm::ivec2> protected_columns;
+          const int blockers=mode==1?15:24;
+          for(int n=0;n<blockers;++n) {
+            const int cx=n+30;
+            fifo.EnqueueTerrainColumnRelight(cx*CHUNK_SIZE,0,false,-48,-33,"q08_visible_blocker");
+            protected_columns.push_back({cx,0});
+          }
+          if(mode==1)
+            fifo.EnqueueTerrainColumnRelight(208,0,false,-48,31,"q08_visible_fifo_victim",&fifo_world);
+          else for(int cx=6;cx<=13;++cx) {
+            uint8_t side_outcome=0;
+            require(fifo.EnqueueVisibleDrawGateRelight(cx*CHUNK_SIZE,0,-48,31,{0,0,0},20,
+                protected_columns,&side_outcome,nullptr,"q08_side_lane_target") && side_outcome==9,
+                "visible side lane accepts bounded exact target");
+          }
+          require(fifo.EnqueueVisibleDrawGateRelight(80,0,-48,-33,{0,0,0},20,protected_columns,
+              &outcome,nullptr,"q08_nearer_visible_target") && outcome==(mode==1?3:14),
+              "visible replacement selects expected FIFO or bounded side-lane victim");
+        }
+        const auto deferred=fifo.GetTerrainColumnRelightQueueInfo({208,0});
+        const bool retained=!deferred.keyed && !deferred.deferred_visible && deferred.deferred_far &&
+            deferred.y_band_defined && deferred.min_world_y==-48 && deferred.max_world_y==31;
+        report["relight_fifo_eviction"].push_back({{"mode",mode},{"outcome",outcome},{"retained_exact",retained}});
+        require(retained,"every accepted evicted target retains exact deferred band");
+        fifo.CancelTerrainColumnRelight({224,0});
+        for(int cx=5;cx<=12;++cx) fifo.CancelTerrainColumnRelight({cx*CHUNK_SIZE,0});
+        for(int cx=30;cx<54;++cx) fifo.CancelTerrainColumnRelight({cx*CHUNK_SIZE,0});
+        URuntimeTuning::Get().RelightFifoSoftCap=96;
+        const int admitted=fifo.AdmitDeferredFarRelightColumns(fifo_world,{13,0,0},4);
+        const auto restored=fifo.GetTerrainColumnRelightQueueInfo({208,0});
+        const bool exact=admitted==1 && restored.keyed && !restored.deferred_far &&
+            restored.y_band_defined && restored.min_world_y==-48 && restored.max_world_y==31;
+        require(exact,"evicted target restores exact band without fresh target request");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({13,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({13,1,0},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        report["relight_fifo_eviction"].back()["readmitted_exact"]=exact;
+        report["relight_fifo_eviction"].back()["negative_and_positive_installed"]=installed();
+        report["relight_fifo_eviction"].back()["pending"]=fifo.GetPendingTerrainColumnRelightCount();
+        require(installed(),"evicted actual FIFO target installs both signed sections");
+        }
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

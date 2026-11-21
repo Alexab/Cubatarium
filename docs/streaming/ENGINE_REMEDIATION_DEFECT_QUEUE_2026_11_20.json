@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "visible-relight-side-lane-replacement-loses-accepted-band",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q08_C2_OPEN",
+      "observed": "Bounded visible side lane nearer replacement outcome14 silently erased accepted farther target band; automatic softcap/visible FIFO correctly preserved before fix.",
+      "fix": "Call common PreserveRelightFifoVictimAsDeferred before side-lane erase; helper reads exact DeferredVisibleDrawGateRelightYBands interval too. No cap increase/new owner container.",
+      "evidence": "build/desktop-msvc/s4-fifo-eviction-acceptance-20261121.json",
+      "next_action": "Q08-C2 QUIESCE_RESET and RESTORE; full package open."
+    },
+    {
       "id": "player-relight-dequeue-loses-work-during-lighting-deferral",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q08_C1_OPEN",

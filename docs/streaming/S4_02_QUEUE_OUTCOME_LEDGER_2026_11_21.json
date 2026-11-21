@@ -400,8 +400,10 @@
         },
         {
           "id": "Q08-C2.EVICTION",
-          "status": "CHECK",
-          "scope": "Automatic soft-cap and visible-reserve/far-victim replacement preserve exact valid band/deferred owner; actual current successor. Reuse common transfer mechanism only at exact property."
+          "status": "REUSE",
+          "scope": "Automatic soft-cap and visible-reserve/far-victim replacement preserve exact valid band/deferred owner; actual current successor. Reuse common transfer mechanism only at exact property.",
+          "evidence": "build/desktop-msvc/s4-fifo-eviction-acceptance-20261121.json",
+          "coverage_note": "No survivor execution/fairness or process memory claim. Protected blockers deliberately retired. Other outcomes of shared-FIFO reserve admission/rejection inherit common admission mechanism Q08-C1, not separately saturated all combinations. Quiesce/reset/world retirement and section restore remain Q08-C2. Scoped Full calculation within Flat startup, not rendered Full/backend parity."
         },
         {
           "id": "Q08-C2.QUIESCE_RESET",
@@ -547,5 +549,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C2.TRIM normal/priority deferred transfer/current signed install accepted. Remaining EVICTION, QUIESCE_RESET, RESTORE with S3 matching reuse. Top-level8 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C2 TRIM/EVICTION accepted; bounded visible side-lane victim loss fixed. Remaining QUIESCE_RESET and RESTORE. Top-level8 CHECK; full scope OPEN."
 }

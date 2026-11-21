@@ -1428,6 +1428,8 @@ bool UWorldPersistence::EnqueueVisibleRelight(
     if (farthest_deferred != DeferredVisibleDrawGateRelightYBands.end())
     {
       const glm::ivec2 victim = farthest_deferred->first;
+      PreserveRelightFifoVictimAsDeferred(victim, /*priority=*/true,
+                                          "visible_exact_replacement");
       DeferredVisibleDrawGateRelightYBands.erase(farthest_deferred);
       PendingVisibleDrawGateRelightYBands.erase(victim);
       DeferredVisibleDrawGateRelightYBands.emplace(key,
@@ -1677,6 +1679,13 @@ void UWorldPersistence::PreserveRelightFifoVictimAsDeferred(
   if (const auto it =
           PendingVisibleFirstMeshRelightYBands.find(world_block_key);
       it != PendingVisibleFirstMeshRelightYBands.end())
+  {
+    merge_band(it->second);
+  }
+  // A bounded visible-side-lane victim has no shared-FIFO band entry.
+  // Capture its exact interval before the producer erases the old owner.
+  if (const auto it = DeferredVisibleDrawGateRelightYBands.find(world_block_key);
+      it != DeferredVisibleDrawGateRelightYBands.end())
   {
     merge_band(it->second);
   }

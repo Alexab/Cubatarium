@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.eviction-exact-deferred-owner",
+      "status": "SCOPED_PASS_Q08_C2_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-fifo-eviction-acceptance-20261121.json",
+      "scope": "No survivor execution/fairness or process memory claim. Protected blockers deliberately retired. Other outcomes of shared-FIFO reserve admission/rejection inherit common admission mechanism Q08-C1, not separately saturated all combinations. Quiesce/reset/world retirement and section restore remain Q08-C2. Scoped Full calculation within Flat startup, not rendered Full/backend parity."
+    },
+    {
       "id": "S4.02.Q08.fifo-trim-exact-deferred-owner",
       "status": "SCOPED_PASS_Q08_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
