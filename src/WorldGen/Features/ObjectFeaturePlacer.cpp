@@ -1,4 +1,5 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
+#include "Core/Memory/GenerationAllocator.h"
 #include "Blocks/BlockRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/ChunkManager.h"
@@ -23,6 +24,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -32,7 +34,12 @@ namespace cutum
 namespace
 {
 
-thread_local std::unordered_map<uint64_t, int> ScatterChunkCounts;
+template<class V> using GenerationVoxelMap=std::unordered_map<uint64_t,V,
+    std::hash<uint64_t>,std::equal_to<uint64_t>,UGenerationAllocator<std::pair<const uint64_t,V>>>;
+
+// Construct lazily under this chunk's owner, never bind a TLS container once
+// to the first job. Reset destroys nodes, buckets, sentinels and allocator.
+thread_local std::optional<GenerationVoxelMap<int>> ScatterChunkCounts;
 
 std::mutex ObjectFeatureDiagnosticsMutex;
 std::map<std::string, ObjectFeatureRuleProfile> ObjectFeatureRuleTotals;
@@ -358,8 +365,8 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
           static_cast<float>((heightHash >> 17U) % 13U) / 100.0f - 0.06f,
       0.2f, 1.0f);
 
-  std::vector<std::pair<glm::ivec3, BlockId>> voxels;
-  std::unordered_map<uint64_t, size_t> voxelIndex;
+  GenerationVector<std::pair<glm::ivec3, BlockId>> voxels;
+  GenerationVoxelMap<size_t> voxelIndex;
   const auto addVoxel = [&](int x, int y, int z, BlockId block)
   {
     const uint64_t key = TreeVoxelKey(x, y, z);
@@ -802,7 +809,7 @@ bool TryPlaceProceduralTree(WorldGenContext &ctx, glm::ivec3 base,
 
   int minY = base.y;
   int maxY = base.y;
-  std::vector<std::pair<glm::ivec3, BlockId>> accepted;
+  GenerationVector<std::pair<glm::ivec3, BlockId>> accepted;
   accepted.reserve(voxels.size());
   for (const auto &[relative, block] : voxels)
   {
@@ -900,8 +907,8 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
           static_cast<float>((shapeHash >> 15U) % 11U) / 100.0f - 0.05f,
       0.2f, 1.0f);
 
-  std::vector<std::pair<glm::ivec3, BlockId>> voxels;
-  std::unordered_map<uint64_t, size_t> voxelIndex;
+  GenerationVector<std::pair<glm::ivec3, BlockId>> voxels;
+  GenerationVoxelMap<size_t> voxelIndex;
   const auto addVoxel = [&](int x, int y, int z, BlockId block)
   {
     if (block == BLOCK_AIR)
@@ -1027,7 +1034,7 @@ bool TryPlaceProceduralShrub(WorldGenContext &ctx, glm::ivec3 base,
 
   int minY = base.y;
   int maxY = base.y;
-  std::vector<std::pair<glm::ivec3, BlockId>> accepted;
+  GenerationVector<std::pair<glm::ivec3, BlockId>> accepted;
   accepted.reserve(voxels.size());
   for (const auto &[relative, block] : voxels)
   {
@@ -1202,7 +1209,8 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     const uint64_t chunk_key = ChunkXZKey(chunk_coord.x, chunk_coord.z);
     if (rule.Scatter.MaxPerChunk > 0)
     {
-      const int chunk_count = ScatterChunkCounts[chunk_key];
+      if(!ScatterChunkCounts) ScatterChunkCounts.emplace();
+      const int chunk_count = (*ScatterChunkCounts)[chunk_key];
       if (chunk_count >= rule.Scatter.MaxPerChunk)
       {
         continue;
@@ -1211,7 +1219,7 @@ bool TryPlaceScatterBlocks(WorldGenContext &ctx, int x, int z, int surfaceY,
     sink.WriteVoxel(pos, blockId);
     if (rule.Scatter.MaxPerChunk > 0)
     {
-      ++ScatterChunkCounts[chunk_key];
+      ++(*ScatterChunkCounts)[chunk_key];
     }
     ++placed;
     minY = std::min(minY, pos.y);
@@ -1385,7 +1393,7 @@ bool TryPlaceObjectPool(
     int Weight;
   };
 
-  std::vector<Candidate> candidates;
+  GenerationVector<Candidate> candidates;
   candidates.reserve(rules.size());
   const uint32_t seed = ctx.Settings.Seed;
   const SubBiomeId subBiome = SubBiomeFor(x, z, biome, seed);
@@ -1749,6 +1757,7 @@ const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(
     bool enabled)
 {
+  ResetScatterChunkCounts();
   ObjectFeatureDiagnosticsEnabled = enabled;
   ObjectFeatureChunkRules.clear();
   ObjectFeatureSelectedRules.clear();
@@ -1756,6 +1765,7 @@ ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(
 
 ObjectFeatureChunkDiagnosticsScope::~ObjectFeatureChunkDiagnosticsScope()
 {
+  ResetScatterChunkCounts();
   if (ObjectFeatureDiagnosticsEnabled && !ObjectFeatureChunkRules.empty())
   {
     std::lock_guard<std::mutex> lock(ObjectFeatureDiagnosticsMutex);
@@ -1811,7 +1821,7 @@ void RecordObjectFeaturePlacementCheck(const std::string &prefabName,
   profile.prefabSurfaceScans += surfaceScans;
 }
 
-void ResetScatterChunkCounts() { ScatterChunkCounts.clear(); }
+void ResetScatterChunkCounts() { ScatterChunkCounts.reset(); }
 
 void RegisterBuiltinObjectFeaturePlacementStrategies()
 {

@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.object-placement-working-containers",
+      "status": "SCOPED_PASS_DIAGNOSTIC_HISTORIES_OPEN",
+      "receipt": "build/desktop-msvc/s4-placement-working-containers-acceptance-20261121.json",
+      "scope": "Five object-placement working vectors (tree/shrub voxels and accepted staging, pool candidates), two uint64 voxel-index hash maps, and per-chunk scatter hash map use context-owning generation allocator. Actual node/bucket/sentinel/element allocation requests reserve before allocating and release after actual free. Scatter map is optional/lazy under current job; chunk scope destroys whole state on entry/exit including exception unwind, even with diagnostics disabled. Legacy ResetScatterChunkCounts also destroys retained capacity."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.numeric-working-vectors",
       "status": "SCOPED_PASS_OBJECT_FEATURE_CONTAINERS_OPEN",
       "receipt": "build/desktop-msvc/s4-numeric-working-vectors-acceptance-20261121.json",

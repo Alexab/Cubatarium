@@ -1714,6 +1714,114 @@ static void TestPackDefaultsRespectUserFieldsInProfile3()
       "older profiles still take cave and ravine values from the pack");
 }
 
+static void TestPlacementWorkingBudget(cutum::UBlockRegistry &registry)
+{
+  cutum::RegisterBuiltinObjectFeaturePlacementStrategies();
+  auto settings=MakeVegetationSettings(); settings.SeaLevel=48; settings.MaxHeight=128;
+  const auto prepare=[](cutum::WorldGenContext &ctx) {
+    ctx.WorldgenOwnerPackId="minetest_default_16"; ctx.ResolveBlockIds();
+    for(int x=-10;x<=10;++x) for(int z=-10;z<=10;++z) ctx.World.SetBlock({x,51,z},ctx.Blocks.Grass);
+  };
+  cutum::ObjectFeatureRule tree; tree.Mode=cutum::ObjectFeatureRuleMode::ProceduralTree;
+  tree.Tree.HeightMin=7; tree.Tree.HeightMax=9; tree.Tree.CrownRadiusX=4; tree.Tree.CrownRadiusZ=4;
+  tree.Tree.CrownHeight=5; tree.Tree.BranchCount=3; tree.Tree.TrunkBlock="mtg_tree"; tree.Tree.LeavesBlock="mtg_leaves";
+  cutum::ObjectFeatureRule shrub; shrub.Mode=cutum::ObjectFeatureRuleMode::ProceduralShrub;
+  shrub.Shrub.HeightMin=3; shrub.Shrub.HeightMax=4; shrub.Shrub.RadiusX=4; shrub.Shrub.RadiusZ=4;
+  shrub.Shrub.LeavesBlock="mtg_leaves"; shrub.Shrub.StemBlock="mtg_tree";
+  struct Result {bool refused; size_t count,peak; uint64_t hash;};
+  const auto place=[&](const cutum::ObjectFeatureRule &rule,size_t limit) {
+    cutum::UBlockWorld world; cutum::WorldGenContext ctx(world,registry,settings); prepare(ctx);
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(limit);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    bool denied=false,placed=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      try {placed=cutum::UObjectFeaturePlacementStrategyRegistry::Find(rule.Mode)->Place(ctx,0,0,51,rule);}
+      catch(const cutum::UBufferBudgetExceeded &) {denied=true;}
+    }
+    FluidTest::Expect(budget->UsedBytes()==1,kTestName,"placement working containers unwind to competing credit");
+    budget->Release(*peer,1);
+    std::vector<std::tuple<int,int,int,int>> blocks;
+    world.ForEachBlock([&](glm::ivec3 p,cutum::BlockId id) {if(p.y>51) blocks.emplace_back(p.x,p.y,p.z,id);});
+    std::sort(blocks.begin(),blocks.end()); uint64_t hash=1469598103934665603ULL;
+    for(const auto &[x,y,z,id]:blocks) for(int v:{x,y,z,id}) hash=(hash^uint32_t(v))*1099511628211ULL;
+    FluidTest::Expect(denied ? blocks.empty() : placed && !blocks.empty(),kTestName,
+        "placement refuses before writes or writes actual species voxels");
+    return Result{denied,blocks.size(),budget->PeakBytes(),hash};
+  };
+  size_t refused=0,late_refused=0,peak=0,total_voxels=0; uint64_t golden=1469598103934665603ULL;
+  for(const auto &rule:{tree,shrub}) {
+    const auto pressure=place(rule,256); refused+=pressure.refused;
+    std::cout << "placement_budget_mode=" << int(rule.Mode) << " refused=" << pressure.refused << std::endl;
+  }
+  for(int profile:{2,3}) {
+    settings.WorldGenProfileVersion=profile;
+    for(auto shape:{cutum::TreeCrownShape::Round,cutum::TreeCrownShape::Conical,
+        cutum::TreeCrownShape::Umbrella,cutum::TreeCrownShape::Columnar}) {
+      tree.Tree.CrownShape=shape; const auto result=place(tree,1024*1024);
+      peak=std::max(peak,result.peak); total_voxels+=result.count;
+      golden=(golden^result.hash)*1099511628211ULL;
+      if(profile==2 && shape==cutum::TreeCrownShape::Round)
+        late_refused+=place(tree,result.peak-1).refused;
+    }
+    const auto result=place(shrub,1024*1024); peak=std::max(peak,result.peak); total_voxels+=result.count;
+    golden=(golden^result.hash)*1099511628211ULL;
+    if(profile==2) late_refused+=place(shrub,result.peak-1).refused;
+  }
+  {
+    cutum::UBlockWorld world; cutum::WorldGenContext ctx(world,registry,settings); prepare(ctx);
+    cutum::ObjectFeatureConfig features; features.Vegetation.resize(512);
+    for(auto &rule:features.Vegetation) rule.Biomes={cutum::BiomeId::Desert};
+    ctx.ObjectFeatures=&features;
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(256);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    bool denied=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)cutum::TryPlaceVegetationFeatures(ctx,0,0,51,cutum::BiomeId::Plains);}
+      catch(const cutum::UBufferBudgetExceeded &) {denied=true;}
+    }
+    refused+=denied;
+    FluidTest::Expect(budget->UsedBytes()==1,kTestName,"candidate reserve failure leaves no payload credit");
+    std::cout << "placement_budget_candidates refused=" << denied << std::endl;
+    budget->Release(*peer,1);
+  }
+  cutum::ResetScatterChunkCounts();
+  bool scatter_charged=true,scatter_released=true,scatter_cap=true;
+  auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+  auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+  size_t scatter_credit=0;
+  for(int cycle=0;cycle<32;++cycle) {
+    cutum::UBlockWorld world; cutum::WorldGenContext ctx(world,registry,settings); prepare(ctx);
+    cutum::ObjectFeatureRule scatter; scatter.Mode=cutum::ObjectFeatureRuleMode::ScatterBlocks;
+    scatter.Scatter.BlockName="mtg_grass_1"; scatter.Scatter.Attempts=1; scatter.Scatter.MaxPerChunk=1;
+    scatter.Scatter.Radius=0;
+    auto job=std::make_shared<cutum::BufferBudgetJob>(); std::weak_ptr<cutum::BufferBudgetJob> weak=job;
+    try {
+      cutum::UBufferBudgetScope active({budget,job});
+      cutum::ObjectFeatureChunkDiagnosticsScope chunk(false);
+      const auto strategy=cutum::UObjectFeaturePlacementStrategyRegistry::Find(scatter.Mode);
+      const bool first=strategy->Place(ctx,0,0,51,scatter);
+      const bool second=strategy->Place(ctx,1,0,51,scatter);
+      scatter_cap=scatter_cap && first && !second;
+      scatter_credit=std::max(scatter_credit,budget->UsedBytes()-1);
+      scatter_charged=scatter_charged && budget->UsedBytes()>1;
+      if(cycle%2) throw 7; // exercise scope retirement during abort/unwind
+    } catch(int) {}
+    job.reset(); scatter_released=scatter_released && budget->UsedBytes()==1 && weak.expired();
+  }
+  budget->Release(*peer,1); cutum::ResetScatterChunkCounts();
+  std::cout << "placement_working_hash=" << golden << " voxels=" << total_voxels << " peak=" << peak
+      << " refused=" << refused << "/3 scatter_credit=" << scatter_credit
+      << " late_refused=" << late_refused << "/2"
+      << " scatter_charged=" << scatter_charged << " scatter_released=" << scatter_released
+      << " scatter_cap=" << scatter_cap << " final=" << budget->UsedBytes() << std::endl;
+  FluidTest::Expect(golden==12582183685928458711ULL && total_voxels==1571,kTestName,
+      "ten actual species/profile placements preserve pre-fix sorted voxel output exactly");
+  FluidTest::Expect(refused==3 && late_refused==2 && scatter_charged && scatter_released && scatter_cap && budget->UsedBytes()==0,
+      kTestName,"working placement containers and per-chunk scatter state obey shared job quota and lifetime");
+}
+
 int main(int argc, char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -1812,6 +1920,12 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": population metrics bounded-window PASS count=" << count << std::endl;
     std::cout << "population_metrics_storage_bytes=" << summary.sampleStorageBytes
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
+    return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--placement-budget-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions); TestPlacementWorkingBudget(registry);
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--algorithm-budget-only")

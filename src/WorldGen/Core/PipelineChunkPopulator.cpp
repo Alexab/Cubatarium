@@ -603,7 +603,6 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       }
     }
   } release_scratch{composable};
-  ResetScatterChunkCounts();
   ObjectFeatureChunkDiagnosticsScope objectFeatureDiagnostics(audit_seal);
 
   // D1: write gen scratch + transfer buffer together (no final world→buffer

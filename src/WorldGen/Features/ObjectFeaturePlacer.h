@@ -55,6 +55,7 @@ struct ObjectFeatureRuleProfile
 
 // Per-worker accumulation is flushed once per chunk. Enabled only by the
 // existing worldgen audit switch; placement behavior is unchanged.
+// Scatter count storage is retired at chunk boundaries even when disabled.
 struct ObjectFeatureChunkDiagnosticsScope
 {
   explicit ObjectFeatureChunkDiagnosticsScope(bool enabled);
