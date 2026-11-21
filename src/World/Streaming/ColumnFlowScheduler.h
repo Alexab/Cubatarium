@@ -34,8 +34,8 @@ struct ColumnWorkItem
   int priority{0};
   /// True: Admit scans full focus ring (only=nullptr). False: filter to column.
   bool scan_full_focus{false};
-  /// A concrete signed chunk Y prefers that slice. The sentinels request the
-  /// whole remesh band or the whole vertical column.
+  /// A concrete signed chunk Y requests that slice. The sentinels request the
+  /// whole remesh band or column; coalescing distinct scopes widens to column.
   int cy{kColumnWorkWholeRemeshBandCy};
   /// Monotonic ticket generation for this column occupancy (M02 / A05).
   uint64_t generation{0};

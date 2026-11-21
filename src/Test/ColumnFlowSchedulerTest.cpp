@@ -147,8 +147,34 @@ int main()
     signed_y.Enqueue(broad);
     ColumnWorkItem drained{};
     Expect(signed_y.DrainOne(drained), "signed-Y work is drainable");
-    Expect(drained.cy == -1,
-           "broad refresh preserves exact negative chunk target");
+    Expect(drained.cy == cutum::kColumnWorkWholeColumnCy,
+           "broad refresh retains negative slice and broad obligation");
+  }
+
+  // A single live ticket must retain both requested signed slices.
+  for (int mode=0; mode<3; ++mode)
+  {
+    UColumnFlowScheduler merged;
+    ColumnWorkItem old{}; old.column={-7,9}; old.cy=-3;
+    old.kind=mode==1 ? ColumnWorkKind::RemeshSeam : ColumnWorkKind::FirstMesh;
+    old.priority=90; old.scan_full_focus=true;
+    merged.Enqueue(old);
+    ColumnWorkItem next=old; next.cy=2; next.priority=20; next.scan_full_focus=false;
+    next.kind=mode==2 ? ColumnWorkKind::RelightThenMesh : ColumnWorkKind::FirstMesh;
+    if(mode==2) Expect(merged.ReplaceColumnTicket(next,old.kind),"explicit dependent replacement accepted");
+    else merged.Enqueue(next);
+    ColumnWorkItem out{};
+    Expect(merged.DrainOne(out),"merged signed-slice request drains");
+    Expect(out.cy==cutum::kColumnWorkWholeColumnCy,"coalescing preserves both signed slices");
+    Expect(out.scan_full_focus && out.priority==90,"coalescing preserves scan extent and urgency");
+    Expect(!merged.DrainOne(out),"superseded ticket cannot run again");
+    merged.Enqueue(next);
+    Expect(merged.RemoveColumn(next.column),"remove retires live ticket");
+    merged.Enqueue(old);
+    Expect(merged.DrainOne(out) && out.cy==-3,"same-coordinate successor survives old tombstones");
+    merged.Enqueue(next); merged.Clear();
+    merged.Enqueue(old);
+    Expect(merged.DrainOne(out) && out.cy==-3 && !merged.DrainOne(out),"clear retires old ticket without poisoning successor");
   }
 
   // N06: structural cooldown keys must not collide on negative Z / adjacent X.

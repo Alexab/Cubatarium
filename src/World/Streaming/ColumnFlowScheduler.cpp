@@ -5,6 +5,21 @@
 
 namespace cutum
 {
+namespace
+{
+ColumnWorkItem MergeTicketScope(const ColumnWorkItem &item, int old_cy,
+                               int old_priority, bool old_full_focus)
+{
+  ColumnWorkItem merged = item;
+  // One cy cannot encode two distinct slice/range obligations. The full
+  // column is the conservative union, independent of the current world band.
+  if (old_cy != item.cy)
+    merged.cy = kColumnWorkWholeColumnCy;
+  merged.priority = std::max(old_priority, item.priority);
+  merged.scan_full_focus = old_full_focus || item.scan_full_focus;
+  return merged;
+}
+} // namespace
 
 void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
                                    int priority)
@@ -48,18 +63,8 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
   const LiveTicket &old = it->second;
   if (old.kind == item.kind)
   {
-    // Same kind: refresh urgency / preferred slice with a new generation.
-    // Keep the higher priority; prefer a concrete cy (>=0) over whole-band.
-    ColumnWorkItem refreshed = item;
-    refreshed.priority = std::max(old.priority, item.priority);
-    if ((IsConcreteColumnWorkCy(old.cy) && !IsConcreteColumnWorkCy(item.cy)) ||
-        (old.cy == kColumnWorkWholeColumnCy &&
-         item.cy == kColumnWorkWholeRemeshBandCy))
-    {
-      refreshed.cy = old.cy;
-    }
-    // Prefer full-focus scan if either request asked for it.
-    refreshed.scan_full_focus = old.scan_full_focus || item.scan_full_focus;
+    const auto refreshed =
+        MergeTicketScope(item, old.cy, old.priority, old.scan_full_focus);
     if (refreshed.priority == old.priority && refreshed.cy == old.cy &&
         refreshed.scan_full_focus == old.scan_full_focus)
     {
@@ -75,7 +80,7 @@ void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
   {
     ++upgrade_n_;
     ++superseded_n_;
-    PushLive(item);
+    PushLive(MergeTicketScope(item, old.cy, old.priority, old.scan_full_focus));
     return;
   }
 
@@ -93,7 +98,8 @@ bool UColumnFlowScheduler::ReplaceColumnTicket(const ColumnWorkItem &item,
   }
   ++superseded_n_;
   ++upgrade_n_;
-  PushLive(item);
+  const auto &old = it->second;
+  PushLive(MergeTicketScope(item, old.cy, old.priority, old.scan_full_focus));
   return true;
 }
 

@@ -35,8 +35,8 @@ int main()
     const bool got = queue.DrainOne(out);
     std::cout << "priority refresh: got=" << got
               << " priority=" << out.priority << " cy=" << out.cy << '\n';
-    check(got && out.priority == 99 && out.cy == 7,
-          "same-kind urgency and preferred slice are refreshed");
+    check(got && out.priority == 99 && out.cy == kColumnWorkWholeColumnCy,
+          "same-kind urgency and both slice obligations are retained");
   }
   {
     UColumnFlowScheduler queue;
