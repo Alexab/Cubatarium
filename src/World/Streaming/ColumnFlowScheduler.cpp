@@ -58,6 +58,11 @@ bool UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
   const auto it = Live.find(coord);
   if (it == Live.end())
   {
+    if (Live.size() >= kMaxLiveTickets)
+    {
+      ++capacity_refused_n_;
+      return false;
+    }
     PushLive(item);
     return true;
   }

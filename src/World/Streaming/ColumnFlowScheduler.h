@@ -71,6 +71,8 @@ struct ColumnCoordHash
 class UColumnFlowScheduler
 {
 public:
+  static constexpr size_t kMaxLiveTickets = 1024;
+  uint64_t CapacityRefusedCount() const { return capacity_refused_n_; }
   /// True means this scope transferred to the live ticket; false leaves it
   /// with the caller (for example a competing higher-rank ticket owns XZ).
   bool Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority);
@@ -166,6 +168,7 @@ private:
   uint64_t denied_n_{0};
   uint64_t upgrade_n_{0};
   uint64_t superseded_n_{0};
+  uint64_t capacity_refused_n_{0};
 };
 
 } // namespace cutum

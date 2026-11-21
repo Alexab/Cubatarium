@@ -86,8 +86,9 @@ inline bool AllowUnlitFirstMesh(bool has_mesh, int horiz_from_focus,
 
 /// Void-edge / VisibleBlack debt: Relight-first (mesh dark + light field 0).
 /// No RemeshSeam — remesh alone cannot invent light (manual 190350 / Era32 P1).
+template <typename Queue>
 inline void EnqueueVoidDarkRelightTickets(
-    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    Queue &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &void_dark_cols)
 {
   auto near_dist = [&](glm::ivec2 col) {
@@ -102,8 +103,9 @@ inline void EnqueueVoidDarkRelightTickets(
 }
 
 /// VisibleBlack Hide⇒Ticket: RelightThenMesh (+ Promote) — same as void.
+template <typename Queue>
 inline void EnqueueVisibleBlackRepairTickets(
-    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    Queue &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &cols)
 {
   EnqueueVoidDarkRelightTickets(scheduler, focus, cols);
@@ -111,8 +113,9 @@ inline void EnqueueVisibleBlackRepairTickets(
 
 /// Enqueue FirstMesh / RelightThenMesh for sticky + stale-dark columns
 /// (ColPipe P1: no RemeshSeam proxy spam; void-class uses EnqueueVoidDark*).
+template <typename Queue>
 inline void EnqueueStickyStaleRepairTickets(
-    UColumnFlowScheduler &scheduler, glm::ivec2 focus,
+    Queue &scheduler, glm::ivec2 focus,
     const std::vector<glm::ivec2> &sticky_cols,
     const std::vector<glm::ivec2> &stale_dark_cols)
 {

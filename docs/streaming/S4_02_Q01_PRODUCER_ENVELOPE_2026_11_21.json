@@ -423,13 +423,14 @@
         "src/World/Streaming/ColumnFlowExecutor.cpp"
       ],
       "status": "OPEN",
-      "wip": "Explicit source-world EnqueueForWorld implemented and migrated at identified external direct/alias producer sites. Inactive/pre-bind callbacks retain intent without stealing active queue; TickMeshEmerge binds actual owner before producers. Clear/Forget retirement already connected. Full Release app compile PASS. Internal scheduler retry/deferred and two policy-helper bypasses must use lossless transfer before numeric cap; final native saturation pending.",
+      "wip": "1024 count cap, all identified owned ingress/internal retry/deferred/policy transfer and bounded replay connected. Local/native saturation and exact two-section current successor PASS. Allocator byte envelope still required, so step not yet complete.",
       "local_evidence": "build/desktop-msvc/s4-flow-intent-test-20261121.log",
       "cursor_evidence": "build/desktop-msvc/s4-flow-intent-cursor-test-20261121.log",
       "connection_build": "build/desktop-msvc/s4-flow-intent-connect-build-20261121.log",
       "connection_test": "build/desktop-msvc/s4-flow-intent-connect-test-20261121.log",
       "retirement_test": "build/desktop-msvc/s4-flow-intent-retire-test-20261121.log",
-      "owned_ingress_build": "build/desktop-msvc/s4-flow-owned-ingress-build-20261121.log"
+      "owned_ingress_build": "build/desktop-msvc/s4-flow-owned-ingress-build-20261121.log",
+      "capacity_receipt": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
     },
     {
       "id": "Q01.L2",
@@ -441,10 +442,11 @@
       "id": "Q01.L3",
       "action": "Saturation and current successor acceptance",
       "done_when": "At capacity, existing demand coalesces; refused new demand remains discoverable; release one owner and finish exact successor without manual ingress. Verify two signed slices, expiry, neighbour isolation and world retirement once on final source. Record source/EXE/config and retain overall UNTESTED.",
-      "status": "OPEN"
+      "status": "OPEN",
+      "partial_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
     }
   ],
-  "next_action": "Trace one-shot MarkRelitInstall/persistence ingress to authoritative render-demand/column record before choosing rejection policy. Do not add silent cap to void Enqueue. Then implement L1/L2 together and one final L3 verification.",
+  "next_action": "Resolve L2 world-record/stage cardinality and allocator-byte envelope without merely shifting uncapped overflow into records. Existing capacity/lifetime native receipts reusable unless dependent source changes.",
   "verified_one_shot_paths": [
     {
       "file": "src/World/Core/MarkRelitInstall.cpp",

@@ -32,6 +32,27 @@ int main()
 
   UColumnFlowScheduler s;
   {
+    UColumnFlowScheduler full;
+    bool accepted=true;
+    for(size_t i=0;i<UColumnFlowScheduler::kMaxLiveTickets;++i)
+      accepted=full.Enqueue({static_cast<int>(i),0},ColumnWorkKind::FirstMesh,10) && accepted;
+    Expect(accepted && full.LiveCount()==UColumnFlowScheduler::kMaxLiveTickets,"scheduler accepts declared capacity");
+    Expect(!full.Enqueue({-1,0},ColumnWorkKind::FirstMesh,10) && full.CapacityRefusedCount()==1,
+           "new key is explicitly refused at capacity");
+    ColumnWorkItem merged{}; merged.column={0,0}; merged.cy=-3; merged.priority=90;
+    Expect(full.Enqueue(merged),"existing key coalesces at capacity");
+    merged.cy=2;
+    Expect(full.Enqueue(merged),"second signed scope coalesces at capacity");
+    ColumnWorkItem out{};
+    Expect(full.DrainOne(out) && out.column==glm::ivec2(0,0) &&
+        out.cy==cutum::kColumnWorkWholeColumnCy,"saturated queue retains merged signed obligation");
+    Expect(full.Enqueue({-1,0},ColumnWorkKind::FirstMesh,10),"released slot accepts formerly refused key");
+    size_t drained=0; bool successor=false;
+    while(full.DrainOne(out)) { ++drained; successor=successor || out.column==glm::ivec2(-1,0); }
+    Expect(drained==UColumnFlowScheduler::kMaxLiveTickets && successor,
+           "capacity refusal evicts no accepted work and successor drains");
+  }
+  {
     cutum::UColumnRecordStore records;
     ColumnWorkItem a{}; a.column={-2,7}; a.cy=-3;
     ColumnWorkItem b=a; b.column={8,-4}; b.cy=2;

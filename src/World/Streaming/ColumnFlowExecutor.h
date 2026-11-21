@@ -178,6 +178,18 @@ private:
   void AdvanceCooldownFrame();
   void SetRelightRetryCooldown(const CooldownKey &key);
   void ReplayAdmissionIntents(UWorld &world);
+  bool TransferToScheduler(UWorld &world, const ColumnWorkItem &item);
+  struct AdmissionSink
+  {
+    UColumnFlowExecutor &executor;
+    UWorld &world;
+    void Enqueue(glm::ivec2 column, ColumnWorkKind kind, int priority)
+    {
+      ColumnWorkItem item{};
+      item.column = column; item.kind = kind; item.priority = priority;
+      executor.TransferToScheduler(world, item);
+    }
+  };
   std::optional<uint64_t> intent_cursor_;
 
   UColumnFlowScheduler SchedulerState;

@@ -657,7 +657,7 @@
         {
           "id": "LIMIT-C1.Q01",
           "status": "CHECK",
-          "required_result": "Priority storage, targeted retirement, dispatch/retry expiry, Absent/local Clear and global world owner retirement PASS. Remaining live-coordinate producer/count envelope and retained non-Absent stage-map envelope. LIMIT remains CHECK.",
+          "required_result": "1024 scheduler/index count and lossless saturated owned admission/readmission current successor PASS. Remaining world-record/non-Absent-stage cardinality and allocator byte envelope. LIMIT remains CHECK.",
           "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json",
           "retirement_evidence": "build/desktop-msvc/s4-flow-forget-acceptance-20261121.json",
           "dispatch_expiry_evidence": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json",
@@ -668,7 +668,8 @@
             "Q01.L1",
             "Q01.L2",
             "Q01.L3"
-          ]
+          ],
+          "count_admission_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q02",
@@ -719,7 +720,7 @@
         "Q01"
       ],
       "source": "src/World/Streaming/ColumnFlowScheduler.h",
-      "observed": "Exact-removal ordered priority index has one fixed-size entry per live XZ, no tombstones; enqueue/remove logarithmic, drain one entry. Current accepted receipt s4-flow-storage-acceptance-20261121.json. Numeric distinct-live producer envelope and hash-bucket peak/cooldown-map cleanup not yet closed."
+      "observed": "Scheduler max1024 live/index entries, existing-key merge allowed at full, new-key refusal explicit. Owned/internal policy ingress retains refused intent in source-world records; bounded64-record readmission current native PASS. Dispatch/retry metadata source bounds48 each. World-record/stage cardinality and allocator byte accounting not closed."
     },
     {
       "queues": [

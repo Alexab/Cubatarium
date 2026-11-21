@@ -395,6 +395,19 @@ void UColumnFlowExecutor::EnqueueForWorld(UWorld &world, const ColumnWorkItem &i
     Enqueue(item);
 }
 
+bool UColumnFlowExecutor::TransferToScheduler(UWorld &world, const ColumnWorkItem &incoming)
+{
+  auto item = incoming;
+  const auto epoch = world.GetMeshService().GetCache().GetCaptureStore().WorldEpoch();
+  auto &intent = world.GetColumnRecords().NoteFlowIntent(item, epoch);
+  item.cy = intent.cy;
+  item.priority = intent.priority;
+  item.scan_full_focus = intent.scan_full_focus;
+  const bool accepted = SchedulerState.Enqueue(item);
+  if (accepted) intent = {};
+  return accepted;
+}
+
 void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &incoming)
 {
   ColumnWorkItem item = incoming;
@@ -509,8 +522,10 @@ void UColumnFlowExecutor::Enqueue(const ColumnWorkItem &incoming)
     if (intent) *intent = {};
     return;
   }
-  if (SchedulerState.Enqueue(item) && intent)
-    *intent = {};
+  if (decide_world_)
+    TransferToScheduler(*decide_world_, item);
+  else
+    SchedulerState.Enqueue(item);
   // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains
   // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch.
 }
@@ -673,7 +688,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
       const CooldownKey retry_key =
           MakeCooldownKey(work.column, ColumnWorkKind::RelightThenMesh);
       SetRelightRetryCooldown(retry_key);
-      SchedulerState.Enqueue(work);
+      TransferToScheduler(world, work);
     }
     else
     {
@@ -717,7 +732,7 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
       const CooldownKey retry_key =
           MakeCooldownKey(retry.column, ColumnWorkKind::RelightThenMesh);
       SetRelightRetryCooldown(retry_key);
-      SchedulerState.Enqueue(retry);
+      TransferToScheduler(world, retry);
     }
     break;
   }
@@ -870,7 +885,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
   }
   for (const ColumnWorkItem &item : deferred)
   {
-    SchedulerState.Enqueue(item);
+    TransferToScheduler(world, item);
   }
   telemetry.ColumnFlowProbedN = std::max(telemetry.ColumnFlowProbedN, probed);
   telemetry.ColumnFlowCooldownDeferredN =
@@ -930,6 +945,7 @@ void UColumnFlowExecutor::TickDerived(
     bool prep_over_budget)
 {
   BindDecideWorld(&world);
+  AdmissionSink intent_sink{*this, world};
   AdvanceCooldownFrame();
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
   std::vector<glm::ivec2> pending_cols;
@@ -1290,7 +1306,7 @@ void UColumnFlowExecutor::TickDerived(
     }
     if (!stale_dark_cols.empty())
     {
-      EnqueueVisibleBlackRepairTickets(SchedulerState, focus, stale_dark_cols);
+      EnqueueVisibleBlackRepairTickets(intent_sink, focus, stale_dark_cols);
     }
     // FZ2-R6 / FZ2.2-C2a: second collect idle-only; C2c enter peak one-shot.
     // FZ2.7-P15b (ex-P14 F4): also one moving second pass under no_ticket
@@ -1314,7 +1330,7 @@ void UColumnFlowExecutor::TickDerived(
                                          extra, remain);
       if (!extra.empty())
       {
-        EnqueueVisibleBlackRepairTickets(SchedulerState, focus, extra);
+        EnqueueVisibleBlackRepairTickets(intent_sink, focus, extra);
       }
     }
     else if (second_pass_enter_peak)
@@ -1330,13 +1346,13 @@ void UColumnFlowExecutor::TickDerived(
                                            remain);
         if (!extra.empty())
         {
-          EnqueueVisibleBlackRepairTickets(SchedulerState, focus, extra);
+          EnqueueVisibleBlackRepairTickets(intent_sink, focus, extra);
         }
       }
     }
     if (!void_dark_cols.empty())
     {
-      EnqueueVoidDarkRelightTickets(SchedulerState, focus, void_dark_cols);
+      EnqueueVoidDarkRelightTickets(intent_sink, focus, void_dark_cols);
       // G1: Note+FIFO for every void ticket (collect already ≤void_cap ~2–4).
       // Previously only under void_pressure with note_cap=2 → FullyDarkStalled
       // while RelightThenMesh sat in the heap without PendingLight progress.
@@ -1408,12 +1424,12 @@ void UColumnFlowExecutor::TickDerived(
     }
     if (!stale_dark_cols.empty())
     {
-      EnqueueStickyStaleRepairTickets(SchedulerState, focus, /*sticky*/ {},
+      EnqueueStickyStaleRepairTickets(intent_sink, focus, /*sticky*/ {},
                                       stale_dark_cols);
     }
     if (!void_dark_cols.empty())
     {
-      EnqueueVoidDarkRelightTickets(SchedulerState, focus, void_dark_cols);
+      EnqueueVoidDarkRelightTickets(intent_sink, focus, void_dark_cols);
       for (const glm::ivec2 &col : void_dark_cols)
       {
         if (world.IsPendingLightBeforeMesh(col))

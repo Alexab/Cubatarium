@@ -2321,6 +2321,47 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           report["flow_cooldown_expiry"].push_back({{"mode",mode},{"before",cooldown_before},
               {"counts_by_age",ages},{"receipts_after",executor.DispatchExpiryCount()},{"exact",expires_exactly}});
           require(expires_exactly,"old expiry receipt preserves renewed cooldown until its exact deadline");
+          if(mode==1) {
+            mesh.RemoveColumn({0,0,0},-3,2);
+            bool filled=true;
+            for(size_t i=0;i<UColumnFlowScheduler::kMaxLiveTickets;++i)
+              filled=executor.Scheduler().Enqueue({100+static_cast<int>(i),0},ColumnWorkKind::FirstMesh,1) && filled;
+            ColumnWorkItem a{}; a.column={0,0}; a.cy=-3; a.priority=90;
+            auto b=a; b.cy=2;
+            // Owned callback before binding must remain in the world record.
+            executor.EnqueueForWorld(flow,a); executor.EnqueueForWorld(flow,b);
+            executor.DrainBudget(flow,0,{0,-3,0},1,1);
+            const auto epoch=cache.GetCaptureStore().WorldEpoch();
+            const auto *retained=flow.GetColumnRecords().FindFlowIntents({0,0},epoch);
+            const bool refused_retained=filled && retained && retained->flow_intent[1].pending &&
+                retained->flow_intent[1].cy==kColumnWorkWholeColumnCy &&
+                !executor.Scheduler().ContainsColumn({0,0}) &&
+                executor.Scheduler().LiveCount()==UColumnFlowScheduler::kMaxLiveTickets &&
+                executor.Scheduler().CapacityRefusedCount()>0;
+            executor.Scheduler().RemoveColumn({100,0});
+            executor.DrainBudget(flow,0,{0,-3,0},1,1);
+            const auto *readmitted_record=flow.GetColumnRecords().FindFlowIntents({0,0},epoch);
+            const bool readmitted=executor.Scheduler().ContainsColumn({0,0}) && readmitted_record &&
+                !readmitted_record->flow_intent[1].pending &&
+                executor.Scheduler().LiveCount()==UColumnFlowScheduler::kMaxLiveTickets;
+            // Explicitly retire synthetic capacity occupants, never execute
+            // nonexistent far-column jobs. The target uses real world data.
+            for(size_t i=0;i<UColumnFlowScheduler::kMaxLiveTickets;++i)
+              executor.Scheduler().RemoveColumn({100+static_cast<int>(i),0});
+            UFrameDeadline::Get().BeginFrame(5000);
+            const auto dispatched=executor.DrainBudget(flow,1,{0,-3,0},1,1);
+            const bool both_dirty=mesh.IsChunkMeshDirty({0,-3,0}) && mesh.IsChunkMeshDirty({0,2,0});
+            mesh.RebuildDirtyChunksWithStats(flow.BlockWorld,*flow.BlockRegistry,8,8);
+            const bool successor=dispatched==1 && both_dirty &&
+                cache.GetPublishCount({0,-3,0})>0 && cache.GetPublishCount({0,2,0})>0 &&
+                cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld) &&
+                cache.IsPublishedMeshCurrentForInputs({0,2,0},flow.BlockWorld);
+            report["flow_capacity"]={{"limit",UColumnFlowScheduler::kMaxLiveTickets},
+                {"refused_intent_retained",refused_retained},{"automatic_readmission",readmitted},
+                {"actual_current_successor",successor}};
+            require(refused_retained && readmitted && successor,
+                "saturated flow queue retains owned callback intent and readmits without fresh ingress");
+          }
           if(mode==0) {
             auto &global=GetColumnFlowExecutor();
             struct RestoreGlobalFlow {

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.saturated-owned-admission-current-successor",
+      "status": "SCOPED_PASS_LIMIT_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json",
+      "scope": "Q01.L1 scheduler count/admission: max1024 live tickets/index entries, no accepted eviction; local Release saturation/same-key signed merge/released-slot drain PASS. Native actual scheduler saturated by explicit synthetic far-owner adapter; two actual owned pre-bind target requests retained, automatically readmitted after one slot release without producer reissue, real executor/current two-section publication PASS. Remaining synthetic owners explicitly retired, not executed. Existing flow lifetime/expiry/world successor cases PASS. World-record/stage cardinality, allocator byte accounting, whole-world memory/performance remain OPEN. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.global-world-owner-retirement",
       "status": "SCOPED_PASS_LIMIT_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
