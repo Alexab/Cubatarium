@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q10-C1",
     "Q10-C2",
     "Q12-C1",
     "Q01-C1",
@@ -475,7 +474,7 @@
     {
       "id": "Q10-C1",
       "queue": "Q10",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "Load cancellation/retry/reject/stale snapshot: no old slice erases newer state; pending completion and retry exhaustion terminate explicitly; current reissue loads fully.",
       "subcases": [
         {
@@ -501,10 +500,14 @@
         },
         {
           "id": "Q10-C1.OUTSIDE_RESET",
-          "status": "CHECK",
-          "scope": "Actual outside-radius/abort/world replacement retires abandoned load owner and current reissue completes without stale state resurrection."
+          "status": "REUSE",
+          "scope": "Actual outside-radius/abort/world replacement retires abandoned load owner and current reissue completes without stale state resurrection.",
+          "evidence": "build/desktop-msvc/s4-load-outside-reset-acceptance-20261121.json",
+          "coverage_note": "Actual radius/abort/UWorld permanent replacement with real target/peer disk cohorts, one actual partial AIR install, independent preexisting AIR, optional actual materialized edit. Actual late old payloads delayed/requeued while current real workers gate-held; current target24, radius retained peer24, cancelled peers0. AIR-only retirement and new field incarnation, exact preexisting/edit preservation except intentional permanent world discard. Codec preexisting AIR/delayed delivery/time gate are explicit adapters, not OS-blocked reads, camera travel/full world-switch save transaction/Full light/backend/framebuffer/performance/memory acceptance. Caps LIMIT-C1, full S0..S6 OPEN."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-load-outside-reset-acceptance-20261121.json",
+      "coverage_note": "All4 finite load outcomes accepted via property-specific receipts; latest actual native revalidates retry/admission/cancel/new owner/retirement/current completion. Actual radius/abort/UWorld permanent replacement with real target/peer disk cohorts, one actual partial AIR install, independent preexisting AIR, optional actual materialized edit. Actual late old payloads delayed/requeued while current real workers gate-held; current target24, radius retained peer24, cancelled peers0. AIR-only retirement and new field incarnation, exact preexisting/edit preservation except intentional permanent world discard. Codec preexisting AIR/delayed delivery/time gate are explicit adapters, not OS-blocked reads, camera travel/full world-switch save transaction/Full light/backend/framebuffer/performance/memory acceptance. Caps LIMIT-C1, full S0..S6 OPEN."
     },
     {
       "id": "Q10-C2",
@@ -681,5 +684,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q10-C1 RETRY_EXHAUSTION/ADMISSION/CANCEL_STALE accepted. Next OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
+  "checkpoint": "Q10-C1 all4 load subcases accepted. Next Q10-C2 save ownership/outcomes. Top-level4 CHECK; full scope OPEN."
 }

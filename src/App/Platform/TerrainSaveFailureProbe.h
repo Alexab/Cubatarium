@@ -1876,6 +1876,113 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               {"decoded_sections",decoded_sections},{"current_successor",successor}});
           require(successor,"actual current load completes and retains local deletion after old cancellation");
         }
+        // Real peer files let radius cancellation preserve an independently
+        // admitted boundary demand; no fabricated pending map entry.
+        const glm::ivec3 peer(1,0,0),owned_air(0,-3,0),prior_air(0,-2,0),materialized(1,-47,1);
+        auto peer_saved=std::make_unique<UBlockWorld>(); peer_saved->SetVerticalProfile({-64,319,63});
+        for(int cy=-4;cy<=19;++cy) {
+          const glm::ivec3 slice(1,cy,0); auto frame=std::make_unique<UChunk>(slice);
+          if(cy==-4) for(int x=0;x<CHUNK_SIZE;++x) for(int z=0;z<CHUNK_SIZE;++z) frame->SetBlockLocal({x,0,z},8);
+          if(cy==19) frame->SetBlockLocal({8,8,8},8);
+          const auto decoded=serializer.Deserialize(serializer.Serialize(slice,*frame,*load_world.BlockRegistry).bytes,
+                                                    slice,*load_world.BlockRegistry);
+          require(ApplyTerrainSliceLoad(*peer_saved,slice,&decoded,nullptr,{peer,0},0,false),"peer disk fixture decoded");
+        }
+        require(persistence.GetChunkStorage().SaveTerrainColumn(peer,*peer_saved,folder.string(),
+                    *load_world.BlockRegistry,319,-64),"peer disk fixture saved");
+        for(int operation=0;operation<3;++operation) for(const bool materialize : {false,true}) {
+          auto reset_owner=std::make_unique<UWorld>(nullptr,nullptr); auto &reset=*reset_owner;
+          reset.SetSpawnPoint({8,-47,8});
+          reset.ProceduralTemplate.MinHeight=-64; reset.ProceduralTemplate.MaxHeight=319;
+          reset.ProceduralTemplate.SeaLevel=63; reset.ProceduralTemplate.AsyncChunkIo=true;
+          reset.ProceduralTemplate.AsyncRelight=false; reset.BlockWorld.SetVerticalProfile({-64,319,63});
+          reset.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          reset.BlockWorld.SetFluidDefinitions(definitions.get()); reset.SetRenderSettings(settings);
+          reset.SetWorldFolderPath(folder.string());
+          auto prior_frame=std::make_unique<UChunk>(prior_air);
+          const auto prior=serializer.Deserialize(serializer.Serialize(prior_air,*prior_frame,*reset.BlockRegistry).bytes,
+                                                  prior_air,*reset.BlockRegistry);
+          require(ApplyTerrainSliceLoad(reset.BlockWorld,prior_air,&prior,nullptr,{column,0},0,false),
+                  "preexisting AIR owner installed independently of cancelled demand");
+          const auto prior_incarnation=reset.BlockWorld.GetChunkManager().GetSectionLightField(prior_air)->GetIncarnation();
+          auto &pending=*reset.Persistence;
+          const uint64_t old_id=99000+operation*4+(materialize?2:0),new_id=old_id+1;
+          pending.RequestAsyncTerrainColumnLoad(reset,column,old_id);
+          pending.RequestAsyncTerrainColumnLoad(reset,peer,old_id+100);
+          auto &io=*pending.AsyncChunkIo;
+          const auto old_owner=pending.PendingAsyncColumnLoadSlices.at(column).cancellation;
+          const auto peer_owner=pending.PendingAsyncColumnLoadSlices.at(peer).cancellation;
+          require(io.WaitIdleFor(std::chrono::seconds(5)) && io.GetLoadResultQueueDepth()==48,
+                  "two real disk cohorts completed before exact partial AIR install");
+          auto all=io.DrainLoads(); std::vector<AsyncChunkLoadResult> late,peer_results,one;
+          for(auto &result:all) {
+            if(result.coord==owned_air) one.push_back(std::move(result));
+            else if(result.coord.x==0) late.push_back(std::move(result));
+            else peer_results.push_back(std::move(result));
+          }
+          require(one.size()==1 && late.size()==23 && peer_results.size()==24,"actual payload cohorts partitioned");
+          io.RequeueLoads(std::move(one)); pending.TickAsyncChunkIo(reset,1,0);
+          require(reset.BlockWorld.GetChunkManager().HasLoadedAirSlice(owned_air) &&
+              !reset.BlockWorld.GetChunkManager().HasResidentGeometryColumn(column),"only demand-owned AIR partially installed");
+          const auto old_air_incarnation=reset.BlockWorld.GetChunkManager().GetSectionLightField(owned_air)->GetIncarnation();
+          if(materialize) { reset.BlockWorld.SetBlock(materialized,8); reset.ModifiedChunks.insert(owned_air); }
+          const auto peer_token=reset.Streaming->GetChunkGenTokens().Current(peer).sequence;
+          if(operation==0) require(pending.CancelAsyncTerrainColumnLoadsOutsideRadius(reset,{1,400,0},0)==1,
+                                  "outside radius cancels only abandoned target");
+          if(operation==1) (void)pending.AbortAsyncChunkIoFor(reset,std::chrono::milliseconds(0));
+          if(operation==2) reset.AbandonTerrainForWorldReplace();
+          const auto prior_field=reset.BlockWorld.GetChunkManager().GetSectionLightField(prior_air);
+          const bool old_retired=operation==2?
+              reset.BlockWorld.CountNonAir()==0 && !prior_field &&
+                  !reset.BlockWorld.GetChunkManager().HasLoadedAirSlice(owned_air):
+              prior_field && prior_field->GetIncarnation()==prior_incarnation &&
+                  (materialize?reset.BlockWorld.GetBlock(materialized)==8:
+                      !reset.BlockWorld.GetChunkManager().HasLoadedAirSlice(owned_air) &&
+                      !reset.BlockWorld.GetChunkManager().GetSectionLightField(owned_air));
+          const bool peer_preserved=operation!=0 ||
+              pending.PendingAsyncColumnLoadSlices.at(peer).cancellation==peer_owner && !peer_owner->load() &&
+              pending.PendingAsyncColumnLoadSlices.at(peer).remaining_results==24 &&
+              reset.Streaming->GetChunkGenTokens().Current(peer).sequence==peer_token;
+          require(old_owner->load() && !pending.IsTerrainColumnDiskLoadPending(column) && old_retired && peer_preserved,
+                  "retirement removes only exact old AIR; preexisting/materialized/retained owners survive");
+          auto current_gate=std::make_shared<AsyncLoadReadProbeGate>(); current_gate->demandId=new_id;
+          io.LoadReadProbeGate=current_gate;
+          pending.RequestAsyncTerrainColumnLoad(reset,column,new_id);
+          const auto current_owner=pending.PendingAsyncColumnLoadSlices.at(column).cancellation;
+          const auto entered_by=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+          while(!current_gate->entered.load() && std::chrono::steady_clock::now()<entered_by) std::this_thread::yield();
+          require(current_gate->entered.load() && !current_gate->timedOut.load(),"current actual disk worker held after retirement");
+          io.RequeueLoads(std::move(late));
+          for(int n=0;n<23;++n) pending.TickAsyncChunkIo(reset,1,0);
+          const auto &current=pending.PendingAsyncColumnLoadSlices.at(column);
+          require(current.cancellation==current_owner && current.demand_id==new_id && current.remaining_results==24,
+                  "late retired AIR/geometry results cannot consume new load owner");
+          current_gate->released.store(true); io.LoadReadProbeGate.reset();
+          require(io.WaitIdleFor(std::chrono::seconds(5)) && !current_gate->timedOut.load(),"current worker gate released without timeout");
+          io.RequeueLoads(std::move(peer_results));
+          const auto completed_by=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+          while(!pending.PendingAsyncColumnLoadSlices.empty() || io.GetLoadResultQueueDepth()>0) {
+            pending.TickAsyncChunkIo(reset,1,0);
+            require(std::chrono::steady_clock::now()<completed_by,"radius/abort/replacement current recovery bound");
+            std::this_thread::yield();
+          }
+          int current_decoded=0,peer_decoded=0;
+          for(int cy=-4;cy<=19;++cy) {
+            current_decoded+=reset.BlockWorld.GetChunkManager().HasDecodedTerrainSlice({0,cy,0});
+            peer_decoded+=reset.BlockWorld.GetChunkManager().HasDecodedTerrainSlice({1,cy,0});
+          }
+          const auto new_air=reset.BlockWorld.GetChunkManager().GetSectionLightField(owned_air);
+          const bool successor=current_decoded==24 &&
+              reset.BlockWorld.GetBlock({8,19*CHUNK_SIZE+8,8})==8 &&
+              !reset.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+              (operation==0?peer_decoded==24:peer_decoded==0) &&
+              (materialize && operation!=2?reset.BlockWorld.GetBlock(materialized)==8:
+                  new_air && new_air->GetIncarnation()!=old_air_incarnation);
+          report["disk_load_outside_reset"].push_back({{"operation",operation},{"materialized",materialize},
+              {"exact_retirement",old_retired},{"peer_preserved",peer_preserved},
+              {"current_decoded",current_decoded},{"peer_decoded",peer_decoded},{"current_successor",successor}});
+          require(successor,"actual current load recovers after exact AIR retirement/radius/abort/world replacement");
+        }
       });
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

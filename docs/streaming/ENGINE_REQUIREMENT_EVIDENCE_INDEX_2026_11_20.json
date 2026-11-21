@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q10.load-outside-reset-air-and-closure",
+      "status": "SCOPED_PASS_Q10_C1_CLOSED_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-load-outside-reset-acceptance-20261121.json",
+      "scope": "Actual radius/abort/UWorld permanent replacement with real target/peer disk cohorts, one actual partial AIR install, independent preexisting AIR, optional actual materialized edit. Actual late old payloads delayed/requeued while current real workers gate-held; current target24, radius retained peer24, cancelled peers0. AIR-only retirement and new field incarnation, exact preexisting/edit preservation except intentional permanent world discard. Codec preexisting AIR/delayed delivery/time gate are explicit adapters, not OS-blocked reads, camera travel/full world-switch save transaction/Full light/backend/framebuffer/performance/memory acceptance. Caps LIMIT-C1, full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q10.actual-disk-cancel-stale-current-successor",
       "status": "SCOPED_PASS_Q10_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

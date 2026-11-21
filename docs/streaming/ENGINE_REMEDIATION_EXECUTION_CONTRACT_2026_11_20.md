@@ -8,15 +8,14 @@
 
 ### Ближайшая очередь S4.02
 
-Актуальная точка на 2026-11-21: CPU Q02/Q04, capture Q03, pool Q05, GPU Q06, relight Q08, generation Q09 и seed/seal Q11 закрыты в пределах соответствующих receipts. Их повторная отладка не входит в очередь. Осталось **5 CHECK-групп**, 25 REUSE-групп и один отключённый путь; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json. Q11 завершён scoped composition RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT, включая actual replacement/current drain. Следующая группа — Q10-C1.
+Актуальная точка на 2026-11-21: CPU Q02/Q04, capture Q03, pool Q05, GPU Q06, relight Q08, generation Q09, seed/seal Q11 и load Q10-C1 закрыты в пределах соответствующих receipts. Их повторная отладка не входит в очередь. Осталось **4 CHECK-группы**, 26 REUSE-групп и один отключённый путь; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json. Q10-C1 завершён actual retry/admission/cancel/radius/abort/replacement/AIR/current recovery. Следующая группа — Q10-C2.
 
 | Шаг | ID | Конкретный результат для закрытия |
 |---|---|---|
-| 1 | Q10-C1 | Load cancel/retry/reject/stale slice не стирают новые данные. Retry exhaustion имеет явный исход; повторный текущий запрос полностью загружается. |
-| 2 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
-| 3 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
-| 4 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
-| 5 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
+| 1 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
+| 2 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
+| 3 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
+| 4 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
 
 ### Исполнимые шаги до закрытия S4.02
 
@@ -39,6 +38,8 @@
 15. **Закрыть S4.02.** Нет обязательных CHECK/BLOCKED; каждый принятый запрос имеет доказанный terminal outcome, лимиты и receipt. Сохранить checkpoint/commit; перейти к S4.03. Полный S4/S0..S6 остаётся открытым.
 
 Q11: шаги 7–8 завершены в объёме группы. RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT имеют scoped receipts; итоговый `s4-seed-seal-replacement-acceptance-20261121.json` подтверждает actual permanent reset и физическое выполнение свежего seed/seal в том же UWorld. Ограничения adapters/Flat/healthy-frame подготовки сохранены; caps/fairness/full IO и backend остаются в своих пакетах. Следующий — шаг 9 / Q10-C1. S4.02 и полная цель открыты.
+
+Шаг 9 / Q10-C1 завершён: RETRY_EXHAUSTION/ADMISSION/CANCEL_STALE/OUTSIDE_RESET приняты. Итоговый `s4-load-outside-reset-acceptance-20261121.json`: шесть radius/abort/replacement × AIR/materialized случаев, актуальные24 секции и сохранённый peer; прежние retry/admission/cancel проверки также PASS. Ограничения диагностических барьеров/кодековых входов сохранены; это не полная приёмка save/world-switch UI/backend. Следующий — шаг 10 / Q10-C2.
 
 На момент уточнения плана был выполнен шаг 1; само уточнение не запускало сборки или тесты. Последующее исполнение завершило шаги 2–3: `s4-generation-cancel-acceptance-20261121.json`, все 9 случаев PASS; шаг 4: `s4-generation-outside-acceptance-20261121.json`, все 3 стадии PASS; шаги 5–6: `s4-generation-admission-acceptance-20261121.json`, priority6/discarded2 PASS и все прежние Q09 regression PASS. Q09-C1 закрыт в своём объёме. Следующий — шаг 7 / Q11. Полная цель остаётся открытой.
 
