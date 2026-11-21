@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "ResourcePacks/ResourcePack.h"
 #include "ResourcePacks/TextureOverrides.h"
 #include "Render/Textures/TextureBase.h"
@@ -34,7 +35,7 @@ UResourcePack::LoadManifest(const fs::path &root)
   try
   {
     // The JSON lexer consumes UTF-8 BOM directly from the stream as well.
-    const json d = json::parse(in);
+    const json d = ParseCatalogSourceJson(in,CatalogJsonKind::Manifest);
     ResourcePackManifest m;
     m.Root = root;
     m.Id = d.value("id", root.filename().string());
@@ -114,7 +115,7 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     }
     try
     {
-      const json d = json::parse(file);
+      const json d = ParseCatalogSourceJson(file,CatalogJsonKind::ResourceBlocks);
       const ParsedBlockJson parsed = ParseBlockFromJson(d, true);
       if (!parsed.Valid)
       {

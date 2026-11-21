@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "World/Objects/ObjectLibrary.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
@@ -132,7 +133,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
 
   try
   {
-    json data = json::parse(file);
+    json data = ParseCatalogSourceJson(file,CatalogJsonKind::Prefab);
     WorldObjectDefinition object;
     object.Name = registerName.empty()
                       ? data.value("name",

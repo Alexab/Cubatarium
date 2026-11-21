@@ -37,6 +37,7 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
 #include <atomic>
 #include <fstream>
@@ -129,6 +130,18 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   try
   {
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
+    const auto json_sources=GetCatalogJsonSourceSnapshot();
+    report["catalog_json_sources"]={{"schema","catalog-json-source-model.v1"},
+        {"active_parsers",json_sources.active},{"peak_active_parsers",json_sources.peak_active},
+        {"completed",json_sources.completed},{"failed",json_sources.failed},{"largest_input_bytes",json_sources.largest_input},
+        {"largest_requested_heap_upper",json_sources.largest_requested_heap_upper},{"attempts_by_kind",json_sources.attempts},
+        {"largest_model_shape",{{"bytes",json_sources.largest_bound_shape.bytes},{"values",json_sources.largest_bound_shape.values},
+          {"objects",json_sources.largest_bound_shape.objects},{"arrays",json_sources.largest_bound_shape.arrays},
+          {"keys",json_sources.largest_bound_shape.keys},{"strings",json_sources.largest_bound_shape.strings},
+          {"string_bytes",json_sources.largest_bound_shape.string_bytes},{"max_depth",json_sources.largest_bound_shape.max_depth},
+          {"kind",static_cast<size_t>(json_sources.largest_bound_shape.kind)},{"success",json_sources.largest_bound_shape.success}}},
+        {"shape_inline_bytes",sizeof(CatalogJsonSourceShape)},{"process_counters_inline_bytes",sizeof(CatalogJsonSourceSnapshot)},
+        {"scope","Per-source MSVC container/parser/destructor request model;not measured heap or simultaneous process peak;no compiled candidate/publication/CRT/GL cap"}};
     const auto stbi_process=GetStbiProcessAllocationSnapshot();
     report["stbi_process_allocation"]={{"schema","stbi-allocation-requests.v1"},
         {"live_payload_bytes",stbi_process.live_payload_bytes},{"live_request_bytes",stbi_process.live_request_bytes},

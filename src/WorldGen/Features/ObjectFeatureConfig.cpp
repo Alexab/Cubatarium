@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenContentPinTls.h"
@@ -642,7 +643,7 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   }
   try
   {
-    const nlohmann::json root = nlohmann::json::parse(in);
+    const nlohmann::json root = ParseCatalogSourceJson(in,CatalogJsonKind::Features);
     // value<json>() deep-copies the complete group while both the source DOM
     // and the compiled candidate are live. Borrow members until root dies.
     // Keep value()'s previous rejection of a non-object root.

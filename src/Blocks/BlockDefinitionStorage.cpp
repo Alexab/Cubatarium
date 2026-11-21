@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include <cstdlib>
 #include <atomic>
@@ -129,7 +130,7 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
       json d;
       try
       {
-        d = json::parse(file);
+        d = ParseCatalogSourceJson(file,CatalogJsonKind::Definitions);
       }
       catch (const json::exception &e)
       {

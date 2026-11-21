@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 // #include <QPainter>
 // #include <QJsonDocument>
 // #include <QJsonObject>
@@ -555,7 +556,7 @@ bool UTextureCubeStorage::LoadJson(const std::string &file_name,
 
   try
   {
-    const json d = json::parse(file);
+    const json d = ParseCatalogSourceJson(file,CatalogJsonKind::LegacyCube);
     std::string name_value = d.value("name", "");
     size_t id_value = d.value("id", 0);
     const auto textures_member = d.find("textures");

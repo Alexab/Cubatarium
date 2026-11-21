@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "Core/Memory/GenerationString.h"
 #include "ThirdParty/stb_image.h"
@@ -294,7 +295,7 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(pipelineJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     if (!json.contains("stages") || !json["stages"].is_array())
     {
       return;
@@ -372,7 +373,7 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(heightJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Height.SchemaVersion = json.value("schema_version", 1);
     if (pack.Height.SchemaVersion < 1 || pack.Height.SchemaVersion > 2)
     {
@@ -488,7 +489,7 @@ void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(climateJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     if (json.contains("temperature"))
     {
       ParseClimateAxis(json["temperature"], pack.Climate.Temperature);
@@ -536,7 +537,7 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(oresJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     if (!json.contains("ores") || !json["ores"].is_array())
     {
       return;
@@ -580,7 +581,7 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(valleys_json);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Valleys.Enabled = json.value("enabled", pack.Valleys.Enabled);
     pack.Valleys.MaxDepth = json.value("max_depth", pack.Valleys.MaxDepth);
     pack.Valleys.WidthSigma =
@@ -619,7 +620,7 @@ void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(lakes_json);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Lakes.Enabled = json.value("enabled", pack.Lakes.Enabled);
     pack.Lakes.CellSize =
         std::clamp(json.value("cell_size", pack.Lakes.CellSize), 48, 512);
@@ -673,7 +674,7 @@ void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(ravines_json);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Ravines.Enabled = json.value("enabled", pack.Ravines.Enabled);
     pack.Ravines.Rarity = json.value("rarity", pack.Ravines.Rarity);
     pack.Ravines.MinDepth = json.value("min_depth", pack.Ravines.MinDepth);
@@ -702,7 +703,7 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(cavesJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Caves.MaxDepthBelowSurface =
         json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
     pack.Caves.MinDepthBelowSurface =
@@ -757,7 +758,7 @@ void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
   try
   {
     std::ifstream file(aquifersJson);
-    const nlohmann::json json = nlohmann::json::parse(file);
+    const nlohmann::json json = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Aquifers.CellSizeX =
         json.value("cell_size_x", pack.Aquifers.CellSizeX);
     pack.Aquifers.CellSizeY =
@@ -1048,7 +1049,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   try
   {
     std::ifstream file(packJson);
-    const nlohmann::json rootJson = nlohmann::json::parse(file);
+    const nlohmann::json rootJson = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
     pack.Id = rootJson.value("id", "default");
     const std::string mode = rootJson.value("biome_mode", "procedural");
     pack.BiomeMode = mode == "image" ? WorldGenBiomeMode::Image
@@ -1111,7 +1112,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
       try
       {
         std::ifstream biomeFile(entry.path());
-        const nlohmann::json biomeJson = nlohmann::json::parse(biomeFile);
+        const nlohmann::json biomeJson = ParseCatalogSourceJson(biomeFile,CatalogJsonKind::Pack);
         const std::string biomeId =
             biomeJson.value("id", entry.path().stem().string());
         if (!IsValidBiomeKey(biomeId))
@@ -1252,7 +1253,7 @@ std::vector<WorldGenPackInfo> UWorldGenPack::ListPackInfos()
     try
     {
       std::ifstream file(packJson);
-      const nlohmann::json rootJson = nlohmann::json::parse(file);
+      const nlohmann::json rootJson = ParseCatalogSourceJson(file,CatalogJsonKind::Pack);
       WorldGenPackInfo info;
       info.Id = rootJson.value("id", entry.path().filename().string());
       info.Description = rootJson.value("description", std::string{});

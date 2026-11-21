@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.catalog-json-source-envelope",
+      "status": "SCOPED_SOURCE_MODEL_NEW_REQUESTS_AND_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-json-source-acceptance-20261121.json",
+      "scope": "19 catalog parse sites single-pass source/shape+MSVC DOM/parser/lexer/destructor envelope;12 valid and9 exact error/stream equivalences,16 actual ordinary new request/destruction cases and unrelated-allocation negative control PASS. Native2184 parses,largest paired prefab48442bytes/model1114702,active0. Source-bound obligation preserved,no extra arbitrary asset cap. File/path/external settings/compiled candidate/prior-current/full decoder domain,C06/E12/full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.stbi-allocation-envelope",
       "status": "SCOPED_REQUEST_OWNER_FAILURE_CONCURRENCY_AND_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-stbi-allocation-acceptance-20261121.json",

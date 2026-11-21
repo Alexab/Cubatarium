@@ -8,6 +8,8 @@
 #include "Core/Memory/StbiAllocation.h"
 #include "ThirdParty/stb_image.h"
 #include "Test/StbiAllocationFixture.h"
+#include "WorldGen/Core/CatalogJsonSource.h"
+#include <sstream>
 
 #include <chrono>
 #include <cmath>
@@ -513,6 +515,60 @@ static void TestStbiAllocationEnvelope()
       << " concurrent_retained_request=" << concurrent.live_request_bytes << " final_live_delta=0" << std::endl;
 }
 
+static void TestCatalogJsonSourceEnvelope()
+{
+  using namespace cutum;using Json=nlohmann::json;
+  std::vector<std::string> valid={"null","true","-42","1.25e4",R"("text")","[]","{}",
+      "\xEF\xBB\xBF{\r\n\"unicode\":\"\\uD83D\\uDE03\",\"zero\":\"\\u0000\"\r\n}",
+      R"({"k":[1,{"s":"x"}],"k":[2,3]})"};
+  valid.push_back("{\"long\":\""+std::string(256*1024,'x')+"\"}");
+  valid.push_back(std::string(512,'[')+"0"+std::string(512,']'));
+  std::string wide="[";for(int i=0;i<20000;++i) {if(i) wide+=',';wide+=std::to_string(i);}wide+=']';valid.push_back(std::move(wide));
+  for(const auto &text:valid) {
+    std::istringstream oldInput(text),input(text);
+    const auto expected=Json::parse(oldInput);
+    const auto actual=ParseCatalogSourceJson(input,CatalogJsonKind::Pack);
+    const auto shape=GetLastCatalogJsonSource();
+    FluidTest::Expect(actual==expected && input.rdstate()==oldInput.rdstate(),kTestName,"single-pass catalog parser preserves JSON values and stream flags");
+    FluidTest::Expect(shape.success && !shape.overflow && shape.bytes==text.size() &&
+        shape.model_supported==kCatalogJsonSourceModelSupported &&
+        (shape.model_supported ? shape.requested_heap_upper>=text.size() : shape.requested_heap_upper==0),kTestName,
+        "source bytes/host bound or explicit unsupported model are recorded");
+  }
+  {
+    std::istringstream source(R"({"k":[1,{"s":"x"}],"k":[2,3]})");
+    (void)ParseCatalogSourceJson(source,CatalogJsonKind::Pack);const auto shape=GetLastCatalogJsonSource();
+#if !JSON_DIAGNOSTIC_POSITIONS
+    FluidTest::Expect(shape.values==8 && shape.objects==2 && shape.arrays==2 && shape.keys==3 &&
+        shape.strings==1 && shape.string_bytes==4 && shape.max_depth==3,kTestName,
+        "source envelope includes overwritten duplicate subtree,not only final DOM");
+#endif
+  }
+  const std::vector<std::string> invalid={""," ","{","[1,]","{} []",R"({"a":})",R"("\uD800")","1e10000",std::string("\xFF",1)};
+  for(const auto &text:invalid) {
+    std::istringstream oldInput(text),input(text);std::string oldError,error;int oldId=0,id=0;
+    try {(void)Json::parse(oldInput);} catch(const Json::exception &e) {oldError=e.what();oldId=e.id;}
+    try {(void)ParseCatalogSourceJson(input,CatalogJsonKind::Features);} catch(const Json::exception &e) {error=e.what();id=e.id;}
+    const auto shape=GetLastCatalogJsonSource();
+    FluidTest::Expect(oldId!=0 && id==oldId && error==oldError && input.rdstate()==oldInput.rdstate() &&
+        !shape.success && !shape.overflow && shape.model_supported==kCatalogJsonSourceModelSupported,kTestName,
+        "malformed/trailing catalog input preserves exact exception and stream state");
+  }
+  CatalogJsonSourceShape huge;huge.bytes=std::numeric_limits<size_t>::max();huge.success=true;
+  huge=BoundCatalogJsonSource(huge);
+  FluidTest::Expect(kCatalogJsonSourceModelSupported ? huge.overflow && huge.requested_heap_upper==std::numeric_limits<size_t>::max()
+      : !huge.model_supported && huge.requested_heap_upper==0,kTestName,"source bound arithmetic saturates or explicitly declines unsupported model");
+  const auto source=GetCatalogJsonSourceSnapshot();
+  FluidTest::Expect(source.active==0 && source.failed>=invalid.size() && source.completed>=valid.size(),kTestName,
+      "all successful/failed parser scopes retire without source-name history");
+  FluidTest::Expect(source.largest_bound_shape.requested_heap_upper==source.largest_requested_heap_upper,kTestName,
+      "largest model retains its own numeric input shape rather than joining independent maxima");
+  std::cout << "catalog_json_valid=" << valid.size() << " exact_error_cases=" << invalid.size()
+      << " duplicate_values=8 deep_levels=512 wide_values=20000 largest_source=" << source.largest_input
+      << " largest_source_model=" << source.largest_requested_heap_upper << " shape_inline_bytes=" << sizeof(CatalogJsonSourceShape)
+      << " counters_inline_bytes=" << sizeof(CatalogJsonSourceSnapshot) << " active=0" << std::endl;
+}
+
 int main(int argc,char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -525,6 +581,7 @@ int main(int argc,char **argv)
     TestPackSelectorBudget(); return 0;
   }
   if(argc>1 && std::string(argv[1])=="--stbi-allocation-only") {TestStbiAllocationEnvelope();return 0;}
+  if(argc>1 && std::string(argv[1])=="--catalog-json-source-only") {TestCatalogJsonSourceEnvelope();return 0;}
   if(argc>1 && std::string(argv[1])=="--source-json-load-only") {
     TestFeatureSourceJsonLoading();return 0;
   }
@@ -539,6 +596,7 @@ int main(int argc,char **argv)
   TestPackScopedBiomeHandlesAndFailClosedValidation();
   TestFeatureSourceJsonLoading();
   TestStbiAllocationEnvelope();
+  TestCatalogJsonSourceEnvelope();
 
   std::cout << kTestName << ": OK" << std::endl;
   return 0;

@@ -2849,6 +2849,10 @@ cubatarium_add_test(NAME chunk_generation_registry_test
         src/Test/ChunkGenerationRegistryTest.cpp
     LIBRARIES glm::glm)
 
+cubatarium_add_test(NAME catalog_json_source_envelope_test
+    SOURCES src/Test/CatalogJsonSourceEnvelopeTest.cpp
+    LIBRARIES nlohmann_json::nlohmann_json)
+
 cubatarium_add_test(NAME worldgen_biome_features_test
     SOURCES
         src/WorldGen/Core/WorldGenRefs.cpp

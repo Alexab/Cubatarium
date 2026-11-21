@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenContentPinTls.h"
@@ -23,7 +24,7 @@ bool UWorldGenRefs::LoadFromFile(const std::filesystem::path &path)
   }
   try
   {
-    const nlohmann::json root = nlohmann::json::parse(in);
+    const nlohmann::json root = ParseCatalogSourceJson(in,CatalogJsonKind::Refs);
     if (!root.contains("slots") || !root["slots"].is_object())
     {
       std::cerr << "WorldGenRefs: missing slots object in " << path << std::endl;
