@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.world-record-retirement-startup-fail",
+      "status": "API_OBSERVED_PASS_STARTUP_FAIL_PACKAGE_OPEN",
+      "receipt": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",
+      "scope": "Actual permanent replacement empties world records, legacy stage labels/counters and current successor publishes. Current startup gate FAIL prevents aggregate acceptance; no full readiness claim. Live-world cardinality/allocator accounting still OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.saturated-owned-admission-current-successor",
       "status": "SCOPED_PASS_LIMIT_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

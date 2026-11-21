@@ -339,7 +339,15 @@
       "additional_observation": {
         "artifact": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
         "status": "Startup PASS in debt-target run; does not invalidate original 13-section FAIL or establish a fix."
-      }
+      },
+      "additional_observations": [
+        {
+          "evidence": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",
+          "status": "FAIL",
+          "scope": "World_261 CPU/Flat flow-only startup; actual API PASS/native0, first paint publication_unready31/light_unready0/missing_data0. Not proof current metadata retirement caused failure; original13-case remains distinct.",
+          "next_action": "Read existing first-paint/mesh publication diagnostics and identify unready sections/last valid authority; no repeat without new hypothesis."
+        }
+      ]
     },
     {
       "id": "surface-packed-floor-sky-zero",

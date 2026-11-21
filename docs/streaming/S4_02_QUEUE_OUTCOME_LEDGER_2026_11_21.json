@@ -669,7 +669,9 @@
             "Q01.L2",
             "Q01.L3"
           ],
-          "count_admission_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
+          "count_admission_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json",
+          "world_record_retirement_observation": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",
+          "startup_regression": "Current API PASS/native0 but startup31 publication-unready FAIL; aggregate acceptance remains pending, see existing surface-first-paint-unready defect."
         },
         {
           "id": "LIMIT-C1.Q02",

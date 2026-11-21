@@ -2375,6 +2375,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             global.Scheduler().Enqueue({3,0},ColumnWorkKind::FirstMesh,20);
             global.SetColumnJobStage({3,0},ColumnJobStage::Meshing);
             global.SetRelightRetryCooldown(UColumnFlowExecutor::MakeCooldownKey({3,0},ColumnWorkKind::RelightThenMesh));
+            flow.SetColumnEmergeState({3,0,0},ColumnEmergeState::Lighting);
+            ColumnWorkItem retired_intent{}; retired_intent.column={3,0};
+            flow.GetColumnRecords().NoteFlowIntent(retired_intent,cache.GetCaptureStore().WorldEpoch());
             auto unrelated=std::make_unique<UWorld>(nullptr,nullptr);
             unrelated->AbandonTerrainForWorldReplace();
             const bool foreign_preserved=global.Scheduler().LiveCount()==2 && global.decide_world_==&flow;
@@ -2382,6 +2385,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             flow.AbandonTerrainForWorldReplace();
             const bool retired=global.Scheduler().LiveCount()==0 && global.column_job_stage_.empty() &&
                 global.relight_retry_after_frame_.empty() && global.retry_expiry_.empty() && global.decide_world_==nullptr;
+            const bool world_records_retired=flow.GetColumnRecords().Size()==0 && flow.ColumnEmergeStates.empty() &&
+                flow.ColumnLightingTelemetryN==0 && flow.ColumnMeshingTelemetryN==0 && flow.ColumnRenderReadyTelemetryN==0;
             flow.BlockWorld.SetBlock({8,-40,8},8); flow.BlockWorld.SetBlock({8,40,8},8);
             global.BindDecideWorld(&flow);
             ColumnWorkItem a{}; a.column={0,0}; a.cy=-3; a.priority=90;
@@ -2402,8 +2407,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             unrelated.reset();
             const bool destructor_retired=global.Scheduler().LiveCount()==0 && global.decide_world_==nullptr;
             report["flow_world_lifecycle"]={{"foreign_preserved",foreign_preserved},{"old_owner_retired",retired},
+                {"world_records_retired",world_records_retired},
                 {"current_successor",successor},{"retargeted",retargeted},{"destructor_retired",destructor_retired}};
-            require(foreign_preserved && retired && successor && retargeted && destructor_retired,
+            require(foreign_preserved && retired && world_records_retired && successor && retargeted && destructor_retired,
                 "global flow retires only its world and replacement publishes actual current successor");
           }
         }

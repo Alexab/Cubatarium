@@ -11815,6 +11815,13 @@ void UWorld::AbandonTerrainForWorldReplace()
     MeshService->GetCache().MarkAllDirty();
   }
   GetRenderDemandStore().Clear();
+  ColumnRecords.Clear();
+  decltype(ColumnEmergeStates){}.swap(ColumnEmergeStates);
+  ColumnLightingTelemetryN = 0;
+  ColumnMeshingTelemetryN = 0;
+  ColumnRenderReadyTelemetryN = 0;
+  NextColumnEmergeTelemetrySampleMs = 0.0;
+  LastColumnEmergeTelemetrySampleMs = 0.0;
   ResetFluidSurfacePackReuseCache();
   ModifiedChunks.clear();
   BlockWorldReady = false;
