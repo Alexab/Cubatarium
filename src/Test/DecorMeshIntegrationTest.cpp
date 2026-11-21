@@ -1592,6 +1592,8 @@ public:
   mutable int eligibility_calls{0};
 };
 
+static void TestOldGpuNewGpuOwner(cutum::UBlockRegistry &,
+                                  const cutum::UBlockDefinitionStorage *);
 static void TestOldGpuNewCpuOwner(cutum::UBlockRegistry &,
                                   const cutum::UBlockDefinitionStorage *);
 
@@ -2517,6 +2519,7 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
     TestGpuEnqueueQuotaLifetime(registry, definitions);
     TestGpuPendingCancellationLifetime(registry, definitions);
     TestOldGpuNewCpuOwner(registry, definitions);
+    TestOldGpuNewGpuOwner(registry, definitions);
     TestPackedLightArtifactOwnership(registry, definitions);
   }
 #endif
@@ -4284,6 +4287,77 @@ static bool TestDeferredRemeshCapacity(
 }
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void TestOldGpuNewGpuOwner(cutum::UBlockRegistry &registry,
+                                  const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for(int phase=0;phase<3;++phase) {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+    world.SetBlock({8,8,8},kStone);
+    const glm::ivec3 root(0);
+    DeferredTestMesher backend;
+    UChunkMeshCache cache;
+    auto settings=MakeFrustumMeshSettings();
+    settings.AsyncMeshing=true; settings.GpuPackedMeshing=true;
+    settings.FrustumCulling=false; settings.Lighting=LightingMode::Flat;
+    cache.SetRenderSettings(settings); cache.SetMesherBackend(&backend);
+    cache.SetMeshRebuildFocus(root,4,1);
+    const auto capture=[&]() {
+      UFlatLightingPipeline flat;flat.FillAllLoadedChunks(world);
+      const auto *chunk=world.GetChunkManager().GetChunk(root);
+      const auto epoch=cache.GetCaptureStore().WorldEpoch();
+      auto &d=cache.GetRenderDemandStore();
+      d.NoteDemand(root,cache.GetChunkMeshRevision(root),chunk->GetLightFieldRevision(),
+          0,1.0,epoch,chunk->GetIncarnation());
+      d.NoteLightCalculationSettled(root,epoch,chunk->GetIncarnation(),
+          chunk->GetLightFieldRevision(),chunk->GetContentRevision());
+      return ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache,world,root);
+    };
+    cache.MarkDirtyPriority(root);
+    ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache,capture(),registry);
+    if(phase>0) {
+      ChunkMeshCaptureAdmissionTestAccess::KickOnly(cache,registry);glFinish();
+      if(phase==2) Expect(ChunkMeshCaptureAdmissionTestAccess::AdvancePackedToKicked(cache,registry),
+          "old GPU reaches Kicked before new GPU owner");
+    }
+    world.SetBlock({12,8,8},kStone);
+    cache.InvalidateInFlightMeshBuild(root);
+    auto newer=capture();
+    Expect(cache.GetCaptureStore().TryCommit(root,newer.sourceRevision,
+        newer.sourceWorldEpoch,newer,nullptr),"new GPU owner retains current capture");
+    Expect(ChunkMeshCaptureAdmissionTestAccess::AdmitCpuThenAdvanceReceiptFrame(cache,newer,registry) &&
+        cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),"new GPU deferred result real worker completes");
+    cache.DrainAsyncMeshResults(world,registry,8);
+    Expect(cache.GetPendingGpuAppliesCount()==2,"old and new GPU pending owners coexist before retirement");
+    std::vector<int> held;
+    // New FirstMesh is at queue front: kick it, then retire the old tail.
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache,world,registry);
+    const bool pending=cache.GetPendingGpuAppliesCount()==1;
+    const bool preserved=cache.GetCaptureStore().TryGet(world,root,newer.sourceRevision).has_value() &&
+        !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root) &&
+        (pending ? cache.GetInflightSourceRevision(root)==newer.sourceRevision &&
+                       cache.IsGpuExtractInFlight(root) && cache.IsPendingGpuApply(root)
+                 : cache.IsPublishedMeshCurrentForInputs(root,world));
+    if(!preserved) std::cout<<"new_gpu_boundary pending="<<cache.GetPendingGpuAppliesCount()
+        <<" active="<<cache.GetInflightSourceRevision(root)<<" expected="<<newer.sourceRevision
+        <<" capture="<<cache.GetCaptureStore().TryGet(world,root,newer.sourceRevision).has_value()
+        <<" dirty="<<cache.IsChunkMeshDirty(root)<<" raa="<<cache.IsRemeshAfterApplyPending(root)
+        <<" extract="<<cache.IsGpuExtractInFlight(root)<<" indexed="<<cache.IsPendingGpuApply(root)<<'\n';
+    ChunkMeshCaptureAdmissionTestAccess::ReleaseHeldPackedSlots(cache,held);
+    for(int n=0;n<8 && cache.GetPendingGpuAppliesCount();++n) {
+      ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache,world,registry);glFinish();
+    }
+    const bool current=cache.IsPublishedMeshCurrentForInputs(root,world) &&
+        cache.GetGpuMeshPipeline()->HasGpuMesh(root) && cache.GetPublishCount(root)==1 &&
+        !cache.HasPendingDirty() && !cache.IsRemeshAfterApplyPending(root);
+    std::cout<<"old_gpu_new_gpu phase="<<phase<<" preserved="<<preserved<<" current="<<current<<'\n';
+    Expect(preserved && current,"old GPU retirement preserves newer actual GPU owner and publication");
+  }
+}
+
 static void TestOldGpuNewCpuOwner(cutum::UBlockRegistry &registry,
                                   const cutum::UBlockDefinitionStorage *definitions)
 {

@@ -302,8 +302,10 @@
             },
             {
               "id": "Q06-C2.3-GPU",
-              "status": "CHECK",
-              "scope": "Old GPU outcome preserves newer actual GPU pending/extract marker/Active/resources and current publication; no duplicate debt."
+              "status": "REUSE",
+              "scope": "All3 old queued/dispatched/exact Kicked preserve newer actual worker/result-admitted GPU pending/Active/current capture and extract marker, no Dirty/RAA manufacture; actual current GPU publication exactly1, no tails.",
+              "evidence": "build/desktop-msvc/s4-mixed-gpu-gpu-acceptance-20261121.json",
+              "coverage_note": "Old pending via existing QueuePacked adapter, newer actual bounded cache builder admission/frame adapter and normal ApplyMeshResult with real GPU byte credit. Runtime scheduler overlap scripted at actor boundary. For phases1/2 consumer may finish current newer in same call; no invented forced timing. FIELD owner remains Q06-C2.3-FIELD. Index rebuild/per-frame cost remains LIMIT-C1/S4.05/S6."
             },
             {
               "id": "Q06-C2.3-FIELD",
@@ -472,5 +474,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2.3-CPU mixed supersession/follow-up accepted. Remaining newer GPU exact marker/resource and FIELD owner subcases before Q06-C2 closure. Top-level10 CHECK; full scope OPEN."
+  "checkpoint": "Q06-C2 mixed newer CPU and newer GPU accepted. Last Q06-C2 gap FIELD owner/current compatible publication and genuine follow-up. Top-level10 CHECK unchanged; full S0..S6 OPEN."
 }

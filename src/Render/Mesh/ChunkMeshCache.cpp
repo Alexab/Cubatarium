@@ -7690,10 +7690,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (!revision_valid)
     {
-      GpuExtractInFlight.erase(pending_ref.coord);
+      const auto retired_coord = pending_ref.coord;
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
+      if (!IsPendingGpuApply(retired_coord))
+        GpuExtractInFlight.erase(retired_coord);
       continue;
     }
     const auto counter_profile_t0 = gpu_process_profile_sample
@@ -7761,7 +7763,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
-      GpuExtractInFlight.erase(pending.coord);
+      if (!IsPendingGpuApply(pending.coord))
+        GpuExtractInFlight.erase(pending.coord);
       ActiveMeshSourceRevision.erase(pending.coord);
       const auto commit_profile_t0 = gpu_process_profile_sample
                                          ? GpuProfileClock::now()
@@ -7845,10 +7848,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     }
     if (!revision_valid)
     {
-      GpuExtractInFlight.erase(pending_ref.coord);
+      const auto retired_coord = pending_ref.coord;
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
+      if (!IsPendingGpuApply(retired_coord))
+        GpuExtractInFlight.erase(retired_coord);
       continue;
     }
 
@@ -7900,7 +7905,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     PendingGpuApplies.erase(PendingGpuApplies.begin() +
                             static_cast<std::ptrdiff_t>(i));
     TouchPendingGpuIndex();
-    GpuExtractInFlight.erase(pending.coord);
+    if (!IsPendingGpuApply(pending.coord))
+      GpuExtractInFlight.erase(pending.coord);
     if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
     {
       ++gpu_profile_quad_failed_n;
@@ -8144,7 +8150,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
     PendingGpuApply pending = std::move(*queued_it);
     PendingGpuApplies.erase(queued_it);
     TouchPendingGpuIndex();
-    GpuExtractInFlight.erase(pending.coord);
+    if (!IsPendingGpuApply(pending.coord))
+      GpuExtractInFlight.erase(pending.coord);
 
     bool dropped = false;
     const auto revision_profile_t0 = gpu_process_profile_sample
@@ -8335,10 +8342,12 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       }
       if (!revision_valid)
       {
-        GpuExtractInFlight.erase(pending_ref.coord);
+        const auto retired_coord = pending_ref.coord;
         PendingGpuApplies.erase(PendingGpuApplies.begin() +
                                 static_cast<std::ptrdiff_t>(i));
         TouchPendingGpuIndex();
+        if (!IsPendingGpuApply(retired_coord))
+          GpuExtractInFlight.erase(retired_coord);
         continue;
       }
 
@@ -8394,7 +8403,8 @@ int UChunkMeshCache::ProcessPendingGpuMeshes(UBlockWorld &world,
       PendingGpuApplies.erase(PendingGpuApplies.begin() +
                               static_cast<std::ptrdiff_t>(i));
       TouchPendingGpuIndex();
-      GpuExtractInFlight.erase(pending.coord);
+      if (!IsPendingGpuApply(pending.coord))
+        GpuExtractInFlight.erase(pending.coord);
       if (st == UGpuMeshPipeline::GpuFinishStatus::Failed)
       {
         fail_ticket(pending, JobTerminalReason::GpuPipelineFailed);

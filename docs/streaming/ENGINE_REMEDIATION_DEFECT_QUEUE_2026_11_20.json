@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "old-gpu-retirement-clears-newer-extract-marker",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "observed": "Corrected actual queue order pending1/new Active/capture intact but extract0 after old retirement; later geometry publication still works.",
+      "fix": "After deque mutation erase shared coordinate extract marker only if no other pending remains. Reference-drop branches copy coord before erase to avoid invalid reference.",
+      "evidence": "build/desktop-msvc/s4-mixed-gpu-gpu-acceptance-20261121.json",
+      "next_action": "Q06-C2 FIELD owner, no parent closure."
+    },
+    {
       "id": "old-gpu-stale-input-invalidates-newer-cpu-capture",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q06_C2_OPEN",
