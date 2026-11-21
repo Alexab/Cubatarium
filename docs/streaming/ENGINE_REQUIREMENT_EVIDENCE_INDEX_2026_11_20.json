@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.dispatch-cooldown-expiry",
+      "status": "SCOPED_PASS_LIMIT_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json",
+      "scope": "LIMIT Q01 dispatch cooldown history: exact expiry after3 advancing frames, stale receipt cannot erase renewed key. Native3 actual forgotten/reissued dispatch sequences count1/1/0 and receipts0; prior Forget isolation and6 real successor publications PASS. Source-composed envelope48 receipts/active keys: sole dispatch path <=16 probes per clock step and3-step lifetime; no 48-key stress runtime claim. Retry map/job-stage/live producer bounds remain OPEN. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.targeted-cooldown-retirement",
       "status": "SCOPED_PASS_LIMIT_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

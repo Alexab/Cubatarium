@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <deque>
 #include <glm/glm.hpp>
 #include <unordered_map>
 
@@ -38,6 +39,7 @@ public:
   {
     SchedulerState.Clear();
     last_dispatch_frame_.clear();
+    dispatch_expiry_.clear();
     relight_retry_after_frame_.clear();
     promote_pending_ = false;
     promote_enqueued_ = false;
@@ -47,6 +49,8 @@ public:
   /// Drop queued/cooldown ownership for a column removed from streaming
   /// interest. Async workers have separate stale-result validation.
   bool ForgetColumnWork(glm::ivec2 column);
+  size_t DispatchCooldownCount() const { return last_dispatch_frame_.size(); }
+  size_t DispatchExpiryCount() const { return dispatch_expiry_.size(); }
 
   /// Clear per-frame Promote coalesce (call at UpdateStreaming BeginFrame).
   void BeginFrame();
@@ -156,6 +160,7 @@ private:
                      glm::ivec3 focus_ground_horiz, int focus_radius,
                      int admit_batch);
   void FlushPromoteRequest();
+  void AdvanceCooldownFrame();
 
   UColumnFlowScheduler SchedulerState;
   /// Rate-limit stale-dark NoteColumnRepair waves (manual 092627 thrash).
@@ -163,6 +168,9 @@ private:
   int frame_counter_{0};
   /// column+kind → frame when last Dispatched (cooldown 3 frames).
   std::unordered_map<CooldownKey, int, CooldownKeyHash> last_dispatch_frame_;
+  // Dispatch has at most16 probes per advancing frame; three-frame receipts
+  // therefore retain at most48 entries, including superseded/forgotten keys.
+  std::deque<std::pair<CooldownKey, int>> dispatch_expiry_;
   /// Failed FIFO admission keeps a live relight ticket while backing off.
   std::unordered_map<CooldownKey, int, CooldownKeyHash>
       relight_retry_after_frame_;

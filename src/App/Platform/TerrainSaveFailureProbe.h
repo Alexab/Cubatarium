@@ -2293,6 +2293,17 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                 {"merged",merged},{"dispatched",dispatched},{"both_dirty",both_dirty},{"both_current",current}});
             require(merged && dispatched==1 && both_dirty && current,"merged flow ticket admits and publishes both signed slices");
           }
+          const auto cooldown_before=executor.DispatchCooldownCount();
+          Json ages=Json::array();
+          for(int age=1;age<=3;++age) {
+            executor.DrainBudget(flow,0,{0,-3,0},1,1);
+            ages.push_back(executor.DispatchCooldownCount());
+          }
+          const bool expires_exactly=cooldown_before==1 && ages[0]==1 && ages[1]==1 && ages[2]==0 &&
+              executor.DispatchExpiryCount()==0;
+          report["flow_cooldown_expiry"].push_back({{"mode",mode},{"before",cooldown_before},
+              {"counts_by_age",ages},{"receipts_after",executor.DispatchExpiryCount()},{"exact",expires_exactly}});
+          require(expires_exactly,"old expiry receipt preserves renewed cooldown until its exact deadline");
         }
       });
       if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});

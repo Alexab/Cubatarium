@@ -46,6 +46,20 @@ void UColumnFlowExecutor::BeginFrame()
   promote_column_ = glm::ivec2(0);
 }
 
+void UColumnFlowExecutor::AdvanceCooldownFrame()
+{
+  ++frame_counter_;
+  while (!dispatch_expiry_.empty() &&
+         frame_counter_ - dispatch_expiry_.front().second >= kEnqueueCooldownFrames)
+  {
+    const auto receipt = dispatch_expiry_.front();
+    dispatch_expiry_.pop_front();
+    const auto current = last_dispatch_frame_.find(receipt.first);
+    if (current != last_dispatch_frame_.end() && current->second == receipt.second)
+      last_dispatch_frame_.erase(current);
+  }
+}
+
 bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
 {
   bool forgot_work = SchedulerState.RemoveColumn(column);
@@ -483,8 +497,9 @@ void UColumnFlowExecutor::AdvanceColumn(UWorld &world,
                                         glm::ivec3 focus_ground_horiz,
                                         int focus_radius, int admit_batch)
 {
-  last_dispatch_frame_[MakeCooldownKey(work.column, work.kind)] =
-      frame_counter_;
+  const auto dispatch_key = MakeCooldownKey(work.column, work.kind);
+  last_dispatch_frame_[dispatch_key] = frame_counter_;
+  dispatch_expiry_.emplace_back(dispatch_key, frame_counter_);
   ColumnEmergeState requested = ColumnEmergeState::Meshing;
   switch (work.kind)
   {
@@ -629,7 +644,7 @@ int UColumnFlowExecutor::DrainBudget(UWorld &world, int n,
 {
   BindDecideWorld(&world);
   FlushPromoteRequest();
-  ++frame_counter_;
+  AdvanceCooldownFrame();
   int drained = 0;
   int deferred_n = 0;
   int cooldown_deferred_n = 0;
@@ -829,7 +844,7 @@ void UColumnFlowExecutor::TickDerived(
     bool prep_over_budget)
 {
   BindDecideWorld(&world);
-  ++frame_counter_;
+  AdvanceCooldownFrame();
   const glm::ivec2 focus(focus_ground_horiz.x, focus_ground_horiz.z);
   std::vector<glm::ivec2> pending_cols;
   std::vector<glm::ivec2> sticky_cols;
