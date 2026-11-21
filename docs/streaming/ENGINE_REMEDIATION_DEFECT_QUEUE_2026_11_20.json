@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "removed-or-reset-cache-retains-deferred-remesh-coord",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Deferred normal return/zero quota already pass, but RemoveChunk/RemoveColumn/MarkAllDirty leave ring/set entry; public focus change returns old dirty after explicit removal/reset.",
+      "fix": "Explicit coord removals erase matching entry from bounded deferred ring and set; whole cache reset clears both. Existing admission algorithm unchanged.",
+      "evidence": "build/desktop-msvc/s4-deferred-zero-quota-acceptance-20261121.json",
+      "next_action": "Q02-C2.3 bounded deferred ring cap256 admission/eviction ownership; then .4 RAA/old receipt. Parent open."
+    },
+    {
       "id": "same-frame-published-edit-dropped-by-historical-scheduled-marker",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q02.deferred-return-zero-quota-retirement",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "ledger_subcase": "Q02-C2.2",
+      "receipt": "build/desktop-msvc/s4-deferred-zero-quota-acceptance-20261121.json",
+      "scope": "CPU dirty/deferred duplicate/return/explicit retirement and Baked hard-zero quota/current successor. Exact current EXE native overflow/cancel/protected publication regression PASS; native fixture does not itself exercise these deferred scenes. Parent Q02-C2/full S4.02/S0..S6 OPEN; no GPU/performance acceptance."
+    },
+    {
       "id": "S4.02.Q02.same-frame-new-edit-coalescing",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

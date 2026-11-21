@@ -614,6 +614,8 @@ void UChunkMeshCache::MarkAllDirty()
   ClearPublishedLightRefresh(false);
   ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
+  RemeshDeferredRing_.clear();
+  RemeshDeferredSet_.clear();
   Cache.clear();
   GreedyCache.clear();
   ReconcileKeys.clear();
@@ -5169,6 +5171,10 @@ void UChunkMeshCache::RemoveChunk(glm::ivec3 chunkCoord)
     GreedyVertexCountByChunk.erase(vIt);
   }
   Dirty.Erase(chunkCoord);
+  RemeshDeferredSet_.erase(chunkCoord);
+  RemeshDeferredRing_.erase(
+      std::remove(RemeshDeferredRing_.begin(), RemeshDeferredRing_.end(), chunkCoord),
+      RemeshDeferredRing_.end());
   ScheduledThisFrame_.erase(chunkCoord);
   if (AsyncBuilder)
     AsyncBuilder->ForgetInflight(chunkCoord);
@@ -5219,6 +5225,10 @@ void UChunkMeshCache::RemoveColumn(glm::ivec3 ground_coord, int min_cy,
       GreedyVertexCountByChunk.erase(vIt);
     }
     Dirty.Erase(slice);
+    RemeshDeferredSet_.erase(slice);
+    RemeshDeferredRing_.erase(
+        std::remove(RemeshDeferredRing_.begin(), RemeshDeferredRing_.end(), slice),
+        RemeshDeferredRing_.end());
     ScheduledThisFrame_.erase(slice);
     MeshRevisions.Erase(slice);
     ActiveMeshSourceRevision.erase(slice);

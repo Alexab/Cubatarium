@@ -111,6 +111,12 @@ struct MeshBuilderAdmissionTestAccess
 
 struct ChunkMeshCaptureAdmissionTestAccess
 {
+  static void ParkExistingRemesh(UChunkMeshCache &cache, glm::ivec3 coord)
+  {
+    cache.DeferRemeshCoord(coord);
+    cache.Dirty.Erase(coord);
+  }
+
   static std::optional<ChunkMeshSnapshot>
   CaptureForSchedule(UChunkMeshCache &cache, const UBlockWorld &world,
                      glm::ivec3 coord, uint64_t revision)
@@ -3625,7 +3631,7 @@ static bool TestSameFrameDirtyCoalescing(
 {
   using namespace cutum;
   bool all = true;
-  for (int mode = 0; mode < 4; ++mode)
+  for (int mode = 0; mode < 5; ++mode)
   {
     UBlockWorld world;
     world.SetFluidDefinitions(definitions);
@@ -3683,6 +3689,24 @@ static bool TestSameFrameDirtyCoalescing(
     const bool retained = cache.IsChunkMeshDirty(root) && !cache.HasCpuMeshBuildInFlight(root) &&
         !cache.HasInflightMeshBuild(root) && cache.GetDirtyCount() == 1;
     const bool revision_ok = cache.GetChunkMeshRevision(root) == initial_request + (mode == 3 ? 0 : 1);
+    bool zero_retained = true;
+    if (mode == 4)
+    {
+      MeshWorkAdmission zero;
+      zero.enforce_schedule_lanes = true;
+      zero.first_mesh_schedule = 1;
+      zero.remesh_schedule = 0;
+      cache.SetMeshWorkAdmission(zero);
+      for (int tick = 0; tick < 2; ++tick)
+      {
+        const auto admitted = schedule();
+        zero_retained = zero_retained && admitted == 0 && mesher.builds == 1 &&
+            (cache.IsChunkMeshDirty(root) || cache.IsRemeshDeferred(root)) &&
+            cache.GetChunkMeshRevision(root) == initial_request + 1;
+      }
+      cache.SetMeshWorkAdmission(MeshWorkAdmission{});
+      std::cout << "baked_zero_quota retained=" << zero_retained << '\n';
+    }
     auto retry_scheduled = schedule();
     const bool budget_retained = retry_scheduled == 1 || cache.IsChunkMeshDirty(root) ||
                                  cache.IsRemeshDeferred(root);
@@ -3703,7 +3727,86 @@ static bool TestSameFrameDirtyCoalescing(
         cache.GetPublishCount(root) == publications && mesher.builds == 2;
     std::cout << "same_frame_dirty mode=" << mode << " retained=" << retained
               << " revision=" << revision_ok << " budget_retained=" << budget_retained << " current=" << current << " no_op=" << no_op << '\n';
-    all = all && retained && revision_ok && budget_retained && current && no_op;
+    all = all && retained && revision_ok && zero_retained && budget_retained && current && no_op;
+  }
+  return all;
+}
+
+static bool TestDeferredRemeshRetirement(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool all = true;
+  for (int mode = 0; mode < 4; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({8, 8, 8}, kStone);
+    const glm::ivec3 root(0);
+    GatedPhysicalMesher mesher;
+    mesher.Release();
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    settings.Lighting = LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.SetRepairGuardWorld(&world);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    const auto schedule = [&]() {
+      UFlatLightingPipeline flat;
+      flat.FillAllLoadedChunks(world);
+      const auto *chunk = world.GetChunkManager().GetChunk(root);
+      const auto revision = cache.GetChunkMeshRevision(root);
+      const auto epoch = cache.GetCaptureStore().WorldEpoch();
+      cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+          0, 1.0, epoch, chunk->GetIncarnation());
+      cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+          chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+      Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                 cache, world, root, revision).has_value(), "deferred fixture captures actual current inputs");
+      const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 8, false, 0);
+      Expect(tick.Scheduled == 1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+             "deferred fixture computes exactly one actual job");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      Expect(cache.IsPublishedMeshCurrentForInputs(root, world),
+             "deferred fixture publishes actual current geometry");
+    };
+    cache.MarkDirtyPriority(root);
+    schedule();
+    world.SetBlock({12, 8, 8}, kStone);
+    cache.MarkDirty(root);
+    const auto request = cache.GetChunkMeshRevision(root);
+    // Exact existing producer transfer, isolated from quota-selection policy.
+    for (int duplicate = 0; duplicate < 6; ++duplicate)
+      ChunkMeshCaptureAdmissionTestAccess::ParkExistingRemesh(cache, root);
+    Expect(cache.GetRemeshDeferredCount() == 1 && cache.IsRemeshDeferred(root) &&
+               !cache.IsChunkMeshDirty(root) && cache.GetChunkMeshRevision(root) == request,
+           "deferred transfer coalesces one exact existing obligation");
+    if (mode == 1) cache.RemoveChunk(root);
+    if (mode == 2) cache.RemoveColumn(root, 0, 0);
+    if (mode == 3) cache.MarkAllDirty();
+    if (mode == 1 || mode == 2) world.GetChunkManager().RemoveChunk(root);
+    const bool cleared = mode == 0 || cache.GetRemeshDeferredCount() == 0;
+    cache.BeginHoleQueryFrame({1, 0, 0});
+    const bool outcome = cleared && !cache.IsRemeshDeferred(root) &&
+        cache.IsChunkMeshDirty(root) == (mode == 0);
+    std::cout << "deferred_remesh mode=" << mode << " cleared=" << cleared
+              << " outcome=" << outcome << '\n';
+    all = all && outcome;
+    if (!outcome) continue; // Preserve failed retirement evidence; never repair it with fresh ingress.
+    if (mode != 0)
+    {
+      world.SetBlock({8, 8, 8}, kStone);
+      cache.MarkDirtyPriority(root);
+    }
+    schedule(); // mode0 consumes the returned existing request, without MarkDirty.
+    all = all && mesher.builds == 2 && cache.GetRemeshDeferredCount() == 0 &&
+        (mode != 0 || cache.GetChunkMeshRevision(root) == request);
   }
   return all;
 }
@@ -7902,8 +8005,9 @@ int main(int argc, char **argv)
   TestMeshSameKeySupersession(registry, definitions.get());
   TestCancelledMeshRetryReceipts(registry, definitions.get());
   const bool same_frame_ok = TestSameFrameDirtyCoalescing(registry, definitions.get());
+  const bool deferred_ok = TestDeferredRemeshRetirement(registry, definitions.get());
   TestOutsideRadiusCpuMeshLifetime(registry, definitions.get());
-  Expect(same_frame_ok, "same-frame dirty coalescing preserves new geometry debt and ignores proven no-op hints");
+  Expect(same_frame_ok && deferred_ok, "dirty and deferred owners survive zero quota and retire on explicit removal/reset");
   const bool admission_owner_ok = TestMeshAdmissionOwnerLifetime(registry, definitions.get());
   const bool admission_debt_ok = TestCacheMeshAdmissionDebt(registry, definitions.get());
   Expect(admission_owner_ok && admission_debt_ok, "mesh admission rejects preserve credits owner and executable current debt");

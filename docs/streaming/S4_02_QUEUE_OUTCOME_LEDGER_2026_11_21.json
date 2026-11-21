@@ -63,8 +63,10 @@
         },
         {
           "id": "Q02-C2.2",
-          "status": "CHECK",
-          "scope": "Deferred normal return/dedup and explicit removal/reset retirement; actual re-entry/current publication. Include Baked hard-zero remesh quota: no lost geometry demand before later nonzero admission."
+          "status": "REUSE",
+          "scope": "Deferred normal return/dedup and explicit removal/reset retirement; actual re-entry/current publication. Include Baked hard-zero remesh quota: no lost geometry demand before later nonzero admission.",
+          "evidence": "build/desktop-msvc/s4-deferred-zero-quota-acceptance-20261121.json",
+          "coverage_note": "Friend isolates exact production transfer DeferRemeshCoord→Dirty.Erase; consumer focus-return/removal/reset/current publication are real public cache paths. Does not independently exercise every producer defer-selection branch. Hard-zero quota uses actual production scheduler, not friend. Ring cap256 eviction/RAA remain separate .3/.4. Reset proof is cache reset without an old running worker, not complete world-switch proof."
         },
         {
           "id": "Q02-C2.3",
@@ -353,5 +355,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q02-C2.1 accepted: new post-publication same-frame edits survive and current worker publishes; repeated hints coalesce/no-op. Physical missing-neighbor/zero-quota and radius cancellation regressions unchanged. Q02-C2 remains CHECK for deferred return/removal/reset/zero-quota/cap and RAA/old-receipt coalescing. 14 CHECK groups/16 REUSE groups/1 disabled production path; full S0..S6 OPEN."
+  "checkpoint": "Q02-C2.1/.2 accepted: same-frame geometry coalescing plus Baked zero quota, deferred dedup/focus return and explicit remove/cache reset retirement. Q02-C2 remains CHECK for .3 ring cap256 and .4 RAA/old receipt coalescing. 14 CHECK groups/16 REUSE groups/1 disabled path; full S0..S6 OPEN."
 }
