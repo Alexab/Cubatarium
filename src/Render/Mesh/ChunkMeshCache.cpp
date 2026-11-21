@@ -611,6 +611,7 @@ void UChunkMeshCache::SetRenderSettings(const RenderSettings &settings)
 }
 void UChunkMeshCache::MarkAllDirty()
 {
+  CancelPendingGpuOutsideLease(glm::ivec3(0), -1);
   ClearPublishedLightRefresh(false);
   ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();

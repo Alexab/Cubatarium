@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.exact-kicked-cache-reset",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-gpu-kicked-reset-acceptance-20261121.json",
+      "scope": "Native startup/Flat regression not reset fault injection. Cache reset proof is not full UWorld replacement with live old CPU/field worker. Policy/world retirement and mixed newer CPU/field owner versus old GPU outcome remain Q06-C2.2b/.3; no S4.02/stage closure."
+    },
+    {
       "id": "S4.02.Q06.pending-gpu-cancellation",
       "status": "SCOPED_PASS_Q06_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

@@ -287,6 +287,19 @@ struct ChunkMeshCaptureAdmissionTestAccess
     cache.TouchPendingGpuIndex();
     return pending.ticket;
   }
+  static bool AdvancePackedToKicked(UChunkMeshCache &cache, UBlockRegistry &registry)
+  {
+    auto &pending = cache.PendingGpuApplies.front();
+    glFinish();
+    const auto status = cache.GpuPipeline->TryCompleteCountersAndEmit(
+        pending.ticket, registry, 0);
+    if (status != UGpuMeshPipeline::GpuFinishStatus::Ready ||
+        !pending.ticket.valid || pending.ticket.awaitingCounters || !pending.ticket.fence)
+      return false;
+    pending.phase = UChunkMeshCache::PendingGpuApply::Phase::Kicked;
+    cache.TouchPendingGpuIndex();
+    return true;
+  }
   static bool HasCpuRecovery(UChunkMeshCache &cache, glm::ivec3 coord)
   {
     return cache.CpuMeshRecovery.count(coord) != 0;
@@ -1911,8 +1924,8 @@ static void TestGpuPendingCancellationLifetime(
     const cutum::UBlockDefinitionStorage *definitions)
 {
   using namespace cutum;
-  for (int mode = 0; mode < 5; ++mode)
-    for (const bool kicked : {false, true})
+  for (int mode = 0; mode < 6; ++mode)
+    for (int phase = 0; phase < 3; ++phase)
   {
   const auto baseline = UPipelineAdmission::Get().GpuPendingBytes();
   UBlockWorld world;
@@ -1944,9 +1957,10 @@ static void TestGpuPendingCancellationLifetime(
       chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
   const auto prepare = [&]() {
     flat.FillAllLoadedChunks(world);
+    const auto current_epoch = cache.GetCaptureStore().WorldEpoch();
     cache.GetRenderDemandStore().NoteDemand(root, cache.GetChunkMeshRevision(root),
-        chunk->GetLightFieldRevision(), 0, 1.0, epoch, chunk->GetIncarnation());
-    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+        chunk->GetLightFieldRevision(), 0, 1.0, current_epoch, chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, current_epoch,
         chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
     Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world, root,
         cache.GetChunkMeshRevision(root)).has_value(), "quota fixture captures current input");
@@ -1970,10 +1984,13 @@ static void TestGpuPendingCancellationLifetime(
   Expect(cache.GetPendingGpuAppliesCount() == 1 &&
              UPipelineAdmission::Get().GpuPendingBytes() > baseline,
          "GPU cancellation starts with actual accepted charged pending result");
-  if (kicked)
+  if (phase > 0)
   {
     ChunkMeshCaptureAdmissionTestAccess::KickOnly(cache, registry);
     glFinish();
+    if (phase == 2)
+      Expect(ChunkMeshCaptureAdmissionTestAccess::AdvancePackedToKicked(cache, registry),
+             "actual counter completion and emit establish exact Kicked phase");
   }
   const auto revision = cache.GetChunkMeshRevision(root);
   if (mode == 0) cache.CancelAsyncMeshWork();
@@ -1981,6 +1998,7 @@ static void TestGpuPendingCancellationLifetime(
   if (mode == 2) cache.RemoveChunk(root);
   if (mode == 3) cache.CancelInFlightOutsideHorizontalRadius({4, 0, 0}, 0, -1);
   if (mode == 4) cache.CancelAsyncInFlightKeepDirty(root, 0);
+  if (mode == 5) cache.MarkAllDirty();
   const bool protected_job = mode == 4;
   const bool boundary = protected_job
       ? cache.GetPendingGpuAppliesCount() == 1 && cache.HasInflightMeshBuild(root) &&
@@ -2006,7 +2024,7 @@ static void TestGpuPendingCancellationLifetime(
       !cache.IsRemeshAfterApplyPending(root) &&
       UPipelineAdmission::Get().GpuPendingBytes() == baseline;
   Expect(current, "GPU cancellation current or protected successor publishes and releases bytes");
-  std::cout << "gpu_pending_cancel mode=" << mode << " kicked=" << kicked
+  std::cout << "gpu_pending_cancel mode=" << mode << " phase=" << phase
             << " boundary=" << boundary << " current=" << current << '\n';
   }
 }

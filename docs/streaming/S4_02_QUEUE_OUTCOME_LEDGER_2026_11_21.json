@@ -238,7 +238,21 @@
         {
           "id": "Q06-C2.2",
           "status": "CHECK",
-          "scope": "Exact Kicked phase cleanup/credits/current successor; reset/world/policy retirement reuse existing identity proofs and fill missing current-demand completion."
+          "scope": "Exact Kicked phase cleanup/credits/current successor; reset/world/policy retirement reuse existing identity proofs and fill missing current-demand completion.",
+          "subcases": [
+            {
+              "id": "Q06-C2.2a",
+              "status": "REUSE",
+              "scope": "Exact Kicked5 operation cases pass before fix. MarkAllDirty queued reset negative leaves pending/credit. After fix all18 operation/phase cases boundary1/current1. Reset queued/dispatched/kicked frees ticket/credit immediately, no late pub; fresh demand in new capture epoch publishes current actual GPU.",
+              "evidence": "build/desktop-msvc/s4-gpu-kicked-reset-acceptance-20261121.json",
+              "coverage_note": "Native startup/Flat regression not reset fault injection. Cache reset proof is not full UWorld replacement with live old CPU/field worker. Policy/world retirement and mixed newer CPU/field owner versus old GPU outcome remain Q06-C2.2b/.3; no S4.02/stage closure."
+            },
+            {
+              "id": "Q06-C2.2b",
+              "status": "CHECK",
+              "scope": "Policy/world retirement with old live work: reject old epoch/policy owners, release only old resources, current demand completes. Reuse existing policy and awaiting-light identity evidence where exact."
+            }
+          ]
         },
         {
           "id": "Q06-C2.3",
@@ -405,5 +419,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2.1 pending cancel/KeepDirty/removal/outside/protected queued/post-kick scoped accepted. .2 exact Kicked/reset/current successor and .3 mixed newer owner remain. Top-level10 CHECK groups; full scope OPEN."
+  "checkpoint": "Q06-C2.2a exact Kicked/cache reset accepted; .2b policy/world retirement/current successor and .3 mixed late newer CPU/field owner remain. Top-level10 CHECK groups; full scope OPEN."
 }

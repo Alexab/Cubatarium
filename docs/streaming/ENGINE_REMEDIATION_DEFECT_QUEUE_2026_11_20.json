@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "mark-all-dirty-retains-old-pending-gpu-credit",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "observed": "Reset clears Active/changes epoch but keeps actual pending GPU and byte credit; negative queued reset fails terminal assertion.",
+      "fix": "MarkAllDirty calls existing CancelPendingGpuOutsideLease(no lease) before clearing caches and changing epoch.",
+      "evidence": "build/desktop-msvc/s4-gpu-kicked-reset-acceptance-20261121.json",
+      "next_action": "Q06-C2.2b policy/world replacement/current successor; .3 mixed late owners."
+    },
+    {
       "id": "full-and-keepdirty-cancel-leave-pending-gpu-resources",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q06_C2_OPEN",
