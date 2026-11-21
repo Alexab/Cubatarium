@@ -119,6 +119,7 @@ struct ChunkPopulateDiagnostics
   struct ThreadScratchSnapshot {
     size_t resident_chunks{0}; bool coarse_cache_active{false};
     size_t retained_seed_text_capacity_bytes{0};
+    size_t retained_config_text_capacity_bytes{0};
   };
   // Calling-thread diagnostic only; no cross-worker traversal.
   static ThreadScratchSnapshot GetThreadScratchSnapshot();

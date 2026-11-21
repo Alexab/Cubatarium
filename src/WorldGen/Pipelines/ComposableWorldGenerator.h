@@ -82,6 +82,8 @@ public:
   WorldGenContext &GetContext() { return Ctx; }
   size_t GetRetainedSampleSeedTextCapacityBytes() const
   { return SampleBuilder ? SampleBuilder->GetRetainedSeedTextCapacityBytes() : 0; }
+  size_t GetRetainedSampleSettingsTextCapacityBytes() const
+  { return SampleBuilder ? SampleBuilder->GetRetainedSettingsTextCapacityBytes() : 0; }
 
   /// Install chunk-local CoarseSurfaceY memo for blend/coast lookups.
   void BeginChunkCoarseCache(int base_x, int base_z, int pad);

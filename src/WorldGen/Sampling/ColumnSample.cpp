@@ -1,4 +1,5 @@
 #include "WorldGen/Sampling/ColumnSample.h"
+#include "WorldGen/Core/RuntimeSettingsText.h"
 
 #include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
@@ -40,8 +41,8 @@ UColumnSampleBuilder::UColumnSampleBuilder(
       Settings(settings), BiomeSource(biome_source)
 {
   // Sampling uses resolved numeric seed and terrain settings. Preserve their
-  // value snapshot, but do not retain arbitrary user-facing seed text.
-  std::string{}.swap(Settings.SeedText);
+  // value snapshot, but not display text or already-resolved selectors.
+  ReleaseRuntimeSettingsText(Settings);
 }
 
 size_t UColumnSampleBuilder::GetRetainedSeedTextCapacityBytes() const
@@ -50,6 +51,9 @@ size_t UColumnSampleBuilder::GetRetainedSeedTextCapacityBytes() const
   const auto object=reinterpret_cast<uintptr_t>(&Settings.SeedText);
   return data>=object && data-object<sizeof(Settings.SeedText) ? 0 : Settings.SeedText.capacity()+1;
 }
+
+size_t UColumnSampleBuilder::GetRetainedSettingsTextCapacityBytes() const
+{ return RuntimeSettingsTextCapacityBytes(Settings); }
 
 ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
 {

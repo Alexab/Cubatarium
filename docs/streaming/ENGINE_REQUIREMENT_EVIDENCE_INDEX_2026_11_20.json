@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.configuration-text-and-owner-envelope",
+      "status": "SCOPED_PASS_ENVELOPE_E10_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-config-text-acceptance-20261121.json",
+      "scope": "Private column sampler settings preserve numeric/tuning values but discard seed display text and already-resolved pack/preset selectors. TLS population cleanup releases all3 settings text fields plus ownerPack after runtime lookups and capture/cache completion. Factory selection and in-job ownerPack are unchanged; next Refresh restores immutable request settings. Diagnostic sums external text capacities in context, ownerPack and sampler copy with saturating arithmetic.",
+      "owner_envelope": "S4_02_Q09_PRODUCER_ENVELOPE_2026_11_21.json"
+    },
+    {
       "id": "S4.02.LIMIT.Q09.coarse-lake-memo-envelope",
       "status": "SCOPED_PASS_CONFIGURATION_SYNTHESIS_OPEN",
       "receipt": "build/desktop-msvc/s4-coarse-lake-memo-acceptance-20261121.json",

@@ -1,0 +1,147 @@
+{
+  "schema": "s4-q09-producer-envelope.v1",
+  "status": "OPEN",
+  "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
+  "current_regression_receipt": "build/desktop-msvc/s4-config-text-acceptance-20261121.json",
+  "owners": [
+    {
+      "id": "E01",
+      "owner": "Requested/metadata/token index",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "Accepted active requests<=1024; exact removable priority index; metadata domain is retention columns+1024; exact token retirement, no history tombstones.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E02",
+      "owner": "Immutable input settings",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "16MiB base with explicit largest-single-input floor; shared snapshot and moved worker copy charged through owner lifetime. Does not include arbitrary active helper copies.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E03",
+      "owner": "Generation compute/result leases",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "At most8 retained results across queued/running/Ready/Tick; shared compute slots and TryEnqueue refusal preserve demand.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E04",
+      "owner": "Transfer buffer storage",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "128MiB base shared preallocation credits, explicit largest sole-job floor; typed refusal exact retry/cancel/new-owner/oversized successor accepted.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-buffer-ownership-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E05",
+      "owner": "Queue/control/Tick metadata",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "Completion8slots2496bytes; full Tick batch2496bytes; callable/result/work/buffer-job allocate_shared nodes counted. Pool deque actual requested block/map counts.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-queue-storage-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E06",
+      "owner": "Worker objects/native stacks",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "4 generation workers on this host; thread object vector64bytes, native stack reservation4MiB. Barrier committed sample is not peak or RSS.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E07",
+      "owner": "Population diagnostics",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "30 fixed1024-sample windows,246240bytes on this build; cumulative aggregates separate; bounded copied-window sort.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-metrics-window-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E08",
+      "owner": "Density/coarse/lake memos",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "Per TLS pipeline: density<=81920dynamic bytes->0 atEnd; coarse<=20480dynamic bytes->0; lake4096 fixed inline bytes/<=256 active entries->0 entries. Four-worker bound applies to generation-pool owners only.",
+      "evidence": [
+        "build/desktop-msvc/s4-density-memo-acceptance-20261121.json",
+        "build/desktop-msvc/s4-coarse-lake-memo-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E09",
+      "owner": "Idle worker scratch/configuration",
+      "status": "PROPERTY_ACCEPTED",
+      "bound_or_observation": "Scratch chunks/cache scopes retire on success/cancel/quota unwind; all external settings/ownerPack text capacity0 after exit. Immutable numeric config and inline generator state remain.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-retained-settings-acceptance-20261121.json",
+        "build/desktop-msvc/s4-config-text-acceptance-20261121.json"
+      ]
+    },
+    {
+      "id": "E10",
+      "owner": "Active-job heap scratch and transient settings",
+      "status": "OPEN",
+      "bound_or_observation": "At most4 active generation workers; transfer buffer budget alone is not a proof of scratch-world/temporary-container/settings-copy bytes.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json"
+      ],
+      "remaining": [
+        "Derive scratch terrain/chunk and temporary container envelope from actual writes/profile/content and accepted input/buffer bounds.",
+        "Account peak settings/factory/helper copies before idle cleanup; preserve legitimate-input floors."
+      ]
+    },
+    {
+      "id": "E11",
+      "owner": "Pinned immutable catalogs",
+      "status": "OPEN",
+      "bound_or_observation": "Request content carries4 shared catalog handles; captured jobs are count-bounded. Distinct version/payload lifetime and bytes still need explicit composition with global catalog owners.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json"
+      ],
+      "remaining": [
+        "Trace request/pin/reload retirement and separate shared payload from per-job handles."
+      ]
+    },
+    {
+      "id": "E12",
+      "owner": "Platform bookkeeping and total process memory",
+      "status": "OPEN_DEPENDENCY",
+      "bound_or_observation": "Resource roots/dispatch wrappers/thread runtime/allocator headers are not included in requested payload counters. Runtime/RSS/performance evidence belongs to original S6 budget matrix.",
+      "evidence": [
+        "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
+        "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json"
+      ],
+      "remaining": [
+        "Finish finite root/dispatch ownership count and Windows implementation envelope.",
+        "Retain S6.06 matched-workload process-memory/latency budget obligation; do not sum virtual stack reservation as RSS."
+      ]
+    }
+  ],
+  "remaining_execution_order": [
+    "E10 active scratch/transient settings",
+    "E11 pinned catalogs",
+    "E12 finite platform counts plus original S6 process-memory dependency"
+  ],
+  "separate_lifecycle_defect": "thread-local-pipeline-registry-owner-not-in-cache-key remains source suspicion in defect queue, not native FAIL and not erased by memory acceptance",
+  "stage_policy": "Q09 CHECK, LIMIT-C1 OPEN, full S0..S6 OPEN; full vegetation ecology FAIL retained."
+}

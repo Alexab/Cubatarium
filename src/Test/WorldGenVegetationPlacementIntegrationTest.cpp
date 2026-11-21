@@ -1874,19 +1874,24 @@ int main(int argc, char **argv)
     request.settings.EnableTrees=false; request.settings.EnableGroundCover=false;
     request.settings.EnableDecoration=false; request.settings.EnableCaves=false;
     request.settings.SeedText=std::string(1024*1024,'s');
+    request.settings.WorldGenPresetId=std::string(1024*1024,'r');
     const auto empty=[] {
       const auto state=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot();
       return state.resident_chunks==0 && !state.coarse_cache_active &&
-          state.retained_seed_text_capacity_bytes==0;
+          state.retained_seed_text_capacity_bytes==0 && state.retained_config_text_capacity_bytes==0;
     };
     auto baseline=populator.Populate(request);
     FluidTest::Expect(baseline.buffer.GetOwnedAllocationBytes()>0 && empty(),kTestName,
         "real successful population releases thread scratch cache and large seed display text");
-    cutum::UColumnSampleBuilder sample_builder(nullptr,nullptr,request.settings);
+    auto sampling_settings=request.settings;
+    sampling_settings.WorldGenPackId=std::string(1024*1024,'p');
+    cutum::UColumnSampleBuilder sample_builder(nullptr,nullptr,sampling_settings);
     const auto sample=sample_builder.Build(3,7);
-    FluidTest::Expect(sample_builder.GetRetainedSeedTextCapacityBytes()==0 &&
-        request.settings.SeedText.size()==1024*1024 && sample.SurfaceY==request.settings.SeaLevel,kTestName,
-        "column sampler retains numeric settings without retaining or changing caller seed display text");
+    FluidTest::Expect(sample_builder.GetRetainedSettingsTextCapacityBytes()==0 &&
+        request.settings.SeedText.size()==1024*1024 && request.settings.WorldGenPresetId.size()==1024*1024 &&
+        request.settings.WorldGenPackId=="default" && sampling_settings.WorldGenPackId.size()==1024*1024 &&
+        sample.SurfaceY==request.settings.SeaLevel,kTestName,
+        "column sampler retains numeric settings without retaining or changing caller selection text");
     auto quota=std::make_shared<cutum::UBufferAllocationBudget>(128*1024);
     auto competitor=std::make_shared<cutum::BufferBudgetJob>();
     quota->Reserve(*competitor,32*1024);
@@ -1911,7 +1916,8 @@ int main(int argc, char **argv)
         kTestName,"partial population cancellation releases scratch and transfer");
     std::cout << kTestName << ": population scratch success/quota/recovery/cancel PASS" << std::endl;
     std::cout << "column_sample_builder_bytes=" << sizeof(cutum::UColumnSampleBuilder)
-        << " retained_seed_text_bytes=" << cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_seed_text_capacity_bytes << std::endl;
+        << " retained_seed_text_bytes=" << cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_seed_text_capacity_bytes
+        << " retained_config_text_bytes=" << cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot().retained_config_text_capacity_bytes << std::endl;
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--buffer-boundary-only")

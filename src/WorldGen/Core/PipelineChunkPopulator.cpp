@@ -11,6 +11,7 @@
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageId.h"
+#include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -522,16 +523,20 @@ ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThr
 {
   auto &tls=GetThreadLocalPipeline();
   auto *composable=dynamic_cast<UComposableWorldGenerator *>(tls.pipeline.get());
-  size_t seed_text_bytes=0;
+  size_t seed_text_bytes=0,config_text_bytes=0;
   if(composable) {
     const auto &text=composable->GetContext().Settings.SeedText;
     const auto data=reinterpret_cast<uintptr_t>(text.data());
     const auto object=reinterpret_cast<uintptr_t>(&text);
     if(data<object || data-object>=sizeof(text)) seed_text_bytes=text.capacity()+1;
     seed_text_bytes+=composable->GetRetainedSampleSeedTextCapacityBytes();
+    config_text_bytes=AddTextCapacityBytes(AddTextCapacityBytes(
+        RuntimeSettingsTextCapacityBytes(composable->GetContext().Settings),
+        ExternalStringCapacityBytes(composable->GetContext().WorldgenOwnerPackId)),
+        composable->GetRetainedSampleSettingsTextCapacityBytes());
   }
   return {tls.world.GetChunkManager().GetResidentChunkCount(),
-      composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes};
+      composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes,config_text_bytes};
 }
 
 ChunkPopulateResult
@@ -584,8 +589,10 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
       if(pipeline) {
         pipeline->EndChunkCoarseCache();
         // Refresh restores the immutable request settings before next use.
-        // Runtime generation only needs the resolved numeric seed.
-        std::string{}.swap(pipeline->GetContext().Settings.SeedText);
+        // Selection and owner lookup have finished; no arbitrary identifier
+        // capacity should survive after the request settings lease retires.
+        ReleaseRuntimeSettingsText(pipeline->GetContext().Settings);
+        std::string{}.swap(pipeline->GetContext().WorldgenOwnerPackId);
       }
       world.GetChunkManager().Clear();
     }
