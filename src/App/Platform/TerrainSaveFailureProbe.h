@@ -160,6 +160,282 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       settings.Lighting=LightingMode::Flat; settings.LightingModeExplicit=true;
       settings.AsyncMeshing=false; settings.GpuPackedMeshing=false; settings.FrustumCulling=false;
       world.SetRenderSettings(settings);
+      if(!face_only) RunTerrainProbePhase([&] {
+        const auto idle_deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+        while(UPipelineAdmission::Get().WorkSlotsInUse()!=0 &&
+            std::chrono::steady_clock::now()<idle_deadline) std::this_thread::yield();
+        require(UPipelineAdmission::Get().WorkSlotsInUse()==0,
+            "generation lifecycle starts with idle shared compute");
+      {
+        // Controlled payload production isolates scheduler ownership; the real
+        // pool, ready queue, generation registry and buffer ApplyTo are used.
+        struct OwnershipPopulator final : IUChunkPopulator {
+          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+            ChunkPopulateResult result;
+            result.coord=request.chunkCoord; result.token=request.token;
+            result.discarded=request.shouldCancel && request.shouldCancel();
+            if(!result.discarded) result.buffer.SetBlock(
+                {8+static_cast<int>(request.token.sequence-1)*2,-40,8},8);
+            return result;
+          }
+        } populator;
+        UChunkGenerationRegistry generation;
+        UChunkLoadScheduler scheduler(populator,generation);
+        UBlockWorld terrain;
+        terrain.SetFluidDefinitions(definitions.get());
+        terrain.SetVerticalProfile({-48,-33,-40});
+        const glm::ivec3 column(0);
+        generation.Bump(column);
+        ProceduralSettings generation_settings;
+        generation_settings.MinHeight=-48; generation_settings.MaxHeight=-33;
+        const auto wait_ready=[&]() {
+          const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+          while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+            std::this_thread::yield();
+          return scheduler.GetCompletedReadyCount()==1;
+        };
+        unsigned arrivals=0;
+        scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+        scheduler.RequestLoad(column,1,generation_settings);
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            wait_ready() &&
+            scheduler.GetCompletedReadyCount()==1,"actual generation worker owns a completed payload");
+        scheduler.Tick(terrain,0,0);
+        require(scheduler.GetState(column)==ChunkLoadState::Ready && arrivals==0,
+            "zero commit budget retains actual ready generation result");
+        const auto successor_sequence=generation.Bump(column);
+        terrain.SetBlock({8,-40,8},9);
+        scheduler.Tick(terrain,1,0);
+        const bool stale_rejected=terrain.GetBlock({8,-40,8})==9 && arrivals==0 &&
+            !scheduler.IsPending(column) && !scheduler.IsCommitted(column) &&
+            generation.Current(column).sequence==successor_sequence;
+        report["generation_stale_ready"]={{"stale_rejected",stale_rejected},
+            {"block",terrain.GetBlock({8,-40,8})},{"arrivals",arrivals}};
+        require(stale_rejected,"expired registry token must reject ready buffer without overwriting new terrain or token");
+        scheduler.RequestLoad(column,0,generation_settings);
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            wait_ready(),
+            "current generation request starts without extra cancellation");
+        scheduler.Tick(terrain,1,0);
+        const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
+            terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
+            generation.Current(column).sequence==successor_sequence;
+        report["generation_stale_ready"]["current_arrival"]=current;
+        require(current,"actual current generation buffer applies and notifies once after stale retirement");
+      }
+      {
+        for(int operation=0;operation<4;++operation) for(int phase=0;phase<3;++phase) {
+          struct GatePopulator final : IUChunkPopulator {
+            std::promise<void> entered,release;
+            std::future<void> entered_future=entered.get_future();
+            std::shared_future<void> resume=release.get_future().share();
+            bool released=false;
+            void Release() { if(!released) { released=true; release.set_value(); } }
+            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+              result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+
+                  (request.settings.Seed==17?8:10),-40,8},8);
+              if(request.settings.Seed==17) {
+                entered.set_value();
+                (void)resume.wait_for(std::chrono::seconds(5));
+              }
+              return result; // A late already-computed result must still be rejected.
+            }
+          } populator;
+          UChunkGenerationRegistry generation;
+          UChunkLoadScheduler scheduler(populator,generation);
+          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
+          terrain.SetVerticalProfile({-48,-33,-40}); terrain.SetBlock({8,-40,8},9);
+          const glm::ivec3 column(0); generation.Bump(column);
+          ProceduralSettings old_settings; old_settings.MinHeight=-48; old_settings.MaxHeight=-33;
+          old_settings.Seed=17;
+          unsigned arrivals=0;
+          scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+          const auto wait_ready=[&]() {
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+              std::this_thread::yield();
+            return scheduler.GetCompletedReadyCount()==1;
+          };
+          scheduler.RequestLoad(column,0,old_settings);
+          if(phase>0) {
+            require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+                populator.entered_future.wait_for(std::chrono::seconds(5))==std::future_status::ready,
+                "generation cancellation holds actual running producer after compute");
+            if(phase==2) {
+              populator.Release(); require(wait_ready(),"generation cancellation has actual completed result");
+              scheduler.Tick(terrain,0,0);
+            }
+          }
+          const glm::ivec3 retained(1,0,0);
+          uint64_t retained_token=0;
+          if(operation==3) {
+            generation.Bump(retained);
+            auto retained_settings=old_settings; retained_settings.Seed=43;
+            scheduler.RequestLoad(retained,2,retained_settings);
+            retained_token=generation.Current(retained).sequence;
+            // Center Y is deliberately unrelated; generation owns XZ columns.
+            require(scheduler.CancelPendingOutsideRadius({2,400,0},1)==1 &&
+                scheduler.GetState(retained)==ChunkLoadState::Requested &&
+                generation.Current(retained).sequence==retained_token,
+                "outside radius abandons only old owner and preserves boundary demand");
+          }
+          if(operation==0) scheduler.Cancel(column);
+          if(operation==1) scheduler.Invalidate(column);
+          if(operation==2) scheduler.CancelAllPending(std::chrono::milliseconds(0));
+          require(!scheduler.IsPending(column),"cancel retires old scheduler owner");
+          auto current_settings=old_settings; current_settings.Seed=29;
+          scheduler.RequestLoad(column,1,current_settings);
+          const auto current_token=generation.Current(column).sequence;
+          if(phase==1) { populator.Release(); require(wait_ready(),"late old generation publishes only to ready queue"); }
+          scheduler.Tick(terrain,1,0);
+          const bool preserved=arrivals==0 && terrain.GetBlock({8,-40,8})==9 &&
+              scheduler.GetState(column)==ChunkLoadState::Requested &&
+              generation.Current(column).sequence==current_token;
+          const char *result_key=operation==3?"generation_outside_lifetime":"generation_cancel_lifetime";
+          report[result_key].push_back({{"operation",operation},{"phase",phase},
+              {"new_owner_preserved",preserved},{"old_arrivals",arrivals}});
+          require(preserved,"cancelled generation cannot install or retire newer queued owner");
+          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
+              "new generation owner computes after old retirement");
+          scheduler.Tick(terrain,1,0);
+          const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
+              terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
+              generation.Current(column).sequence==current_token;
+          report[result_key].back()["current_arrival"]=current;
+          require(current,"cancelled generation successor installs exactly once");
+          if(operation==3) {
+            require(scheduler.GetState(retained)==ChunkLoadState::Requested &&
+                generation.Current(retained).sequence==retained_token &&
+                scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
+                "retained boundary request computes without repeated ingress");
+            scheduler.Tick(terrain,1,0);
+            const bool retained_arrival=scheduler.IsCommitted(retained) && arrivals==2 &&
+                terrain.GetBlock({CHUNK_SIZE+10,-40,8})==8 &&
+                generation.Current(retained).sequence==retained_token;
+            report[result_key].back()["retained_arrival"]=retained_arrival;
+            require(retained_arrival,"outside cancellation preserves actual boundary arrival");
+          }
+        }
+      }
+      {
+        for(int phase=0;phase<3;++phase) for(int direction=0;direction<2;++direction) {
+          struct AdmissionPopulator final : IUChunkPopulator {
+            bool hold=false;
+            std::atomic_int calls{0};
+            std::promise<void> entered,release;
+            std::future<void> entered_future=entered.get_future();
+            std::shared_future<void> resume=release.get_future().share();
+            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+              ++calls;
+              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+              result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+
+                  (request.settings.Seed==17?8:request.settings.Seed==29?10:12),-40,8},8);
+              if(hold && request.chunkCoord.x==0) {
+                entered.set_value(); (void)resume.wait_for(std::chrono::seconds(5));
+              }
+              return result;
+            }
+          } populator;
+          populator.hold=phase==1;
+          UChunkGenerationRegistry generation;
+          UChunkLoadScheduler scheduler(populator,generation);
+          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
+          terrain.SetVerticalProfile({-48,-33,-40});
+          const glm::ivec3 target(0),peer(1,0,0),invalid(0,1,0);
+          generation.Bump(target); generation.Bump(peer);
+          const auto target_token=generation.Current(target).sequence;
+          std::vector<glm::ivec3> arrivals;
+          scheduler.SetMarkDirtyFn([&](glm::ivec3 c,int,int,bool){arrivals.push_back(c);});
+          ProceduralSettings settings; settings.MinHeight=-48; settings.MaxHeight=-33; settings.Seed=17;
+          auto duplicate=settings; duplicate.Seed=99;
+          auto peer_settings=settings; peer_settings.Seed=29;
+          const auto wait_ready=[&](int count) {
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(scheduler.GetCompletedReadyCount()!=count && std::chrono::steady_clock::now()<deadline)
+              std::this_thread::yield();
+            return scheduler.GetCompletedReadyCount()==count;
+          };
+          scheduler.RequestLoad(invalid,-100,settings);
+          require(scheduler.GetState(invalid)==ChunkLoadState::Absent &&
+              scheduler.StartQueuedGenerationWorkers(1)==0 && populator.calls==0,
+              "non-column request rejected before generation admission");
+          const int initial=direction==0?10:-10,final=direction==0?-10:10;
+          scheduler.RequestLoad(target,initial,settings);
+          scheduler.RequestLoad(target,initial,duplicate);
+          if(phase>0) {
+            require(scheduler.StartQueuedGenerationWorkers(1)==1,"admission target starts once");
+            if(phase==1) require(populator.entered_future.wait_for(std::chrono::seconds(5))==
+                std::future_status::ready,"admission holds actual generating target");
+            else { require(wait_ready(1),"admission target completed"); scheduler.Tick(terrain,0,0); }
+          }
+          scheduler.RequestLoad(target,final,duplicate);
+          scheduler.RequestLoad(target,final,duplicate);
+          scheduler.RequestLoad(peer,0,peer_settings);
+          if(phase==1) { populator.release.set_value(); require(wait_ready(1),"admission release target"); }
+          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(phase==0?1:2),
+              "admission preserves one executable request per column");
+          scheduler.Tick(terrain,1,0);
+          const glm::ivec3 first=direction==0?target:peer,second=direction==0?peer:target;
+          require(arrivals.size()==1 && arrivals[0]==first,"live priority orders first actual commit");
+          if(phase==0) require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(1),
+              "queued priority refresh preserves remaining request");
+          scheduler.Tick(terrain,1,0);
+          scheduler.RequestLoad(target,-100,duplicate);
+          const bool accepted=arrivals.size()==2 && arrivals[1]==second &&
+              scheduler.IsCommitted(target) && scheduler.IsCommitted(peer) &&
+              terrain.GetBlock({8,-40,8})==8 && terrain.GetBlock({12,-40,8})==0 &&
+              terrain.GetBlock({CHUNK_SIZE+10,-40,8})==8 && populator.calls==2 &&
+              generation.Current(target).sequence==target_token &&
+              scheduler.StartQueuedGenerationWorkers(1)==0;
+          report["generation_admission"].push_back({{"phase",phase},{"direction",direction},
+              {"invalid_rejected",true},{"priority_order",true},{"immutable_request",accepted},
+              {"single_arrival_per_owner",accepted}});
+          require(accepted,"duplicates preserve original payload and committed owner without extra job");
+        }
+        for(int revoked=0;revoked<2;++revoked) {
+          struct DiscardPopulator final : IUChunkPopulator {
+            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+              result.discarded=request.settings.Seed==17;
+              if(!result.discarded) result.buffer.SetBlock({10,-40,8},8);
+              return result;
+            }
+          } populator;
+          UChunkGenerationRegistry generation; UChunkLoadScheduler scheduler(populator,generation);
+          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
+          terrain.SetVerticalProfile({-48,-33,-40}); terrain.SetBlock({8,-40,8},9);
+          const glm::ivec3 target(0); generation.Bump(target);
+          unsigned arrivals=0; scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+          ProceduralSettings settings; settings.MinHeight=-48; settings.MaxHeight=-33; settings.Seed=17;
+          const auto wait_ready=[&]() {
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+              std::this_thread::yield();
+            return scheduler.GetCompletedReadyCount()==1;
+          };
+          scheduler.RequestLoad(target,0,settings);
+          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),"actual discarded completion ready");
+          if(revoked) generation.Bump(target);
+          const auto current_token=generation.Current(target).sequence;
+          scheduler.Tick(terrain,1,0);
+          require(scheduler.GetState(target)==ChunkLoadState::Absent && arrivals==0 &&
+              terrain.GetBlock({8,-40,8})==9,"discarded result explicitly retires without terrain arrival");
+          settings.Seed=29; scheduler.RequestLoad(target,0,settings);
+          const auto successor_token=generation.Current(target).sequence;
+          require(revoked ? successor_token==current_token : successor_token>current_token,
+              "discarded token retirement preserves newer owner or creates fresh identity");
+          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),"discarded owner permits current reissue");
+          scheduler.Tick(terrain,1,0);
+          const bool current=scheduler.IsCommitted(target) && arrivals==1 &&
+              terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
+              generation.Current(target).sequence==successor_token;
+          report["generation_discarded"].push_back({{"registry_revoked",bool(revoked)},
+              {"retired_without_arrival",true},{"current_arrival",current}});
+          require(current,"current generation completes after discarded terminal outcome");
+        }
+      }
+      });
       if(!face_only && !flow_only) {
       require(world.GetLightingPipeline().GetMode()==LightingMode::Flat && !world.RequiresLightingLitGate(),
               "Flat probe uses actual factory Flat pipeline");
@@ -1113,272 +1389,6 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["relight_fifo_quiesce"].push_back({{"deferred",deferred},{"retained",retained},
             {"negative_and_positive_installed",installed()},{"pending",fifo.GetPendingTerrainColumnRelightCount()}});
         require(installed(),"quiesced FIFO/deferred request completes actual current install after resume");
-        }
-      }
-      {
-        // Controlled payload production isolates scheduler ownership; the real
-        // pool, ready queue, generation registry and buffer ApplyTo are used.
-        struct OwnershipPopulator final : IUChunkPopulator {
-          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
-            ChunkPopulateResult result;
-            result.coord=request.chunkCoord; result.token=request.token;
-            result.discarded=request.shouldCancel && request.shouldCancel();
-            if(!result.discarded) result.buffer.SetBlock(
-                {8+static_cast<int>(request.token.sequence-1)*2,-40,8},8);
-            return result;
-          }
-        } populator;
-        UChunkGenerationRegistry generation;
-        UChunkLoadScheduler scheduler(populator,generation);
-        UBlockWorld terrain;
-        terrain.SetFluidDefinitions(definitions.get());
-        terrain.SetVerticalProfile({-48,-33,-40});
-        const glm::ivec3 column(0);
-        generation.Bump(column);
-        ProceduralSettings generation_settings;
-        generation_settings.MinHeight=-48; generation_settings.MaxHeight=-33;
-        const auto wait_ready=[&]() {
-          const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
-          while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
-            std::this_thread::yield();
-          return scheduler.GetCompletedReadyCount()==1;
-        };
-        unsigned arrivals=0;
-        scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
-        scheduler.RequestLoad(column,1,generation_settings);
-        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
-            wait_ready() &&
-            scheduler.GetCompletedReadyCount()==1,"actual generation worker owns a completed payload");
-        scheduler.Tick(terrain,0,0);
-        require(scheduler.GetState(column)==ChunkLoadState::Ready && arrivals==0,
-            "zero commit budget retains actual ready generation result");
-        const auto successor_sequence=generation.Bump(column);
-        terrain.SetBlock({8,-40,8},9);
-        scheduler.Tick(terrain,1,0);
-        const bool stale_rejected=terrain.GetBlock({8,-40,8})==9 && arrivals==0 &&
-            !scheduler.IsPending(column) && !scheduler.IsCommitted(column) &&
-            generation.Current(column).sequence==successor_sequence;
-        report["generation_stale_ready"]={{"stale_rejected",stale_rejected},
-            {"block",terrain.GetBlock({8,-40,8})},{"arrivals",arrivals}};
-        require(stale_rejected,"expired registry token must reject ready buffer without overwriting new terrain or token");
-        scheduler.RequestLoad(column,0,generation_settings);
-        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
-            wait_ready(),
-            "current generation request starts without extra cancellation");
-        scheduler.Tick(terrain,1,0);
-        const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
-            terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
-            generation.Current(column).sequence==successor_sequence;
-        report["generation_stale_ready"]["current_arrival"]=current;
-        require(current,"actual current generation buffer applies and notifies once after stale retirement");
-      }
-      {
-        for(int operation=0;operation<4;++operation) for(int phase=0;phase<3;++phase) {
-          struct GatePopulator final : IUChunkPopulator {
-            std::promise<void> entered,release;
-            std::future<void> entered_future=entered.get_future();
-            std::shared_future<void> resume=release.get_future().share();
-            bool released=false;
-            void Release() { if(!released) { released=true; release.set_value(); } }
-            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
-              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
-              result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+
-                  (request.settings.Seed==17?8:10),-40,8},8);
-              if(request.settings.Seed==17) {
-                entered.set_value();
-                (void)resume.wait_for(std::chrono::seconds(5));
-              }
-              return result; // A late already-computed result must still be rejected.
-            }
-          } populator;
-          UChunkGenerationRegistry generation;
-          UChunkLoadScheduler scheduler(populator,generation);
-          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
-          terrain.SetVerticalProfile({-48,-33,-40}); terrain.SetBlock({8,-40,8},9);
-          const glm::ivec3 column(0); generation.Bump(column);
-          ProceduralSettings old_settings; old_settings.MinHeight=-48; old_settings.MaxHeight=-33;
-          old_settings.Seed=17;
-          unsigned arrivals=0;
-          scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
-          const auto wait_ready=[&]() {
-            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
-            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
-              std::this_thread::yield();
-            return scheduler.GetCompletedReadyCount()==1;
-          };
-          scheduler.RequestLoad(column,0,old_settings);
-          if(phase>0) {
-            require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
-                populator.entered_future.wait_for(std::chrono::seconds(5))==std::future_status::ready,
-                "generation cancellation holds actual running producer after compute");
-            if(phase==2) {
-              populator.Release(); require(wait_ready(),"generation cancellation has actual completed result");
-              scheduler.Tick(terrain,0,0);
-            }
-          }
-          const glm::ivec3 retained(1,0,0);
-          uint64_t retained_token=0;
-          if(operation==3) {
-            generation.Bump(retained);
-            auto retained_settings=old_settings; retained_settings.Seed=43;
-            scheduler.RequestLoad(retained,2,retained_settings);
-            retained_token=generation.Current(retained).sequence;
-            // Center Y is deliberately unrelated; generation owns XZ columns.
-            require(scheduler.CancelPendingOutsideRadius({2,400,0},1)==1 &&
-                scheduler.GetState(retained)==ChunkLoadState::Requested &&
-                generation.Current(retained).sequence==retained_token,
-                "outside radius abandons only old owner and preserves boundary demand");
-          }
-          if(operation==0) scheduler.Cancel(column);
-          if(operation==1) scheduler.Invalidate(column);
-          if(operation==2) scheduler.CancelAllPending(std::chrono::milliseconds(0));
-          require(!scheduler.IsPending(column),"cancel retires old scheduler owner");
-          auto current_settings=old_settings; current_settings.Seed=29;
-          scheduler.RequestLoad(column,1,current_settings);
-          const auto current_token=generation.Current(column).sequence;
-          if(phase==1) { populator.Release(); require(wait_ready(),"late old generation publishes only to ready queue"); }
-          scheduler.Tick(terrain,1,0);
-          const bool preserved=arrivals==0 && terrain.GetBlock({8,-40,8})==9 &&
-              scheduler.GetState(column)==ChunkLoadState::Requested &&
-              generation.Current(column).sequence==current_token;
-          const char *result_key=operation==3?"generation_outside_lifetime":"generation_cancel_lifetime";
-          report[result_key].push_back({{"operation",operation},{"phase",phase},
-              {"new_owner_preserved",preserved},{"old_arrivals",arrivals}});
-          require(preserved,"cancelled generation cannot install or retire newer queued owner");
-          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
-              "new generation owner computes after old retirement");
-          scheduler.Tick(terrain,1,0);
-          const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
-              terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
-              generation.Current(column).sequence==current_token;
-          report[result_key].back()["current_arrival"]=current;
-          require(current,"cancelled generation successor installs exactly once");
-          if(operation==3) {
-            require(scheduler.GetState(retained)==ChunkLoadState::Requested &&
-                generation.Current(retained).sequence==retained_token &&
-                scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
-                "retained boundary request computes without repeated ingress");
-            scheduler.Tick(terrain,1,0);
-            const bool retained_arrival=scheduler.IsCommitted(retained) && arrivals==2 &&
-                terrain.GetBlock({CHUNK_SIZE+10,-40,8})==8 &&
-                generation.Current(retained).sequence==retained_token;
-            report[result_key].back()["retained_arrival"]=retained_arrival;
-            require(retained_arrival,"outside cancellation preserves actual boundary arrival");
-          }
-        }
-      }
-      {
-        for(int phase=0;phase<3;++phase) for(int direction=0;direction<2;++direction) {
-          struct AdmissionPopulator final : IUChunkPopulator {
-            bool hold=false;
-            std::atomic_int calls{0};
-            std::promise<void> entered,release;
-            std::future<void> entered_future=entered.get_future();
-            std::shared_future<void> resume=release.get_future().share();
-            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
-              ++calls;
-              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
-              result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+
-                  (request.settings.Seed==17?8:request.settings.Seed==29?10:12),-40,8},8);
-              if(hold && request.chunkCoord.x==0) {
-                entered.set_value(); (void)resume.wait_for(std::chrono::seconds(5));
-              }
-              return result;
-            }
-          } populator;
-          populator.hold=phase==1;
-          UChunkGenerationRegistry generation;
-          UChunkLoadScheduler scheduler(populator,generation);
-          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
-          terrain.SetVerticalProfile({-48,-33,-40});
-          const glm::ivec3 target(0),peer(1,0,0),invalid(0,1,0);
-          generation.Bump(target); generation.Bump(peer);
-          const auto target_token=generation.Current(target).sequence;
-          std::vector<glm::ivec3> arrivals;
-          scheduler.SetMarkDirtyFn([&](glm::ivec3 c,int,int,bool){arrivals.push_back(c);});
-          ProceduralSettings settings; settings.MinHeight=-48; settings.MaxHeight=-33; settings.Seed=17;
-          auto duplicate=settings; duplicate.Seed=99;
-          auto peer_settings=settings; peer_settings.Seed=29;
-          const auto wait_ready=[&](int count) {
-            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
-            while(scheduler.GetCompletedReadyCount()!=count && std::chrono::steady_clock::now()<deadline)
-              std::this_thread::yield();
-            return scheduler.GetCompletedReadyCount()==count;
-          };
-          scheduler.RequestLoad(invalid,-100,settings);
-          require(scheduler.GetState(invalid)==ChunkLoadState::Absent &&
-              scheduler.StartQueuedGenerationWorkers(1)==0 && populator.calls==0,
-              "non-column request rejected before generation admission");
-          const int initial=direction==0?10:-10,final=direction==0?-10:10;
-          scheduler.RequestLoad(target,initial,settings);
-          scheduler.RequestLoad(target,initial,duplicate);
-          if(phase>0) {
-            require(scheduler.StartQueuedGenerationWorkers(1)==1,"admission target starts once");
-            if(phase==1) require(populator.entered_future.wait_for(std::chrono::seconds(5))==
-                std::future_status::ready,"admission holds actual generating target");
-            else { require(wait_ready(1),"admission target completed"); scheduler.Tick(terrain,0,0); }
-          }
-          scheduler.RequestLoad(target,final,duplicate);
-          scheduler.RequestLoad(target,final,duplicate);
-          scheduler.RequestLoad(peer,0,peer_settings);
-          if(phase==1) { populator.release.set_value(); require(wait_ready(1),"admission release target"); }
-          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(phase==0?1:2),
-              "admission preserves one executable request per column");
-          scheduler.Tick(terrain,1,0);
-          const glm::ivec3 first=direction==0?target:peer,second=direction==0?peer:target;
-          require(arrivals.size()==1 && arrivals[0]==first,"live priority orders first actual commit");
-          if(phase==0) require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(1),
-              "queued priority refresh preserves remaining request");
-          scheduler.Tick(terrain,1,0);
-          scheduler.RequestLoad(target,-100,duplicate);
-          const bool accepted=arrivals.size()==2 && arrivals[1]==second &&
-              scheduler.IsCommitted(target) && scheduler.IsCommitted(peer) &&
-              terrain.GetBlock({8,-40,8})==8 && terrain.GetBlock({12,-40,8})==0 &&
-              terrain.GetBlock({CHUNK_SIZE+10,-40,8})==8 && populator.calls==2 &&
-              generation.Current(target).sequence==target_token &&
-              scheduler.StartQueuedGenerationWorkers(1)==0;
-          report["generation_admission"].push_back({{"phase",phase},{"direction",direction},
-              {"invalid_rejected",true},{"priority_order",true},{"immutable_request",accepted},
-              {"single_arrival_per_owner",accepted}});
-          require(accepted,"duplicates preserve original payload and committed owner without extra job");
-        }
-        for(int revoked=0;revoked<2;++revoked) {
-          struct DiscardPopulator final : IUChunkPopulator {
-            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
-              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
-              result.discarded=request.settings.Seed==17;
-              if(!result.discarded) result.buffer.SetBlock({10,-40,8},8);
-              return result;
-            }
-          } populator;
-          UChunkGenerationRegistry generation; UChunkLoadScheduler scheduler(populator,generation);
-          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
-          terrain.SetVerticalProfile({-48,-33,-40}); terrain.SetBlock({8,-40,8},9);
-          const glm::ivec3 target(0); generation.Bump(target);
-          unsigned arrivals=0; scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
-          ProceduralSettings settings; settings.MinHeight=-48; settings.MaxHeight=-33; settings.Seed=17;
-          const auto wait_ready=[&]() {
-            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
-            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
-              std::this_thread::yield();
-            return scheduler.GetCompletedReadyCount()==1;
-          };
-          scheduler.RequestLoad(target,0,settings);
-          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),"actual discarded completion ready");
-          if(revoked) generation.Bump(target);
-          const auto current_token=generation.Current(target).sequence;
-          scheduler.Tick(terrain,1,0);
-          require(scheduler.GetState(target)==ChunkLoadState::Absent && arrivals==0 &&
-              terrain.GetBlock({8,-40,8})==9,"discarded result explicitly retires without terrain arrival");
-          settings.Seed=29; scheduler.RequestLoad(target,0,settings);
-          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),"discarded owner permits current reissue");
-          scheduler.Tick(terrain,1,0);
-          const bool current=scheduler.IsCommitted(target) && arrivals==1 &&
-              terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
-              generation.Current(target).sequence==current_token;
-          report["generation_discarded"].push_back({{"registry_revoked",bool(revoked)},
-              {"retired_without_arrival",true},{"current_arrival",current}});
-          require(current,"current generation completes after discarded terminal outcome");
         }
       }
       {
@@ -2601,6 +2611,21 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"ready retirement fixture completes");
         scheduler.CancelAllPending();
         const bool all_retired=scheduler.GetRetainedGenerationResultCount()==0;
+        bool tokens_retired=generation.LiveTokenCount()==0;
+        uint64_t previous_token=0;
+        for(int n=0;n<128;++n) {
+          const glm::ivec3 c(100+n,0,-100-n);
+          scheduler.RequestLoad(c,1,request);
+          const auto token=generation.Current(c).sequence;
+          tokens_retired=tokens_retired && token>previous_token;
+          previous_token=token;
+          scheduler.Cancel(c);
+          tokens_retired=tokens_retired && generation.LiveTokenCount()==0 &&
+              scheduler.GetPendingQueueCount()==0;
+        }
+        report["generation_token_retirement"]={{"cancelled_request_cohorts",128},
+            {"no_retained_token_history",tokens_retired},{"live_tokens",generation.LiveTokenCount()}};
+        require(tokens_retired,"generation terminal owners release token history without sequence reuse");
         report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},
             {"ready_requeue_holds_credit",held},{"stale_release_exact",stale_released},
             {"automatic_readmission",readmitted},{"actual_install_releases_credit",installed},

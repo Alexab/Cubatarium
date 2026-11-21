@@ -6062,11 +6062,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
         // Save runs after this callback. Cancelling the worker must not make
         // the resident column incomplete before its serialization snapshot.
         world.Persistence->CancelAsyncTerrainColumnLoad(world, ground, true);
-        ChunkGenTokens.Bump(ground);
         if (ChunkScheduler)
         {
           ChunkScheduler->Invalidate(ground);
         }
+        else
+          ChunkGenTokens.Retire(ground,ChunkGenTokens.Current(ground).sequence);
         world.RetirePendingLightBeforeMesh(col);
         world.ClearColumnEmergeState(col); // erase the obsolete column record
         const auto mesh_remove_started = std::chrono::steady_clock::now();

@@ -141,7 +141,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
                           : 0;
   pending.demandId = demand_id;
   pending.priority = priority;
-  pending.token = Tokens.Current(coord);
+  pending.token = Tokens.EnsureCurrent(coord);
   pending.requestedAt = std::chrono::steady_clock::now();
   pending.queueRevision = NextRequestQueueRevision++;
   pending.settings = settings;
@@ -176,11 +176,8 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
   // not match a replacement request that reads the registry's current token.
   // Invalidate (or another owner) may already have advanced the registry.
   const auto token_it = ActiveTokens.find(coord);
-  if (token_it != ActiveTokens.end() &&
-      token_it->second.IsValidFor(coord, Tokens.Current(coord).sequence))
-  {
-    Tokens.Bump(coord);
-  }
+  if (token_it != ActiveTokens.end())
+    Tokens.Retire(coord, token_it->second.sequence);
   States.erase(coord);
   ActiveTokens.erase(coord);
   ActiveRequestIds.erase(coord);
@@ -243,7 +240,7 @@ int UChunkLoadScheduler::CancelPendingOutsideRadius(glm::ivec3 center,
     // Invalidate the token before removing the owner so active worldgen workers
     // can stop at their next cancellation point instead of filling the ready
     // queue with terrain the camera has already left behind.
-    Tokens.Bump(coord);
+    Tokens.Retire(coord, ActiveTokens.at(coord).sequence);
     States.erase(coord);
     ActiveTokens.erase(coord);
     ActiveRequestIds.erase(coord);
@@ -315,19 +312,12 @@ void UChunkLoadScheduler::CancelAllPending(
         "reason=" + std::string(reason ? reason : "cancelled_all"));
   }
   Queue.clear();
-  std::vector<glm::ivec3> bump_coords;
-  bump_coords.reserve(ActiveTokens.size() + States.size());
   for (const auto &entry : ActiveTokens)
-  {
-    bump_coords.push_back(entry.first);
-  }
+    Tokens.Retire(entry.first,entry.second.sequence);
   for (const auto &entry : States)
   {
-    bump_coords.push_back(entry.first);
-  }
-  for (const glm::ivec3 &coord : bump_coords)
-  {
-    Tokens.Bump(coord);
+    if (entry.second == ChunkLoadState::Committed)
+      Tokens.Retire(entry.first,Tokens.Current(entry.first).sequence);
   }
   States.clear();
   ActiveTokens.clear();
@@ -371,7 +361,8 @@ void UChunkLoadScheduler::ShutdownForProcessExit(
 
 void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 {
-  Tokens.Bump(coord);
+  const auto current = Tokens.Current(coord);
+  Tokens.Retire(coord,current.sequence);
   Cancel(coord, "invalidated");
 }
 
@@ -545,6 +536,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       LogProceduralRequest(
           "discarded", pending.result.coord, pending.requestId,
           pending.demandId, "stage=apply");
+      Tokens.Retire(pending.result.coord,pending.result.token.sequence);
       States.erase(pending.result.coord);
       ActiveTokens.erase(tokenIt);
       ActiveRequestIds.erase(pending.result.coord);

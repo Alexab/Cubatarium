@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.token-nonce-retirement",
+      "status": "SCOPED_PASS_LIVE_OWNER_ENVELOPE_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",
+      "scope": "Non-reusing registry nonce/exact retirement; current actual generation lifecycle matrix plus10000 registry cohorts and2 IO/streamer regressions. Live resident/pending metadata count and bytes remain open."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.exact-priority-index",
       "status": "SCOPED_PASS_GLOBAL_COUNT_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",

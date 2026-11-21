@@ -713,9 +713,10 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Shared compute/pool admission and retained result quota8 accepted. Exact removable priority index accepted:10000 reranks retain one map/index key and original request; no lazy heap/compaction. Native refusal/cancel/actual successor/result-credit regression PASS. Global Requested key count, Committed/token metadata lifetime and generated-buffer bytes remain CHECK.",
+          "partial_result": "Shared compute/pool, result quota8, exact priority index and non-reusing token retirement accepted. Current actual cancel9/outside3/admission6/discard2/stale-Ready matrix PASS;128 real scheduler cancel cohorts leave0 registry rows. Global Requested/Committed/live owner registry count+bytes and generated-buffer byte envelope remain CHECK.",
           "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
-          "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json"
+          "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
+          "token_retirement_evidence": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",

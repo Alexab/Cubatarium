@@ -24,11 +24,15 @@ class UChunkGenerationRegistry
 {
 public:
   ChunkGenerationToken Current(glm::ivec3 coord) const;
+  ChunkGenerationToken EnsureCurrent(glm::ivec3 coord);
   uint64_t Bump(glm::ivec3 coord);
+  bool Retire(glm::ivec3 coord, uint64_t expected_sequence);
+  size_t LiveTokenCount() const;
 
 private:
   mutable std::mutex Mutex;
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> Sequences;
+  uint64_t NextSequence{0};
 };
 
 } // namespace cutum
