@@ -6195,10 +6195,16 @@ static void TestGpuCapturePolicyTransitions(
     world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
     world.SetBlock({4, 4, 4}, kStone);
     const glm::ivec3 root(0);
+    DeferredTestMesher backend;
     UChunkMeshCache cache;
     auto settings = MakeFrustumMeshSettings();
     settings.AsyncMeshing = true;
+    settings.GpuPackedMeshing = true;
+    settings.Lighting = LightingMode::Flat;
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
     cache.SetRenderSettings(settings);
+    cache.SetMesherBackend(&backend);
+    cache.SetMeshRebuildFocus(root, 4, 1);
     cache.MarkDirtyPriority(root);
     const auto snapshot =
         ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
@@ -6225,6 +6231,31 @@ static void TestGpuCapturePolicyTransitions(
             store.TryGet(world, root, revision),
         "queued or computed GPU policy predecessor releases only its own "
         "resources");
+    UFlatLightingPipeline flat;
+    flat.FillAllLoadedChunks(world);
+    const auto *chunk = world.GetChunkManager().GetChunk(root);
+    const auto epoch = store.WorldEpoch();
+    cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+        0, 1.0, epoch, chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+        chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world, root,
+        revision).has_value(), "policy successor captures actual current input");
+    const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 8, false, 0);
+    Expect(tick.Scheduled == 1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "policy successor real cache worker finishes without fresh MarkDirty");
+    cache.DrainAsyncMeshResults(world, registry, 8);
+    for (int n = 0; n < 8 && cache.GetPendingGpuAppliesCount(); ++n)
+    {
+      cache.DrainPendingGpuMeshes(world, registry, 8, 1000);
+      glFinish();
+    }
+    const bool current = cache.IsPublishedMeshCurrentForInputs(root, world) &&
+        cache.GetGpuMeshPipeline()->HasGpuMesh(root) && cache.GetPublishCount(root) == 1 &&
+        !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root) &&
+        cache.GetPendingGpuAppliesCount() == 0;
+    Expect(current, "policy predecessor rejection preserves demanded actual GPU successor");
+    std::cout << "gpu_policy_successor kicked=" << kicked << " current=" << current << '\n';
     Expect(glGetError() == GL_NO_ERROR,
            "GPU policy transition has no GL errors");
   }
