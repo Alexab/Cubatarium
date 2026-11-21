@@ -3,6 +3,14 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "worldgen-ecology-coral-range-fixture-mismatch",
+      "stage": "S6.05",
+      "status": "OPEN_EXISTING_FIXTURE_MISMATCH",
+      "observed": "Full worldgen_vegetation_placement_integration_test fails TestConfiguredGroundCoverEcology before first buffer consumer: mtg_coral_cyan authored above_sea_level[-48,-1], oracle expects[-48,-4]. Content and test were unchanged at detection; ChunkBuffer not used on failed path. Not classified whether content or oracle should change.",
+      "evidence": "build/desktop-msvc/s4-generation-buffer-format-unit-output-20261121.log",
+      "next_action": "Resolve authored ecology contract in existing S6 full matrix. Preserve full FAIL; targeted existing cross-chunk/rank checks in --buffer-boundary-only do not close full integration or this defect."
+    },
+    {
       "id": "column-unload-keeps-retired-seed-seal-work",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q11_C1_OPEN",

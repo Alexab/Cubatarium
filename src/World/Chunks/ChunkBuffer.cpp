@@ -16,7 +16,7 @@ namespace
 {
 
 int TreeFeatureBlockRank(BlockId id,
-                         const std::unordered_map<BlockId, int> &treeBlockRanks)
+                         const std::pmr::unordered_map<BlockId, int> &treeBlockRanks)
 {
   if (id == BLOCK_AIR)
   {
@@ -28,7 +28,7 @@ int TreeFeatureBlockRank(BlockId id,
 
 bool ShouldApplyCrossChunkBlock(
     const UBlockWorld &world,
-    const std::unordered_map<BlockId, int> &treeBlockRanks, glm::ivec3 pos,
+    const std::pmr::unordered_map<BlockId, int> &treeBlockRanks, glm::ivec3 pos,
     BlockId incoming)
 {
   const BlockId current = world.GetBlock(pos);
@@ -71,64 +71,91 @@ BlockId UBlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
   return World.GetBlock(worldPos);
 }
 
+UChunkBuffer::UChunkBuffer(const UChunkBuffer &other)
+    : Payload(other.Payload ? std::make_unique<Storage>(*other.Payload) : nullptr) {}
+
+UChunkBuffer &UChunkBuffer::operator=(const UChunkBuffer &other)
+{
+  if(this!=&other) {
+    auto copy=other.Payload ? std::make_unique<Storage>(*other.Payload) : nullptr;
+    Payload=std::move(copy);
+  }
+  return *this;
+}
+
+UAllocationCountingResource::Snapshot UChunkBuffer::GetAllocationSnapshot() const
+{
+  return Payload ? Payload->Memory.GetSnapshot() : UAllocationCountingResource::Snapshot{};
+}
+
+size_t UChunkBuffer::GetOwnedAllocationBytes() const
+{
+  return Payload ? sizeof(Storage)+Payload->Memory.GetSnapshot().live_bytes : 0;
+}
+
 void UChunkBuffer::SetBlock(glm::ivec3 worldPos, BlockId id)
 {
-  DecodedFrameValid = false;
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
   if (id == BLOCK_AIR)
   {
-    Blocks.erase(worldPos);
-    FluidPacked.erase(worldPos);
-    LightPacked.erase(worldPos);
+    Payload->Blocks.erase(worldPos);
+    Payload->FluidPacked.erase(worldPos);
+    Payload->LightPacked.erase(worldPos);
     return;
   }
-  Blocks[worldPos] = id;
-  if (!HasBounds)
+  Payload->Blocks[worldPos] = id;
+  if (!Payload->State.HasBounds)
   {
-    HasBounds = true;
-    MinY = worldPos.y;
-    MaxY = worldPos.y;
+    Payload->State.HasBounds = true;
+    Payload->State.MinY = worldPos.y;
+    Payload->State.MaxY = worldPos.y;
     return;
   }
-  MinY = std::min(MinY, worldPos.y);
-  MaxY = std::max(MaxY, worldPos.y);
+  Payload->State.MinY = std::min(Payload->State.MinY, worldPos.y);
+  Payload->State.MaxY = std::max(Payload->State.MaxY, worldPos.y);
 }
 
 void UChunkBuffer::SetFluidPacked(glm::ivec3 worldPos, uint8_t packed)
 {
-  DecodedFrameValid = false;
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
   if (packed == 0)
   {
-    FluidPacked.erase(worldPos);
+    Payload->FluidPacked.erase(worldPos);
     return;
   }
-  FluidPacked[worldPos] = packed;
+  Payload->FluidPacked[worldPos] = packed;
 }
 
 void UChunkBuffer::SetLightPacked(glm::ivec3 worldPos, uint8_t packed)
 {
-  DecodedFrameValid = false;
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
   // Zero is an explicit light removal when applying over resident data.
-  LightPacked[worldPos] = packed;
+  Payload->LightPacked[worldPos] = packed;
 }
 
 void UChunkBuffer::SetChunkLightData(
     glm::ivec3 chunkCoord, const std::array<uint8_t, CHUNK_VOLUME> &light)
 {
-  DecodedFrameValid = false;
-  HasChunkLight = true;
-  ChunkLightCoord = chunkCoord;
-  ChunkLight = light;
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
+  Payload->State.HasChunkLight = true;
+  Payload->State.ChunkLightCoord = chunkCoord;
+  Payload->State.ChunkLight = light;
 }
 
 void UChunkBuffer::SetChunkWeatherState(glm::ivec3 chunkCoord, float wetness,
                                         double last_update_sec)
 {
-  DecodedFrameValid = false;
-  HasChunkWeather = true;
-  ChunkWeatherCoord = chunkCoord;
-  ChunkWetness =
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
+  Payload->State.HasChunkWeather = true;
+  Payload->State.ChunkWeatherCoord = chunkCoord;
+  Payload->State.ChunkWetness =
       std::clamp(std::isfinite(wetness) ? wetness : 0.0f, 0.0f, 1.0f);
-  ChunkWeatherLastUpdateSec =
+  Payload->State.ChunkWeatherLastUpdateSec =
       std::isfinite(last_update_sec) ? std::max(0.0, last_update_sec) : 0.0;
 }
 
@@ -136,10 +163,11 @@ void UChunkBuffer::SetWorldGenOwnerChunk(
     glm::ivec3 chunkCoord, const UBlockRegistry &registry,
     const std::vector<std::pair<BlockId, int>> &treeBlockRanks)
 {
-  DecodedFrameValid = false;
-  WorldGenOwnerChunk = chunkCoord;
-  HasWorldGenOwnerChunk = true;
-  WorldGenTreeBlockRanks.clear();
+  EnsureStorage();
+  Payload->State.DecodedFrameValid = false;
+  Payload->State.WorldGenOwnerChunk = chunkCoord;
+  Payload->State.HasWorldGenOwnerChunk = true;
+  Payload->WorldGenTreeBlockRanks.clear();
   const std::array<std::pair<const char *, int>, 4> builtins = {
       {{"tree_log", 3},
        {"tree_bark", 3},
@@ -150,22 +178,23 @@ void UChunkBuffer::SetWorldGenOwnerChunk(
     const BlockId id = registry.GetIdByTypeName(name);
     if (id != BLOCK_AIR)
     {
-      WorldGenTreeBlockRanks[id] = rank;
+      Payload->WorldGenTreeBlockRanks[id] = rank;
     }
   }
   for (const auto &[id, rank] : treeBlockRanks)
   {
     if (id != BLOCK_AIR && rank > 0)
     {
-      WorldGenTreeBlockRanks[id] = std::max(WorldGenTreeBlockRanks[id], rank);
+      Payload->WorldGenTreeBlockRanks[id] = std::max(Payload->WorldGenTreeBlockRanks[id], rank);
     }
   }
 }
 
 BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 {
-  const auto it = Blocks.find(worldPos);
-  if (it == Blocks.end())
+  if(!Payload) return BLOCK_AIR;
+  const auto it = Payload->Blocks.find(worldPos);
+  if (it == Payload->Blocks.end())
   {
     return BLOCK_AIR;
   }
@@ -174,8 +203,9 @@ BlockId UChunkBuffer::GetBlock(glm::ivec3 worldPos) const
 
 uint8_t UChunkBuffer::GetFluidPacked(glm::ivec3 worldPos) const
 {
-  const auto it = FluidPacked.find(worldPos);
-  if (it == FluidPacked.end())
+  if(!Payload) return 0;
+  const auto it = Payload->FluidPacked.find(worldPos);
+  if (it == Payload->FluidPacked.end())
   {
     return 0;
   }
@@ -184,18 +214,19 @@ uint8_t UChunkBuffer::GetFluidPacked(glm::ivec3 worldPos) const
 
 uint8_t UChunkBuffer::GetLightPacked(glm::ivec3 worldPos) const
 {
-  if (HasChunkLight)
+  if(!Payload) return 0;
+  if (Payload->State.HasChunkLight)
   {
-    const glm::ivec3 local = worldPos - ChunkLightCoord * CHUNK_SIZE;
+    const glm::ivec3 local = worldPos - Payload->State.ChunkLightCoord * CHUNK_SIZE;
     if (local.x >= 0 && local.x < CHUNK_SIZE && local.y >= 0 &&
         local.y < CHUNK_SIZE && local.z >= 0 && local.z < CHUNK_SIZE)
     {
       const int index = local.x + CHUNK_SIZE * (local.y + CHUNK_SIZE * local.z);
-      return ChunkLight[static_cast<size_t>(index)];
+      return Payload->State.ChunkLight[static_cast<size_t>(index)];
     }
   }
-  const auto it = LightPacked.find(worldPos);
-  if (it == LightPacked.end())
+  const auto it = Payload->LightPacked.find(worldPos);
+  if (it == Payload->LightPacked.end())
   {
     return 0;
   }
@@ -204,20 +235,21 @@ uint8_t UChunkBuffer::GetLightPacked(glm::ivec3 worldPos) const
 
 void UChunkBuffer::ApplyTo(UBlockWorld &world) const
 {
-  for (const auto &entry : Blocks)
+  if(!Payload) return;
+  for (const auto &entry : Payload->Blocks)
   {
     const bool ownerChunk =
-        !HasWorldGenOwnerChunk ||
-        UChunkManager::WorldToChunk(entry.first) == WorldGenOwnerChunk;
+        !Payload->State.HasWorldGenOwnerChunk ||
+        UChunkManager::WorldToChunk(entry.first) == Payload->State.WorldGenOwnerChunk;
     const int incomingTreeRank =
-        TreeFeatureBlockRank(entry.second, WorldGenTreeBlockRanks);
+        TreeFeatureBlockRank(entry.second, Payload->WorldGenTreeBlockRanks);
     const int currentTreeRank = TreeFeatureBlockRank(
-        world.GetBlock(entry.first), WorldGenTreeBlockRanks);
-    if ((HasWorldGenOwnerChunk && !ownerChunk &&
-         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+        world.GetBlock(entry.first), Payload->WorldGenTreeBlockRanks);
+    if ((Payload->State.HasWorldGenOwnerChunk && !ownerChunk &&
+         !ShouldApplyCrossChunkBlock(world, Payload->WorldGenTreeBlockRanks, entry.first,
                                      entry.second)) ||
         (ownerChunk && incomingTreeRank > 0 && currentTreeRank > 0 &&
-         !ShouldApplyCrossChunkBlock(world, WorldGenTreeBlockRanks, entry.first,
+         !ShouldApplyCrossChunkBlock(world, Payload->WorldGenTreeBlockRanks, entry.first,
                                      entry.second)))
     {
       continue;
@@ -226,32 +258,32 @@ void UChunkBuffer::ApplyTo(UBlockWorld &world) const
     if (TraceChunkResidencyEnabled(target) &&
         !world.GetChunkManager().HasChunk(target))
       TraceChunkResidency(
-          HasWorldGenOwnerChunk ? "worldgen_buffer_missing" : "buffer_missing",
-          target, WorldGenOwnerChunk, entry.second, &world.GetChunkManager());
+          Payload->State.HasWorldGenOwnerChunk ? "worldgen_buffer_missing" : "buffer_missing",
+          target, Payload->State.WorldGenOwnerChunk, entry.second, &world.GetChunkManager());
     world.SetBlock(entry.first, entry.second);
-    const auto fluid_it = FluidPacked.find(entry.first);
-    if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
+    const auto fluid_it = Payload->FluidPacked.find(entry.first);
+    if (fluid_it != Payload->FluidPacked.end() && fluid_it->second != 0)
     {
       world.SetFluidState(entry.first, UnpackFluidCellState(fluid_it->second));
     }
   }
-  if (HasChunkLight)
+  if (Payload->State.HasChunkLight)
   {
-    world.GetChunkManager().EnsureChunk(ChunkLightCoord);
-    if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkLightCoord))
+    world.GetChunkManager().EnsureChunk(Payload->State.ChunkLightCoord);
+    if (UChunk *chunk = world.GetChunkManager().GetChunk(Payload->State.ChunkLightCoord))
     {
-      chunk->ReplaceLightData(ChunkLight);
+      chunk->ReplaceLightData(Payload->State.ChunkLight);
     }
   }
-  if (HasChunkWeather)
+  if (Payload->State.HasChunkWeather)
   {
-    world.GetChunkManager().EnsureChunk(ChunkWeatherCoord);
-    if (UChunk *chunk = world.GetChunkManager().GetChunk(ChunkWeatherCoord))
+    world.GetChunkManager().EnsureChunk(Payload->State.ChunkWeatherCoord);
+    if (UChunk *chunk = world.GetChunkManager().GetChunk(Payload->State.ChunkWeatherCoord))
     {
-      chunk->SetWeatherState(ChunkWetness, ChunkWeatherLastUpdateSec);
+      chunk->SetWeatherState(Payload->State.ChunkWetness, Payload->State.ChunkWeatherLastUpdateSec);
     }
   }
-  for (const auto &entry : LightPacked)
+  for (const auto &entry : Payload->LightPacked)
   {
     const glm::ivec3 chunk_coord = UChunkManager::WorldToChunk(entry.first);
     world.GetChunkManager().EnsureChunk(chunk_coord);
@@ -284,30 +316,30 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
     return;
   }
 
-  for (const auto &entry : Blocks)
+  for (const auto &entry : Payload->Blocks)
   {
     assert(UChunkManager::WorldToChunk(entry.first) == chunkCoord);
     world.SetBlockInChunk(*chunk, entry.first, entry.second);
-    const auto fluid_it = FluidPacked.find(entry.first);
-    if (fluid_it != FluidPacked.end() && fluid_it->second != 0)
+    const auto fluid_it = Payload->FluidPacked.find(entry.first);
+    if (fluid_it != Payload->FluidPacked.end() && fluid_it->second != 0)
     {
       world.SetFluidStateInChunk(*chunk, entry.first,
                                  UnpackFluidCellState(fluid_it->second));
     }
   }
 
-  if (HasChunkLight)
+  if (Payload->State.HasChunkLight)
   {
-    assert(ChunkLightCoord == chunkCoord);
-    chunk->ReplaceLightData(ChunkLight);
+    assert(Payload->State.ChunkLightCoord == chunkCoord);
+    chunk->ReplaceLightData(Payload->State.ChunkLight);
   }
-  if (HasChunkWeather)
+  if (Payload->State.HasChunkWeather)
   {
-    assert(ChunkWeatherCoord == chunkCoord);
-    chunk->SetWeatherState(ChunkWetness, ChunkWeatherLastUpdateSec);
+    assert(Payload->State.ChunkWeatherCoord == chunkCoord);
+    chunk->SetWeatherState(Payload->State.ChunkWetness, Payload->State.ChunkWeatherLastUpdateSec);
   }
 
-  for (const auto &entry : LightPacked)
+  for (const auto &entry : Payload->LightPacked)
   {
     const glm::ivec3 entry_chunk = UChunkManager::WorldToChunk(entry.first);
     assert(entry_chunk == chunkCoord);
@@ -326,49 +358,35 @@ void UChunkBuffer::ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const
     chunk->SetLightLocal(UChunkManager::WorldToLocal(entry.first),
                          entry.second & 0x0F, entry.second >> 4);
   }
-  if (DecodedFrameValid && DecodedCoord == chunkCoord && fresh_target &&
-      !HasWorldGenOwnerChunk && HasGeometryPayload())
+  if (Payload->State.DecodedFrameValid && Payload->State.DecodedCoord == chunkCoord && fresh_target &&
+      !Payload->State.HasWorldGenOwnerChunk && HasGeometryPayload())
     chunks.NoteDecodedTerrainSlice(chunkCoord);
 }
 
 std::optional<LoadedAirSlice>
 UChunkBuffer::GetDecodedAirSlice(glm::ivec3 coord) const
 {
-  if (!DecodedFrameValid || DecodedCoord != coord || !Blocks.empty() ||
-      !FluidPacked.empty() || !LightPacked.empty() || HasWorldGenOwnerChunk ||
-      (HasChunkLight && ChunkLightCoord != coord) ||
-      (HasChunkWeather && ChunkWeatherCoord != coord))
+  if(!Payload) return std::nullopt;
+  if (!Payload->State.DecodedFrameValid || Payload->State.DecodedCoord != coord || !Payload->Blocks.empty() ||
+      !Payload->FluidPacked.empty() || !Payload->LightPacked.empty() || Payload->State.HasWorldGenOwnerChunk ||
+      (Payload->State.HasChunkLight && Payload->State.ChunkLightCoord != coord) ||
+      (Payload->State.HasChunkWeather && Payload->State.ChunkWeatherCoord != coord))
     return std::nullopt;
   LoadedAirSlice result;
   result.Coord = coord;
   result.ExplicitDecode = true;
-  if (HasChunkLight)
+  if (Payload->State.HasChunkLight)
     result.LegacyLight =
-        std::make_shared<const std::array<uint8_t, CHUNK_VOLUME>>(ChunkLight);
-  result.HasWeather = HasChunkWeather;
-  result.Wetness = ChunkWetness;
-  result.WeatherLastUpdateSec = ChunkWeatherLastUpdateSec;
+        std::make_shared<const std::array<uint8_t, CHUNK_VOLUME>>(Payload->State.ChunkLight);
+  result.HasWeather = Payload->State.HasChunkWeather;
+  result.Wetness = Payload->State.ChunkWetness;
+  result.WeatherLastUpdateSec = Payload->State.ChunkWeatherLastUpdateSec;
   return result;
 }
 
 void UChunkBuffer::Clear()
 {
-  DecodedFrameValid = false;
-  Blocks.clear();
-  FluidPacked.clear();
-  LightPacked.clear();
-  HasChunkLight = false;
-  ChunkLight.fill(0);
-  HasChunkWeather = false;
-  ChunkWeatherCoord = glm::ivec3(0);
-  ChunkWetness = 0.0f;
-  ChunkWeatherLastUpdateSec = 0.0;
-  HasBounds = false;
-  MinY = 0;
-  MaxY = -1;
-  WorldGenOwnerChunk = glm::ivec3(0);
-  HasWorldGenOwnerChunk = false;
-  WorldGenTreeBlockRanks.clear();
+  Payload.reset();
 }
 
 } // namespace cutum

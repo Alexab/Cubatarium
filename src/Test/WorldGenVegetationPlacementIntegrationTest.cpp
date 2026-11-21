@@ -1744,6 +1744,15 @@ int main(int argc, char **argv)
       cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
       "aquifer configuration loads from the active worldgen pack");
   TestPackDefaultsRespectUserFieldsInProfile3();
+  if (argc > 1 && std::string(argv[1]) == "--buffer-boundary-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    TestCrossChunkTreeConflictStable(registry);
+    TestFloraRanksCoverDecorationAndStructures(registry);
+    std::cout << kTestName << ": buffer boundary ownership check OK" << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--biome-profile-only")
   {
     TestDataDefinedBiomeAffectsSampling();

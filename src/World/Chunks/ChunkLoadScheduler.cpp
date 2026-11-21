@@ -827,6 +827,16 @@ int UChunkLoadScheduler::GetCompletedReadyCount() const
   return static_cast<int>(Completed.Size());
 }
 
+size_t UChunkLoadScheduler::GetCompletedReadyPayloadBytes() const
+{
+  size_t bytes=0;
+  Completed.Any([&](const PendingResult &pending) {
+    bytes+=pending.result.buffer.GetOwnedAllocationBytes();
+    return false;
+  });
+  return bytes;
+}
+
 int UChunkLoadScheduler::GetGenBacklogTotal() const
 {
   return GetPendingQueueCount() + GetGenInFlightCount() + GetCompletedReadyCount();

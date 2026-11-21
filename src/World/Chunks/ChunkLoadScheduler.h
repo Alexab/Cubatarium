@@ -98,6 +98,7 @@ public:
   int GetPendingQueueCount() const;
   int GetGenInFlightCount() const;
   int GetCompletedReadyCount() const;
+  size_t GetCompletedReadyPayloadBytes() const;
   int GetGenBacklogTotal() const;
   double GetLastTickApplyMs() const { return LastTickApplyMs; }
   /// Era25: gen commits applied during last Tick (frame honesty).
