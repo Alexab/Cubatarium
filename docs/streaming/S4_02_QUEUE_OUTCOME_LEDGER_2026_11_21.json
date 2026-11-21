@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q11-C1",
     "Q10-C1",
     "Q10-C2",
     "Q12-C1",
@@ -488,7 +487,7 @@
     {
       "id": "Q11-C1",
       "queue": "Q11",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "Physics-seed/shore-seal dedupe coalesces required work; eviction/reset retires abandoned work while live terrain arrival receives seed/seal and preserves current fluid-map/light/save obligations. Reuse S2.05 only where path matches.",
       "subcases": [
         {
@@ -536,7 +535,7 @@
         },
         {
           "id": "Q11-C1.ABANDONMENT",
-          "status": "CHECK",
+          "status": "REUSE",
           "scope": "Unload/eviction/reset retires old work without new-world resurrection; current repeated demand executes. Count/byte/cost envelopes LIMIT-C1.",
           "subcases": [
             {
@@ -547,12 +546,18 @@
             },
             {
               "id": "Q11-C1.ABANDONMENT.REPLACEMENT_CURRENT",
-              "status": "CHECK",
-              "scope": "Actual permanent UWorld replacement retires old accepted owners and current new-world seed/seal physically executes in same world object, not only empty queue. Compose existing exact reset/ingress/drain mechanisms; add only missing transition."
+              "status": "REUSE",
+              "scope": "Actual permanent UWorld replacement retires old accepted owners and current new-world seed/seal physically executes in same world object, not only empty queue. Compose existing exact reset/ingress/drain mechanisms; add only missing transition.",
+              "evidence": "build/desktop-msvc/s4-seed-seal-replacement-acceptance-20261121.json",
+              "coverage_note": "Actual UWorld Abandon clears old terrain/accepted pending owners; same object current section fresh incarnation, actual streaming tick seed/seal and downstream save/light/map/current map, old-only column3 stays absent. Pending-state adapter composed with actual ingress receipts; healthy-frame relight/CPU immediate mesh preparation. Not full world-load/save transaction, native camera travel, Full physical-light/framebuffer/backend/performance/memory/general fairness proof. Far-lane policy source-composed with same consumer; fairness S4.05, caps LIMIT-C1. Full S0..S6 OPEN."
             }
-          ]
+          ],
+          "evidence": "build/desktop-msvc/s4-seed-seal-replacement-acceptance-20261121.json",
+          "coverage_note": "Exact unload/save-veto/new-incarnation ingress and permanent replacement physical successor composition. Child limits retained."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-seed-seal-replacement-acceptance-20261121.json",
+      "coverage_note": "RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT accepted by exact scoped receipts. Actual UWorld Abandon clears old terrain/accepted pending owners; same object current section fresh incarnation, actual streaming tick seed/seal and downstream save/light/map/current map, old-only column3 stays absent. Pending-state adapter composed with actual ingress receipts; healthy-frame relight/CPU immediate mesh preparation. Not full world-load/save transaction, native camera travel, Full physical-light/framebuffer/backend/performance/memory/general fairness proof. Far-lane policy source-composed with same consumer; fairness S4.05, caps LIMIT-C1. Full S0..S6 OPEN."
     },
     {
       "id": "Q12-R1",
@@ -648,5 +653,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE/DRAIN and unload veto/retirement/fresh reissue accepted. Next REPLACEMENT_CURRENT physical successor. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11-C1 all4 subcases accepted; actual replacement current successor ticks2. Next Q10-C1 load lifecycle. Top-level5 CHECK; full scope OPEN."
 }

@@ -1473,6 +1473,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           bool scan=PreferGpuFluidColumnScan();
           ~DrainEnvironmentRestore() { UFrameDeadline::Get()=deadline; SetPreferGpuFluidColumnScan(scan); }
         } restore;
+        for(const bool world_replace : {false,true}) {
         auto drain_owner=std::make_unique<UWorld>(nullptr,nullptr);
         auto &drain=*drain_owner;
         drain.SetSpawnPoint({8,-40,8});
@@ -1487,10 +1488,29 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         PhysicsFeatureFlags flags; flags.EnableFluids=true; flags.LiquidShadowMode=false;
         drain.SetPhysicsProfile(PhysicsProfile::Standard); drain.SetPhysicsFeatureFlags(flags);
         drain.SetLastMovementFrameMs(1);
+        uint64_t old_incarnation=0;
+        if(world_replace) {
+          drain.BlockWorld.SetBlock({8,-45,8},8);
+          drain.BlockWorld.SetBlock({3*CHUNK_SIZE+8,-44,8},8);
+          old_incarnation=drain.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation();
+          auto &old_streaming=*drain.Streaming;
+          old_streaming.DeferredPhysicsSeedQueue={{0,-3,0},{3,-3,0}};
+          old_streaming.DeferredShoreSealQueue={{0,0,0},{3,0,0}};
+          old_streaming.DeferredShoreSealQueued={{0,0,0},{3,0,0}};
+          old_streaming.DeferredIntraChunkSealNeeded={{0,0,0},{3,0,0}};
+          drain.AbandonTerrainForWorldReplace();
+          require(drain.BlockWorld.CountNonAir()==0 &&
+              old_streaming.DeferredPhysicsSeedQueue.empty() && old_streaming.DeferredShoreSealQueue.empty() &&
+              old_streaming.DeferredShoreSealQueued.empty() && old_streaming.DeferredIntraChunkSealNeeded.empty(),
+              "actual world replacement retires old terrain and all accepted seed/seal owners");
+        }
         for(int x=0;x<CHUNK_SIZE;++x) for(int z=0;z<CHUNK_SIZE;++z)
           drain.BlockWorld.SetBlock({x,-48,z},8);
         drain.BlockWorld.SetBlock({8,-40,8},9);
         drain.BlockWorld.SetFluidState({8,-40,8},FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+        const bool fresh_incarnation=!world_replace ||
+            drain.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation()!=old_incarnation;
+        require(fresh_incarnation,"replacement terrain owns a fresh actual incarnation");
         auto &streaming=*drain.Streaming;
         auto &drain_mesh=*drain.MeshService;
         auto &drain_cache=drain_mesh.GetCache();
@@ -1529,15 +1549,20 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const auto *current=drain_cache.GetFluidSurfaceSlice(drain.BlockWorld,*drain.BlockRegistry,{0,0,0},-40);
         const bool current_map=current && direct.valid && current->BottomBlockY[8][8]==direct.bottomBlockY &&
             current->SurfaceBlockY[8][8]==direct.surfaceBlockY && direct.bottomBlockY<-40;
-        report["seed_seal_streaming_drain"]={{"ticks",ticks+1},{"terminal",terminal},
+        const bool old_world_absent=!world_replace ||
+            !drain.BlockWorld.GetChunkManager().HasChunk({3,-3,0});
+        report[world_replace?"seed_seal_replace_drain":"seed_seal_streaming_drain"]=
+            {{"ticks",ticks+1},{"terminal",terminal},{"world_replace",world_replace},
+            {"fresh_incarnation",fresh_incarnation},{"old_world_absent",old_world_absent},
             {"seed_seen",seed_seen},{"actual_seal_mutation",mutation},{"save_owner",save},
             {"light_owner",light},{"map_invalidated",map_invalidated},{"current_map",current_map},
             {"seed_pending",streaming.DeferredPhysicsSeedQueue.size()},
             {"shore_pending",streaming.DeferredShoreSealQueue.size()},
             {"focus_dirty",drain.PhysicsTelemetryData.FocusDirtyChunks},
             {"focus_missing",drain.PhysicsTelemetryData.FocusMissingMesh}};
-        require(terminal && seed_seen && mutation && save && light && map_invalidated && current_map,
+        require(terminal && seed_seen && mutation && save && light && map_invalidated && current_map && old_world_absent,
                 "actual streaming tick drains accepted seed/seal and retains downstream mutation owners");
+        }
       }
       {
         struct UnloadDeadlineRestore {

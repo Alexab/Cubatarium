@@ -8,16 +8,15 @@
 
 ### Ближайшая очередь S4.02
 
-Актуальная точка на 2026-11-21: CPU Q02/Q04, capture Q03, pool Q05, GPU Q06, relight Q08 и generation Q09 закрыты в пределах соответствующих receipts. Их повторная отладка не входит в очередь. Осталось **6 CHECK-групп**, 24 REUSE-группы и один отключённый путь; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json. WIP отмены generation сохранён в `7cad7a68f`, OUTSIDE — `a6ccff403`; ADMISSION receipt завершает Q09-C1. Следующая группа — Q11-C1.
+Актуальная точка на 2026-11-21: CPU Q02/Q04, capture Q03, pool Q05, GPU Q06, relight Q08, generation Q09 и seed/seal Q11 закрыты в пределах соответствующих receipts. Их повторная отладка не входит в очередь. Осталось **5 CHECK-групп**, 25 REUSE-групп и один отключённый путь; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json. Q11 завершён scoped composition RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT, включая actual replacement/current drain. Следующая группа — Q10-C1.
 
 | Шаг | ID | Конкретный результат для закрытия |
 |---|---|---|
-| 1 | Q11-C1 | Physics seed/shore seal dedupe сохраняют нужную работу; eviction/reset прекращают покинутую. Живой arrival получает seed/seal с сохранением fluid-map/light/save обязательств. |
-| 2 | Q10-C1 | Load cancel/retry/reject/stale slice не стирают новые данные. Retry exhaustion имеет явный исход; повторный текущий запрос полностью загружается. |
-| 3 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
-| 4 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
-| 5 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
-| 6 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
+| 1 | Q10-C1 | Load cancel/retry/reject/stale slice не стирают новые данные. Retry exhaustion имеет явный исход; повторный текущий запрос полностью загружается. |
+| 2 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
+| 3 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
+| 4 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
+| 5 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
 
 ### Исполнимые шаги до закрытия S4.02
 
@@ -39,7 +38,7 @@
 14. **LIMIT / реализовать обязательные границы.** Только недостающие ограничения исходного контракта, с явным исходом отказа и сохранением demand. Для retry vectors и Forget отделить память от стоимости обхода. Численные условия задать до измерений.
 15. **Закрыть S4.02.** Нет обязательных CHECK/BLOCKED; каждый принятый запрос имеет доказанный terminal outcome, лимиты и receipt. Сохранить checkpoint/commit; перейти к S4.03. Полный S4/S0..S6 остаётся открытым.
 
-Q11: шаг 7 разложен в ledger на RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT. В шаге 8 исправлен и принят только RETENTION: `s4-seed-seal-lifetime-acceptance-20261121.json`. Точные pending owners сохраняются при временной остановке и прекращаются при замене мира. Следующий результат — actual PRODUCER_DEDUPE/DRAIN; фикстура состояния очередей не заменяет доказательство физического выполнения и текущего преемника. Q11 остаётся CHECK.
+Q11: шаги 7–8 завершены в объёме группы. RETENTION/PRODUCER_DEDUPE/DRAIN/ABANDONMENT имеют scoped receipts; итоговый `s4-seed-seal-replacement-acceptance-20261121.json` подтверждает actual permanent reset и физическое выполнение свежего seed/seal в том же UWorld. Ограничения adapters/Flat/healthy-frame подготовки сохранены; caps/fairness/full IO и backend остаются в своих пакетах. Следующий — шаг 9 / Q10-C1. S4.02 и полная цель открыты.
 
 На момент уточнения плана был выполнен шаг 1; само уточнение не запускало сборки или тесты. Последующее исполнение завершило шаги 2–3: `s4-generation-cancel-acceptance-20261121.json`, все 9 случаев PASS; шаг 4: `s4-generation-outside-acceptance-20261121.json`, все 3 стадии PASS; шаги 5–6: `s4-generation-admission-acceptance-20261121.json`, priority6/discarded2 PASS и все прежние Q09 regression PASS. Q09-C1 закрыт в своём объёме. Следующий — шаг 7 / Q11. Полная цель остаётся открытой.
 

@@ -4,7 +4,7 @@
 
 ## Исполнимый остаток от 2026-11-21
 
-`S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json` после принятия Q09 фиксирует 6 CHECK, 24 property-specific REUSE и 1 INAPPLICABLE (disabled worker capture). CHECK — группы явно перечисленных сценариев, не число запусков. Отсутствующие source caps остаются отдельным LIMIT-C1; drain budget не считается cap. Старые CHECK в обзорной таблице ниже уточняются этим ledger и последующими receipts, а исторические гипотезы не являются очередью повторов. Следующий ID — Q11-C1.
+`S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json` после принятия Q11 фиксирует 5 CHECK, 25 property-specific REUSE и 1 INAPPLICABLE (disabled worker capture). CHECK — группы явно перечисленных сценариев, не число запусков. Отсутствующие source caps остаются отдельным LIMIT-C1; drain budget не считается cap. Старые CHECK в обзорной таблице ниже уточняются этим ledger и последующими receipts, а исторические гипотезы не являются очередью повторов. Следующий ID — Q10-C1.
 
 ### Q04-C1 / capacity reduction after same-key replacement
 
@@ -533,6 +533,12 @@ Initial unload fixture failed successful-unload precondition: log WorldColumnSav
 Corrected repro confirms actual retirement defect: veto accepted=true, success old_resident=false/kept_exact=true/accepted=false. Production unload callback after successful save now removes all matching XZ seed/shore deque entries and shore/intra markers, preserves other columns, and counts this as invalidated active work. No change before save ACK/veto. Linear filtering cost stays LIMIT-C1/S6.04; no bounded-cost claim. One fixed verification with unchanged complete fixture and fresh-incarnation reissue assertion follows.
 
 UNLOAD_REISSUE receipt s4-seed-seal-unload-acceptance-20261121.json accepted: veto old_resident/kept_exact/accepted true; success old_resident false, kept_exact/accepted/fresh_reissue true. Build0/API/runtime0/startup/provenance PASS/config restored, previous DRAIN/ingress/retention/Q09 regressions PASS; runner2/overall UNTESTED retained. Exact source/EXE asserted; incomplete fixture failure separate from actual removed-column negative. Fresh ingress is actual new incarnation and production callback; no physical-return drain claim beyond composed DRAIN mechanism. Last ABANDONMENT subcase REPLACEMENT_CURRENT still CHECK; top-level6 CHECK/full goal OPEN.
+
+### Q11-C1.ABANDONMENT.REPLACEMENT_CURRENT
+
+Extend existing accepted DRAIN scene with two modes: ordinary and actual UWorld Abandon before current terrain. Old terrain/current-column incarnation plus old-only column3 and all4 accepted pending owner containers. Actual permanent Abandon must clear geometry/all4 owners; repopulate same UWorld object/current column0 with new incarnation, original healthy scene, same actual TickAsyncChunkSystems consumer and ≤16 ticks. PASS actual new seed frontier/seal mutation/save/light/map/current map and terminal0; old-only column3 remains absent. Pending-state adapter composed with accepted ingress; no direct seed/seal call, generator algorithm/save UI/backend/framebuffer/performance claim. One missing-property verification, production unchanged. After PASS reconcile only Q11 row, not S4.02 or full stages.
+
+REPLACEMENT_CURRENT receipt s4-seed-seal-replacement-acceptance-20261121.json accepted without production change: ticks2/fresh_incarnation/old_world_absent/actual_seed/actual_seal/save/light/map/current_map/terminal PASS, pending0; ordinary DRAIN and prior Q11/Q09 native regressions PASS. Build0/API/runtime0/startup/provenance PASS/config restored; runner2/overall UNTESTED retained. All4 Q11 subcases and required children now REUSE with exact receipts and adapter/Flat/healthy-frame limits. Far-lane same consumer source composition; general fairness S4.05, caps LIMIT-C1, full world IO S4.06/Q10 remain. Q11 row scoped closure only; next Q10-C1. Top-level5 CHECK/full S4.02/S0..S6 OPEN.
 
 ### Q09-C1.CANCEL_RESET / actual generation cancellation matrix
 

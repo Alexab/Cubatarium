@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q11.world-replacement-current-successor-and-closure",
+      "status": "SCOPED_PASS_Q11_C1_CLOSED_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-seed-seal-replacement-acceptance-20261121.json",
+      "scope": "Actual UWorld Abandon clears old terrain/accepted pending owners; same object current section fresh incarnation, actual streaming tick seed/seal and downstream save/light/map/current map, old-only column3 stays absent. Pending-state adapter composed with actual ingress receipts; healthy-frame relight/CPU immediate mesh preparation. Not full world-load/save transaction, native camera travel, Full physical-light/framebuffer/backend/performance/memory/general fairness proof. Far-lane policy source-composed with same consumer; fairness S4.05, caps LIMIT-C1. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q11.actual-unload-seed-seal-retirement",
       "status": "SCOPED_PASS_Q11_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
