@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "column-unload-keeps-retired-seed-seal-work",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q11_C1_OPEN",
+      "observed": "Actual complete column synchronous save/unload removed RAM geometry but left seed/shore/dedupe/intra owners for obsolete incarnation.",
+      "fix": "After successful save ACK, filter exact retiring XZ from seed/shore deques, erase shore/intra markers, count retired terrain work as active invalidation. Veto preserves all; other columns unaffected.",
+      "evidence": "build/desktop-msvc/s4-seed-seal-unload-acceptance-20261121.json",
+      "next_action": "Q11 REPLACEMENT_CURRENT physical successor; parent remains open."
+    },
+    {
       "id": "sync-shore-seal-ingress-bypasses-shared-dedupe-owner",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q11_C1_OPEN",

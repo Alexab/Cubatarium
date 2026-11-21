@@ -6000,8 +6000,28 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           return false;
 
         const auto invalidation_started = std::chrono::steady_clock::now();
+        // Follow-up work belongs to the resident column being retired. Keep
+        // it through save vetoes, but never let it act on a later incarnation.
+        const auto same_column = [ground](glm::ivec3 pending)
+        { return pending.x == ground.x && pending.z == ground.z; };
+        const auto seed_count = DeferredPhysicsSeedQueue.size();
+        const auto shore_count = DeferredShoreSealQueue.size();
+        DeferredPhysicsSeedQueue.erase(
+            std::remove_if(DeferredPhysicsSeedQueue.begin(),
+                           DeferredPhysicsSeedQueue.end(), same_column),
+            DeferredPhysicsSeedQueue.end());
+        DeferredShoreSealQueue.erase(
+            std::remove_if(DeferredShoreSealQueue.begin(),
+                           DeferredShoreSealQueue.end(), same_column),
+            DeferredShoreSealQueue.end());
+        const bool retired_shore = DeferredShoreSealQueued.erase(ground) > 0;
+        const bool retired_intra = DeferredIntraChunkSealNeeded.erase(ground) > 0;
+        const bool retired_terrain_work =
+            seed_count != DeferredPhysicsSeedQueue.size() ||
+            shore_count != DeferredShoreSealQueue.size() ||
+            retired_shore || retired_intra;
         flow.ForgetColumnWork(col);
-        bool invalidated_work = active_work;
+        bool invalidated_work = active_work || retired_terrain_work;
         const int canceled_relight_work =
             world.Persistence->CancelTerrainColumnRelight(world_key);
         invalidated_work = canceled_relight_work > 0 || invalidated_work;

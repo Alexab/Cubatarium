@@ -22,6 +22,7 @@
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
+#include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
@@ -1537,6 +1538,78 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"focus_missing",drain.PhysicsTelemetryData.FocusMissingMesh}};
         require(terminal && seed_seen && mutation && save && light && map_invalidated && current_map,
                 "actual streaming tick drains accepted seed/seal and retains downstream mutation owners");
+      }
+      {
+        struct UnloadDeadlineRestore {
+          UFrameDeadline deadline=UFrameDeadline::Get();
+          ~UnloadDeadlineRestore() { UFrameDeadline::Get()=deadline; }
+        } restore;
+        bool all_retired=true;
+        for(const bool veto : {true,false}) {
+          auto unloaded_owner=std::make_unique<UWorld>(nullptr,nullptr);
+          auto &unloaded=*unloaded_owner;
+          unloaded.SetSpawnPoint({8,-40,8});
+          unloaded.ProceduralTemplate.MinHeight=-48; unloaded.ProceduralTemplate.MaxHeight=-33;
+          unloaded.ProceduralTemplate.SeaLevel=-40; unloaded.ProceduralTemplate.FillWater=true;
+          unloaded.ProceduralTemplate.AsyncChunkIo=false;
+          unloaded.BlockWorld.SetVerticalProfile({-48,-33,-40});
+          unloaded.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          unloaded.BlockWorld.SetFluidDefinitions(definitions.get());
+          unloaded.SetRenderSettings(settings);
+          const auto folder=root/(veto?"seed-unload-veto":"seed-unload-success");
+          fs::create_directories(folder); unloaded.SetWorldFolderPath(folder.string());
+          const glm::ivec3 old(0,0,0),kept(64,0,0),old_seed(0,-3,0),kept_seed(64,-3,0);
+          for(int x=0;x<CHUNK_SIZE;++x) for(int z=0;z<CHUNK_SIZE;++z) {
+            unloaded.BlockWorld.SetBlock({x,-48,z},8);
+            unloaded.BlockWorld.SetBlock({64*CHUNK_SIZE+x,-48,z},8);
+          }
+          require(IsTerrainChunkComplete(unloaded.BlockWorld,old,-33,kNoTerrainChunkSlice,-48),
+                  "unload fixture owns complete terrain before veto or save");
+          auto &streaming=*unloaded.Streaming;
+          streaming.EnsureStreamer(unloaded.BlockWorld,*unloaded.BlockRegistry,17,unloaded.ProceduralTemplate);
+          streaming.InitStreamerCallbacks(unloaded);
+          streaming.Streamer->SetRenderDistance(3); streaming.Streamer->SetMaxLoadOpsPerFrame(4);
+          streaming.Streamer->SetMaxUnloadOpsPerFrame(8);
+          streaming.DeferredPhysicsSeedQueue={old_seed,kept_seed};
+          streaming.DeferredShoreSealQueue={old,kept};
+          streaming.DeferredShoreSealQueued={old,kept};
+          streaming.DeferredIntraChunkSealNeeded={old,kept};
+          if(veto) unloaded.BlockWorld.GetChunkManager().MarkTerrainColumnReadUnresolved(old);
+          const auto incarnation=unloaded.BlockWorld.GetChunkManager().GetChunk(old_seed)->GetIncarnation();
+          UFrameDeadline::Get().BeginFrame(5000);
+          PlayerCapsule capsule;
+          // Fixed explicit unload observer outside old keep ring, inside kept
+          // column. This isolated API scene is not camera travel evidence.
+          streaming.Streamer->UnloadPass({64*CHUNK_SIZE+8,-40,8},
+              {float(64*CHUNK_SIZE+8),-40,8},capsule);
+          const bool old_resident=unloaded.BlockWorld.GetChunkManager().HasChunk(old_seed);
+          const bool kept_exact=unloaded.BlockWorld.GetChunkManager().HasChunk(kept_seed) &&
+              streaming.DeferredShoreSealQueued.count(kept)==1 &&
+              streaming.DeferredIntraChunkSealNeeded.count(kept)==1;
+          bool accepted=false;
+          if(veto) accepted=old_resident && kept_exact &&
+              streaming.DeferredPhysicsSeedQueue==std::deque<glm::ivec3>{old_seed,kept_seed} &&
+              streaming.DeferredShoreSealQueue==std::deque<glm::ivec3>{old,kept} &&
+              streaming.DeferredShoreSealQueued.count(old)==1 && streaming.DeferredIntraChunkSealNeeded.count(old)==1;
+          else accepted=!old_resident && kept_exact &&
+              streaming.DeferredPhysicsSeedQueue==std::deque<glm::ivec3>{kept_seed} &&
+              streaming.DeferredShoreSealQueue==std::deque<glm::ivec3>{kept} &&
+              streaming.DeferredShoreSealQueued.count(old)==0 && streaming.DeferredIntraChunkSealNeeded.count(old)==0;
+          report["seed_seal_unload"].push_back({{"veto",veto},{"old_resident",old_resident},
+              {"kept_exact",kept_exact},{"accepted",accepted}});
+          all_retired=all_retired && accepted;
+          if(!veto && accepted) {
+            unloaded.BlockWorld.SetBlock({8,-40,8},9);
+            streaming.ChunkScheduler->MarkDirty(old,-40,-40,false);
+            const bool fresh=unloaded.BlockWorld.GetChunkManager().GetChunk(old_seed)->GetIncarnation()!=incarnation &&
+                streaming.DeferredPhysicsSeedQueue==std::deque<glm::ivec3>{kept_seed,old_seed} &&
+                streaming.DeferredShoreSealQueue==std::deque<glm::ivec3>{kept,old} &&
+                streaming.DeferredShoreSealQueued.count(old)==1 && streaming.DeferredIntraChunkSealNeeded.count(old)==1;
+            report["seed_seal_unload"].back()["fresh_reissue"]=fresh;
+            all_retired=all_retired && fresh;
+          }
+        }
+        require(all_retired,"unload veto preserves owners; successful unload retires only old column and permits fresh reissue");
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

@@ -537,7 +537,20 @@
         {
           "id": "Q11-C1.ABANDONMENT",
           "status": "CHECK",
-          "scope": "Unload/eviction/reset retires old work without new-world resurrection; current repeated demand executes. Count/byte/cost envelopes LIMIT-C1."
+          "scope": "Unload/eviction/reset retires old work without new-world resurrection; current repeated demand executes. Count/byte/cost envelopes LIMIT-C1.",
+          "subcases": [
+            {
+              "id": "Q11-C1.ABANDONMENT.UNLOAD_REISSUE",
+              "status": "REUSE",
+              "evidence": "build/desktop-msvc/s4-seed-seal-unload-acceptance-20261121.json",
+              "coverage_note": "Actual public UnloadPass with real installed callback, synchronous column save and RAM removal. Direct accepted pending-owner adapter, fixed explicit unload observer at kept64 (not camera travel). Exact veto/survivor/old retirement and actual new chunk incarnation/production callback reissue. Fresh request acceptance here, physical successor composed separately with DRAIN; permanent replacement/current successor remains CHECK. No full load/save/cold reload/backend/framebuffer/performance acceptance. Linear deque filter cost LIMIT-C1/S6.04; full S0..S6 OPEN."
+            },
+            {
+              "id": "Q11-C1.ABANDONMENT.REPLACEMENT_CURRENT",
+              "status": "CHECK",
+              "scope": "Actual permanent UWorld replacement retires old accepted owners and current new-world seed/seal physically executes in same world object, not only empty queue. Compose existing exact reset/ingress/drain mechanisms; add only missing transition."
+            }
+          ]
         }
       ]
     },
@@ -635,5 +648,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE/DRAIN accepted by scoped receipts. Next ABANDONMENT actual unload/eviction/return and permanent replacement successor. Top-level6 CHECK; full scope OPEN."
+  "checkpoint": "Q11 RETENTION/PRODUCER_DEDUPE/DRAIN and unload veto/retirement/fresh reissue accepted. Next REPLACEMENT_CURRENT physical successor. Top-level6 CHECK; full scope OPEN."
 }
