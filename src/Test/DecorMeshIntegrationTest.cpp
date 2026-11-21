@@ -246,6 +246,20 @@ struct ChunkMeshCaptureAdmissionTestAccess
     MeshRebuildTickStats stats;
     cache.ProcessPendingGpuMeshes(world, registry, 8, 1000, stats);
   }
+  static std::vector<int> HoldAllPackedSlots(UChunkMeshCache &cache)
+  {
+    std::vector<int> slots;
+    auto &allocator = cache.GpuPipeline->GetAllocator();
+    while (allocator.GetFreeSlotCount())
+      slots.push_back(allocator.AllocateStagingSlot(false));
+    return slots;
+  }
+  static void ReleaseHeldPackedSlots(UChunkMeshCache &cache,
+                                      const std::vector<int> &slots)
+  {
+    for (const auto slot : slots)
+      cache.GpuPipeline->GetAllocator().FreeSlotByIndex(slot);
+  }
   static uint32_t FreePackedSlots(UChunkMeshCache &cache)
   {
     return cache.GpuPipeline->GetAllocator().GetFreeSlotCount();
@@ -1624,6 +1638,18 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
   Expect(current.certifiedPaddedLight,
          "packed overflow input carries a certified physical volume");
   ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, current, registry);
+  const auto held_slots = ChunkMeshCaptureAdmissionTestAccess::HoldAllPackedSlots(cache);
+  ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+  const bool slot_refusal_retained = held_slots.size() == 2 &&
+      cache.GetPendingGpuAppliesCount() == 1 && cache.IsPendingGpuQueued(coord) &&
+      cache.IsGpuExtractInFlight(coord) && cache.HasInflightMeshBuild(coord) &&
+      cache.GetPublishCount(coord) == 0 &&
+      ChunkMeshCaptureAdmissionTestAccess::FreePackedSlots(cache) == 0;
+  Expect(slot_refusal_retained,
+         "staging slot refusal preserves queued snapshot and exact active owner");
+  ChunkMeshCaptureAdmissionTestAccess::ReleaseHeldPackedSlots(cache, held_slots);
+  std::cout << "gpu_slot_refusal retained=" << slot_refusal_retained << '\n';
+
   for (int i = 0; i < 8 && cache.GetPendingGpuAppliesCount(); ++i)
   {
     ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);

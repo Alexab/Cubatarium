@@ -196,7 +196,26 @@
       "id": "Q06-C1",
       "queue": "Q06",
       "status": "CHECK",
-      "required_result": "GPU pending admission/slot/byte refusal and extraction failure return demand to actual owner; successor publishes on actual GPU path."
+      "required_result": "GPU pending admission/slot/byte refusal and extraction failure return demand to actual owner; successor publishes on actual GPU path.",
+      "subcases": [
+        {
+          "id": "Q06-C1.1",
+          "status": "CHECK",
+          "scope": "Actual worker result→pending enqueue frame quota refusal including quiesce owner, and current GPU successor."
+        },
+        {
+          "id": "Q06-C1.2",
+          "status": "REUSE",
+          "scope": "Actual GL4.3 driver: two allocated staging slots deny consumer; exact queued/extract/Active retained, no publication. Release slots without ingress; actual GPU overflow terminates and CPU recovery publishes98304 vertices, no dirty/pending.",
+          "evidence": "build/desktop-msvc/s4-gpu-slot-refusal-acceptance-20261121.json",
+          "coverage_note": "Allocator pressure injected via test adapter. Existing QueuePacked adapter bypasses normal worker→pending admission. Does not prove enqueue quota refusal or byte admission. CPU fallback is intentional for actual oversized extraction; not claimed GPU-successor success. No new desktop native needed for test-only scene; current app provenance predates this test change."
+        },
+        {
+          "id": "Q06-C1.3",
+          "status": "CHECK",
+          "scope": "GPU pending byte admission is not wired: TryAcquireGpuPendingBytes has no production caller. Define actual payload owner/envelope, implement refusal retention/release, prove current actual GPU successor."
+        }
+      ]
     },
     {
       "id": "Q06-C2",
@@ -362,5 +381,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q03-C1 actual main-thread capture outcomes/current successor and Q05-C1 compatible container/credit mechanisms accepted. 11 CHECK groups/19 REUSE groups/1 disabled production path. Next Q06-C1 actual GPU refusal/extraction failure/current publication. Full S4.02/S0..S6 OPEN."
+  "checkpoint": "Q06-C1 slot/extraction subcase accepted (actual GL driver1.81s); enqueue-quota and unwired GPU-byte admission remain CHECK. Top-level11 CHECK unchanged. Full scope OPEN."
 }
