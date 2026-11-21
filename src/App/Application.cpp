@@ -485,6 +485,7 @@ void UApplication::BeginWorldOperation(WorldRunnerRequest request,
 {
   PendingFirstWorldPaint = false;
   FirstWorldPaintWaitMs = 0.0;
+  FirstWorldPaintRepairFrames = 0;
   if (!Core || !World)
   {
     return;
@@ -616,8 +617,34 @@ void UApplication::OnWorldOperationFinished()
   if (WorldOpRunner && WorldOpRunner->ShouldEnterGame())
   {
     World->PrepareEnterGameSession();
+    if (const char *probe = std::getenv("CUBA_FLIGHT_QA_FIRST_PAINT_DEBT");
+        probe && std::string(probe) == "1")
+    {
+      const auto focus = UChunkManager::WorldToChunk(World->GetPreferredLoadFocusBlock());
+      const auto &settings = World->GetProceduralSettings();
+      bool injected = false;
+      for (int cy = FloorDiv(settings.MinHeight, CHUNK_SIZE);
+           cy <= FloorDiv(settings.MaxHeight, CHUNK_SIZE); ++cy)
+      {
+        const glm::ivec3 coord(focus.x,cy,focus.z);
+        if (!World->HasCurrentChunkSlicePublication(coord) ||
+            !World->GetMeshService().HasDrawableGreedyMesh(coord))
+          continue;
+        World->GetMeshService().RemoveColumn({focus.x,0,focus.z},cy,cy);
+        if (World->HasCurrentChunkSlicePublication(coord))
+          throw std::runtime_error("First-paint probe failed to retire publication");
+        CubatariumLogInfo("FirstPaintBarrierProbe", "publication_retired coord=(" +
+            std::to_string(coord.x) + "," + std::to_string(coord.y) + "," +
+            std::to_string(coord.z) + ") voxel_data_preserved=1");
+        injected = true;
+        break;
+      }
+      if (!injected)
+        throw std::runtime_error("First-paint probe requires a current drawable section");
+    }
     PendingFirstWorldPaint = true;
     FirstWorldPaintWaitMs = 0.0;
+    FirstWorldPaintRepairFrames = 0;
   }
   else if (WorldOpOnComplete)
   {
@@ -3348,6 +3375,7 @@ void UApplication::Update(double dt)
       if (!World->SampleRequiredPresentationCoverage(
               RequiredPresentationProbeMode::StopOnDebt).Ready())
       {
+        ++FirstWorldPaintRepairFrames;
         if (!World->IsEnterLitGateActive())
           World->BeginEnterLitGate();
         World->ValidateRequiredEnterPresentation(FirstWorldPaintWaitMs);
@@ -3817,7 +3845,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
       World->EndEnterLitGate();
       PendingFirstWorldPaint = false;
       CubatariumLogInfo("FirstPaintBarrier", "ready_before_render wait_ms=" +
-          std::to_string(FirstWorldPaintWaitMs));
+          std::to_string(FirstWorldPaintWaitMs) + " repair_frames=" +
+          std::to_string(FirstWorldPaintRepairFrames));
       EnterGameAfterWorldChange();
     }
   }

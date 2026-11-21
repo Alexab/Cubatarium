@@ -671,8 +671,9 @@
           ],
           "count_admission_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json",
           "world_record_retirement_observation": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",
-          "startup_regression": "Diagnostic-only current run startup PASS0/native0/API PASS, previous FAIL31 remains unresolved; timing-dependent late-commit correlation recorded, not fixed.",
-          "startup_transition_evidence": "build/desktop-msvc/s4-first-paint-transition-20261121.json"
+          "startup_regression": "Scoped barrier fix passes controlled Loading consumer and exact original startup fixture; historical FAIL retained. S4.04/full matrix open; return to live metadata cardinality/bytes.",
+          "startup_transition_evidence": "build/desktop-msvc/s4-first-paint-transition-20261121.json",
+          "startup_barrier_receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q02",

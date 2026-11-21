@@ -295,7 +295,7 @@
     {
       "id": "surface-first-paint-unready",
       "stage": "S4",
-      "status": "OPEN",
+      "status": "SCOPED_FIX_PASS_S4_04_OPEN",
       "discovered_by": "S1.04 flat walking native run",
       "evidence": "build\\desktop-msvc\\s1-surface-rd4-20261120-native\\smoke-verdict.json",
       "evidence_sha256": "9cc07639b0545eddb25733d3e98affb1e3520fb95308a30960f4d2795450d615",
@@ -335,7 +335,7 @@
       },
       "blocks_surface_motor_proof": false,
       "blocks_overall_acceptance": true,
-      "next_action": "Controlled pending-debt application barrier test (exercise Loading consumer, then render only ready), original Full-light13 scenario and final requirement evidence. Do not close from wait_ms0 baseline.",
+      "next_action": "Preserve original FAIL13/31 receipts; reconcile remaining S4.04 presentation/fog authorities and later complete backend/route/pixel matrix. Return to LIMIT.Q01 live stage/world-record cardinality and byte envelope; no repeated first-paint checks without dependent change.",
       "additional_observation": {
         "artifact": "build\\desktop-msvc\\s1-debt-walk-rd4-20261120-native\\smoke-verdict.json",
         "status": "Startup PASS in debt-target run; does not invalidate original 13-section FAIL or establish a fix."
@@ -365,7 +365,8 @@
           "scope": "S4.04 candidate final-render admission barrier baseline CPU/Flat Windows: State stays Loading through platform movement/streaming until same RenderFrame readiness check and InGame transition. Actual first witness ready0 debt, no generation commit between barrier and paint. wait_ms0 means late-debt repair/loading branch not exercised. Original13/31 failure cases, Full light, Android runtime and final complete startup acceptance remain OPEN."
         }
       ],
-      "candidate_fix": "Hold Loading after operation; bounded required-input/gate/mesh consumer while waiting. Final same-render readiness check transitions InGame before first Paint, preventing intervening normal streaming tick."
+      "candidate_fix": "Hold Loading after operation; bounded required-input/gate/mesh consumer while waiting. Final same-render readiness check transitions InGame before first Paint, preventing intervening normal streaming tick.",
+      "scoped_fix_receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json"
     },
     {
       "id": "surface-packed-floor-sky-zero",

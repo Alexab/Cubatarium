@@ -434,7 +434,9 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         probe_terrain_save_failure: bool = False, walking: bool = False,
         record_replay: bool = False, debt_target: dict | None = None,
         flat_publication: bool = False, face_repair_only: bool = False,
-        flow_only: bool = False) -> dict:
+        flow_only: bool = False, probe_first_paint_debt: bool = False) -> dict:
+    if type(probe_first_paint_debt) is not bool or (probe_first_paint_debt and not startup_only):
+        raise ValueError("First-paint debt probe requires startup-only isolation")
     if type(flow_only) is not bool or (flow_only and (not flat_publication or face_repair_only)):
         raise ValueError("Flow isolation requires the standalone Flat probe without face isolation")
     if type(face_repair_only) is not bool or (face_repair_only and not flat_publication):
@@ -617,6 +619,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             "CUBA_FLIGHT_CAPTURE_INTERVAL_SEC": "10",
             "CUBA_FLIGHT_CAPTURE_ENCODE_DELAY_MS": str(capture_encode_delay_ms),
         })
+        if probe_first_paint_debt:
+            env["CUBA_FLIGHT_QA_FIRST_PAINT_DEBT"] = "1"
         if fixture_scene == "air-pocket-negative-cave":
             env["CUBA_FLIGHT_AIR_POCKET_PROBE"] = "1"
         if round_trip:
@@ -757,6 +761,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "flat_publication_requested": flat_publication,
                  "face_repair_only_requested": face_repair_only,
                  "flow_only_requested": flow_only,
+                 "probe_first_paint_debt": probe_first_paint_debt,
                  "capture_encode_delay_ms": capture_encode_delay_ms,
                  "duration_semantics": "maximum in-game budget; exits early after bot completion plus stop phase",
                  "fly_seconds": fly_seconds, "stop_seconds": stop_seconds,
@@ -1054,6 +1059,8 @@ def main() -> int:
                         help="run only face repair lifecycle within the Flat publication probe")
     parser.add_argument("--flow-only", action="store_true",
                         help="run only signed-slice flow publication within the Flat probe")
+    parser.add_argument("--probe-first-paint-debt", action="store_true",
+                        help="retire one prepared mesh publication to verify loading consumer before first Paint")
     parser.add_argument("--startup-only", action="store_true",
                         help="observe first-world-paint readiness without route or visual acceptance")
     parser.add_argument("--world-actions", type=Path,
@@ -1107,6 +1114,7 @@ def main() -> int:
                   flat_publication=args.flat_publication,
                   face_repair_only=args.face_repair_only,
                   flow_only=args.flow_only,
+                  probe_first_paint_debt=args.probe_first_paint_debt,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,
                   world_actions=json.loads(args.world_actions.read_text(encoding="utf-8")) if args.world_actions else None)

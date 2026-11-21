@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.04.final-render-barrier-controlled-debt-original-profile",
+      "status": "SCOPED_PASS_STAGE_OPEN",
+      "receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json",
+      "scope": "S4.04 first-world-frame admission: final same-render current required-ring barrier; controlled real mesh publication retirement after warmup exercises Loading bounded consumer35 frames then ready first Paint. Separate actual generation late-apply causal receipt retained. Original open-sky-plane fixture metadata exactly matched at minimum_chunks8; Full lighting/async render profile startup required ring1944 sections light/publication debt0. Extended minimum16 run explicitly separate. No walking route, independent pixels, Android runtime, all backends, performance or full S4.04/S0..S6 closure."
+    },
+    {
       "id": "S4.04.first-render-barrier-baseline",
       "status": "BASELINE_PASS_CONTROLLED_WAIT_PENDING",
       "receipt": "build/desktop-msvc/s4-first-paint-barrier-observation-20261121.json",
