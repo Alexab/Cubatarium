@@ -8,23 +8,39 @@
 
 ### Ближайшая очередь S4.02
 
-Актуальная точка: CPU Q02/Q04 закрыты соответствующими receipts, включая старый retry против нового owner и настоящий RAA. Их повторная отладка не входит в очередь. Осталось 13 CHECK-групп; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json.
+Актуальная точка на 2026-11-21: CPU Q02/Q04, capture Q03, pool Q05, GPU Q06 и relight Q08 закрыты в пределах соответствующих receipts. Их повторная отладка не входит в очередь. Осталось **7 CHECK-групп**, 23 REUSE-группы и один отключённый путь; число групп не означает число тестов или процент готовности. Порядок и стабильные ID берутся из S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json. Текущий HEAD при уточнении — `110858559`; fixture/card WIP отмены generation сохраняется.
 
 | Шаг | ID | Конкретный результат для закрытия |
 |---|---|---|
-| 1 | Q03-C1 | Раздельно сопоставить credit refusal, cap512 eviction, pressure eviction и stale capture с имеющимися receipts. Для каждого пробела доказать сохранённый demand, recapture актуальных входов и завершённую текущую публикацию. Отключённый worker capture не включать. |
-| 2 | Q05-C1 | Привязать существующие Release-артефакты к TryEnqueue reject, tagged queued cancel, completed drop/cap shrink и освобождению credits к idle. Запустить только механизм без достаточного доказательства. |
-| 3 | Q06-C1 | На фактическом GPU пути отказ pending/slot/byte admission и ошибка extraction возвращают demand владельцу; актуальный преемник публикуется. |
-| 4 | Q06-C2 | Cancel/eviction/reset и поздний GPU completion не уничтожают нового CPU/GPU/field owner. Живой demand завершается, покинутый явно прекращается. Перестановки пары оставить S4.03, ABA — S5.02. |
-| 5 | Q08-C1 | FIFO reject/promotion/coalescing сохраняют signed Y-band для column/player/boundary/draw-gate/FirstMesh; соответствующий актуальный свет установлен. |
-| 6 | Q08-C2 | Trim/eviction/quiesce/reset передают живую работу deferred/restore owner. Restore завершается; долг старого мира не попадает в новый. |
-| 7 | Q09-C1 | Generation reject/cancel/reset/eviction и stale ready commit отвергают старую generation, сохраняют живой запрос и устанавливают текущий terrain arrival. |
-| 8 | Q11-C1 | Physics seed/shore seal dedupe сохраняют нужную работу; eviction/reset прекращают покинутую. Живой arrival получает seed/seal с сохранением fluid-map/light/save обязательств. |
-| 9 | Q10-C1 | Load cancel/retry/reject/stale slice не стирают новые данные. Retry exhaustion имеет явный исход; повторный текущий запрос полностью загружается. |
-| 10 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
-| 11 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
-| 12 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
-| 13 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
+| 1 | Q09-C1 | Завершить CANCEL_RESET, OUTSIDE, ADMISSION. STALE_READY уже принят. Старое поколение отвергнуто, живой запрос сохранён и текущий terrain arrival установлен. |
+| 2 | Q11-C1 | Physics seed/shore seal dedupe сохраняют нужную работу; eviction/reset прекращают покинутую. Живой arrival получает seed/seal с сохранением fluid-map/light/save обязательств. |
+| 3 | Q10-C1 | Load cancel/retry/reject/stale slice не стирают новые данные. Retry exhaustion имеет явный исход; повторный текущий запрос полностью загружается. |
+| 4 | Q10-C2 | Save reject/failure/stale completion не очищают новую dirty-save. Unload/world switch соблюдают владельца сохранения; холодное чтение содержит последнюю правку. Пользовательский fatal-flow — S4.06. |
+| 5 | Q12-C1 | Face repair dedupe/cancel/eviction/reset и повторный presentation demand сохраняют точного owner либо явно прекращают запрос; актуальный преемник снимает debt. |
+| 6 | Q01-C1 | Upgrade/replace объединяют signed Y-bands без потери работы; remove/clear прекращают старый ticket; повторный demand завершается. |
+| 7 | LIMIT-C1 | Зафиксировать реальные caps и producer envelopes всех перечисленных в ledger очередей, включая retry vectors и стоимость Forget. Где исходный контракт требует границу — реализовать её; frame budget не считать memory cap. |
+
+### Исполнимые шаги до закрытия S4.02
+
+Эти шаги раскрывают действия 5–8 основной нумерации. Новых пакетов не добавляют.
+
+1. **CANCEL_RESET / принять репродукцию.** Уже получен `build/desktop-msvc/s4-generation-cancel-repro-20261121-native/terrain-save-probe/report.json`: queued-case прошёл, running public Cancel дал old_arrivals=1 и new_owner_preserved=false. Прогон завершён, повторять репродукцию не нужно. Public Cancel отличать от app-callers, использующих Invalidate.
+2. **CANCEL_RESET / исправить владельца.** Отозвать точный старый generation owner при Cancel, не отзывая уже обновлённый authoritative token другого владельца. Не менять одновременно fixture и production contract.
+3. **CANCEL_RESET / принять исправление.** Одна проверка существующей матрицы: Cancel / Invalidate / CancelAllPending × queued / running / completed. Старый буфер не установлен; новый owner сохранён и завершается одним текущим arrival. Receipt и commit.
+4. **OUTSIDE.** Зафиксировать actual outside-radius cancellation и защищённый живой запрос. Старый результат не возвращается; сохранённый запрос завершается; возврат в область даёт актуальный arrival. Переиспользовать доказанные стадии только при совпадении механизма.
+5. **ADMISSION.** Сопоставить фактические reject, duplicate/coalescing и priority refresh с сохранением одного живого запроса. Для discarded completion записать terminal outcome и завершение нужного преемника. Legacy Enqueue не выдавать за bounded TryEnqueue.
+6. **Закрыть Q09.** Свести четыре подслучая, обновить ledger/evidence, commit. Алгоритм генерации и все backend не входят в эту строку.
+7. **Q11 / зафиксировать исходы.** Для seed и seal выделить dedupe, eviction, temporary quiesce, permanent reset; сопоставить имеющиеся доказательства. Общий аудит физики не начинать.
+8. **Q11 / закрыть пробелы.** Проверить сохранение живого обязательства и прекращение старого. При потере работы исправить владельца; доказать завершение seed/seal и требуемые downstream light/save/map обязательства. Receipt и commit.
+9. **Q10-C1 / загрузка.** Для непокрытых cancel, retry exhaustion, admission reject и stale slice доказать отсутствие старой записи поверх новой и полностью завершённую текущую загрузку. Закрыть строку.
+10. **Q10-C2 / сохранение.** Проверить admission failure, transient write failure, late completion после новой правки; dirty-save сохраняется до актуальной записи. Отдельно unload/world-switch и cold read последней правки. Закрыть строку; пользовательский recovery оставить S4.06.
+11. **Q12 / repair.** Проверить непокрытые dedupe/cancel/eviction/reset/repeated demand до снятия актуального presentation debt. Закрыть строку.
+12. **Q01 / flow.** Проверить signed Y-band при upgrade/replace, retirement при remove/clear и завершение повторного demand. Закрыть строку.
+13. **LIMIT / перечислить границы.** Для owners из ledger записать count cap, byte cap, producer envelope, queued/running/completed storage и release point. Неограниченное хранение отметить явно; drain budget не считать memory cap.
+14. **LIMIT / реализовать обязательные границы.** Только недостающие ограничения исходного контракта, с явным исходом отказа и сохранением demand. Для retry vectors и Forget отделить память от стоимости обхода. Численные условия задать до измерений.
+15. **Закрыть S4.02.** Нет обязательных CHECK/BLOCKED; каждый принятый запрос имеет доказанный terminal outcome, лимиты и receipt. Сохранить checkpoint/commit; перейти к S4.03. Полный S4/S0..S6 остаётся открытым.
+
+На момент уточнения шаг 1 выполнен предыдущим прогоном; следующий — шаг 2. В рамках уточнения плана новые сборки, тесты и production-правки не выполняются. Незавершённые fixture/card изменения остаются WIP.
 
 Перед выполнением строки развернуть только её существующие подслучаи в конечный список. Для каждого записать: вход/барьер, production owner, terminal outcome, текущий successor, критерий PASS/FAIL, команду, timeout и зависимые проверки. Сначала REUSE; реализация и запуск только для оставшегося пробела. Новые подслучаи допустимы со ссылкой на требование или доказанную зависимость.
 
