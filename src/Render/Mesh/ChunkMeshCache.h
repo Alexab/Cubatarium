@@ -1436,6 +1436,8 @@ private:
     uint64_t sourceRevision{0};
     ChunkMeshSnapshot snapshot;
     std::unique_ptr<UPipelineCreditGuard> resultCredit;
+    // Pending payload plus reserved staging envelope, released with this owner.
+    std::unique_ptr<UPipelineCreditGuard> gpuCredit;
     std::shared_ptr<const BlockDefinitionCatalog> inputCatalog;
     std::unordered_map<BlockId, std::vector<CrossInstanceGpu>> crossCenters;
     Phase phase{Phase::Queued};

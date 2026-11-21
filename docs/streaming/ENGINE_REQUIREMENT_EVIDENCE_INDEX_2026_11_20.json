@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.gpu-byte-admission",
+      "status": "SCOPED_PASS_Q06_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-gpu-byte-acceptance-20261121.json",
+      "scope": "Native Flat regression API PASS, not native byte fault injection. Driver binds actual pipeline2slots via test adapter, real worker/result/apply/compute/publication. Frame quota Q06-C1.1 remains; cancel/eviction/reset/mixed late owners Q06-C2 and global envelopes LIMIT-C1 remain open."
+    },
+    {
       "id": "S4.02.Q05.container-credit-lifetime",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

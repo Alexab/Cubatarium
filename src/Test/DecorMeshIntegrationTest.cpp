@@ -246,6 +246,13 @@ struct ChunkMeshCaptureAdmissionTestAccess
     MeshRebuildTickStats stats;
     cache.ProcessPendingGpuMeshes(world, registry, 8, 1000, stats);
   }
+  static void InitPacked(UChunkMeshCache &cache)
+  {
+    cache.EnsureAsyncBuilder();
+    cache.GpuPipeline = std::make_unique<UGpuMeshPipeline>();
+    if (!cache.GpuPipeline->Init(2)) std::abort();
+    cache.GpuPipelineInitAttempted = true;
+  }
   static std::vector<int> HoldAllPackedSlots(UChunkMeshCache &cache)
   {
     std::vector<int> slots;
@@ -1722,6 +1729,78 @@ TestDenseCutoutFallback(cutum::GpuGreedyEmitState &state,
          "packed overflow and CPU recovery issue no invalid GL operations");
 }
 
+static void TestGpuPendingByteAdmission(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  auto &credits = UPipelineAdmission::Get();
+  const auto baseline = credits.GpuPendingBytes();
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+  world.SetBlock({8, 8, 8}, kStone);
+  const glm::ivec3 root(0);
+  DeferredTestMesher backend;
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = true;
+  settings.GpuPackedMeshing = true;
+  settings.FrustumCulling = false;
+  settings.Lighting = LightingMode::Flat;
+  cache.SetRenderSettings(settings);
+  cache.SetMesherBackend(&backend);
+  cache.SetMeshRebuildFocus(root, 4, 1);
+  ChunkMeshCaptureAdmissionTestAccess::InitPacked(cache);
+  cache.MarkDirtyPriority(root);
+  UFlatLightingPipeline flat;
+  flat.FillAllLoadedChunks(world);
+  const auto revision = cache.GetChunkMeshRevision(root);
+  const auto *chunk = world.GetChunkManager().GetChunk(root);
+  const auto epoch = cache.GetCaptureStore().WorldEpoch();
+  cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+      0, 1.0, epoch, chunk->GetIncarnation());
+  cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+      chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  UAsyncMeshBuilder builder(1);
+  builder.SetMesher(&backend);
+  const auto deliver = [&]() {
+    auto input = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+    Expect(builder.Enqueue(input, registry) && builder.WaitIdleFor(std::chrono::seconds(5)),
+           "GPU byte fixture actual worker produces deferred snapshot");
+    auto results = builder.DrainCompleted(1);
+    Expect(results.size() == 1 && results[0].GpuExtractPending,
+           "GPU byte fixture result requests actual extraction");
+    if (results.empty()) return;
+    ChunkMeshCaptureAdmissionTestAccess::TrackSource(cache, root, revision);
+    ChunkMeshCaptureAdmissionTestAccess::Apply(cache, world, registry, std::move(results[0]));
+  };
+  credits.SetGpuCap(baseline);
+  deliver();
+  const bool refused = cache.GetPendingGpuAppliesCount() == 0 &&
+      cache.IsChunkMeshDirty(root) && !cache.HasInflightMeshBuild(root) &&
+      cache.GetChunkMeshRevision(root) == revision && credits.GpuPendingBytes() == baseline;
+  Expect(refused, "GPU byte refusal returns exact demand without ghost owner");
+  // Clean the baseline's unexpected acceptance so the negative run is bounded.
+  if (cache.GetPendingGpuAppliesCount()) cache.CancelAsyncInFlightKeepDirty();
+  credits.SetGpuCap(256 * 1024 * 1024);
+  deliver();
+  const bool charged = cache.GetPendingGpuAppliesCount() == 1 && credits.GpuPendingBytes() > baseline;
+  Expect(charged, "accepted pending GPU payload owns byte credit");
+  for (int n = 0; n < 8 && cache.GetPendingGpuAppliesCount(); ++n)
+  {
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    glFinish();
+  }
+  const bool current = cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+      cache.IsPublishedMeshCurrentForInputs(root, world) &&
+      cache.GetPendingGpuAppliesCount() == 0 && credits.GpuPendingBytes() == baseline;
+  Expect(current, "GPU byte successor publishes actual current GPU geometry and releases credit");
+  std::cout << "gpu_byte_admission refused=" << refused << " charged=" << charged
+            << " current=" << current << '\n';
+}
+
 static void TestPackedLightArtifactOwnership(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
@@ -2175,6 +2254,7 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
   if (gpu && !gles)
   {
     TestDenseCutoutFallback(state, registry, definitions);
+    TestGpuPendingByteAdmission(registry, definitions);
     TestPackedLightArtifactOwnership(registry, definitions);
   }
 #endif

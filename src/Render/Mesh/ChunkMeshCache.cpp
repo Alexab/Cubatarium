@@ -9305,11 +9305,43 @@ void UChunkMeshCache::ApplyMeshResult(const UBlockWorld &world,
       {
         (void)TryConsumeEnqueueGpu(); // best-effort; never deny FirstMesh
       }
+      // Admission precedes transfer of the immutable capture into the pending
+      // queue. The fixed staging reservation also bounds queued work which has
+      // not obtained a physical slot yet. Shared catalogs/field resources and
+      // the globally preallocated pipeline buffers have separate owners.
+      size_t gpu_bytes = sizeof(PendingGpuApply) + UGpuMeshSlotAllocator::kBytesPerSlot;
+      bool gpu_bytes_valid = true;
+      for (const auto &cross : result.crossCenters)
+      {
+        constexpr size_t node_bytes = sizeof(decltype(result.crossCenters)::value_type) +
+                                      3 * sizeof(void *);
+        const auto limit = std::numeric_limits<size_t>::max();
+        if (gpu_bytes > limit - node_bytes ||
+            cross.second.capacity() >
+                (limit - gpu_bytes - node_bytes) / sizeof(CrossInstanceGpu))
+        {
+          gpu_bytes_valid = false;
+          break;
+        }
+        gpu_bytes += node_bytes + cross.second.capacity() * sizeof(CrossInstanceGpu);
+      }
+      auto &gpu_admission = UPipelineAdmission::Get();
+      if (!gpu_bytes_valid || !gpu_admission.TryAcquireGpuPendingBytes(gpu_bytes))
+      {
+        ActiveMeshSourceRevision.erase(revisionIt);
+        GpuExtractInFlight.erase(result.coord);
+        Dirty.MarkDirtyPriority(result.coord);
+        note_terminal(JobTerminalReason::GpuAdmissionDeferred);
+        return;
+      }
+      auto gpu_credit = std::make_unique<UPipelineCreditGuard>(
+          PipelineCreditKind::Gpu, gpu_bytes, true);
       PendingGpuApply pending;
       pending.coord = result.coord;
       pending.sourceRevision = result.sourceRevision;
       pending.snapshot = std::move(*result.PendingSnapshot);
       pending.resultCredit = std::move(result.ResultCredit);
+      pending.gpuCredit = std::move(gpu_credit);
       pending.inputCatalog = std::move(result.InputCatalog);
       pending.crossCenters = std::move(result.crossCenters);
       pending.accepted_input_stale = refresh_after_accept_stale;

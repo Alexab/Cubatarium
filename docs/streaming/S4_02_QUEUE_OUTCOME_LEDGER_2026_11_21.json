@@ -212,8 +212,10 @@
         },
         {
           "id": "Q06-C1.3",
-          "status": "CHECK",
-          "scope": "GPU pending byte admission is not wired: TryAcquireGpuPendingBytes has no production caller. Define actual payload owner/envelope, implement refusal retention/release, prove current actual GPU successor."
+          "status": "REUSE",
+          "scope": "Actual deferred worker result→normal ApplyMeshResult with cap baseline refuses; Dirty/same revision retained/no ghost/no credit leak. Lift cap256MiB without MarkDirty, same current input accepted/charged, actual GL packed GPU publication current, pending0 and credits baseline. Driver1.81s + normal decor2.62s PASS.",
+          "evidence": "build/desktop-msvc/s4-gpu-byte-acceptance-20261121.json",
+          "coverage_note": "Native Flat regression API PASS, not native byte fault injection. Driver binds actual pipeline2slots via test adapter, real worker/result/apply/compute/publication. Frame quota Q06-C1.1 remains; cancel/eviction/reset/mixed late owners Q06-C2 and global envelopes LIMIT-C1 remain open."
         }
       ]
     },
@@ -356,7 +358,7 @@
         "Q06"
       ],
       "source": "src/Render/Mesh/GpuMeshPipeline.h",
-      "observed": "Default packed slots2048; readback ring8; GPU byte credits256MiB default. Cache pending/extract envelope requires LIMIT-C1."
+      "observed": "Default packed slots2048/readback8; GPU pending byte credits256MiB now acquired by actual ApplyMeshResult and owned through pending lifetime. Pending payload+reserved staging envelope; globally preallocated pipeline buffers/shared fields separate. Full producer/memory envelope LIMIT-C1, cancel/late mixed-owner Q06-C2."
     },
     {
       "queues": [
@@ -381,5 +383,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C1 slot/extraction subcase accepted (actual GL driver1.81s); enqueue-quota and unwired GPU-byte admission remain CHECK. Top-level11 CHECK unchanged. Full scope OPEN."
+  "checkpoint": "Q06-C1.2 slot/extraction and .3 actual GPU pending byte refusal/current GPU successor accepted. .1 enqueue quota remains. Top-level11 CHECK groups unchanged; next Q06-C1.1. Full scope OPEN."
 }
