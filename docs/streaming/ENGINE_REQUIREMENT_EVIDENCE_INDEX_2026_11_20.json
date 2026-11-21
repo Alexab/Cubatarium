@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.field-owner-admission-current-publication",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-gpu-field-owner-acceptance-20261121.json",
+      "scope": "Pair permutations S4.03, atlas ABA S5.02, consumer/backend/framebuffer/performance/memory full matrix remain full original scope. Q06-C2 closure does not close S4.02 or parent S4."
+    },
+    {
       "id": "S4.02.Q06.old-gpu-new-gpu-marker",
       "status": "SCOPED_PASS_Q06_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

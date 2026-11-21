@@ -2149,6 +2149,40 @@ static void TestPackedLightArtifactOwnership(
   };
   settle();
   pack();
+  // Published-field admission is mutually exclusive with a geometry owner.
+  // Exercise the guard, not an impossible synthetic field/GPU overlap.
+  const auto before_conflict = cache.GetPublishCount(root);
+  auto older_geometry = ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+  ChunkMeshCaptureAdmissionTestAccess::QueuePacked(cache, std::move(older_geometry), registry);
+  world.SetBlock({16, 4, 16}, kFire);
+  settle();
+  const bool excluded = !cache.RequestPublishedLightRefresh(world, registry, root) &&
+      !cache.IsPublishedLightRefreshPending(root) && cache.GetPendingGpuAppliesCount() == 1;
+  Expect(excluded, "published field owner cannot overlap pending GPU geometry owner");
+  for (int n=0;n<8 && cache.GetPendingGpuAppliesCount();++n) {
+    ChunkMeshCaptureAdmissionTestAccess::DrainPacked(cache, world, registry);
+    glFinish();
+  }
+  const bool compatible = cache.IsPublishedMeshCurrentForInputs(root, world) &&
+      cache.GetPublishCount(root) == before_conflict + 1 &&
+      cache.GetGpuMeshPipeline()->HasGpuMesh(root);
+  Expect(compatible, "older physical GPU geometry publishes with current compatible field");
+  const auto geometry_publication = cache.GetPublishCount(root);
+  const auto geometry_bytes = packed_bytes();
+  world.SetBlock({16, 4, 16}, BLOCK_AIR);
+  settle();
+  Expect(cache.RequestPublishedLightRefresh(world, registry, root),
+         "field owner admits after geometry conflict has retired");
+  cache.DrainPendingGpuMeshes(world, registry, 8, -1);
+  flatten();
+  const bool refreshed = !cache.IsPublishedLightRefreshPending(root) &&
+      cache.IsPublishedMeshCurrentForInputs(root, world) &&
+      cache.GetPublishCount(root) == geometry_publication && packed_bytes() == geometry_bytes &&
+      !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root);
+  Expect(refreshed, "actual field refresh completes without geometry publication or byte changes");
+  ProbeCertifiedBinding(owner, cache.GetPublishedRenderLightBinding(root));
+  std::cout << "gpu_field_owner excluded=" << excluded << " compatible=" << compatible
+            << " refreshed=" << refreshed << '\n';
   std::cerr << "packed artifact refs=" << cache.GetGpuPackedOpaqueRefs().size()
             << " transparent=" << cache.GetGpuPackedTransparentRefs().size()
             << " resident=" << cache.GetGpuMeshPipeline()->HasGpuMesh(root)

@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q06-C2",
     "Q08-C1",
     "Q08-C2",
     "Q09-C1",
@@ -225,7 +224,7 @@
     {
       "id": "Q06-C2",
       "queue": "Q06",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "GPU pending cancel/eviction/reset and late completion preserve newer mixed CPU/GPU/field owners; current demand completes, abandoned owner retires. Pair permutations S4.03, ABA S5.02.",
       "subcases": [
         {
@@ -290,7 +289,7 @@
         },
         {
           "id": "Q06-C2.3",
-          "status": "CHECK",
+          "status": "REUSE",
           "scope": "Old GPU outcomes preserve newer mixed CPU/field owner and current publication; genuine follow-up debt survives. Pair permutations S4.03, ABA S5.02.",
           "subcases": [
             {
@@ -309,12 +308,17 @@
             },
             {
               "id": "Q06-C2.3-FIELD",
-              "status": "CHECK",
-              "scope": "Old GPU outcome preserves newer field owner/current compatible publication and genuine follow-up debt. Pair permutations S4.03."
+              "status": "REUSE",
+              "scope": "Actual GL packed physical field: published refresh admission rejected/no ghost while GPU pending; older compatible geometry publishes actual current field. Subsequent admitted field refresh completes with current binding, unchanged packed geometry bytes/publication count, no Dirty/RAA. excluded1/compatible1/refreshed1. ProbeCertifiedBinding verifies actual resident field.",
+              "evidence": "build/desktop-msvc/s4-gpu-field-owner-acceptance-20261121.json",
+              "coverage_note": "GeometryAwaitingLight retains exact Active source; superseded GPU early check is stage-independent and preserves unequal newer source without capture invalidation or DropGeometryAwaitingLight. Actual oldGPU/newCPU identity test plus current retained geometry/field completion/cancel/identity suites supply matching properties. No separately injected oldGPU/newawaitingfield scene claimed. Pair permutations S4.03, atlas ABA S5.02, consumer/backend/framebuffer/performance/memory full matrix remain full original scope. Q06-C2 closure does not close S4.02 or parent S4."
             }
-          ]
+          ],
+          "evidence": "build/desktop-msvc/s4-gpu-field-owner-acceptance-20261121.json"
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-gpu-field-owner-acceptance-20261121.json",
+      "coverage_note": "Composed .1 pending cancellation/lease, .2 exact phase/reset/policy/actual UWorld retirement and .3 CPU/GPU newer-owner/field admission proof. Each receipt retains adapter and stage-composition limits; no pair/performance/full memory claim."
     },
     {
       "id": "Q07-R1",
@@ -474,5 +478,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C2 mixed newer CPU and newer GPU accepted. Last Q06-C2 gap FIELD owner/current compatible publication and genuine follow-up. Top-level10 CHECK unchanged; full S0..S6 OPEN."
+  "checkpoint": "Q06-C2 GPU lifecycle/newer CPU/GPU/field ownership accepted with property-specific composition and limits. 9 CHECK groups/21 REUSE groups/1 disabled path. Next Q08-C1 signed Y-band FIFO admission/promotion/coalescing and actual light install. Full S4.02/S0..S6 OPEN."
 }
