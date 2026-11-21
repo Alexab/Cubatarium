@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/PipelineAdmission.h"
+#include "Core/Memory/AllocationCountingResource.h"
 #include "Render/Mesh/ChunkMeshSnapshot.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
@@ -31,6 +32,7 @@ enum class MeshEnqueueResult : uint8_t
   WorkSlotRejected,
   SnapshotBudgetRejected,
   WorkerPoolRejected,
+  RetryCapacityRejected,
 };
 
 struct MeshBuildResult
@@ -72,6 +74,15 @@ struct MeshBuildResult
 class UAsyncMeshBuilder
 {
 public:
+  // Bound the union of executable owners and undelivered coordinate retries.
+  // Refused new coordinates remain with the caller's Dirty owner.
+  static constexpr size_t kMaxOwnedCoordinates = 1024;
+  struct RetryStorageSnapshot
+  {
+    size_t overflow_count{0}, discarded_count{0}, in_flight_count{0};
+    UAllocationCountingResource::Snapshot overflow, discarded;
+  };
+  RetryStorageSnapshot GetRetryStorageSnapshot() const;
   explicit UAsyncMeshBuilder(std::size_t thread_count = 0);
 
   void
@@ -168,10 +179,13 @@ private:
   std::atomic<uint64_t> DiscardedLateEpoch{0};
   std::atomic<uint64_t> DiscardedLateJobMismatch{0};
   mutable std::mutex OverflowMutex;
+  // Each resource is serialized by its corresponding mutex, including reads.
+  UAllocationCountingResource OverflowMemory;
   // One retry obligation per coordinate, independent of failed job history.
-  std::unordered_set<glm::ivec3, IVec3Hash> OverflowCoords;
+  std::pmr::unordered_set<glm::ivec3, IVec3Hash> OverflowCoords{&OverflowMemory};
   mutable std::mutex DiscardedMutex;
-  std::unordered_set<glm::ivec3, IVec3Hash> DiscardedCoords;
+  UAllocationCountingResource DiscardedMemory;
+  std::pmr::unordered_set<glm::ivec3, IVec3Hash> DiscardedCoords{&DiscardedMemory};
   // Destroy first: callbacks access all the members above until workers join.
   UJobThreadPool Pool;
 };

@@ -155,6 +155,19 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
   // holding the same lock through pool admission; a refusal restores the exact
   // previous owner without revoking that accepted job's retry permission.
   std::unique_lock<std::mutex> submission_lock(InFlightMutex);
+  {
+    std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+    std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
+    // Existing keys may coalesce even at saturation. The sum conservatively
+    // bounds the union (a key may occur in more than one store); new keys
+    // require room before publishing any executable owner. Completion moves
+    // an existing key into retry storage, never invents a new coordinate.
+    if (!InFlight.count(coord) && !OverflowCoords.count(coord) &&
+        !DiscardedCoords.count(coord) &&
+        InFlight.size() + OverflowCoords.size() + DiscardedCoords.size() >=
+            kMaxOwnedCoordinates)
+      return MeshEnqueueResult::RetryCapacityRejected;
+  }
   const auto previous_it = InFlight.find(coord);
   const bool had_previous = previous_it != InFlight.end();
   const TrackedJob previous = had_previous ? previous_it->second : TrackedJob{};
@@ -431,16 +444,17 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
       InFlight.erase(it);
       accepted.push_back(std::move(result));
     }
+    if (!discarded_now.empty())
+    {
+      // Transfer ownership before allowing another admission to reuse space.
+      std::lock_guard<std::mutex> dlock(DiscardedMutex);
+      DiscardedCoords.insert(discarded_now.begin(), discarded_now.end());
+    }
   }
   for (const TerminalEvent &event : terminal_events)
   {
     UJobStageTrace::NoteTerminal(event.span, JobStage::Retired,
                                  event.reason);
-  }
-  if (!discarded_now.empty())
-  {
-    std::lock_guard<std::mutex> dlock(DiscardedMutex);
-    DiscardedCoords.insert(discarded_now.begin(), discarded_now.end());
   }
   return accepted;
 }
@@ -690,7 +704,7 @@ std::vector<glm::ivec3> UAsyncMeshBuilder::TakeOverflowCoords()
   std::vector<glm::ivec3> out(OverflowCoords.begin(), OverflowCoords.end());
   // Construct the transfer first: allocation failure must leave debt owned.
   // Then release buckets as well as nodes, matching the old vector swap.
-  decltype(OverflowCoords){}.swap(OverflowCoords);
+  decltype(OverflowCoords){&OverflowMemory}.swap(OverflowCoords);
   return out;
 }
 
@@ -698,8 +712,17 @@ std::vector<glm::ivec3> UAsyncMeshBuilder::TakeDiscardedCoords()
 {
   std::lock_guard<std::mutex> dlock(DiscardedMutex);
   std::vector<glm::ivec3> out(DiscardedCoords.begin(), DiscardedCoords.end());
-  decltype(DiscardedCoords){}.swap(DiscardedCoords);
+  decltype(DiscardedCoords){&DiscardedMemory}.swap(DiscardedCoords);
   return out;
+}
+
+UAsyncMeshBuilder::RetryStorageSnapshot UAsyncMeshBuilder::GetRetryStorageSnapshot() const
+{
+  std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+  std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+  std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
+  return {OverflowCoords.size(), DiscardedCoords.size(), InFlight.size(),
+          OverflowMemory.GetSnapshot(), DiscardedMemory.GetSnapshot()};
 }
 
 } // namespace cutum

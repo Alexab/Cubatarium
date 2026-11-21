@@ -107,6 +107,10 @@ struct CrossGpuBackendDriverTestAccess
 struct MeshBuilderAdmissionTestAccess
 {
   static void LimitPool(UAsyncMeshBuilder &builder) { builder.Pool.SetMaxPendingJobCount(1); }
+  // Controlled stale-delivery fault: the real completed result retains its
+  // retry permission while the submission epoch changes before delivery.
+  static void AdvanceDeliveryEpoch(UAsyncMeshBuilder &builder)
+  { builder.Epoch.fetch_add(1,std::memory_order_acq_rel); }
 };
 
 struct ChunkMeshCaptureAdmissionTestAccess
@@ -5154,6 +5158,94 @@ static void TestMeshSameKeySupersession(
   Expect(successor.size()==1 && successor[0].sourceRevision==1102 &&
              !successor[0].batches.empty(),"coalesced retry successor publishes current geometry");
   std::cout << "mesh_retry_history_coalescing rounds=8 obligations=" << coalesced.size() << " PASS\n";
+  {
+    UAsyncMeshBuilder limited(1);
+    limited.SetMesher(&mesher);
+    const auto empty_retry=limited.GetRetryStorageSnapshot();
+    auto &credits=UPipelineAdmission::Get();
+    successor.clear();
+    credits.SetResultCap(0);
+    const auto enqueue=[&](glm::ivec3 coord,uint64_t revision) {
+      return limited.EnqueueDetailed(ChunkMeshSnapshot::Capture(world,coord,revision,
+          nullptr,nullptr,MeshLightInputs::PhysicalField),registry);
+    };
+    bool all_admitted=true;
+    for(size_t n=0;n<UAsyncMeshBuilder::kMaxOwnedCoordinates;++n) {
+      const auto outcome=enqueue({2000+static_cast<int>(n),0,0},1200+n);
+      all_admitted=all_admitted && outcome==MeshEnqueueResult::Accepted;
+      if(outcome!=MeshEnqueueResult::Accepted ||
+          !limited.WaitIdleFor(std::chrono::seconds(5))) { all_admitted=false; break; }
+    }
+    Expect(all_admitted,"actual result refusal fills declared distinct retry capacity");
+    const auto full_retry=limited.GetRetryStorageSnapshot();
+    Expect(full_retry.overflow_count==UAsyncMeshBuilder::kMaxOwnedCoordinates &&
+        full_retry.in_flight_count==0 && full_retry.discarded_count==0 &&
+        full_retry.overflow.live_bytes>empty_retry.overflow.live_bytes,
+        "retry allocator accounts actual full distinct coordinate set");
+    const glm::ivec3 refused(4000,0,0),released(2000,0,0);
+    const auto snapshot_before=credits.SnapshotPendingBytes();
+    const auto result_before=credits.ResultPendingBytes();
+    Expect(enqueue(refused,2300)==MeshEnqueueResult::RetryCapacityRejected &&
+        !limited.IsInFlight(refused) && credits.WorkSlotsInUse()==0 &&
+        credits.SnapshotPendingBytes()==snapshot_before && credits.ResultPendingBytes()==result_before,
+        "retry capacity refuses new key without ghost owner or leaked credits");
+    Expect(enqueue(released,2301)==MeshEnqueueResult::Accepted &&
+        limited.WaitIdleFor(std::chrono::seconds(5)),"same key remains admissible at retry capacity");
+    limited.ForgetInflight(released);
+    credits.SetResultCap(128*1024*1024);
+    world.SetBlock(refused*CHUNK_SIZE+glm::ivec3(8),kStone);
+    Expect(enqueue(refused,2302)==MeshEnqueueResult::Accepted &&
+        limited.WaitIdleFor(std::chrono::seconds(5)),"one exact retirement restores admission");
+    auto fresh=limited.DrainCompleted(1);
+    Expect(fresh.size()==1 && fresh[0].coord==refused && fresh[0].sourceRevision==2302 &&
+        !fresh[0].batches.empty(),"post-capacity current physical successor completes");
+    const auto retained=limited.TakeOverflowCoords();
+    Expect(retained.size()==UAsyncMeshBuilder::kMaxOwnedCoordinates-1 &&
+        std::find(retained.begin(),retained.end(),released)==retained.end() &&
+        std::find(retained.begin(),retained.end(),refused)==retained.end() &&
+        limited.TakeOverflowCoords().empty(),"all other admitted retry obligations transfer exactly once");
+    const auto empty_again=limited.GetRetryStorageSnapshot();
+    Expect(empty_again.overflow.live_bytes==empty_retry.overflow.live_bytes &&
+        empty_again.discarded.live_bytes==empty_retry.discarded.live_bytes,
+        "retry transfer releases actual allocator nodes and buckets to baseline");
+    std::cout << "mesh_retry_capacity limit=" << UAsyncMeshBuilder::kMaxOwnedCoordinates
+        << " retained=" << retained.size() << " current_successor=" << fresh.size() << " PASS\n";
+    std::cout << "mesh_retry_allocator empty=" << empty_retry.overflow.live_bytes
+        << " full=" << full_retry.overflow.live_bytes
+        << " peak=" << full_retry.overflow.peak_bytes
+        << " after=" << empty_again.overflow.live_bytes << '\n';
+    fresh.clear();
+    bool mixed_admitted=true;
+    for(size_t n=0;n<UAsyncMeshBuilder::kMaxOwnedCoordinates;++n) {
+      credits.SetResultCap(n%2==0 ? 0 : 128*1024*1024);
+      const auto outcome=enqueue({5000+static_cast<int>(n),0,0},3000+n);
+      if(outcome!=MeshEnqueueResult::Accepted ||
+          !limited.WaitIdleFor(std::chrono::seconds(5))) { mixed_admitted=false; break; }
+      if(n%2!=0) {
+        MeshBuilderAdmissionTestAccess::AdvanceDeliveryEpoch(limited);
+        Expect(limited.DrainCompleted(1).empty(),"stale real completion transfers to discarded retry owner");
+      }
+    }
+    credits.SetResultCap(128*1024*1024);
+    const auto mixed=limited.GetRetryStorageSnapshot();
+    Expect(mixed_admitted && mixed.overflow_count==512 && mixed.discarded_count==512 &&
+        mixed.in_flight_count==0 &&
+        enqueue({7000,0,0},4100)==MeshEnqueueResult::RetryCapacityRejected,
+        "overflow and stale retries share one distinct-key admission boundary");
+    limited.ForgetInflight({5001,0,0});
+    Expect(enqueue({7000,0,0},4101)==MeshEnqueueResult::Accepted &&
+        limited.WaitIdleFor(std::chrono::seconds(5)) && limited.DrainCompleted(1).size()==1,
+        "discarded key retirement restores actual admission");
+    const auto mixed_overflow=limited.TakeOverflowCoords();
+    const auto mixed_discarded=limited.TakeDiscardedCoords();
+    const auto mixed_empty=limited.GetRetryStorageSnapshot();
+    Expect(mixed_overflow.size()==512 && mixed_discarded.size()==511 &&
+        mixed_empty.overflow.live_bytes==empty_retry.overflow.live_bytes &&
+        mixed_empty.discarded.live_bytes==empty_retry.discarded.live_bytes,
+        "mixed retry obligations transfer once and both allocators release to baseline");
+    std::cout << "mesh_retry_mixed_capacity overflow=" << mixed_overflow.size()
+        << " discarded=" << mixed_discarded.size() << " PASS\n";
+  }
 }
 
 static void TestCertifiedGeometrySurvivesInflightLight(

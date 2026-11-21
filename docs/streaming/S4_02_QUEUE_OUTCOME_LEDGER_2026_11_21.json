@@ -689,10 +689,11 @@
         },
         {
           "id": "LIMIT-C1.Q04",
-          "status": "CHECK",
+          "status": "REUSE",
           "required_result": "OverflowCoords/DiscardedCoords numeric retry envelope and exact terminal retention; per-coordinate Forget cost distinct from worker/completed caps.",
           "retry_coalescing_evidence": "build/desktop-msvc/s4-mesh-retry-coalescing-acceptance-20261121.json",
-          "partial_result": "Unique-coordinate retry storage, keyed exact Forget (expected hash O(1)), Take releases historical bucket capacity. Eight real overflow cohorts coalesce1, exact retirement/current successor PASS. Distinct-coordinate/byte envelope and radius scan remain CHECK."
+          "partial_result": "Q04 scoped limit property accepted:1024 union coordinate cap; caller retains refused Dirty demand; actual overflow/mixed-stale saturation/release/current successor PASS. PMR node/bucket accounting and release verified; conservative two-set98368 requested bytes on current MSVC, excluding separate pipeline/OS/transfer storage. Exact Forget retry filtering now keyed; whole method still bounded pool/completed filters, no O(1) whole-call claim. Global owner caps/fairness remain other OPEN groups.",
+          "capacity_evidence": "build/desktop-msvc/s4-mesh-retry-cap-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q06",
