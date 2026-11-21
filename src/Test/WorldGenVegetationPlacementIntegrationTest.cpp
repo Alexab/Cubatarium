@@ -11,6 +11,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
+#include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -1810,6 +1811,51 @@ int main(int argc, char **argv)
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
     return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--settings-text-budget-only")
+  {
+    auto settings=MakeVegetationSettings();
+    settings.SeedText=std::string(64*1024,'s'); settings.WorldGenPackId=std::string(64*1024,'p');
+    settings.WorldGenPresetId=std::string(64*1024,'r');
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1024);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    bool refused=false;
+    {
+      cutum::UBufferBudgetScope active({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      try {cutum::UColumnSampleBuilder sampler(nullptr,nullptr,settings);}
+      catch(const cutum::UBufferBudgetExceeded &) {refused=true;}
+    }
+    std::cout << "settings_text_refused=" << refused << " remaining=" << budget->UsedBytes() << std::endl;
+    FluidTest::Expect(refused && budget->UsedBytes()==1,kTestName,
+        "temporary sampler settings copy refuses quota before allocation");
+    budget->Release(*peer,1);
+    auto roomy=std::make_shared<cutum::UBufferAllocationBudget>(4*1024*1024);
+    auto roomy_peer=std::make_shared<cutum::BufferBudgetJob>(); roomy->Reserve(*roomy_peer,1);
+    {
+      cutum::UBufferBudgetScope active({roomy,std::make_shared<cutum::BufferBudgetJob>()});
+      for(size_t length:{size_t(0),size_t(1),size_t(15),size_t(16),size_t(17),size_t(31),size_t(32),
+          size_t(47),size_t(48),size_t(255),size_t(256),size_t(64*1024)}) {
+        settings.SeedText=std::string(length,'s'); settings.WorldGenPackId=std::string(length,'p');
+        settings.WorldGenPresetId=std::string(length,'r');
+        auto copied=cutum::ProceduralSettings(settings);
+        cutum::ProceduralSettings refreshed;
+        cutum::ReleaseRuntimeSettingsText(refreshed);
+        refreshed=cutum::ProceduralSettings(settings);
+        const auto charged=cutum::RuntimeSettingsTextCapacityBytes(settings);
+        FluidTest::Expect(cutum::RuntimeSettingsTextCapacityBytes(copied)<=charged &&
+            cutum::RuntimeSettingsTextCapacityBytes(refreshed)<=charged,kTestName,
+            "supported string copy and fresh-move refresh capacities fit preallocation charge");
+        cutum::UColumnSampleBuilder sampler(nullptr,nullptr,settings);
+        FluidTest::Expect(roomy->UsedBytes()==1 && sampler.GetRetainedSettingsTextCapacityBytes()==0 &&
+            sampler.Build(3,7).SurfaceY==settings.SeaLevel && settings.SeedText.size()==length,
+            kTestName,"fresh copy capacity boundaries release quota and preserve caller/numeric snapshot");
+      }
+    }
+    roomy->Release(*roomy_peer,1);
+    FluidTest::Expect(roomy->UsedBytes()==0 && roomy->PeakBytes()>64*1024 && roomy->PeakBytes()<=4*1024*1024,
+        kTestName,"active temporary text copy has nonzero bounded peak and final release");
+    std::cout << "settings_text_peak_bytes=" << roomy->PeakBytes() << " final_bytes=" << roomy->UsedBytes() << std::endl;
+    std::cout << kTestName << ": active settings text budget PASS" << std::endl; return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--population-context-move-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
@@ -1929,6 +1975,24 @@ int main(int argc, char **argv)
     FluidTest::Expect(refused && quota->UsedBytes()==32*1024 && empty(),kTestName,
         "actual pipeline quota exception releases partial transfer and thread scratch");
     quota->Release(*competitor,32*1024);
+    // Large text can now refuse at entry. Keep a separate short-text case
+    // proving unwind after actual terrain work has begun.
+    auto deep_request=request;
+    deep_request.settings.SeedText.clear(); deep_request.settings.WorldGenPresetId="balanced";
+    deep_request.settings=cutum::ProceduralSettings(deep_request.settings);
+    unsigned terrain_checks=0;
+    deep_request.shouldCancel=[&] {++terrain_checks; return false;};
+    auto deep_quota=std::make_shared<cutum::UBufferAllocationBudget>(128*1024);
+    auto deep_peer=std::make_shared<cutum::BufferBudgetJob>(); deep_quota->Reserve(*deep_peer,32*1024);
+    bool deep_refused=false;
+    {
+      cutum::UBufferBudgetScope active({deep_quota,std::make_shared<cutum::BufferBudgetJob>()});
+      try {(void)populator.Populate(deep_request);} catch(const cutum::UBufferBudgetExceeded &) {deep_refused=true;}
+    }
+    FluidTest::Expect(deep_refused && terrain_checks>0 && deep_quota->UsedBytes()==32*1024 && empty(),
+        kTestName,"short-text pipeline refusal still unwinds after actual terrain starts");
+    deep_quota->Release(*deep_peer,32*1024);
+    std::cout << "deep_terrain_quota_refused=" << deep_refused << " terrain_checks=" << terrain_checks << std::endl;
     auto recovered=populator.Populate(request);
     cutum::UBlockWorld expected,actual;
     baseline.buffer.ApplyTo(expected); recovered.buffer.ApplyTo(actual);

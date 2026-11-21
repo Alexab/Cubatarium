@@ -1,5 +1,6 @@
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
+#include "WorldGen/Core/SettingsTextBudget.h"
 
 #include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
@@ -11,6 +12,14 @@ namespace cutum
 
 namespace
 {
+
+ProceduralSettings MakeSamplingSettingsSnapshot(const ProceduralSettings &source)
+{
+  USettingsTextBudget text_budget(source);
+  ProceduralSettings result=source;
+  ReleaseRuntimeSettingsText(result);
+  return result;
+}
 
 float HeightNormFromY(int surface_y, int sea_level, int max_height)
 {
@@ -38,11 +47,8 @@ UColumnSampleBuilder::UColumnSampleBuilder(
     const UBiomeSampler *biome_sampler, const ProceduralSettings &settings,
     const IWorldGenBiomeSource *biome_source)
     : HeightSampler(height_sampler), BiomeSampler(biome_sampler),
-      Settings(settings), BiomeSource(biome_source)
+      Settings(MakeSamplingSettingsSnapshot(settings)), BiomeSource(biome_source)
 {
-  // Sampling uses resolved numeric seed and terrain settings. Preserve their
-  // value snapshot, but not display text or already-resolved selectors.
-  ReleaseRuntimeSettingsText(Settings);
 }
 
 size_t UColumnSampleBuilder::GetRetainedSeedTextCapacityBytes() const

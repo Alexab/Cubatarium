@@ -12,6 +12,7 @@
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageId.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
+#include "WorldGen/Core/SettingsTextBudget.h"
 #include "WorldGen/Core/PopulationScratchBudget.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
@@ -174,7 +175,9 @@ void RefreshThreadLocalPipelineContext(UBlockRegistry &registry,
   }
   WorldGenContext &ctx = composable->GetContext();
   ctx.Objects = prefabs;
-  ctx.Settings = settings;
+  // Replace from a fresh copy: the job reservation covers one snapshot,
+  // not an assignment that can retain/grow a previous string allocation.
+  ctx.Settings = ProceduralSettings(settings);
   ctx.WorldgenOwnerPackId = ownerPackId;
   ctx.ResolveBlockIds();
 }
@@ -559,6 +562,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   result.coord = request.chunkCoord;
   result.token = request.token;
 
+  USettingsTextBudget local_settings_budget(request.settings);
   ProceduralSettings settings = request.settings;
   if (settings.EnableCaves &&
       settings.TerrainBackendMode != TerrainBackend::Density3D &&
@@ -570,6 +574,8 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
   }
 
   UObjectLibrary *objects = request.objects ? request.objects : Objects;
+  // Context cleanup runs before this lease ends, including on quota unwind.
+  USettingsTextBudget context_settings_budget(settings,ExternalStringCapacityBytes(WorldgenOwnerPackId));
   IUWorldGenPipeline *pipeline = EnsureThreadLocalPipeline(
       Registry, objects, WorldgenOwnerPackId, settings);
   if (!pipeline)

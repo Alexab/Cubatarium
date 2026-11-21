@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.active-settings-text-copies",
+      "status": "SCOPED_PASS_ALGORITHM_TEMPORARIES_OPEN",
+      "receipt": "build/desktop-msvc/s4-active-settings-text-acceptance-20261121.json",
+      "scope": "USettingsTextBudget reserves external string capacities before fresh copies using active generation budget. Populate local settings lease precedes local value; context lease precedes Ensure and outlives context text cleanup, including ownerPack copy. Refresh builds fresh settings then moves into idle context instead of growing assignment capacity. Factory pack-selector lease precedes its string copy. Private sampler helper leases, copies and strips text before returning numeric snapshot. Factory chain ownership moves remain reused evidence. Fixed objects and unrelated algorithm temporaries are separate."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.context-ownership-transfer",
       "status": "SCOPED_PASS_OTHER_ACTIVE_TEMPORARIES_OPEN",
       "receipt": "build/desktop-msvc/s4-context-transfer-acceptance-20261121.json",

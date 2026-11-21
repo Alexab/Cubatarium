@@ -2,6 +2,7 @@
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/ProceduralSettings.h"
+#include "WorldGen/Core/SettingsTextBudget.h"
 #include <iostream>
 #include <memory>
 
@@ -13,6 +14,7 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
 {
   ctx.ResolveBlockIds();
 
+  USettingsTextBudget selector_budget(ExternalStringCapacityBytes(ctx.Settings.WorldGenPackId));
   std::string packId = ctx.Settings.WorldGenPackId;
   if (packId.empty())
   {
