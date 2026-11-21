@@ -13,6 +13,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/CatalogStorageCensus.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
 #include "WorldGen/Features/ValleyCarver.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
@@ -2573,6 +2574,110 @@ int main(int argc, char **argv)
         kTestName,"active temporary text copy has nonzero bounded peak and final release");
     std::cout << "settings_text_peak_bytes=" << roomy->PeakBytes() << " final_bytes=" << roomy->UsedBytes() << std::endl;
     std::cout << kTestName << ": active settings text budget PASS" << std::endl; return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--catalog-storage-only")
+  {
+    const auto content=cutum::CaptureWorldGenContentSnapshot();
+    const auto before_diagnostics=content.Features->Diagnostics.Snapshot();
+    const auto one=cutum::MeasureCatalogStorage(&content,1);
+    const std::vector<cutum::WorldGenContentSnapshot> repeated(128,content);
+    const auto many=cutum::MeasureCatalogStorage(repeated.data(),repeated.size());
+    FluidTest::Expect(!one.overflow && one.known_storage_bytes>0 && many.known_storage_bytes==one.known_storage_bytes &&
+        many.shared_owners==one.shared_owners && many.objects==one.objects &&
+        many.input_snapshot_handle_bytes==128*sizeof(cutum::WorldGenContentSnapshot) &&
+        content.Features->Diagnostics.Snapshot()==before_diagnostics,kTestName,
+        "128 shared snapshots count each catalog payload once, count handles separately and never prepare diagnostics");
+
+    cutum::WorldGenContentSnapshot custom;
+    auto pack=std::make_shared<cutum::WorldGenPack>();custom.Pack=pack;
+    const auto empty=cutum::MeasureCatalogStorage(&custom,1);
+    pack->Id=std::string(64*1024,'i');pack->Id.reserve(256*1024);
+    const auto text=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(text.text_bytes-empty.text_bytes==pack->Id.capacity()+1 &&
+        text.known_storage_bytes-empty.known_storage_bytes==pack->Id.capacity()+1,kTestName,
+        "catalog text storage counts actual retained spare capacity including terminator");
+    pack->Ores.Rules.reserve(7);
+    const auto reserved=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(reserved.vector_bytes-text.vector_bytes==pack->Ores.Rules.capacity()*sizeof(cutum::PackOreRule),kTestName,
+        "unused vector capacity belongs to catalog storage even with no live elements");
+    pack->BiomeRegistry=std::make_shared<cutum::UBiomeDefinitionRegistry>(std::vector<cutum::BiomeKey>{std::string(64*1024,'k')});
+    custom.Biomes=pack->BiomeRegistry;
+    const auto registry=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(registry.Objects(cutum::CatalogObjectKind::Biomes)==1 && registry.text_bytes>=text.text_bytes+2*(64*1024+1),
+        kTestName,"registry key vector and handle-map key copies both count, shared Pack/Biomes roots count once");
+    auto image=std::make_shared<cutum::WorldGenBiomeMapImage>();image->Width=1;image->Height=1;
+    image->Pixels={0xe8,0xd4,0x6a};image->Pixels.reserve(4096);pack->BiomeMapImage=image;
+    const auto image_count=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(image_count.vector_bytes-registry.vector_bytes==image->Pixels.capacity() &&
+        image_count.Objects(cutum::CatalogObjectKind::Image)==1,kTestName,"image spare bytes counted as one shared payload");
+    std::array<cutum::WorldGenContentSnapshot,2> two={custom,custom};
+    two[1].Pack=std::make_shared<cutum::WorldGenPack>(*pack);
+    const auto copies=cutum::MeasureCatalogStorage(two.data(),two.size());
+    FluidTest::Expect(copies.Objects(cutum::CatalogObjectKind::Pack)==2 && copies.Objects(cutum::CatalogObjectKind::Biomes)==1 &&
+        copies.Objects(cutum::CatalogObjectKind::Image)==1,kTestName,"distinct Pack shells count separately while their image and registry remain shared");
+
+    auto features=std::make_shared<cutum::ObjectFeatureConfig>();features->Decoration.resize(2);custom.Features=features;
+    const auto unprepared=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(unprepared.diagnostic_bytes==0 && !features->Diagnostics.Snapshot(),kTestName,
+        "read-only census does not materialize lazy derived storage");
+    const auto diagnostics=features->Diagnostics.Get(features->Decoration);
+    const auto prepared=cutum::MeasureCatalogStorage(&custom,1);
+    FluidTest::Expect(prepared.diagnostic_bytes==diagnostics->CapacityBytes() &&
+        prepared.known_storage_bytes-unprepared.known_storage_bytes==sizeof(cutum::ObjectFeatureDiagnosticCatalog)+diagnostics->CapacityBytes(),
+        kTestName,"derived diagnostics shell and numeric capacities count exactly once");
+    auto aliases=std::make_shared<std::array<cutum::WorldGenPack,2>>();
+    (*aliases)[0]=*pack;(*aliases)[1]=*pack;
+    two[0].Pack=std::shared_ptr<const cutum::WorldGenPack>(aliases,&(*aliases)[0]);
+    two[1].Pack=std::shared_ptr<const cutum::WorldGenPack>(aliases,&(*aliases)[1]);
+    const auto aliased=cutum::MeasureCatalogStorage(two.data(),two.size());
+    FluidTest::Expect(aliased.Objects(cutum::CatalogObjectKind::Pack)==2 && aliased.shared_owners==copies.shared_owners-1,
+        kTestName,"two aliased objects in one allocation count two object shells and only one control owner");
+    auto nonowning=custom;
+    nonowning.Pack=std::shared_ptr<const cutum::WorldGenPack>(std::shared_ptr<const cutum::WorldGenPack>{},pack.get());
+    const auto nonowning_count=cutum::MeasureCatalogStorage(&nonowning,1);
+    FluidTest::Expect(nonowning_count.known_storage_bytes==prepared.known_storage_bytes &&
+        nonowning_count.shared_owners+1==prepared.shared_owners,kTestName,
+        "nonowning static-style alias counts storage but invents no shared control allocation");
+    std::weak_ptr<const cutum::WorldGenPack> retired_census;
+    {
+      cutum::WorldGenContentSnapshot transient;transient.Pack=std::make_shared<cutum::WorldGenPack>();
+      retired_census=transient.Pack;(void)cutum::MeasureCatalogStorage(&transient,1);
+    }
+    FluidTest::Expect(retired_census.expired(),kTestName,"census leaves no owning payload/history after its synchronous return");
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry_view(nullptr,definitions);
+    auto library=std::make_shared<cutum::UObjectLibrary>();library->LoadMerged(repo_root/"objects",{},registry_view);
+    const auto blocks=definitions->GetCatalogSnapshot();
+    const auto with_assets=cutum::MeasureCatalogStorage(&content,1,&blocks,1,library);
+    FluidTest::Expect(with_assets.Objects(cutum::CatalogObjectKind::Blocks)==1 &&
+        with_assets.Objects(cutum::CatalogObjectKind::PrefabIndex)==1 && with_assets.Objects(cutum::CatalogObjectKind::Prefab)>0 &&
+        with_assets.known_storage_bytes>one.known_storage_bytes && with_assets.tables>one.tables,kTestName,
+        "real block catalog and prefab library/index contribute nested storage to the same census");
+    auto node_budget=std::make_shared<cutum::UBufferAllocationBudget>(1024*1024);
+    size_t node_cases=0;
+    if(cutum::kCatalogMsvcUnorderedModel) {
+      cutum::UBufferBudgetScope active({node_budget,std::make_shared<cutum::BufferBudgetJob>()});
+      using Entry=std::pair<const std::string,int>;
+      std::unordered_map<std::string,int,std::hash<std::string>,std::equal_to<std::string>,cutum::UGenerationAllocator<Entry>> table;
+      const auto check=[&] {
+        cutum::detail::CatalogStorageInspector inspected;inspected.Map(table);
+        FluidTest::Expect(inspected.Result.map_value_bytes+inspected.Result.msvc_unordered_extra_bytes==node_budget->UsedBytes(),
+            kTestName,"MSVC table value+sentinel/link/bucket model equals actual allocator requests");
+        ++node_cases;
+      };
+      check();table.reserve(257);for(int n=0;n<100;++n) table.emplace(std::to_string(n),n);check();
+      for(int n=0;n<50;++n) table.erase(std::to_string(n));check();
+      table.clear();table.rehash(0);check();
+    }
+    FluidTest::Expect(node_budget->UsedBytes()==0,kTestName,"counted table proof retires all actual node and bucket allocations");
+    std::cout << "catalog_known_storage_bytes=" << one.known_storage_bytes << " shared_snapshots=128 deduplicated=1"
+        << " retained_text_capacity=" << pack->Id.capacity()+1 << " image_capacity=" << image->Pixels.capacity()
+        << " diagnostic_bytes=" << prepared.diagnostic_bytes << " asset_known_bytes=" << with_assets.known_storage_bytes
+        << " blocks=1 prefabs=" << with_assets.Objects(cutum::CatalogObjectKind::Prefab)
+        << " tables=" << with_assets.tables << " nodes=" << with_assets.nodes << " buckets=" << with_assets.bucket_slots
+        << " unordered_extra_bytes=" << with_assets.msvc_unordered_extra_bytes << " allocation_model_cases=" << node_cases
+        << " final_model_credits=" << node_budget->UsedBytes() << std::endl;
+    return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--pipeline-cache-owner-only")
   {

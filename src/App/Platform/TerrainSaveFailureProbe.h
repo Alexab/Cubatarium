@@ -35,6 +35,7 @@
 #include "Core/FrameDeadline.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Core/CatalogStorageCensus.h"
 #include <filesystem>
 #include <atomic>
 #include <fstream>
@@ -126,6 +127,27 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   };
   try
   {
+    const auto catalog_content=CaptureWorldGenContentSnapshot();
+    const auto catalog_blocks=core.BlockDefinitionsInstance ? core.BlockDefinitionsInstance->GetCatalogSnapshot() : nullptr;
+    const auto storage=MeasureCatalogStorage(&catalog_content,1,&catalog_blocks,1,core.ObjectLibraryInstance);
+    const std::array<WorldGenContentSnapshot,2> catalog_duplicates={catalog_content,catalog_content};
+    const auto duplicate_storage=MeasureCatalogStorage(catalog_duplicates.data(),catalog_duplicates.size(),&catalog_blocks,1,core.ObjectLibraryInstance);
+    require(!storage.overflow && duplicate_storage.known_storage_bytes==storage.known_storage_bytes &&
+        duplicate_storage.shared_owners==storage.shared_owners,"catalog storage census duplicates shared payload");
+    report["catalog_storage"]={{"schema","catalog-storage-census.v1"},
+        {"scope","Supplied current worldgen/definition/prefab roots; known storage excludes map links/buckets, shared control/upstream, mutable merge/texture indices and unsupplied TLS/retired roots. Not total heap/RSS or a cap."},
+        {"known_storage_bytes",storage.known_storage_bytes},{"object_bytes",storage.object_bytes},
+        {"vector_bytes",storage.vector_bytes},{"map_value_bytes",storage.map_value_bytes},
+        {"text_bytes",storage.text_bytes},{"diagnostic_bytes",storage.diagnostic_bytes},
+        {"vectors",storage.vectors},{"tables",storage.tables},{"nodes",storage.nodes},{"bucket_slots",storage.bucket_slots},
+        {"vector_allocations",storage.vector_allocations},{"unordered_model_supported",storage.unordered_model_supported},
+        {"msvc_unordered_extra_bytes",storage.msvc_unordered_extra_bytes},
+        {"shared_owners",storage.shared_owners},{"snapshot_handle_bytes",storage.input_snapshot_handle_bytes},
+        {"packs",storage.Objects(CatalogObjectKind::Pack)},{"biome_registries",storage.Objects(CatalogObjectKind::Biomes)},
+        {"feature_configs",storage.Objects(CatalogObjectKind::Features)},{"refs",storage.Objects(CatalogObjectKind::Refs)},
+        {"images",storage.Objects(CatalogObjectKind::Image)},{"diagnostic_catalogs",storage.Objects(CatalogObjectKind::Diagnostics)},
+        {"block_catalogs",storage.Objects(CatalogObjectKind::Blocks)},{"prefab_indexes",storage.Objects(CatalogObjectKind::PrefabIndex)},
+        {"prefabs",storage.Objects(CatalogObjectKind::Prefab)},{"duplicate_snapshot_deduplicated",true}};
     const char *variant=std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT");
     if(variant && std::string(variant)=="flat_publication")
     {

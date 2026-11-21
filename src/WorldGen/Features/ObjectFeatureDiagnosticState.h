@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <atomic>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -52,6 +53,10 @@ public:
   ObjectFeatureDiagnosticStorage(const ObjectFeatureDiagnosticStorage &) noexcept {}
   ObjectFeatureDiagnosticStorage &operator=(const ObjectFeatureDiagnosticStorage &) noexcept;
   std::shared_ptr<ObjectFeatureDiagnosticCatalog> Get(const std::vector<ObjectFeatureRule> &rules) const;
+  // Read-only census must not lazily construct a diagnostic catalog.
+  std::shared_ptr<const ObjectFeatureDiagnosticCatalog> Snapshot() const {
+    return std::atomic_load_explicit(&State,std::memory_order_acquire);
+  }
 private:
   mutable std::shared_ptr<ObjectFeatureDiagnosticCatalog> State;
 };

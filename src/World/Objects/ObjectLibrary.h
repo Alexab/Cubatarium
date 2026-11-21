@@ -74,6 +74,14 @@ public:
   std::vector<std::string> GetTags(const std::string &Name) const;
   ObjectOrigin GetOrigin(const std::string &Name) const;
 
+  // Quiescent load/rebind diagnostic only; does not retain returned objects.
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    std::shared_lock lock(ObjectsMutex);
+    out.Map(Objects);out.Map(LoggedUnknownTypes);
+    for(const auto &entry:Objects) {out.Text(entry.first);out.Prefab(entry.second);}
+    for(const auto &name:LoggedUnknownTypes) out.Text(name);
+  }
+
 private:
   bool LoadFile(const std::string &path, UBlockRegistry &registry,
                 const std::string &registerName, ObjectOrigin origin,

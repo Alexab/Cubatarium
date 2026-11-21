@@ -39,6 +39,12 @@ public:
 
   size_t Size() const { return Keys.size(); }
 
+  template<class Inspector> void InspectStorage(Inspector &out) const {
+    out.Vector(Keys);out.Map(Handles);
+    for(const auto &key:Keys) out.Text(key);
+    for(const auto &entry:Handles) out.Text(entry.first);
+  }
+
 private:
   std::vector<BiomeKey> Keys;
   std::unordered_map<BiomeKey, BiomeHandle> Handles;

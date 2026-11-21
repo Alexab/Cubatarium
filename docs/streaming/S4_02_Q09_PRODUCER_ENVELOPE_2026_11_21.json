@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-catalog-storage-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -126,7 +126,7 @@
       "id": "E11",
       "owner": "Pinned immutable catalogs",
       "status": "OPEN",
-      "bound_or_observation": "Request content carries4 shared catalog handles; captured jobs are count-bounded. Distinct version/payload lifetime and bytes still need explicit composition with global catalog owners. Derived feature diagnostic payload now catalog-owned:73*N retained numeric bytes plus8*N prepare sorting scratch on current STL, N=decoration rules; full report labels/rows are source-domain bounded temporaries. Include this payload and fixed source roots in the pending catalog/platform composition. Runtime biome key aliases explicitly retain UBiomeDefinitionRegistry across escaped samples/cave results and source replacement; key payload counted once, alias handles separately. Compose this owner path with request/pin/reload retirement rather than assuming job end alone frees registry. Tier A warning history now18 inline flags per mutable registry epoch plus18 constant string_view keys, no external full-name history.32 aliases/cross-registry reset,Rebuild,4608 concurrent resolutions/5 owners/90 warnings and retirement verified. Pinned factory no longer publishes new catalogs during job construction; unpinned loader owns cold construction. Biome image now immutable Pack-owned shared payload; image scale/pixels/dimensions read from one snapshot.2x1->1x2 same-name reload old result0->1,64 copies exact pointer sharing,4 readers/32768 queries/16 publications/0 mismatches,failed JSON/decode/procedural isolation and last-strong image retirement PASS. Image may outlive original Pack without retaining it. Decoder output RAII spans vector copy; construction overlap and weak control metadata remain explicit composition. Cached pipeline identity defect now reproduced and scoped-fixed: same-settings registry switch old15616->0 blocks fixed15616; image catalog stale source old158 voxel mismatches fixed0. Exact85-scalar fixed key,weak6 owner slots/object pointer,registry lifetime tag and identical cold/warm Pack defaults policy.8 identical-input reuses,15 numeric dimensions/old hash collision,4 content owners,definition publication,aliased catalog addresses,registry address reuse,payload retirement and constructor quota/refusal exact retry PASS.",
+      "bound_or_observation": "Request content carries4 shared catalog handles; captured jobs are count-bounded. Distinct version/payload lifetime and bytes still need explicit composition with global catalog owners. Derived feature diagnostic payload now catalog-owned:73*N retained numeric bytes plus8*N prepare sorting scratch on current STL, N=decoration rules; full report labels/rows are source-domain bounded temporaries. Include this payload and fixed source roots in the pending catalog/platform composition. Runtime biome key aliases explicitly retain UBiomeDefinitionRegistry across escaped samples/cave results and source replacement; key payload counted once, alias handles separately. Compose this owner path with request/pin/reload retirement rather than assuming job end alone frees registry. Tier A warning history now18 inline flags per mutable registry epoch plus18 constant string_view keys, no external full-name history.32 aliases/cross-registry reset,Rebuild,4608 concurrent resolutions/5 owners/90 warnings and retirement verified. Pinned factory no longer publishes new catalogs during job construction; unpinned loader owns cold construction. Biome image now immutable Pack-owned shared payload; image scale/pixels/dimensions read from one snapshot.2x1->1x2 same-name reload old result0->1,64 copies exact pointer sharing,4 readers/32768 queries/16 publications/0 mismatches,failed JSON/decode/procedural isolation and last-strong image retirement PASS. Image may outlive original Pack without retaining it. Decoder output RAII spans vector copy; construction overlap and weak control metadata remain explicit composition. Cached pipeline identity defect now reproduced and scoped-fixed: same-settings registry switch old15616->0 blocks fixed15616; image catalog stale source old158 voxel mismatches fixed0. Exact85-scalar fixed key,weak6 owner slots/object pointer,registry lifetime tag and identical cold/warm Pack defaults policy.8 identical-input reuses,15 numeric dimensions/old hash collision,4 content owners,definition publication,aliased catalog addresses,registry address reuse,payload retirement and constructor quota/refusal exact retry PASS. Supplied-root live storage census implemented: object/vector/string/map-value/diagnostic components, distinct pointee/control-owner dedup including aliases;128 shared snapshots no payload multiplication, spare capacities/no lazy diagnostics/no reporter retention verified. Native current roots1 Pack/1 Biomes/1 Features/1 Refs/1 diagnostics/1 block catalog/1 prefab index/130 prefabs:1646584 known storage bytes plus separate500768 MSVC table bytes,137 shared owners. Not all process roots or a cap.",
       "evidence": [
         "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
         "build/desktop-msvc/s4-feature-diagnostic-stores-acceptance-20261121.json",
@@ -134,24 +134,29 @@
         "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json",
         "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",
         "build/desktop-msvc/s4-biome-image-owner-acceptance-20261121.json",
-        "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json"
+        "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json",
+        "build/desktop-msvc/s4-catalog-storage-acceptance-20261121.json"
       ],
       "remaining": [
-        "Compose unpinned catalog construction transient versus published lifetimes: filesystem path/JSON DOM/parser strings/image decoder+RGB copy/compiled registries/mutable block/prefab payload; source-sized bound and explicit construction/publication owner, not producer scratch credit.",
-        "Complete request/pin/reload/escaped biome-key/image owner retirement graph and count shared payload versus per-job handles; include unpinned Get TLS keep and block-definition/prefab/library TLS roots plus existing cancel/drain lifecycle. Cache key keeps6 weak slots, no strong retired catalog payloads."
-      ]
+        "C04: add mutable merge/texture/placeholder/static-path and TLS convenience roots/counts to supplied-root census; retain borrowed/current-world cancel/drain semantics.",
+        "C05: source-bound unpinned file/JSON/parser/subtree/decoder+RGB copy construction peak and candidate/published overlap; current census measures retained supplied storage only.",
+        "C06: finish global/world/publisher/TLS/escaped-root counts around accepted8-job producer graph and4-worker-per-host-pool; account shared payload once and weak coallocated shells separately."
+      ],
+      "composition_worksheet": "build/desktop-msvc/s4-catalog-storage-composition-20261121.json"
     },
     {
       "id": "E12",
       "owner": "Platform bookkeeping and total process memory",
       "status": "OPEN_DEPENDENCY",
-      "bound_or_observation": "Resource roots/dispatch wrappers/thread runtime/allocator headers are not included in requested payload counters. Runtime/RSS/performance evidence belongs to original S6 budget matrix. Current cache key metadata now measured332-byte settings optional +104-byte6-weak-owner/object-pointer key per TLS, plus one uint64 build counter. Registry incarnation adds one16-byte handle and shared tag node per registry. Expired weak slots can retain fixed coallocated object/control storage (up to6 slots per TLS), not dynamic catalog payload; compose this separately from process memory.",
+      "bound_or_observation": "Resource roots/dispatch wrappers/thread runtime/allocator headers are not included in requested payload counters. Runtime/RSS/performance evidence belongs to original S6 budget matrix. Current cache key metadata now measured332-byte settings optional +104-byte6-weak-owner/object-pointer key per TLS, plus one uint64 build counter. Registry incarnation adds one16-byte handle and shared tag node per registry. Expired weak slots can retain fixed coallocated object/control storage (up to6 slots per TLS), not dynamic catalog payload; compose this separately from process memory. MSVC Release unordered metadata now source/allocator verified: node/sentinel+2 iterators per bucket, separate from map values; local4 allocation states exact/final0. Native1798 tables/5672 value nodes/19248 buckets ->500768 extra requested bytes. Shared owner/upstream/runtime and unsupplied roots still open.",
       "evidence": [
         "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
         "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json",
-        "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json"
+        "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json",
+        "build/desktop-msvc/s4-catalog-storage-acceptance-20261121.json"
       ],
       "remaining": [
+        "Use catalog census table/vector/shared-owner counts and verified MSVC table layout in remaining fixed/control/upstream/root composition; known1646584+table500768 bytes is not total native heap/RSS.",
         "Compose exact TLS state alignment/padding and6 weak coallocation nodes, registry identity tag/handle with finite root/dispatch counts; measured332/104 fields are not a complete TLS/process cap.",
         "Finish finite root/dispatch ownership count and Windows implementation envelope.",
         "Retain S6.06 matched-workload process-memory/latency budget obligation; do not sum virtual stack reservation as RSS."

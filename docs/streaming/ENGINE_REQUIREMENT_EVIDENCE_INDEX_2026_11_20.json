@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.catalog-storage-census",
+      "status": "SCOPED_CENSUS_AND_HOST_TABLE_MODEL_PASS_FULL_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-storage-acceptance-20261121.json",
+      "scope": "Read-only synchronous census for supplied worldgen snapshots, block catalogs and quiescent prefab library. Counts object shells, vector/string retained capacity, map values and derived diagnostics; deduplicates pointees and shared control ownership separately, including aliases and nonowning roots. No lazy diagnostic creation or persistent reporter ownership. MSVC Release table node/sentinel/bucket requested bytes reported separately and allocator-verified."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.tls-pipeline-owner-incarnation",
       "status": "SCOPED_PASS_CATALOG_TOTAL_AND_FULL_LIFECYCLE_MATRIX_OPEN",
       "receipt": "build/desktop-msvc/s4-pipeline-cache-owner-acceptance-20261121.json",
