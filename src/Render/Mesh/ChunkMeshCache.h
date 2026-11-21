@@ -1961,7 +1961,8 @@ private:
   bool Fz2DeferGated_{true};
   std::deque<glm::ivec3> RemeshDeferredRing_;
   std::unordered_set<glm::ivec3, IVec3Hash> RemeshDeferredSet_;
-  void DeferRemeshCoord(const glm::ivec3 &coord);
+  /// False at capacity: caller retains its existing Dirty owner.
+  bool DeferRemeshCoord(const glm::ivec3 &coord);
   void RequeueDeferredRemesh(int max_n);
   bool ShouldLeaveInRemeshUnderPlPressure() const
   {

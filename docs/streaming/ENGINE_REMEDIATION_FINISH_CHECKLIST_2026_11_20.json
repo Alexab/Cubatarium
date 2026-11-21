@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q02-C2.2 accepted via s4-deferred-zero-quota-acceptance-20261121.json: Baked hard-zero quota/current successor and normal deferred return already pass; explicit remove/cache reset now clears parked debt without resurrection. Next Q02-C2.3: ring cap256 admission/eviction preserves live obligation or explicit retirement and actual current return; then .4 RAA/old receipt coalescing. Reuse .1/.2; ledger14 CHECK groups, full S0..S6 OPEN, no audit restart.",
+  "next_action": "S4.02 Q02-C2.3 accepted via s4-deferred-capacity-acceptance-20261121.json: real cap256 retains all257 obligations by refusing transfer and keeping Dirty; edge current workers pass after explicit middle retirement. Next Q02-C2.4: old retry receipt versus newer accepted owner and RAA follow-up, no duplicate or lost current work. Reuse accepted .1/.2/.3 and Q04 lifecycle; ledger14 CHECK groups, full S0..S6 OPEN; no audit restart.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

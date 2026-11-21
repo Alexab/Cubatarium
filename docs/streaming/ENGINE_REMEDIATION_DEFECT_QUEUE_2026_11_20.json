@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "deferred-capacity-evicts-live-obligation-without-owner",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Real cap256 + request257 leaves parked256 but only256 of257 Dirty/deferred owners; oldest live obligation silently erased.",
+      "fix": "Full deferred index rejects new transfer; existing Dirty retains ownership. Duplicates accepted without growth. All3 production callers consume bool before Dirty erase; no oldest eviction, extra queue or cap increase. No Dirty insertion during iteration.",
+      "evidence": "build/desktop-msvc/s4-deferred-capacity-acceptance-20261121.json",
+      "next_action": "Q02-C2.4 old retry/new owner and RAA coalescing. Global memory/cost/fairness remains open; no parent closure."
+    },
+    {
       "id": "removed-or-reset-cache-retains-deferred-remesh-coord",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

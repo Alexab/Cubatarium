@@ -2165,22 +2165,17 @@ void UChunkMeshCache::BeginHoleQueryFrame(glm::ivec3 focus_ground_chunk)
   ++HoleQueryEpoch;
 }
 
-void UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)
+bool UChunkMeshCache::DeferRemeshCoord(const glm::ivec3 &coord)
 {
   if (RemeshDeferredSet_.count(coord) > 0)
-  {
-    return;
-  }
-  while (static_cast<int>(RemeshDeferredRing_.size()) >=
-             kRemeshDeferredRingMax &&
-         !RemeshDeferredRing_.empty())
-  {
-    const glm::ivec3 evict = RemeshDeferredRing_.front();
-    RemeshDeferredRing_.pop_front();
-    RemeshDeferredSet_.erase(evict);
-  }
+    return true;
+  // The bounded execution index cannot silently retire another live request.
+  // A refused transfer stays in Dirty, owned by the caller until space returns.
+  if (static_cast<int>(RemeshDeferredRing_.size()) >= kRemeshDeferredRingMax)
+    return false;
   RemeshDeferredSet_.insert(coord);
   RemeshDeferredRing_.push_back(coord);
+  return true;
 }
 
 void UChunkMeshCache::RequeueDeferredRemesh(int max_n)
@@ -12474,9 +12469,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
           ++it;
           continue;
         }
-        if (!skip_defer_lit_ring(*it))
+        if (!skip_defer_lit_ring(*it) && !DeferRemeshCoord(*it))
         {
-          DeferRemeshCoord(*it);
+          ++it;
+          continue;
         }
         it = Dirty.RemoveAt(it);
         continue;
@@ -12493,9 +12489,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             ++it;
             continue;
           }
-          if (!skip_defer_lit_ring(*it))
+          if (!skip_defer_lit_ring(*it) && !DeferRemeshCoord(*it))
           {
-            DeferRemeshCoord(*it);
+            ++it;
+            continue;
           }
           it = Dirty.RemoveAt(it);
           continue;
@@ -12555,9 +12552,11 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
             {
               if (!skip_defer_lit_ring(*it))
               {
-                DeferRemeshCoord(*it);
                 ++LastMeshDirtyScheduleSkipOutsideFocusFmN;
-                it = Dirty.RemoveAt(it);
+                if (DeferRemeshCoord(*it))
+                  it = Dirty.RemoveAt(it);
+                else
+                  ++it;
               }
               else
               {
