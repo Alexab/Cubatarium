@@ -136,6 +136,10 @@ public:
   {
     return ResidentColumnTerrainCounts.size();
   }
+  bool HasResidentTerrainColumn(glm::ivec3 column) const
+  {
+    return ResidentColumnTerrainCounts.count({column.x, 0, column.z}) != 0;
+  }
   bool HasResidentGeometryColumn(glm::ivec3 column) const
   {
     return ResidentColumnChunkCounts.count({column.x, 0, column.z}) != 0;

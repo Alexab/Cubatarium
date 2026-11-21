@@ -32,6 +32,7 @@
 #include "World/Lighting/LightCacheCertificate.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Math/GridMath.h"
+#include <limits>
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include "World/Streaming/ColumnEmergeState.h"
@@ -6075,6 +6076,27 @@ bool UWorldPersistence::IsTerrainColumnDiskLoadPending(
     ground_coord.y = 0;
   }
   return PendingAsyncColumnLoadSlices.count(ground_coord) > 0;
+}
+
+bool UWorldPersistence::HasTerrainColumnMetadataOwner(glm::ivec3 ground) const
+{
+  ground.y = 0;
+  const glm::ivec2 column(ground.x, ground.z);
+  if (PendingAsyncColumnLoadSlices.count(ground) ||
+      PendingAsyncColumnSaveSlices.count(ground) ||
+      (ChunkStorage && ChunkStorage->IsColumnSavePending(ground)) ||
+      DeferredFarRelightColumns.count(column))
+    return true;
+  const int64_t x = int64_t(ground.x) * CHUNK_SIZE;
+  const int64_t z = int64_t(ground.z) * CHUNK_SIZE;
+  if (x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+      z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max())
+    return false;
+  const glm::ivec2 key(static_cast<int>(x),static_cast<int>(z));
+  return
+      PendingTerrainColumnRelightKeys.count(key) ||
+      PendingBoundaryDependencyRelightKeys.count(key) ||
+      DeferredVisibleDrawGateRelightYBands.count(key);
 }
 
 int UWorldPersistence::LoadTerrainColumn(glm::ivec3 coord,

@@ -17,6 +17,7 @@
 #include <climits>
 #include <cstdint>
 #include <deque>
+#include <optional>
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_set>
@@ -24,6 +25,7 @@
 
 namespace cutum
 {
+class UColumnFlowExecutor;
 
 class UWorld;
 class UCore;
@@ -118,6 +120,11 @@ public:
 
 private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  struct RecordRetirementResult { size_t visited{0}; size_t retired{0}; };
+  RecordRetirementResult RetireUnownedColumnRecords(
+      UWorld &world, UColumnFlowExecutor &flow, glm::ivec3 center,
+      int retention_radius, size_t budget);
+  std::optional<uint64_t> RecordRetirementCursor;
   RequiredLightScan RequiredLightInputs;
   void RecordGpuAllocationTelemetry(UWorld &world);
   bool PrepareChunkScheduler(UWorld &world);

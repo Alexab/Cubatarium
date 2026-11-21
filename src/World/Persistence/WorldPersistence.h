@@ -220,6 +220,8 @@ public:
                                                  glm::ivec3 center,
                                                  int radius_chunks);
   bool IsTerrainColumnDiskLoadPending(glm::ivec3 ground_coord) const;
+  /// Indexed owner checks only; no FIFO position scans.
+  bool HasTerrainColumnMetadataOwner(glm::ivec3 ground_coord) const;
 
   int LoadTerrainColumn(glm::ivec3 coord, UBlockWorld &block_world,
                         UBlockRegistry &registry, int max_height,

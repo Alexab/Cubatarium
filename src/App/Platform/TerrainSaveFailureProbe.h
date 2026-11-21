@@ -2472,6 +2472,101 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           require(released,"actual world retirement releases record nodes to allocator baseline");
         }
       });
+      if(flow_only) RunTerrainProbePhase([&] {
+        struct MetadataPopulator final : IUChunkPopulator {
+          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+            ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+            result.discarded=true; return result;
+          }
+        } populator;
+        auto owner=std::make_unique<UWorld>(nullptr,nullptr); auto &test=*owner;
+        test.SetSpawnPoint({8,-40,8});
+        test.ProceduralTemplate.MinHeight=-48; test.ProceduralTemplate.MaxHeight=-33;
+        test.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        test.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        test.BlockWorld.SetFluidDefinitions(definitions.get());
+        test.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        test.SetRenderSettings(settings);
+        UColumnFlowExecutor flow; flow.BindDecideWorld(&test);
+        auto &stream=*test.Streaming; auto &p=*test.Persistence;
+        auto &records=test.GetColumnRecords();
+        const auto epoch=test.MeshService->GetCache().GetCaptureStore().WorldEpoch();
+        for(int n=0;n<100;++n) {
+          ColumnWorkItem item{}; item.column={1000+n,0}; item.cy=-3;
+          if(n%2==0) records.NoteFlowIntent(item,epoch);
+          else flow.Scheduler().Enqueue(item);
+          flow.SetColumnJobStage(test,item.column,ColumnJobStage::Meshing);
+        }
+        for(const int x : {0,1100,1101,1200,1201,1300,1301,1302})
+          flow.SetColumnJobStage(test,{x,0},ColumnJobStage::Meshing);
+        test.BlockWorld.SetBlock({1100*CHUNK_SIZE+8,-40,8},8);
+        const glm::ivec3 air(1101,-3,0);
+        auto frame=std::make_unique<UChunk>(air);
+        UBinaryChunkSerializer codec;
+        const auto decoded=codec.Deserialize(codec.Serialize(air,*frame,*test.BlockRegistry).bytes,air,*test.BlockRegistry);
+        require(ApplyTerrainSliceLoad(test.BlockWorld,air,&decoded,nullptr,{{1101,0,0},0},0,false),
+            "metadata AIR guard owns actual decoded geometry-free terrain");
+        require(!test.BlockWorld.GetChunkManager().HasResidentGeometryColumn({1101,0,0}) &&
+            test.BlockWorld.GetChunkManager().HasResidentTerrainColumn({1101,0,0}),"AIR has terrain ownership without geometry");
+        // Indexed IO/light guards; physical IO ownership is separately proven
+        // by the Q10 receipts. Generation below is a real queued request.
+        p.PendingAsyncColumnLoadSlices.try_emplace({1200,0,0});
+        p.PendingAsyncColumnSaveSlices.try_emplace({1201,0,0});
+        p.PendingTerrainColumnRelightKeys.insert({1300*CHUNK_SIZE,0});
+        test.AsyncRelight=std::make_unique<UAsyncRelightBuilder>(1);
+        RelightJobSpec owner_spec;
+        owner_spec.job_id=1302;
+        owner_spec.block_positions={{1302*CHUNK_SIZE+8,-40,8}};
+        owner_spec.min_world_y=-48; owner_spec.max_world_y=-33;
+        owner_spec.column_center_only=true;
+        test.AsyncRelight->EnqueueJob(test.BlockWorld,owner_spec,*test.BlockRegistry);
+        require(test.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)) &&
+            test.AsyncRelight->GetCompletedSize()==1,"metadata light guard has real undelivered result");
+        test.AsyncRelightColumnsInFlight[{1302,0}]=owner_spec.job_id;
+        stream.ChunkScheduler=std::make_unique<UChunkLoadScheduler>(populator,stream.ChunkGenTokens);
+        stream.ChunkScheduler->RequestLoad({1301,0,0},1,test.ProceduralTemplate);
+        report["column_record_owner_preconditions"]={
+            {"generation_pending",stream.ChunkScheduler->IsPending({1301,0,0})},
+            {"async_light_active",test.IsAsyncRelightColumnInFlight({1302,0})}};
+        require(stream.ChunkScheduler->IsPending({1301,0,0}) &&
+            test.IsAsyncRelightColumnInFlight({1302,0}),"metadata owner guards are executable before retirement");
+        size_t retired=0,max_visit=0;
+        for(int n=0;n<8;++n) {
+          const auto result=stream.RetireUnownedColumnRecords(test,flow,{0,0,0},4,10000);
+          retired+=result.retired; max_visit=std::max(max_visit,result.visited);
+        }
+        bool orphans_gone=true,protected_kept=true;
+        for(int n=0;n<100;++n) orphans_gone=orphans_gone && !records.Find({1000+n,0});
+        for(const int x : {0,1100,1101,1200,1201,1300,1301,1302}) {
+          const bool kept=records.Find({x,0})!=nullptr;
+          report["column_record_owner_results"].push_back({{"column_x",x},{"kept",kept}});
+          protected_kept=protected_kept && kept;
+        }
+        p.PendingAsyncColumnLoadSlices.erase({1200,0,0});
+        p.PendingAsyncColumnSaveSlices.erase({1201,0,0});
+        p.PendingTerrainColumnRelightKeys.erase({1300*CHUNK_SIZE,0});
+        test.AsyncRelightColumnsInFlight.erase({1302,0});
+        require(test.AsyncRelight->DrainCompleted(1).size()==1,
+            "metadata light owner releases its actual result");
+        stream.ChunkScheduler->Cancel({1301,0,0});
+        for(int n=0;n<4;++n) stream.RetireUnownedColumnRecords(test,flow,{0,0,0},4,32);
+        bool released_gone=true;
+        for(const int x : {1200,1201,1300,1301,1302}) released_gone=released_gone && !records.Find({x,0});
+        auto &fresh=records.GetOrCreate({1000,0});
+        bool fresh_intent=true; for(const auto &item:fresh.flow_intent) fresh_intent=fresh_intent && !item.pending;
+        const bool fresh_stage=records.GetFlowJobStage({1000,0})==ColumnJobStage::Absent;
+        test.BlockWorld.SetBlock({1000*CHUNK_SIZE+8,-40,8},8);
+        test.MeshService->RebuildChunkImmediate(test.BlockWorld,*test.BlockRegistry,{1000,-3,0});
+        const bool current=test.HasCurrentChunkSlicePublication({1000,-3,0});
+        report["column_record_interest_retirement"]={{"retired",retired},{"max_visited",max_visit},
+            {"orphans_gone",orphans_gone},{"protected_owners_kept",protected_kept},
+            {"released_owners_retired",released_gone},{"fresh_intent",fresh_intent},
+            {"fresh_stage",fresh_stage},{"current_publication",current}};
+        require(max_visit<=32 && orphans_gone && protected_kept && released_gone &&
+            flow.Scheduler().LiveCount()==0 && fresh_intent && fresh_stage && current,
+            "bounded interest retirement preserves live owners and fresh current reentry");
+        test.AbandonTerrainForWorldReplace();
+      });
       if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});
       else if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
       else report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},

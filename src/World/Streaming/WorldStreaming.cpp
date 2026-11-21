@@ -5465,8 +5465,41 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
                         world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs);
 }
 
+UWorldStreaming::RecordRetirementResult UWorldStreaming::RetireUnownedColumnRecords(
+    UWorld &world, UColumnFlowExecutor &flow, glm::ivec3 center,
+    int retention_radius, size_t budget)
+{
+  RecordRetirementResult result;
+  flow.BindDecideWorld(&world);
+  std::vector<glm::ivec2> keys;
+  world.GetColumnRecords().CollectKeysAfter(RecordRetirementCursor,
+      std::min(budget, size_t{32}), keys);
+  result.visited = keys.size();
+  for (const auto column : keys)
+  {
+    const int64_t distance = std::max(
+        std::abs(int64_t(column.x) - center.x),
+        std::abs(int64_t(column.y) - center.z));
+    const glm::ivec3 ground(column.x,0,column.y);
+    if (distance <= std::max(0, retention_radius) ||
+        world.BlockWorld.GetChunkManager().HasResidentTerrainColumn(ground) ||
+        world.Persistence->HasTerrainColumnMetadataOwner(ground) ||
+        (ChunkScheduler && ChunkScheduler->IsPending(ground)) ||
+        world.IsAsyncRelightColumnInFlight(column))
+      continue;
+    // No data incarnation or future data/light writer owns this old-interest
+    // request. Queued admission intent is explicitly abandoned with interest.
+    flow.ForgetColumnWork(column);
+    world.RetirePendingLightBeforeMesh(column);
+    world.ClearColumnEmergeState(column);
+    ++result.retired;
+  }
+  return result;
+}
+
 void UWorldStreaming::RetireDeferredTerrainWorkForWorldReplace()
 {
+  RecordRetirementCursor.reset();
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
   DeferredShoreSealQueued.clear();
@@ -7503,6 +7536,10 @@ void UWorldStreaming::UpdateStreaming(
     // StreamPressure / PendingLightFocus already set in
     // RefreshStreamingPressure.
   }
+  const auto record_focus = UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+  RetireUnownedColumnRecords(world, GetColumnFlowExecutor(), record_focus,
+      std::max(Streamer->GetAsyncRequestRetentionRadius(record_focus),
+               world.GetRequiredPresentationRadius() + 1), 32);
   if (update_core_ran)
   {
     world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs =
