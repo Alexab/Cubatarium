@@ -55,6 +55,30 @@ int main()
     records.Clear();
     Expect(records.Size()==0,"world clear retires admission intent with record");
   }
+  {
+    cutum::UColumnRecordStore records;
+    for(int x=-70;x<70;++x) records.GetOrCreate({x,-9});
+    std::optional<uint64_t> cursor;
+    std::vector<glm::ivec2> keys;
+    records.CollectKeysAfter(cursor,10000,keys);
+    Expect(keys.size()==64,"record replay batch is capped at64 keys");
+    const auto retired=keys.back();
+    records.Erase(retired); // Cursor's exact key need not remain resident.
+    records.GetOrCreate({1000,-9});
+    std::unordered_map<uint64_t,int> seen;
+    for(int batch=0;batch<3;++batch) {
+      records.CollectKeysAfter(cursor,64,keys);
+      for(const auto key:keys) ++seen[cutum::PackColumnKey(key)];
+    }
+    Expect(seen.size()==records.Size() && seen.count(cutum::PackColumnKey(retired))==0,
+           "bounded cursor covers surviving and inserted keys after retirement");
+    records.CollectKeysAfter(cursor,0,keys);
+    Expect(keys.empty(),"zero replay budget visits no records");
+    records.Clear(); records.GetOrCreate({-1,-2});
+    records.CollectKeysAfter(cursor,64,keys);
+    Expect(keys.size()==1 && keys.front()==glm::ivec2(-1,-2),
+           "key cursor safely resumes after world store replacement");
+  }
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 10);
   s.Enqueue({1, 2}, ColumnWorkKind::FirstMesh, 99); // refresh urgency
   Expect(s.Size() == 1, "same column+kind refreshes to one live ticket");

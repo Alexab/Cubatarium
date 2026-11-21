@@ -10,7 +10,9 @@
 #include <array>
 #include <algorithm>
 #include <glm/glm.hpp>
-#include <unordered_map>
+#include <map>
+#include <optional>
+#include <vector>
 
 namespace cutum
 {
@@ -259,6 +261,29 @@ public:
 
   size_t Size() const { return Records.size(); }
 
+  // Key cursor survives erasure/insertion; never retain a container iterator
+  // across world callbacks. One batch visits at most64 current records.
+  void CollectKeysAfter(std::optional<uint64_t> &after, size_t budget,
+                        std::vector<glm::ivec2> &out) const
+  {
+    out.clear();
+    const size_t count = std::min({budget, size_t{64}, Records.size()});
+    if (count == 0)
+      return;
+    auto it = after ? Records.upper_bound(*after) : Records.begin();
+    if (it == Records.end())
+      it = Records.begin();
+    for (size_t n = 0; n < count; ++n)
+    {
+      const auto key = it->first;
+      out.emplace_back(static_cast<int32_t>(key >> 32),
+                       static_cast<int32_t>(static_cast<uint32_t>(key)));
+      after = key;
+      if (++it == Records.end())
+        it = Records.begin();
+    }
+  }
+
   template <typename Fn> void ForEach(Fn &&fn) const
   {
     for (const auto &kv : Records)
@@ -270,7 +295,9 @@ public:
   }
 
 private:
-  std::unordered_map<uint64_t, ColumnRecord> Records;
+  // Ordered world records support bounded fair key traversal without an
+  // additional uncapped retry index or rehash-invalidated iterators.
+  std::map<uint64_t, ColumnRecord> Records;
 };
 
 } // namespace cutum
