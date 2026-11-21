@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.buffer-byte-enforcement",
+      "status": "SCOPED_PASS_OVERHEAD_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
+      "scope": "Reserve sizeof(Storage) and 64KiB PMR credit chunks before allocation. Shared scheduler budget base128MiB; a sole charged job may raise the shared limit to its required allocation. Credit follows stable storage through worker/Ready/copy/move and releases on destruction. Typed refusal unwinds partial buffers and returns exact request; temporary serial admission prevents abort storms until retained owners drain. Cancel/current-token validation precedes retry. Not a fixed absolute128MiB RSS limit: explicit sole-job floor can raise it; retained arena credit conservatively exceeds actual live node bytes Unrelated generator scratch/cache/noise allocations not covered by UChunkBuffer scope Shared control blocks, task closures, pool/queue/transient and upstream heap overhead remain Q09 work Full vegetation ecology fixture FAIL remains S6.05; scoped boundary mode does not replace full test No full backend/framebuffer/performance/S0..S6 closure"
+    },
+    {
       "id": "S4.02.LIMIT.Q09.buffer-allocation-ownership",
       "status": "SCOPED_PASS_BYTE_ENFORCEMENT_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-buffer-ownership-acceptance-20261121.json",

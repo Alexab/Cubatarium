@@ -93,6 +93,30 @@ int main()
   std::cout << "chunk_buffer_allocator nodes_buckets=" << allocated.live_bytes
       << " peak=" << allocated.peak_bytes << " owned=" << owned
       << " inline=" << sizeof(cutum::UChunkBuffer) << " clear=0 copy_move=PASS\n";
+  auto quota=std::make_shared<cutum::UBufferAllocationBudget>(64*1024);
+  auto first_job=std::make_shared<cutum::BufferBudgetJob>();
+  auto second_job=std::make_shared<cutum::BufferBudgetJob>();
+  cutum::UChunkBuffer first_buffer,second_buffer;
+  { cutum::UBufferBudgetScope scope({quota,first_job}); first_buffer.SetBlock({1,1,1},8); }
+  const auto first_reserved=quota->UsedBytes();
+  Expect(first_reserved>=first_buffer.GetOwnedAllocationBytes(),"quota covers fixed storage and allocator payload");
+  bool refused=false;
+  try { cutum::UBufferBudgetScope scope({quota,second_job}); second_buffer.SetBlock({2,2,2},9); }
+  catch(const cutum::UBufferBudgetExceeded &) { refused=true; }
+  Expect(refused && second_buffer.GetOwnedAllocationBytes()==0 && quota->UsedBytes()==first_reserved,
+         "competing buffer refuses before allocating and refunds failed construction");
+  first_buffer.Clear();
+  Expect(quota->UsedBytes()==0,"actual destruction releases all fixed and chunked credits");
+  { cutum::UBufferBudgetScope scope({quota,second_job}); second_buffer.SetBlock({2,2,2},9); }
+  auto charged_move=std::move(second_buffer);
+  Expect(quota->UsedBytes()>0 && charged_move.GetBlock({2,2,2})==9,
+         "move retains budget owner beyond thread-local scope");
+  second_buffer.Clear();
+  Expect(quota->UsedBytes()>0,"clearing moved-from object cannot release live payload credit");
+  charged_move.Clear();
+  Expect(quota->UsedBytes()==0 && quota->PeakBytes()<=quota->LimitBytes(),
+         "destination clear releases quota without overshoot");
+  std::cout << "chunk_buffer_compute_quota refused=1 moved_owner=1 released=0 PASS\n";
 
   std::cout << kTestName << " OK" << std::endl;
   return 0;

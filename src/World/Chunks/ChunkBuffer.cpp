@@ -71,13 +71,37 @@ BlockId UBlockWorldWriter::GetBlock(glm::ivec3 worldPos) const
   return World.GetBlock(worldPos);
 }
 
+UChunkBuffer::StoragePtr UChunkBuffer::CreateStorage(const Storage *source)
+{
+  auto owner=ActiveBufferBudget;
+  if(!owner.budget && source) owner=source->Budget;
+  if(owner.budget) owner.budget->Reserve(*owner.job,sizeof(Storage));
+  Storage *raw=nullptr;
+  try { raw=new Storage(owner); }
+  catch(...) { if(owner.budget) owner.budget->Release(*owner.job,sizeof(Storage)); throw; }
+  StoragePtr storage(raw);
+  if(source) {
+    storage->State=source->State; storage->Blocks=source->Blocks;
+    storage->FluidPacked=source->FluidPacked; storage->LightPacked=source->LightPacked;
+    storage->WorldGenTreeBlockRanks=source->WorldGenTreeBlockRanks;
+  }
+  return storage;
+}
+
+void UChunkBuffer::StorageDelete::operator()(Storage *storage) const noexcept
+{
+  auto owner=storage->Budget;
+  delete storage;
+  if(owner.budget) owner.budget->Release(*owner.job,sizeof(Storage));
+}
+
 UChunkBuffer::UChunkBuffer(const UChunkBuffer &other)
-    : Payload(other.Payload ? std::make_unique<Storage>(*other.Payload) : nullptr) {}
+    : Payload(other.Payload ? CreateStorage(other.Payload.get()) : StoragePtr{}) {}
 
 UChunkBuffer &UChunkBuffer::operator=(const UChunkBuffer &other)
 {
   if(this!=&other) {
-    auto copy=other.Payload ? std::make_unique<Storage>(*other.Payload) : nullptr;
+    auto copy=other.Payload ? CreateStorage(other.Payload.get()) : StoragePtr{};
     Payload=std::move(copy);
   }
   return *this;

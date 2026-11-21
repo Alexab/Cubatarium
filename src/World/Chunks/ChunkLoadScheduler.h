@@ -41,6 +41,10 @@ public:
   size_t SettingsPayloadBytes() const { return SettingsBudget->used.load(std::memory_order_relaxed); }
   size_t SettingsPayloadPeak() const { return SettingsBudget->peak.load(std::memory_order_relaxed); }
   size_t SettingsPayloadLimit() const { return std::max(kSettingsPayloadBudget,SettingsBudget->largest_single); }
+  static constexpr size_t kBufferByteBudget=128*1024*1024;
+  size_t BufferReservedBytes() const { return BufferBudget->UsedBytes(); }
+  size_t BufferReservedPeak() const { return BufferBudget->PeakBytes(); }
+  size_t BufferBudgetLimit() const { return BufferBudget->LimitBytes(); }
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
   size_t MetadataCount() const { return States.size(); }
@@ -142,6 +146,7 @@ private:
   {
     std::shared_ptr<ResultSlotGuard> resultSlot;
     ChunkPopulateResult result;
+    std::optional<PendingRequest> bufferRetry;
     uint64_t requestId{0};
     uint64_t demandId{0};
     int priority{0};
@@ -184,6 +189,8 @@ private:
     { return a.x!=b.x ? a.x<b.x : a.z!=b.z ? a.z<b.z : a.y<b.y; }
   };
   std::shared_ptr<SettingsBudgetState> SettingsBudget{std::make_shared<SettingsBudgetState>()};
+  std::shared_ptr<UBufferAllocationBudget> BufferBudget{std::make_shared<UBufferAllocationBudget>(kBufferByteBudget)};
+  std::atomic<bool> BufferSerialMode{false};
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   // A result keeps its slot while queued/running/ready or held by Tick.

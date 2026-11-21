@@ -418,6 +418,8 @@ void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 bool UChunkLoadScheduler::ScheduleWorker(
     const PendingRequest &request, const int generation_start_cap_per_frame)
 {
+  if((BufferSerialMode.load(std::memory_order_relaxed) && GetRetainedGenerationResultCount()!=0) ||
+      BufferBudget->UsedBytes()>=BufferBudget->LimitBytes()) return false;
   size_t retained = RetainedResults->load(std::memory_order_relaxed);
   do
   {
@@ -457,12 +459,13 @@ bool UChunkLoadScheduler::ScheduleWorker(
   const std::size_t worker_count = Pool.GetWorkerCount();
   if (!Pool.TryEnqueue(
       [this, populateRequest = std::move(populateRequest), settings_owner = request.settings,
+       retry_request=request, buffer_budget=BufferBudget,
        requested_at, scheduled_at, priority,
        request_id, demand_id,
        max_height, request_queue_live_at_schedule,
        request_queue_heap_at_schedule, worker_pending_at_submit,
        worker_active_at_submit, worker_count,
-       generation_start_cap_per_frame, work_slot = std::move(work_slot), result_slot]()
+       generation_start_cap_per_frame, work_slot = std::move(work_slot), result_slot]() mutable
       {
         PendingResult pending;
         pending.resultSlot = result_slot;
@@ -483,7 +486,15 @@ bool UChunkLoadScheduler::ScheduleWorker(
         pending.workerCount = worker_count;
         pending.generationStartCapPerFrame =
             generation_start_cap_per_frame;
-        pending.result = Populator.Populate(populateRequest);
+        try {
+          UBufferBudgetScope budget_scope({buffer_budget,std::make_shared<BufferBudgetJob>()});
+          pending.result = Populator.Populate(populateRequest);
+        } catch(const UBufferBudgetExceeded &) {
+          pending.result.coord=populateRequest.chunkCoord;
+          pending.result.token=populateRequest.token;
+          pending.bufferRetry=std::move(retry_request);
+          BufferSerialMode.store(true,std::memory_order_relaxed);
+        }
         pending.generationFinishedAt = std::chrono::steady_clock::now();
         pending.generationMs = std::chrono::duration<double, std::milli>(
                                    pending.generationFinishedAt -
@@ -579,6 +590,16 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
       if (queued != QueuedRequests.end() &&
           queued->second.token.sequence == pending.result.token.sequence)
         EraseQueuedRequest(pending.result.coord);
+      continue;
+    }
+    if(pending.bufferRetry) {
+      auto retry=std::move(*pending.bufferRetry);
+      const auto priority=RequestPriorities.find(retry.coord);
+      if(priority!=RequestPriorities.end()) retry.priority=priority->second;
+      retry.queueRevision=NextRequestQueueRevision++;
+      QueuedRequests[retry.coord]=retry;
+      Queue.insert(std::move(retry));
+      States[pending.result.coord].state=ChunkLoadState::Requested;
       continue;
     }
     if (pending.result.discarded)
@@ -710,6 +731,8 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
 
 int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
 {
+  if(Queue.empty() && GetRetainedGenerationResultCount()==0 && BufferBudget->UsedBytes()==0)
+    BufferSerialMode.store(false,std::memory_order_relaxed);
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxStarts)
   {
@@ -747,6 +770,8 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
 {
   const JobThreadPoolSnapshot snapshot = Pool.GetSnapshot();
   const std::size_t occupied = snapshot.pending + snapshot.active;
+  if((BufferSerialMode.load(std::memory_order_relaxed) && GetRetainedGenerationResultCount()!=0) ||
+      BufferBudget->UsedBytes()>=BufferBudget->LimitBytes()) return 0;
   const size_t retained = GetRetainedGenerationResultCount();
   return static_cast<int>(std::min(
       snapshot.workers > occupied ? snapshot.workers - occupied : size_t{0},

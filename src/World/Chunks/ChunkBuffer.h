@@ -3,7 +3,7 @@
 #include "World/Chunks/ChunkManager.h"
 #include "World/Chunks/LoadedAirSlice.h"
 #include "World/Core/IUBlockWriter.h"
-#include "Core/Memory/AllocationCountingResource.h"
+#include "Core/Memory/BufferAllocationBudget.h"
 #include <memory>
 #include <array>
 #include <optional>
@@ -101,20 +101,20 @@ private:
   struct Storage
   {
     FrameState State;
-    UAllocationCountingResource Memory;
+    BufferBudgetContext Budget;
+    UBufferAllocationResource Memory;
     std::pmr::unordered_map<glm::ivec3,BlockId,IVec3Hash> Blocks{&Memory};
     std::pmr::unordered_map<glm::ivec3,uint8_t,IVec3Hash> FluidPacked{&Memory};
     std::pmr::unordered_map<glm::ivec3,uint8_t,IVec3Hash> LightPacked{&Memory};
     std::pmr::unordered_map<BlockId,int> WorldGenTreeBlockRanks{&Memory};
-    Storage() = default;
-    Storage(const Storage &other) : Storage()
-    {
-      State=other.State; Blocks=other.Blocks; FluidPacked=other.FluidPacked;
-      LightPacked=other.LightPacked; WorldGenTreeBlockRanks=other.WorldGenTreeBlockRanks;
-    }
+    explicit Storage(BufferBudgetContext budget) : Budget(std::move(budget)),Memory(Budget) {}
+    Storage(const Storage &)=delete;
   };
-  std::unique_ptr<Storage> Payload;
-  void EnsureStorage() { if(!Payload) Payload=std::make_unique<Storage>(); }
+  struct StorageDelete { void operator()(Storage *storage) const noexcept; };
+  using StoragePtr=std::unique_ptr<Storage,StorageDelete>;
+  StoragePtr Payload;
+  static StoragePtr CreateStorage(const Storage *source=nullptr);
+  void EnsureStorage() { if(!Payload) Payload=CreateStorage(); }
   void MarkDecodedFrame(glm::ivec3 coord)
   {
     EnsureStorage(); Payload->State.DecodedCoord=coord; Payload->State.DecodedFrameValid=true;

@@ -713,7 +713,7 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Count/lifetime/settings admission and metadata accounting accepted. Actual UChunkBuffer allocation ownership now stable through deep copy/move/vector/Ready requeue/stale/apply; native8 Ready41664 bytes ->exact1 release ->0 after install. Capture/negative-height/fluid IO and scoped existing tree-boundary/rank checks PASS; full vegetation ecology precondition FAIL retained S6.05. Compute/Ready buffer byte enforcement and remaining overhead still CHECK.",
+          "partial_result": "Count/lifetime/settings admission and metadata accounting accepted. Actual UChunkBuffer allocation ownership now stable through deep copy/move/vector/Ready requeue/stale/apply; native8 Ready41664 bytes ->exact1 release ->0 after install. Capture/negative-height/fluid IO and scoped existing tree-boundary/rank checks PASS; full vegetation ecology precondition FAIL retained S6.05. Compute/Ready buffer byte enforcement now scoped PASS: shared128MiB base/explicit sole-job floor; actual preallocation refusal, exact automatic retry, cancellation/new-owner, oversized floor and final release verified. Remaining scratch/control/pool/transient/upstream overhead still CHECK.",
           "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
           "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
           "token_retirement_evidence": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",
@@ -721,7 +721,8 @@
           "metadata_domain_evidence": "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json",
           "metadata_allocator_evidence": "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json",
           "settings_byte_evidence": "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json",
-          "buffer_ownership_evidence": "build/desktop-msvc/s4-generation-buffer-ownership-acceptance-20261121.json"
+          "buffer_ownership_evidence": "build/desktop-msvc/s4-generation-buffer-ownership-acceptance-20261121.json",
+          "buffer_byte_evidence": "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",

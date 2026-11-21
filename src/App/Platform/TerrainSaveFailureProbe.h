@@ -2838,6 +2838,110 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             "actual generation buffer allocation ownership follows ready requeue and stale retirement");
       });
       if(flow_only) RunTerrainProbePhase([&] {
+        struct BufferPopulator final : IUChunkPopulator {
+          std::atomic<unsigned> calls{0};
+          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+            ++calls;
+            ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+            for(int n=0;n<1024;++n)
+              result.buffer.SetBlock({request.chunkCoord.x*16+n%16,-48+n/256,
+                  request.chunkCoord.z*16+(n/16)%16},request.settings.Seed==29 ? 9 : 8);
+            return result;
+          }
+        } populator;
+        UChunkGenerationRegistry generation;
+        UChunkLoadScheduler scheduler(populator,generation);
+        scheduler.BufferBudget=std::make_shared<UBufferAllocationBudget>(256*1024);
+        UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
+        terrain.SetVerticalProfile({-48,-33,-40});
+        ProceduralSettings request; request.MinHeight=-48; request.MaxHeight=-33; request.Seed=17;
+        unsigned arrivals=0;
+        scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+        auto compute=[&](glm::ivec3 coord,const ProceduralSettings &input) {
+          require(scheduler.RequestLoad(coord,0,input),"buffer quota fixture accepts request");
+          require(scheduler.StartQueuedGenerationWorkers(1)==1,"buffer quota fixture starts worker");
+          require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"buffer quota worker finishes");
+        };
+        for(int x=0;x<3;++x) compute({x,0,0},request);
+        const auto ready_charge=scheduler.BufferReservedBytes();
+        const glm::ivec3 target(3,0,0);
+        require(scheduler.RequestLoad(target,0,request),"buffer retry request accepted");
+        const auto token=scheduler.QueuedRequests.at(target).token.sequence;
+        const auto time=scheduler.QueuedRequests.at(target).requestedAt;
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"buffer quota refusal completes normally");
+        const bool refused=scheduler.BufferBudget->RefusalCount()>0 &&
+            scheduler.BufferReservedBytes()==ready_charge;
+        scheduler.Tick(terrain,0,0);
+        const auto &retry=scheduler.QueuedRequests.at(target);
+        const bool exact=retry.token.sequence==token && retry.requestedAt==time &&
+            retry.settings->value.Seed==17;
+        const bool no_spin=scheduler.StartQueuedGenerationWorkers(8)==0;
+        scheduler.Tick(terrain,8,0);
+        const bool drained=scheduler.BufferReservedBytes()==0 && arrivals==3;
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"buffer retry computes after drain");
+        scheduler.Tick(terrain,1,0);
+        const bool installed=scheduler.IsCommitted(target) && arrivals==4 && populator.calls==5 &&
+            terrain.GetBlock({56,-48,0})==8 && scheduler.BufferReservedBytes()==0;
+        report["generation_buffer_quota"]={{"base_bytes",256*1024},{"ready3_charge",ready_charge},
+            {"refused_before_allocation",refused},{"exact_retry",exact},{"no_busy_retry",no_spin},
+            {"drain_releases",drained},{"automatic_install",installed},
+            {"peak_bytes",scheduler.BufferReservedPeak()},{"limit_bytes",scheduler.BufferBudgetLimit()}};
+        require(refused && exact && no_spin && drained && installed &&
+            scheduler.BufferReservedPeak()<=scheduler.BufferBudgetLimit() &&
+            scheduler.BufferBudgetLimit()==256*1024,
+            "actual buffer quota retains demand and automatically recovers after Ready drain");
+        scheduler.Tick(terrain,0,0); // reset serial mode after the last owner retires
+        for(int x=10;x<13;++x) compute({x,0,0},request);
+        const auto refusals_before=scheduler.BufferBudget->RefusalCount();
+        compute({13,0,0},request);
+        const auto old_token=generation.Current({13,0,0}).sequence;
+        require(scheduler.BufferBudget->RefusalCount()>refusals_before,
+            "replacement fixture actually refuses old buffer allocation");
+        scheduler.Cancel({13,0,0});
+        auto replacement=request; replacement.Seed=29;
+        require(scheduler.RequestLoad({13,0,0},-3,replacement),"new buffer owner admitted after cancel");
+        const auto new_token=scheduler.QueuedRequests.at({13,0,0}).token.sequence;
+        scheduler.Tick(terrain,8,0);
+        const auto &new_request=scheduler.QueuedRequests.at({13,0,0});
+        const bool new_owner=old_token!=new_token && new_request.token.sequence==new_token &&
+            new_request.settings->value.Seed==29 && scheduler.BufferReservedBytes()==0;
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"replacement buffer computes");
+        scheduler.Tick(terrain,1,0);
+        const bool replacement_installed=scheduler.IsCommitted({13,0,0}) && arrivals==8 &&
+            populator.calls==10 && terrain.GetBlock({216,-48,0})==9 && scheduler.BufferReservedBytes()==0;
+        require(new_owner && replacement_installed,"late quota retry cannot resurrect cancelled old owner");
+
+        scheduler.Tick(terrain,0,0);
+        require(scheduler.GetRetainedGenerationResultCount()==0,"sole-job fixture has no retained owner");
+        scheduler.BufferBudget=std::make_shared<UBufferAllocationBudget>(32*1024);
+        compute({20,0,0},request);
+        const auto floor=scheduler.BufferBudgetLimit();
+        const bool oversized=floor>32*1024 && scheduler.BufferReservedBytes()==floor;
+        require(scheduler.RequestLoad({21,0,0},0,replacement),"second floor request accepted");
+        const bool floor_blocks=scheduler.StartQueuedGenerationWorkers(1)==0;
+        scheduler.Tick(terrain,1,0);
+        const bool floor_release=scheduler.BufferReservedBytes()==0;
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"sole-job floor successor computes");
+        scheduler.Tick(terrain,1,0);
+        const bool floor_successor=scheduler.IsCommitted({20,0,0}) && scheduler.IsCommitted({21,0,0}) &&
+            terrain.GetBlock({328,-48,0})==8 && terrain.GetBlock({344,-48,0})==9 &&
+            arrivals==10 && populator.calls==12 && scheduler.BufferReservedBytes()==0;
+        report["generation_buffer_quota"]["cancel_preserves_new_owner"]=new_owner;
+        report["generation_buffer_quota"]["replacement_installs_once"]=replacement_installed;
+        report["generation_buffer_quota"]["sole_job_floor_bytes"]=floor;
+        report["generation_buffer_quota"]["sole_job_floor"]=oversized;
+        report["generation_buffer_quota"]["floor_blocks_competitor"]=floor_blocks;
+        report["generation_buffer_quota"]["floor_owner_release"]=floor_release;
+        report["generation_buffer_quota"]["floor_successor"]=floor_successor;
+        require(oversized && floor_blocks && floor_release && floor_successor &&
+            scheduler.BufferReservedPeak()<=scheduler.BufferBudgetLimit(),
+            "one oversized buffer progresses without concurrent unbounded admission");
+      });
+      if(flow_only) RunTerrainProbePhase([&] {
         auto owner=std::make_unique<UWorld>(nullptr,nullptr); auto &test=*owner;
         test.SetSpawnPoint({8,-40,8});
         test.ProceduralTemplate.MinHeight=-48; test.ProceduralTemplate.MaxHeight=-33;
