@@ -349,8 +349,10 @@
         },
         {
           "id": "Q08-C1.PRESSURE",
-          "status": "CHECK",
-          "scope": "Actual FIFO backpressure admission refusal retains signed band in deferred owner; re-admission installs current target without new ingress."
+          "status": "REUSE",
+          "scope": "Actual FIFO backpressure admission refusal retains signed band in deferred owner; re-admission installs current target without new ingress.",
+          "evidence": "build/desktop-msvc/s4-fifo-pressure-band-acceptance-20261121.json",
+          "coverage_note": "Blockers deliberately abandoned through public Cancel; no trim/eviction/fairness acceptance from that operation. No arbitrary sleep/private container injection. Scoped Full CPU light install inside outer Flat startup, no Full framebuffer/backend parity claim. PLAYER/BOUNDARY/DRAW_GATE/FIRST_MESH and Q08-C2/LIMIT-C1 remain open."
         },
         {
           "id": "Q08-C1.PLAYER",
@@ -512,5 +514,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C1.COLUMN coalescing/promotion and actual signed target install accepted. Next PRESSURE backpressure/deferred re-admission, then PLAYER/BOUNDARY/DRAW_GATE/FIRST_MESH. Top-level9 CHECK groups; full scope OPEN."
+  "checkpoint": "Q08-C1 COLUMN/PRESSURE accepted, exact signed deferred ownership/re-admission/current install. Next PLAYER then BOUNDARY/DRAW_GATE/FIRST_MESH. Top-level9 CHECK; full scope OPEN."
 }

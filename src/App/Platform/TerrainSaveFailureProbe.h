@@ -680,6 +680,61 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"pending",fifo.GetPendingTerrainColumnRelightCount()}};
         require(installed(),"actual FIFO consumer installs current light in both signed bands");
       }
+      {
+        struct PressureDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~PressureDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({56,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({56,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({56,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        fifo.TrimFarRelightFifoFarthest({0,0,0},16);
+        for(int n=0;n<16;++n)
+          fifo.EnqueueTerrainColumnRelight((n+8)*CHUNK_SIZE,0,false,-48,-33,"q08_pressure_blocker");
+        require(fifo.GetPendingTerrainColumnRelightCount()==16,"pressure fixture fills actual FIFO to16");
+        fifo.SetColumnLightComplete({3,0},true,"q08_pressure_baseline");
+        fifo.EnqueueTerrainColumnRelight(48,0,false,-48,-33,"q08_pressure_negative",&fifo_world);
+        fifo.EnqueueTerrainColumnRelight(48,0,true,16,31,"q08_pressure_positive",&fifo_world);
+        const auto denied=fifo.GetTerrainColumnRelightQueueInfo({48,0});
+        const bool retained=!denied.keyed && denied.deferred_far && denied.y_band_defined &&
+            denied.min_world_y==-48 && denied.max_world_y==31 &&
+            fifo.GetPendingTerrainColumnRelightCount()==16 && !fifo.IsColumnLightComplete({3,0});
+        require(retained,"pressure denial coalesces signed work into deferred owner and invalidates disk complete");
+        for(int n=0;n<16;++n) fifo.CancelTerrainColumnRelight({(n+8)*CHUNK_SIZE,0});
+        require(fifo.GetPendingTerrainColumnRelightCount()==0,"explicit blocker retirement removes FIFO pressure");
+        const int admitted=fifo.AdmitDeferredFarRelightColumns(fifo_world,{3,0,0},4);
+        const auto current=fifo.GetTerrainColumnRelightQueueInfo({48,0});
+        const bool readmitted=admitted==1 && current.keyed && current.y_band_defined &&
+            current.min_world_y==-48 && current.max_world_y==31 && !current.deferred_far;
+        require(readmitted,"deferred band re-admits exactly without new producer request");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({3,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({3,1,0},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        report["relight_fifo_pressure_band"]={{"deferred_exact",retained},
+            {"readmitted_without_ingress",readmitted},{"negative_and_positive_installed",installed()},
+            {"pending",fifo.GetPendingTerrainColumnRelightCount()}};
+        require(installed(),"deferred actual FIFO successor installs both signed light targets");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
