@@ -26,8 +26,8 @@ void UCoarseHeightCache::Reset(int origin_x, int origin_z, int size_x,
 
 bool UCoarseHeightCache::Contains(int x, int z) const
 {
-  const int lx = x - OriginX;
-  const int lz = z - OriginZ;
+  const int64_t lx = int64_t(x) - OriginX;
+  const int64_t lz = int64_t(z) - OriginZ;
   return lx >= 0 && lz >= 0 && lx < SizeX && lz < SizeZ;
 }
 

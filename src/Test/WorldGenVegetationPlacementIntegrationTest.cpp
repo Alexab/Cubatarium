@@ -17,6 +17,7 @@
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/ColumnSample.h"
+#include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 #include <algorithm>
@@ -1806,6 +1807,60 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": population metrics bounded-window PASS count=" << count << std::endl;
     std::cout << "population_metrics_storage_bytes=" << summary.sampleStorageBytes
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
+    return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--population-memo-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions);
+    cutum::UBlockWorld world;
+    auto settings=MakeVegetationSettings();
+    cutum::WorldGenContext ctx(world,registry,settings);
+    cutum::ComposableWorldGenConfig config;
+    config.UseBiomeSurface=true;
+    cutum::UComposableWorldGenerator generator(std::move(ctx),config);
+    generator.BeginChunkCoarseCache(-16,-16,24);
+    const auto coarse_bytes=generator.GetCoarseMemoStorageBytes();
+    const auto lake_bytes=generator.GetLakeMemoInlineBytes();
+    FluidTest::Expect(coarse_bytes==20480 && lake_bytes==4096,kTestName,
+        "coarse halo and inline lake memo have explicit bounded storage");
+    for(int n=0;n<600;++n) {
+      const int x=n*17-5000,z=n%37-20;
+      const int expected=generator.SurfaceYAt(x,z);
+      FluidTest::Expect(generator.LakeCenterSurfaceYAt(x,z)==expected &&
+          generator.LakeCenterSurfaceYAt(x,z)==expected,kTestName,
+          "lake memo preserves direct terrain height across negative coordinates and resets");
+      FluidTest::Expect(generator.GetLakeMemoEntryCount()<=256,kTestName,"lake memo entry bound");
+      if(n==255 || n==511)
+        FluidTest::Expect(generator.GetLakeMemoEntryCount()==256,kTestName,"duplicate lookup at capacity retains memo");
+      if(n==256 || n==512)
+        FluidTest::Expect(generator.GetLakeMemoEntryCount()==1,kTestName,"new miss at capacity resets memo exactly");
+    }
+    generator.EndChunkCoarseCache();
+    FluidTest::Expect(generator.GetLakeMemoEntryCount()==0,kTestName,"population end retires lake memo entries");
+    const int direct=generator.SurfaceYAt(-15,-15);
+    for(int cycle=0;cycle<32;++cycle) {
+      generator.BeginChunkCoarseCache(-16,-16,24);
+      FluidTest::Expect(generator.LakeCenterSurfaceYAt(-15,-15)==direct &&
+          generator.GetCoarseMemoStorageBytes()==coarse_bytes,kTestName,"repeated coarse/lake scopes preserve value and capacity");
+      generator.BeginChunkCoarseCache(-16,-16,8);
+      FluidTest::Expect(generator.GetLakeMemoEntryCount()==0 && generator.GetCoarseMemoStorageBytes()==5120 &&
+          generator.LakeCenterSurfaceYAt(-15,-15)==direct,kTestName,"restarting memo safely replaces old callbacks and scope");
+      generator.EndChunkCoarseCache();
+      FluidTest::Expect(generator.GetCoarseMemoStorageBytes()==0 && generator.GetLakeMemoEntryCount()==0,
+          kTestName,"scope end releases coarse allocation and retires lake entries");
+    }
+    for(int pad:{-1,25,std::numeric_limits<int>::max()}) {
+      generator.BeginChunkCoarseCache(-16,-16,pad);
+      FluidTest::Expect(generator.GetCoarseMemoStorageBytes()==0 &&
+          generator.LakeCenterSurfaceYAt(-15,-15)==direct,kTestName,"unsupported coarse memo geometry keeps exact direct path");
+    }
+    generator.BeginChunkCoarseCache(std::numeric_limits<int>::min(),0,24);
+    FluidTest::Expect(generator.GetCoarseMemoStorageBytes()==0,kTestName,"coarse memo origin overflow is rejected before allocation");
+    generator.EndChunkCoarseCache();
+    std::cout << kTestName << ": population coarse/lake memo PASS" << std::endl;
+    std::cout << "coarse_memo_max_bytes=" << coarse_bytes << " lake_inline_bytes=" << lake_bytes
+        << " idle_coarse_bytes=0 idle_lake_entries=0" << std::endl;
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--population-scratch-only")

@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
-#include <unordered_map>
+#include <array>
 
 namespace cutum
 {
@@ -59,6 +59,9 @@ public:
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
   int LakeCenterSurfaceYAt(int world_x, int world_z) const;
+  size_t GetLakeMemoEntryCount() const {return LakeMemoEntryCount;}
+  size_t GetLakeMemoInlineBytes() const {return sizeof(LakeCenterSurfaceYCache);}
+  size_t GetCoarseMemoStorageBytes() const {return ChunkCoarseCache ? ChunkCoarseCache->GetStorageBytes() : 0;}
   BiomeId BiomeAt3D(int world_x, int world_y, int world_z,
                     int surface_y) const;
   BiomeKey BiomeKeyAt3D(int world_x, int world_y, int world_z,
@@ -108,7 +111,9 @@ private:
   std::unique_ptr<IWorldGenBiomeSource> BiomeSource;
   std::optional<UColumnSampleBuilder> SampleBuilder;
   mutable std::optional<UCoarseHeightCache> ChunkCoarseCache;
-  mutable std::unordered_map<uint64_t, int> LakeCenterSurfaceYCache;
+  struct LakeMemoEntry { uint64_t key{0}; int value{0}; };
+  mutable std::array<LakeMemoEntry,256> LakeCenterSurfaceYCache{};
+  mutable size_t LakeMemoEntryCount{0};
   CoarseHeightCallback DirectCoarseHeightFn;
 };
 

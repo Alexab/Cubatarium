@@ -27,6 +27,7 @@ public:
   int GetOrCompute(int x, int z, const std::function<int(int, int)> &compute);
   void Put(int x, int z, int value);
   const CoarseHeightCacheStats &GetStats() const { return Stats; }
+  size_t GetStorageBytes() const {return Values.capacity()*sizeof(int)+Valid.capacity()*sizeof(uint8_t);}
 
 private:
   int OriginX{0};

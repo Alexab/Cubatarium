@@ -10,6 +10,8 @@
 #include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Sampling/ClimateSampler.h"
 #include "WorldGen/Stages/WorldGenStages.h"
+#include <algorithm>
+#include <limits>
 
 namespace cutum
 {
@@ -98,7 +100,10 @@ UComposableWorldGenerator::UComposableWorldGenerator(
 void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
                                                       int pad)
 {
-  LakeCenterSurfaceYCache.clear();
+  EndChunkCoarseCache();
+  if(pad<0 || pad>UDensityFieldSampler::kMaxChunkCachePad) return;
+  const int64_t origin_x=int64_t(base_x)-pad,origin_z=int64_t(base_z)-pad;
+  if(origin_x<std::numeric_limits<int>::min() || origin_z<std::numeric_limits<int>::min()) return;
   if (DensitySampler)
   {
     DensitySampler->BeginChunkSamplingCache(base_x, base_z, pad);
@@ -107,10 +112,8 @@ void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
   {
     return;
   }
-  const int origin_x = base_x - pad;
-  const int origin_z = base_z - pad;
   const int size = CHUNK_SIZE + pad * 2;
-  ChunkCoarseCache.emplace(origin_x, origin_z, size, size);
+  ChunkCoarseCache.emplace(static_cast<int>(origin_x),static_cast<int>(origin_z),size,size);
   UCoarseHeightCache *cache = &*ChunkCoarseCache;
   if (BiomeSampler)
   {
@@ -131,6 +134,7 @@ void UComposableWorldGenerator::PrimeChunkCoarseY(int x, int z, int y)
 
 void UComposableWorldGenerator::EndChunkCoarseCache()
 {
+  LakeMemoEntryCount=0;
   if (DensitySampler)
   {
     DensitySampler->EndChunkSamplingCache();
@@ -400,17 +404,22 @@ int UComposableWorldGenerator::LakeCenterSurfaceYAt(int world_x,
   const uint64_t key =
       (static_cast<uint64_t>(static_cast<uint32_t>(world_x)) << 32U) |
       static_cast<uint32_t>(world_z);
-  const auto cached = LakeCenterSurfaceYCache.find(key);
-  if (cached != LakeCenterSurfaceYCache.end())
+  const auto first=LakeCenterSurfaceYCache.begin();
+  auto position=std::lower_bound(first,first+LakeMemoEntryCount,key,
+      [](const LakeMemoEntry &entry,uint64_t value) {return entry.key<value;});
+  if (position!=first+LakeMemoEntryCount && position->key==key)
   {
-    return cached->second;
+    return position->value;
   }
   const int surfaceY = SurfaceYAt(world_x, world_z);
-  if (LakeCenterSurfaceYCache.size() >= 256)
+  if (LakeMemoEntryCount==LakeCenterSurfaceYCache.size())
   {
-    LakeCenterSurfaceYCache.clear();
+    LakeMemoEntryCount=0;
+    position=first;
   }
-  LakeCenterSurfaceYCache.emplace(key, surfaceY);
+  std::move_backward(position,first+LakeMemoEntryCount,first+LakeMemoEntryCount+1);
+  *position={key,surfaceY};
+  ++LakeMemoEntryCount;
   return surfaceY;
 }
 

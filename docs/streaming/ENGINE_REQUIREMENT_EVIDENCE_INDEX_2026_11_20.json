@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.coarse-lake-memo-envelope",
+      "status": "SCOPED_PASS_CONFIGURATION_SYNTHESIS_OPEN",
+      "receipt": "build/desktop-msvc/s4-coarse-lake-memo-acceptance-20261121.json",
+      "scope": "Lake memo replaces node hash map with inline sorted256-entry full-XZ key/value array: binary lookup, bounded insertion, existing clear-all on257th distinct miss policy. End retires active entries without allocating; fixed4096 inline bytes remain part of generator. Coarse memo reports actual vector capacities; existing production pad<=24/64x64 bounds fresh allocation at20480bytes. Begin safely ends prior scope before installing callbacks; unsupported pad/origin bypasses optional coarse/density memo and retains direct computation. Coarse Contains uses64-bit coordinate differences."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.density-memo-envelope",
       "status": "SCOPED_PASS_OTHER_SCRATCH_OPEN",
       "receipt": "build/desktop-msvc/s4-density-memo-acceptance-20261121.json",

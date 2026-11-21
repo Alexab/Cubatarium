@@ -729,7 +729,8 @@
           "control_allocation_evidence": "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
           "worker_batch_evidence": "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json",
           "retained_seed_text_evidence": "build/desktop-msvc/s4-generation-retained-settings-acceptance-20261121.json",
-          "density_memo_evidence": "build/desktop-msvc/s4-density-memo-acceptance-20261121.json"
+          "density_memo_evidence": "build/desktop-msvc/s4-density-memo-acceptance-20261121.json",
+          "coarse_lake_evidence": "build/desktop-msvc/s4-coarse-lake-memo-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",
