@@ -783,6 +783,53 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"first_request_installed_both",first_completed},{"all_requests_completed",complete}};
         require(complete,"remaining player request completes without new ingress");
       }
+      {
+        struct BoundaryDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~BoundaryDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({-8,-40,-8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({-8,-40,-8},8);
+        fifo_world.BlockWorld.SetBlock({-8,24,-8},8);
+        auto &fifo=*fifo_world.Persistence;
+        fifo.EnqueueBoundaryDependencyRelight(fifo_world,-1,-1,-48,-33);
+        fifo.EnqueueBoundaryDependencyRelight(fifo_world,-8,-8,16,31);
+        fifo.EnqueueBoundaryDependencyRelight(fifo_world,-16,-16,-48,-33);
+        const auto info=fifo.GetTerrainColumnRelightQueueInfo({-16,-16});
+        const bool exact=info.keyed && info.priority && info.in_deque &&
+            info.boundary_dependency && info.y_band_defined &&
+            info.min_world_y==-48 && info.max_world_y==31 &&
+            fifo.GetPendingTerrainColumnRelightCount()==1;
+        require(exact,"boundary producer normalizes negative column key and preserves exact signed band once");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({-1,-3,-1},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({-1,1,-1},catalog);
+        };
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+        }
+        const auto terminal=fifo.GetTerrainColumnRelightQueueInfo({-16,-16});
+        const bool retired=!terminal.keyed && !terminal.boundary_dependency &&
+            fifo.GetPendingTerrainColumnRelightCount()==0;
+        report["relight_boundary_band"]={{"exact_signed_union",exact},
+            {"negative_and_positive_installed",installed()},{"terminal_marker_retired",retired}};
+        require(installed() && retired,"boundary exact target installs current light and retires only completed marker");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

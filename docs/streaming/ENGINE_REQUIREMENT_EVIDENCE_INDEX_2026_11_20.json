@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.boundary-signed-band",
+      "status": "SCOPED_PASS_Q08_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-boundary-band-acceptance-20261121.json",
+      "scope": "No independently settled normal-producer rejection or direct boundary-specific pressure scene claimed; guard/common pressure behavior source-composed with accepted PRESSURE fixture. Trimming/reset Q08-C2, caps LIMIT-C1 and Full framebuffer/backend parity remain open. Scoped Full calculation inside outer Flat startup. No production change."
+    },
+    {
       "id": "S4.02.Q08.player-deferral-signed-targets",
       "status": "SCOPED_PASS_Q08_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

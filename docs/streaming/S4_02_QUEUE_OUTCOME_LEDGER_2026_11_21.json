@@ -363,8 +363,10 @@
         },
         {
           "id": "Q08-C1.BOUNDARY",
-          "status": "CHECK",
-          "scope": "Boundary dependency producer preserves exact signed band and bypasses only correct no-op guard; actual install."
+          "status": "REUSE",
+          "scope": "Boundary dependency producer preserves exact signed band and bypasses only correct no-op guard; actual install.",
+          "evidence": "build/desktop-msvc/s4-boundary-band-acceptance-20261121.json",
+          "coverage_note": "No independently settled normal-producer rejection or direct boundary-specific pressure scene claimed; guard/common pressure behavior source-composed with accepted PRESSURE fixture. Trimming/reset Q08-C2, caps LIMIT-C1 and Full framebuffer/backend parity remain open. Scoped Full calculation inside outer Flat startup. No production change."
         },
         {
           "id": "Q08-C1.DRAW_GATE",
@@ -516,5 +518,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C1 COLUMN/PRESSURE/PLAYER accepted; player deferral request loss fixed with actual signed targets installed. Next BOUNDARY then DRAW_GATE/FIRST_MESH. Top-level9 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C1 COLUMN/PRESSURE/PLAYER/BOUNDARY accepted. Remaining DRAW_GATE/FIRST_MESH exact signed bands through actual install. Top-level9 CHECK; full scope OPEN."
 }
