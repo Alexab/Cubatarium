@@ -26,6 +26,14 @@ std::size_t ResolveRelightWorkerCount(std::size_t thread_count)
 }
 
 std::mutex gRelightCaptureMutex;
+struct RelightWorkSlotGuard
+{
+  bool held{UPipelineAdmission::Get().TryAcquireWorkSlot()};
+  ~RelightWorkSlotGuard()
+  {
+    if (held) UPipelineAdmission::Get().ReleaseWorkSlot();
+  }
+};
 } // namespace
 
 UAsyncRelightBuilder::UAsyncRelightBuilder(std::size_t thread_count)
@@ -46,6 +54,15 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   const uint64_t job_id = snapshot.GetJobId() > 0
                               ? snapshot.GetJobId()
                               : NextJobId.fetch_add(1, std::memory_order_relaxed);
+  auto work_slot = std::make_shared<RelightWorkSlotGuard>();
+  if (!work_slot->held)
+  {
+    auto retry = snapshot.GetJobSpec();
+    retry.job_id = job_id;
+    std::lock_guard<std::mutex> lock(DiscardedSourcesMutex);
+    DiscardedJobs.push_back(std::move(retry));
+    return;
+  }
   WorkToken work_token = snapshot.GetWorkToken();
   work_token.world_epoch = submit_epoch;
   work_token.domain = WorkDomain::Relight;
@@ -63,9 +80,9 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
   snapshot.SetInputCatalog(catalogKeep);
 
-  Pool.Enqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
+  if (!Pool.TryEnqueue([this, snapshot = std::move(snapshot), registryPtr = &registry,
                 catalogKeep = std::move(catalogKeep), job_id,
-                submit_epoch]() mutable
+                submit_epoch, work_slot = std::move(work_slot)]() mutable
                {
                  // Compute uses the pinned immutable material catalog throughout
                  // the flood; the registry is only a fallback for legacy callers.
@@ -81,7 +98,8 @@ void UAsyncRelightBuilder::Enqueue(UChunkRelightSnapshot snapshot,
                  {
                    NoteCompletedOverflow(std::move(dropped));
                  }
-               });
+               }))
+    ReturnUnsubmittedJob(job_id, submit_epoch);
 }
 
 AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
@@ -97,6 +115,16 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
       spec.job_id > 0 ? spec.job_id
                       : NextJobId.fetch_add(1, std::memory_order_relaxed);
   spec.job_id = job_id;
+
+  // Refuse compute before allocating its captured payload. The normal World
+  // discarded-job consumer retains/replays the complete request specification.
+  auto work_slot = std::make_shared<RelightWorkSlotGuard>();
+  if (!work_slot->held)
+  {
+    std::lock_guard<std::mutex> lock(DiscardedSourcesMutex);
+    DiscardedJobs.push_back(std::move(spec));
+    return timings;
+  }
 
   UChunkRelightSnapshot snapshot;
   {
@@ -178,30 +206,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
   auto catalogKeep = registry.GetDefinitionsCatalogSnapshot();
   snapshot.SetInputCatalog(catalogKeep);
 
-  // A21 P5: share work-slot envelope with mesh workers. If denied, still
-  // enqueue (do not drop light demand) under a limited bypass counter —
-  // separate relight pool cutover is follow-on.
-  struct WorkSlotGuard
-  {
-    bool held{false};
-    ~WorkSlotGuard()
-    {
-      if (held)
-      {
-        UPipelineAdmission::Get().ReleaseWorkSlot();
-      }
-    }
-  };
-  auto work_slot = std::make_shared<WorkSlotGuard>();
-  work_slot->held = UPipelineAdmission::Get().TryAcquireWorkSlot();
-  if (!work_slot->held)
-  {
-    static std::atomic<uint64_t> gRelightWorkSlotBypassN{0};
-    gRelightWorkSlotBypassN.fetch_add(1, std::memory_order_relaxed);
-  }
-
   const auto submit_started = std::chrono::steady_clock::now();
-  Pool.Enqueue(
+  if (!Pool.TryEnqueue(
       [this, snapshot = std::move(snapshot), registry = &registry,
        catalogKeep = std::move(catalogKeep), job_id, submit_epoch,
        work_slot = std::move(work_slot), audit_relight, captured_full_n,
@@ -276,7 +282,8 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
         {
           NoteCompletedOverflow(std::move(dropped));
         }
-      });
+      }))
+    ReturnUnsubmittedJob(job_id, submit_epoch);
   const auto submit_complete = std::chrono::steady_clock::now();
   timings.queue_submit_ms =
       std::chrono::duration<double, std::milli>(submit_complete -
@@ -287,6 +294,18 @@ AsyncRelightEnqueueTimings UAsyncRelightBuilder::EnqueueJob(
                                                 dependency_complete)
           .count();
   return timings;
+}
+
+void UAsyncRelightBuilder::ReturnUnsubmittedJob(uint64_t job_id, uint64_t submit_epoch)
+{
+  std::lock_guard<std::mutex> owner_lock(InFlightMutex);
+  const auto pending = RetryObligations.find(job_id);
+  if (pending == RetryObligations.end() || pending->second.epoch != submit_epoch)
+    return; // Cancellation already transferred this exact submission.
+  std::lock_guard<std::mutex> debt_lock(DiscardedSourcesMutex);
+  DiscardedJobs.push_back(std::move(pending->second.spec));
+  RetryObligations.erase(pending);
+  InFlight.erase(job_id);
 }
 
 std::vector<RelightComputeResult>
@@ -339,7 +358,13 @@ bool UAsyncRelightBuilder::HasPendingWork() const
     return true;
   }
   std::lock_guard<std::mutex> lock(InFlightMutex);
-  return !InFlight.empty();
+  if (!InFlight.empty()) return true;
+  // Admission refusal has no executable owner, but its undelivered exact
+  // request must still prevent a false quiescent/readiness observation.
+  std::lock_guard<std::mutex> discarded_lock(DiscardedSourcesMutex);
+  if (!DiscardedJobs.empty()) return true;
+  std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
+  return !OverflowJobs.empty();
 }
 
 double UAsyncRelightBuilder::GetLightSampleHorizonSeconds() const

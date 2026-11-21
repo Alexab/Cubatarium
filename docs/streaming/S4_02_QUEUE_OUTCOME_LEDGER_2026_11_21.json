@@ -685,7 +685,9 @@
         {
           "id": "LIMIT-C1.Q03_Q05",
           "status": "CHECK",
-          "required_result": "Compose existing capture512/shared snapshot96MiB/result128MiB/work8 credits and TryEnqueue pending256 with actual callers; legacy Enqueue not bounded by that cap."
+          "required_result": "Compose existing capture512/shared snapshot96MiB/result128MiB/work8 credits and TryEnqueue pending256 with actual callers; legacy Enqueue not bounded by that cap.",
+          "relight_shared_admission_evidence": "build/desktop-msvc/s4-relight-shared-admission-acceptance-20261121.json",
+          "partial_result": "Real relight work-slot bypass reproduced/fixed; both APIs now obey work/pool denial, return exact spec, expose pending debt; local and native actual World automatic AIR successor PASS. Overall shared producer composition remains CHECK, especially generation Q09; returned retry-storage envelope Q08 stays OPEN."
         },
         {
           "id": "LIMIT-C1.Q04",

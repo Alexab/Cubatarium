@@ -4,6 +4,30 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q03_Q05.relight-shared-admission",
+      "status": "SCOPED_PASS_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-relight-shared-admission-acceptance-20261121.json",
+      "scope": "Isolated actual UWorld Full-mode solver/drain: no compute during shared denial, normal automatic retry after pressure release installs demanded AIR light field. Outer CPU/Flat probe regression also PASS; no all-backend/physical-field oracle claim. Shared work/pool refusal and exact retry accepted; Q08/Q09 composition still open."
+    },
+    {
+      "id": "S4.02.LIMIT.Q04.retry-count-byte-envelope",
+      "status": "SCOPED_PASS",
+      "receipt": "build/desktop-msvc/s4-mesh-retry-cap-acceptance-20261121.json",
+      "scope": "CPU retry union1024, lossless pressure refusal/current successor, allocator byte accounting, keyed exact retirement. Global Dirty/record/pipeline/performance claims excluded."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.scheduler-allocator",
+      "status": "SCOPED_PASS_CARDINALITY_OPEN",
+      "receipt": "build/desktop-msvc/s4-scheduler-allocator-acceptance-20261121.json",
+      "scope": "Both scheduler containers accounted; full1024 live requested147584 bytes on MSVC; no world-record N claim."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.interest-record-retirement",
+      "status": "SCOPED_PASS_CARDINALITY_OPEN",
+      "receipt": "build/desktop-msvc/s4-world-record-interest-acceptance-20261121.json",
+      "scope": "100 orphan records retired/max32 visits/all8 live owners retained/fresh current publication; live-owner cardinality still requires upstream envelopes."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.actual-record-allocator-accounting",
       "status": "SCOPED_PASS_CARDINALITY_OPEN",
       "receipt": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json",

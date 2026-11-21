@@ -2473,6 +2473,46 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         }
       });
       if(flow_only) RunTerrainProbePhase([&] {
+        auto owner=std::make_unique<UWorld>(nullptr,nullptr); auto &test=*owner;
+        test.SetSpawnPoint({8,-40,8});
+        test.ProceduralTemplate.MinHeight=-48; test.ProceduralTemplate.MaxHeight=-33;
+        test.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        test.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        test.BlockWorld.SetFluidDefinitions(definitions.get());
+        test.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full=settings; full.Lighting=LightingMode::Full;
+        test.SetRenderSettings(full);
+        test.AsyncRelight=std::make_unique<UAsyncRelightBuilder>(1);
+        test.NextAsyncRelightJobId=9700;
+        RelightJobSpec spec;
+        spec.job_id=9700; spec.block_positions={{4,-40,4}};
+        spec.min_world_y=-48; spec.max_world_y=-33;
+        spec.column_center_only=true; spec.include_known_air_outputs=true;
+        spec.known_air_output_sections={{0,-3,0}};
+        spec.light_sample_output_sections={{0,-3,0}};
+        spec.finalize_pending_gate=false;
+        auto &credits=UPipelineAdmission::Get();
+        struct RestoreSlots { ~RestoreSlots(){UPipelineAdmission::Get().SetWorkSlotCap(8);} } restore;
+        credits.SetWorkSlotCap(0);
+        test.AsyncRelight->EnqueueJob(test.BlockWorld,spec,*test.BlockRegistry);
+        const bool debt_visible=test.HasPendingAsyncRelightWork();
+        test.DrainAsyncRelightResults(1,false,false);
+        const bool deferred=test.DeferredRelightRetries.Size()==1 &&
+            test.AsyncRelight->GetInFlightCount()==0 && test.AsyncRelight->GetQueuedJobCount()==0;
+        credits.SetWorkSlotCap(8);
+        test.DrainAsyncRelightResults(1,false,false);
+        require(test.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)),
+            "world relight admission successor computes after shared pressure release");
+        test.DrainAsyncRelightResults(4,false,false);
+        const bool installed=test.BlockWorld.GetChunkManager().GetSectionLightField({0,-3,0})!=nullptr;
+        report["relight_shared_admission"]={{"deferred_without_compute",deferred},
+            {"refused_debt_visible",debt_visible},{"automatic_air_field_install",installed},
+            {"remaining_retry",test.DeferredRelightRetries.Size()}};
+        require(debt_visible && deferred && installed && test.DeferredRelightRetries.Empty(),
+            "real world retains refused full relight and automatically installs AIR successor");
+        test.AbandonTerrainForWorldReplace();
+      });
+      if(flow_only) RunTerrainProbePhase([&] {
         struct MetadataPopulator final : IUChunkPopulator {
           ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
             ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;

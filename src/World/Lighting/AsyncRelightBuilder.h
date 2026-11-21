@@ -90,6 +90,7 @@ public:
 private:
   friend struct AsyncRelightLifecycleTestAccess;
   void NoteCompletedOverflow(RelightComputeResult &&dropped);
+  void ReturnUnsubmittedJob(uint64_t job_id, uint64_t submit_epoch);
 
   static constexpr int kPipelineSlotsPerWorker = 8;
 
