@@ -18,7 +18,7 @@ namespace cutum
 
 namespace fs = std::filesystem;
 
-const std::unordered_set<std::string> UBlockMergeRegistry::kTierAWorldgenNames =
+const std::array<std::string_view,18> UBlockMergeRegistry::kTierAWorldgenNames =
     {"bedrock", "stone", "dirt", "grass",    "sand",      "sandstone",
      "gravel",  "snow",  "clay", "ice",      "hellrock",  "water",
      "lava",    "fire",  "wood", "tree_log", "tree_bark", "tree_leaves"};
@@ -29,6 +29,7 @@ void UBlockMergeRegistry::Rebuild(
     int placeholderTileSize)
 {
   std::unique_lock lock(CatalogMutex);
+  TierAMissingLogged.fill(false);
   ActivePacks = packs;
   PlaceholderCache = std::move(placeholder);
   PlaceholderTileSize = placeholderTileSize;
@@ -452,17 +453,6 @@ std::string UBlockMergeRegistry::ComputeCatalogFingerprint() const
   return std::to_string(std::hash<std::string>{}(payload));
 }
 
-namespace
-{
-
-std::unordered_set<std::string> &LoggedTierAMissing()
-{
-  static std::unordered_set<std::string> logged;
-  return logged;
-}
-
-} // namespace
-
 BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
 {
   if (name.empty() || IsReservedBlockName(name))
@@ -476,10 +466,13 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
 
   const auto separator=name.find(kQualifiedBlockSeparator);
   const UGenerationString local({std::string_view(name).substr(separator==std::string::npos ? 0 : separator+2)});
-  if (kTierAWorldgenNames.count(local.Get()) != 0)
+  const auto tier=std::find(kTierAWorldgenNames.begin(),kTierAWorldgenNames.end(),std::string_view(local.Get()));
+  if (tier != kTierAWorldgenNames.end())
   {
-    if (LoggedTierAMissing().insert(name).second)
+    const auto index=static_cast<size_t>(tier-kTierAWorldgenNames.begin());
+    if (!TierAMissingLogged[index])
     {
+      TierAMissingLogged[index]=true;
       std::cerr << "BlockMergeRegistry: CRITICAL missing Tier A block '" << name
                 << "'" << std::endl;
     }

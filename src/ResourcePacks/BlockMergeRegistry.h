@@ -8,6 +8,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -124,7 +125,9 @@ private:
   std::shared_ptr<UPlaceholderTextureCache> PlaceholderCache;
   int PlaceholderTileSize{16};
   mutable std::shared_mutex CatalogMutex;
-  static const std::unordered_set<std::string> kTierAWorldgenNames;
+  static const std::array<std::string_view,18> kTierAWorldgenNames;
+  // Protected by CatalogMutex; one flag per canonical name per catalog epoch.
+  std::array<bool,18> TierAMissingLogged{};
 };
 
 } // namespace cutum

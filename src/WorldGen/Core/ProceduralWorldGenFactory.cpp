@@ -1,6 +1,7 @@
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/SettingsTextBudget.h"
 #include <iostream>
@@ -14,23 +15,30 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
 {
   ctx.ResolveBlockIds();
 
-  USettingsTextBudget selector_budget(ExternalStringCapacityBytes(ctx.Settings.WorldGenPackId));
-  std::string packId = ctx.Settings.WorldGenPackId;
-  if (packId.empty())
+  // A Populate job has already captured its immutable catalog. Loading here
+  // would publish another global version while Get() still reads the pin,
+  // and put filesystem/JSON/image construction inside a generation worker.
+  const auto *pinned=GetPinnedWorldGenContent();
+  if (!pinned || !pinned->Pack)
   {
-    if (const WorldGeneratorDescriptor *descriptor =
-            UWorldGeneratorRegistry::Find(ctx.Settings.Generator))
+    USettingsTextBudget selector_budget(ExternalStringCapacityBytes(ctx.Settings.WorldGenPackId));
+    std::string packId = ctx.Settings.WorldGenPackId;
+    if (packId.empty())
     {
-      packId = descriptor->PackId ? descriptor->PackId : "default";
+      if (const WorldGeneratorDescriptor *descriptor =
+              UWorldGeneratorRegistry::Find(ctx.Settings.Generator))
+      {
+        packId = descriptor->PackId ? descriptor->PackId : "default";
+      }
+      else
+      {
+        packId = "default";
+      }
     }
-    else
+    if (!UWorldGenPack::LoadPackId(packId))
     {
-      packId = "default";
+      UWorldGenPack::LoadPackId("default");
     }
-  }
-  if (!UWorldGenPack::LoadPackId(packId))
-  {
-    UWorldGenPack::LoadPackId("default");
   }
   // Worldgen profile >= 3: the values from the New World form are
   // authoritative. Older profiles keep the historical behaviour where the pack

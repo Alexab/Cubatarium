@@ -2573,6 +2573,73 @@ int main(int argc, char **argv)
     std::cout << "settings_text_peak_bytes=" << roomy->PeakBytes() << " final_bytes=" << roomy->UsedBytes() << std::endl;
     std::cout << kTestName << ": active settings text budget PASS" << std::endl; return 0;
   }
+  if (argc > 1 && std::string(argv[1]) == "--pinned-factory-catalog-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions); cutum::UBlockWorld world;
+    auto content=cutum::CaptureWorldGenContentSnapshot();
+    auto pack=std::make_shared<cutum::WorldGenPack>(*content.Pack);
+    pack->Id="captured_fixture"; pack->BiomeBlendRadius=37;
+    pack->Caves.Loaded=true; pack->Caves.MaxDepthBelowSurface=77;
+    content.Pack=pack; content.Biomes=pack->BiomeRegistry;
+    size_t global_reloads=0;
+    for(size_t n=0;n<cutum::UWorldGeneratorRegistry::Count();++n) {
+      auto settings=MakeVegetationSettings(); settings.WorldGenProfileVersion=2;
+      settings.Generator=cutum::UWorldGeneratorRegistry::Get(n).Id;
+      settings.WorldGenPackId="default";
+      cutum::WorldGenContext context(world,registry,settings);
+      const auto global_before=cutum::UWorldGenPack::GetSnapshot();
+      cutum::UWorldGenContentPinScope pin(content);
+      auto pipeline=cutum::UProceduralWorldGenFactory::Create(std::move(context));
+      const auto &actual=pipeline->GetProceduralSettings();
+      FluidTest::Expect(actual.Tuning.biomeBlendRadius==37 && actual.Caves.maxDepthBelowSurface==77,
+          kTestName,"all generator factories use captured pack defaults");
+      global_reloads+=cutum::UWorldGenPack::GetSnapshot()!=global_before;
+    }
+    std::cout << "pinned_factory_generators=" << cutum::UWorldGeneratorRegistry::Count()
+        << " global_catalog_reloads=" << global_reloads << std::endl;
+    FluidTest::Expect(global_reloads==0,kTestName,"pinned factory never cold loads or publishes a global catalog");
+    auto settings=MakeVegetationSettings(); settings.Generator=cutum::ProceduralGenerator::Flat;
+    settings.WorldGenPackId=std::string(64*1024,'p');
+    cutum::WorldGenContext context(world,registry,settings);
+    const auto selector=context.Settings.WorldGenPackId.data();
+    auto budget=std::make_shared<cutum::UBufferAllocationBudget>(1);
+    auto peer=std::make_shared<cutum::BufferBudgetJob>(); budget->Reserve(*peer,1);
+    {
+      cutum::UWorldGenContentPinScope pin(content);
+      cutum::UBufferBudgetScope no_selector_credit({budget,std::make_shared<cutum::BufferBudgetJob>()});
+      auto pipeline=cutum::UProceduralWorldGenFactory::Create(std::move(context));
+      FluidTest::Expect(pipeline->GetProceduralSettings().WorldGenPackId.data()==selector &&
+          budget->UsedBytes()==1 && budget->RefusalCount()==0,kTestName,
+          "pinned factory moves caller selector without copying or building unused disk paths");
+    }
+    budget->Release(*peer,1);
+    cutum::UPipelineChunkPopulator populator(registry,nullptr,"minetest_default_16");
+    cutum::ChunkPopulateRequest request; request.chunkCoord={0,0,0}; request.content=content;
+    request.settings=MakeVegetationSettings(); request.settings.Generator=cutum::ProceduralGenerator::Flat;
+    request.settings.WorldGenPackId="default"; request.settings.MinHeight=-48; request.settings.MaxHeight=127;
+    const auto global_before=cutum::UWorldGenPack::GetSnapshot();
+    auto result=populator.Populate(request);
+    const auto scratch=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot();
+    FluidTest::Expect(!result.discarded && result.buffer.GetOwnedAllocationBytes()>0 &&
+        cutum::UWorldGenPack::GetSnapshot()==global_before && scratch.resident_chunks==0 &&
+        scratch.retained_config_text_capacity_bytes==0,kTestName,
+        "actual population cold TLS creation consumes captured catalog without publishing and releases scratch");
+
+    settings.WorldGenPackId="image_demo";
+    cutum::WorldGenContext image_context(world,registry,settings);
+    (void)cutum::UProceduralWorldGenFactory::Create(std::move(image_context));
+    FluidTest::Expect(cutum::UWorldGenPack::GetSnapshot()->Id=="image_demo",kTestName,
+        "unpinned scheduler factory retains explicit pack loading");
+    settings.WorldGenPackId="__missing_factory_fixture__";
+    cutum::WorldGenContext fallback_context(world,registry,settings);
+    (void)cutum::UProceduralWorldGenFactory::Create(std::move(fallback_context));
+    FluidTest::Expect(cutum::UWorldGenPack::GetSnapshot()->Id=="default",kTestName,
+        "unpinned scheduler factory retains missing-pack fallback to default");
+    std::cout << "pinned_factory_long_selector_moved=1 actual_population_no_publication=1 unpinned_load_fallback=1 final="
+        << budget->UsedBytes() << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--population-context-move-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");

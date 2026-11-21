@@ -4,6 +4,18 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E10.pinned-factory-no-catalog-load",
+      "status": "PROPERTY_PASS_PINNED_PRODUCER_CATALOG_AND_PLATFORM_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",
+      "scope": "Populate installs a non-null captured Pack pin before TLS pipeline creation. Factory with a Pack pin uses that catalog and never selects/loads/publishes disk content; selector text is moved as part of owned context without a redundant selector copy/path. Unpinned scheduler factory retains original selector/default/fallback loading. File/JSON/image catalog construction is outside the pinned producer graph and remains an explicit E11 catalog construction/publication obligation."
+    },
+    {
+      "id": "S4.02.LIMIT.Q09.E11.tier-a-warning-owners",
+      "status": "SCOPED_PASS_CATALOG_PAYLOAD_VERSION_COMPOSITION_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-owners-acceptance-20261121.json",
+      "scope": "Replace process-global unordered_set of full missing Tier A names with18 registry-owned bool flags indexed by18 immutable string_view names. Catalog mutex guards each flag; Rebuild resets the epoch. One original full-name diagnostic per canonical Tier A key per registry epoch; no full-name history, cross-registry shared mutable warning storage or membership-table heap. Missing Tier A remains AIR; non-Tier-A synthetic behavior preserved."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E10.selector-mutable-registry-names",
       "status": "SCOPED_PASS_COLD_LOADER_AND_CATALOG_OWNERS_OPEN",
       "receipt": "build/desktop-msvc/s4-selector-mutation-name-acceptance-20261121.json",
