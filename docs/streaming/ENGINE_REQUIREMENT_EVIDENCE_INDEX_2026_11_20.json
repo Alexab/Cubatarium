@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.gpu-enqueue-quota",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-gpu-quota-acceptance-20261121.json",
+      "scope": "Native startup/Flat regression, not native injection of quota boundary. Driver scripts per-frame admission after real worker, not claim runtime organically selects every interleaving. GPU cancellation/eviction/reset/mixed late owners remain Q06-C2; full memory producer envelopes LIMIT-C1."
+    },
+    {
       "id": "S4.02.Q06.gpu-byte-admission",
       "status": "SCOPED_PASS_Q06_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

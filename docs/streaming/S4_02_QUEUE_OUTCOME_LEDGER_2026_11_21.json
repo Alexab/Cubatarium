@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q06-C1",
     "Q06-C2",
     "Q08-C1",
     "Q08-C2",
@@ -195,13 +194,15 @@
     {
       "id": "Q06-C1",
       "queue": "Q06",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "GPU pending admission/slot/byte refusal and extraction failure return demand to actual owner; successor publishes on actual GPU path.",
       "subcases": [
         {
           "id": "Q06-C1.1",
-          "status": "CHECK",
-          "scope": "Actual worker result→pending enqueue frame quota refusal including quiesce owner, and current GPU successor."
+          "status": "REUSE",
+          "scope": "Actual worker result→pending enqueue frame quota refusal including quiesce owner, and current GPU successor.",
+          "evidence": "build/desktop-msvc/s4-gpu-quota-acceptance-20261121.json",
+          "coverage_note": "Native startup/Flat regression, not native injection of quota boundary. Driver scripts per-frame admission after real worker, not claim runtime organically selects every interleaving. GPU cancellation/eviction/reset/mixed late owners remain Q06-C2; full memory producer envelopes LIMIT-C1."
         },
         {
           "id": "Q06-C1.2",
@@ -217,7 +218,9 @@
           "evidence": "build/desktop-msvc/s4-gpu-byte-acceptance-20261121.json",
           "coverage_note": "Native Flat regression API PASS, not native byte fault injection. Driver binds actual pipeline2slots via test adapter, real worker/result/apply/compute/publication. Frame quota Q06-C1.1 remains; cancel/eviction/reset/mixed late owners Q06-C2 and global envelopes LIMIT-C1 remain open."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-gpu-quota-acceptance-20261121.json",
+      "coverage_note": "Composed .1 frame quota/current GPU publication, .2 slot/extraction failure/current CPU fallback, .3 byte refusal/current GPU successor. Typed hard extraction failure intentionally uses canonical CPU recovery rather than retry same oversized GPU section. Q06-C2 mixed lifetime and LIMIT-C1 full envelopes remain open."
     },
     {
       "id": "Q06-C2",
@@ -383,5 +386,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C1.2 slot/extraction and .3 actual GPU pending byte refusal/current GPU successor accepted. .1 enqueue quota remains. Top-level11 CHECK groups unchanged; next Q06-C1.1. Full scope OPEN."
+  "checkpoint": "Q06-C1 all3 subcases accepted. 10 CHECK groups/20 REUSE groups/1 disabled path. Next Q06-C2 GPU pending cancellation/eviction/reset/mixed late-owner lifetimes; reuse exact existing GPU policy/storage evidence, fill only missing debt/current successor/credits cases. Full S4.02/S0..S6 OPEN."
 }

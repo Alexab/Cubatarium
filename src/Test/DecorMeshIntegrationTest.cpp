@@ -1801,6 +1801,111 @@ static void TestGpuPendingByteAdmission(
             << " current=" << current << '\n';
 }
 
+static void TestGpuEnqueueQuotaLifetime(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  for (int mode = 0; mode < 3; ++mode)
+  {
+  UBlockWorld world;
+  world.SetFluidDefinitions(definitions);
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+  world.SetBlock({8, 8, 8}, kStone);
+  const glm::ivec3 root(0);
+  DeferredTestMesher backend;
+  UChunkMeshCache cache;
+  auto settings = MakeFrustumMeshSettings();
+  settings.AsyncMeshing = true;
+  settings.GpuPackedMeshing = true;
+  settings.FrustumCulling = false;
+  settings.Lighting = LightingMode::Flat;
+  cache.SetRenderSettings(settings);
+  cache.SetMesherBackend(&backend);
+  cache.SetMeshRebuildFocus(root, 4, 1);
+  ChunkMeshCaptureAdmissionTestAccess::InitPacked(cache);
+  cache.MarkDirtyPriority(root);
+  UFlatLightingPipeline flat;
+  flat.FillAllLoadedChunks(world);
+  const auto initial_revision = cache.GetChunkMeshRevision(root);
+  const auto *chunk = world.GetChunkManager().GetChunk(root);
+  const auto epoch = cache.GetCaptureStore().WorldEpoch();
+  cache.GetRenderDemandStore().NoteDemand(root, initial_revision, chunk->GetLightFieldRevision(),
+      0, 1.0, epoch, chunk->GetIncarnation());
+  cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+      chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+  const auto prepare = [&]() {
+    flat.FillAllLoadedChunks(world);
+    cache.GetRenderDemandStore().NoteDemand(root, cache.GetChunkMeshRevision(root),
+        chunk->GetLightFieldRevision(), 0, 1.0, epoch, chunk->GetIncarnation());
+    cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+        chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+    Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(cache, world, root,
+        cache.GetChunkMeshRevision(root)).has_value(), "quota fixture captures current input");
+  };
+  const auto schedule = [&]() {
+    prepare();
+    const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 8, false, 0);
+    Expect(tick.Scheduled == 1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+           "quota fixture actual cache worker finishes");
+  };
+  const auto drain = [&]() {
+    cache.DrainAsyncMeshResults(world, registry, 8);
+    for (int n = 0; n < 8 && cache.GetPendingGpuAppliesCount(); ++n)
+    {
+      cache.DrainPendingGpuMeshes(world, registry, 8, 1000);
+      glFinish();
+    }
+  };
+  if (mode != 0)
+  {
+    schedule();
+    drain();
+    Expect(cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+               cache.IsPublishedMeshCurrentForInputs(root, world),
+           "quota fixture has actual current GPU predecessor");
+    world.SetBlock({10, 8, 8}, kStone);
+    cache.MarkDirtyPriority(root);
+  }
+  schedule();
+  const auto revision = cache.GetChunkMeshRevision(root);
+  const auto predecessor = cache.GetPublishCount(root);
+  MeshWorkAdmission zero;
+  zero.enqueue_gpu_budget = 0;
+  cache.SetMeshWorkAdmission(zero);
+  cache.SetEnterLitQuiesce(mode == 2);
+  cache.DrainAsyncMeshResults(world, registry, 8);
+  const bool retained = mode == 0
+      ? cache.GetPendingGpuAppliesCount() == 1
+      : cache.GetPendingGpuAppliesCount() == 0 && !cache.HasInflightMeshBuild(root) &&
+          cache.GetPublishCount(root) == predecessor &&
+          (mode == 2 ? cache.IsRemeshAfterApplyPending(root) : cache.IsChunkMeshDirty(root));
+  Expect(retained && cache.GetChunkMeshRevision(root) == revision,
+         "zero GPU enqueue quota retains remesh debt and allows FirstMesh");
+  cache.SetEnterLitQuiesce(false);
+  MeshWorkAdmission positive;
+  positive.enqueue_gpu_budget = 8;
+  cache.SetMeshWorkAdmission(positive);
+  if (mode != 0)
+  {
+    // Real main tick promotes parked RAA; zero scheduling keeps this boundary observable.
+    cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
+    Expect(cache.IsChunkMeshDirty(root), "quota release exposes executable dirty successor");
+    schedule();
+  }
+  drain();
+  const bool current = cache.GetGpuMeshPipeline()->HasGpuMesh(root) &&
+      cache.IsPublishedMeshCurrentForInputs(root, world) &&
+      cache.GetPublishCount(root) == predecessor + 1 &&
+      !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root) &&
+      cache.GetPendingGpuAppliesCount() == 0;
+  Expect(current, "GPU enqueue quota successor publishes current without new dirty ingress");
+  std::cout << "gpu_enqueue_quota mode=" << mode << " retained=" << retained
+            << " current=" << current << '\n';
+  }
+}
+
 static void TestPackedLightArtifactOwnership(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
@@ -2255,6 +2360,7 @@ TestMaterialVisibilityParity(cutum::UBlockRegistry &registry,
   {
     TestDenseCutoutFallback(state, registry, definitions);
     TestGpuPendingByteAdmission(registry, definitions);
+    TestGpuEnqueueQuotaLifetime(registry, definitions);
     TestPackedLightArtifactOwnership(registry, definitions);
   }
 #endif
