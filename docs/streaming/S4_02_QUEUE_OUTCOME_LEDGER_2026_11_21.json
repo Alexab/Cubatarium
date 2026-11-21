@@ -726,7 +726,8 @@
           "scratch_release_evidence": "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",
           "diagnostic_window_evidence": "build/desktop-msvc/s4-generation-metrics-window-acceptance-20261121.json",
           "queue_storage_evidence": "build/desktop-msvc/s4-generation-queue-storage-acceptance-20261121.json",
-          "control_allocation_evidence": "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json"
+          "control_allocation_evidence": "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
+          "worker_batch_evidence": "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",

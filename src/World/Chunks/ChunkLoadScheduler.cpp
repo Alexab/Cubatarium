@@ -533,6 +533,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
   StartQueuedGenerationWorkers(maxGenerationStartsPerFrame);
 
   std::vector<PendingResult> ready = Completed.DrainAll();
+  TickBatchStorage.count=ready.size();
+  TickBatchStorage.capacity_bytes=ready.capacity()*sizeof(PendingResult);
+  TickBatchStorage.peak_capacity_bytes=std::max(TickBatchStorage.peak_capacity_bytes,
+      TickBatchStorage.capacity_bytes);
   // During intentional movement, use the actual drained batch rather than a
   // racy queue snapshot taken by WorldStreaming before Tick. Bound both the
   // result count and synchronous ApplyTo + MarkDirty time; one commit may

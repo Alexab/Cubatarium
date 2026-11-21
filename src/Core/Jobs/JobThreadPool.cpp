@@ -3,9 +3,39 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include <algorithm>
 #include <thread>
+#if defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 namespace cutum
 {
+
+UJobThreadPool::StackStorageSnapshot UJobThreadPool::GetCurrentThreadStackStorage()
+{
+  StackStorageSnapshot result;
+#if defined(_WIN32)
+  unsigned char marker=0;
+  MEMORY_BASIC_INFORMATION region{};
+  if(!VirtualQuery(&marker,&region,sizeof(region))) return result;
+  const auto base=region.AllocationBase;
+  auto cursor=reinterpret_cast<uintptr_t>(base);
+  for(;;) {
+    if(!VirtualQuery(reinterpret_cast<void *>(cursor),&region,sizeof(region))) return result;
+    if(region.AllocationBase!=base) { result.observed=true; return result; }
+    if(region.State==MEM_RESERVE || region.State==MEM_COMMIT)
+      result.reservation_bytes+=region.RegionSize;
+    if(region.State==MEM_COMMIT) result.committed_bytes+=region.RegionSize;
+    const auto next=reinterpret_cast<uintptr_t>(region.BaseAddress)+region.RegionSize;
+    if(next<=cursor) return result;
+    cursor=next;
+  }
+#else
+  return result;
+#endif
+}
 
 UJobThreadPool::UJobThreadPool(std::size_t threadCount,
                                const char *worker_job_kind)

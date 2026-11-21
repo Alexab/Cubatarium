@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 LIMIT.Q09: full callable/result/work/buffer-job shared control allocations counted with safe allocator lifetime; actual refusal/reset release0 and Ready8=16nodes/704bytes accepted. Next finish platform root/dispatch/worker/Tick-batch envelope, then active scratch/retained pipeline configuration/upstream overhead using existing profile/content dependencies. Reuse prior count/lifetime/buffer/settings/metadata/diagnostic/queue receipts; no audit restart. Other LIMIT groups, ecology fixture FAIL and full S0..S6 remain OPEN.",
+  "next_action": "S4.02 LIMIT.Q09: actual generation4 workers,64 thread-object bytes/4MiB native stack reservation observed; Tick8 metadata2496bytes (queue+batch4992) accepted, point committed sample explicitly not peak/RSS. Next remaining original envelope: active heap scratch/retained pipeline configuration, platform root/dispatch/CRT/TLS/upstream bookkeeping; reuse count/control/queue/buffer/settings/metadata/diagnostic receipts. No new audit or whole-process cap claim. Other LIMIT groups, ecology fixture FAIL and full S0..S6 remain OPEN.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

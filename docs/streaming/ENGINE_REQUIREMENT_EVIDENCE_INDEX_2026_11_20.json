@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.worker-stack-tick-batch",
+      "status": "SCOPED_PASS_ACTIVE_HEAP_PLATFORM_OVERHEAD_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json",
+      "scope": "Owner-thread pool worker vector reports actual capacity*sizeof(std::thread). Calling-thread Windows VirtualQuery walks all regions with the stack AllocationBase; reservation includes committed+reserved portions, committed bytes are sampled at barrier only. Native barrier occupies all actual generation workers simultaneously, one observation per worker; existing generation cap4 and worker/vector stability checked through64 cohorts. Tick stores historical last/peak drained vector capacity*sizeof(PendingResult), not current live memory after Tick returns."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.callable-control-allocation",
       "status": "SCOPED_PASS_PLATFORM_SCRATCH_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",

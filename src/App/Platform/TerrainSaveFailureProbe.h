@@ -33,6 +33,7 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Core/FrameDeadline.h"
+#include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include <filesystem>
 #include <atomic>
@@ -2547,15 +2548,30 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         std::promise<void> entered,release;
         auto entered_future=entered.get_future(); auto release_future=release.get_future().share();
         std::atomic<size_t> entered_count{0}; const auto workers=scheduler.Pool.GetWorkerCount();
+        const auto worker_storage=scheduler.Pool.GetWorkerStorageSnapshot();
+        std::vector<UJobThreadPool::StackStorageSnapshot> worker_stacks(workers);
         struct ReleasePool { std::promise<void> &p; UJobThreadPool &pool; bool done{false};
           void Release(){if(!done){p.set_value();done=true;}}
           ~ReleasePool(){Release();pool.WaitIdleFor(std::chrono::seconds(5));}
         } release_guard{release,scheduler.Pool};
-        for(size_t n=0;n<workers;++n) scheduler.Pool.Enqueue([&] {
+        for(size_t n=0;n<workers;++n) scheduler.Pool.Enqueue([&,n] {
+          worker_stacks[n]=UJobThreadPool::GetCurrentThreadStackStorage();
           if(++entered_count==workers) entered.set_value(); release_future.wait();
         });
         require(entered_future.wait_for(std::chrono::seconds(5))==std::future_status::ready,
             "generation pressure probe controls actual worker scheduling");
+        bool stacks_observed=true; size_t stack_reservation=0,stack_commit_sample=0;
+        for(const auto &stack:worker_stacks) {
+          stacks_observed=stacks_observed && stack.observed && stack.reservation_bytes>0 &&
+              stack.committed_bytes>0 && stack.committed_bytes<=stack.reservation_bytes;
+          stack_reservation+=stack.reservation_bytes; stack_commit_sample+=stack.committed_bytes;
+        }
+        report["generation_worker_storage"]={{"workers",workers},{"thread_slots",worker_storage.thread_slots},
+            {"thread_object_bytes",worker_storage.thread_bytes},{"all_stack_allocations_observed",stacks_observed},
+            {"stack_reservation_bytes",stack_reservation},{"stack_committed_bytes_at_barrier",stack_commit_sample}};
+        require(stacks_observed && workers>0 && workers<=kMaxWorkersPerPool &&
+            worker_storage.workers==workers && worker_storage.thread_slots>=workers,
+            "actual generation pool worker vector and every native stack reservation accounted");
         scheduler.Pool.SetMaxPendingJobCount(1); scheduler.Pool.Enqueue([]{});
         const bool pool_refused=scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(target)==ChunkLoadState::Requested && populator.calls==0 &&
@@ -2607,6 +2623,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             scheduler.GetState(next)==ChunkLoadState::Requested &&
             scheduler.GetAvailableGenerationWorkerSlots()==0 && credits.WorkSlotsInUse()==0;
         scheduler.Tick(terrain,0,64);
+        const auto full_tick_batch=scheduler.GetTickBatchStorageSnapshot();
         const bool held=scheduler.GetRetainedGenerationResultCount()==8 && scheduler.GetCompletedReadyCount()==8;
         const bool payload_held=ready_payload_before>=8*CHUNK_VOLUME &&
             scheduler.GetCompletedReadyPayloadBytes()==ready_payload_before;
@@ -2653,6 +2670,16 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               scheduler.GetControlAllocationSnapshot().live_bytes==0;
         }
         const auto pool_storage=scheduler.Pool.GetQueueAllocationSnapshot();
+        const auto tick_batch=scheduler.GetTickBatchStorageSnapshot();
+        const auto current_workers=scheduler.Pool.GetWorkerStorageSnapshot();
+        report["generation_tick_batch_storage"]={{"full_batch_count",full_tick_batch.count},
+            {"full_batch_capacity_bytes",full_tick_batch.capacity_bytes},
+            {"peak_capacity_bytes",tick_batch.peak_capacity_bytes},
+            {"queue_plus_full_batch_bytes",empty_completion.bytes+full_tick_batch.capacity_bytes}};
+        require(full_tick_batch.count==8 && full_tick_batch.capacity_bytes==8*sizeof(UChunkLoadScheduler::PendingResult) &&
+            tick_batch.peak_capacity_bytes<=8*sizeof(UChunkLoadScheduler::PendingResult) &&
+            current_workers.workers==worker_storage.workers && current_workers.thread_bytes==worker_storage.thread_bytes,
+            "Tick transfer metadata and fixed worker storage stay bounded through repeated cohorts");
         const auto control_storage=scheduler.GetControlAllocationSnapshot();
         report["generation_queue_storage"]={{"cohorts",64},{"per_result_inline_bytes",sizeof(UChunkLoadScheduler::PendingResult)},
             {"completion_slots",empty_completion.slots},{"completion_capacity_bytes",empty_completion.bytes},

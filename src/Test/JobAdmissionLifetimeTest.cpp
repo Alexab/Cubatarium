@@ -60,16 +60,28 @@ int main()
   check(!admission.TryAcquireSnapshotBytes(std::numeric_limits<size_t>::max()),
         "overflow cannot bypass cap");
   UJobThreadPool pool(1);
+  UJobThreadPool::StackStorageSnapshot worker_stack;
   pool.SetMaxPendingJobCount(1);
   std::promise<void> started, unblock;
   auto gate = unblock.get_future().share();
   pool.Enqueue(
       [&]
       {
+        worker_stack=UJobThreadPool::GetCurrentThreadStackStorage();
         started.set_value();
         gate.wait();
       });
   started.get_future().wait();
+  const auto worker_storage=pool.GetWorkerStorageSnapshot();
+  check(worker_storage.workers==1 && worker_storage.thread_slots>=1 &&
+      worker_storage.thread_bytes==worker_storage.thread_slots*sizeof(std::thread),
+      "worker object capacity is measured separately from native stack");
+#if defined(_WIN32)
+  check(worker_stack.observed && worker_stack.reservation_bytes>0 && worker_stack.committed_bytes>0 &&
+      worker_stack.committed_bytes<=worker_stack.reservation_bytes,"actual Windows worker stack allocation observed");
+#else
+  check(!worker_stack.observed,"unsupported stack observation stays explicit");
+#endif
   auto lease = std::make_shared<UPipelineCreditGuard>(
       PipelineCreditKind::Snapshot, 64, true);
   check(pool.TryEnqueue([lease] {}), "queued lease");

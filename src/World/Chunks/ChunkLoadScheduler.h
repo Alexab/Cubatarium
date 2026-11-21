@@ -48,6 +48,8 @@ public:
   size_t BufferBudgetLimit() const { return BufferBudget->LimitBytes(); }
   UAllocationCountingResource::Snapshot GetControlAllocationSnapshot() const
   { return ControlMemory->GetSnapshot(); }
+  struct TickBatchStorageSnapshot { size_t count{0},capacity_bytes{0},peak_capacity_bytes{0}; };
+  TickBatchStorageSnapshot GetTickBatchStorageSnapshot() const { return TickBatchStorage; }
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
   size_t MetadataCount() const { return States.size(); }
@@ -223,6 +225,7 @@ private:
   uint64_t NextRequestQueueRevision{1};
   uint64_t CapacityRefused{0};
   double LastTickApplyMs{0.0};
+  TickBatchStorageSnapshot TickBatchStorage;
   int LastCommitsThisFrame{0};
 };
 

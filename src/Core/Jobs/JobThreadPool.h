@@ -34,6 +34,16 @@ struct JobThreadPoolSnapshot
 class UJobThreadPool
 {
 public:
+  struct WorkerStorageSnapshot { size_t workers{0},thread_slots{0},thread_bytes{0}; };
+  struct StackStorageSnapshot { bool observed{false}; size_t reservation_bytes{0},committed_bytes{0}; };
+  // Calling thread's native stack allocation. Committed bytes are a point
+  // sample, not maximum stack usage or a process-memory measurement.
+  static StackStorageSnapshot GetCurrentThreadStackStorage();
+  WorkerStorageSnapshot GetWorkerStorageSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    return {Workers.size(),Workers.capacity(),Workers.capacity()*sizeof(std::thread)};
+  }
   explicit UJobThreadPool(std::size_t threadCount = 0,
                           const char *worker_job_kind = "Worker");
   ~UJobThreadPool();
