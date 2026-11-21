@@ -522,8 +522,16 @@ ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThr
 {
   auto &tls=GetThreadLocalPipeline();
   auto *composable=dynamic_cast<UComposableWorldGenerator *>(tls.pipeline.get());
+  size_t seed_text_bytes=0;
+  if(composable) {
+    const auto &text=composable->GetContext().Settings.SeedText;
+    const auto data=reinterpret_cast<uintptr_t>(text.data());
+    const auto object=reinterpret_cast<uintptr_t>(&text);
+    if(data<object || data-object>=sizeof(text)) seed_text_bytes=text.capacity()+1;
+    seed_text_bytes+=composable->GetRetainedSampleSeedTextCapacityBytes();
+  }
   return {tls.world.GetChunkManager().GetResidentChunkCount(),
-      composable && composable->GetChunkCoarseCache()!=nullptr};
+      composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes};
 }
 
 ChunkPopulateResult
@@ -573,7 +581,12 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     UBlockWorld &world;
     UComposableWorldGenerator *pipeline;
     ~ReleasePopulationScratch() {
-      if(pipeline) pipeline->EndChunkCoarseCache();
+      if(pipeline) {
+        pipeline->EndChunkCoarseCache();
+        // Refresh restores the immutable request settings before next use.
+        // Runtime generation only needs the resolved numeric seed.
+        std::string{}.swap(pipeline->GetContext().Settings.SeedText);
+      }
       world.GetChunkManager().Clear();
     }
   } release_scratch{genWorld,composable};

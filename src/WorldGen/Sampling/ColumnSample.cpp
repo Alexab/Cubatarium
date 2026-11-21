@@ -39,6 +39,16 @@ UColumnSampleBuilder::UColumnSampleBuilder(
     : HeightSampler(height_sampler), BiomeSampler(biome_sampler),
       Settings(settings), BiomeSource(biome_source)
 {
+  // Sampling uses resolved numeric seed and terrain settings. Preserve their
+  // value snapshot, but do not retain arbitrary user-facing seed text.
+  std::string{}.swap(Settings.SeedText);
+}
+
+size_t UColumnSampleBuilder::GetRetainedSeedTextCapacityBytes() const
+{
+  const auto data=reinterpret_cast<uintptr_t>(Settings.SeedText.data());
+  const auto object=reinterpret_cast<uintptr_t>(&Settings.SeedText);
+  return data>=object && data-object<sizeof(Settings.SeedText) ? 0 : Settings.SeedText.capacity()+1;
 }
 
 ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const

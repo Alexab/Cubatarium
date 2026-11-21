@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.retained-seed-text",
+      "status": "SCOPED_PASS_CONFIGURATION_PEAK_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-retained-settings-acceptance-20261121.json",
+      "scope": "Column sample builder retains its full numerical/tuning value snapshot but removes display-only SeedText from its private copy. Population-scope cleanup releases TLS context SeedText after capture/cache lifetime on normal/cancel/quota-unwind exits. Next same-key Refresh restores full immutable request settings before use. Public caller/persistence settings and resolved numeric Seed remain unchanged. Diagnostic sums external seed-text character capacities in context and sample builder."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.worker-stack-tick-batch",
       "status": "SCOPED_PASS_ACTIVE_HEAP_PLATFORM_OVERHEAD_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-worker-batch-acceptance-20261121.json",

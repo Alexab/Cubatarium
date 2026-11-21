@@ -77,6 +77,8 @@ public:
     return AquiferSampler.has_value() ? &*AquiferSampler : nullptr;
   }
   WorldGenContext &GetContext() { return Ctx; }
+  size_t GetRetainedSampleSeedTextCapacityBytes() const
+  { return SampleBuilder ? SampleBuilder->GetRetainedSeedTextCapacityBytes() : 0; }
 
   /// Install chunk-local CoarseSurfaceY memo for blend/coast lookups.
   void BeginChunkCoarseCache(int base_x, int base_z, int pad);

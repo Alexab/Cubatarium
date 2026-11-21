@@ -3,6 +3,14 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "thread-local-pipeline-registry-owner-not-in-cache-key",
+      "stage": "S4.02",
+      "status": "OPEN_SOURCE_SUSPICION_NOT_REPRODUCED",
+      "observed": "During existing Q09 retained-context inspection: EnsureThreadLocalPipeline key includes settings/prefabs but not registry identity. Cached WorldGenContext owns Registry reference; RefreshThreadLocalPipelineContext receives registry argument but does not rebind that reference. Same key/prefabs after registry replacement may reuse old registry. Not asserted as observed native failure.",
+      "evidence": "src/WorldGen/Core/PipelineChunkPopulator.cpp:PipelineSettingsKey/EnsureThreadLocalPipeline/RefreshThreadLocalPipelineContext; src/WorldGen/Core/WorldGenContext.h:Registry",
+      "next_action": "Address in existing owner/incarnation lifecycle verification with controlled same-settings/same-prefabs registry replacement; one targeted reproduction before any fix. Do not divert current memory package or restart audit."
+    },
+    {
       "id": "population-diagnostic-sample-history-unbounded",
       "stage": "S4.02.LIMIT.Q09",
       "status": "SCOPED_PASS_Q09_OPEN",

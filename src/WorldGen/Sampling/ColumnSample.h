@@ -40,6 +40,7 @@ public:
                        const IWorldGenBiomeSource *biome_source = nullptr);
 
   ColumnSampleContext Build(int world_x, int world_z) const;
+  size_t GetRetainedSeedTextCapacityBytes() const;
 
 private:
   const UOverworldHeightSampler *HeightSampler;
