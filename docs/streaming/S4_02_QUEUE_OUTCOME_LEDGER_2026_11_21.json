@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q10-C2",
     "Q12-C1",
     "Q01-C1",
     "LIMIT-C1"
@@ -512,8 +511,30 @@
     {
       "id": "Q10-C2",
       "queue": "Q10",
-      "status": "CHECK",
-      "required_result": "Save admission/completion failure or stale snapshot cannot clear newer dirty-save; unload/world-switch respects pending save ownership; cold read proves latest mutation. Fatal/menu/relocation remains S4.06."
+      "status": "REUSE",
+      "required_result": "Save admission/completion failure or stale snapshot cannot clear newer dirty-save; unload/world-switch respects pending save ownership; cold read proves latest mutation. Fatal/menu/relocation remains S4.06.",
+      "subcases": [
+        {
+          "id": "Q10-C2.ADMISSION",
+          "status": "REUSE",
+          "evidence": "build/desktop-msvc/s4-save-owner-acceptance-20261121.json",
+          "scope": "Actual current missing-dependency/incomplete/unresolved/pending-save/duplicate admission preserves dirty until real writer ACK and exact cold latest."
+        },
+        {
+          "id": "Q10-C2.FAILURE_STALE",
+          "status": "REUSE",
+          "evidence": "build/desktop-msvc/s4-save-owner-reuse-20261121.json",
+          "scope": "Actual historical sync/async failure/retry and newer edit invalidates ACK, dirty/new cold data preserved; producer/ACK/stamp/codec exact current source match."
+        },
+        {
+          "id": "Q10-C2.ABORT_SWITCH",
+          "status": "REUSE",
+          "evidence": "build/desktop-msvc/s4-save-owner-reuse-20261121.json",
+          "scope": "Actual historical old-folder ACK/index, abort retaining immutable writes, snapshot/cooperative/timeout/save-before-operation fences and cold latest. Current exact save dispatch/helper/runner source matched; temporary resume retention separately Q08/Q11, not whole-current-EXE/UI acceptance."
+        }
+      ],
+      "evidence": "build/desktop-msvc/s4-save-owner-acceptance-20261121.json",
+      "coverage_note": "Current actual save admission/held writer/ACK/cold latest data plus property-specific historical write failure/stale ACK/unload/folder switch/writer-fence/timeout native reuse. Historical EXE is explicitly historical; exact16 current save method/dispatch regions and6 complete dependency files plus native save suffix verified. Current resume/temporary retention changes separately current-proven Q08/Q11; no current whole-EXE cooperative UI/physics concurrency claim. Marker/dependency/unresolved adapters explicit; legacy enqueue capacity LIMIT-C1. Autosave scheduling/silent transient recovery/fatal menu/full transactional relocation remain S4.06, backend/framebuffer/performance/full memory original stages. Full S0..S6 OPEN."
     },
     {
       "id": "Q11-C1",
@@ -684,5 +705,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q10-C1 all4 load subcases accepted. Next Q10-C2 save ownership/outcomes. Top-level4 CHECK; full scope OPEN."
+  "checkpoint": "Q10-C2 save ownership accepted by current admission+exact historical property reuse. Next Q12-C1 face-repair lifecycle. Top-level3 CHECK; full scope OPEN."
 }

@@ -1983,6 +1983,74 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               {"current_decoded",current_decoded},{"peer_decoded",peer_decoded},{"current_successor",successor}});
           require(successor,"actual current load recovers after exact AIR retirement/radius/abort/world replacement");
         }
+        // Save admission shares this actual complete, locally edited terrain.
+        auto save_registry=std::move(load_world.BlockRegistry);
+        const bool dependency_refused=!persistence.RequestAsyncTerrainColumnSave(load_world,column) &&
+            persistence.PendingAsyncColumnSaveSlices.empty() && load_world.ModifiedChunks.count(lower)==1;
+        load_world.BlockRegistry=std::move(save_registry);
+        auto &save_storage=persistence.GetChunkStorage();
+        save_storage.MarkColumnSavePending(column);
+        const bool save_pending_refused=!persistence.RequestAsyncTerrainColumnSave(load_world,column) &&
+            persistence.PendingAsyncColumnSaveSlices.empty() && save_storage.IsColumnSavePending(column) &&
+            load_world.ModifiedChunks.count(lower)==1;
+        save_storage.ClearColumnSavePending(column);
+        auto incomplete=std::make_unique<UWorld>(nullptr,nullptr);
+        incomplete->ProceduralTemplate.MinHeight=-64; incomplete->ProceduralTemplate.MaxHeight=319;
+        incomplete->BlockWorld.SetVerticalProfile({-64,319,63});
+        incomplete->BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        incomplete->BlockWorld.SetBlock({1,-64,1},8); incomplete->ModifiedChunks.insert(lower);
+        incomplete->SetWorldFolderPath((root/"save-admission-incomplete").string());
+        incomplete->Persistence->EnsureChunkIoInitialized();
+        const bool incomplete_refused=!incomplete->Persistence->RequestAsyncTerrainColumnSave(*incomplete,column) &&
+            incomplete->Persistence->PendingAsyncColumnSaveSlices.empty() && incomplete->ModifiedChunks.count(lower)==1 &&
+            !incomplete->Persistence->GetChunkStorage().IsColumnSavePending(column);
+        const glm::ivec3 latest(3,-63,1);
+        load_world.BlockWorld.SetBlock(latest,8); load_world.ModifiedChunks.insert(lower);
+        load_world.BlockWorld.GetChunkManager().MarkTerrainColumnReadUnresolved(column);
+        const bool unresolved_refused=!persistence.RequestAsyncTerrainColumnSave(load_world,column) &&
+            persistence.PendingAsyncColumnSaveSlices.empty() && load_world.ModifiedChunks.count(lower)==1;
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,100101);
+        const auto resolved_by=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+        while(persistence.IsTerrainColumnDiskLoadPending(column)) {
+          persistence.TickAsyncChunkIo(load_world,1,0);
+          require(std::chrono::steady_clock::now()<resolved_by,"save admission read-fault recovery bound");
+          std::this_thread::yield();
+        }
+        const bool resolved=!load_world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(column) &&
+            load_world.BlockWorld.GetBlock(latest)==8 && load_world.BlockWorld.GetBlock(edit)==BLOCK_AIR;
+        auto save_gate=std::make_shared<AsyncSaveWriteProbeGate>();
+        struct ReleaseSaveAdmissionGate {
+          std::shared_ptr<AsyncSaveWriteProbeGate> gate;
+          ~ReleaseSaveAdmissionGate() { gate->released.store(true); }
+        } save_release{save_gate};
+        persistence.AsyncChunkIo->SaveWriteProbeGate=save_gate;
+        const bool enqueue_not_acknowledged=!persistence.TrySaveTerrainColumnForUnload(load_world,column) &&
+            save_storage.IsColumnSavePending(column) && load_world.ModifiedChunks.count(lower)==1;
+        const auto save_entered_by=std::chrono::steady_clock::now()+std::chrono::seconds(3);
+        while(!save_gate->entered.load() && std::chrono::steady_clock::now()<save_entered_by) std::this_thread::yield();
+        require(save_gate->entered.load(),"actual save writer held before duplicate admission");
+        const auto batch=persistence.PendingAsyncColumnSaveSlices.at(column).BatchId();
+        const bool save_duplicate_preserved=!persistence.RequestAsyncTerrainColumnSave(load_world,column) &&
+            persistence.PendingAsyncColumnSaveSlices.at(column).BatchId()==batch &&
+            save_storage.IsColumnSavePending(column) && load_world.ModifiedChunks.count(lower)==1;
+        save_gate->released.store(true); persistence.AsyncChunkIo->SaveWriteProbeGate.reset();
+        const auto saved_by=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+        while(save_storage.IsColumnSavePending(column)) {
+          persistence.TickAsyncChunkIo(load_world,32,6.0);
+          require(std::chrono::steady_clock::now()<saved_by,"actual save admission ACK completes");
+          std::this_thread::yield();
+        }
+        const bool acknowledged=persistence.TrySaveTerrainColumnForUnload(load_world,column) && load_world.ModifiedChunks.empty();
+        auto cold=std::make_unique<UBlockWorld>(); cold->SetVerticalProfile({-64,319,63});
+        const bool cold_latest=save_storage.LoadTerrainColumn(column,*cold,folder.string(),*load_world.BlockRegistry,319,-64)>0 &&
+            cold->GetBlock(latest)==8 && cold->GetBlock(edit)==BLOCK_AIR;
+        report["disk_save_admission"]={{"dependency_refused",dependency_refused},{"save_pending_refused",save_pending_refused},
+            {"incomplete_refused",incomplete_refused},{"unresolved_refused",unresolved_refused},{"resolved_current",resolved},
+            {"enqueue_not_acknowledged",enqueue_not_acknowledged},{"duplicate_preserved",save_duplicate_preserved},
+            {"acknowledged",acknowledged},{"cold_latest",cold_latest}};
+        require(dependency_refused && save_pending_refused && incomplete_refused && unresolved_refused && resolved &&
+            enqueue_not_acknowledged && save_duplicate_preserved && acknowledged && cold_latest,
+            "save admission preserves dirty owner through refusal/duplicate until real ACK and cold latest data");
       });
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

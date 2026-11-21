@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q10.save-ownership-current-admission-and-reuse",
+      "status": "SCOPED_PASS_Q10_C2_CLOSED_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-save-owner-acceptance-20261121.json",
+      "scope": "Current actual save admission/held writer/ACK/cold latest data plus property-specific historical write failure/stale ACK/unload/folder switch/writer-fence/timeout native reuse. Historical EXE is explicitly historical; exact16 current save method/dispatch regions and6 complete dependency files plus native save suffix verified. Current resume/temporary retention changes separately current-proven Q08/Q11; no current whole-EXE cooperative UI/physics concurrency claim. Marker/dependency/unresolved adapters explicit; legacy enqueue capacity LIMIT-C1. Autosave scheduling/silent transient recovery/fatal menu/full transactional relocation remain S4.06, backend/framebuffer/performance/full memory original stages. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q10.load-outside-reset-air-and-closure",
       "status": "SCOPED_PASS_Q10_C1_CLOSED_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
