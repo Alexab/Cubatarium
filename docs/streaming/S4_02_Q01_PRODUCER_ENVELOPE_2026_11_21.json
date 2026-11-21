@@ -1,0 +1,459 @@
+{
+  "schema": "s4-q01-producer-envelope.v1",
+  "status": "OPEN",
+  "scope": "Existing LIMIT-C1.Q01 only; records identified production ingress, not a new S0..S6 audit or proof all producer branches executed.",
+  "source_files": [
+    {
+      "path": "src/World/Core/World.cpp",
+      "sha256": "ca8c6c500ab756517184a21183d112900dde500618f145fc97ca17c96fc713e1"
+    },
+    {
+      "path": "src/World/Core/MarkRelitInstall.cpp",
+      "sha256": "918d08dda5311dc0608069381509c650de8a3e3499b9304b28fad052bb8b71b1"
+    },
+    {
+      "path": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "sha256": "e5e708403689415c4bc0f889155ad7f0c6cce9a6dadc34c21a300f9ffc1e7b07"
+    },
+    {
+      "path": "src/World/Streaming/WorldStreaming.cpp",
+      "sha256": "f681590aa9b433c0cf32b3072e12e470a43e361357e54be87f34dfca62628714"
+    },
+    {
+      "path": "src/World/Persistence/WorldPersistence.cpp",
+      "sha256": "35f59d69b6c168b38e713c04a6562d81ffe05dea1b53d5b48801a272eec77d0d"
+    },
+    {
+      "path": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "sha256": "90c302ba3cb992d1e5e5b2b745ba472ff958cb5ba172b12d10004cced354a70e"
+    }
+  ],
+  "identified_ingress_sites": [
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 9218,
+      "statement": "GetColumnFlowExecutor().Enqueue(key,\n                                            ColumnWorkKind::RelightThenMesh,\n                                            /*priority=*/80);"
+    },
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 13744,
+      "statement": "GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,\n                                      /*priority=*/100);\n    }"
+    },
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 13799,
+      "statement": "GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,\n                                      /*priority=*/80);\n      EnqueueVoidDarkColumnRelightNote(col);"
+    },
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 14035,
+      "statement": "GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::RelightThenMesh,\n                                      /*priority=*/80);\n      // OpenSky inject is a light delta — remesh via ColumnFlow (not direct"
+    },
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 14042,
+      "statement": "GetColumnFlowExecutor().Enqueue(col, ColumnWorkKind::FirstMesh,\n                                        /*priority=*/85);\n      }"
+    },
+    {
+      "file": "src/World/Core/World.cpp",
+      "line": 15598,
+      "statement": "GetColumnFlowExecutor().Enqueue(item);\n    }\n  }"
+    },
+    {
+      "file": "src/World/Core/MarkRelitInstall.cpp",
+      "line": 565,
+      "statement": "GetColumnFlowExecutor().Enqueue(fm_col, ColumnWorkKind::FirstMesh,\n                                    /*priority=*/70);\n    ++PhysicsTelemetryData.MarkRelitEnqueueFirstMeshN;"
+    },
+    {
+      "file": "src/World/Core/MarkRelitInstall.cpp",
+      "line": 1213,
+      "statement": "GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::FirstMesh,\n                                      /*priority=*/65);\n    }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 160,
+      "statement": "GetColumnFlowExecutor().Enqueue(item);\n}"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 826,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                     ColumnWorkKind::FirstMesh, 40 + admit_n);\n        note_column_flow_drain(4, admit_n);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1584,
+      "statement": "exec.Enqueue(item);\n        }\n        if (allow_own && !stable_face_debt)"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1637,
+      "statement": "exec.Enqueue(relight);\n            }\n            if (phys_telem.DarkFaceVoidNearN > 200 &&"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1670,
+      "statement": "exec.Enqueue(item);\n            if (!age_drain_done)\n            {"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1838,
+      "statement": "exec_uf.Enqueue(pin);\n        note_column_flow_drain(2, 1);\n      }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1910,
+      "statement": "exec.Enqueue(pin);\n        SoftDeferEmptyOwned.insert(stuck);\n        SoftDeferEmptyAgeFrames[stuck] = 0;"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 1930,
+      "statement": "exec.Enqueue(pin);\n    SoftDeferEmptyOwned.insert(stuck);\n    note_column_flow_drain(2, 2);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 2056,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                 ColumnWorkKind::FirstMesh, 110);\n  }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 2119,
+      "statement": "GetColumnFlowExecutor().Enqueue(uf, ColumnWorkKind::FirstMesh, 120);\n    }\n  }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3288,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                 ColumnWorkKind::FirstMesh, 80);\n    // Audit16 R1: also ticket SoftDefer empty-stuck witness so rim holes get"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3297,
+      "statement": "exec.Enqueue(\n          glm::ivec2(pt_cu.SoftDeferEmptyStuckCx, pt_cu.SoftDeferEmptyStuckCz),\n          ColumnWorkKind::FirstMesh, 85);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3571,
+      "statement": "exec.Enqueue(focus_xz, ColumnWorkKind::RelightThenMesh, relight_prio);\n        }\n      }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3645,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                     ColumnWorkKind::FirstMesh, 80);\n      }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3655,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                   ColumnWorkKind::FirstMesh, 60);\n    }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3671,
+      "statement": "exec.Enqueue(glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n                     ColumnWorkKind::FirstMesh, 40);\n        note_column_flow_drain(sticky_sync, 1);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3738,
+      "statement": "GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),\n                                        ColumnWorkKind::FirstMesh, 110);\n      }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3881,
+      "statement": "GetColumnFlowExecutor().Enqueue(glm::ivec2(coord.x, coord.z),\n                                              ColumnWorkKind::PromoteRelight,\n                                              100);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 3886,
+      "statement": "GetColumnFlowExecutor().Enqueue(glm::ivec2(coord.x, coord.z),\n                                            ColumnWorkKind::FirstMesh, 110);\n            mesh_service.MarkMissingSlicesDirtyPriority("
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4083,
+      "statement": "exec.Enqueue(glm::ivec2(hole.x, hole.z), ColumnWorkKind::FirstMesh,\n                       70 + ingress.first_mesh_admit * 10);\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4094,
+      "statement": "exec.Enqueue(hole_xz, ColumnWorkKind::FirstMesh, 85);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4130,
+      "statement": "exec.Enqueue(glm::ivec2(hole.x, hole.z),\n                           ColumnWorkKind::FirstMesh, 75);\n            }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4151,
+      "statement": "exec.Enqueue(glm::ivec2(neighbor.x, neighbor.z),\n                                 ColumnWorkKind::FirstMesh, 65);\n                  }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4385,
+      "statement": "GetColumnFlowExecutor().Enqueue(glm::ivec2(hole.x, hole.z),\n                                      ColumnWorkKind::FirstMesh, 100);\n      note_column_flow_drain(1, 1);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4723,
+      "statement": "exec.Enqueue(escalate);\n          ++world.GetPhysicsTelemetryMutable().MissSlaKickN;\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4736,
+      "statement": "exec.Enqueue(hole_work);\n        }\n        exec.RequestPromoteRelight(hole_col, /*priority=*/55);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4748,
+      "statement": "exec.Enqueue(hole);\n      }\n    }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4799,
+      "statement": "exec.Enqueue(tail_scan);\n      note_column_flow_drain(5, 4);\n    }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4811,
+      "statement": "exec.Enqueue(focus_scan);\n      FocusScanCd =\n          (far_rim_force_scan || adm.mode == MeshWorkAdmission::Mode::Normal)"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4874,
+      "statement": "exec.Enqueue(xfer);\n          }\n          return;"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4891,
+      "statement": "exec.Enqueue(miss_xz, ColumnWorkKind::RelightThenMesh,\n                           first_mesh_prio);\n            }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4909,
+      "statement": "exec.Enqueue(xfer);\n            }\n            return;"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4918,
+      "statement": "exec.Enqueue(miss_xz, ColumnWorkKind::FirstMesh, first_mesh_prio);\n        }\n        return;"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4935,
+      "statement": "exec.Enqueue(xfer);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4949,
+      "statement": "exec.Enqueue(xfer);\n      }\n      // Ticket-only without Dirty is incomplete ownership — transfer to Dirty."
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 4966,
+      "statement": "exec.Enqueue(xfer);\n      }\n    };"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5065,
+      "statement": "exec.Enqueue(owned);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5097,
+      "statement": "exec.Enqueue(renew);\n        }\n        // I9-D1: nh≤1 stuck miss — pin when age>60 frames without owner."
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5141,
+      "statement": "exec.Enqueue(pin);\n          }\n          if (queued_stuck || kicked_stuck)"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5165,
+      "statement": "exec.Enqueue(owned);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5222,
+      "statement": "exec.Enqueue(fm);\n              }\n            }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5268,
+      "statement": "exec.Enqueue(fm);\n              note_column_flow_drain(2, 1);\n            }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5288,
+      "statement": "exec.Enqueue(fm);\n              note_column_flow_drain(2, 1);\n              mesh_service.SetFmDirtyEnqueueReserve(1);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5353,
+      "statement": "exec.Enqueue(rim_pin);\n              note_column_flow_drain(2, 1);\n            }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5446,
+      "statement": "exec.Enqueue(heal_scan);\n          note_column_flow_drain(3, 3);\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5464,
+      "statement": "exec.Enqueue(pin);\n          if (stop_tail_ownership_mode)\n          {"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5543,
+      "statement": "exec.Enqueue(focus_scan);\n    note_column_flow_drain(moving ? 2 : 3, moving ? 2 : 3);\n  }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 5640,
+      "statement": "GetColumnFlowExecutor().Enqueue(\n        glm::ivec2(focus_ground_horiz.x, focus_ground_horiz.z),\n        ColumnWorkKind::FirstMesh, 105);"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 6408,
+      "statement": "exec.Enqueue(bump);\n      }\n      else if (!exec.Scheduler().ContainsColumn(col_xz))"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 6417,
+      "statement": "exec.Enqueue(fm);\n      }\n    };"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 6562,
+      "statement": "exec_stuck.Enqueue(fm);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/ChunkEmergeCoordinator.cpp",
+      "line": 6914,
+      "statement": "GetColumnFlowExecutor().Enqueue(key, ColumnWorkKind::RelightThenMesh,\n                                        /*priority=*/70);\n        if (GetColumnFlowExecutor().HasRepairTicket(key))"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 550,
+      "statement": "exec.Enqueue(fm);\n            }\n            else if (admit_far_dirty)"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 664,
+      "statement": "exec.Enqueue(relight);\n                if (world.PhysicsTelemetryData.DarkFaceVoidNearN > 200 ||\n                    world.PhysicsTelemetryData.FocusMissingMesh != 0)"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 689,
+      "statement": "exec.Enqueue(fm);\n              }\n            };"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 741,
+      "statement": "exec.Enqueue(fm);\n          }\n        }"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 2095,
+      "statement": "exec.Enqueue(relight);\n            flow_after = exec.Scheduler().Contains(\n                column, ColumnWorkKind::RelightThenMesh);"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 2138,
+      "statement": "exec.Enqueue(fm);\n        const bool flow_after =\n            exec.Scheduler().Contains(column, ColumnWorkKind::FirstMesh);"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 4724,
+      "statement": "exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 100);\n    }\n    else if (ingress.first_mesh_admit > 0)"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 4728,
+      "statement": "exec.Enqueue(repair_xz, ColumnWorkKind::FirstMesh, 80);\n    }\n    if (!rim_first_mesh_sla)"
+    },
+    {
+      "file": "src/World/Streaming/WorldStreaming.cpp",
+      "line": 5155,
+      "statement": "exec.Enqueue(item);\n        }\n      }"
+    },
+    {
+      "file": "src/World/Persistence/WorldPersistence.cpp",
+      "line": 4669,
+      "statement": "GetColumnFlowExecutor().Enqueue(n, ColumnWorkKind::RelightThenMesh,\n                                          /*priority=*/50);\n          ++world.GetPhysicsTelemetryMutable().DiskLightRepairedN;"
+    },
+    {
+      "file": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "line": 468,
+      "statement": "SchedulerState.Enqueue(item);\n  // Era17: do NOT arm last_dispatch at Enqueue — HasRepairTicket is Contains\n  // only. last_dispatch_frame_ remains enqueue cooldown after Dispatch."
+    },
+    {
+      "file": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "line": 607,
+      "statement": "SchedulerState.Enqueue(work);\n    }\n    else"
+    },
+    {
+      "file": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "line": 651,
+      "statement": "SchedulerState.Enqueue(retry);\n    }\n    break;"
+    },
+    {
+      "file": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "line": 803,
+      "statement": "SchedulerState.Enqueue(item);\n  }\n  telemetry.ColumnFlowProbedN = std::max(telemetry.ColumnFlowProbedN, probed);"
+    },
+    {
+      "file": "src/World/Streaming/ColumnFlowExecutor.cpp",
+      "line": 889,
+      "statement": "Enqueue(item);\n    // Phase 3: ticket → ColumnRecord.desired dual-write.\n    const ColumnTicketLevel ticket = TicketLevelForRing(0);"
+    }
+  ],
+  "findings": [
+    "Global live scheduler has no count cap; one entry/XZ and no tombstones limit amplification, not distinct-key count.",
+    "Dispatch and retry cooldown stores have separate source-composed bounds48 each; these do not bound live tickets or stage metadata.",
+    "Focus/radius and per-scan caps are not a global envelope: completion callbacks, persistence neighbours, repairs and retries feed the same scheduler.",
+    "Unload retirement occurs after save ACK; it cannot be treated as guaranteed immediate reclamation under save veto.",
+    "Non-Absent stage is written by focus truth sync, actual dispatch and lit-column promotion; current code also permits storing stage before residency."
+  ],
+  "remaining_steps": [
+    {
+      "id": "Q01.L1",
+      "action": "Central live admission contract",
+      "done_when": "Count/byte envelope declared before implementation; accepted same-key merge remains lossless at saturation. Refused distinct-key work has authoritative retained demand and guaranteed bounded re-admission. No one-shot completion obligation dropped.",
+      "files": [
+        "src/World/Streaming/ColumnFlowScheduler.h",
+        "src/World/Streaming/ColumnFlowScheduler.cpp",
+        "src/World/Streaming/ColumnFlowExecutor.cpp"
+      ],
+      "status": "OPEN"
+    },
+    {
+      "id": "Q01.L2",
+      "action": "Stage ownership envelope",
+      "done_when": "Store only current-world live column projections, define numeric/producer-derived peak storage and release points including unload veto, absent, world retirement. Cache eviction must not falsely report readiness or suppress live repair.",
+      "status": "OPEN"
+    },
+    {
+      "id": "Q01.L3",
+      "action": "Saturation and current successor acceptance",
+      "done_when": "At capacity, existing demand coalesces; refused new demand remains discoverable; release one owner and finish exact successor without manual ingress. Verify two signed slices, expiry, neighbour isolation and world retirement once on final source. Record source/EXE/config and retain overall UNTESTED.",
+      "status": "OPEN"
+    }
+  ],
+  "next_action": "Trace one-shot MarkRelitInstall/persistence ingress to authoritative render-demand/column record before choosing rejection policy. Do not add silent cap to void Enqueue. Then implement L1/L2 together and one final L3 verification.",
+  "verified_one_shot_paths": [
+    {
+      "file": "src/World/Core/MarkRelitInstall.cpp",
+      "line": 565,
+      "finding": "plan.enqueue_first_mesh issues void Enqueue after relight completion; local branch does not inspect acceptance or register a rejection retry."
+    },
+    {
+      "file": "src/World/Core/MarkRelitInstall.cpp",
+      "line": 1213,
+      "finding": "relit band seam path issues FirstMesh only if not already queued; local branch does not inspect capacity refusal."
+    },
+    {
+      "file": "src/World/Persistence/WorldPersistence.cpp",
+      "line": 4669,
+      "finding": "trusted-disk seam repair selects at most one incomplete cardinal neighbour and breaks immediately after void Enqueue; global refusal would lose this local one-shot notification."
+    }
+  ],
+  "implementation_constraint": "Capacity refusal must first preserve intent in an existing authoritative current-world record and bounded re-admission path. An additional uncapped overflow queue is not an acceptable memory bound. Accepted requests may not be evicted to make room."
+}

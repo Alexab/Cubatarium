@@ -662,7 +662,13 @@
           "retirement_evidence": "build/desktop-msvc/s4-flow-forget-acceptance-20261121.json",
           "dispatch_expiry_evidence": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json",
           "metadata_evidence": "build/desktop-msvc/s4-flow-metadata-acceptance-20261121.json",
-          "world_owner_evidence": "build/desktop-msvc/s4-flow-world-acceptance-20261121.json"
+          "world_owner_evidence": "build/desktop-msvc/s4-flow-world-acceptance-20261121.json",
+          "producer_inventory": "S4_02_Q01_PRODUCER_ENVELOPE_2026_11_21.json",
+          "remaining_steps": [
+            "Q01.L1",
+            "Q01.L2",
+            "Q01.L3"
+          ]
         },
         {
           "id": "LIMIT-C1.Q02",
