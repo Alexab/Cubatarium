@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.04.controlled-late-generation-invalidates-settled-publication",
+      "status": "SCOPED_PASS_FIRST_PAINT_FIX_OPEN",
+      "receipt": "build/desktop-msvc/s4-late-first-paint-transition-acceptance-20261121.json",
+      "scope": "S4.04 controlled data/publication transition: actual CPU/Flat settled neighbour, real generation scheduler worker/Ready payload held with zero commit budget then actual buffer ApplyTo. Held payload preserves current publication, late neighbour install invalidates exact target publication/input stamp, real mesh consumer republishes current successor <=8 passes. Payload and arrival counter adapters explicit. Not actual UI first-frame barrier, exact original31/13 section cause, Full/backend/framebuffer or performance acceptance."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.world-record-retirement-startup-fail",
       "status": "API_OBSERVED_PASS_STARTUP_FAIL_PACKAGE_OPEN",
       "receipt": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",

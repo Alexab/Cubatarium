@@ -2321,6 +2321,48 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           report["flow_cooldown_expiry"].push_back({{"mode",mode},{"before",cooldown_before},
               {"counts_by_age",ages},{"receipts_after",executor.DispatchExpiryCount()},{"exact",expires_exactly}});
           require(expires_exactly,"old expiry receipt preserves renewed cooldown until its exact deadline");
+          if(mode==2) {
+            struct LateArrivalPopulator final : IUChunkPopulator {
+              ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+                ChunkPopulateResult result;
+                result.coord=request.chunkCoord; result.token=request.token;
+                result.buffer.SetBlock({CHUNK_SIZE+8,-40,8},8);
+                return result;
+              }
+            } populator;
+            UChunkGenerationRegistry generation;
+            UChunkLoadScheduler scheduler(populator,generation);
+            ProceduralSettings generation_settings;
+            generation_settings.MinHeight=-48; generation_settings.MaxHeight=47;
+            unsigned arrivals=0;
+            scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+            const bool settled_before=flow.HasCurrentChunkSlicePublication({0,-3,0}) &&
+                cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld);
+            scheduler.RequestLoad({1,0,0},100,generation_settings);
+            require(scheduler.StartQueuedGenerationWorkers(1)==1,"late arrival starts actual generation worker");
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+              std::this_thread::yield();
+            require(scheduler.GetCompletedReadyCount()==1,"late arrival owns actual completed payload");
+            scheduler.Tick(flow.BlockWorld,0,0);
+            const bool held=arrivals==0 && flow.HasCurrentChunkSlicePublication({0,-3,0});
+            scheduler.Tick(flow.BlockWorld,1,0);
+            const bool invalidated=arrivals==1 && !flow.HasCurrentChunkSlicePublication({0,-3,0}) &&
+                !cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld);
+            const auto before=cache.GetPublishCount({0,-3,0});
+            for(int pass=0;pass<8;++pass) {
+              UFrameDeadline::Get().BeginFrame(5000);
+              mesh.RebuildDirtyChunksWithStats(flow.BlockWorld,*flow.BlockRegistry,8,8);
+              if(flow.HasCurrentChunkSlicePublication({0,-3,0})) break;
+            }
+            const bool recovered=cache.GetPublishCount({0,-3,0})>before &&
+                flow.HasCurrentChunkSlicePublication({0,-3,0}) &&
+                cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld);
+            report["late_generation_publication_transition"]={{"settled_before",settled_before},
+                {"ready_payload_held",held},{"late_apply_invalidates",invalidated},{"real_successor",recovered}};
+            require(settled_before && held && invalidated && recovered,
+                "late actual generation commit invalidates a settled neighbour until real current republication");
+          }
           if(mode==1) {
             mesh.RemoveColumn({0,0,0},-3,2);
             bool filled=true;
