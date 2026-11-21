@@ -657,7 +657,7 @@
         {
           "id": "LIMIT-C1.Q01",
           "status": "CHECK",
-          "required_result": "1024 scheduler/index count and lossless saturated owned admission/readmission current successor PASS. Remaining world-record/non-Absent-stage cardinality and allocator byte envelope. LIMIT remains CHECK.",
+          "required_result": "1024 scheduler/index count and saturated owned readmission PASS; duplicate stage-map removed, source-world projection lifetime PASS. Remaining world-record cardinality and complete allocator-byte envelope. LIMIT remains CHECK.",
           "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json",
           "retirement_evidence": "build/desktop-msvc/s4-flow-forget-acceptance-20261121.json",
           "dispatch_expiry_evidence": "build/desktop-msvc/s4-flow-expiry-acceptance-20261121.json",
@@ -673,7 +673,8 @@
           "world_record_retirement_observation": "build/desktop-msvc/s4-flow-world-record-retire-observation-20261121.json",
           "startup_regression": "Scoped barrier fix passes controlled Loading consumer and exact original startup fixture; historical FAIL retained. S4.04/full matrix open; return to live metadata cardinality/bytes.",
           "startup_transition_evidence": "build/desktop-msvc/s4-first-paint-transition-20261121.json",
-          "startup_barrier_receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json"
+          "startup_barrier_receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json",
+          "stage_projection_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q02",

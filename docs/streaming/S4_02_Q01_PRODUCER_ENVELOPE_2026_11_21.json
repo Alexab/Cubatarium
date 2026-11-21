@@ -436,7 +436,9 @@
       "id": "Q01.L2",
       "action": "Stage ownership envelope",
       "done_when": "Store only current-world live column projections, define numeric/producer-derived peak storage and release points including unload veto, absent, world retirement. Cache eviction must not falsely report readiness or suppress live repair.",
-      "status": "OPEN"
+      "status": "OPEN",
+      "wip": "Separate stage map removed; world-owned generation projection lifetime/current native regression PASS. Payload240/intent16 measured, node/allocator overhead excluded. World record cardinality/full bytes remain OPEN.",
+      "partial_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json"
     },
     {
       "id": "Q01.L3",

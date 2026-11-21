@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.world-owned-stage-projection",
+      "status": "SCOPED_PASS_LIMIT_OPEN",
+      "receipt": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json",
+      "scope": "LIMIT.Q01 duplicate executor stage hash map removed; explicit source-world generation projection in ColumnRecord. Local signed-key/2000 Absent/no-growth/neighbour/occupancy tests and current native metadata/world lifecycle/capacity/current successor PASS. MSVC payload ColumnRecord240/intent slot16 bytes excludes map node/allocator. World record cardinality/full allocator envelope remain OPEN."
+    },
+    {
       "id": "S4.04.final-render-barrier-controlled-debt-original-profile",
       "status": "SCOPED_PASS_STAGE_OPEN",
       "receipt": "build/desktop-msvc/s4-first-paint-barrier-acceptance-20261121.json",
