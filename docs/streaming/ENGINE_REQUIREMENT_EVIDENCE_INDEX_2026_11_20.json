@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.visible-firstmesh-signed-async-bands",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-visible-bands-acceptance-20261121.json",
+      "scope": "No arbitrary reserve-victim/trim/reset/fairness matrix acceptance (Q08-C2). Scoped Full CPU transport/install inside outer Flat startup, not Full framebuffer/GPU parity. No production change. Q08-C1 closure composes6 existing producer/pressure receipts with exact limits; S4.02 and full stages remain OPEN."
+    },
+    {
       "id": "S4.02.Q08.boundary-signed-band",
       "status": "SCOPED_PASS_Q08_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

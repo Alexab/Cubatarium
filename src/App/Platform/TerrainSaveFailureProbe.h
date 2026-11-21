@@ -830,6 +830,69 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"negative_and_positive_installed",installed()},{"terminal_marker_retired",retired}};
         require(installed() && retired,"boundary exact target installs current light and retires only completed marker");
       }
+      {
+        struct VisibleBandDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~VisibleBandDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        for(const bool first_mesh : {false,true}) {
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({8,24,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=true;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({8,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({8,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        fifo_world.AsyncRelight=std::make_unique<UAsyncRelightBuilder>(1);
+        const auto initial_job=fifo_world.NextAsyncRelightJobId;
+        uint8_t first_outcome=0,second_outcome=0;
+        if(first_mesh) {
+          fifo_world.NoteVisibleFirstMeshRelightBand({0,0},-48,-33);
+          fifo.EnqueueTerrainColumnRelight(0,0,false,-48,-33,"q08_first_mesh_negative",&fifo_world);
+          fifo_world.NoteVisibleFirstMeshRelightBand({0,0},16,31);
+          fifo.EnqueueTerrainColumnRelight(0,0,true,16,31,"q08_first_mesh_positive",&fifo_world);
+        } else {
+          require(fifo.EnqueueVisibleDrawGateRelight(0,0,-48,-33,{0,0,0},4,{{0,0}},
+              &first_outcome,nullptr,"q08_draw_gate_negative"),"draw-gate first band admitted");
+          require(fifo.EnqueueVisibleDrawGateRelight(0,0,16,31,{0,0,0},4,{{0,0}},
+              &second_outcome,nullptr,"q08_draw_gate_positive"),"draw-gate second band coalesced");
+        }
+        const auto info=fifo.GetTerrainColumnRelightQueueInfo({0,0});
+        const bool exact=info.keyed && info.priority && info.in_deque && info.y_band_defined &&
+            info.min_world_y==-48 && info.max_world_y==31 &&
+            fifo.GetPendingTerrainColumnRelightCount()==1;
+        require(exact,"visible producer preserves both signed targets under one priority key");
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,1,0},catalog);
+        };
+        int submitted=0;
+        for(int n=0;n<8 && !installed();++n) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          fifo.DrainTerrainColumnRelights(fifo_world,1);
+          require(fifo_world.AsyncRelight->WaitIdleFor(std::chrono::seconds(5)),
+              "visible signed-band actual relight worker finishes");
+          fifo_world.DrainAsyncRelightResults(8,false,false);
+          submitted=static_cast<int>(fifo_world.NextAsyncRelightJobId-initial_job);
+        }
+        report["relight_visible_bands"].push_back({{"first_mesh",first_mesh},
+            {"exact_signed_union",exact},{"first_outcome",first_outcome},
+            {"second_outcome",second_outcome},{"actual_jobs",submitted},
+            {"negative_and_positive_installed",installed()}});
+        require(submitted>0 && installed(),"visible exact bands survive async surface selection and actual install");
+        }
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

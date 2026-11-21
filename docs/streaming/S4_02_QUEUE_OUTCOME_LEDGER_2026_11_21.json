@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q08-C1",
     "Q08-C2",
     "Q09-C1",
     "Q11-C1",
@@ -337,7 +336,7 @@
     {
       "id": "Q08-C1",
       "queue": "Q08",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "FIFO admission refusal/promotion/coalescing preserves exact signed Y band for column/player/boundary/draw-gate/FirstMesh requests, then actual light install completes.",
       "subcases": [
         {
@@ -370,15 +369,21 @@
         },
         {
           "id": "Q08-C1.DRAW_GATE",
-          "status": "CHECK",
-          "scope": "Visible draw-gate admission/coalescing retains exact signed target band through actual capture/install."
+          "status": "REUSE",
+          "scope": "Visible draw-gate admission/coalescing retains exact signed target band through actual capture/install.",
+          "evidence": "build/desktop-msvc/s4-visible-bands-acceptance-20261121.json",
+          "coverage_note": "No arbitrary reserve-victim/trim/reset/fairness matrix acceptance (Q08-C2). Scoped Full CPU transport/install inside outer Flat startup, not Full framebuffer/GPU parity. No production change. Q08-C1 closure composes6 existing producer/pressure receipts with exact limits; S4.02 and full stages remain OPEN."
         },
         {
           "id": "Q08-C1.FIRST_MESH",
-          "status": "CHECK",
-          "scope": "FirstMesh exact signed band survives surface-range selection/coalescing through actual install."
+          "status": "REUSE",
+          "scope": "FirstMesh exact signed band survives surface-range selection/coalescing through actual install.",
+          "evidence": "build/desktop-msvc/s4-visible-bands-acceptance-20261121.json",
+          "coverage_note": "No arbitrary reserve-victim/trim/reset/fairness matrix acceptance (Q08-C2). Scoped Full CPU transport/install inside outer Flat startup, not Full framebuffer/GPU parity. No production change. Q08-C1 closure composes6 existing producer/pressure receipts with exact limits; S4.02 and full stages remain OPEN."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-visible-bands-acceptance-20261121.json",
+      "coverage_note": "Composed COLUMN/PRESSURE/PLAYER/BOUNDARY/DRAW_GATE/FIRST_MESH receipts. Exact signed target/current install, source-specific noncoalescing and admission limits retained. No trim/reset/performance/backend/full-stage claim."
     },
     {
       "id": "Q08-C2",
@@ -518,5 +523,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C1 COLUMN/PRESSURE/PLAYER/BOUNDARY accepted. Remaining DRAW_GATE/FIRST_MESH exact signed bands through actual install. Top-level9 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C1 all6 producer/pressure subcases accepted. 8 CHECK groups/22 REUSE groups/1 disabled path. Next Q08-C2 FIFO trim/eviction/quiesce/reset and restore current target/world retirement; reuse exact S3 retry lifecycle. Full S4.02/S0..S6 OPEN."
 }
