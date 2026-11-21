@@ -12433,6 +12433,35 @@ void UWorld::RecordFirstRenderedRequiredRing()
   row["focus"] = {focus.x, focus.y, focus.z};
   row["world_epoch"] = MeshService->GetCache().GetCaptureStore().WorldEpoch();
   row["render_pass_complete"] = true;
+  if (row["publication_unready_sections"].get<int>() > 0)
+  {
+    const auto &cache = MeshService->GetCache();
+    auto &details = row["unready_publications"] = json::array();
+    const int cy0 = FloorDiv(ProceduralTemplate.MinHeight, CHUNK_SIZE);
+    const int cy1 = FloorDiv(ProceduralTemplate.MaxHeight, CHUNK_SIZE);
+    const int radius = GetRequiredPresentationRadius();
+    for (int z = focus.z-radius; z <= focus.z+radius; ++z)
+      for (int x = focus.x-radius; x <= focus.x+radius; ++x)
+        for (int cy = cy0; cy <= cy1 && details.size() < 128; ++cy)
+        {
+          const glm::ivec3 coord(x,cy,z);
+          if (!BlockWorld.GetChunkManager().GetChunk(coord) || HasCurrentChunkSlicePublication(coord))
+            continue;
+          const auto published = cache.GetMeshPublishRevs(coord);
+          const auto *demand = GetRenderDemandStore().Find(coord);
+          details.push_back({{"coord",{x,cy,z}},
+              {"inputs_current",cache.IsPublishedMeshCurrentForInputs(coord,BlockWorld)},
+              {"drawable",MeshService->HasDrawableGreedyMesh(coord)},
+              {"dirty",MeshService->IsChunkMeshDirty(coord)},
+              {"cpu_owner",cache.HasCpuMeshBuildInFlight(coord)},
+              {"capture_owner",cache.HasPendingCaptureWork(coord)},
+              {"gpu_owner",MeshService->IsPendingGpuApply(coord)},
+              {"published_geom",published.geom_rev},
+              {"desired_geom",demand?demand->desired_geom_rev:0},
+              {"face_debt",demand?demand->face_debt_mask:0}});
+        }
+    row["unready_publications_limit"] = 128;
+  }
   CubatariumLogInfo("FirstWorldFrameWitness", row.dump());
   CubatariumFlushLogs();
 }
