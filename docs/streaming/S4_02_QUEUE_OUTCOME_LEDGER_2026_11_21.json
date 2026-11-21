@@ -652,7 +652,55 @@
       "id": "LIMIT-C1",
       "queue": "Q01..Q12",
       "status": "CHECK",
-      "required_result": "Resolve production caps/admission envelope at actual producers for Q02/Q06/Q08/Q09/Q10/Q11/Q12. Explicitly distinguish uncapped storage from frame drain budgets; implement required bound where original contract requires it. Include Q04 OverflowCoords/DiscardedCoords retry-vector envelope and per-coordinate Forget filtering cost; no bounded-cost claim follows from pool/completed caps alone."
+      "required_result": "Resolve production caps/admission envelope at actual producers for Q02/Q06/Q08/Q09/Q10/Q11/Q12. Explicitly distinguish uncapped storage from frame drain budgets; implement required bound where original contract requires it. Include Q04 OverflowCoords/DiscardedCoords retry-vector envelope and per-coordinate Forget filtering cost; no bounded-cost claim follows from pool/completed caps alone.",
+      "subcases": [
+        {
+          "id": "LIMIT-C1.Q01",
+          "status": "CHECK",
+          "required_result": "Auxiliary ordered index/storage PASS; remaining actual distinct-column producer envelope, peak retained map storage and executor cooldown cleanup cost. LIMIT remains CHECK.",
+          "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json"
+        },
+        {
+          "id": "LIMIT-C1.Q02",
+          "status": "CHECK",
+          "required_result": "Dirty/deferred/RAA producer count and storage envelope; retain exact live demand on pressure, release on eviction/reset; distinguish existing deferred256 cap from global Dirty."
+        },
+        {
+          "id": "LIMIT-C1.Q03_Q05",
+          "status": "CHECK",
+          "required_result": "Compose existing capture512/shared snapshot96MiB/result128MiB/work8 credits and TryEnqueue pending256 with actual callers; legacy Enqueue not bounded by that cap."
+        },
+        {
+          "id": "LIMIT-C1.Q04",
+          "status": "CHECK",
+          "required_result": "OverflowCoords/DiscardedCoords numeric retry envelope and exact terminal retention; per-coordinate Forget cost distinct from worker/completed caps."
+        },
+        {
+          "id": "LIMIT-C1.Q06",
+          "status": "CHECK",
+          "required_result": "GPU pending actual256MiB credits/slots/readback and producer envelope; account for preallocated buffers/independent field memory separately."
+        },
+        {
+          "id": "LIMIT-C1.Q08",
+          "status": "CHECK",
+          "required_result": "Deferred relight FIFO/maps and pending bands: live-column producer envelope, storage/release under pressure/quiesce/eviction."
+        },
+        {
+          "id": "LIMIT-C1.Q09",
+          "status": "CHECK",
+          "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded."
+        },
+        {
+          "id": "LIMIT-C1.Q10",
+          "status": "CHECK",
+          "required_result": "Load/save/flag IO queued-running-completed payload count/bytes, pending maps/retry producer envelope and release; avoid dropping unsaved data."
+        },
+        {
+          "id": "LIMIT-C1.Q11_Q12",
+          "status": "CHECK",
+          "required_result": "Seed/seal and face-repair pending storage versus actual ingress/residency, duplicates/retirement/cap admission; existing drain budgets are not memory limits."
+        }
+      ]
     }
   ],
   "source_limits": [
@@ -661,7 +709,7 @@
         "Q01"
       ],
       "source": "src/World/Streaming/ColumnFlowScheduler.h",
-      "observed": "One live map entry per XZ; lazy heap tombstones. No numeric cap exposed in this class; producer envelope and compaction require LIMIT-C1."
+      "observed": "Exact-removal ordered priority index has one fixed-size entry per live XZ, no tombstones; enqueue/remove logarithmic, drain one entry. Current accepted receipt s4-flow-storage-acceptance-20261121.json. Numeric distinct-live producer envelope and hash-bucket peak/cooldown-map cleanup not yet closed."
     },
     {
       "queues": [

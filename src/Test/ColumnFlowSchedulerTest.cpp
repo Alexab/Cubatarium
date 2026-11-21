@@ -132,6 +132,29 @@ int main()
            "identical demand cannot grow tombstone heap");
   }
 
+  {
+    UColumnFlowScheduler refreshed;
+    for(int n=0;n<2000;++n)
+      refreshed.Enqueue({1,2},ColumnWorkKind::FirstMesh,n);
+    Expect(refreshed.LiveCount()==1 && refreshed.HeapCount()==1,
+           "changing urgency retains one ordered entry per live column");
+    for(int n=0;n<2000;++n) {
+      refreshed.RemoveColumn({1,2});
+      refreshed.Enqueue({1,2},ColumnWorkKind::FirstMesh,n);
+    }
+    Expect(refreshed.LiveCount()==1 && refreshed.HeapCount()==1,
+           "remove and reissue cannot accumulate retired entries");
+    refreshed.RemoveColumn({1,2});
+    Expect(refreshed.HeapCount()==0,"removal releases ordered storage immediately");
+    refreshed.Enqueue({2,2},ColumnWorkKind::FirstMesh,7);
+    refreshed.Enqueue({3,2},ColumnWorkKind::FirstMesh,9);
+    refreshed.Enqueue({4,2},ColumnWorkKind::FirstMesh,9);
+    ColumnWorkItem out{};
+    Expect(refreshed.DrainOne(out) && out.column==glm::ivec2(3,2),"highest priority oldest tie drains first");
+    Expect(refreshed.DrainOne(out) && out.column==glm::ivec2(4,2),"equal priority retains FIFO");
+    Expect(refreshed.DrainOne(out) && out.column==glm::ivec2(2,2),"lower priority retained");
+  }
+
   // Negative chunk coordinates are concrete targets, not range sentinels.
   {
     UColumnFlowScheduler signed_y;

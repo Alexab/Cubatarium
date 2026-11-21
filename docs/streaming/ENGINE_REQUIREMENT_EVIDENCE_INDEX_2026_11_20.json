@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.exact-priority-storage",
+      "status": "SCOPED_PASS_LIMIT_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json",
+      "scope": "LIMIT Q01 auxiliary priority storage only: repro3 failures, local Release4000 changing-priority/remove-reissue operations retain index==live, immediate release, priority/FIFO and earlier scope/lifecycle tests PASS. Exact-removal ordered index eliminates tombstones; O(log N) enqueue/remove, one entry per drain. Current native6-case flow publication regression PASS. No numeric bound for distinct live coordinates, map peak bucket retention, executor cooldown-map cleanup, other queues or global memory/performance claimed. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q01.lossless-scope-current-publication",
       "status": "SCOPED_PASS_Q01_C1_CLOSED_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

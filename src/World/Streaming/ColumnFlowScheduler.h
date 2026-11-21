@@ -4,7 +4,7 @@
 
 #include <cstdint>
 #include <glm/glm.hpp>
-#include <queue>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -67,7 +67,7 @@ struct ColumnCoordHash
 };
 
 /// Single-owner focus column work queue (V4 / M02).
-/// Live map is authoritative; heap may contain stale generations (lazy delete).
+/// Live map and ordered index contain exactly one entry per accepted column.
 class UColumnFlowScheduler
 {
 public:
@@ -79,7 +79,7 @@ public:
   bool DrainOne(ColumnWorkItem &out);
   void Clear();
   /// Forget queued work for a column that has left the streamer's keep set.
-  /// Heap entries become harmless tombstones and are discarded by DrainOne.
+  /// Removes its ordered entry immediately; no deferred tombstones.
   bool RemoveColumn(glm::ivec2 column);
 
   /// Live tickets only (excludes superseded heap entries).
@@ -132,6 +132,7 @@ private:
     bool scan_full_focus{false};
     int cy{kColumnWorkWholeRemeshBandCy};
     uint64_t generation{0};
+    uint64_t sequence{0};
   };
 
   struct HeapEntry
@@ -146,16 +147,17 @@ private:
     {
       if (a.item.priority != b.item.priority)
       {
-        return a.item.priority < b.item.priority;
+        return a.item.priority > b.item.priority;
       }
       // Stable tie-break: older sequence first when priorities equal.
-      return a.sequence > b.sequence;
+      return a.sequence < b.sequence;
     }
   };
 
   void PushLive(const ColumnWorkItem &item);
 
-  std::priority_queue<HeapEntry, std::vector<HeapEntry>, Compare> Heap;
+  // Historical HeapCount accessor reports this exact removable priority index.
+  std::set<HeapEntry, Compare> Heap;
   std::unordered_map<ColumnCoord, LiveTicket, ColumnCoordHash> Live;
   uint64_t next_generation_{1};
   uint64_t next_sequence_{1};

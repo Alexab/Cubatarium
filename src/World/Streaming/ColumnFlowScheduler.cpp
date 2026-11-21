@@ -35,6 +35,7 @@ void UColumnFlowScheduler::Enqueue(glm::ivec2 column, ColumnWorkKind kind,
 
 void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
 {
+  RemoveColumn(item.column);
   ColumnWorkItem stamped = item;
   stamped.generation = next_generation_++;
   LiveTicket ticket{};
@@ -43,11 +44,12 @@ void UColumnFlowScheduler::PushLive(const ColumnWorkItem &item)
   ticket.scan_full_focus = stamped.scan_full_focus;
   ticket.cy = stamped.cy;
   ticket.generation = stamped.generation;
+  ticket.sequence = next_sequence_++;
   Live[ColumnCoord(stamped.column)] = ticket;
   HeapEntry entry{};
   entry.item = stamped;
-  entry.sequence = next_sequence_++;
-  Heap.push(entry);
+  entry.sequence = ticket.sequence;
+  Heap.insert(entry);
 }
 
 void UColumnFlowScheduler::Enqueue(const ColumnWorkItem &item)
@@ -105,36 +107,32 @@ bool UColumnFlowScheduler::ReplaceColumnTicket(const ColumnWorkItem &item,
 
 bool UColumnFlowScheduler::DrainOne(ColumnWorkItem &out)
 {
-  while (!Heap.empty())
-  {
-    HeapEntry entry = Heap.top();
-    Heap.pop();
-    const ColumnCoord coord(entry.item.column);
-    const auto it = Live.find(coord);
-    if (it == Live.end() || it->second.generation != entry.item.generation)
-    {
-      // Stale / superseded heap residue.
-      continue;
-    }
-    out = entry.item;
-    Live.erase(it);
-    return true;
-  }
-  return false;
+  if (Heap.empty())
+    return false;
+  const auto first = Heap.begin();
+  out = first->item;
+  Heap.erase(first);
+  Live.erase(ColumnCoord(out.column));
+  return true;
 }
 
 void UColumnFlowScheduler::Clear()
 {
-  while (!Heap.empty())
-  {
-    Heap.pop();
-  }
+  Heap.clear();
   Live.clear();
 }
 
 bool UColumnFlowScheduler::RemoveColumn(glm::ivec2 column)
 {
-  return Live.erase(ColumnCoord(column)) != 0;
+  const auto it = Live.find(ColumnCoord(column));
+  if (it == Live.end())
+    return false;
+  HeapEntry entry{};
+  entry.item.priority = it->second.priority;
+  entry.sequence = it->second.sequence;
+  Heap.erase(entry);
+  Live.erase(it);
+  return true;
 }
 
 bool UColumnFlowScheduler::Contains(glm::ivec2 column,
