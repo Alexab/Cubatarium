@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.active-request-capacity",
+      "status": "SCOPED_PASS_COMMITTED_BYTES_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json",
+      "scope": "Accepted Requested/Generating/Ready coordinates (ActiveTokens). No new-key state/token/priority-index allocation on refusal; current key remains mergeable at saturation. Committed residency metadata excluded explicitly and remains debt. Real Streamer EnsureDataColumns with controlled scheduler callback: same required vector refused at full, exact owner release, same normal policy re-invoked without manual RequestLoad, actual Tick/worker/ChunkBuffer.ApplyTo installs desired block. Not travel or whole-column completeness/framebuffer acceptance."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.token-nonce-retirement",
       "status": "SCOPED_PASS_LIVE_OWNER_ENVELOPE_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",

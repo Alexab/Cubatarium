@@ -6169,11 +6169,8 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
         UWorldPersistence &persistence = *world.Persistence;
-        if (persistence.GetChunkStorage().IsColumnSavePending(ground) ||
-            persistence.IsTerrainColumnDiskLoadPending(ground))
-        {
-          return;
-        }
+        if (persistence.GetChunkStorage().IsColumnSavePending(ground)) return false;
+        if (persistence.IsTerrainColumnDiskLoadPending(ground)) return true;
         const bool generation_pending =
             ChunkScheduler && ChunkScheduler->IsPending(ground);
         // Async streaming used to jump straight to procedural generation,
@@ -6186,12 +6183,12 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
           persistence.RequestAsyncTerrainColumnLoad(world, ground, demand_id);
           if (persistence.IsTerrainColumnDiskLoadPending(ground))
           {
-            return;
+            return true;
           }
         }
         if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
                 ground))
-          return;
+          return false;
         if (ChunkScheduler)
         {
           glm::ivec2 column_origin(0);
@@ -6206,9 +6203,10 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
             column_origin = glm::ivec2(feet_block.x, feet_block.z);
             has_origin = true;
           }
-          ChunkScheduler->RequestLoad(ground, priority, procedural,
+          return ChunkScheduler->RequestLoad(ground, priority, procedural,
                                       column_origin, has_origin, demand_id);
         }
+        return false;
       },
       [&world, this](glm::ivec3 coord)
       {

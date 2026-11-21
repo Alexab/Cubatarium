@@ -107,7 +107,7 @@ public:
   using UnloadColumnFn = std::function<bool(glm::ivec3 ground, int max_cy)>;
   using GenerateColumnFn = std::function<void(int x, int z)>;
   using RequestAsyncChunkFn =
-      std::function<void(glm::ivec3, int priority, uint64_t demand_id)>;
+      std::function<bool(glm::ivec3, int priority, uint64_t demand_id)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;
   using IsColumnPendingFn = std::function<bool(glm::ivec3)>;
   /// True while column awaits first light before mesh (visual hole).

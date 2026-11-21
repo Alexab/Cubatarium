@@ -2626,6 +2626,47 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["generation_token_retirement"]={{"cancelled_request_cohorts",128},
             {"no_retained_token_history",tokens_retired},{"live_tokens",generation.LiveTokenCount()}};
         require(tokens_retired,"generation terminal owners release token history without sequence reuse");
+        credits.SetWorkSlotCap(0);
+        bool admitted_all=true;
+        for(size_t n=0;n<UChunkLoadScheduler::kMaxActiveGenerationRequests;++n)
+          admitted_all=scheduler.RequestLoad({1000+static_cast<int>(n),0,0},1000000000,request) && admitted_all;
+        const bool updated_at_full=scheduler.RequestLoad({1000,0,0},-10,duplicate) &&
+            scheduler.QueuedRequests.at({1000,0,0}).settings.Seed==17 &&
+            scheduler.QueuedRequests.at({1000,0,0}).priority==-10;
+        const glm::ivec3 desired(5000,0,0);
+        const bool explicit_refusal=!scheduler.RequestLoad(desired,0,request) &&
+            scheduler.GetState(desired)==ChunkLoadState::Absent && generation.Current(desired).sequence==0;
+        UChunkStreamer producer(terrain,*world.BlockRegistry,1,0,-33,-48);
+        producer.SetAsyncGeneration(true); producer.SetNearLoadRadius(1);
+        producer.SetAsyncCallbacks([&](glm::ivec3 c,int priority,uint64_t demand) {
+          return scheduler.RequestLoad(c,priority,request,{},false,demand);
+        },[&](glm::ivec3 c){return scheduler.IsCommitted(c);});
+        producer.SetColumnPendingCallback([&](glm::ivec3 c){return scheduler.IsPending(c);});
+        const std::vector<glm::ivec3> required{desired};
+        producer.EnsureDataColumns(required,1);
+        const bool retained_requirement=admitted_all && explicit_refusal && updated_at_full &&
+            scheduler.ActiveTokens.size()==1024 && scheduler.GetPendingQueueCount()==1024 &&
+            generation.LiveTokenCount()==1024 && !scheduler.IsPending(desired) &&
+            producer.GetLastFrameStats().asyncQueuedThisFrame==0;
+        scheduler.Cancel({1000,0,0});
+        producer.EnsureDataColumns(required,1);
+        const bool producer_replayed=scheduler.IsPending(desired) && scheduler.ActiveTokens.size()==1024 &&
+            producer.GetLastFrameStats().asyncQueuedThisFrame==1;
+        credits.SetWorkSlotCap(8);
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"required-data replay executes actual generation");
+        scheduler.Tick(terrain,1,0);
+        const bool current_demand=scheduler.IsCommitted(desired) &&
+            terrain.GetBlock({5000*CHUNK_SIZE+8,-40,8})==8;
+        scheduler.CancelAllPending();
+        const bool capacity_retired=scheduler.ActiveTokens.empty() && scheduler.QueuedRequests.empty() &&
+            scheduler.GetPendingQueueCount()==0 && generation.LiveTokenCount()==0 &&
+            scheduler.GetRetainedGenerationResultCount()==0;
+        report["generation_request_capacity"]={{"limit",1024},{"same_key_update_at_full",updated_at_full},
+            {"refused_requirement_retained",retained_requirement},{"normal_producer_replayed",producer_replayed},
+            {"current_terrain_installed",current_demand},{"reset_releases_owners",capacity_retired}};
+        require(retained_requirement && producer_replayed && current_demand && capacity_retired,
+            "generation request capacity retains required-data producer demand without overflow storage");
         report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},
             {"ready_requeue_holds_credit",held},{"stale_release_exact",stale_released},
             {"automatic_readmission",readmitted},{"actual_install_releases_credit",installed},

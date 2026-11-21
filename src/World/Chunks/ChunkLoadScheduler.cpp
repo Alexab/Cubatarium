@@ -64,7 +64,7 @@ void UChunkLoadScheduler::SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn)
   ColumnMeshDirty = std::move(fn);
 }
 
-void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
+bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
                                       const ProceduralSettings &settings,
                                       glm::ivec2 column_origin,
                                       bool has_column_origin,
@@ -72,7 +72,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
 {
   if (coord.y != 0)
   {
-    return;
+    return false;
   }
   const auto stateIt = States.find(coord);
   if (stateIt != States.end())
@@ -84,7 +84,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
       {
         if (priority == queuedIt->second.priority)
         {
-          return;
+          return true;
         }
         // Re-rank in both directions as the focus moves. Preserve the original
         // request time/settings; resetting them would hide queue wait and make
@@ -100,7 +100,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
         LogProceduralRequest(
             "priority_refreshed", coord, queuedIt->second.requestId,
             demand_id, "state=requested priority=" + std::to_string(priority));
-        return;
+        return true;
       }
     }
     else if (stateIt->second == ChunkLoadState::Generating ||
@@ -111,7 +111,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
       const auto prioIt = RequestPriorities.find(coord);
       if (prioIt != RequestPriorities.end() && priority == prioIt->second)
       {
-        return;
+        return true;
       }
       if (InitialRequestPriorities.find(coord) ==
           InitialRequestPriorities.end())
@@ -127,12 +127,17 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
           idIt != ActiveRequestIds.end() ? idIt->second : 0, demand_id,
           "state=" + std::to_string(static_cast<int>(stateIt->second)) +
               " priority=" + std::to_string(priority));
-      return;
+      return true;
     }
     else if (stateIt->second != ChunkLoadState::Absent)
     {
-      return;
+      return true;
     }
+  }
+  if (ActiveTokens.size() >= kMaxActiveGenerationRequests)
+  {
+    ++CapacityRefused;
+    return false;
   }
   PendingRequest pending;
   pending.coord = coord;
@@ -161,6 +166,7 @@ void UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   Queue.insert(std::move(pending));
   LogProceduralRequest("requested", coord, request_id, demand_id,
                        "priority=" + std::to_string(priority));
+  return true;
 }
 
 void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)

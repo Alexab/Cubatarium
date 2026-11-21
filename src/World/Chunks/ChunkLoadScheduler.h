@@ -33,6 +33,8 @@ class UChunkLoadScheduler
 {
 public:
   static constexpr size_t kMaxRetainedGenerationResults = 8;
+  static constexpr size_t kMaxActiveGenerationRequests = 1024;
+  uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   size_t GetRetainedGenerationResultCount() const
   { return RetainedResults->load(std::memory_order_relaxed); }
   using MarkChunkDirtyFn =
@@ -46,7 +48,8 @@ public:
 
   void SetMarkDirtyFn(MarkChunkDirtyFn fn);
   void SetColumnMeshDirtyFn(ColumnMeshDirtyFn fn);
-  void RequestLoad(glm::ivec3 coord, int priority,
+  // False transfers no ownership; caller retains/revisits required-data demand.
+  bool RequestLoad(glm::ivec3 coord, int priority,
                    const ProceduralSettings &settings,
                    glm::ivec2 column_origin = glm::ivec2(0),
                    bool has_column_origin = false,
@@ -159,6 +162,7 @@ private:
   std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
       RequestPriorityRefreshCounts;
   uint64_t NextRequestQueueRevision{1};
+  uint64_t CapacityRefused{0};
   double LastTickApplyMs{0.0};
   int LastCommitsThisFrame{0};
 };

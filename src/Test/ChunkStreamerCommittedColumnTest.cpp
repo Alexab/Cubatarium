@@ -270,6 +270,7 @@ static void TestAirOnlyColumnLifecycle()
         {
           if (key == column)
             ++requested;
+          return true;
         },
         [](glm::ivec3) { return true; });
     UFrameDeadline::Get().BeginFrame(0);
@@ -455,7 +456,7 @@ int main()
       nullptr, nullptr, nullptr);
   streamer.SetAsyncGeneration(true);
   streamer.SetAsyncCallbacks(
-      [&](glm::ivec3, int, uint64_t) { ++async_requests; },
+      [&](glm::ivec3, int, uint64_t) { ++async_requests; return true; },
       [&](glm::ivec3 c) { return streamer.IsTerrainChunkCompleteCached(c); });
   for (int dz = -1; dz <= 1; ++dz)
     for (int dx = -1; dx <= 1; ++dx)
@@ -502,7 +503,7 @@ int main()
   partial.SetAsyncGeneration(true);
   partial.SetAsyncCallbacks(
       [&](glm::ivec3 c, int, uint64_t)
-      { async_requests += c == center ? 1 : 0; },
+      { async_requests += c == center ? 1 : 0; return true; },
       [&](glm::ivec3 c) { return partial.IsTerrainChunkCompleteCached(c); });
   partial.NotifyChunkCommitted(center);
   partial.EnsureCollisionChunks(feet);
