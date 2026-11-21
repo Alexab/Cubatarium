@@ -1680,10 +1680,37 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         auto &persistence=*load_world.Persistence;
         require(persistence.GetChunkStorage().SaveTerrainColumn(column,saved,folder.string(),
                     *load_world.BlockRegistry,319,-64),"retry fixture persisted by actual storage");
+        auto registry_owner=std::move(load_world.BlockRegistry);
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96001);
+        const bool dependency_rejected=persistence.PendingAsyncColumnLoadSlices.empty() &&
+            load_world.BlockWorld.CountNonAir()==0;
+        load_world.BlockRegistry=std::move(registry_owner);
+        persistence.RequestAsyncTerrainColumnLoad(load_world,{4,7,0},96002);
+        const bool miss_rejected=persistence.PendingAsyncColumnLoadSlices.empty() &&
+            load_world.BlockWorld.CountNonAir()==0;
+        persistence.GetChunkStorage().MarkColumnSavePending(column);
+        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96003);
+        const bool save_rejected=persistence.PendingAsyncColumnLoadSlices.empty() &&
+            persistence.GetChunkStorage().IsColumnSavePending(column);
+        persistence.GetChunkStorage().ClearColumnSavePending(column);
+        report["disk_load_admission"]={{"dependency_rejected",dependency_rejected},
+            {"disk_miss_rejected",miss_rejected},{"pending_save_rejected",save_rejected}};
+        require(dependency_rejected && miss_rejected && save_rejected,
+                "load refusal leaves no ghost owner or terrain before dependency/save release");
         persistence.ReadFailureProbe=DiskReadFailureProbe(glm::ivec2(0,0));
         persistence.ReadFailureProbe.ObserveFocus({16,0,0});
-        persistence.RequestAsyncTerrainColumnLoad(load_world,column,96101);
+        persistence.RequestAsyncTerrainColumnLoad(load_world,{0,7,0},96101);
         require(persistence.IsTerrainColumnDiskLoadPending(column),"retry request admitted");
+        const auto initial_owner=persistence.PendingAsyncColumnLoadSlices.at(column).cancellation;
+        const auto initial_remaining=persistence.PendingAsyncColumnLoadSlices.at(column).remaining_results;
+        const auto initial_token=load_world.Streaming->GetChunkGenTokens().Current(column).sequence;
+        persistence.RequestAsyncTerrainColumnLoad(load_world,{0,-99,0},96999);
+        const auto &unchanged=persistence.PendingAsyncColumnLoadSlices.at(column);
+        const bool duplicate_preserved=unchanged.cancellation==initial_owner && unchanged.demand_id==96101 &&
+            unchanged.remaining_results==initial_remaining && persistence.PendingAsyncColumnLoadSlices.size()==1 &&
+            load_world.Streaming->GetChunkGenTokens().Current(column).sequence==initial_token;
+        report["disk_load_admission"]["normalized_duplicate_preserved"]=duplicate_preserved;
+        require(duplicate_preserved,"duplicate normalized request preserves exact accepted owner and token");
         const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
         bool edited=false; uint64_t incarnation=0; int max_retry=0;
         std::unordered_set<uint64_t> demands;
@@ -1695,6 +1722,15 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             load_world.BlockWorld.SetBlock(edit,BLOCK_AIR);
             load_world.ModifiedChunks.insert(lower);
             incarnation=load_world.BlockWorld.GetChunkManager().GetChunk(lower)->GetIncarnation(); edited=true;
+            const auto owner=persistence.PendingAsyncColumnLoadSlices.at(column).cancellation;
+            const auto demand=persistence.PendingAsyncColumnLoadSlices.at(column).demand_id;
+            const auto remaining=persistence.PendingAsyncColumnLoadSlices.at(column).remaining_results;
+            persistence.RequestAsyncTerrainColumnLoad(load_world,column,97000);
+            const auto &after=persistence.PendingAsyncColumnLoadSlices.at(column);
+            const bool partial_preserved=after.cancellation==owner && after.demand_id==demand &&
+                after.remaining_results==remaining && load_world.BlockWorld.GetBlock(edit)==BLOCK_AIR;
+            report["disk_load_admission"]["partial_duplicate_preserved"]=partial_preserved;
+            require(partial_preserved,"partial-load duplicate cannot reset owner, slice count or local edit");
           }
           require(std::chrono::steady_clock::now()<deadline,"actual failed disk batch terminates in10s");
           std::this_thread::yield();
@@ -1729,6 +1765,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["disk_load_retry_exhaustion"]={{"max_retry",max_retry},{"failed_demands",demands.size()},
             {"exhausted_retained",exhausted},{"cooldown_rejected",cooldown},
             {"decoded_sections",decoded_count},{"current_recovered",recovered}};
+        report["disk_load_admission"]["current_completion_after_release"]=recovered;
         require(recovered,"actual current disk load fully recovers without replaying local deletion");
       });
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},

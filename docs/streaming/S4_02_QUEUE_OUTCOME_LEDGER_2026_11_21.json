@@ -487,8 +487,10 @@
         },
         {
           "id": "Q10-C1.ADMISSION",
-          "status": "CHECK",
-          "scope": "Actual missing dependency/save-pending/disk-miss/cooldown rejection and duplicate request preserve explicit owner/current completion. Legacy Enqueue unbounded capacity LIMIT-C1."
+          "status": "REUSE",
+          "scope": "Actual missing dependency/save-pending/disk-miss/cooldown rejection and duplicate request preserve explicit owner/current completion. Legacy Enqueue unbounded capacity LIMIT-C1.",
+          "evidence": "build/desktop-msvc/s4-load-admission-acceptance-20261121.json",
+          "coverage_note": "Actual public RequestAsyncTerrainColumnLoad and real disk files/workers/results; missing registry/disk miss refusals; storage pending-save marker adapter (not concurrent save-worker). Normalized Y duplicate and actual partial-load duplicate preserve exact cancellation owner/demand/count/token/edit. Actual current24-section completion after blockers released, cooldown reused in same run. Legacy Enqueue unbounded has no capacity denial; below-profile discovery guard source-specific profile compatibility; LIMIT-C1 retains envelope. No cancellation/newer race/radius/reset/OS fault/cold save/backend/framebuffer/performance/memory acceptance; full S0..S6 OPEN."
         },
         {
           "id": "Q10-C1.CANCEL_STALE",
@@ -677,5 +679,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q10-C1 RETRY_EXHAUSTION actual4 retries/5 demands/current24-section recovery accepted. Next ADMISSION, CANCEL_STALE, OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
+  "checkpoint": "Q10-C1 RETRY_EXHAUSTION/ADMISSION accepted. Next CANCEL_STALE, then OUTSIDE_RESET. Top-level5 CHECK; full scope OPEN."
 }
