@@ -2478,7 +2478,11 @@ void UWorldPersistence::DrainRelightQueues(UWorld &world, int max_player_jobs,
         static_cast<uint64_t>(std::max(0, overflow));
   };
   int drained_player = 0;
-  while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs)
+  // RelightPlayerEdit cannot execute while lighting is deferred or the
+  // registry is unavailable. Retain the full request until its consumer can
+  // accept it; removing it first silently loses player edit lighting work.
+  while (!PendingPlayerRelights.empty() && drained_player < max_player_jobs &&
+         !world.IsLightingRelightDeferred() && world.BlockRegistry)
   {
     const PlayerRelightRequest request =
         std::move(PendingPlayerRelights.front());

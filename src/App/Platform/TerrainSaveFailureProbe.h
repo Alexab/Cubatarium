@@ -735,6 +735,54 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"pending",fifo.GetPendingTerrainColumnRelightCount()}};
         require(installed(),"deferred actual FIFO successor installs both signed light targets");
       }
+      {
+        struct PlayerDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~PlayerDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        UFrameDeadline::Get().BeginFrame(5000);
+        UWorld fifo_world(nullptr,nullptr);
+        fifo_world.SetSpawnPoint({8,-40,8});
+        fifo_world.ProceduralTemplate.MinHeight=-48;
+        fifo_world.ProceduralTemplate.MaxHeight=31;
+        fifo_world.ProceduralTemplate.AsyncRelight=false;
+        fifo_world.BlockWorld.SetVerticalProfile({-48,31,-40});
+        fifo_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        fifo_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        fifo_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        auto full_settings=settings;
+        full_settings.Lighting=LightingMode::Full;
+        full_settings.AsyncMeshing=false;
+        fifo_world.SetRenderSettings(full_settings);
+        fifo_world.BlockWorld.SetBlock({8,-40,8},8);
+        fifo_world.BlockWorld.SetBlock({8,24,8},8);
+        auto &fifo=*fifo_world.Persistence;
+        const std::vector<glm::ivec3> first{{8,-40,8},{8,24,8},{8,-40,8}};
+        const std::vector<glm::ivec3> second{{9,-40,8},{9,24,8}};
+        fifo.EnqueuePlayerRelight({});
+        fifo.EnqueuePlayerRelight(first);
+        fifo.EnqueuePlayerRelight(second);
+        require(fifo.GetPendingPlayerRelightCount()==2,"player FIFO retains separate full requests, empty ignored");
+        fifo_world.SetLightingRelightDeferred(true);
+        fifo_world.DrainRelightQueuesBudget(1,0);
+        const bool retained=fifo.GetPendingPlayerRelightCount()==2;
+        report["relight_player_band"]["deferred_retained"]=retained;
+        require(retained,"player lighting deferral must not consume unexecuted requests");
+        fifo_world.SetLightingRelightDeferred(false);
+        const auto catalog=fifo_world.BlockRegistry->GetDefinitionsCatalogSnapshot();
+        const auto installed=[&]() {
+          return fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,-3,0},catalog) &&
+              fifo_world.BlockWorld.HasCompleteLightSamplingCalculation({0,1,0},catalog);
+        };
+        fifo_world.DrainRelightQueuesBudget(1,0);
+        const bool first_completed=fifo.GetPendingPlayerRelightCount()==1 && installed();
+        require(first_completed,"one player request preserves negative/positive positions through actual install");
+        fifo_world.DrainRelightQueuesBudget(1,0);
+        const bool complete=fifo.GetPendingPlayerRelightCount()==0 && installed();
+        report["relight_player_band"]={{"deferred_retained",retained},
+            {"first_request_installed_both",first_completed},{"all_requests_completed",complete}};
+        require(complete,"remaining player request completes without new ingress");
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

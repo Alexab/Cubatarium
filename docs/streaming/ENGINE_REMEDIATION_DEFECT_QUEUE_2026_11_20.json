@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "player-relight-dequeue-loses-work-during-lighting-deferral",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q08_C1_OPEN",
+      "observed": "Drain popped player request before RelightPlayerEdit returned on LightingRelightDeferred, silently losing edit-light work.",
+      "fix": "Guard dequeue on consumer readiness: lighting not deferred and registry available. Original positions/min_world_y/order/budget retained.",
+      "evidence": "build/desktop-msvc/s4-player-band-acceptance-20261121.json",
+      "next_action": "Q08-C1 BOUNDARY/DRAW_GATE/FIRST_MESH; caps LIMIT-C1."
+    },
+    {
       "id": "old-gpu-retirement-clears-newer-extract-marker",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q06_C2_OPEN",

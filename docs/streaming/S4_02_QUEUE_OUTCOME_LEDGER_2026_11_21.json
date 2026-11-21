@@ -356,8 +356,10 @@
         },
         {
           "id": "Q08-C1.PLAYER",
-          "status": "CHECK",
-          "scope": "Player position coalescing/admission preserves requested signed vertical work through actual light install."
+          "status": "REUSE",
+          "scope": "Actual isolated Full CPU UWorld profile[-48,31]; two separate full position requests crossing negative/positive sections, first has duplicate position. Empty request ignored. Deferral budget1 drain retains2; resume budget1 installs both requested target certificates and leaves1; next drain completes all without new ingress.",
+          "evidence": "build/desktop-msvc/s4-player-band-acceptance-20261121.json",
+          "coverage_note": "Player FIFO has no coalescing or cap; no invented coalescing claim. Registry-unavailable readiness guard source-confirmed, not independently injected. Direct current acceptance is synchronous Full CPU; S3 exact async spec/retry transport reused only where matching. Backend/framebuffer/full memory/fairness remain original scope. BOUNDARY/DRAW_GATE/FIRST_MESH Q08-C1 remain."
         },
         {
           "id": "Q08-C1.BOUNDARY",
@@ -514,5 +516,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q08-C1 COLUMN/PRESSURE accepted, exact signed deferred ownership/re-admission/current install. Next PLAYER then BOUNDARY/DRAW_GATE/FIRST_MESH. Top-level9 CHECK; full scope OPEN."
+  "checkpoint": "Q08-C1 COLUMN/PRESSURE/PLAYER accepted; player deferral request loss fixed with actual signed targets installed. Next BOUNDARY then DRAW_GATE/FIRST_MESH. Top-level9 CHECK; full scope OPEN."
 }

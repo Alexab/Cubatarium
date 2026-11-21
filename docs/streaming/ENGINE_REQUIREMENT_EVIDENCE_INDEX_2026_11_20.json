@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q08.player-deferral-signed-targets",
+      "status": "SCOPED_PASS_Q08_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-player-band-acceptance-20261121.json",
+      "scope": "Player FIFO has no coalescing or cap; no invented coalescing claim. Registry-unavailable readiness guard source-confirmed, not independently injected. Direct current acceptance is synchronous Full CPU; S3 exact async spec/retry transport reused only where matching. Backend/framebuffer/full memory/fairness remain original scope. BOUNDARY/DRAW_GATE/FIRST_MESH Q08-C1 remain."
+    },
+    {
       "id": "S4.02.Q08.fifo-pressure-signed-band",
       "status": "SCOPED_PASS_Q08_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
