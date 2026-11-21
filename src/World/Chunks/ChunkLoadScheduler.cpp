@@ -3,11 +3,13 @@
 #include "World/Core/BlockWorld.h"
 #include "App/Platform/Log.h"
 #include "Core/Jobs/JobThreadBudget.h"
+#include "Core/Jobs/PipelineAdmission.h"
 #include "World/Streaming/WorldColumnRequestId.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -390,13 +392,15 @@ void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
   Cancel(coord, "invalidated");
 }
 
-void UChunkLoadScheduler::ScheduleWorker(
+bool UChunkLoadScheduler::ScheduleWorker(
     const PendingRequest &request, const int generation_start_cap_per_frame)
 {
-  States[request.coord] = ChunkLoadState::Generating;
-  LogProceduralRequest(
-      "worker_submitted", request.coord, request.requestId,
-      request.demandId, "priority=" + std::to_string(request.priority));
+  if (!UPipelineAdmission::Get().TryAcquireWorkSlot()) return false;
+  struct WorkSlotGuard
+  {
+    ~WorkSlotGuard() { UPipelineAdmission::Get().ReleaseWorkSlot(); }
+  };
+  auto work_slot = std::make_shared<WorkSlotGuard>();
   ChunkPopulateRequest populateRequest;
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
@@ -420,13 +424,13 @@ void UChunkLoadScheduler::ScheduleWorker(
   const std::size_t worker_pending_at_submit = Pool.GetPendingJobCount();
   const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
   const std::size_t worker_count = Pool.GetWorkerCount();
-  Pool.Enqueue(
+  if (!Pool.TryEnqueue(
       [this, populateRequest, requested_at, scheduled_at, priority,
        request_id, demand_id,
        max_height, request_queue_live_at_schedule,
        request_queue_heap_at_schedule, worker_pending_at_submit,
        worker_active_at_submit, worker_count,
-       generation_start_cap_per_frame]()
+       generation_start_cap_per_frame, work_slot = std::move(work_slot)]()
       {
         PendingResult pending;
         pending.requestId = request_id;
@@ -458,7 +462,12 @@ void UChunkLoadScheduler::ScheduleWorker(
             "discarded=" + std::to_string(pending.result.discarded ? 1 : 0) +
                 " generation_ms=" + std::to_string(pending.generationMs));
         Completed.Push(std::move(pending));
-      });
+      })) return false;
+  States[request.coord] = ChunkLoadState::Generating;
+  LogProceduralRequest(
+      "worker_submitted", request.coord, request.requestId,
+      request.demandId, "priority=" + std::to_string(request.priority));
+  return true;
 }
 
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
@@ -687,7 +696,13 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
     {
       continue;
     }
-    ScheduleWorker(next, maxStarts);
+    if (!ScheduleWorker(next, maxStarts))
+    {
+      // Keep the exact immutable request and its rank. A future normal Tick
+      // retries admission; do not spin on the same refused head this frame.
+      Queue.push(next);
+      break;
+    }
     QueuedRequests.erase(queuedIt);
     ++generationStarts;
   }

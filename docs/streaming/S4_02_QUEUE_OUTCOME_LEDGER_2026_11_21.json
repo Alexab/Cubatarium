@@ -687,7 +687,8 @@
           "status": "CHECK",
           "required_result": "Compose existing capture512/shared snapshot96MiB/result128MiB/work8 credits and TryEnqueue pending256 with actual callers; legacy Enqueue not bounded by that cap.",
           "relight_shared_admission_evidence": "build/desktop-msvc/s4-relight-shared-admission-acceptance-20261121.json",
-          "partial_result": "Real relight work-slot bypass reproduced/fixed; both APIs now obey work/pool denial, return exact spec, expose pending debt; local and native actual World automatic AIR successor PASS. Overall shared producer composition remains CHECK, especially generation Q09; returned retry-storage envelope Q08 stays OPEN."
+          "partial_result": "Mesh/relight/generation active compute now obey shared work slots and bounded TryEnqueue; relight and generation denial/current successors have current native receipts. Overall payload-byte/count composition remains CHECK: existing mesh snapshot/result credits do not cover all relight/gen captured and ready payloads; those envelopes remain Q08/Q09.",
+          "generation_shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q04",
@@ -710,7 +711,9 @@
         {
           "id": "LIMIT-C1.Q09",
           "status": "CHECK",
-          "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded."
+          "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
+          "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
+          "partial_result": "Shared compute-slot and actual pool refusal accepted: exact Requested retention/rerank, normal-Tick actual terrain successor, cancel while refused. Requested/Ready/metadata count and generated-buffer bytes remain CHECK."
         },
         {
           "id": "LIMIT-C1.Q10",

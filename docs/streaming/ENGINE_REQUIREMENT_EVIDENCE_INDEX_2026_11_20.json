@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.shared-compute-admission",
+      "status": "SCOPED_PASS_STORAGE_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
+      "scope": "Controlled IUChunkPopulator payload, real scheduler/pool/registry/Completed/Tick/ChunkBuffer.ApplyTo. Actual pool pressure via bounded fixture barriers, original seed17 versus duplicate seed99, retained timestamp/token/priority, one terrain install and cancel while refused. Not worldgen algorithm parity or camera route evidence. Requested/Ready count and buffer bytes still open."
+    },
+    {
       "id": "S4.02.LIMIT.Q03_Q05.relight-shared-admission",
       "status": "SCOPED_PASS_COMPOSITION_OPEN",
       "receipt": "build/desktop-msvc/s4-relight-shared-admission-acceptance-20261121.json",

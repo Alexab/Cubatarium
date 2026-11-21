@@ -120,7 +120,7 @@ private:
     }
   };
 
-  void ScheduleWorker(const PendingRequest &request,
+  bool ScheduleWorker(const PendingRequest &request,
                       int generation_start_cap_per_frame);
   void CompactRequestQueueIfStale();
 
