@@ -626,8 +626,9 @@
       "subcases": [
         {
           "id": "Q12-C1.PEER_REPAIR",
-          "status": "CHECK",
-          "scope": "Actual queue dedupe/budget0/missing peer retains request; actual peer coverage transfers dependency; target real current successor completes."
+          "status": "REUSE",
+          "scope": "Actual queue dedupe/budget0/missing peer retains request; actual peer coverage transfers dependency; target real current successor completes.",
+          "evidence": "build/desktop-msvc/s4-face-peer-acceptance-20261121.json"
         },
         {
           "id": "Q12-C1.OVERLAY_REPAIR",
@@ -637,7 +638,8 @@
         {
           "id": "Q12-C1.RETIRE_RESET",
           "status": "CHECK",
-          "scope": "Actual target removal retires old request; new incarnation/repeated demand and permanent world epoch replacement complete current successor."
+          "scope": "Actual target removal retires old request; new incarnation/repeated demand and permanent world epoch replacement complete current successor.",
+          "coverage_note": "Current receipt proves actual target removal/reissue/new incarnation; permanent world epoch replacement remains CHECK."
         }
       ]
     },
