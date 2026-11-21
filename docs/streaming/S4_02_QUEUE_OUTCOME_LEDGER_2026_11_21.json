@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q09-C1",
     "Q11-C1",
     "Q10-C1",
     "Q10-C2",
@@ -432,7 +431,7 @@
     {
       "id": "Q09-C1",
       "queue": "Q09",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "Generation reject/cancel/reset/eviction and stale ready-commit reject old generation, preserve live demand and install actual current arrival.",
       "subcases": [
         {
@@ -458,10 +457,14 @@
         },
         {
           "id": "Q09-C1.ADMISSION",
-          "status": "CHECK",
-          "scope": "Actual request rejection/coalescing/priority refresh and discarded completion terminate explicitly or retain live demand/current arrival. Distinguish unbounded legacy pool enqueue from typed capacity denial (LIMIT-C1)."
+          "status": "REUSE",
+          "scope": "Actual request rejection/coalescing/priority refresh and discarded completion terminate explicitly or retain live demand/current arrival. Distinguish unbounded legacy pool enqueue from typed capacity denial (LIMIT-C1).",
+          "evidence": "build/desktop-msvc/s4-generation-admission-acceptance-20261121.json",
+          "coverage_note": "Controlled IUChunkPopulator payload; actual scheduler/pool/ready/buffer ApplyTo. Same-token discarded is interface injection, not ordinary PipelineChunkPopulator failure; production discarded comes from cancellation checkpoints. Actual request rejection is non-column Y; capacity denial absent from legacy unbounded Enqueue and stays LIMIT-C1. No generator algorithm/backend/framebuffer/performance/full memory acceptance; full S0..S6 OPEN."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-generation-admission-acceptance-20261121.json",
+      "coverage_note": "Four finite subcases accepted by matching receipts; latest native revalidates actual owner/current arrival. Controlled IUChunkPopulator payload; actual scheduler/pool/ready/buffer ApplyTo. Same-token discarded is interface injection, not ordinary PipelineChunkPopulator failure; production discarded comes from cancellation checkpoints. Actual request rejection is non-column Y; capacity denial absent from legacy unbounded Enqueue and stays LIMIT-C1. No generator algorithm/backend/framebuffer/performance/full memory acceptance; full S0..S6 OPEN."
     },
     {
       "id": "Q10-R1",
@@ -582,5 +585,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q09-C1 STALE_READY/CANCEL_RESET/OUTSIDE accepted. Next ADMISSION. Top-level7 CHECK; full scope OPEN."
+  "checkpoint": "Q09-C1 all4 subcases accepted. Next Q11-C1 seed/seal lifecycle. Top-level6 CHECK; full scope OPEN."
 }

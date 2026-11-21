@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q09.admission-and-composed-lifecycle",
+      "status": "SCOPED_PASS_Q09_C1_CLOSED_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-generation-admission-acceptance-20261121.json",
+      "scope": "Controlled IUChunkPopulator payload; actual scheduler/pool/ready/buffer ApplyTo. Same-token discarded is interface injection, not ordinary PipelineChunkPopulator failure; production discarded comes from cancellation checkpoints. Actual request rejection is non-column Y; capacity denial absent from legacy unbounded Enqueue and stays LIMIT-C1. No generator algorithm/backend/framebuffer/performance/full memory acceptance; full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q09.outside-radius-current-return",
       "status": "SCOPED_PASS_Q09_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

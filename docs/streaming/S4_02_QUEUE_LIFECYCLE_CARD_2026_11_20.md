@@ -4,7 +4,7 @@
 
 ## Исполнимый остаток от 2026-11-21
 
-`S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json` фиксирует 18 CHECK, 12 property-specific REUSE и 1 INAPPLICABLE (disabled worker capture). CHECK — группы явно перечисленных сценариев, не число запусков. Отсутствующие source caps остаются отдельным LIMIT-C1; drain budget не считается cap. Старые CHECK в обзорной таблице ниже уточняются этим ledger и последующими receipts, а исторические гипотезы не являются очередью повторов.
+`S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json` после принятия Q09 фиксирует 6 CHECK, 24 property-specific REUSE и 1 INAPPLICABLE (disabled worker capture). CHECK — группы явно перечисленных сценариев, не число запусков. Отсутствующие source caps остаются отдельным LIMIT-C1; drain budget не считается cap. Старые CHECK в обзорной таблице ниже уточняются этим ledger и последующими receipts, а исторические гипотезы не являются очередью повторов. Следующий ID — Q11-C1.
 
 ### Q04-C1 / capacity reduction after same-key replacement
 
@@ -481,6 +481,12 @@ Q09 STALE_READY receipt s4-generation-stale-ready-acceptance-20261121.json accep
 Reuse the actual scheduler/pool/promise/ready cancellation fixture for operation3, three stages (scheduler queued, running after compute, completed Ready). Public CancelPendingOutsideRadius center(2,400,0)/radius1 retires old column0, retains boundary column1 with unchanged authoritative token. Accept current column0 return before releasing late old result: sentinel stays9, old arrivals0, newer Requested survives. Actual return buffer then retained boundary buffer ApplyTo, each one callback, retained admission unchanged/no repeated ingress. Controlled buffer positions now respect column X. Source WorldStreaming calls this same method with actual focus/retention radius; fixture is not camera travel/algorithm parity. Existing cancellation9/stale-ready regression included; worker/ready5s. No production defect assumed; one verification for this missing property.
 
 OUTSIDE accepted without production change: s4-generation-outside-acceptance-20261121.json. All3 phases old_arrivals0/new_owner_preserved/current_arrival/retained_arrival true. Existing cancellation9 and STALE_READY passed in same actual native probe. Build0/API/runtime0/startup/provenance PASS/config restored; runner2/overall UNTESTED retained. No generator algorithm/camera travel/framebuffer/backend/memory acceptance. Next ADMISSION, then Q11-C1; full scope OPEN.
+
+### Q09-C1.ADMISSION / finite request outcomes
+
+Six actual scheduler/pool/ApplyTo cases: queued/Generating-promise/Ready × priority promotion/demotion relative to peer. Duplicate same and changed priorities carry intentionally different Seed99; first immutable accepted Seed17 must remain, one job/arrival per owner, commit order follows live priority. Non-column Y1 rejects before worker; committed duplicate starts no job. Ready-count wait5s; no destructive idle observer. Two controlled discarded-result cases exercise still-current interface terminal branch and registry-expired reject then direct current reissue, protected terrain/callback count. Actual PipelineChunkPopulator produces discarded only at cancellation checkpoints; synthetic still-current discard is scheduler interface coverage, not an ordinary uncancelled production failure. Exact stale-vs-newer ownership reuse from accepted cancellation/stale-ready paths; unbounded legacy pool Enqueue has no capacity-denial branch (LIMIT-C1), not fabricated TryEnqueue rejection. One missing-property verification; no production defect assumed. Full backend/framebuffer/performance remains open.
+
+ADMISSION accepted without production change: s4-generation-admission-acceptance-20261121.json. All6 priority cases immutable_request/invalid_rejected/priority_order/single_arrival_per_owner true; both discarded terminal/current reissue cases true. Current native regression also cancellation9/outside3/stale-ready PASS. Build0/API/runtime0/startup/provenance PASS/config restored; runner2/overall UNTESTED retained. All4 Q09-C1 subcases now REUSE by matching property; original terrain/fluid callback evidence remains separate. Next Q11-C1; top-level6 CHECK, full S4.02/S0..S6 OPEN.
 
 ### Q09-C1.CANCEL_RESET / actual generation cancellation matrix
 
