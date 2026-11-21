@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q02-C2",
     "Q03-C1",
     "Q05-C1",
     "Q06-C1",
@@ -52,7 +51,7 @@
     {
       "id": "Q02-C2",
       "queue": "Q02",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "Dirty/deferred coalescing and outside-keep eviction: retain required demand or explicitly retire abandoned demand; later return/repeated demand publishes.",
       "subcases": [
         {
@@ -77,10 +76,14 @@
         },
         {
           "id": "Q02-C2.4",
-          "status": "CHECK",
-          "scope": "Old executable retry receipt versus newer accepted owner and RAA follow-up coalescing; no duplicate/lost current work. Reuse Q04-C2 cancellation/removal where exact transition matches."
+          "status": "REUSE",
+          "scope": "Old executable retry receipt versus newer accepted owner and RAA follow-up coalescing; no duplicate/lost current work. Reuse Q04-C2 cancellation/removal where exact transition matches.",
+          "evidence": "build/desktop-msvc/s4-retry-raa-acceptance-20261121.json",
+          "coverage_note": "Scripted actor-boundary admission/frame adapter isolates interleaving; no claim the full runtime scheduler naturally produced all4 scenes. CPU scope; mixed GPU/field RAA and resource lifecycle remain Q06. No independent framebuffer/performance oracle."
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-retry-raa-acceptance-20261121.json",
+      "coverage_note": "CPU dirty/deferred lifecycle composed from .1/.2/.3/.4 receipts and Q04-C2 explicit CPU cancellation/removal/lease proof. Complete current normal decor target revalidates dependent cases; GPU/field ownership remains Q06."
     },
     {
       "id": "Q03-C1",
@@ -357,5 +360,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q02-C2.1/.2/.3 accepted: same-frame coalescing, deferred return/retirement/zero quota, bounded index256 with all257 obligations retained and two current edge publications after explicit middle retirement. Q02-C2 remains CHECK only for .4 RAA/old receipt coalescing. 14 CHECK groups/16 REUSE groups/1 disabled path; full S0..S6 OPEN."
+  "checkpoint": "Q02-C2 all4 CPU dirty/deferred/coalescing subcases accepted. 13 CHECK groups/17 REUSE groups/1 disabled production path. Next Q03-C1 production main-thread capture refusal/store capacity/pressure/stale-current successor. Full S4.02/S0..S6 OPEN; no mixed GPU/field/performance acceptance."
 }

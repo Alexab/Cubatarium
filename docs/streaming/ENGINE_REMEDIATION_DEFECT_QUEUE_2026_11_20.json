@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "old-overflow-retry-manufactures-raa-and-dirty-tail",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "Both consumers mark an already-owned coord dirty when consuming older overflow retry, creating redundant RAA. Genuine edit correctly returns Dirty but stale RAA survives and contaminates the final current publication.",
+      "fix": "Old overflow receipts coalesce into existing actual CPU owner instead of MarkDirty. Orphan mesh RAA merges into existing Dirty rather than surviving through its next publication; request and queue age unchanged by that merge. GPU/extract-only overflow branch unchanged.",
+      "evidence": "build/desktop-msvc/s4-retry-raa-acceptance-20261121.json",
+      "next_action": "Q03-C1 capture-store refusal/eviction/stale current publication. Mixed GPU/field RAA remains Q06; no parent package closure."
+    },
+    {
       "id": "deferred-capacity-evicts-live-obligation-without-owner",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

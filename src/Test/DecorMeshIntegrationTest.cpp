@@ -124,6 +124,20 @@ struct ChunkMeshCaptureAdmissionTestAccess
     cache.ConfigureCapturePolicy(world);
     return cache.GetCaptureStore().CaptureAndStore(world, coord, revision);
   }
+  static bool AdmitCpuThenAdvanceReceiptFrame(UChunkMeshCache &cache,
+      ChunkMeshSnapshot snapshot, UBlockRegistry &registry)
+  {
+    cache.EnsureAsyncBuilder();
+    const auto coord = snapshot.coord;
+    const auto revision = snapshot.sourceRevision;
+    if (!cache.AsyncBuilder->Enqueue(std::move(snapshot), registry)) return false;
+    cache.ActiveMeshSourceRevision[coord] = revision;
+    cache.Dirty.Erase(coord);
+    // Isolate the actual admission/owner handoff and next-frame marker reset;
+    // receipt consumption itself uses the public cache API under test.
+    cache.ScheduledThisFrame_.clear();
+    return true;
+  }
   static void TrackSource(UChunkMeshCache &cache, glm::ivec3 coord,
                           uint64_t revision)
   {
@@ -3899,6 +3913,101 @@ static bool TestDeferredRemeshCapacity(
       !cache.HasPendingDirty();
   std::cout << "deferred_capacity edge_publications=" << mesher.builds << " complete=" << complete << '\n';
   return complete;
+}
+
+static bool TestRetryReceiptAndRealRaa(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool all = true;
+  for (const bool main_tick : {false, true})
+    for (const bool genuine_edit : {false, true})
+    {
+      UBlockWorld world;
+      world.SetFluidDefinitions(definitions);
+      world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+      world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+      world.SetBlock({8, 8, 8}, kStone);
+      const glm::ivec3 root(0);
+      GatedPhysicalMesher rejected_mesher, current_mesher;
+      rejected_mesher.Release();
+      UChunkMeshCache cache;
+      auto settings = MakeFrustumMeshSettings();
+      settings.AsyncMeshing = true;
+      settings.FrustumCulling = false;
+      settings.Lighting = LightingMode::Flat;
+      cache.SetRenderSettings(settings);
+      cache.SetRepairGuardWorld(&world);
+      cache.SetMesherBackend(&rejected_mesher);
+      cache.SetMeshRebuildFocus(root, 4, 1);
+      const auto capture = [&]() {
+        UFlatLightingPipeline flat;
+        flat.FillAllLoadedChunks(world);
+        const auto *chunk = world.GetChunkManager().GetChunk(root);
+        const auto revision = cache.GetChunkMeshRevision(root);
+        const auto epoch = cache.GetCaptureStore().WorldEpoch();
+        cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+            0, 1.0, epoch, chunk->GetIncarnation());
+        cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+            chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+        return ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache, world, root);
+      };
+      cache.MarkDirtyPriority(root);
+      auto input = capture();
+      Expect(cache.GetCaptureStore().TryCommit(root, input.sourceRevision,
+                 cache.GetCaptureStore().WorldEpoch(), input, nullptr), "retry fixture commits valid captured input");
+      UPipelineAdmission::Get().SetResultCap(0);
+      const auto tick = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+      Expect(tick.Scheduled == 1 && cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+             "old actual CPU job creates result-rejection receipt");
+      UPipelineAdmission::Get().SetResultCap(128 * 1024 * 1024);
+      Expect(cache.GetMeshCompletedSize() == 0 && !cache.HasCpuMeshBuildInFlight(root),
+             "failed old result has no executable CPU owner before reissue");
+      world.SetBlock({12, 8, 8}, kStone);
+      cache.InvalidateInFlightMeshBuild(root);
+      cache.SetMesherBackend(&current_mesher);
+      Expect(ChunkMeshCaptureAdmissionTestAccess::AdmitCpuThenAdvanceReceiptFrame(
+                 cache, capture(), registry) && current_mesher.WaitEntered(),
+             "newer actual CPU job owns target before old receipt consumption");
+      const auto current_request = cache.GetInflightSourceRevision(root);
+      if (main_tick) cache.RebuildDirtyChunksWithStats(world, registry, 0, 0, false, 0);
+      else cache.DrainAsyncMeshResults(world, registry, 0);
+      const bool coalesced = cache.HasCpuMeshBuildInFlight(root) &&
+          cache.GetInflightSourceRevision(root) == current_request &&
+          !cache.IsChunkMeshDirty(root) && !cache.IsRemeshAfterApplyPending(root);
+      if (genuine_edit)
+      {
+        world.SetBlock({8, 8, 12}, kStone);
+        for (int duplicate = 0; duplicate < 6; ++duplicate) cache.MarkDirty(root);
+      }
+      const bool real_debt = !genuine_edit || cache.IsRemeshAfterApplyPending(root);
+      current_mesher.Release();
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) && !current_mesher.timed_out,
+             "current worker exits behind explicit mutation barrier");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      bool current = false;
+      if (genuine_edit)
+      {
+        const bool returned = cache.IsChunkMeshDirty(root);
+        auto latest = capture();
+        Expect(cache.GetCaptureStore().TryCommit(root, latest.sourceRevision,
+                   cache.GetCaptureStore().WorldEpoch(), latest, nullptr),
+               "real RAA follow-up captures latest geometry");
+        const auto retry = cache.RebuildDirtyChunksWithStats(world, registry, 0, 1, false, 0);
+        Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "real RAA current follow-up computes");
+        cache.DrainAsyncMeshResults(world, registry, 8);
+        current = returned && retry.Scheduled == 1 && current_mesher.builds == 2;
+      }
+      else current = current_mesher.builds == 1;
+      current = current && cache.IsPublishedMeshCurrentForInputs(root, world) &&
+          !cache.HasPendingDirty() && !cache.IsRemeshAfterApplyPending(root);
+      std::cout << "retry_raa main=" << main_tick << " edit=" << genuine_edit
+                << " coalesced=" << coalesced << " real_debt=" << real_debt
+                << " current=" << current << " builds=" << current_mesher.builds << '\n';
+      all = all && coalesced && real_debt && current;
+    }
+  return all;
 }
 
 static bool TestMeshAdmissionOwnerLifetime(
@@ -8097,8 +8206,9 @@ int main(int argc, char **argv)
   const bool same_frame_ok = TestSameFrameDirtyCoalescing(registry, definitions.get());
   const bool deferred_ok = TestDeferredRemeshRetirement(registry, definitions.get());
   const bool deferred_capacity_ok = TestDeferredRemeshCapacity(registry, definitions.get());
+  const bool retry_raa_ok = TestRetryReceiptAndRealRaa(registry, definitions.get());
   TestOutsideRadiusCpuMeshLifetime(registry, definitions.get());
-  Expect(same_frame_ok && deferred_ok && deferred_capacity_ok, "dirty and deferred owners survive zero quota and retire on explicit removal/reset");
+  Expect(same_frame_ok && deferred_ok && deferred_capacity_ok && retry_raa_ok, "dirty and deferred owners survive zero quota and retire on explicit removal/reset");
   const bool admission_owner_ok = TestMeshAdmissionOwnerLifetime(registry, definitions.get());
   const bool admission_debt_ok = TestCacheMeshAdmissionDebt(registry, definitions.get());
   Expect(admission_owner_ok && admission_debt_ok, "mesh admission rejects preserve credits owner and executable current debt");

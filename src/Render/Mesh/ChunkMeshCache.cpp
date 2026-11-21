@@ -10336,7 +10336,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
          it != RemeshAfterApply.end() && promoted < kOrphanRaaReconcile;)
     {
       const glm::ivec3 c = *it;
-      const bool owned = Dirty.Contains(c) || IsPendingGpuApply(c) ||
+      const bool owned = IsPendingGpuApply(c) ||
                          (AsyncBuilder && AsyncBuilder->IsInFlight(c)) ||
                          ActiveMeshSourceRevision.count(c) > 0;
       if (owned)
@@ -10345,6 +10345,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         continue;
       }
       it = RemeshAfterApply.erase(it);
+      // A rejected attempt may already have transferred the follow-up to Dirty.
+      // Keep that one current owner; do not carry RAA through its next publish.
+      if (Dirty.Contains(c))
+        continue;
       // ColPipe P2: !Drawable → FirstMeshQ; FullyDark only if stale field;
       // lit remesh → RemeshQ. True-dark FullyDark drops RAA without Dirty.
       if (!HasDrawableGreedyMesh(c))
@@ -10835,6 +10839,10 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
     }
     for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
     {
+      // The current CPU attempt covers this coordinate and owns its own retry.
+      // An older receipt is not evidence of another input mutation.
+      if (AsyncBuilder->IsInFlight(coord))
+        continue;
       // This is already admitted demand, not a new edit. An exhausted ingress
       // quota must not lose a replacement just because the old mesh is lit.
       // Drop only orphan ownership; a newer CPU/GPU job still owns its result.
@@ -13285,6 +13293,8 @@ void UChunkMeshCache::DrainAsyncMeshResults(UBlockWorld &world,
   }
   for (const glm::ivec3 &coord : AsyncBuilder->TakeOverflowCoords())
   {
+    if (AsyncBuilder->IsInFlight(coord))
+      continue;
     // The dropped completed job no longer owns this coordinate. Preserve a
     // newer CPU/GPU owner, but retire orphan tracking before MarkDirtyPriority
     // can mistake it for active work and park the retry in RemeshAfterApply.
