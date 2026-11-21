@@ -224,3 +224,5 @@ Q11: шаги 7–8 завершены в объёме группы. RETENTION/P
 
 
 S4.01 завершён: s4-section-owner-acceptance-20261120.json, текущий Release Full20/20 + Flat1/1 + policy2/2 PASS. Шаги 1–4 завершены. Точка продолжения: шаг 5, S4.02 — конечный реестр очередей и только недостающие исходы; уже доказанный relight lifecycle не повторять. Полная цель S0..S6 и родительский S4 остаются OPEN.
+
+Checkpoint 2026-11-21 after Q12: finite near-queue actions through step11 accepted (Q09/Q11/Q10/Q12 property receipts in evidence index). Next step12 Q01-C1, then13–14 LIMIT-C1;2 CHECK/28 REUSE/1 INAPPLICABLE in authoritative ledger. S4.02 remains OPEN and23/42 work packages unchanged. Full S0..S6 scope and final stage reconciliation retained.

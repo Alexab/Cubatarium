@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q12.overlay-and-lifecycle-closure",
+      "status": "SCOPED_PASS_Q12_C1_CLOSED_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-face-overlay-acceptance-20261121.json",
+      "scope": "Q12-C1.OVERLAY_REPAIR: actual missing-peer overlay capture/publication, exact production callback installer and repair drain, same actual peer incarnation/coverage/target-light tuple refused, real current overlay-free target successor. Absence oracle/request adapters explicit; no independent framebuffer/Full-light/backend/fairness/cap acceptance. Earlier accepted peer/reset receipts retained; caps LIMIT-C1, S4.02/full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q12.world-replacement",
       "status": "SCOPED_PASS_Q12_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

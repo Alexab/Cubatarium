@@ -5,7 +5,6 @@
   "scope": "Finite decomposition of existing Q01..Q12, not new audit; full S0..S6 remains OPEN. REUSE is property-specific historical evidence, not claim all receipts match current sources. Current EXE native regression receipt separately records source identity.",
   "rule": "CHECK rows close only with exact owner/terminal/current successor evidence. Split row only to track its existing subcases; new obligation needs original requirement/dependency reference. INAPPLICABLE is source-specific and reopens on changed dependency.",
   "execution_order": [
-    "Q12-C1",
     "Q01-C1",
     "LIMIT-C1"
   ],
@@ -621,7 +620,7 @@
     {
       "id": "Q12-C1",
       "queue": "Q12",
-      "status": "CHECK",
+      "status": "REUSE",
       "required_result": "Face-repair dedupe/cancel/eviction/reset and repeated presentation demand preserve exact repair owner or explicitly retire demand; actual successor clears debt.",
       "subcases": [
         {
@@ -632,8 +631,10 @@
         },
         {
           "id": "Q12-C1.OVERLAY_REPAIR",
-          "status": "CHECK",
-          "scope": "Target-local boundary overlay repair once per peer identity/coverage/light state, actual current target republish clears overlay obligation."
+          "status": "REUSE",
+          "scope": "Target-local boundary overlay repair once per peer identity/coverage/light state, actual current target republish clears overlay obligation.",
+          "evidence": "build/desktop-msvc/s4-face-overlay-acceptance-20261121.json",
+          "coverage_note": "Q12-C1.OVERLAY_REPAIR: actual missing-peer overlay capture/publication, exact production callback installer and repair drain, same actual peer incarnation/coverage/target-light tuple refused, real current overlay-free target successor. Absence oracle/request adapters explicit; no independent framebuffer/Full-light/backend/fairness/cap acceptance."
         },
         {
           "id": "Q12-C1.RETIRE_RESET",
@@ -642,7 +643,9 @@
           "coverage_note": "Q12-C1.RETIRE_RESET: actual removal, fresh incarnation and public permanent world replacement; exact production epoch ingress adapter. No full focus tick/overlay/route/backend/framebuffer/fairness acceptance.",
           "evidence": "build/desktop-msvc/s4-face-replacement-acceptance-20261121.json"
         }
-      ]
+      ],
+      "evidence": "build/desktop-msvc/s4-face-overlay-acceptance-20261121.json",
+      "coverage_note": "All three finite lifecycle subcases accepted; no separate queue cancel/eviction API. Actual removal and epoch reset explicitly retire demand. Storage caps/cost remain LIMIT-C1; fairness S4.05; pair/backend/framebuffer later packages."
     },
     {
       "id": "LIMIT-C1",
@@ -725,5 +728,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q10-C2 save ownership accepted by current admission+exact historical property reuse. Next Q12-C1 face-repair lifecycle. Top-level3 CHECK; full scope OPEN."
+  "checkpoint": "Q12 lifecycle closed by peer/current publication, actual removal/world replacement and actual overlay repair. Remaining2 CHECK: Q01-C1 then LIMIT-C1; full S0..S6 OPEN."
 }

@@ -2178,6 +2178,47 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"fresh_incarnation",replacement_fresh},{"current_successor",replacement_current}};
         require(epoch_changed && old_retired && replacement_fresh && replacement_current,
             "actual world replacement retires old face owners and current replacement publishes");
+        repair.SoftDeferPolicy.world=&face_world;
+        repair.InstallSoftDeferCallbacks(face_mesh);
+        face_mesh.RemoveColumn({1,0,0},-3,-3);
+        face_world.BlockWorld.GetChunkManager().RemoveChunk(peer);
+        face_world.BlockWorld.SetKnownOpenSkyAbsentQuery([peer](glm::ivec3 c){return c!=peer;});
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,target);
+        const bool overlay_published=face_cache.HasActiveBoundaryOverlayFace(target,1) &&
+            demand.Find(target) && (demand.Find(target)->overlay_face_debt_mask & bit)!=0;
+        require(overlay_published,"actual missing peer capture publishes target boundary overlay");
+        repair.EnqueueFaceDebtRepair(target);
+        repair.DrainFaceDebtRepairs(face_world,1);
+        const bool overlay_waits=repair.PendingFaceDebtRepairSet_.count(target)!=0 &&
+            (demand.Find(target)->overlay_face_debt_mask & bit)!=0;
+        face_world.BlockWorld.SetBlock({CHUNK_SIZE+8,-40,8},8);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        const auto overlay_peer_incarnation=face_world.BlockWorld.GetChunkManager().GetChunk(peer)->GetIncarnation();
+        const auto overlay_peer_coverage=demand.Find(peer)->published_coverage_gen;
+        const auto overlay_target_light=face_world.BlockWorld.GetChunkManager().GetChunk(target)->GetLightFieldRevision();
+        repair.DrainFaceDebtRepairs(face_world,1);
+        const bool overlay_transferred=face_cache.HasPendingMeshDependencyInvalidation(target) &&
+            (demand.Find(target)->overlay_repair_attempted_mask & bit)!=0;
+        const bool same_state_refused=!demand.CanBeginBoundaryOverlayRepair(target,1,
+            overlay_peer_incarnation,overlay_peer_coverage,overlay_target_light);
+        repair.DrainFaceDebtRepairs(face_world,1);
+        const auto overlay_before=face_cache.GetPublishCount(target);
+        for(int pass=0;pass<8;++pass) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          face_mesh.RebuildDirtyChunksWithStats(face_world.BlockWorld,*face_world.BlockRegistry,8,8);
+          repair.DrainFaceDebtRepairs(face_world,1);
+          if(!face_cache.HasActiveBoundaryOverlayFace(target,1) && repair.PendingFaceDebtRepairs_.empty()) break;
+        }
+        const bool overlay_current=face_cache.GetPublishCount(target)>overlay_before &&
+            face_cache.IsPublishedMeshCurrentForInputs(target,face_world.BlockWorld) &&
+            !face_cache.HasActiveBoundaryOverlay(target) && demand.Find(target)->face_debt_mask==0 &&
+            repair.PendingFaceDebtRepairs_.empty() && repair.PendingFaceDebtRepairSet_.empty() &&
+            !face_cache.HasPendingMeshDependencyInvalidation(target);
+        report["face_repair_overlay"]={{"actual_overlay_published",overlay_published},{"missing_peer_retained",overlay_waits},
+            {"dependency_transferred",overlay_transferred},{"same_state_refused",same_state_refused},
+            {"current_successor",overlay_current}};
+        require(overlay_published && overlay_waits && overlay_transferred && same_state_refused && overlay_current,
+            "actual overlay repair waits, admits peer state once and publishes overlay-free current target");
       });
       if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
       else report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
