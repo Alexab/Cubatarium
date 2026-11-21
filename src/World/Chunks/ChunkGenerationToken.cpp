@@ -40,7 +40,14 @@ bool UChunkGenerationRegistry::Retire(glm::ivec3 coord, uint64_t expected_sequen
   const auto current = Sequences.find(coord);
   if (current == Sequences.end() || current->second != expected_sequence) return false;
   Sequences.erase(current);
+  if(Sequences.empty()) decltype(Sequences){&Memory}.swap(Sequences);
   return true;
+}
+
+UAllocationCountingResource::Snapshot UChunkGenerationRegistry::GetAllocationSnapshot() const
+{
+  std::lock_guard<std::mutex> lock(Mutex);
+  return Memory.GetSnapshot();
 }
 
 size_t UChunkGenerationRegistry::LiveTokenCount() const

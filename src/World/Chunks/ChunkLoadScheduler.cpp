@@ -335,6 +335,13 @@ void UChunkLoadScheduler::CancelAllPending(
   InitialRequestPriorities.clear();
   RequestPriorityRefreshCounts.clear();
   QueuedRequests.clear();
+  // Release historical bucket capacity, retaining the same resource owner.
+  decltype(QueuedRequests){&MetadataMemory}.swap(QueuedRequests);
+  decltype(ActiveTokens){&MetadataMemory}.swap(ActiveTokens);
+  decltype(ActiveRequestIds){&MetadataMemory}.swap(ActiveRequestIds);
+  decltype(RequestPriorities){&MetadataMemory}.swap(RequestPriorities);
+  decltype(InitialRequestPriorities){&MetadataMemory}.swap(InitialRequestPriorities);
+  decltype(RequestPriorityRefreshCounts){&MetadataMemory}.swap(RequestPriorityRefreshCounts);
   Pool.CancelPendingJobs();
   (void)Completed.DrainAll();
   if (worker_wait.count() > 0)
@@ -710,6 +717,24 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
   return static_cast<int>(std::min(
       snapshot.workers > occupied ? snapshot.workers - occupied : size_t{0},
       retained < kMaxRetainedGenerationResults ? kMaxRetainedGenerationResults-retained : size_t{0}));
+}
+
+UChunkLoadScheduler::MetadataStorageSnapshot UChunkLoadScheduler::GetMetadataStorageSnapshot() const
+{
+  MetadataStorageSnapshot snapshot{MetadataMemory.GetSnapshot(),0};
+  const auto string_charge=[](const std::string &value) -> size_t {
+    const auto data=reinterpret_cast<uintptr_t>(value.data());
+    const auto object=reinterpret_cast<uintptr_t>(&value);
+    if(data>=object && data-object<sizeof(value)) return 0; // inline/SSO
+    return value.capacity()+1;
+  };
+  const auto settings_charge=[&](const ProceduralSettings &settings) {
+    return string_charge(settings.SeedText)+string_charge(settings.WorldGenPackId)+
+        string_charge(settings.WorldGenPresetId);
+  };
+  for(const auto &entry:Queue) snapshot.pending_string_capacity_bytes+=settings_charge(entry.settings);
+  for(const auto &entry:QueuedRequests) snapshot.pending_string_capacity_bytes+=settings_charge(entry.second.settings);
+  return snapshot;
 }
 
 size_t UChunkLoadScheduler::RetireCommittedOutsideInterest(glm::ivec3 center,int radius,

@@ -2495,6 +2495,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         } populator;
         UChunkGenerationRegistry generation;
         UChunkLoadScheduler scheduler(populator,generation);
+        const auto empty_metadata=scheduler.GetMetadataStorageSnapshot();
+        const auto empty_token_allocator=generation.GetAllocationSnapshot();
         UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
         terrain.SetVerticalProfile({-48,-33,-40});
         const glm::ivec3 target(0),peer(1,0,0);
@@ -2628,14 +2630,23 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(tokens_retired,"generation terminal owners release token history without sequence reuse");
         credits.SetWorkSlotCap(0);
         bool admitted_all=true;
+        auto long_settings=request;
+        long_settings.SeedText=std::string(4096,'s');
+        long_settings.WorldGenPackId=std::string(64,'p');
+        long_settings.WorldGenPresetId=std::string(96,'r');
         for(size_t n=0;n<UChunkLoadScheduler::kMaxActiveGenerationRequests;++n)
-          admitted_all=scheduler.RequestLoad({1000+static_cast<int>(n),0,0},1000000000,request) && admitted_all;
+          admitted_all=scheduler.RequestLoad({1000+static_cast<int>(n),0,0},1000000000,long_settings) && admitted_all;
         const bool updated_at_full=scheduler.RequestLoad({1000,0,0},-10,duplicate) &&
             scheduler.QueuedRequests.at({1000,0,0}).settings.Seed==17 &&
             scheduler.QueuedRequests.at({1000,0,0}).priority==-10;
+        const auto full_metadata=scheduler.GetMetadataStorageSnapshot();
+        const auto full_token_allocator=generation.GetAllocationSnapshot();
         const glm::ivec3 desired(5000,0,0);
         const bool explicit_refusal=!scheduler.RequestLoad(desired,0,request) &&
             scheduler.GetState(desired)==ChunkLoadState::Absent && generation.Current(desired).sequence==0;
+        const bool rejected_no_allocation=scheduler.GetMetadataStorageSnapshot().containers.live_bytes==
+            full_metadata.containers.live_bytes && generation.GetAllocationSnapshot().live_bytes==
+            full_token_allocator.live_bytes;
         UChunkStreamer producer(terrain,*world.BlockRegistry,1,0,-33,-48);
         producer.SetAsyncGeneration(true); producer.SetNearLoadRadius(1);
         producer.SetAsyncCallbacks([&](glm::ivec3 c,int priority,uint64_t demand) {
@@ -2704,6 +2715,23 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const bool newer_preserved=scheduler.MetadataCount()==0 &&
             generation.Current(protected_column).sequence==newer_identity;
         generation.Retire(protected_column,newer_identity);
+        scheduler.CancelAllPending();
+        const auto reset_metadata=scheduler.GetMetadataStorageSnapshot();
+        const auto reset_token_allocator=generation.GetAllocationSnapshot();
+        const bool allocation_released=reset_metadata.containers.live_bytes==empty_metadata.containers.live_bytes &&
+            reset_metadata.pending_string_capacity_bytes==0 &&
+            reset_token_allocator.live_bytes==empty_token_allocator.live_bytes;
+        report["generation_metadata_allocator"]={{"empty_container_bytes",empty_metadata.containers.live_bytes},
+            {"full_container_bytes",full_metadata.containers.live_bytes},
+            {"peak_container_bytes",reset_metadata.containers.peak_bytes},
+            {"reset_container_bytes",reset_metadata.containers.live_bytes},
+            {"full_pending_string_capacity_bytes",full_metadata.pending_string_capacity_bytes},
+            {"empty_token_bytes",empty_token_allocator.live_bytes},{"full_token_bytes",full_token_allocator.live_bytes},
+            {"reset_token_bytes",reset_token_allocator.live_bytes},{"rejected_no_allocation",rejected_no_allocation},
+            {"reset_to_baseline",allocation_released}};
+        require(rejected_no_allocation && allocation_released &&
+            full_metadata.pending_string_capacity_bytes>=2*1024*(4096+64+96),
+            "metadata allocator and separately charged string payload release to baseline");
         report["generation_metadata_capacity"]={{"test_capacity",4},{"full_refusal",metadata_full && metadata_refused},
             {"unowned_retired_live_data_preserved",live_preserved},{"required_successor",metadata_successor},
             {"shrink_does_not_evict",shrink_preserves},{"newer_identity_preserved",newer_preserved},

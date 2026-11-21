@@ -13,6 +13,7 @@ static void Expect(bool ok)
 int main()
 {
   cutum::UChunkGenerationRegistry registry;
+  const auto empty_allocator=registry.GetAllocationSnapshot();
   const glm::ivec3 coord(3, 0, -2);
 
   const uint64_t first = registry.Bump(coord);
@@ -67,6 +68,9 @@ int main()
   Expect(registry.Retire(coord,fresh.sequence));
   Expect(registry.Retire(other,other_token));
   Expect(registry.LiveTokenCount()==0);
+  Expect(registry.GetAllocationSnapshot().live_bytes==empty_allocator.live_bytes);
+  std::cout << "generation_registry_allocator empty=" << empty_allocator.live_bytes
+      << " after_retirement=" << registry.GetAllocationSnapshot().live_bytes << '\n';
   const auto successor=registry.EnsureCurrent(coord);
   Expect(successor.sequence>last && !registry.Retire(coord,fresh.sequence));
   std::cout << "generation_registry_retirement cohorts=10000 live="

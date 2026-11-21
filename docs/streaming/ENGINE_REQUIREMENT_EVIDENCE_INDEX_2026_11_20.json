@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.metadata-allocator-accounting",
+      "status": "SCOPED_PASS_BYTE_ADMISSION_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json",
+      "scope": "All8 scheduler metadata containers and separate mutex-serialized generation registry use owner-stable counting PMR resources. Measurements are requested dynamic node/sentinel/bucket allocation bytes, excluding owning object inline storage and upstream runtime/OS heap overhead. Both actual pending stores scanned by owner-thread diagnostic only. External std::string char capacity+terminator reported separately, inline/SSO excluded. This is capacity charge, not an allocator trace; large-allocation alignment/prefix/heap overhead not counted. Test config has4096-char seed text,64-char pack ID,96-char preset ID across1024 keys."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.metadata-domain-budget",
       "status": "SCOPED_PASS_BYTES_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json",

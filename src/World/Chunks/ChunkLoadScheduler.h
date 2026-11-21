@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
+#include "Core/Memory/AllocationCountingResource.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
@@ -39,6 +40,14 @@ public:
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
   size_t MetadataCount() const { return States.size(); }
+  struct MetadataStorageSnapshot
+  {
+    UAllocationCountingResource::Snapshot containers;
+    // Character capacity outside inline strings; allocator/OS overhead excluded.
+    size_t pending_string_capacity_bytes{0};
+  };
+  // Owner-thread diagnostic scan, not part of per-frame maintenance.
+  MetadataStorageSnapshot GetMetadataStorageSnapshot() const;
   size_t RetireCommittedOutsideInterest(glm::ivec3 center,int radius,
       const std::function<bool(glm::ivec3)> &has_owner,size_t budget=32);
   size_t GetRetainedGenerationResultCount() const
@@ -167,18 +176,19 @@ private:
   UJobThreadPool Pool;
   MarkChunkDirtyFn MarkDirty;
   ColumnMeshDirtyFn ColumnMeshDirty;
-  std::set<PendingRequest, RequestCompare> Queue;
+  UAllocationCountingResource MetadataMemory;
+  std::pmr::set<PendingRequest, RequestCompare> Queue{&MetadataMemory};
   // One exact removable ordered index entry per authoritative live request.
-  std::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests;
-  std::map<glm::ivec3,StateRecord,CoordinateLess> States;
+  std::pmr::unordered_map<glm::ivec3, PendingRequest, IVec3Hash> QueuedRequests{&MetadataMemory};
+  std::pmr::map<glm::ivec3,StateRecord,CoordinateLess> States{&MetadataMemory};
   size_t MetadataCapacity{2*kMaxActiveGenerationRequests};
   std::optional<glm::ivec3> MetadataRetirementCursor;
-  std::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveRequestIds;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities;
-  std::unordered_map<glm::ivec3, int, IVec3Hash> InitialRequestPriorities;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
-      RequestPriorityRefreshCounts;
+  std::pmr::unordered_map<glm::ivec3, ChunkGenerationToken, IVec3Hash> ActiveTokens{&MetadataMemory};
+  std::pmr::unordered_map<glm::ivec3, uint64_t, IVec3Hash> ActiveRequestIds{&MetadataMemory};
+  std::pmr::unordered_map<glm::ivec3, int, IVec3Hash> RequestPriorities{&MetadataMemory};
+  std::pmr::unordered_map<glm::ivec3, int, IVec3Hash> InitialRequestPriorities{&MetadataMemory};
+  std::pmr::unordered_map<glm::ivec3, uint64_t, IVec3Hash>
+      RequestPriorityRefreshCounts{&MetadataMemory};
   uint64_t NextRequestQueueRevision{1};
   uint64_t CapacityRefused{0};
   double LastTickApplyMs{0.0};

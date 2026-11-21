@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/Chunks/ChunkManager.h"
+#include "Core/Memory/AllocationCountingResource.h"
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <mutex>
@@ -28,10 +29,12 @@ public:
   uint64_t Bump(glm::ivec3 coord);
   bool Retire(glm::ivec3 coord, uint64_t expected_sequence);
   size_t LiveTokenCount() const;
+  UAllocationCountingResource::Snapshot GetAllocationSnapshot() const;
 
 private:
   mutable std::mutex Mutex;
-  std::unordered_map<glm::ivec3, uint64_t, IVec3Hash> Sequences;
+  UAllocationCountingResource Memory;
+  std::pmr::unordered_map<glm::ivec3, uint64_t, IVec3Hash> Sequences{&Memory};
   uint64_t NextSequence{0};
 };
 
