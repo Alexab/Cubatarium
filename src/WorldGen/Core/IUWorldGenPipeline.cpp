@@ -54,7 +54,7 @@ void GenerateAllColumnsInChunkRange(IUWorldGenPipeline &pipeline, int centerX,
 
 } // namespace
 
-IUWorldGenPipeline::IUWorldGenPipeline(WorldGenContext ctx) : Ctx(ctx) {}
+IUWorldGenPipeline::IUWorldGenPipeline(WorldGenContext ctx) : Ctx(std::move(ctx)) {}
 
 glm::vec3 IUWorldGenPipeline::DefaultSpawnPosition(int worldX, int worldZ,
                                                   float eyeHeight) const

@@ -79,7 +79,7 @@ void ApplyBetaRetroDefaults(ProceduralSettings &s)
 std::unique_ptr<IUWorldGenPipeline> MakeComposable(WorldGenContext ctx,
                                                   ComposableWorldGenConfig config)
 {
-  return std::make_unique<UComposableWorldGenerator>(ctx, config);
+  return std::make_unique<UComposableWorldGenerator>(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateFlat(WorldGenContext ctx)
@@ -87,7 +87,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateFlat(WorldGenContext ctx)
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::Flat;
   config.Fluids = false;
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
@@ -95,7 +95,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateHeightmap(WorldGenContext ctx)
   ComposableWorldGenConfig config;
   config.TerrainMode = ComposableTerrainMode::LegacyHash;
   config.Fluids = ctx.Settings.FillWater;
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateHills(WorldGenContext ctx)
@@ -105,7 +105,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateHills(WorldGenContext ctx)
   config.HeightPreset = HeightPreset::Hills;
   config.Fluids = true;
   ApplyTerrainBackend(config, ctx.Settings);
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateMountains(WorldGenContext ctx)
@@ -115,7 +115,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateMountains(WorldGenContext ctx)
   config.HeightPreset = HeightPreset::Mountains;
   config.Fluids = true;
   ApplyTerrainBackend(config, ctx.Settings);
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
@@ -140,7 +140,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateOverworld(WorldGenContext ctx)
   config.Aquifers = ctx.Settings.EnableCaves;
   config.CaveFeatures = ctx.Settings.EnableCaves;
   ApplyTerrainBackend(config, ctx.Settings);
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 std::unique_ptr<IUWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
@@ -156,7 +156,7 @@ std::unique_ptr<IUWorldGenPipeline> CreateBetaRetro(WorldGenContext ctx)
   config.LavaPools = true;
   config.FirePatch = true;
   ApplyTerrainBackend(config, ctx.Settings);
-  return MakeComposable(ctx, config);
+  return MakeComposable(std::move(ctx), config);
 }
 
 constexpr WorldGeneratorDescriptor kDescriptors[] = {
@@ -262,7 +262,7 @@ std::unique_ptr<IUWorldGenPipeline> UWorldGeneratorRegistry::Create(
       descriptor = &kDescriptors[0];
     }
   }
-  return descriptor->Create(ctx);
+  return descriptor->Create(std::move(ctx));
 }
 
 } // namespace cutum

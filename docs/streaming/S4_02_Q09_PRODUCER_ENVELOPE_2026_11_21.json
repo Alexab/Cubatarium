@@ -2,7 +2,7 @@
   "schema": "s4-q09-producer-envelope.v1",
   "status": "OPEN",
   "scope": "Consolidation of existing LIMIT-C1.Q09 owner obligations, not a new audit or reduced acceptance. PROPERTY_ACCEPTED reuses exact scoped historical receipts; current native regression identity separately recorded. No inference of total process cap.",
-  "current_regression_receipt": "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
+  "current_regression_receipt": "build/desktop-msvc/s4-context-transfer-acceptance-20261121.json",
   "owners": [
     {
       "id": "E01",
@@ -106,11 +106,13 @@
         "build/desktop-msvc/s4-generation-buffer-quota-acceptance-20261121.json",
         "build/desktop-msvc/s4-scratch-payload-acceptance-20261121.json",
         "build/desktop-msvc/s4-scratch-metadata-acceptance-20261121.json",
-        "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json"
+        "build/desktop-msvc/s4-scratch-field-acceptance-20261121.json",
+        "build/desktop-msvc/s4-context-transfer-acceptance-20261121.json"
       ],
       "remaining": [
-        "Account other algorithm temporary containers and active settings/factory/helper copies; preserve legitimate-input floors.",
-        "Compose field/resource/allocator-root overhead with accepted owners in E12; do not infer total RSS from requested payload counters."
+        "Compose remaining active settings copies: Populate local value, initial WorldGenContext snapshot/refresh, factory pack selector and private UColumnSampleBuilder snapshot; internal factory ownership chain now moves.",
+        "Account remaining algorithm temporary containers and source-specific data-dependent envelopes; preserve legitimate-input floors.",
+        "Compose field/resource/allocator-root overhead in E12; do not infer total RSS from requested payload counters."
       ]
     },
     {

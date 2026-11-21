@@ -21,53 +21,53 @@ namespace cutum
 // structures -> lava -> fire.
 UComposableWorldGenerator::UComposableWorldGenerator(
     WorldGenContext ctx, ComposableWorldGenConfig config)
-    : IUWorldGenPipeline(ctx), Config(ApplyPackPipelineMask(config)),
-      StageMask(BuildWorldGenStageMask(Config, ctx.Settings,
+    : IUWorldGenPipeline(std::move(ctx)), Config(ApplyPackPipelineMask(config)),
+      StageMask(BuildWorldGenStageMask(Config, Ctx.Settings,
                                        UWorldGenPack::Get().Pipeline))
 {
-  if (Config.Aquifers && ctx.Settings.EnableCaves &&
-      (ctx.Settings.FillWater || ctx.Settings.FillLava))
+  if (Config.Aquifers && Ctx.Settings.EnableCaves &&
+      (Ctx.Settings.FillWater || Ctx.Settings.FillLava))
   {
     AquiferSampler.emplace(
-        ctx.Settings.Seed, ctx.Settings.SeaLevel, ctx.Settings.MaxHeight,
-        UWorldGenPack::AquifersConfig(), ctx.Settings.MinHeight);
+        Ctx.Settings.Seed, Ctx.Settings.SeaLevel, Ctx.Settings.MaxHeight,
+        UWorldGenPack::AquifersConfig(), Ctx.Settings.MinHeight);
   }
   if (Config.TerrainMode == ComposableTerrainMode::Density3D)
   {
     DensityFieldParams density_params;
-    density_params.routerV3 = ctx.Settings.WorldGenProfileVersion >= 3;
-    density_params.cavesInDensity = Config.Caves && ctx.Settings.EnableCaves;
+    density_params.routerV3 = Ctx.Settings.WorldGenProfileVersion >= 3;
+    density_params.cavesInDensity = Config.Caves && Ctx.Settings.EnableCaves;
     density_params.caveAmplitude =
         std::max(0.0f, DensityFieldCaveAmplitudeBlocks(
-                           ctx.Settings.Caves.densityCaveAmplitude));
+                           Ctx.Settings.Caves.densityCaveAmplitude));
     const PackValleysConfig &valley_config = UWorldGenPack::ValleysConfig();
     density_params.riversEnabled =
-        Config.Valleys && ctx.Settings.WorldGenProfileVersion >= 2 &&
-        (ctx.Settings.WorldGenProfileVersion >= 3 ||
-         !ctx.Settings.Tuning.useDensityRefineParity);
-    density_params.riverWidth = ctx.Settings.Tuning.riverWidth;
+        Config.Valleys && Ctx.Settings.WorldGenProfileVersion >= 2 &&
+        (Ctx.Settings.WorldGenProfileVersion >= 3 ||
+         !Ctx.Settings.Tuning.useDensityRefineParity);
+    density_params.riverWidth = Ctx.Settings.Tuning.riverWidth;
     if (valley_config.Loaded)
     {
       density_params.riversEnabled =
           density_params.riversEnabled && valley_config.Enabled;
       density_params.riverNoiseScale = valley_config.RiverNoiseScale;
     }
-    DensitySampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
-                           ctx.Settings.MaxHeight,
-                           ctx.Settings.Tuning.terrainRoughness, density_params,
-                           ctx.Settings.Caves, ctx.Settings.MinHeight);
+    DensitySampler.emplace(Ctx.Settings.Seed, Ctx.Settings.SeaLevel,
+                           Ctx.Settings.MaxHeight,
+                           Ctx.Settings.Tuning.terrainRoughness, density_params,
+                           Ctx.Settings.Caves, Ctx.Settings.MinHeight);
   }
   else if (Config.TerrainMode == ComposableTerrainMode::NoiseHeightmap)
   {
-    HeightSampler.emplace(ctx.Settings.Seed, ctx.Settings.SeaLevel,
-                          ctx.Settings.MaxHeight, Config.HeightPreset,
-                          ctx.Settings.Tuning.terrainRoughness,
-                          ctx.Settings.MinHeight);
+    HeightSampler.emplace(Ctx.Settings.Seed, Ctx.Settings.SeaLevel,
+                          Ctx.Settings.MaxHeight, Config.HeightPreset,
+                          Ctx.Settings.Tuning.terrainRoughness,
+                          Ctx.Settings.MinHeight);
   }
   if (Config.UseBiomeSurface)
   {
-    BiomeSampler.emplace(ctx.Settings.Seed, ctx.Settings.Tuning,
-                         ctx.Settings.WorldGenProfileVersion);
+    BiomeSampler.emplace(Ctx.Settings.Seed, Ctx.Settings.Tuning,
+                         Ctx.Settings.WorldGenProfileVersion);
     if (UWorldGenPack::Get().BiomeMode == WorldGenBiomeMode::Image)
     {
       BiomeSource = std::make_unique<ImageMapBiomeSource>(*BiomeSampler);
@@ -91,7 +91,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(
   {
     SampleBuilder.emplace(HeightSampler.has_value() ? &*HeightSampler : nullptr,
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
-                          ctx.Settings, BiomeSource.get());
+                          Ctx.Settings, BiomeSource.get());
   }
   Ctx.CoarseSurfaceYAt = [this](int world_x, int world_z)
   { return SampleCoarseSurfaceY(world_x, world_z); };

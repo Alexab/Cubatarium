@@ -41,9 +41,10 @@ UProceduralWorldGenFactory::Create(WorldGenContext ctx)
   UWorldGenPack::ApplyPackCaveDefaults(ctx.Settings, userOwned);
   UWorldGenPack::ApplyPackRavineDefaults(ctx.Settings, userOwned);
 
-  auto pipeline = UWorldGeneratorRegistry::Create(ctx);
+  const auto generator_id=ctx.Settings.Generator;
+  auto pipeline = UWorldGeneratorRegistry::Create(std::move(ctx));
   std::cout << "WorldGen: created pipeline "
-            << ProceduralGeneratorToString(ctx.Settings.Generator)
+            << ProceduralGeneratorToString(generator_id)
             << " (pack " << UWorldGenPack::Get().Id << ")" << std::endl;
   return pipeline;
 }

@@ -10,6 +10,7 @@
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenPack.h"
+#include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/WorldGenRefs.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -1807,6 +1808,31 @@ int main(int argc, char **argv)
     std::cout << kTestName << ": population metrics bounded-window PASS count=" << count << std::endl;
     std::cout << "population_metrics_storage_bytes=" << summary.sampleStorageBytes
         << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
+    return 0;
+  }
+  if (argc > 1 && std::string(argv[1]) == "--population-context-move-only")
+  {
+    const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
+    cutum::UBlockRegistry registry(nullptr,definitions); cutum::UBlockWorld world;
+    for(size_t n=0;n<cutum::UWorldGeneratorRegistry::Count();++n) {
+      auto settings=MakeVegetationSettings();
+      settings.Generator=cutum::UWorldGeneratorRegistry::Get(n).Id;
+      settings.SeedText=std::string(64*1024,'s'); settings.WorldGenPresetId=std::string(64*1024,'p');
+      settings.MinHeight=-48; settings.MaxHeight=127;
+      cutum::WorldGenContext context(world,registry,settings);
+      const char *seed_storage=context.Settings.SeedText.data();
+      const char *preset_storage=context.Settings.WorldGenPresetId.data();
+      auto pipeline=cutum::UProceduralWorldGenFactory::Create(std::move(context));
+      const auto &actual=pipeline->GetProceduralSettings();
+      FluidTest::Expect(actual.SeedText.data()==seed_storage && actual.WorldGenPresetId.data()==preset_storage,
+          kTestName,"factory passes owned settings allocations to every pipeline unchanged");
+      FluidTest::Expect(actual.Seed==settings.Seed && actual.Generator==settings.Generator &&
+          actual.MinHeight==-48 && actual.MaxHeight==127 && actual.SeedText==settings.SeedText &&
+          actual.WorldGenPresetId==settings.WorldGenPresetId && actual.WorldGenPackId==settings.WorldGenPackId &&
+          &settings!=&actual && settings.SeedText.size()==64*1024,kTestName,
+          "context ownership transfer preserves profile numeric values selectors and original caller");
+    }
+    std::cout << kTestName << ": factory context transfer PASS generators=" << cutum::UWorldGeneratorRegistry::Count() << std::endl;
     return 0;
   }
   if (argc > 1 && std::string(argv[1]) == "--population-memo-only")
