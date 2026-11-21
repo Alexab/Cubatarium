@@ -15,6 +15,7 @@ namespace cutum
 {
 
 class UWorld;
+class UCore;
 class UWorldMeshService;
 class UColumnFlowExecutor;
 struct ProceduralSettings;
@@ -61,6 +62,7 @@ public:
                                   UColumnFlowExecutor &executor);
 
 private:
+  friend void RunTerrainSaveFailureProbe(UCore &core);
   bool HasResidentChunk(glm::ivec3 chunk_coord);
   void OnSoftDeferHeld(glm::ivec3 chunk_coord);
   void ResetFaceDebtEpoch(UWorld &world);

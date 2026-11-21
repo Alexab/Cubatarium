@@ -130,6 +130,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     {
 
       report["variant"]="flat_publication";
+      const char *face_phase=std::getenv("CUBA_FLIGHT_QA_FACE_REPAIR_ONLY");
+      const bool face_only=face_phase && std::string(face_phase)=="1";
+      report["face_repair_only"]=face_only;
       report["scope"]="Actual CPU/Flat UWorld section publication/input readiness; no Full solver or framebuffer acceptance";
       const auto &caps=GetActiveRenderBackendCaps();
       require(caps.ForceCpuBackends &&
@@ -154,6 +157,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       settings.Lighting=LightingMode::Flat; settings.LightingModeExplicit=true;
       settings.AsyncMeshing=false; settings.GpuPackedMeshing=false; settings.FrustumCulling=false;
       world.SetRenderSettings(settings);
+      if(!face_only) {
       require(world.GetLightingPipeline().GetMode()==LightingMode::Flat && !world.RequiresLightingLitGate(),
               "Flat probe uses actual factory Flat pipeline");
       const glm::ivec3 coord(0,-3,0);
@@ -2052,7 +2056,99 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             enqueue_not_acknowledged && save_duplicate_preserved && acknowledged && cold_latest,
             "save admission preserves dirty owner through refusal/duplicate until real ACK and cold latest data");
       });
-      report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
+      }
+      RunTerrainProbePhase([&] {
+        struct FaceDeadlineRestore {
+          UFrameDeadline deadline=UFrameDeadline::Get();
+          ~FaceDeadlineRestore() { UFrameDeadline::Get()=deadline; }
+        } restore;
+        auto face_owner=std::make_unique<UWorld>(nullptr,nullptr); auto &face_world=*face_owner;
+        face_world.SetSpawnPoint({8,-40,8});
+        face_world.ProceduralTemplate.MinHeight=-48; face_world.ProceduralTemplate.MaxHeight=-33;
+        face_world.BlockWorld.SetVerticalProfile({-48,-33,-40});
+        face_world.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+        face_world.BlockWorld.SetFluidDefinitions(definitions.get());
+        face_world.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+        face_world.SetRenderSettings(settings);
+        auto &face_mesh=*face_world.MeshService; auto &face_cache=face_mesh.GetCache();
+        auto &demand=face_world.GetRenderDemandStore();
+        auto &repair=face_world.Streaming->GetEmergeCoordinator();
+        const glm::ivec3 target(0,-3,0),peer(1,-3,0); const uint8_t bit=2;
+        face_world.BlockWorld.SetBlock({8,-40,8},8);
+        UFrameDeadline::Get().BeginFrame(5000);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,target);
+        require(face_mesh.HasDrawableGreedyMesh(target),"face repair starts with actual target mesh");
+        repair.ResetFaceDebtEpoch(face_world);
+        demand.NoteFaceDebt(target,bit,0);
+        repair.EnqueueFaceDebtRepair(target); repair.EnqueueFaceDebtRepair(target);
+        repair.DrainFaceDebtRepairs(face_world,0);
+        const bool deduped=repair.PendingFaceDebtRepairs_.size()==1 && repair.PendingFaceDebtRepairSet_.size()==1;
+        repair.DrainFaceDebtRepairs(face_world,1);
+        const bool deferred=repair.PendingFaceDebtRepairs_.size()==1 && demand.Find(target) &&
+            (demand.Find(target)->face_debt_mask&bit)!=0;
+        face_world.BlockWorld.SetBlock({CHUNK_SIZE+8,-40,8},8);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        const auto *peer_base=demand.Find(peer);
+        require(peer_base && peer_base->published_geom_rev>0,"peer owns actual geometry before coverage request");
+        demand.NoteDemand(peer,peer_base->published_geom_rev,peer_base->published_light_rev,1,0,
+                          peer_base->world_epoch,peer_base->incarnation);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        const auto *peer_record=demand.Find(peer);
+        require(peer_record && peer_record->published_coverage_gen>0 && face_mesh.HasMeshSatisfyingColumnReady(peer),
+                "face repair peer has actual current coverage publication");
+        const auto drive=[&]() {
+          const auto before=face_cache.GetPublishCount(target);
+          repair.DrainFaceDebtRepairs(face_world,1);
+          const bool transferred=face_cache.HasPendingMeshDependencyInvalidation(target);
+          Json transition={{"before_publications",before},{"dependency_transferred",transferred},
+              {"repair_pending",repair.PendingFaceDebtRepairs_.size()},
+              {"target_mask",demand.Find(target)?demand.Find(target)->face_debt_mask:255},
+              {"peer_coverage",demand.Find(peer)?demand.Find(peer)->published_coverage_gen:0}};
+          std::ofstream(root/"face-repair-transitions.json") << transition.dump(2) << '\n';
+          for(int frame=0;frame<8;++frame) {
+            UFrameDeadline::Get().BeginFrame(5000);
+            const auto stats=face_mesh.RebuildDirtyChunksWithStats(face_world.BlockWorld,*face_world.BlockRegistry,8,8);
+            face_mesh.DrainAsyncMeshResults(face_world.BlockWorld,*face_world.BlockRegistry,8);
+            transition["frames"].push_back({{"scheduled",stats.Scheduled},{"sync",stats.SyncRebuilt},
+                {"completed",stats.Completed},{"publications",face_cache.GetPublishCount(target)},
+                {"inputs_current",face_cache.IsPublishedMeshCurrentForInputs(target,face_world.BlockWorld)},
+                {"dirty",face_mesh.IsChunkMeshDirty(target)},{"inflight",face_mesh.HasInflightMeshBuild(target)},
+                {"dependency",face_cache.HasPendingMeshDependencyInvalidation(target)}});
+            std::ofstream(root/"face-repair-transitions.json") << transition.dump(2) << '\n';
+            if(face_cache.GetPublishCount(target)>before &&
+                face_cache.IsPublishedMeshCurrentForInputs(target,face_world.BlockWorld)) break;
+          }
+          const bool current=face_cache.GetPublishCount(target)>before &&
+              face_cache.IsPublishedMeshCurrentForInputs(target,face_world.BlockWorld) && demand.Find(target) &&
+              demand.Find(target)->face_debt_mask==0 && !face_cache.HasPendingMeshDependencyInvalidation(target) &&
+              repair.PendingFaceDebtRepairs_.empty() && repair.PendingFaceDebtRepairSet_.empty();
+          transition["current_successor"]=current;
+          report["face_repair_transitions"].push_back(std::move(transition));
+          return transferred && current;
+        };
+        const bool first=drive();
+        report["face_repair_queue"]={{"deduped",deduped},{"missing_peer_retained",deferred},{"current_successor",first}};
+        require(deduped && deferred && first,"face repair retains missing peer and publishes actual current successor");
+        const auto old_incarnation=face_world.BlockWorld.GetChunkManager().GetChunk(target)->GetIncarnation();
+        demand.NoteFaceDebt(target,bit,peer_record->published_coverage_gen);
+        repair.EnqueueFaceDebtRepair(target);
+        face_mesh.RemoveColumn({0,0,0},-3,-3);
+        face_world.BlockWorld.GetChunkManager().RemoveChunk(target);
+        repair.DrainFaceDebtRepairs(face_world,1);
+        const bool retired=repair.PendingFaceDebtRepairs_.empty() && repair.PendingFaceDebtRepairSet_.empty();
+        face_world.BlockWorld.SetBlock({8,-40,8},8);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,target);
+        const bool fresh=face_world.BlockWorld.GetChunkManager().GetChunk(target)->GetIncarnation()!=old_incarnation;
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        demand.NoteFaceDebt(target,bit,demand.Find(peer)->published_coverage_gen);
+        repair.EnqueueFaceDebtRepair(target); repair.EnqueueFaceDebtRepair(target);
+        const bool reissued=drive();
+        report["face_repair_retirement"]={{"removed_owner_retired",retired},{"fresh_incarnation",fresh},
+            {"current_reissue",reissued}};
+        require(retired && fresh && reissued,"removed face repair owner retires and new incarnation completes");
+      });
+      if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
+      else report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});
       report["status"]="PASS";

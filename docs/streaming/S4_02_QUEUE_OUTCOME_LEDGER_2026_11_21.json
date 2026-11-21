@@ -622,7 +622,24 @@
       "id": "Q12-C1",
       "queue": "Q12",
       "status": "CHECK",
-      "required_result": "Face-repair dedupe/cancel/eviction/reset and repeated presentation demand preserve exact repair owner or explicitly retire demand; actual successor clears debt."
+      "required_result": "Face-repair dedupe/cancel/eviction/reset and repeated presentation demand preserve exact repair owner or explicitly retire demand; actual successor clears debt.",
+      "subcases": [
+        {
+          "id": "Q12-C1.PEER_REPAIR",
+          "status": "CHECK",
+          "scope": "Actual queue dedupe/budget0/missing peer retains request; actual peer coverage transfers dependency; target real current successor completes."
+        },
+        {
+          "id": "Q12-C1.OVERLAY_REPAIR",
+          "status": "CHECK",
+          "scope": "Target-local boundary overlay repair once per peer identity/coverage/light state, actual current target republish clears overlay obligation."
+        },
+        {
+          "id": "Q12-C1.RETIRE_RESET",
+          "status": "CHECK",
+          "scope": "Actual target removal retires old request; new incarnation/repeated demand and permanent world epoch replacement complete current successor."
+        }
+      ]
     },
     {
       "id": "LIMIT-C1",
