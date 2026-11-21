@@ -37,6 +37,10 @@ class UChunkLoadScheduler
 public:
   static constexpr size_t kMaxRetainedGenerationResults = 8;
   static constexpr size_t kMaxActiveGenerationRequests = 1024;
+  static constexpr size_t kSettingsPayloadBudget = 16*1024*1024;
+  size_t SettingsPayloadBytes() const { return SettingsBudget->used.load(std::memory_order_relaxed); }
+  size_t SettingsPayloadPeak() const { return SettingsBudget->peak.load(std::memory_order_relaxed); }
+  size_t SettingsPayloadLimit() const { return std::max(kSettingsPayloadBudget,SettingsBudget->largest_single); }
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
   size_t MetadataCount() const { return States.size(); }
@@ -101,6 +105,19 @@ public:
 
 private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  struct SettingsBudgetState
+  {
+    std::atomic<size_t> used{0},peak{0};
+    size_t largest_single{0}; // owner thread; no worker writes this limit
+  };
+  struct OwnedSettings
+  {
+    explicit OwnedSettings(const ProceduralSettings &source) : value(source) {}
+    ProceduralSettings value;
+    std::shared_ptr<SettingsBudgetState> budget;
+    size_t charge{0};
+    ~OwnedSettings() { if(budget) budget->used.fetch_sub(charge,std::memory_order_relaxed); }
+  };
   struct PendingRequest
   {
     glm::ivec3 coord;
@@ -110,7 +127,7 @@ private:
     ChunkGenerationToken token;
     std::chrono::steady_clock::time_point requestedAt{};
     uint64_t queueRevision{0};
-    ProceduralSettings settings;
+    std::shared_ptr<const OwnedSettings> settings;
     glm::ivec2 columnOrigin{0};
     bool hasColumnOrigin{false};
   };
@@ -165,6 +182,7 @@ private:
     bool operator()(glm::ivec3 a,glm::ivec3 b) const
     { return a.x!=b.x ? a.x<b.x : a.z!=b.z ? a.z<b.z : a.y<b.y; }
   };
+  std::shared_ptr<SettingsBudgetState> SettingsBudget{std::make_shared<SettingsBudgetState>()};
   IUChunkPopulator &Populator;
   UChunkGenerationRegistry &Tokens;
   // A result keeps its slot while queued/running/ready or held by Tick.

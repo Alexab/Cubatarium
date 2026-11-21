@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 LIMIT.Q09 count/lifetime and real container allocator accounting accepted. Next implement settings/string byte admission with retained producer demand and account worker/transient/pipeline plus generated-buffer payload bytes. Current snapshot separates container allocations from char capacity and excludes OS/runtime/inline owner overhead; it is not a total byte cap. Other LIMIT groups/full S0..S6 unchanged/open.",
+  "next_action": "S4.02 LIMIT.Q09: settings snapshot sharing/retained byte admission accepted with explicit16MiB base/one-largest-input floor and cancelled-worker ownership. Next bound actual generation buffer bytes and compose candidate/control/closure/pool overhead; use current shared-layout accounting, not historical two-copy constants. Result8/count1024/metadata-domain/lifecycle proofs retained. Other LIMIT groups/full S0..S6 unchanged/open.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.settings-byte-admission",
+      "status": "SCOPED_PASS_BUFFER_BYTES_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json",
+      "scope": "Retained settings payload reservation = sizeof(OwnedSettings)+sizeof(worker ProceduralSettings)+2*external snapshot string capacities. Base16MiB; effective budget=max(base,largest single observed snapshot charge), explicitly producer-derived floor allowing one valid oversized config to progress. Not a fixed absolute16MiB total allocation/RSS cap. Pending map, ordered index and rerank copies share one immutable snapshot. Actual moved worker request owns one value copy; captured shared snapshot retains reservation through worker completion, including cancellation. Snapshot destructor atomically releases charge."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.metadata-allocator-accounting",
       "status": "SCOPED_PASS_BYTE_ADMISSION_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json",

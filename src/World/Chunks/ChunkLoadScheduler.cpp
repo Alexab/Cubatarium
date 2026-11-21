@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <limits>
 #include <string>
 #include <thread>
 
@@ -18,6 +19,23 @@ namespace cutum
 
 namespace
 {
+
+size_t StringCapacityCharge(const std::string &value)
+{
+  const auto data=reinterpret_cast<uintptr_t>(value.data());
+  const auto object=reinterpret_cast<uintptr_t>(&value);
+  return data>=object && data-object<sizeof(value) ? 0 : value.capacity()+1;
+}
+size_t SettingsStringCharge(const ProceduralSettings &settings)
+{
+  size_t charge=0;
+  for(const auto *value:{&settings.SeedText,&settings.WorldGenPackId,&settings.WorldGenPresetId}) {
+    const size_t next=StringCapacityCharge(*value);
+    if(next>std::numeric_limits<size_t>::max()-charge) return std::numeric_limits<size_t>::max();
+    charge+=next;
+  }
+  return charge;
+}
 
 bool IsWorldColumnSourceTraceEnabled()
 {
@@ -139,6 +157,21 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
     ++CapacityRefused;
     return false;
   }
+  auto owned=std::make_shared<OwnedSettings>(settings);
+  const size_t fixed=sizeof(OwnedSettings)+sizeof(ProceduralSettings);
+  const size_t strings=SettingsStringCharge(owned->value);
+  if(strings>(std::numeric_limits<size_t>::max()-fixed)/2) return false;
+  const size_t charge=fixed+2*strings; // immutable snapshot and one worker value copy
+  SettingsBudget->largest_single=std::max(SettingsBudget->largest_single,charge);
+  size_t used=SettingsBudget->used.load(std::memory_order_relaxed);
+  do {
+    const size_t limit=SettingsPayloadLimit();
+    if(used>limit || charge>limit-used) { ++CapacityRefused; return false; }
+  } while(!SettingsBudget->used.compare_exchange_weak(used,used+charge,std::memory_order_relaxed));
+  owned->budget=SettingsBudget; owned->charge=charge;
+  size_t peak=SettingsBudget->peak.load(std::memory_order_relaxed);
+  while(peak<used+charge && !SettingsBudget->peak.compare_exchange_weak(
+      peak,used+charge,std::memory_order_relaxed)) {}
   PendingRequest pending;
   pending.coord = coord;
   pending.requestId = IsWorldColumnSourceTraceEnabled()
@@ -149,7 +182,7 @@ bool UChunkLoadScheduler::RequestLoad(glm::ivec3 coord, int priority,
   pending.token = Tokens.EnsureCurrent(coord);
   pending.requestedAt = std::chrono::steady_clock::now();
   pending.queueRevision = NextRequestQueueRevision++;
-  pending.settings = settings;
+  pending.settings = std::move(owned);
   pending.columnOrigin = column_origin;
   pending.hasColumnOrigin = has_column_origin;
   const uint64_t request_id = pending.requestId;
@@ -402,7 +435,7 @@ bool UChunkLoadScheduler::ScheduleWorker(
   ChunkPopulateRequest populateRequest;
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
-  populateRequest.settings = request.settings;
+  populateRequest.settings = request.settings->value;
   populateRequest.columnOrigin = request.columnOrigin;
   populateRequest.hasColumnOrigin = request.hasColumnOrigin;
   const glm::ivec3 coord = request.coord;
@@ -415,7 +448,7 @@ bool UChunkLoadScheduler::ScheduleWorker(
   const int priority = request.priority;
   const uint64_t request_id = request.requestId;
   const uint64_t demand_id = request.demandId;
-  const int max_height = request.settings.MaxHeight;
+  const int max_height = request.settings->value.MaxHeight;
   const std::size_t request_queue_live_at_schedule =
       QueuedRequests.empty() ? 0 : QueuedRequests.size() - 1;
   const std::size_t request_queue_heap_at_schedule = Queue.size();
@@ -423,7 +456,8 @@ bool UChunkLoadScheduler::ScheduleWorker(
   const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
   const std::size_t worker_count = Pool.GetWorkerCount();
   if (!Pool.TryEnqueue(
-      [this, populateRequest, requested_at, scheduled_at, priority,
+      [this, populateRequest = std::move(populateRequest), settings_owner = request.settings,
+       requested_at, scheduled_at, priority,
        request_id, demand_id,
        max_height, request_queue_live_at_schedule,
        request_queue_heap_at_schedule, worker_pending_at_submit,
@@ -722,18 +756,9 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
 UChunkLoadScheduler::MetadataStorageSnapshot UChunkLoadScheduler::GetMetadataStorageSnapshot() const
 {
   MetadataStorageSnapshot snapshot{MetadataMemory.GetSnapshot(),0};
-  const auto string_charge=[](const std::string &value) -> size_t {
-    const auto data=reinterpret_cast<uintptr_t>(value.data());
-    const auto object=reinterpret_cast<uintptr_t>(&value);
-    if(data>=object && data-object<sizeof(value)) return 0; // inline/SSO
-    return value.capacity()+1;
-  };
-  const auto settings_charge=[&](const ProceduralSettings &settings) {
-    return string_charge(settings.SeedText)+string_charge(settings.WorldGenPackId)+
-        string_charge(settings.WorldGenPresetId);
-  };
-  for(const auto &entry:Queue) snapshot.pending_string_capacity_bytes+=settings_charge(entry.settings);
-  for(const auto &entry:QueuedRequests) snapshot.pending_string_capacity_bytes+=settings_charge(entry.second.settings);
+  // The ordered index shares each authoritative request's immutable settings.
+  for(const auto &entry:QueuedRequests)
+    snapshot.pending_string_capacity_bytes+=SettingsStringCharge(entry.second.settings->value);
   return snapshot;
 }
 

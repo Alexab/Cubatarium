@@ -2485,8 +2485,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       if(flow_only) RunTerrainProbePhase([&] {
         struct PressurePopulator final : IUChunkPopulator {
           std::atomic<int> calls{0},seed{0};
+          std::shared_future<void> settings_gate;
+          std::promise<void> *settings_entered{nullptr};
           ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
             ++calls; seed=static_cast<int>(request.settings.Seed);
+            if(settings_entered) { settings_entered->set_value(); settings_gate.wait(); }
             ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
             result.buffer.SetBlock({request.chunkCoord.x*CHUNK_SIZE+8,-40,
                 request.chunkCoord.z*CHUNK_SIZE+8},8);
@@ -2503,7 +2506,9 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         generation.Bump(target); generation.Bump(peer);
         ProceduralSettings request; request.MinHeight=-48; request.MaxHeight=-33; request.Seed=17;
         scheduler.RequestLoad(target,10,request);
-        const auto original=scheduler.QueuedRequests.at(target);
+        const auto original_seed=scheduler.QueuedRequests.at(target).settings->value.Seed;
+        const auto original_time=scheduler.QueuedRequests.at(target).requestedAt;
+        const auto original_token=scheduler.QueuedRequests.at(target).token.sequence;
         auto &credits=UPipelineAdmission::Get();
         const auto background_slots=credits.WorkSlotsInUse();
         const auto idle_deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
@@ -2532,10 +2537,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
               scheduler.QueuedRequests.size()==1;
         }
         scheduler.RequestLoad(target,-10,duplicate);
-        const auto reranked=scheduler.QueuedRequests.at(target);
-        const bool exact=reranked.settings.Seed==original.settings.Seed &&
-            reranked.requestedAt==original.requestedAt &&
-            reranked.token.sequence==original.token.sequence && reranked.priority==-10;
+        const auto &reranked=scheduler.QueuedRequests.at(target);
+        const bool exact=reranked.settings->value.Seed==original_seed &&
+            reranked.requestedAt==original_time &&
+            reranked.token.sequence==original_token && reranked.priority==-10;
         credits.SetWorkSlotCap(8);
         std::promise<void> entered,release;
         auto entered_future=entered.get_future(); auto release_future=release.get_future().share();
@@ -2637,7 +2642,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         for(size_t n=0;n<UChunkLoadScheduler::kMaxActiveGenerationRequests;++n)
           admitted_all=scheduler.RequestLoad({1000+static_cast<int>(n),0,0},1000000000,long_settings) && admitted_all;
         const bool updated_at_full=scheduler.RequestLoad({1000,0,0},-10,duplicate) &&
-            scheduler.QueuedRequests.at({1000,0,0}).settings.Seed==17 &&
+            scheduler.QueuedRequests.at({1000,0,0}).settings->value.Seed==17 &&
             scheduler.QueuedRequests.at({1000,0,0}).priority==-10;
         const auto full_metadata=scheduler.GetMetadataStorageSnapshot();
         const auto full_token_allocator=generation.GetAllocationSnapshot();
@@ -2730,7 +2735,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"reset_token_bytes",reset_token_allocator.live_bytes},{"rejected_no_allocation",rejected_no_allocation},
             {"reset_to_baseline",allocation_released}};
         require(rejected_no_allocation && allocation_released &&
-            full_metadata.pending_string_capacity_bytes>=2*1024*(4096+64+96),
+            full_metadata.pending_string_capacity_bytes>=1024*(4096+64+96),
             "metadata allocator and separately charged string payload release to baseline");
         report["generation_metadata_capacity"]={{"test_capacity",4},{"full_refusal",metadata_full && metadata_refused},
             {"unowned_retired_live_data_preserved",live_preserved},{"required_successor",metadata_successor},
@@ -2739,6 +2744,81 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(metadata_full && metadata_refused && live_preserved && metadata_successor &&
             shrink_preserves && newer_preserved && generation.LiveTokenCount()==0,
             "generation metadata budget retains live owners and reclaims abandoned committed history");
+        scheduler.SetMetadataCapacity(2048);
+        require(scheduler.SettingsPayloadBytes()==0,"settings leases release after all preceding owners retire");
+        auto byte_settings=long_settings; byte_settings.SeedText=std::string(8192,'b');
+        size_t byte_admitted=0;
+        glm::ivec3 byte_refused(0);
+        for(size_t n=0;n<=UChunkLoadScheduler::kMaxActiveGenerationRequests;++n) {
+          const glm::ivec3 c(7000+static_cast<int>(n),0,0);
+          if(!scheduler.RequestLoad(c,1000000000,byte_settings)) {byte_refused=c;break;}
+          ++byte_admitted;
+        }
+        const auto charged_before=scheduler.SettingsPayloadBytes();
+        const auto normal_byte_peak=scheduler.SettingsPayloadPeak();
+        const auto *first_snapshot=scheduler.QueuedRequests.at({7000,0,0}).settings.get();
+        const bool byte_refusal=byte_admitted>0 && byte_admitted<1024 &&
+            scheduler.SettingsPayloadLimit()==UChunkLoadScheduler::kSettingsPayloadBudget &&
+            charged_before<=UChunkLoadScheduler::kSettingsPayloadBudget &&
+            scheduler.GetState(byte_refused)==ChunkLoadState::Absent &&
+            generation.Current(byte_refused).sequence==0;
+        const bool byte_merge=scheduler.RequestLoad({7000,0,0},-10,duplicate) &&
+            scheduler.QueuedRequests.at({7000,0,0}).settings.get()==first_snapshot &&
+            scheduler.SettingsPayloadBytes()==charged_before;
+        UChunkStreamer byte_producer(terrain,*world.BlockRegistry,1,0,-33,-48);
+        byte_producer.SetAsyncGeneration(true); byte_producer.SetNearLoadRadius(1);
+        byte_producer.SetAsyncCallbacks([&](glm::ivec3 c,int priority,uint64_t demand) {
+          return scheduler.RequestLoad(c,priority,byte_settings,{},false,demand);
+        },[&](glm::ivec3 c){return scheduler.IsCommitted(c);});
+        byte_producer.SetColumnPendingCallback([&](glm::ivec3 c){return scheduler.IsPending(c);});
+        const std::vector<glm::ivec3> byte_required{byte_refused};
+        std::promise<void> settings_entered,settings_release;
+        auto settings_started=settings_entered.get_future();
+        populator.settings_gate=settings_release.get_future().share();
+        populator.settings_entered=&settings_entered;
+        struct ReleaseSettingsGate {std::promise<void> &p; UJobThreadPool &pool; bool done{false};
+          void Release(){if(!done){p.set_value();done=true;}}
+          ~ReleaseSettingsGate(){Release();pool.WaitIdleFor(std::chrono::seconds(5));}
+        } settings_guard{settings_release,scheduler.Pool};
+        require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+            settings_started.wait_for(std::chrono::seconds(5))==std::future_status::ready,
+            "settings byte lease fixture holds actual worker");
+        scheduler.Cancel({7000,0,0});
+        byte_producer.EnsureDataColumns(byte_required,1);
+        const bool running_holds=scheduler.SettingsPayloadBytes()==charged_before &&
+            !scheduler.IsPending(byte_refused);
+        settings_guard.Release();
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"settings worker lease releases after cancellation");
+        populator.settings_entered=nullptr; populator.settings_gate={};
+        byte_producer.EnsureDataColumns(byte_required,1);
+        const bool byte_readmitted=scheduler.IsPending(byte_refused);
+        scheduler.Tick(terrain,1,1);
+        require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"settings pressure successor computes");
+        scheduler.Tick(terrain,1,0);
+        const bool byte_installed=scheduler.IsCommitted(byte_refused) &&
+            terrain.GetBlock({byte_refused.x*CHUNK_SIZE+8,-40,8})==8;
+        scheduler.CancelAllPending();
+        const bool byte_released=scheduler.SettingsPayloadBytes()==0;
+        auto oversized=byte_settings;
+        oversized.SeedText=std::string(UChunkLoadScheduler::kSettingsPayloadBudget/2+128,'h');
+        const bool oversized_first=scheduler.RequestLoad({9000,0,0},0,oversized);
+        const auto oversized_limit=scheduler.SettingsPayloadLimit();
+        const bool single_floor=oversized_first && oversized_limit>UChunkLoadScheduler::kSettingsPayloadBudget &&
+            scheduler.SettingsPayloadBytes()==oversized_limit &&
+            !scheduler.RequestLoad({9001,0,0},0,oversized);
+        scheduler.Cancel({9000,0,0});
+        const bool oversized_reentry=scheduler.RequestLoad({9001,0,0},0,oversized);
+        scheduler.CancelAllPending();
+        report["generation_settings_bytes"]={{"base_budget",UChunkLoadScheduler::kSettingsPayloadBudget},
+            {"accepted_before_byte_refusal",byte_admitted},{"normal_peak_charge",normal_byte_peak},
+            {"refusal_without_owner",byte_refusal},{"same_snapshot_merge",byte_merge},
+            {"cancelled_worker_holds_charge",running_holds},{"normal_producer_readmission",byte_readmitted},
+            {"actual_successor",byte_installed},{"normal_reset_releases",byte_released},
+            {"one_oversized_request_floor",single_floor},{"oversized_reentry",oversized_reentry},
+            {"oversized_limit",oversized_limit},{"final_charge",scheduler.SettingsPayloadBytes()}};
+        require(byte_refusal && byte_merge && running_holds && byte_readmitted && byte_installed &&
+            byte_released && single_floor && oversized_reentry && scheduler.SettingsPayloadBytes()==0,
+            "settings payload budget retains exact demand through pending worker and normal replay");
         report["generation_ready_credit"]={{"limit",8},{"full_refusal_retained",ready_full},
             {"ready_requeue_holds_credit",held},{"stale_release_exact",stale_released},
             {"automatic_readmission",readmitted},{"actual_install_releases_credit",installed},

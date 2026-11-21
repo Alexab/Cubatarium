@@ -713,13 +713,14 @@
           "status": "CHECK",
           "required_result": "Generation Requested/Active/Ready/pool producer envelope and retirement; legacy pool submission not assumed numerically bounded.",
           "shared_admission_evidence": "build/desktop-msvc/s4-generation-shared-admission-acceptance-20261121.json",
-          "partial_result": "Count/lifetime domains accepted; all8 scheduler container and registry allocator requests now measured/released. Native1024 long-string requests:1434904 container bytes,8814592 separate char-capacity bytes,57384 registry bytes; reset2072/0/168. Refusal no metadata/token allocation. Fixed settings-byte admission, worker/transient/pipeline and generated-buffer payload envelope still CHECK; no process-memory claim.",
+          "partial_result": "Count/lifetime/container accounting and retained settings payload admission accepted. Immutable shared snapshot; normal16MiB reservation, explicit one-largest-input floor; default byte pressure952<1024, gated cancelled worker holds lease, ordinary producer replay/current install/reset0 PASS. New shared layout containers664104/string capacity4407296 at1024 long-config keys, reset1320/0; prior allocator values are historical layout. Candidate temporary/control/closure/pool overhead and generated-buffer bytes still CHECK.",
           "result_credit_evidence": "build/desktop-msvc/s4-generation-result-credit-acceptance-20261121.json",
           "priority_index_evidence": "build/desktop-msvc/s4-generation-priority-index-acceptance-20261121.json",
           "token_retirement_evidence": "build/desktop-msvc/s4-generation-token-retirement-acceptance-20261121.json",
           "request_capacity_evidence": "build/desktop-msvc/s4-generation-request-cap-acceptance-20261121.json",
           "metadata_domain_evidence": "build/desktop-msvc/s4-generation-metadata-domain-acceptance-20261121.json",
-          "metadata_allocator_evidence": "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json"
+          "metadata_allocator_evidence": "build/desktop-msvc/s4-generation-metadata-allocator-acceptance-20261121.json",
+          "settings_byte_evidence": "build/desktop-msvc/s4-generation-settings-byte-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q10",
