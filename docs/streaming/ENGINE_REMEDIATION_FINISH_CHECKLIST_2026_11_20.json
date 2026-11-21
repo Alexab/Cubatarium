@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 Q04-C3/Q02-C1 accepted via s4-admission-owner-debt-acceptance-20261121.json: exact admission outcomes/credit release, refused replacement preserves prior owner, result rejection restores same-request dirty and actual current publication without new ingress. Next Q02-C2: dirty/deferred coalescing and eviction/return ownership, reuse accepted Q04-C2 explicit removal/cancellation/leases and shared receipts; only uncovered transitions. Ledger 14 CHECK groups/16 REUSE/1 disabled path. Full S0..S6 OPEN; no audit restart.",
+  "next_action": "S4.02 Q02-C2.1 same-frame new geometry edit/coalescing accepted in s4-same-frame-dirty-acceptance-20261121.json. Next Q02-C2.2: actual deferred transfer/dedup/return, removal/reset retirement and Baked hard-zero remesh quota retaining obligation before nonzero admission. Then .3 ring cap256 eviction and .4 RAA/old receipt coalescing. Reuse accepted cancellation/removal proofs; ledger still14 CHECK groups, full S0..S6 OPEN; no audit restart.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

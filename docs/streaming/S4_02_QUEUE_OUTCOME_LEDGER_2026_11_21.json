@@ -53,7 +53,30 @@
       "id": "Q02-C2",
       "queue": "Q02",
       "status": "CHECK",
-      "required_result": "Dirty/deferred coalescing and outside-keep eviction: retain required demand or explicitly retire abandoned demand; later return/repeated demand publishes."
+      "required_result": "Dirty/deferred coalescing and outside-keep eviction: retain required demand or explicitly retire abandoned demand; later return/repeated demand publishes.",
+      "subcases": [
+        {
+          "id": "Q02-C2.1",
+          "status": "REUSE",
+          "scope": "Same-frame post-publication geometry mutation ordinary/priority/mixed dirty calls, active-job stale-input coalescing, unchanged repair hint no-op; actual current successor.",
+          "evidence": "build/desktop-msvc/s4-same-frame-dirty-acceptance-20261121.json"
+        },
+        {
+          "id": "Q02-C2.2",
+          "status": "CHECK",
+          "scope": "Deferred normal return/dedup and explicit removal/reset retirement; actual re-entry/current publication. Include Baked hard-zero remesh quota: no lost geometry demand before later nonzero admission."
+        },
+        {
+          "id": "Q02-C2.3",
+          "status": "CHECK",
+          "scope": "Deferred ring cap256 eviction retains live obligation or explicit abandonment; later demand/focus return completes."
+        },
+        {
+          "id": "Q02-C2.4",
+          "status": "CHECK",
+          "scope": "Old executable retry receipt versus newer accepted owner and RAA follow-up coalescing; no duplicate/lost current work. Reuse Q04-C2 cancellation/removal where exact transition matches."
+        }
+      ]
     },
     {
       "id": "Q03-C1",
@@ -330,5 +353,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q04-C3/Q02-C1 accepted: exact builder admission/credit owner rollback and cache budget refusal→same-request current publication. 14 CHECK groups/16 REUSE groups/1 disabled production path. Next Q02-C2 dirty/deferred coalescing/eviction, reuse accepted lifecycle; full S0..S6 OPEN."
+  "checkpoint": "Q02-C2.1 accepted: new post-publication same-frame edits survive and current worker publishes; repeated hints coalesce/no-op. Physical missing-neighbor/zero-quota and radius cancellation regressions unchanged. Q02-C2 remains CHECK for deferred return/removal/reset/zero-quota/cap and RAA/old-receipt coalescing. 14 CHECK groups/16 REUSE groups/1 disabled production path; full S0..S6 OPEN."
 }

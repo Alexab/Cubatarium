@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "same-frame-published-edit-dropped-by-historical-scheduled-marker",
+      "stage": "S4.02",
+      "status": "RESOLVED_SCOPED_PACKAGE_OPEN",
+      "observed": "After actual predecessor publication, new same-frame geometry mutation and ordinary/priority/mixed dirty notifications leave no dirty/revision/current successor. First implementation exposed maintenance requeue conflict; second broadened physical admission and failed unchanged zero-quota builds1 invariant. Failed maps retained, no weakened assertions.",
+      "fix": "Same-frame mutation dedupe requires executable owner; reconcile maintenance skips already-scheduled coords before repair cooldown. Actual mismatched geometry inputs in Baked path may use existing remesh quota; physical admission unchanged, no extra quota or scalar revision-domain comparison.",
+      "evidence": "build/desktop-msvc/s4-same-frame-dirty-acceptance-20261121.json",
+      "next_action": "Q02-C2.2 deferred normal return/removal/reset and Baked hard-zero quota, then cap/RAA subcases. No whole Q02-C2 closure."
+    },
+    {
       "id": "mesh-refused-replacement-owner-and-same-frame-retry-loss",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

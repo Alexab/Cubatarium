@@ -4,6 +4,14 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q02.same-frame-new-edit-coalescing",
+      "status": "SCOPED_PASS_PACKAGE_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "ledger_subcase": "Q02-C2.1",
+      "receipt": "build/desktop-msvc/s4-same-frame-dirty-acceptance-20261121.json",
+      "scope": "CPU same-frame actual edit coalescing/current publication plus existing dependent normal integration cases. Current EXE native overflow/cancel/protected publication regression PASS; native does not itself inject the four same-frame scenes. Parent Q02-C2/full S4.02/S0..S6 remain OPEN; no GPU/performance acceptance."
+    },
+    {
       "id": "S4.02.Q04.Q02.admission-owner-credit-current-debt",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

@@ -3619,6 +3619,95 @@ static void TestCacheMeshCancellationLifetime(
   Expect(published_all, "cache cancellation successor publishes current geometry without invented debt");
 }
 
+static bool TestSameFrameDirtyCoalescing(
+    cutum::UBlockRegistry &registry,
+    const cutum::UBlockDefinitionStorage *definitions)
+{
+  using namespace cutum;
+  bool all = true;
+  for (int mode = 0; mode < 4; ++mode)
+  {
+    UBlockWorld world;
+    world.SetFluidDefinitions(definitions);
+    world.SetLightingConfigurationIdentity(static_cast<uint64_t>(LightingMode::Flat));
+    world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+    world.SetBlock({8, 8, 8}, kStone);
+    const glm::ivec3 root(0);
+    GatedPhysicalMesher mesher;
+    if (mode != 3) mesher.Release();
+    UChunkMeshCache cache;
+    auto settings = MakeFrustumMeshSettings();
+    settings.AsyncMeshing = true;
+    settings.FrustumCulling = false;
+    settings.Lighting = LightingMode::Flat;
+    cache.SetRenderSettings(settings);
+    cache.SetRepairGuardWorld(&world);
+    cache.SetMesherBackend(&mesher);
+    cache.SetMeshRebuildFocus(root, 4, 1);
+    const auto schedule = [&](int budget = 1) {
+      UFlatLightingPipeline flat;
+      flat.FillAllLoadedChunks(world);
+      const auto *chunk = world.GetChunkManager().GetChunk(root);
+      const auto revision = cache.GetChunkMeshRevision(root);
+      const auto epoch = cache.GetCaptureStore().WorldEpoch();
+      cache.GetRenderDemandStore().NoteDemand(root, revision, chunk->GetLightFieldRevision(),
+          0, 1.0, epoch, chunk->GetIncarnation());
+      cache.GetRenderDemandStore().NoteLightCalculationSettled(root, epoch,
+          chunk->GetIncarnation(), chunk->GetLightFieldRevision(), chunk->GetContentRevision());
+      Expect(ChunkMeshCaptureAdmissionTestAccess::CaptureForSchedule(
+                 cache, world, root, revision).has_value(), "coalescing fixture captures current inputs");
+      return cache.RebuildDirtyChunksWithStats(world, registry, 0, budget, false, 0).Scheduled;
+    };
+    cache.MarkDirtyPriority(root);
+    Expect(schedule() == 1 && mesher.WaitEntered(), "coalescing first job reaches actual worker");
+    const auto initial_request = cache.GetChunkMeshRevision(root);
+    if (mode != 3)
+    {
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "coalescing predecessor computes");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+      Expect(cache.IsPublishedMeshCurrentForInputs(root, world), "coalescing predecessor actually publishes current inputs");
+    }
+    world.SetBlock({12, 8, 8}, kStone);
+    for (int hint = 0; hint < 6; ++hint)
+    {
+      if (mode == 0 || (mode == 2 && hint % 2 == 0)) cache.MarkDirty(root);
+      else cache.MarkDirtyPriority(root);
+    }
+    if (mode == 3)
+    {
+      mesher.Release();
+      Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)) && !mesher.timed_out,
+             "active coalescing predecessor retires behind barrier");
+      cache.DrainAsyncMeshResults(world, registry, 8);
+    }
+    const bool retained = cache.IsChunkMeshDirty(root) && !cache.HasCpuMeshBuildInFlight(root) &&
+        !cache.HasInflightMeshBuild(root) && cache.GetDirtyCount() == 1;
+    const bool revision_ok = cache.GetChunkMeshRevision(root) == initial_request + (mode == 3 ? 0 : 1);
+    auto retry_scheduled = schedule();
+    const bool budget_retained = retry_scheduled == 1 || cache.IsChunkMeshDirty(root) ||
+                                 cache.IsRemeshDeferred(root);
+    if (retry_scheduled == 0 && budget_retained)
+      retry_scheduled = schedule(8); // Lift admission only; do not create new dirty demand.
+    Expect(cache.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)), "coalesced current successor computes");
+    cache.DrainAsyncMeshResults(world, registry, 8);
+    const bool current = retry_scheduled == 1 && cache.IsPublishedMeshCurrentForInputs(root, world) &&
+        mesher.builds == 2 && cache.GetPublishCount(root) == (mode == 3 ? 1u : 2u);
+    std::cout << "same_frame_publish mode=" << mode << " scheduled=" << retry_scheduled
+              << " inputs_current=" << cache.IsPublishedMeshCurrentForInputs(root, world)
+              << " builds=" << mesher.builds << " publications=" << cache.GetPublishCount(root)
+              << " dirty=" << cache.IsChunkMeshDirty(root) << '\n';
+    const auto publications = cache.GetPublishCount(root);
+    for (int hint = 0; hint < 6; ++hint)
+      cache.MarkDirtyPriority(root, MeshRevisionBumpReason::PriorityWorldCoreRepair);
+    const bool no_op = !cache.IsChunkMeshDirty(root) && !cache.HasInflightMeshBuild(root) &&
+        cache.GetPublishCount(root) == publications && mesher.builds == 2;
+    std::cout << "same_frame_dirty mode=" << mode << " retained=" << retained
+              << " revision=" << revision_ok << " budget_retained=" << budget_retained << " current=" << current << " no_op=" << no_op << '\n';
+    all = all && retained && revision_ok && budget_retained && current && no_op;
+  }
+  return all;
+}
+
 static bool TestMeshAdmissionOwnerLifetime(
     cutum::UBlockRegistry &registry,
     const cutum::UBlockDefinitionStorage *definitions)
@@ -7812,7 +7901,9 @@ int main(int argc, char **argv)
   TestSelectiveMeshLeaseWorkerLifecycle(registry, definitions.get());
   TestMeshSameKeySupersession(registry, definitions.get());
   TestCancelledMeshRetryReceipts(registry, definitions.get());
+  const bool same_frame_ok = TestSameFrameDirtyCoalescing(registry, definitions.get());
   TestOutsideRadiusCpuMeshLifetime(registry, definitions.get());
+  Expect(same_frame_ok, "same-frame dirty coalescing preserves new geometry debt and ignores proven no-op hints");
   const bool admission_owner_ok = TestMeshAdmissionOwnerLifetime(registry, definitions.get());
   const bool admission_debt_ok = TestCacheMeshAdmissionDebt(registry, definitions.get());
   Expect(admission_owner_ok && admission_debt_ok, "mesh admission rejects preserve credits owner and executable current debt");

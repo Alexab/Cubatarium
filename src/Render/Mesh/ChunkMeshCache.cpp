@@ -3645,7 +3645,8 @@ void UChunkMeshCache::ReconcilePublishedMeshInputs(const UBlockWorld &world,
     {
       continue;
     }
-    if (Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
+    if (ScheduledThisFrame_.count(coord) > 0 ||
+        Dirty.Contains(coord) || RemeshAfterApply.count(coord) > 0 ||
         HasInflightMeshBuild(coord) || IsPendingGpuApply(coord) ||
         IsPendingGpuQueued(coord) || IsGpuExtractInFlight(coord))
     {
@@ -3877,8 +3878,11 @@ void UChunkMeshCache::MarkDirty(glm::ivec3 chunkCoord,
     }
     return;
   }
-  // FZ2.3-O3: already scheduled this emerge tick — skip re-Dirty ping-pong.
-  if (ScheduledThisFrame_.count(chunkCoord) > 0)
+  // Coalesce only while an executable owner still covers the scheduled attempt.
+  // A new edit after publication must not be dropped by its historical marker.
+  if (ScheduledThisFrame_.count(chunkCoord) > 0 &&
+      (HasInflightMeshBuild(chunkCoord) || HasCpuMeshBuildInFlight(chunkCoord) ||
+       IsPendingGpuApply(chunkCoord) || IsGpuExtractInFlight(chunkCoord)))
   {
     ++LastDirtyScheduleDedupN;
     return;
@@ -4135,7 +4139,9 @@ void UChunkMeshCache::MarkDirtyPriorityImpl(glm::ivec3 chunkCoord,
     CrossBatchesDirty = true;
     return;
   }
-  if (ScheduledThisFrame_.count(chunkCoord) > 0)
+  if (ScheduledThisFrame_.count(chunkCoord) > 0 &&
+      (HasInflightMeshBuild(chunkCoord) || HasCpuMeshBuildInFlight(chunkCoord) ||
+       IsPendingGpuApply(chunkCoord) || IsGpuExtractInFlight(chunkCoord)))
   {
     ++LastDirtyScheduleDedupN;
     return;
@@ -10068,6 +10074,14 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
 {
   ConfigureCapturePolicy(world);
   Dirty.AdvanceScheduleFrame();
+  const auto has_baked_geometry_debt = [&](glm::ivec3 coord) {
+    const auto published = GreedyCache.find(coord);
+    return CaptureStore.LightInputsPolicy() == MeshLightInputs::Baked &&
+        published != GreedyCache.end() &&
+        (!published->second.RenderGeometryInputs.valid ||
+         !published->second.RenderGeometryInputs.Matches(
+             world.CaptureCurrentGeometryRenderInputs(coord)));
+  };
   if (const auto &target = PublicationTraceChunk();
       target && (Dirty.Contains(*target) || HasInflightMeshBuild(*target)))
   {
@@ -12051,7 +12065,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
         }
         // A42c: miss floor is LightRepair / FullyDark Published remesh only —
         // do not reopen A29 U1 hinterland (stale-lit hinterland remesh).
-        if (light_repair_only_under_miss &&
+        if (light_repair_only_under_miss && !has_baked_geometry_debt(*it) &&
             !((Dirty.IsPriorityRemesh(*it) ||
                (IsLightRepairRemesh && IsLightRepairRemesh(*it))) ||
               ChunkHasFullyDarkFace(*it) || ChunkHasStaleDarkFaces(*it, world)))
@@ -12426,7 +12440,8 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       {
         // Admission pressure does not fulfill a physical geometry edit.
         // Keep its queue owner and age until a remesh slot is available.
-        if (CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField)
+        if (CaptureStore.LightInputsPolicy() == MeshLightInputs::PhysicalField ||
+            has_baked_geometry_debt(*it))
         {
           ++it;
           continue;
@@ -12438,7 +12453,7 @@ MeshRebuildTickStats UChunkMeshCache::RebuildDirtyChunksWithStats(
       // F2: remesh quota separate from FirstMesh under HoleDrain/Deep.
       const bool is_remesh = HasDrawableGreedyMesh(*it);
       // A42c: miss floor is LightRepair / FullyDark Published remesh only.
-      if (is_remesh && light_repair_only_under_miss &&
+      if (is_remesh && light_repair_only_under_miss && !has_baked_geometry_debt(*it) &&
           !Dirty.IsPriorityRemesh(*it) &&
           !((Dirty.IsPriorityRemesh(*it) ||
              (IsLightRepairRemesh && IsLightRepairRemesh(*it))) ||
