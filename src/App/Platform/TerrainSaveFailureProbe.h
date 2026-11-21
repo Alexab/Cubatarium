@@ -2321,6 +2321,50 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           report["flow_cooldown_expiry"].push_back({{"mode",mode},{"before",cooldown_before},
               {"counts_by_age",ages},{"receipts_after",executor.DispatchExpiryCount()},{"exact",expires_exactly}});
           require(expires_exactly,"old expiry receipt preserves renewed cooldown until its exact deadline");
+          if(mode==0) {
+            auto &global=GetColumnFlowExecutor();
+            struct RestoreGlobalFlow {
+              UColumnFlowExecutor &target;
+              std::unique_ptr<UColumnFlowExecutor> saved;
+              ~RestoreGlobalFlow() { target=std::move(*saved); }
+            } restore_global{global,std::make_unique<UColumnFlowExecutor>(std::move(global))};
+            global=UColumnFlowExecutor{};
+            global.BindDecideWorld(&flow);
+            global.Scheduler().Enqueue({0,0},ColumnWorkKind::FirstMesh,90);
+            global.Scheduler().Enqueue({3,0},ColumnWorkKind::FirstMesh,20);
+            global.SetColumnJobStage({3,0},ColumnJobStage::Meshing);
+            global.SetRelightRetryCooldown(UColumnFlowExecutor::MakeCooldownKey({3,0},ColumnWorkKind::RelightThenMesh));
+            auto unrelated=std::make_unique<UWorld>(nullptr,nullptr);
+            unrelated->AbandonTerrainForWorldReplace();
+            const bool foreign_preserved=global.Scheduler().LiveCount()==2 && global.decide_world_==&flow;
+            const auto old_inc=flow.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation();
+            flow.AbandonTerrainForWorldReplace();
+            const bool retired=global.Scheduler().LiveCount()==0 && global.column_job_stage_.empty() &&
+                global.relight_retry_after_frame_.empty() && global.retry_expiry_.empty() && global.decide_world_==nullptr;
+            flow.BlockWorld.SetBlock({8,-40,8},8); flow.BlockWorld.SetBlock({8,40,8},8);
+            global.BindDecideWorld(&flow);
+            ColumnWorkItem a{}; a.column={0,0}; a.cy=-3; a.priority=90;
+            auto b=a; b.cy=2;
+            global.Scheduler().Enqueue(a); global.Scheduler().Enqueue(b);
+            UFrameDeadline::Get().BeginFrame(5000);
+            const auto dispatched=global.DrainBudget(flow,1,{0,-3,0},1,1);
+            mesh.RebuildDirtyChunksWithStats(flow.BlockWorld,*flow.BlockRegistry,8,8);
+            const bool successor=dispatched==1 &&
+                flow.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation()!=old_inc &&
+                cache.GetPublishCount({0,-3,0})>0 && cache.GetPublishCount({0,2,0})>0 &&
+                cache.IsPublishedMeshCurrentForInputs({0,-3,0},flow.BlockWorld) &&
+                cache.IsPublishedMeshCurrentForInputs({0,2,0},flow.BlockWorld);
+            global.BindDecideWorld(unrelated.get());
+            const bool retargeted=global.Scheduler().LiveCount()==0 && global.column_job_stage_.empty() &&
+                global.DispatchCooldownCount()==0 && global.decide_world_==unrelated.get();
+            global.Scheduler().Enqueue({7,0},ColumnWorkKind::FirstMesh,10);
+            unrelated.reset();
+            const bool destructor_retired=global.Scheduler().LiveCount()==0 && global.decide_world_==nullptr;
+            report["flow_world_lifecycle"]={{"foreign_preserved",foreign_preserved},{"old_owner_retired",retired},
+                {"current_successor",successor},{"retargeted",retargeted},{"destructor_retired",destructor_retired}};
+            require(foreign_preserved && retired && successor && retargeted && destructor_retired,
+                "global flow retires only its world and replacement publishes actual current successor");
+          }
         }
       });
       if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});

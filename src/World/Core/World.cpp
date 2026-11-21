@@ -510,7 +510,10 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
   ConfigurePhysicsServices();
 }
 
-UWorld::~UWorld() = default;
+UWorld::~UWorld()
+{
+  GetColumnFlowExecutor().RetireWorld(this);
+}
 
 UChunkRenderDemandStore &UWorld::GetRenderDemandStore()
 {
@@ -11779,6 +11782,7 @@ void UWorld::AbandonTerrainForWorldReplace()
   {
     CancelCooperativeOperation();
   }
+  GetColumnFlowExecutor().RetireWorld(this);
 
   if (Streaming)
   {

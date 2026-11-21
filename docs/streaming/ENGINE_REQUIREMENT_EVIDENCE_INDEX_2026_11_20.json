@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q01.global-world-owner-retirement",
+      "status": "SCOPED_PASS_LIMIT_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-flow-world-acceptance-20261121.json",
+      "scope": "LIMIT Q01 global owner lifetime: actual singleton state saved/restored around isolated fixture; foreign UWorld public Abandon preserves active pending tickets, bound public Abandon clears old tickets/metadata/binding, same-object fresh incarnation real merged admission publishes both signed sections. Bind different world retires prior domain; actual bound UWorld destructor clears its pending ticket. Explicit pending metadata ingress adapter; no complete save/load transaction, backend or framebuffer claim. Live-coordinate producer/count envelope remains OPEN. Full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.LIMIT.Q01.retry-stage-metadata-lifetime",
       "status": "SCOPED_PASS_LIMIT_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

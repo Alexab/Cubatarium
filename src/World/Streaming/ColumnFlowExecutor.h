@@ -128,7 +128,18 @@ public:
   void SyncFocusRingColumnJobStages(UWorld &world, glm::ivec3 focus_ground,
                                     int focus_radius);
   /// Q6: bind world for Decide* record_want during Enqueue (frame-scoped).
-  void BindDecideWorld(UWorld *world) { decide_world_ = world; }
+  void BindDecideWorld(UWorld *world)
+  {
+    // Initial producers may queue before the first consumer binds its world.
+    if (decide_world_ != nullptr && decide_world_ != world)
+      Clear();
+    decide_world_ = world;
+  }
+  void RetireWorld(const UWorld *world)
+  {
+    if (decide_world_ == world)
+      Clear();
+  }
   /// Focus-ring census for JSONL (PendingLight / Meshing / GpuPending /
   /// RenderReady).
   void CountFocusRingJobStages(glm::ivec3 focus_ground, int focus_radius,
