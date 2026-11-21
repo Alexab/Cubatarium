@@ -14,6 +14,7 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -167,9 +168,10 @@ private:
   std::atomic<uint64_t> DiscardedLateEpoch{0};
   std::atomic<uint64_t> DiscardedLateJobMismatch{0};
   mutable std::mutex OverflowMutex;
-  std::vector<glm::ivec3> OverflowCoords;
+  // One retry obligation per coordinate, independent of failed job history.
+  std::unordered_set<glm::ivec3, IVec3Hash> OverflowCoords;
   mutable std::mutex DiscardedMutex;
-  std::vector<glm::ivec3> DiscardedCoords;
+  std::unordered_set<glm::ivec3, IVec3Hash> DiscardedCoords;
   // Destroy first: callbacks access all the members above until workers join.
   UJobThreadPool Pool;
 };

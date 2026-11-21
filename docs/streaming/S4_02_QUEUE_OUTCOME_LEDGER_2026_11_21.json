@@ -690,7 +690,9 @@
         {
           "id": "LIMIT-C1.Q04",
           "status": "CHECK",
-          "required_result": "OverflowCoords/DiscardedCoords numeric retry envelope and exact terminal retention; per-coordinate Forget cost distinct from worker/completed caps."
+          "required_result": "OverflowCoords/DiscardedCoords numeric retry envelope and exact terminal retention; per-coordinate Forget cost distinct from worker/completed caps.",
+          "retry_coalescing_evidence": "build/desktop-msvc/s4-mesh-retry-coalescing-acceptance-20261121.json",
+          "partial_result": "Unique-coordinate retry storage, keyed exact Forget (expected hash O(1)), Take releases historical bucket capacity. Eight real overflow cohorts coalesce1, exact retirement/current successor PASS. Distinct-coordinate/byte envelope and radius scan remain CHECK."
         },
         {
           "id": "LIMIT-C1.Q06",

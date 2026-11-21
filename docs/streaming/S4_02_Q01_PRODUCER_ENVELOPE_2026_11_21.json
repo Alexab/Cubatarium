@@ -451,7 +451,7 @@
       "partial_evidence": "build/desktop-msvc/s4-flow-cap-acceptance-20261121.json"
     }
   ],
-  "next_action": "Derive world-record N from interest/resident/save-veto/IO/generation/light owners and ingress-versus-retirement rates; reuse scheduler allocator/native acceptance absent dependent changes. Other LIMIT groups stay OPEN.",
+  "next_action": "LIMIT-C1.Q04 retry history coalescing/keyed retirement; then existing independent LIMIT subgroups. Q01.L2 depends on live producer envelopes listed here; preserve outstanding closure requirement.",
   "verified_one_shot_paths": [
     {
       "file": "src/World/Core/MarkRelitInstall.cpp",
@@ -469,5 +469,17 @@
       "finding": "trusted-disk seam repair selects at most one incomplete cardinal neighbour and breaks immediately after void Enqueue; global refusal would lose this local one-shot notification."
     }
   ],
-  "implementation_constraint": "Capacity refusal must first preserve intent in an existing authoritative current-world record and bounded re-admission path. An additional uncapped overflow queue is not an acceptable memory bound. Accepted requests may not be evicted to make room."
+  "implementation_constraint": "Capacity refusal must first preserve intent in an existing authoritative current-world record and bounded re-admission path. An additional uncapped overflow queue is not an acceptable memory bound. Accepted requests may not be evicted to make room.",
+  "cardinality_dependencies": {
+    "status": "OPEN",
+    "reason": "No finite global record cap follows from current code: resident/save-veto owners are protected; input admission is not globally limited by MaxResidentChunks, which only caps free-list pool. Bounded32 visits retires history but does not bound arbitrarily larger distinct-key ingress.",
+    "required_before_closure": [
+      "Q09 requested/active/ready generation admission envelope",
+      "Q10 load/save/flag admission and save-veto backpressure retaining dirty data",
+      "Q08 live light obligations and pending-band envelope",
+      "Q02/Q11/Q12 distinct resident/interest producer envelopes",
+      "Ingress-orphan lifetime/rate proof, including no-streaming and quiesce paths"
+    ],
+    "execution": "Continue existing LIMIT subgroups with exact partial receipts; return to Q01.L2 after upstream admission envelopes. Do not mark Q01 REUSE or COMPLETE."
+  }
 }

@@ -13,6 +13,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Streaming/ChunkRenderDemand.h"
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <unordered_set>
 #include <mutex>
@@ -292,7 +293,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
             if (it != InFlight.end())
               InFlight.erase(it);
             std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
-            OverflowCoords.push_back(result.coord);
+            OverflowCoords.insert(result.coord);
           }
           return;
         }
@@ -329,7 +330,7 @@ UAsyncMeshBuilder::EnqueueDetailed(ChunkMeshSnapshot snapshot,
             if (it != InFlight.end())
               InFlight.erase(it);
             std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
-            OverflowCoords.push_back(dropped.coord);
+            OverflowCoords.insert(dropped.coord);
           }
         }
           }, jobId))
@@ -366,7 +367,7 @@ void UAsyncMeshBuilder::SetCompletedCapacity(std::size_t cap)
       if (it != InFlight.end())
         InFlight.erase(it);
       std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
-      OverflowCoords.push_back(dropped.coord);
+      OverflowCoords.insert(dropped.coord);
     }
   }
 }
@@ -439,8 +440,7 @@ std::vector<MeshBuildResult> UAsyncMeshBuilder::DrainCompleted(int maxPerFrame)
   if (!discarded_now.empty())
   {
     std::lock_guard<std::mutex> dlock(DiscardedMutex);
-    DiscardedCoords.insert(DiscardedCoords.end(), discarded_now.begin(),
-                           discarded_now.end());
+    DiscardedCoords.insert(discarded_now.begin(), discarded_now.end());
   }
   return accepted;
 }
@@ -603,11 +603,9 @@ void UAsyncMeshBuilder::ForgetInflight(const glm::ivec3 coord)
     // Overflow may have retired the job before its owner abandons the coord.
     // Its already-produced retry must be retired even without an InFlight entry.
     std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
-    OverflowCoords.erase(std::remove(OverflowCoords.begin(), OverflowCoords.end(), coord),
-                         OverflowCoords.end());
+    OverflowCoords.erase(coord);
     std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
-    DiscardedCoords.erase(std::remove(DiscardedCoords.begin(), DiscardedCoords.end(), coord),
-                          DiscardedCoords.end());
+    DiscardedCoords.erase(coord);
   }
   if (retired_id == 0) return;
   Pool.CancelPendingJobsIf([&](uint64_t id) { return id == retired_id; });
@@ -636,7 +634,7 @@ void UAsyncMeshBuilder::NoteObsoleteJob(glm::ivec3 coord,
         (current == InFlight.end() || current->second.id == span.job_id))
     {
       std::lock_guard<std::mutex> debt_lock(DiscardedMutex);
-      DiscardedCoords.push_back(coord);
+      DiscardedCoords.insert(coord);
     }
   }
   UJobStageTrace::NoteTerminal(span, JobStage::Retired, reason);
@@ -671,11 +669,11 @@ void UAsyncMeshBuilder::CancelPendingOutsideHorizontalRadius(glm::ivec3 focus,
     // Already-produced retries have the same cancellation boundary as jobs.
     // Protected retries remain owned even when overflow retired their CPU job.
     std::lock_guard<std::mutex> overflow_lock(OverflowMutex);
-    OverflowCoords.erase(std::remove_if(OverflowCoords.begin(), OverflowCoords.end(), outside),
-                         OverflowCoords.end());
+    for (auto it = OverflowCoords.begin(); it != OverflowCoords.end();)
+      it = outside(*it) ? OverflowCoords.erase(it) : std::next(it);
     std::lock_guard<std::mutex> discarded_lock(DiscardedMutex);
-    DiscardedCoords.erase(std::remove_if(DiscardedCoords.begin(), DiscardedCoords.end(), outside),
-                          DiscardedCoords.end());
+    for (auto it = DiscardedCoords.begin(); it != DiscardedCoords.end();)
+      it = outside(*it) ? DiscardedCoords.erase(it) : std::next(it);
   }
   Pool.CancelPendingJobsIf([&](uint64_t id) { return !protected_jobs.count(id); });
   Completed.EraseIf([&](const MeshBuildResult &result) {
@@ -689,16 +687,18 @@ void UAsyncMeshBuilder::CancelPendingOutsideHorizontalRadius(glm::ivec3 focus,
 std::vector<glm::ivec3> UAsyncMeshBuilder::TakeOverflowCoords()
 {
   std::lock_guard<std::mutex> olock(OverflowMutex);
-  std::vector<glm::ivec3> out;
-  out.swap(OverflowCoords);
+  std::vector<glm::ivec3> out(OverflowCoords.begin(), OverflowCoords.end());
+  // Construct the transfer first: allocation failure must leave debt owned.
+  // Then release buckets as well as nodes, matching the old vector swap.
+  decltype(OverflowCoords){}.swap(OverflowCoords);
   return out;
 }
 
 std::vector<glm::ivec3> UAsyncMeshBuilder::TakeDiscardedCoords()
 {
   std::lock_guard<std::mutex> dlock(DiscardedMutex);
-  std::vector<glm::ivec3> out;
-  out.swap(DiscardedCoords);
+  std::vector<glm::ivec3> out(DiscardedCoords.begin(), DiscardedCoords.end());
+  decltype(DiscardedCoords){}.swap(DiscardedCoords);
   return out;
 }
 

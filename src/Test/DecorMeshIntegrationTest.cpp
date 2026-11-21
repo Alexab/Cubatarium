@@ -5127,6 +5127,33 @@ static void TestMeshSameKeySupersession(
              builder.TakeOverflowCoords().empty() && !builder.IsInFlight(victim),
          "capacity victim retry completes real current geometry exactly once");
   std::cout << "mesh_capacity_distinct_victim_retry PASS\n";
+  // Repeated actual capacity loss must retain one coordinate obligation,
+  // rather than one notification per historical job. Do not drain retries
+  // between rounds; each successor is a new real physical mesh submission.
+  for(int round=0;round<8;++round) {
+    Expect(submit(victim,1000+round*2) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
+               submit(kept,1001+round*2) && builder.WaitIdleFor(std::chrono::seconds(5)),
+           "repeated overflow cohort completes real jobs");
+    auto newest=builder.DrainCompleted(1);
+    Expect(newest.size()==1 && newest[0].coord==kept,
+           "repeated overflow preserves current distinct owner");
+  }
+  const auto coalesced=builder.TakeOverflowCoords();
+  Expect(coalesced.size()==1 && coalesced[0]==victim && builder.TakeOverflowCoords().empty(),
+         "eight real overflow victims coalesce into one transferred retry obligation");
+  Expect(submit(victim,1100) && builder.WaitIdleFor(std::chrono::seconds(5)) &&
+             submit(kept,1101) && builder.WaitIdleFor(std::chrono::seconds(5)),
+         "forgotten overflow has actual pending retry");
+  builder.ForgetInflight(victim);
+  Expect(builder.TakeOverflowCoords().empty() && builder.IsInFlight(kept),
+         "keyed retry retirement preserves independent completed owner");
+  builder.DrainCompleted(1).clear();
+  Expect(submit(victim,1102) && builder.WaitIdleFor(std::chrono::seconds(5)),
+         "coalesced retry successor reaches physical worker");
+  auto successor=builder.DrainCompleted(1);
+  Expect(successor.size()==1 && successor[0].sourceRevision==1102 &&
+             !successor[0].batches.empty(),"coalesced retry successor publishes current geometry");
+  std::cout << "mesh_retry_history_coalescing rounds=8 obligations=" << coalesced.size() << " PASS\n";
 }
 
 static void TestCertifiedGeometrySurvivesInflightLight(
