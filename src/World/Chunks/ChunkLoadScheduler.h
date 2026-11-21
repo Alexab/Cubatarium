@@ -2,6 +2,7 @@
 
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Memory/AllocationCountingResource.h"
+#include "Core/Memory/SharedCountingAllocator.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
@@ -45,6 +46,8 @@ public:
   size_t BufferReservedBytes() const { return BufferBudget->UsedBytes(); }
   size_t BufferReservedPeak() const { return BufferBudget->PeakBytes(); }
   size_t BufferBudgetLimit() const { return BufferBudget->LimitBytes(); }
+  UAllocationCountingResource::Snapshot GetControlAllocationSnapshot() const
+  { return ControlMemory->GetSnapshot(); }
   uint64_t CapacityRefusedCount() const { return CapacityRefused; }
   void SetMetadataCapacity(size_t capacity) { MetadataCapacity=capacity; }
   size_t MetadataCount() const { return States.size(); }
@@ -189,6 +192,8 @@ private:
     { return a.x!=b.x ? a.x<b.x : a.z!=b.z ? a.z<b.z : a.y<b.y; }
   };
   std::shared_ptr<SettingsBudgetState> SettingsBudget{std::make_shared<SettingsBudgetState>()};
+  std::shared_ptr<UConcurrentAllocationCountingResource> ControlMemory{
+      std::make_shared<UConcurrentAllocationCountingResource>()};
   std::shared_ptr<UBufferAllocationBudget> BufferBudget{std::make_shared<UBufferAllocationBudget>(kBufferByteBudget)};
   std::atomic<bool> BufferSerialMode{false};
   IUChunkPopulator &Populator;

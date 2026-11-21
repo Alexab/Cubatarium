@@ -2524,7 +2524,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         credits.SetWorkSlotCap(0);
         const bool slot_refused=scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(target)==ChunkLoadState::Requested && populator.calls==0 &&
-            scheduler.GetPendingQueueCount()==1 && credits.WorkSlotsInUse()==0;
+            scheduler.GetPendingQueueCount()==1 && credits.WorkSlotsInUse()==0 &&
+            scheduler.GetControlAllocationSnapshot().live_bytes==0;
         report["generation_pressure_details"]["slot"]={{"calls",populator.calls.load()},
             {"state",static_cast<int>(scheduler.GetState(target))},
             {"index",scheduler.GetPendingQueueCount()},{"live",scheduler.QueuedRequests.size()},
@@ -2558,7 +2559,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         scheduler.Pool.SetMaxPendingJobCount(1); scheduler.Pool.Enqueue([]{});
         const bool pool_refused=scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(target)==ChunkLoadState::Requested && populator.calls==0 &&
-            scheduler.QueuedRequests.size()==1 && credits.WorkSlotsInUse()==0;
+            scheduler.QueuedRequests.size()==1 && credits.WorkSlotsInUse()==0 &&
+            scheduler.GetControlAllocationSnapshot().live_bytes==0;
         report["generation_pressure_details"]["pool"]={{"calls",populator.calls.load()},
             {"state",static_cast<int>(scheduler.GetState(target))},
             {"index",scheduler.GetPendingQueueCount()},{"live",scheduler.QueuedRequests.size()},
@@ -2599,6 +2601,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         const glm::ivec3 next(30,0,0); generation.Bump(next); scheduler.RequestLoad(next,2,request);
         const auto ready_payload_before=scheduler.GetCompletedReadyPayloadBytes();
         const auto full_completion=scheduler.Completed.GetStorageSnapshot();
+        const auto full_controls=scheduler.GetControlAllocationSnapshot();
         const bool ready_full=cohort && scheduler.GetRetainedGenerationResultCount()==8 &&
             scheduler.GetCompletedReadyCount()==8 && scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(next)==ChunkLoadState::Requested &&
@@ -2646,15 +2649,24 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           if(cycle>31) queue_plateau=queue_plateau && queue.live_bytes==warm_queue_bytes;
           released_owners=released_owners && idle.count==0 && idle.bytes==empty_completion.bytes &&
               scheduler.GetRetainedGenerationResultCount()==0 && scheduler.GetCompletedReadyPayloadBytes()==0 &&
-              scheduler.BufferReservedBytes()==0 && scheduler.SettingsPayloadBytes()==0;
+              scheduler.BufferReservedBytes()==0 && scheduler.SettingsPayloadBytes()==0 &&
+              scheduler.GetControlAllocationSnapshot().live_bytes==0;
         }
         const auto pool_storage=scheduler.Pool.GetQueueAllocationSnapshot();
+        const auto control_storage=scheduler.GetControlAllocationSnapshot();
         report["generation_queue_storage"]={{"cohorts",64},{"per_result_inline_bytes",sizeof(UChunkLoadScheduler::PendingResult)},
             {"completion_slots",empty_completion.slots},{"completion_capacity_bytes",empty_completion.bytes},
             {"completion_fixed",fixed_completion},{"retired_payload_owners",released_owners},
             {"pool_deque_idle_bytes",pool_storage.live_bytes},{"pool_deque_peak_bytes",pool_storage.peak_bytes},
             {"pool_deque_live_allocations",pool_storage.live_allocations},
             {"last32_idle_deque_plateau",queue_plateau}};
+        report["generation_control_storage"]={{"ready8_bytes",full_controls.live_bytes},
+            {"ready8_allocations",full_controls.live_allocations},{"peak_bytes",control_storage.peak_bytes},
+            {"after_cancel_bytes",control_storage.live_bytes},{"after_cancel_allocations",control_storage.live_allocations},
+            {"slot_refusal_releases",slot_refused},{"pool_refusal_releases",pool_refused}};
+        require(full_controls.live_bytes>0 && full_controls.live_allocations==16 &&
+            control_storage.live_bytes==0 && control_storage.live_allocations==0,
+            "counted generation result and budget controls survive Ready then release exactly");
         require(fixed_completion && released_owners && queue_plateau &&
             scheduler.Completed.DiscardedOverflow()==0,
             "generation queue storage stays fixed and payload owners release over repeated cohorts");

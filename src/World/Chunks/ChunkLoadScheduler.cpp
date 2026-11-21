@@ -429,14 +429,14 @@ bool UChunkLoadScheduler::ScheduleWorker(
     if (retained >= kMaxRetainedGenerationResults) return false;
   } while (!RetainedResults->compare_exchange_weak(retained,retained+1,
       std::memory_order_relaxed));
-  auto result_slot = std::make_shared<ResultSlotGuard>();
+  auto result_slot = std::allocate_shared<ResultSlotGuard>(USharedCountingAllocator<ResultSlotGuard>{ControlMemory});
   result_slot->count = RetainedResults;
   if (!UPipelineAdmission::Get().TryAcquireWorkSlot()) return false;
   struct WorkSlotGuard
   {
     ~WorkSlotGuard() { UPipelineAdmission::Get().ReleaseWorkSlot(); }
   };
-  auto work_slot = std::make_shared<WorkSlotGuard>();
+  auto work_slot = std::allocate_shared<WorkSlotGuard>(USharedCountingAllocator<WorkSlotGuard>{ControlMemory});
   ChunkPopulateRequest populateRequest;
   populateRequest.chunkCoord = request.coord;
   populateRequest.token = request.token;
@@ -460,9 +460,9 @@ bool UChunkLoadScheduler::ScheduleWorker(
   const std::size_t worker_pending_at_submit = Pool.GetPendingJobCount();
   const std::size_t worker_active_at_submit = Pool.GetActiveJobCount();
   const std::size_t worker_count = Pool.GetWorkerCount();
-  if (!Pool.TryEnqueue(
+  auto worker =
       [this, populateRequest = std::move(populateRequest), settings_owner = request.settings,
-       retry_request=request, buffer_budget=BufferBudget,
+       retry_request=request, buffer_budget=BufferBudget, control_memory=ControlMemory,
        requested_at, scheduled_at, priority,
        request_id, demand_id,
        max_height, request_queue_live_at_schedule,
@@ -490,7 +490,8 @@ bool UChunkLoadScheduler::ScheduleWorker(
         pending.generationStartCapPerFrame =
             generation_start_cap_per_frame;
         try {
-          UBufferBudgetScope budget_scope({buffer_budget,std::make_shared<BufferBudgetJob>()});
+          UBufferBudgetScope budget_scope({buffer_budget,std::allocate_shared<BufferBudgetJob>(
+              USharedCountingAllocator<BufferBudgetJob>{control_memory})});
           pending.result = Populator.Populate(populateRequest);
         } catch(const UBufferBudgetExceeded &) {
           pending.result.coord=populateRequest.chunkCoord;
@@ -509,7 +510,12 @@ bool UChunkLoadScheduler::ScheduleWorker(
             "discarded=" + std::to_string(pending.result.discarded ? 1 : 0) +
                 " generation_ms=" + std::to_string(pending.generationMs));
         Completed.Push(std::move(pending));
-      })) return false;
+      };
+  // Keep the full callable and its shared control block in tracked storage.
+  // std::function receives only a small shared-owner dispatch wrapper.
+  auto task=std::allocate_shared<decltype(worker)>(
+      USharedCountingAllocator<decltype(worker)>{ControlMemory},std::move(worker));
+  if (!Pool.TryEnqueue([task=std::move(task)] {(*task)();})) return false;
   States[request.coord].state = ChunkLoadState::Generating;
   LogProceduralRequest(
       "worker_submitted", request.coord, request.requestId,

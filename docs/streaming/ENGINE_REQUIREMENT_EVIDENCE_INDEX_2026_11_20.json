@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.callable-control-allocation",
+      "status": "SCOPED_PASS_PLATFORM_SCRATCH_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-control-allocation-acceptance-20261121.json",
+      "scope": "Generation lambda, result-slot guard, work-slot guard and buffer-budget job use allocate_shared with shared-owner allocator. Counter serializes actual rebound-node allocation/deallocation requests and snapshots; includes callable/object plus shared-control/allocator state. Resource is retained in allocator through last strong/weak ownership, avoiding raw PMR resource lifetime dependency. Full callable is tracked; pool std::function receives small shared-owner dispatcher."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.queue-storage",
       "status": "SCOPED_PASS_CALLABLE_SCRATCH_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-queue-storage-acceptance-20261121.json",

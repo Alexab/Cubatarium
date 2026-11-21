@@ -1,5 +1,6 @@
 #include "Core/Jobs/JobThreadPool.h"
 #include "Core/Jobs/PipelineAdmission.h"
+#include "Core/Memory/SharedCountingAllocator.h"
 #include <future>
 #include <iostream>
 #include <limits>
@@ -24,6 +25,36 @@ int main()
     }
   };
   auto &admission = UPipelineAdmission::Get();
+  {
+    auto memory=std::make_shared<UConcurrentAllocationCountingResource>();
+    struct alignas(64) Payload { int value{42}; };
+    std::weak_ptr<Payload> weak;
+    {
+      auto payload=std::allocate_shared<Payload>(USharedCountingAllocator<Payload>{memory});
+      check(reinterpret_cast<uintptr_t>(payload.get())%alignof(Payload)==0,"counted control allocation alignment");
+      weak=payload;
+      check(payload->value==42 && memory->GetSnapshot().live_bytes>=sizeof(Payload),
+          "actual allocate_shared payload and control bytes counted");
+    }
+    check(weak.expired() && memory->GetSnapshot().live_bytes>0,"weak owner keeps control allocation counted");
+    weak.reset();
+    check(memory->GetSnapshot().live_bytes==0,"last weak owner releases counted allocation");
+    std::vector<std::thread> producers;
+    for(int worker=0;worker<4;++worker) producers.emplace_back([memory] {
+      for(int n=0;n<1000;++n) {
+        auto value=std::allocate_shared<Payload>(USharedCountingAllocator<Payload>{memory});
+      }
+    });
+    for(auto &worker:producers) worker.join();
+    check(memory->GetSnapshot().live_bytes==0 && memory->GetSnapshot().live_allocations==0 &&
+        memory->GetSnapshot().peak_bytes>0,"concurrent control allocation retires all bytes");
+    auto owner=std::allocate_shared<Payload>(USharedCountingAllocator<Payload>{memory});
+    std::weak_ptr<UConcurrentAllocationCountingResource> resource_lifetime=memory;
+    memory.reset();
+    check(!resource_lifetime.expired() && owner->value==42,"allocator retains resource after outer owner retires");
+    owner.reset();
+    check(resource_lifetime.expired(),"last allocation releases retained resource");
+  }
   admission.SetSnapshotCap(64);
   check(admission.TryAcquireSnapshotBytes(64), "reserve snapshot");
   check(!admission.TryAcquireSnapshotBytes(std::numeric_limits<size_t>::max()),
