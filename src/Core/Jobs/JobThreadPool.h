@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/Memory/AllocationCountingResource.h"
+
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -59,6 +61,13 @@ public:
     std::lock_guard<std::mutex> lock(QueueMutex);
     return JobThreadPoolSnapshot{Jobs.size(), ActiveJobs, Workers.size()};
   }
+  // Queue node/map allocations only. Serialized with all deque mutations;
+  // callable payloads, workers and upstream allocator overhead are separate.
+  UAllocationCountingResource::Snapshot GetQueueAllocationSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    return QueueMemory.GetSnapshot();
+  }
   std::size_t GetWorkerCount() const { return Workers.size(); }
   std::size_t GetMaxPendingJobCount() const { return MaxPendingJobs; }
   uint64_t GetRejectedEnqueueCount() const { return RejectedEnqueues.load(); }
@@ -78,7 +87,8 @@ private:
     std::function<void()> run;
     uint64_t tag{0};
   };
-  std::deque<QueuedJob> Jobs;
+  UAllocationCountingResource QueueMemory;
+  std::pmr::deque<QueuedJob> Jobs{&QueueMemory};
   std::size_t ActiveJobs{0};
   std::size_t MaxPendingJobs{kDefaultMaxPendingJobsPerPool};
   std::atomic<uint64_t> RejectedEnqueues{0};
@@ -89,6 +99,19 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
+  struct StorageSnapshot { size_t count{0},slots{0},bytes{0}; };
+  StorageSnapshot GetStorageSnapshot() const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    return {Count,Items.capacity(),Items.capacity()*sizeof(T)};
+  }
+  // Preallocate slots without imposing a drop policy. Producers still own
+  // admission and may use the existing lossless queue behavior.
+  void ReserveStorage(size_t slots)
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    Items.reserve(slots);
+  }
   // Return every evicted result so its owner can retire its token and retry.
   std::vector<T> SetCapacity(std::size_t cap)
   {

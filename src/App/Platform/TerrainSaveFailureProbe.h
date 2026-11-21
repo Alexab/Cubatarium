@@ -2499,6 +2499,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         UChunkGenerationRegistry generation;
         UChunkLoadScheduler scheduler(populator,generation);
         const auto empty_metadata=scheduler.GetMetadataStorageSnapshot();
+        const auto empty_completion=scheduler.Completed.GetStorageSnapshot();
         const auto empty_token_allocator=generation.GetAllocationSnapshot();
         UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
         terrain.SetVerticalProfile({-48,-33,-40});
@@ -2597,6 +2598,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         }
         const glm::ivec3 next(30,0,0); generation.Bump(next); scheduler.RequestLoad(next,2,request);
         const auto ready_payload_before=scheduler.GetCompletedReadyPayloadBytes();
+        const auto full_completion=scheduler.Completed.GetStorageSnapshot();
         const bool ready_full=cohort && scheduler.GetRetainedGenerationResultCount()==8 &&
             scheduler.GetCompletedReadyCount()==8 && scheduler.StartQueuedGenerationWorkers(64)==0 &&
             scheduler.GetState(next)==ChunkLoadState::Requested &&
@@ -2624,6 +2626,38 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"ready retirement fixture completes");
         scheduler.CancelAllPending();
         const bool all_retired=scheduler.GetRetainedGenerationResultCount()==0;
+        bool fixed_completion=empty_completion.slots==8 && full_completion.count==8 &&
+            full_completion.bytes==empty_completion.bytes && scheduler.Completed.DiscardedOverflow()==0;
+        bool released_owners=true,queue_plateau=true;
+        size_t warm_queue_bytes=0;
+        for(int cycle=0;cycle<64;++cycle) {
+          for(int n=0;n<8;++n) {
+            require(scheduler.RequestLoad({60+n,0,0},0,request),"storage cohort request admitted");
+            require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+                scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),"storage cohort worker finishes");
+          }
+          const auto full=scheduler.Completed.GetStorageSnapshot();
+          fixed_completion=fixed_completion && full.count==8 && full.bytes==empty_completion.bytes &&
+              scheduler.GetRetainedGenerationResultCount()==8;
+          scheduler.CancelAllPending();
+          const auto idle=scheduler.Completed.GetStorageSnapshot();
+          const auto queue=scheduler.Pool.GetQueueAllocationSnapshot();
+          if(cycle==31) warm_queue_bytes=queue.live_bytes;
+          if(cycle>31) queue_plateau=queue_plateau && queue.live_bytes==warm_queue_bytes;
+          released_owners=released_owners && idle.count==0 && idle.bytes==empty_completion.bytes &&
+              scheduler.GetRetainedGenerationResultCount()==0 && scheduler.GetCompletedReadyPayloadBytes()==0 &&
+              scheduler.BufferReservedBytes()==0 && scheduler.SettingsPayloadBytes()==0;
+        }
+        const auto pool_storage=scheduler.Pool.GetQueueAllocationSnapshot();
+        report["generation_queue_storage"]={{"cohorts",64},{"per_result_inline_bytes",sizeof(UChunkLoadScheduler::PendingResult)},
+            {"completion_slots",empty_completion.slots},{"completion_capacity_bytes",empty_completion.bytes},
+            {"completion_fixed",fixed_completion},{"retired_payload_owners",released_owners},
+            {"pool_deque_idle_bytes",pool_storage.live_bytes},{"pool_deque_peak_bytes",pool_storage.peak_bytes},
+            {"pool_deque_live_allocations",pool_storage.live_allocations},
+            {"last32_idle_deque_plateau",queue_plateau}};
+        require(fixed_completion && released_owners && queue_plateau &&
+            scheduler.Completed.DiscardedOverflow()==0,
+            "generation queue storage stays fixed and payload owners release over repeated cohorts");
         bool tokens_retired=generation.LiveTokenCount()==0;
         uint64_t previous_token=0;
         for(int n=0;n<128;++n) {

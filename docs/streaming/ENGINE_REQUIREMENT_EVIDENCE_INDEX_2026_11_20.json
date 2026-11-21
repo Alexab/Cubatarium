@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.queue-storage",
+      "status": "SCOPED_PASS_CALLABLE_SCRATCH_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-queue-storage-acceptance-20261121.json",
+      "scope": "Generation Completed reserves8 slots before use, retaining unbounded/lossless push semantics rather than adding drop-oldest. Existing8 retained-result credits cover queued/running/Ready/Tick owners and prevent larger admission. Snapshot reports vector capacity*sizeof(PendingResult), separate from pointed payload. Pool deque uses counting PMR serialized under existing QueueMutex; getter includes requested block/map live/peak bytes and allocation count. Resource declared before deque and outlives it."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.population-metric-window",
       "status": "SCOPED_PASS_OVERHEAD_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-metrics-window-acceptance-20261121.json",

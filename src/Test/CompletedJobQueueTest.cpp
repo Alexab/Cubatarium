@@ -21,6 +21,20 @@ void Expect(bool cond, const char *msg)
 
 int main()
 {
+  cutum::UCompletedJobQueue<int> reserved;
+  reserved.ReserveStorage(8);
+  const auto storage=reserved.GetStorageSnapshot();
+  Expect(storage.count==0 && storage.slots>=8 && storage.bytes==storage.slots*sizeof(int),
+         "reserved storage accounts capacity without creating items");
+  for(int cycle=0;cycle<1000;++cycle) {
+    for(int n=0;n<8;++n) reserved.Push(n);
+    const auto full=reserved.GetStorageSnapshot();
+    Expect(full.count==8 && full.bytes==storage.bytes,"repeated full cohorts reuse reserved storage");
+    const auto batch=reserved.DrainAll();
+    Expect(batch.size()==8 && batch.front()==0 && batch.back()==7,"reserved cohorts stay lossless");
+    Expect(reserved.GetStorageSnapshot().bytes==storage.bytes && reserved.DiscardedOverflow()==0,
+           "drain retains fixed empty slots without overflow");
+  }
   cutum::UCompletedJobQueue<int> q;
   q.SetCapacity(3);
   Expect(q.Capacity() == 3, "capacity set");

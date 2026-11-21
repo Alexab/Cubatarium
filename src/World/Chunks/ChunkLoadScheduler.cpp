@@ -70,6 +70,9 @@ UChunkLoadScheduler::UChunkLoadScheduler(IUChunkPopulator &populator,
       Pool(ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration),
            "ChunkGeneration")
 {
+  // The retained-result lease covers queued/running/Ready/Tick owners, so
+  // this lossless queue never needs more than these preallocated slots.
+  Completed.ReserveStorage(kMaxRetainedGenerationResults);
 }
 
 void UChunkLoadScheduler::SetMarkDirtyFn(MarkChunkDirtyFn fn)
