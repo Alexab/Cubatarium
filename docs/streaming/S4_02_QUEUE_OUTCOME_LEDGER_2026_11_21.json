@@ -226,7 +226,26 @@
       "id": "Q06-C2",
       "queue": "Q06",
       "status": "CHECK",
-      "required_result": "GPU pending cancel/eviction/reset and late completion preserve newer mixed CPU/GPU/field owners; current demand completes, abandoned owner retires. Pair permutations S4.03, ABA S5.02."
+      "required_result": "GPU pending cancel/eviction/reset and late completion preserve newer mixed CPU/GPU/field owners; current demand completes, abandoned owner retires. Pair permutations S4.03, ABA S5.02.",
+      "subcases": [
+        {
+          "id": "Q06-C2.1",
+          "status": "REUSE",
+          "scope": "All10 boundary/current1. Cancel releases pending/staging/readback/byte credits; no late publication. KeepDirty retains same revision/current successor without MarkDirty, abandonment allows explicitly fresh demand, protected exact original completes. No Dirty/RAA/pending tails.",
+          "evidence": "build/desktop-msvc/s4-gpu-pending-cancel-acceptance-20261121.json",
+          "coverage_note": "Negative run directly reproduced fullcancel only; missing KeepDirty pending cleanup source-confirmed and fixed cases positive. Post-kick glFinish does not separately force each Dispatched/Kicked transition or guarantee compute still running. Internal Kicked, reset/world/policy retirement/current successor and mixed late CPU/field owner cases remain Q06-C2. No stage closure."
+        },
+        {
+          "id": "Q06-C2.2",
+          "status": "CHECK",
+          "scope": "Exact Kicked phase cleanup/credits/current successor; reset/world/policy retirement reuse existing identity proofs and fill missing current-demand completion."
+        },
+        {
+          "id": "Q06-C2.3",
+          "status": "CHECK",
+          "scope": "Old GPU outcomes preserve newer mixed CPU/field owner and current publication; genuine follow-up debt survives. Pair permutations S4.03, ABA S5.02."
+        }
+      ]
     },
     {
       "id": "Q07-R1",
@@ -386,5 +405,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Q06-C1 all3 subcases accepted. 10 CHECK groups/20 REUSE groups/1 disabled path. Next Q06-C2 GPU pending cancellation/eviction/reset/mixed late-owner lifetimes; reuse exact existing GPU policy/storage evidence, fill only missing debt/current successor/credits cases. Full S4.02/S0..S6 OPEN."
+  "checkpoint": "Q06-C2.1 pending cancel/KeepDirty/removal/outside/protected queued/post-kick scoped accepted. .2 exact Kicked/reset/current successor and .3 mixed newer owner remain. Top-level10 CHECK groups; full scope OPEN."
 }

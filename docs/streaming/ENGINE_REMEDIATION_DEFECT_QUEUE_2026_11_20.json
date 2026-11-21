@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "full-and-keepdirty-cancel-leave-pending-gpu-resources",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "observed": "Full cancel actual accepted GPU pending survives after Active cleared, retaining byte credit. KeepDirty has same missing cleanup by source inspection.",
+      "fix": "Shared CancelPendingGpuOutsideLease called by full cancel before early-return and KeepDirty after debt transfer; releases exact ticket and pending RAII credit, preserves leased pending.",
+      "evidence": "build/desktop-msvc/s4-gpu-pending-cancel-acceptance-20261121.json",
+      "next_action": "Q06-C2.2 exact Kicked/reset and .3 mixed late owner; full package remains open."
+    },
+    {
       "id": "gpu-pending-byte-budget-has-no-production-admission",
       "stage": "S4.02",
       "status": "RESOLVED_SCOPED_PACKAGE_OPEN",

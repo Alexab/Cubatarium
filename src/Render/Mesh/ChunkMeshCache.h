@@ -1453,6 +1453,7 @@ private:
   };
   void EnsureGpuPipeline();
   void ReleasePendingGpuTicket(PendingGpuApply &pending);
+  void CancelPendingGpuOutsideLease(glm::ivec3 focus, int keep_horiz_lease);
   void RequeueFailedGpuMesh(glm::ivec3 coord);
   bool CommitGpuMeshResult(
       const UBlockWorld &world, UBlockRegistry &registry, glm::ivec3 coord,

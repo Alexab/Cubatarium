@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.pending-gpu-cancellation",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-gpu-pending-cancel-acceptance-20261121.json",
+      "scope": "Negative run directly reproduced fullcancel only; missing KeepDirty pending cleanup source-confirmed and fixed cases positive. Post-kick glFinish does not separately force each Dispatched/Kicked transition or guarantee compute still running. Internal Kicked, reset/world/policy retirement/current successor and mixed late CPU/field owner cases remain Q06-C2. No stage closure."
+    },
+    {
       "id": "S4.02.Q06.gpu-enqueue-quota",
       "status": "SCOPED_PASS_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

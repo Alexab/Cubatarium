@@ -760,6 +760,7 @@ bool UChunkMeshCache::WaitForAsyncMeshIdleFor(
 
 void UChunkMeshCache::CancelAsyncMeshWork()
 {
+  CancelPendingGpuOutsideLease(glm::ivec3(0), -1);
   ClearPublishedLightRefresh(false);
   ClearGeometryAwaitingLight(JobTerminalReason::SubmissionEpochChanged);
   Dirty.Clear();
@@ -833,6 +834,7 @@ void UChunkMeshCache::CancelAsyncInFlightKeepDirty(
   }
   for (const auto &coord : cancelled_geometry)
     DropGeometryAwaitingLight(coord);
+  CancelPendingGpuOutsideLease(focus_ground_chunk, keep_horiz_lease);
   ActiveMeshSourceRevision.clear();
   RemeshAfterApply.clear();
   for (const auto &entry : keep_active)
@@ -5081,6 +5083,27 @@ void UChunkMeshCache::ReleasePendingGpuTicket(PendingGpuApply &pending)
   if (GpuPipeline)
     GpuPipeline->ReleaseReadbackSlot(pending.ticket);
   pending.ticket = {};
+}
+
+void UChunkMeshCache::CancelPendingGpuOutsideLease(glm::ivec3 focus,
+                                                   int keep_horiz_lease)
+{
+  for (auto it = PendingGpuApplies.begin(); it != PendingGpuApplies.end();)
+  {
+    const int horiz = std::max(std::abs(it->coord.x - focus.x),
+                               std::abs(it->coord.z - focus.z));
+    if (keep_horiz_lease >= 0 && horiz <= keep_horiz_lease)
+    {
+      ++it;
+      continue;
+    }
+    ReleasePendingGpuTicket(*it);
+    UJobStageTrace::NoteTerminal(it->stageTrace, JobStage::Cancelled,
+                                JobTerminalReason::SubmissionEpochChanged);
+    GpuExtractInFlight.erase(it->coord);
+    it = PendingGpuApplies.erase(it); // releases pending payload byte credit
+    TouchPendingGpuIndex();
+  }
 }
 
 void UChunkMeshCache::RequeueFailedGpuMesh(glm::ivec3 coord)
