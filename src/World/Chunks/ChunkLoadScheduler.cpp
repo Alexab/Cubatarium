@@ -171,6 +171,15 @@ void UChunkLoadScheduler::Cancel(glm::ivec3 coord, const char *reason)
         "cancelled", coord, id_it->second, 0,
         "reason=" + std::string(reason ? reason : "cancelled"));
   }
+  // Retire this submission before forgetting it: a late computed result must
+  // not match a replacement request that reads the registry's current token.
+  // Invalidate (or another owner) may already have advanced the registry.
+  const auto token_it = ActiveTokens.find(coord);
+  if (token_it != ActiveTokens.end() &&
+      token_it->second.IsValidFor(coord, Tokens.Current(coord).sequence))
+  {
+    Tokens.Bump(coord);
+  }
   States.erase(coord);
   ActiveTokens.erase(coord);
   ActiveRequestIds.erase(coord);

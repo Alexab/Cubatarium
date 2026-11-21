@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "generation-public-cancel-reuses-live-token",
+      "stage": "S4.02",
+      "status": "SCOPED_PASS_Q09_C1_OPEN",
+      "observed": "Public Cancel forgot owner without token revocation; old running result installed and retired newer Requested owner. App Invalidate already revoked its token.",
+      "fix": "Cancel revokes exact active token only if still authoritative, before forgetting owner; already advanced registry is preserved.",
+      "evidence": "build/desktop-msvc/s4-generation-cancel-acceptance-20261121.json",
+      "next_action": "Q09-C1 OUTSIDE, then ADMISSION; no parent closure."
+    },
+    {
       "id": "generation-ready-commit-ignores-authoritative-registry-token",
       "stage": "S4.02",
       "status": "SCOPED_PASS_Q09_C1_OPEN",

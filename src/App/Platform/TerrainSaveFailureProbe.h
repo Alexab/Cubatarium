@@ -34,6 +34,7 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <thread>
@@ -1149,6 +1150,74 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             generation.Current(column).sequence==successor_sequence;
         report["generation_stale_ready"]["current_arrival"]=current;
         require(current,"actual current generation buffer applies and notifies once after stale retirement");
+      }
+      {
+        for(int operation=0;operation<3;++operation) for(int phase=0;phase<3;++phase) {
+          struct GatePopulator final : IUChunkPopulator {
+            std::promise<void> entered,release;
+            std::future<void> entered_future=entered.get_future();
+            std::shared_future<void> resume=release.get_future().share();
+            bool released=false;
+            void Release() { if(!released) { released=true; release.set_value(); } }
+            ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override {
+              ChunkPopulateResult result; result.coord=request.chunkCoord; result.token=request.token;
+              result.buffer.SetBlock({request.settings.Seed==17?8:10,-40,8},8);
+              if(request.settings.Seed==17) {
+                entered.set_value();
+                (void)resume.wait_for(std::chrono::seconds(5));
+              }
+              return result; // A late already-computed result must still be rejected.
+            }
+          } populator;
+          UChunkGenerationRegistry generation;
+          UChunkLoadScheduler scheduler(populator,generation);
+          UBlockWorld terrain; terrain.SetFluidDefinitions(definitions.get());
+          terrain.SetVerticalProfile({-48,-33,-40}); terrain.SetBlock({8,-40,8},9);
+          const glm::ivec3 column(0); generation.Bump(column);
+          ProceduralSettings old_settings; old_settings.MinHeight=-48; old_settings.MaxHeight=-33;
+          old_settings.Seed=17;
+          unsigned arrivals=0;
+          scheduler.SetMarkDirtyFn([&](glm::ivec3,int,int,bool){++arrivals;});
+          const auto wait_ready=[&]() {
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
+            while(scheduler.GetCompletedReadyCount()==0 && std::chrono::steady_clock::now()<deadline)
+              std::this_thread::yield();
+            return scheduler.GetCompletedReadyCount()==1;
+          };
+          scheduler.RequestLoad(column,0,old_settings);
+          if(phase>0) {
+            require(scheduler.StartQueuedGenerationWorkers(1)==1 &&
+                populator.entered_future.wait_for(std::chrono::seconds(5))==std::future_status::ready,
+                "generation cancellation holds actual running producer after compute");
+            if(phase==2) {
+              populator.Release(); require(wait_ready(),"generation cancellation has actual completed result");
+              scheduler.Tick(terrain,0,0);
+            }
+          }
+          if(operation==0) scheduler.Cancel(column);
+          if(operation==1) scheduler.Invalidate(column);
+          if(operation==2) scheduler.CancelAllPending(std::chrono::milliseconds(0));
+          require(!scheduler.IsPending(column),"cancel retires old scheduler owner");
+          auto current_settings=old_settings; current_settings.Seed=29;
+          scheduler.RequestLoad(column,1,current_settings);
+          const auto current_token=generation.Current(column).sequence;
+          if(phase==1) { populator.Release(); require(wait_ready(),"late old generation publishes only to ready queue"); }
+          scheduler.Tick(terrain,1,0);
+          const bool preserved=arrivals==0 && terrain.GetBlock({8,-40,8})==9 &&
+              scheduler.GetState(column)==ChunkLoadState::Requested &&
+              generation.Current(column).sequence==current_token;
+          report["generation_cancel_lifetime"].push_back({{"operation",operation},{"phase",phase},
+              {"new_owner_preserved",preserved},{"old_arrivals",arrivals}});
+          require(preserved,"cancelled generation cannot install or retire newer queued owner");
+          require(scheduler.StartQueuedGenerationWorkers(1)==1 && wait_ready(),
+              "new generation owner computes after old retirement");
+          scheduler.Tick(terrain,1,0);
+          const bool current=scheduler.IsCommitted(column) && arrivals==1 &&
+              terrain.GetBlock({10,-40,8})==8 && terrain.GetBlock({8,-40,8})==9 &&
+              generation.Current(column).sequence==current_token;
+          report["generation_cancel_lifetime"].back()["current_arrival"]=current;
+          require(current,"cancelled generation successor installs exactly once");
+        }
       }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},

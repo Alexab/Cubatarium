@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q09.cancel-reset-current-successor",
+      "status": "SCOPED_PASS_Q09_C1_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-generation-cancel-acceptance-20261121.json",
+      "scope": "Controlled IUChunkPopulator payload; actual scheduler/pool/ready/buffer ApplyTo. Queued is scheduler queued, not saturated pool queued. Public Cancel API defect; app Invalidate already revoked tokens. No generator algorithm/backend/framebuffer/performance/full memory acceptance. OUTSIDE/ADMISSION remain Q09-C1; full S0..S6 OPEN."
+    },
+    {
       "id": "S4.02.Q09.authoritative-token-stale-ready",
       "status": "SCOPED_PASS_Q09_C1_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
