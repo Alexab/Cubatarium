@@ -4,6 +4,12 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.population-metric-window",
+      "status": "SCOPED_PASS_OVERHEAD_OPEN",
+      "receipt": "build/desktop-msvc/s4-generation-metrics-window-acceptance-20261121.json",
+      "scope": "30 fixed per-metric rings x1024 doubles plus size/index =246240 static bytes on this Windows build. Record O(metric count), no sample-history heap allocation; GetSummary sorts at most1024 copied doubles per metric using one8192-byte temporary array, independent of total job count. Lifetime count/total/max retained; median/p95 last1024 accepted samples per metric; detail-only rings advance only for detail-enabled jobs. Schema v2 declares distribution/aggregate scope, capacity, sample count and storage bytes."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.population-scratch-release",
       "status": "SCOPED_PASS_PEAK_OVERHEAD_OPEN",
       "receipt": "build/desktop-msvc/s4-generation-scratch-release-acceptance-20261121.json",

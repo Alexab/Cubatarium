@@ -39,48 +39,61 @@ namespace
 std::mutex gPopulateDiagMutex;
 ChunkPopulateTiming gLastPopulateTiming;
 
+struct PopulateMetricWindow
+{
+  std::array<double,kChunkPopulateMetricWindow> values{};
+  size_t size{0},next{0};
+  void Append(double value) {
+    values[next]=value;
+    next=(next+1)%values.size();
+    size=std::min(size+1,values.size());
+  }
+};
+
 struct PopulateMetricSamples
 {
-  std::vector<double> total;
-  std::vector<double> sample;
-  std::vector<double> terrain;
-  std::vector<double> carve;
-  std::vector<double> post;
-  std::vector<double> seal;
-  std::vector<double> mudflow;
-  std::vector<double> pocketSeal;
-  std::vector<double> permeableSeal;
-  std::vector<double> permeableFloorScan;
-  std::vector<double> permeableRestore;
-  std::vector<double> permeableWaterlog;
-  std::vector<double> pocketReseal;
-  std::vector<double> vegetationPrune;
-  std::array<std::vector<double>, WorldGenStageIdCount> postStages;
+  PopulateMetricWindow total;
+  PopulateMetricWindow sample;
+  PopulateMetricWindow terrain;
+  PopulateMetricWindow carve;
+  PopulateMetricWindow post;
+  PopulateMetricWindow seal;
+  PopulateMetricWindow mudflow;
+  PopulateMetricWindow pocketSeal;
+  PopulateMetricWindow permeableSeal;
+  PopulateMetricWindow permeableFloorScan;
+  PopulateMetricWindow permeableRestore;
+  PopulateMetricWindow permeableWaterlog;
+  PopulateMetricWindow pocketReseal;
+  PopulateMetricWindow vegetationPrune;
+  std::array<PopulateMetricWindow, WorldGenStageIdCount> postStages;
 };
 
 PopulateMetricSamples gPopulateSamples;
 ChunkPopulateSummary gPopulateSummary;
 
-void AppendPopulateMetric(std::vector<double> &samples,
+void AppendPopulateMetric(PopulateMetricWindow &samples,
                           ChunkPopulateMetric &metric, double value)
 {
-  samples.push_back(value);
+  samples.Append(value);
+  ++metric.count;
   metric.totalMs += value;
   metric.maxMs = std::max(metric.maxMs, value);
 }
 
-void FinalizePopulateMetric(std::vector<double> &samples,
+void FinalizePopulateMetric(const PopulateMetricWindow &samples,
                             ChunkPopulateMetric &metric)
 {
-  metric.count = samples.size();
-  if (samples.empty())
+  metric.sampleCount = samples.size;
+  if (samples.size==0)
   {
     return;
   }
-  std::sort(samples.begin(), samples.end());
-  metric.medianMs = samples[(samples.size() - 1) / 2];
-  metric.p95Ms = samples[static_cast<size_t>(
-      std::ceil(static_cast<double>(samples.size()) * 0.95) - 1.0)];
+  // Sorting the ring itself would destroy chronological eviction after a read.
+  auto sorted=samples.values;
+  std::sort(sorted.begin(),sorted.begin()+samples.size);
+  metric.medianMs = sorted[(samples.size - 1) / 2];
+  metric.p95Ms = sorted[(samples.size*95+99)/100-1];
 }
 
 void FinalizePopulateSummary()
@@ -426,6 +439,7 @@ ChunkPopulateSummary ChunkPopulateDiagnostics::GetSummary()
 {
   std::lock_guard<std::mutex> lock(gPopulateDiagMutex);
   FinalizePopulateSummary();
+  gPopulateSummary.sampleStorageBytes=sizeof(gPopulateSamples);
   return gPopulateSummary;
 }
 

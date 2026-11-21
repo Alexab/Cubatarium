@@ -5,10 +5,10 @@
     {
       "id": "population-diagnostic-sample-history-unbounded",
       "stage": "S4.02.LIMIT.Q09",
-      "status": "OPEN_SOURCE_CONFIRMED",
+      "status": "SCOPED_PASS_Q09_OPEN",
       "observed": "PipelineChunkPopulator.cpp AppendPopulateMetric pushes each completion into global vectors; GetSummary sorts full history. No cap or reset found in the actual owner; six base metrics plus detailed stage metrics grow with completed generation count.",
       "evidence": "src/WorldGen/Core/PipelineChunkPopulator.cpp: PopulateMetricSamples/AppendPopulateMetric/FinalizePopulateMetric/Record/GetSummary",
-      "next_action": "Bound retained distribution samples and summary cost; keep cumulative totals/count/max semantics explicit, label distribution sample window, exercise >cap completions and negative/history checks. Reuse existing Q09 work; no new audit."
+      "next_action": "Fixed ring storage246240 bytes; cumulative aggregates retained, schema v2 distribution scope explicit; Release rollover/concurrent tests and native JSON export PASS. Receipt build/desktop-msvc/s4-generation-metrics-window-acceptance-20261121.json. Remaining Q09 producer envelope and original S0..S6 OPEN."
     },
     {
       "id": "worldgen-ecology-coral-range-fixture-mismatch",

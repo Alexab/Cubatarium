@@ -65,9 +65,13 @@ struct ChunkPopulateTiming
   bool detailEnabled{false};
 };
 
+inline constexpr size_t kChunkPopulateMetricWindow=1024;
+
 struct ChunkPopulateMetric
 {
+  // Lifetime accepted samples, sum and maximum; distribution is recent window.
   uint64_t count{0};
+  size_t sampleCount{0};
   double totalMs{0.0};
   double medianMs{0.0};
   double p95Ms{0.0};
@@ -76,6 +80,8 @@ struct ChunkPopulateMetric
 
 struct ChunkPopulateSummary
 {
+  size_t distributionWindowCapacity{kChunkPopulateMetricWindow};
+  size_t sampleStorageBytes{0};
   uint64_t completedCount{0};
   uint64_t discardedCount{0};
   uint64_t detailCount{0};

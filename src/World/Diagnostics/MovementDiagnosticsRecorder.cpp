@@ -31,6 +31,7 @@ namespace
 json PopulateMetricToJson(const ChunkPopulateMetric &metric)
 {
   return json{{"count", metric.count},
+              {"sample_count", metric.sampleCount},
               {"total_ms", metric.totalMs},
               {"median_ms", metric.medianMs},
               {"p95_ms", metric.p95Ms},
@@ -49,7 +50,11 @@ const char *PopulateStageName(size_t index)
 
 json PopulateSummaryToJson(const ChunkPopulateSummary &summary)
 {
-  json root{{"schema", "chunk_populate_summary.v1"},
+  json root{{"schema", "chunk_populate_summary.v2"},
+            {"distribution_scope", "last_accepted_samples_per_metric"},
+            {"distribution_window_capacity", summary.distributionWindowCapacity},
+            {"sample_storage_bytes", summary.sampleStorageBytes},
+            {"aggregate_scope", "lifetime_accepted_samples"},
             {"completed_count", summary.completedCount},
             {"discarded_count", summary.discardedCount},
             {"detail_count", summary.detailCount},

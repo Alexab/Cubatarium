@@ -23,6 +23,7 @@
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <thread>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -1744,6 +1745,68 @@ int main(int argc, char **argv)
       cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
       "aquifer configuration loads from the active worldgen pack");
   TestPackDefaultsRespectUserFieldsInProfile3();
+  if (argc > 1 && std::string(argv[1]) == "--population-metrics-only")
+  {
+    constexpr size_t window=1024;
+    const auto initial=cutum::ChunkPopulateDiagnostics::GetSummary();
+    FluidTest::Expect(initial.completedCount==0,kTestName,"metrics fixture starts without generation");
+    std::vector<double> recent,detail;
+    double total=0; uint64_t details=0;
+    const size_t count=5*window+37;
+    for(size_t i=0;i<count;++i) {
+      cutum::ChunkPopulateTiming timing;
+      timing.totalMs=i<4*window ? 100000.0 : double(i-4*window);
+      timing.detailEnabled=i%3==0;
+      timing.mudflowMs=timing.totalMs;
+      timing.postStageMs.fill(timing.totalMs);
+      total+=timing.totalMs;
+      recent.push_back(timing.totalMs);
+      if(recent.size()>window) recent.erase(recent.begin());
+      if(timing.detailEnabled) {
+        ++details; detail.push_back(timing.totalMs);
+        if(detail.size()>window) detail.erase(detail.begin());
+      }
+      cutum::ChunkPopulateDiagnostics::Record(timing);
+      if(i%113==0) (void)cutum::ChunkPopulateDiagnostics::GetSummary();
+    }
+    std::sort(recent.begin(),recent.end()); std::sort(detail.begin(),detail.end());
+    auto summary=cutum::ChunkPopulateDiagnostics::GetSummary();
+    FluidTest::Expect(summary.total.medianMs==recent[(recent.size()-1)/2] &&
+        summary.total.p95Ms==recent[(recent.size()*95+99)/100-1],kTestName,
+        "population percentiles use last bounded window after wrap and intermediate reads");
+    FluidTest::Expect(summary.completedCount==count && summary.total.count==count &&
+        summary.total.totalMs==total && summary.total.maxMs==100000 &&
+        summary.detailCount==details && summary.mudflow.count==details &&
+        summary.mudflow.medianMs==detail[(detail.size()-1)/2],kTestName,
+        "window does not truncate lifetime totals counts or maxima and details have independent window");
+    for(const auto &metric:summary.postStages)
+      FluidTest::Expect(metric.count==details && metric.p95Ms==detail[(detail.size()*95+99)/100-1],
+          kTestName,"every detailed stage uses bounded independent distribution");
+    cutum::ChunkPopulateTiming cancelled; cancelled.totalMs=999999;
+    cutum::ChunkPopulateDiagnostics::Record(cancelled,true);
+    summary=cutum::ChunkPopulateDiagnostics::GetSummary();
+    FluidTest::Expect(summary.discardedCount==1 && summary.completedCount==count &&
+        summary.total.maxMs==100000 && cutum::ChunkPopulateDiagnostics::GetLast().totalMs==999999,
+        kTestName,"discarded timing updates last observation without contaminating accepted metrics");
+    std::vector<std::thread> producers;
+    for(int worker=0;worker<4;++worker) producers.emplace_back([] {
+      cutum::ChunkPopulateTiming timing; timing.totalMs=7;
+      for(int n=0;n<8192;++n) cutum::ChunkPopulateDiagnostics::Record(timing);
+    });
+    for(auto &producer:producers) producer.join();
+    summary=cutum::ChunkPopulateDiagnostics::GetSummary();
+    FluidTest::Expect(summary.completedCount==count+4*8192 &&
+        summary.total.count==count+4*8192 && summary.total.totalMs==total+4*8192*7 &&
+        summary.total.medianMs==7 && summary.total.p95Ms==7 && summary.total.maxMs==100000 &&
+        summary.total.sampleCount==window && summary.mudflow.sampleCount==window &&
+        summary.mudflow.count==details && summary.distributionWindowCapacity==window &&
+        summary.sampleStorageBytes==initial.sampleStorageBytes && summary.sampleStorageBytes>0,
+        kTestName,"concurrent recording keeps fixed storage and exact lifetime aggregates");
+    std::cout << kTestName << ": population metrics bounded-window PASS count=" << count << std::endl;
+    std::cout << "population_metrics_storage_bytes=" << summary.sampleStorageBytes
+        << " accepted=" << summary.completedCount << " window=" << summary.total.sampleCount << std::endl;
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--population-scratch-only")
   {
     const auto definitions=LoadPackDefinitions(repo_root/"resource_packs"/"minetest_default_16");
