@@ -49,23 +49,17 @@ void UColumnFlowExecutor::BeginFrame()
 bool UColumnFlowExecutor::ForgetColumnWork(glm::ivec2 column)
 {
   bool forgot_work = SchedulerState.RemoveColumn(column);
-  const auto erase_column_cooldowns = [&](auto &entries)
+  // Exactly four structural keys can belong to this column. Retirement must
+  // not scan the history of every other column on each successful unload.
+  for (const auto kind : {ColumnWorkKind::RelightThenMesh,
+                          ColumnWorkKind::FirstMesh,
+                          ColumnWorkKind::RemeshSeam,
+                          ColumnWorkKind::PromoteRelight})
   {
-    for (auto it = entries.begin(); it != entries.end();)
-    {
-      if (it->first.x == column.x && it->first.z == column.y)
-      {
-        it = entries.erase(it);
-        forgot_work = true;
-      }
-      else
-      {
-        ++it;
-      }
-    }
-  };
-  erase_column_cooldowns(last_dispatch_frame_);
-  erase_column_cooldowns(relight_retry_after_frame_);
+    const auto key = MakeCooldownKey(column, kind);
+    forgot_work = last_dispatch_frame_.erase(key) != 0 || forgot_work;
+    forgot_work = relight_retry_after_frame_.erase(key) != 0 || forgot_work;
+  }
   forgot_work = column_job_stage_.erase(ColumnKey(column)) != 0 || forgot_work;
 
   if (promote_pending_ && promote_column_.x == column.x &&

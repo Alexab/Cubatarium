@@ -657,8 +657,9 @@
         {
           "id": "LIMIT-C1.Q01",
           "status": "CHECK",
-          "required_result": "Auxiliary ordered index/storage PASS; remaining actual distinct-column producer envelope, peak retained map storage and executor cooldown cleanup cost. LIMIT remains CHECK.",
-          "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json"
+          "required_result": "Auxiliary ordered index/storage and exact-column cooldown retirement cost PASS; remaining actual distinct-column producer envelope, expired cooldown history lifetime and peak retained map storage. LIMIT remains CHECK.",
+          "partial_evidence": "build/desktop-msvc/s4-flow-storage-acceptance-20261121.json",
+          "retirement_evidence": "build/desktop-msvc/s4-flow-forget-acceptance-20261121.json"
         },
         {
           "id": "LIMIT-C1.Q02",

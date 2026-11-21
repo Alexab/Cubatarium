@@ -2243,7 +2243,28 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           auto &mesh=*flow.MeshService; auto &cache=mesh.GetCache();
           UColumnFlowExecutor executor;
           for(int round=0;round<2;++round) {
-            if(round) { mesh.RemoveColumn({0,0,0},-3,2); executor.Clear(); }
+            if(round) {
+              mesh.RemoveColumn({0,0,0},-3,2);
+              // Keep a neighbouring ticket/stage while retiring this exact
+              // column's real dispatch cooldown and scheduling metadata.
+              executor.Scheduler().Enqueue({1,0},ColumnWorkKind::FirstMesh,1);
+              executor.SetColumnJobStage({1,0},ColumnJobStage::Meshing);
+              const bool forgotten=executor.ForgetColumnWork({0,0});
+              const bool isolated=executor.GetColumnJobStage({0,0})==ColumnJobStage::Absent &&
+                  executor.Scheduler().ContainsColumn({1,0}) &&
+                  executor.GetColumnJobStage({1,0})==ColumnJobStage::Meshing;
+              const bool repeat_noop=!executor.ForgetColumnWork({0,0});
+              require(forgotten && isolated && repeat_noop,"flow forget retires exact metadata and preserves neighbour");
+              require(executor.ForgetColumnWork({1,0}),"flow peer metadata retires independently");
+              auto reentry=ColumnWorkItem{}; reentry.column={0,0}; reentry.cy=-3;
+              reentry.kind=ColumnWorkKind::FirstMesh; reentry.priority=90;
+              executor.Enqueue(reentry);
+              const bool cooldown_released=executor.Scheduler().ContainsColumn({0,0});
+              report["flow_forget"].push_back({{"mode",mode},{"forgotten",forgotten},{"isolated",isolated},
+                  {"repeat_noop",repeat_noop},{"cooldown_released",cooldown_released}});
+              require(cooldown_released,"flow reentry does not inherit old dispatch cooldown");
+              executor.Scheduler().RemoveColumn({0,0});
+            }
             ColumnWorkItem old{}; old.column={0,0}; old.cy=-3; old.priority=90;
             old.kind=mode==0 ? ColumnWorkKind::FirstMesh :
                 (mode==1 ? ColumnWorkKind::RemeshSeam : ColumnWorkKind::RelightThenMesh);
