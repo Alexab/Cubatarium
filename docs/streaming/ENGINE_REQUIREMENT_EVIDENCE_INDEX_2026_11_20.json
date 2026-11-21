@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q06.actual-world-teardown-current-successor",
+      "status": "SCOPED_PASS_Q06_C2_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-world-replacement-acceptance-20261121.json",
+      "scope": "No separately gated still-running CPU during UWorld teardown or actual GPU already-in-flight UWorld teardown scene claimed. Stage-specific exact retirement is composed from existing accepted cases. No complete save/load/generation/IO world-switch acceptance; Q09/Q10/S4.06 retain those. Diagnostic explicitly selects real GPU mesher for scoped GPU fixture within CPU-selected outer Flat session. Mixed newer CPU/field owner vs old GPU remains Q06-C2.3."
+    },
+    {
       "id": "S4.02.Q06.actual-configure-policy",
       "status": "SCOPED_PASS_Q06_C2_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",

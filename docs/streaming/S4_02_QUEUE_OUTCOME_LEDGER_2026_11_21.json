@@ -237,7 +237,7 @@
         },
         {
           "id": "Q06-C2.2",
-          "status": "CHECK",
+          "status": "REUSE",
           "scope": "Exact Kicked phase cleanup/credits/current successor; reset/world/policy retirement reuse existing identity proofs and fill missing current-demand completion.",
           "subcases": [
             {
@@ -249,7 +249,7 @@
             },
             {
               "id": "Q06-C2.2b",
-              "status": "CHECK",
+              "status": "REUSE",
               "scope": "Policy/world retirement with old live work: reject old epoch/policy owners, release only old resources, current demand completes. Reuse existing policy and awaiting-light identity evidence where exact.",
               "subcases": [
                 {
@@ -261,7 +261,7 @@
                 },
                 {
                   "id": "Q06-C2.2b.2",
-                  "status": "CHECK",
+                  "status": "REUSE",
                   "scope": "Actual ConfigureCapturePolicy and full UWorld retirement with old live work/current successor.",
                   "subcases": [
                     {
@@ -273,14 +273,20 @@
                     },
                     {
                       "id": "Q06-C2.2b.2-world",
-                      "status": "CHECK",
-                      "scope": "Full UWorld teardown/replacement while old work exists: no old debt/publication, current world demand completes."
+                      "status": "REUSE",
+                      "scope": "Full UWorld teardown/replacement while old work exists: no old debt/publication, current world demand completes.",
+                      "evidence": "build/desktop-msvc/s4-world-replacement-acceptance-20261121.json",
+                      "coverage_note": "No separately gated still-running CPU during UWorld teardown or actual GPU already-in-flight UWorld teardown scene claimed. Stage-specific exact retirement is composed from existing accepted cases. No complete save/load/generation/IO world-switch acceptance; Q09/Q10/S4.06 retain those. Diagnostic explicitly selects real GPU mesher for scoped GPU fixture within CPU-selected outer Flat session. Mixed newer CPU/field owner vs old GPU remains Q06-C2.3."
                     }
-                  ]
+                  ],
+                  "evidence": "build/desktop-msvc/s4-world-replacement-acceptance-20261121.json"
                 }
-              ]
+              ],
+              "evidence": "build/desktop-msvc/s4-world-replacement-acceptance-20261121.json"
             }
-          ]
+          ],
+          "evidence": "build/desktop-msvc/s4-world-replacement-acceptance-20261121.json",
+          "coverage_note": "No separately gated still-running CPU during UWorld teardown or actual GPU already-in-flight UWorld teardown scene claimed. Stage-specific exact retirement is composed from existing accepted cases. No complete save/load/generation/IO world-switch acceptance; Q09/Q10/S4.06 retain those. Diagnostic explicitly selects real GPU mesher for scoped GPU fixture within CPU-selected outer Flat session. Mixed newer CPU/field owner vs old GPU remains Q06-C2.3."
         },
         {
           "id": "Q06-C2.3",
@@ -447,5 +453,5 @@
       "observed": "Forget now retires exact queued/completed job and matching retry receipts. Retry vectors and per-coordinate cancellation scans have no separately verified numeric envelope in this receipt; LIMIT-C1/S6.04 retain this obligation. No permanent job-history map introduced."
     }
   ],
-  "checkpoint": "Actual configuration policy queued/dispatched/kicked/current successor accepted. Q06-C2 remaining: full UWorld replacement/live old work and mixed late newer CPU-field owners. Top-level10 CHECK; full scope OPEN."
+  "checkpoint": "Q06-C2.2 policy/world retirement/current successor accepted with explicit stage-composition limits. Remaining Q06-C2.3 old GPU versus newer CPU/field owner/current completion. Top-level10 CHECK; full S0..S6 OPEN."
 }

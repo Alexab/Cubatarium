@@ -553,6 +553,88 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         }
         }
       }
+      {
+        struct ReplaceDeadlineRestore {
+          UFrameDeadline previous=UFrameDeadline::Get();
+          ~ReplaceDeadlineRestore() { UFrameDeadline::Get()=previous; }
+        } restore;
+        for (const bool gpu : {false,true}) {
+          UFrameDeadline::Get().BeginFrame(5000);
+          UGpuGreedyMesher gpu_backend;
+          UWorld replaced(nullptr,nullptr);
+          replaced.SetSpawnPoint({8,-40,8});
+          replaced.BlockWorld.SetVerticalProfile({-48,-33,-40});
+          replaced.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,definitions);
+          replaced.BlockWorld.SetFluidDefinitions(definitions.get());
+          replaced.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+          auto replacement_settings=settings;
+          replacement_settings.AsyncMeshing=true;
+          replacement_settings.GpuPackedMeshing=gpu;
+          replaced.SetRenderSettings(replacement_settings);
+          auto &service=replaced.GetMeshService(); auto &rc=service.GetCache();
+          if(gpu) service.SetMesherBackend(&gpu_backend);
+          service.SetMeshRebuildFocus({0,0,0},1,1);
+          service.SetMeshSnapshotBudgetMs(1000); service.SetMeshEmergeTotalBudgetMs(1000);
+          MeshWorkAdmission admission;
+          admission.enforce_schedule_lanes=true; admission.max_schedule=1;
+          admission.first_mesh_schedule=1; admission.remesh_schedule=1;
+          service.SetMeshWorkAdmission(admission);
+          const auto populate=[&](bool successor) {
+            replaced.BlockWorld.SetFluidDefinitions(definitions.get());
+            replaced.BlockWorld.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+            for(int x=0;x<16;++x) for(int z=0;z<16;++z)
+              replaced.BlockWorld.SetBlock({x,-48,z},8);
+            replaced.BlockWorld.SetBlock(successor?glm::ivec3(10,-40,10):glm::ivec3(8,-40,8),8);
+            replaced.GetLightingPipeline().FillAllLoadedChunks(replaced.BlockWorld);
+          };
+          const auto submit=[&]() {
+            rc.MarkDirtyPriority(coord);
+            const auto *chunk=replaced.BlockWorld.GetChunkManager().GetChunk(coord);
+            auto &demand=rc.GetRenderDemandStore(); const auto epoch=rc.GetCaptureStore().WorldEpoch();
+            demand.NoteDemand(coord,rc.GetChunkMeshRevision(coord),chunk->GetLightFieldRevision(),
+                0,1.0,epoch,chunk->GetIncarnation());
+            demand.NoteLightCalculationSettled(coord,epoch,chunk->GetIncarnation(),
+                chunk->GetLightFieldRevision(),chunk->GetContentRevision());
+            require(WaitForProbeMeshCapture(rc,replaced.BlockWorld,*replaced.BlockRegistry,
+                coord,rc.GetChunkMeshRevision(coord)),"world replacement actual mesh capture");
+            const auto tick=rc.RebuildDirtyChunksWithStats(replaced.BlockWorld,
+                *replaced.BlockRegistry,0,1,false,0,1000,true);
+            require(tick.Scheduled==1 && rc.WaitForAsyncMeshIdleFor(std::chrono::seconds(5)),
+                "world replacement actual worker completes");
+          };
+          const auto baseline=UPipelineAdmission::Get().GpuPendingBytes();
+          populate(false); submit();
+          if(gpu) service.DrainAsyncMeshResults(replaced.BlockWorld,*replaced.BlockRegistry,1);
+          const bool old_accepted=gpu?rc.GetPendingGpuAppliesCount()==1:
+              rc.GetMeshCompletedSize()==1;
+          require(old_accepted,"world replacement retains actual old accepted work");
+          const auto old_epoch=rc.GetCaptureStore().WorldEpoch();
+          replaced.AbandonTerrainForWorldReplace();
+          const bool retired=rc.GetCaptureStore().WorldEpoch()!=old_epoch &&
+              rc.GetPendingGpuAppliesCount()==0 && rc.GetMeshCompletedSize()==0 &&
+              !rc.HasInflightMeshBuild(coord) && !rc.HasPendingDirty() &&
+              replaced.BlockWorld.CountNonAir()==0 &&
+              UPipelineAdmission::Get().GpuPendingBytes()==baseline;
+          require(retired,"actual UWorld teardown retires old accepted mesh and byte owner");
+          service.DrainAsyncMeshResults(replaced.BlockWorld,*replaced.BlockRegistry,8);
+          require(!rc.HasPendingDirty() && !rc.HasPublishedSectionDraw(coord),
+              "old world result cannot recreate debt or draw after teardown");
+          populate(true); submit();
+          service.DrainAsyncMeshResults(replaced.BlockWorld,*replaced.BlockRegistry,8);
+          for(int n=0;n<16 && rc.GetPendingGpuAppliesCount();++n) {
+            rc.DrainPendingGpuMeshes(replaced.BlockWorld,*replaced.BlockRegistry,8,1000);
+            glFinish();
+          }
+          const bool current=replaced.HasCurrentChunkSlicePublication(coord) &&
+              rc.IsPublishedMeshCurrentForInputs(coord,replaced.BlockWorld) &&
+              (!gpu || (rc.GetGpuMeshPipeline() && rc.GetGpuMeshPipeline()->HasGpuMesh(coord))) &&
+              !rc.IsChunkMeshDirty(coord) && rc.GetPendingGpuAppliesCount()==0 &&
+              UPipelineAdmission::Get().GpuPendingBytes()==baseline;
+          report["mesh_world_replacement"].push_back({{"gpu",gpu},{"old_accepted",old_accepted},
+              {"retired",retired},{"current",current}});
+          require(current,"new terrain after actual UWorld teardown publishes current mesh");
+        }
+      }
       report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},
           {"physical_certificate_absent",true},{"actual_publication_recovers",true},
           {"geometry_mutation_rejected",true},{"replacement_without_relight",true}});

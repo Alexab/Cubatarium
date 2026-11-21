@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "S4.02 actual ConfigureCapturePolicy/current GPU successor accepted all3 phases. Next Q06-C2 full UWorld teardown/replacement with old live work, then .3 mixed old GPU/new CPU-field owner. Top-level10 CHECK; full S0..S6 OPEN.",
+  "next_action": "S4.02 Q06-C2.2 policy/world retirement/current successor accepted. Next remaining Q06-C2.3: old GPU outcome versus newer CPU/field owner, preserve genuine follow-up/current completion. Top-level10 CHECK; full S0..S6 OPEN.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }
