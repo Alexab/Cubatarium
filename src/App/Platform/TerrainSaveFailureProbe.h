@@ -2146,6 +2146,38 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         report["face_repair_retirement"]={{"removed_owner_retired",retired},{"fresh_incarnation",fresh},
             {"current_reissue",reissued}};
         require(retired && fresh && reissued,"removed face repair owner retires and new incarnation completes");
+        const auto replaced_incarnation=face_world.BlockWorld.GetChunkManager().GetChunk(target)->GetIncarnation();
+        const auto replaced_epoch=face_cache.GetCaptureStore().WorldEpoch();
+        const glm::ivec3 old_only{3,-3,0};
+        face_world.BlockWorld.SetBlock({3*CHUNK_SIZE+8,-40,8},8);
+        demand.NoteFaceDebt(target,bit,0); demand.NoteFaceDebt(old_only,bit,0);
+        repair.EnqueueFaceDebtRepair(target); repair.EnqueueFaceDebtRepair(old_only);
+        require(repair.PendingFaceDebtRepairs_.size()==2,"replacement starts with two actual queued repair owners");
+        face_world.AbandonTerrainForWorldReplace();
+        // Exact production epoch ingress used at the start of TickMeshEmerge;
+        // isolate it from unrelated focus scheduling and admission policies.
+        repair.ResetFaceDebtEpoch(face_world);
+        const bool epoch_changed=face_cache.GetCaptureStore().WorldEpoch()!=replaced_epoch;
+        const bool old_retired=repair.PendingFaceDebtRepairs_.empty() && repair.PendingFaceDebtRepairSet_.empty() &&
+            !demand.Find(target) && !demand.Find(old_only) &&
+            !face_world.BlockWorld.GetChunkManager().HasChunk(old_only);
+        face_world.BlockWorld.SetBlock({8,-40,8},8);
+        face_world.BlockWorld.SetBlock({CHUNK_SIZE+8,-40,8},8);
+        const bool replacement_fresh=face_world.BlockWorld.GetChunkManager().GetChunk(target)->GetIncarnation()!=replaced_incarnation;
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,target);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        const auto *replacement_peer=demand.Find(peer);
+        require(replacement_peer && replacement_peer->published_geom_rev>0,"replacement peer actually publishes");
+        demand.NoteDemand(peer,replacement_peer->published_geom_rev,replacement_peer->published_light_rev,
+            1,0,replacement_peer->world_epoch,replacement_peer->incarnation);
+        face_mesh.RebuildChunkImmediate(face_world.BlockWorld,*face_world.BlockRegistry,peer);
+        require(demand.Find(peer)->published_coverage_gen>0,"replacement peer has actual coverage");
+        demand.NoteFaceDebt(target,bit,0); repair.EnqueueFaceDebtRepair(target);
+        const bool replacement_current=drive();
+        report["face_repair_world_replacement"]={{"epoch_changed",epoch_changed},{"old_owners_retired",old_retired},
+            {"fresh_incarnation",replacement_fresh},{"current_successor",replacement_current}};
+        require(epoch_changed && old_retired && replacement_fresh && replacement_current,
+            "actual world replacement retires old face owners and current replacement publishes");
       });
       if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
       else report["cases"].push_back({{"kind","flat_section_publication"},{"status","PASS"},

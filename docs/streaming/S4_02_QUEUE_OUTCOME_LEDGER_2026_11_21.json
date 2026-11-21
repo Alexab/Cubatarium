@@ -637,9 +637,10 @@
         },
         {
           "id": "Q12-C1.RETIRE_RESET",
-          "status": "CHECK",
+          "status": "REUSE",
           "scope": "Actual target removal retires old request; new incarnation/repeated demand and permanent world epoch replacement complete current successor.",
-          "coverage_note": "Current receipt proves actual target removal/reissue/new incarnation; permanent world epoch replacement remains CHECK."
+          "coverage_note": "Q12-C1.RETIRE_RESET: actual removal, fresh incarnation and public permanent world replacement; exact production epoch ingress adapter. No full focus tick/overlay/route/backend/framebuffer/fairness acceptance.",
+          "evidence": "build/desktop-msvc/s4-face-replacement-acceptance-20261121.json"
         }
       ]
     },

@@ -4,6 +4,20 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.Q12.world-replacement",
+      "status": "SCOPED_PASS_Q12_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-face-replacement-acceptance-20261121.json",
+      "scope": "Q12-C1.RETIRE_RESET: actual removal, fresh incarnation and public permanent world replacement; exact production epoch ingress adapter. No full focus tick/overlay/route/backend/framebuffer/fairness acceptance. Q12 overlay, S4.02 and full S0..S6 remain OPEN."
+    },
+    {
+      "id": "S4.02.Q12.peer-repair",
+      "status": "SCOPED_PASS_Q12_OPEN",
+      "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
+      "receipt": "build/desktop-msvc/s4-face-peer-acceptance-20261121.json",
+      "scope": "Actual queue dedupe/budget0/missing peer retention, real peer coverage, dependency transfer and actual current target publication. Explicit face request adapter; CPU/Flat only. Q12 overlay, S4.02 and full S0..S6 remain OPEN."
+    },
+    {
       "id": "S4.02.Q10.save-ownership-current-admission-and-reuse",
       "status": "SCOPED_PASS_Q10_C2_CLOSED_PACKAGE_OPEN",
       "card": "S4_02_QUEUE_LIFECYCLE_CARD_2026_11_20.md",
