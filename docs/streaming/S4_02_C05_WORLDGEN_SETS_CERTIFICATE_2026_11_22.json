@@ -1,0 +1,651 @@
+{
+  "schema": "s4-worldgen-sets-source-acceptance.v1",
+  "status": "SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "WorldGenSets ResolveObjectFeatures source selection/construction scoped PASS: choose each world/global pool before copy,exact admitted rule reserve and biome/subbiome reserves;no temporary copy of overridden global pools.48 schema1..3/source-mask cases,5 wide/legacy/scatter/invalid-pool cases,27 persistent ordinary-new refusal prefixes+exact retries and unmodeled-allocation negative control PASS. Baseline45/48 fail under64KiB diagnostic request ceiling due unused256KiB source-name copy;fixed48/48 PASS,ceiling is test-only. Wide selected rules peak3551836/model11015817 requested bytes,final0. Full C05/C06/E12/S4.06/S6/S0..S6 remain OPEN;23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenSets.cpp": "303f4450afdb53fbf94533c149e1d34fec5c6ed4ce7d7a5ecdb6e484707315a8",
+    "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "92808841f41fe64f38b85118f19bc087931857c37bf1f1c4259f55435f05f497",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "3a9a65628370c028963b6a31e83fb12fdce8890e291495caea87382799e26c8c",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "2f6e81853d19d1214888cd9d6d7adcc3245240135ec193f4414b28b63ea29812",
+    "src/WorldGen/Features/ObjectFeatureDiagnosticState.h": "6cec62c3d59f46fdc42c35c04dba0356d790cee90e84c5ff830a6e7fd05246df"
+  },
+  "exe_sha256": "b657c56cfae14eb0d393b36e93e8bcef3f4a7b369d550c88ff154dae329b15cf",
+  "provenance": "build/desktop-msvc/s4-worldgen-sets-provenance-20261122.json",
+  "baseline": {
+    "returncode": 1,
+    "report": "build\\desktop-msvc\\s4-worldgen-sets-baseline-20261122.json",
+    "source_sha256": "81ffb747980aa6e495792e6b9c683fa3a1b91f38bcc92c50941803d62af6b874",
+    "exe_sha256": "0ebde2288604cadc3ca71eef17d174aae1da9fada373899ae0263eccc06d81c6",
+    "failed_cases": 45,
+    "cases": 48
+  },
+  "baseline_scope": "Exact preceding production resolver;48 common schema/source-mask cases. Five additional cases/negative control added for final source-model checks,not asserted as baseline results. Baseline source and executable hashes retained;no retroactive baseline fixture-source hash.",
+  "verification": {
+    "resolver": {
+      "returncode": 0,
+      "exe_sha256": "f1ad62ffb3e12c5b3aae2a91c3d3942acc73d60835a3c10415c1f7f7118eb455",
+      "report": "build\\desktop-msvc\\s4-worldgen-sets-fixed-20261122.json"
+    },
+    "catalog-storage": {
+      "returncode": 0,
+      "log": "build\\desktop-msvc\\s4-worldgen-sets-catalog-storage-20261122.log",
+      "exe_sha256": "b305acc3b52eea1ab0d3125485e4ba27f637ddc5288917f1db61abab1d7348f2"
+    },
+    "pipeline-cache-owner": {
+      "returncode": 0,
+      "log": "build\\desktop-msvc\\s4-worldgen-sets-pipeline-cache-owner-20261122.log",
+      "exe_sha256": "b305acc3b52eea1ab0d3125485e4ba27f637ddc5288917f1db61abab1d7348f2"
+    },
+    "pinned-factory-catalog": {
+      "returncode": 0,
+      "log": "build\\desktop-msvc\\s4-worldgen-sets-pinned-factory-catalog-20261122.log",
+      "exe_sha256": "b305acc3b52eea1ab0d3125485e4ba27f637ddc5288917f1db61abab1d7348f2"
+    }
+  },
+  "unit": {
+    "additional_cases": [
+      {
+        "final_live": 0,
+        "max_request": 60927,
+        "name": "wide_vectors_long_keys_profiles",
+        "pass": true,
+        "peak": 3551836,
+        "source_upper": 11015817
+      },
+      {
+        "final_live": 0,
+        "max_request": 5047,
+        "name": "legacy_profile1_preserved",
+        "pass": true,
+        "peak": 8655,
+        "source_upper": 28819
+      },
+      {
+        "final_live": 0,
+        "max_request": 10055,
+        "name": "legacy_profile2_restored",
+        "pass": true,
+        "peak": 18982,
+        "source_upper": 67729
+      },
+      {
+        "final_live": 0,
+        "max_request": 7047,
+        "name": "legacy_scatter_lookup_and_user_frequency",
+        "pass": true,
+        "peak": 10927,
+        "source_upper": 43387
+      },
+      {
+        "final_live": 0,
+        "max_request": 472,
+        "name": "nonempty_invalid_pool_suppresses_fallback",
+        "pass": true,
+        "peak": 3136,
+        "source_upper": 11820
+      }
+    ],
+    "cases": [
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 0,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 24281
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 1,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 22046
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 2,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 22046
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 3,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 4,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 22046
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 5,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 6,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 7,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 17576
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 8,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 22046
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 9,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 10,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 11,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 17576
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 12,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 19811
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 13,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 17576
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 14,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 17576
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 15,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 1,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 0,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 1,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 2,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 3,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 4,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 5,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 6,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 7,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 8,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 9,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 10,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 11,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 12,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 13,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 14,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 15,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 2,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 0,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 1,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 2,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 3,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 4,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 5,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 6,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 7,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 8,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 9,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 10,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 11,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 12,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 13,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 14,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      },
+      {
+        "attempts": 27,
+        "final_live": 0,
+        "max_request": 472,
+        "override_mask": 15,
+        "pass": true,
+        "peak": 4064,
+        "refusals": 0,
+        "schema": 3,
+        "source_upper": 15341
+      }
+    ],
+    "failed_cases": 0,
+    "persistent_refusal_and_retry_cases": 27,
+    "schema": "worldgen-sets-construction-source.v1",
+    "scope": "Actual resolver ordinary-new requests;48 schema/source combinations,unused256KiB global names,64KiB diagnostic single-request ceiling (not production limit),persistent refusal+retry;not parser/file/candidate publication/process cap",
+    "status": "PASS",
+    "unmodeled_allocation_negative_control": "PASS"
+  },
+  "model": {
+    "implementation": "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h:BoundResolvedFeaturesSource",
+    "platform": "Current MSVC Release ordinary-new request domain",
+    "formula": "Each selected vector:count*sizeof(value)+39 when nonempty;each copied string:3*length+192 (conservative SSO/capacity/alignment/legacy old+new growth). Include selected rule vectors,biome enum/key/subbiome vectors,key strings,7 rule strings,cave vector/2 cave strings and matched legacy replacement5 profile strings. Checked size_t arithmetic and selected counts.",
+    "diagnostics": "Copied builder starts fresh;no lazy diagnostic preparation in resolver. Later prepare payload remains separate existing catalog obligation.",
+    "ownership": "Input WorldGenSets/global owner payloads and previous/current returned catalogs are separate. Per-call source bound can compose with these owners;not an enforced allocation quota.",
+    "exclusions": "Not ParseWorldGenSets/default construction/upgrade/serialization/file/stream/path/CRT heap/native stack/shared control/GPU/RSS/process cap. Refusal test ordinary-new only;direct CRT/runtime/aligned overloads not observed. Current modeled types use ordinary alignment."
+  },
+  "native": {
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+    "limitation": "Native regression is not a heap observation of the resolver or full S6 acceptance;S4.06 fatal disk-full/transactional relocation remains open."
+  },
+  "remaining": "C05: finish source file/path/stream resources and pre-parsed settings/WorldGenSets DOM-to-sets/default/upgrade construction,other compiled catalog candidate allocation/reallocation and prior/current publication overlap. Resolver-only source model accepted;original parameterized source bound,no arbitrary gameplay asset cap. Then C06 finite all-thread/world/global/publisher/escaped owners and E12/original S6 process budgets.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;full S0..S6 retained without audit restart."
+}

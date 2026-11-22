@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "worldgen-sets-overridden-global-pool-copy",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Resolver copies entire global config before clearing overridden pools. Actual original resolver fails45/48 schema/source masks when an unused256KiB name meets64KiB test-only request refusal.",
+      "fix": "Select source per pool before copy,exact admitted rule reserve;preserve cave/scalar/distribution/fresh diagnostics and legacy restoration. Parameterized source bound covers selected ordinary-new construction.",
+      "acceptance_receipt": "build/desktop-msvc/s4-worldgen-sets-acceptance-20261122.json",
+      "next_action": "C05: finish source file/path/stream resources and pre-parsed settings/WorldGenSets DOM-to-sets/default/upgrade construction,other compiled catalog candidate allocation/reallocation and prior/current publication overlap. Resolver-only source model accepted;original parameterized source bound,no arbitrary gameplay asset cap. Then C06 finite all-thread/world/global/publisher/escaped owners and E12/original S6 process budgets."
+    },
+    {
       "id": "stbi-png-initial-inflate-signed-range",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",

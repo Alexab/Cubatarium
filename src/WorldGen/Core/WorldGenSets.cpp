@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <stdexcept>
 #include <nlohmann/json.hpp>
 
 namespace cutum
@@ -27,6 +28,9 @@ ObjectFeatureRule ToFeatureRule(const WorldGenObjectEntry &entry)
   rule.Tree = entry.Tree;
   rule.Shrub = entry.Shrub;
   rule.Ecology = entry.Ecology;
+  rule.BiomeKeys.reserve(entry.Biomes.size());
+  rule.Biomes.reserve(entry.Biomes.size());
+  rule.SubBiomes.reserve(entry.SubBiomes.size());
   for (const auto &b : entry.Biomes)
   {
     rule.BiomeKeys.push_back(b);
@@ -397,6 +401,23 @@ void AppendPool(
     std::vector<ObjectFeatureRule> &out,
     const std::unordered_map<std::string, WorldGenObjectSection> &sections)
 {
+  size_t count = 0;
+  for (const auto &pair : sections)
+  {
+    for (const auto &entry : pair.second.Entries)
+    {
+      const bool included = entry.Mode == ObjectFeatureRuleMode::ScatterBlocks
+                                ? !entry.Scatter.BlockName.empty()
+                                : !entry.ObjectName.empty();
+      if (included)
+      {
+        if (count == out.max_size())
+          throw std::length_error("worldgen feature pool too large");
+        ++count;
+      }
+    }
+  }
+  out.reserve(count);
   for (const auto &pair : sections)
   {
     for (const auto &entry : pair.second.Entries)
@@ -668,27 +689,24 @@ ObjectFeatureConfig ResolveObjectFeatures(const WorldGenSets &sets,
                                           const ObjectFeatureConfig &global,
                                           int worldgenProfileVersion)
 {
-  ObjectFeatureConfig resolved = global;
-  if (!sets.VegetationSections.empty())
+  // Select each source before copying: an overridden global pool must never
+  // be built and discarded. Diagnostics on a copied builder start fresh.
+  ObjectFeatureConfig resolved;
+  resolved.CaveFeatures = global.CaveFeatures;
+  resolved.VegetationDistribution = global.VegetationDistribution;
+  resolved.GroundCoverDistribution = global.GroundCoverDistribution;
+  resolved.structureCellSize = global.structureCellSize;
+  resolved.structureChancePerCell = global.structureChancePerCell;
+  resolved.structureMinSpacing = global.structureMinSpacing;
+  const auto resolvePool = [](auto &target, const auto &sections, const auto &fallback)
   {
-    resolved.Vegetation.clear();
-    AppendPool(resolved.Vegetation, sets.VegetationSections);
-  }
-  if (!sets.GroundCoverSections.empty())
-  {
-    resolved.GroundCover.clear();
-    AppendPool(resolved.GroundCover, sets.GroundCoverSections);
-  }
-  if (!sets.DecorationSections.empty())
-  {
-    resolved.Decoration.clear();
-    AppendPool(resolved.Decoration, sets.DecorationSections);
-  }
-  if (!sets.StructureSections.empty())
-  {
-    resolved.Structures.clear();
-    AppendPool(resolved.Structures, sets.StructureSections);
-  }
+    if (sections.empty()) target = fallback;
+    else AppendPool(target, sections);
+  };
+  resolvePool(resolved.Vegetation, sets.VegetationSections, global.Vegetation);
+  resolvePool(resolved.GroundCover, sets.GroundCoverSections, global.GroundCover);
+  resolvePool(resolved.Decoration, sets.DecorationSections, global.Decoration);
+  resolvePool(resolved.Structures, sets.StructureSections, global.Structures);
   if (sets.SchemaVersion == 1 && worldgenProfileVersion >= 2)
   {
     RestoreLegacyFeatureMetadata(resolved.Vegetation, global.Vegetation);
