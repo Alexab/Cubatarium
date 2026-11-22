@@ -107,12 +107,14 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
 #include "Test/SourceInputStorageCensusFixture.h"
 #include "Test/CatalogFileLifetimeFixture.h"
 #include "Test/CatalogFilesystemSourceFixture.h"
+#include "Test/CatalogFilesystemErrorFixture.h"
 int main(int argc,char **argv)
 {
   if(argc>1 && std::string(argv[1])=="--settings-input") return RunWorldGenSetsInputEnvelopeFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--retained-inputs") return RunSourceInputStorageCensusFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--catalog-files") return RunCatalogFileLifetimeFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--filesystem-source") return RunCatalogFilesystemSourceFixture(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--filesystem-errors") return RunCatalogFilesystemErrorFixture(argc>2?argv[2]:nullptr);
   ObjectFeatureConfig global;
   ObjectFeatureRule rule;rule.ObjectName="selected";rule.Biomes={BiomeId::Plains};rule.BiomeKeys={"plains"};rule.SubBiomes={SubBiomeIdFromString("none")};
   rule.Spacing=17;rule.Weight=7;rule.ChancePerColumn=13;rule.SeedOffset=29;rule.PlacementYOffset=-4;

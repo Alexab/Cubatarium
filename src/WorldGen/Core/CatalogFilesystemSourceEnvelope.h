@@ -10,6 +10,7 @@ struct CatalogFilesystemLayout
 {
   size_t simple_shared_block{},recursive_shared_block{},handle_cell{};
   size_t iterator_inline{},recursive_iterator_inline{},entry_inline{},creator_inline{},find_data_inline{};
+  size_t filesystem_error_object{},system_error_object{},error_code_inline{};
   bool supported{};
 };
 inline CatalogFilesystemLayout GetCatalogFilesystemLayout() noexcept
@@ -18,6 +19,8 @@ inline CatalogFilesystemLayout GetCatalogFilesystemLayout() noexcept
   result.iterator_inline=sizeof(std::filesystem::directory_iterator);
   result.recursive_iterator_inline=sizeof(std::filesystem::recursive_directory_iterator);
   result.entry_inline=sizeof(std::filesystem::directory_entry);
+  result.filesystem_error_object=sizeof(std::filesystem::filesystem_error);
+  result.system_error_object=sizeof(std::system_error);result.error_code_inline=sizeof(std::error_code);
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0 && defined(_WIN64)
   result.supported=true;
   result.simple_shared_block=sizeof(std::_Ref_count_obj2<std::filesystem::_Dir_enum_impl>);
@@ -79,6 +82,46 @@ inline CatalogFilesystemEnvelope BoundCatalogFilesystemSource(const CatalogFiles
   const size_t name_bytes=add(add(mul(domain.max_path_units,4),domain.prefix_bytes),2);
   result.name_operations_heap_upper=add(mul(native,4),mul(text(name_bytes,1),4));
   result.combined_heap_upper=add(result.traversal_heap_upper,result.name_operations_heap_upper);
+  return result;
+}
+
+struct CatalogFilesystemErrorDomain
+{
+  size_t operation_bytes{},system_message_bytes{},path1_units{},path2_units{};
+  size_t narrow_bytes_per_native_unit{4};
+};
+struct CatalogFilesystemErrorEnvelope
+{
+  size_t new_request_upper{},base_runtime_text_length_upper{};
+  bool supported{},overflow{};
+};
+// Built-in system/generic categories (or a category whose message() performs
+// only the declared output-string copy). Arbitrary custom category callbacks
+// need their own source envelope. M is localized message length,not a fixed
+// English string;also allow MSVC's13-byte unknown-error fallback.
+// Includes canonical path copies,category/message concatenation and pretty
+// path strings. Direct CRT exception/message storage,Win32 formatter buffers,
+// native stack and caller-owned inputs remain E12/separate terms.
+inline CatalogFilesystemErrorEnvelope BoundCatalogFilesystemErrorSource(const CatalogFilesystemErrorDomain &domain)
+{
+  CatalogFilesystemErrorEnvelope result;result.supported=GetCatalogFilesystemLayout().supported && domain.narrow_bytes_per_native_unit!=0;
+  const auto add=[&](size_t a,size_t b) {
+    if(b>std::numeric_limits<size_t>::max()-a) {result.overflow=true;return std::numeric_limits<size_t>::max();}return a+b;
+  };
+  const auto mul=[&](size_t a,size_t b) {
+    if(b && a>std::numeric_limits<size_t>::max()/b) {result.overflow=true;return std::numeric_limits<size_t>::max();}return a*b;
+  };
+  const auto text=[&](size_t n,size_t width) {return add(mul(mul(add(n,32),2),width),39);};
+  const size_t message=std::max(domain.system_message_bytes,size_t{13});
+  const size_t paths=add(domain.path1_units,domain.path2_units);
+  const size_t formatted=add(add(add(domain.operation_bytes,message),mul(paths,domain.narrow_bytes_per_native_unit)),16);
+  // _System_error::_Makestr old/new/message strings and original operation;
+  // _Pretty_message path1/path2/result strings are successive phases. Six
+  // conservative narrow backings cover either phase,including alignment.
+  result.new_request_upper=add(add(text(domain.path1_units,sizeof(wchar_t)),text(domain.path2_units,sizeof(wchar_t))),
+    add(mul(text(formatted,1),6),512));
+  // Logical strlen bound only,not actual CRT allocation capacity/headers.
+  result.base_runtime_text_length_upper=add(add(domain.operation_bytes,message),3);
   return result;
 }
 } // namespace cutum

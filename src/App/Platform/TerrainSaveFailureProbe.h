@@ -139,6 +139,8 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         {"handle_cell",filesystem_layout.handle_cell},{"iterator_inline",filesystem_layout.iterator_inline},
         {"recursive_iterator_inline",filesystem_layout.recursive_iterator_inline},{"entry_inline",filesystem_layout.entry_inline},
         {"creator_inline",filesystem_layout.creator_inline},{"find_data_inline",filesystem_layout.find_data_inline},
+        {"filesystem_error_object",filesystem_layout.filesystem_error_object},{"system_error_object",filesystem_layout.system_error_object},
+        {"error_code_inline",filesystem_layout.error_code_inline},
         {"scope","Compiled MSVC Release layout only;native does not sample all scan path/depth high-water domains or OS/CRT heap."}};
     report["catalog_json_sources"]={{"schema","catalog-json-source-model.v1"},
         {"active_parsers",json_sources.active},{"peak_active_parsers",json_sources.peak_active},
