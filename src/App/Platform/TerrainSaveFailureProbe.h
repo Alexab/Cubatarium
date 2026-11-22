@@ -36,6 +36,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
+#include "WorldGen/Core/SourceInputStorageCensus.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -185,6 +186,37 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         {"block_stores",storage.Objects(CatalogObjectKind::BlockStorage)},
         {"block_registries",storage.Objects(CatalogObjectKind::Registry)},{"registry_tags",storage.Objects(CatalogObjectKind::RegistryIdentity)},
         {"prefabs",storage.Objects(CatalogObjectKind::Prefab)},{"duplicate_snapshot_deduplicated",true}};
+    if(core.WorldInstance) {
+      const WorldGenSets *settings[]={&core.WorldInstance->GetWorldGenSets()};
+      const auto inputs=MeasureSourceInputStorage(settings,1);
+      const WorldGenSets *repeated[]={settings[0],settings[0]};
+      const auto duplicate_inputs=MeasureSourceInputStorage(repeated,2);
+      require(!inputs.overflow && inputs.settings_roots==1 && duplicate_inputs.settings_roots==1 &&
+          inputs.RequestedHeapComponents()==duplicate_inputs.RequestedHeapComponents(),
+          "source input census duplicates world settings");
+      WorldGenContentSnapshot world_features;
+      // Empty-owner alias is a non-owning synchronous view. Never create an
+      // independent shared control block for a member of the live UWorld.
+      world_features.Features=std::shared_ptr<const ObjectFeatureConfig>(std::shared_ptr<const void>{},
+          &core.WorldInstance->GetResolvedObjectFeatures());
+      const std::array<WorldGenContentSnapshot,2> with_world={catalog_content,world_features};
+      const auto joined=MeasureCatalogStorage(with_world.data(),with_world.size(),&catalog_blocks,1,core.ObjectLibraryInstance,catalog_resources);
+      require(!joined.overflow && joined.known_storage_bytes>=storage.known_storage_bytes &&
+          joined.shared_owners>=storage.shared_owners,"world resolved feature census invalid");
+      report["worldgen_input_storage"]={{"schema","worldgen-input-storage-native.v1"},
+          {"settings_roots",inputs.settings_roots},{"settings_inline_bytes",inputs.settings_inline_bytes},
+          {"model_supported",inputs.storage.unordered_model_supported},
+          {"settings_heap_components",inputs.RequestedHeapComponents()},
+          {"settings_known_bytes",inputs.storage.known_storage_bytes},
+          {"settings_unordered_metadata",inputs.storage.msvc_unordered_extra_bytes},
+          {"settings_large_alignment_extra",inputs.msvc_large_allocation_extra_bytes},
+          {"joined_catalog_and_resolved_known_bytes",joined.known_storage_bytes},
+          {"resolved_feature_known_delta",joined.known_storage_bytes-storage.known_storage_bytes},
+          {"resolved_inline_shell_bytes",sizeof(ObjectFeatureConfig)},
+          {"joined_shared_owners",joined.shared_owners},{"joined_feature_configs",joined.Objects(CatalogObjectKind::Features)},
+          {"duplicate_settings_deduplicated",true},{"json_roots_observed",0},
+          {"scope","Current supplied world settings and resolved feature member only. Settings include actual capacities/MSVC request alignment;inline world member shells separate. Joined catalog census remains known components,not exact heap/RSS/all-version/process cap. No live pre-parsed DOM in this native snapshot;isolated unit covers DOM. No collector owners retained."}};
+    }
     const char *variant=std::getenv("CUBA_FLIGHT_QA_TERRAIN_SAVE_VARIANT");
     if(variant && std::string(variant)=="flat_publication")
     {

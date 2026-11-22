@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.retained-settings-dom-inputs",
+      "status": "SCOPED_EXACT_RETAINED_NEW_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-source-input-retained-acceptance-20261122.json",
+      "certificate": "S4_02_C05_RETAINED_INPUTS_CERTIFICATE_2026_11_22.json",
+      "scope": "Retained supplied WorldGenSets/default-nlohmann DOM storage now capacity-aware and source/allocator verified.10 live ordinary-new states match exactly,including6-map empty1192,spare settings80752,prior/current union128692,clear-retained106936,DOM large string/binary/array/tree55932,cleared42398,depth4096=163840,joined inputs1296;duplicate/child-first roots deduplicated. Negative unrelated allocation detected,all output credits released. MSVC large-request39-byte alignment prefix separate from payload and map metadata. Native current WorldGenSets63204 heap components +392 inline shell;resolved-feature member adds51368 known catalog components (includes176-byte inline shell),joined2 feature configs/shared owners143 unchanged. No new owning control block/lazy publication.53 resolver +26 settings-construction cases/238 refusal retries still PASS. C05 total construction/C06/E12/full S0..S6 OPEN,23/42 unchanged."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.settings-input-source",
       "status": "SCOPED_SOURCE_REQUEST_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-worldgen-sets-input-acceptance-20261122.json",

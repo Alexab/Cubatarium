@@ -1,0 +1,235 @@
+{
+  "schema": "s4-retained-input-storage-acceptance.v1",
+  "status": "SCOPED_EXACT_RETAINED_NEW_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Retained supplied WorldGenSets/default-nlohmann DOM storage now capacity-aware and source/allocator verified.10 live ordinary-new states match exactly,including6-map empty1192,spare settings80752,prior/current union128692,clear-retained106936,DOM large string/binary/array/tree55932,cleared42398,depth4096=163840,joined inputs1296;duplicate/child-first roots deduplicated. Negative unrelated allocation detected,all output credits released. MSVC large-request39-byte alignment prefix separate from payload and map metadata. Native current WorldGenSets63204 heap components +392 inline shell;resolved-feature member adds51368 known catalog components (includes176-byte inline shell),joined2 feature configs/shared owners143 unchanged. No new owning control block/lazy publication.53 resolver +26 settings-construction cases/238 refusal retries still PASS. C05 total construction/C06/E12/full S0..S6 OPEN,23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "71974b93336ea8e7188e3cbe336fed2c6e815a6863a77626aba0e1a8ab7a544b",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "de0e8f51426a80cc5a1074a172de6f04fadea0e5e4eb5293ee45df46f1f59348",
+    "src/WorldGen/Core/WorldGenSets.h": "06184fe1352ee2ff1cffffa394d9e04de734a8191edbecd73b76f071c3c167c2",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "2f6e81853d19d1214888cd9d6d7adcc3245240135ec193f4414b28b63ea29812",
+    "src/Test/SourceInputStorageCensusFixture.h": "13bf96774d13c64cee693095c08701482b236387f4fb99807dac7509210de044",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "82a96f46a42f55de60e60e08507e02b344ea55382b7e0b2148944c05e6d828be",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "68b9c8baf0a16907bf5247ab078e77deb0fa00f57a2b9cf0589d306448ae977d"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942"
+  },
+  "exe_sha256": "f59f081e4d2694dae52c02b8526a85995ec15f78573a413d50e9bdc0054f0876",
+  "provenance": "build/desktop-msvc/s4-source-input-retained-provenance-20261122.json",
+  "verification": {
+    "exe_sha256": "f8e5af81e48f3276dc4cfa9e1d73dda8d25d9eeb0fa34d6e6a16eb35007d1de9",
+    "resolver": {
+      "returncode": 0,
+      "report": "build\\desktop-msvc\\s4-source-input-retained-resolver-20261122.json",
+      "log": "build\\desktop-msvc\\s4-source-input-retained-resolver-20261122.log"
+    },
+    "settings-input": {
+      "returncode": 0,
+      "report": "build\\desktop-msvc\\s4-source-input-retained-settings-input-20261122.json",
+      "log": "build\\desktop-msvc\\s4-source-input-retained-settings-input-20261122.log"
+    },
+    "retained-inputs": {
+      "returncode": 0,
+      "report": "build\\desktop-msvc\\s4-source-input-retained-accepted-20261122.json",
+      "log": "build\\desktop-msvc\\s4-source-input-retained-first-run-20261122.log"
+    }
+  },
+  "unit": {
+    "cases": [
+      {
+        "json_values": 0,
+        "known_bytes": 0,
+        "large_alignment_extra": 0,
+        "model_heap_components": 1192,
+        "name": "settings_empty6_maps",
+        "observed_live_requests": 1192,
+        "pass": true,
+        "settings_inline_bytes": 392,
+        "settings_roots": 1,
+        "tree_metadata": 0,
+        "unordered_metadata": 1192
+      },
+      {
+        "json_values": 0,
+        "known_bytes": 46560,
+        "large_alignment_extra": 312,
+        "model_heap_components": 80752,
+        "name": "settings_spare_capacities_and_bucket_growth",
+        "observed_live_requests": 80752,
+        "pass": true,
+        "settings_inline_bytes": 392,
+        "settings_roots": 1,
+        "tree_metadata": 0,
+        "unordered_metadata": 33880
+      },
+      {
+        "json_values": 0,
+        "known_bytes": 60464,
+        "large_alignment_extra": 468,
+        "model_heap_components": 128692,
+        "name": "settings_prior_current_duplicate_reference",
+        "observed_live_requests": 128692,
+        "pass": true,
+        "settings_inline_bytes": 784,
+        "settings_roots": 2,
+        "tree_metadata": 0,
+        "unordered_metadata": 67760
+      },
+      {
+        "json_values": 0,
+        "known_bytes": 38864,
+        "large_alignment_extra": 312,
+        "model_heap_components": 106936,
+        "name": "settings_clear_keeps_vector_capacity",
+        "observed_live_requests": 106936,
+        "pass": true,
+        "settings_inline_bytes": 784,
+        "settings_roots": 2,
+        "tree_metadata": 0,
+        "unordered_metadata": 67760
+      },
+      {
+        "json_values": 1,
+        "known_bytes": 16,
+        "large_alignment_extra": 0,
+        "model_heap_components": 96,
+        "name": "json_empty_object",
+        "observed_live_requests": 96,
+        "pass": true,
+        "settings_inline_bytes": 0,
+        "settings_roots": 0,
+        "tree_metadata": 80,
+        "unordered_metadata": 0
+      },
+      {
+        "json_values": 264,
+        "known_bytes": 47225,
+        "large_alignment_extra": 195,
+        "model_heap_components": 55932,
+        "name": "json_string_binary_array_spare_tree_growth",
+        "observed_live_requests": 55932,
+        "pass": true,
+        "settings_inline_bytes": 0,
+        "settings_roots": 0,
+        "tree_metadata": 8512,
+        "unordered_metadata": 0
+      },
+      {
+        "json_values": 264,
+        "known_bytes": 47225,
+        "large_alignment_extra": 195,
+        "model_heap_components": 55932,
+        "name": "json_child_first_and_repeated_root",
+        "observed_live_requests": 55932,
+        "pass": true,
+        "settings_inline_bytes": 0,
+        "settings_roots": 0,
+        "tree_metadata": 8512,
+        "unordered_metadata": 0
+      },
+      {
+        "json_values": 261,
+        "known_bytes": 33881,
+        "large_alignment_extra": 117,
+        "model_heap_components": 42398,
+        "name": "json_clear_keeps_array_capacity",
+        "observed_live_requests": 42398,
+        "pass": true,
+        "settings_inline_bytes": 0,
+        "settings_roots": 0,
+        "tree_metadata": 8400,
+        "unordered_metadata": 0
+      },
+      {
+        "json_values": 4097,
+        "known_bytes": 163840,
+        "large_alignment_extra": 0,
+        "model_heap_components": 163840,
+        "name": "json_deep4096_iterative_census",
+        "observed_live_requests": 163840,
+        "pass": true,
+        "settings_inline_bytes": 0,
+        "settings_roots": 0,
+        "tree_metadata": 0,
+        "unordered_metadata": 0
+      },
+      {
+        "json_values": 4,
+        "known_bytes": 104,
+        "large_alignment_extra": 0,
+        "model_heap_components": 1296,
+        "name": "settings_and_external_dom_join",
+        "observed_live_requests": 1296,
+        "pass": true,
+        "settings_inline_bytes": 392,
+        "settings_roots": 1,
+        "tree_metadata": 0,
+        "unordered_metadata": 1192
+      }
+    ],
+    "failed_cases": 0,
+    "schema": "source-input-retained-new-request-verification.v1",
+    "scope": "Supplied WorldGenSets and default nlohmann::json retained requested-new components,including current MSVC alignment shim;inline roots/reference arrays/collector scratch/CRT/shared-control/process roots excluded",
+    "status": "PASS",
+    "unmodeled_allocation_negative_control": "PASS"
+  },
+  "native": {
+    "runner_exit_code": 2,
+    "runtime_exit_code": 0,
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "observed_inputs": {
+      "duplicate_settings_deduplicated": true,
+      "joined_catalog_and_resolved_known_bytes": 7552164,
+      "joined_feature_configs": 2,
+      "joined_shared_owners": 143,
+      "json_roots_observed": 0,
+      "model_supported": true,
+      "resolved_feature_known_delta": 51368,
+      "resolved_inline_shell_bytes": 176,
+      "schema": "worldgen-input-storage-native.v1",
+      "scope": "Current supplied world settings and resolved feature member only. Settings include actual capacities/MSVC request alignment;inline world member shells separate. Joined catalog census remains known components,not exact heap/RSS/all-version/process cap. No live pre-parsed DOM in this native snapshot;isolated unit covers DOM. No collector owners retained.",
+      "settings_heap_components": 63204,
+      "settings_inline_bytes": 392,
+      "settings_known_bytes": 61792,
+      "settings_large_alignment_extra": 156,
+      "settings_roots": 1,
+      "settings_unordered_metadata": 1256
+    },
+    "limitation": "Native snapshot contains no live pre-parsed DOM;unit validates DOM. Current member census does not discover prior/escaped/other-world roots or measure construction peak. Aggregate startup-only smoke UNTESTED;S4.06 disk-full/relocation and S6 full matrix remain open."
+  },
+  "model": {
+    "implementation": "SourceInputStorageCensus.h reuses CatalogStorageCensus MSVC map/tree/text/vector payload formulas;tracks actual capacities and allocated JSON object/array/string/binary shells. World settings6 maps/member-owned vectors/text included.",
+    "alignment": "Current MSVC xmemory4096 threshold,32-byte manual alignment and39-byte requested over-allocation. Alignment separate from stored capacity and requested32-byte STBI prefix (different allocators,do not conflate).",
+    "identity": "Settings pointer identity and JSON value-address set deduplicate supplied roots and overlap. Distinct copies retain independent capacities. Inspector keeps only temporary non-owning addresses;all source roots must remain live/quiescent.",
+    "collector": "Temporary pointer-vector/address-set scratch is excluded from input storage totals. Work is iterative for deep DOM,expected linear address-set traversal;no persistent ownership/history. Not a bound on diagnostic collector/native stack/CRT/RSS/GPU or every root.",
+    "exactness": "Isolated ordinary-new observer matches retained heap components for the stated default allocators and tested supported MSVC Release layout;root shells are outside measured allocations. No production allocation interception introduced."
+  },
+  "phase_composition": {
+    "scope": "Parameterized requested-component composition for supplied live roots,not discovery of every owner or a total-process cap.",
+    "input_union": "L_settings_dom = MeasureSourceInputStorage(unique settings and DOM node union).RequestedHeapComponents(). Actual capacities,MSVC list/tree/bucket layout and>=4096-byte alignment shim included;duplicate roots/overlapping child roots count once.",
+    "inline": "WorldGenSets392 and resolved config176 bytes in this native build belong inside UWorld shell;count once if UWorld sizeof is counted later. DOM root cells/reference arrays belong to caller or parent backing;not extra input heap objects.",
+    "catalog_union": "Existing MeasureCatalogStorage joins actual global/retained snapshots and a synchronous empty-owner alias of current resolved member. Pointee payload counted once;world member view creates no shared control block. Joined known component census still excludes some allocator/shared bookkeeping;no exact process total inferred.",
+    "construction": "For an operation with pre-existing owner union L and accepted source bound B,conservative requested peak<=L+B plus explicit excluded CRT/stack/control/file/platform terms. Sequential operation peaks combine by max;do not sum historical cumulative peaks with a later storage census.",
+    "remaining": "C05: finish actual source file/path/stream resources and other compiled catalog candidate allocation/reallocation,then compose prior/current candidate/publication owners with accepted JSON/decoder/settings construction envelopes and retained supplied-input census. WorldGenSets/pre-parsed DOM retained capacities now observable;discovery/count of all worlds/threads/global/publisher/escaped versions remains C06. E12 control/CRT/stack/upstream/GPU and original S6 process-memory/performance matrix OPEN. No arbitrary new asset cap."
+  },
+  "remaining": "C05: finish actual source file/path/stream resources and other compiled catalog candidate allocation/reallocation,then compose prior/current candidate/publication owners with accepted JSON/decoder/settings construction envelopes and retained supplied-input census. WorldGenSets/pre-parsed DOM retained capacities now observable;discovery/count of all worlds/threads/global/publisher/escaped versions remains C06. E12 control/CRT/stack/upstream/GPU and original S6 process-memory/performance matrix OPEN. No arbitrary new asset cap.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;S4.06/S6/full S0..S6 retained,no audit restart."
+}
