@@ -643,7 +643,7 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   }
   try
   {
-    const nlohmann::json root = ParseCatalogSourceJson(in,CatalogJsonKind::Features);
+    const auto root = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Features);
     // value<json>() deep-copies the complete group while both the source DOM
     // and the compiled candidate are live. Borrow members until root dies.
     // Keep value()'s previous rejection of a non-object root.

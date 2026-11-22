@@ -35,7 +35,7 @@ UResourcePack::LoadManifest(const fs::path &root)
   try
   {
     // The JSON lexer consumes UTF-8 BOM directly from the stream as well.
-    const json d = ParseCatalogSourceJson(in,CatalogJsonKind::Manifest);
+    const auto d = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Manifest);
     ResourcePackManifest m;
     m.Root = root;
     m.Id = d.value("id", root.filename().string());
@@ -115,7 +115,7 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     }
     try
     {
-      const json d = ParseCatalogSourceJson(file,CatalogJsonKind::ResourceBlocks);
+      const auto d = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::ResourceBlocks);
       const ParsedBlockJson parsed = ParseBlockFromJson(d, true);
       if (!parsed.Valid)
       {

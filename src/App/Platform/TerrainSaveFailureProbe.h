@@ -142,6 +142,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"string_bytes",json_sources.largest_bound_shape.string_bytes},{"max_depth",json_sources.largest_bound_shape.max_depth},
           {"kind",static_cast<size_t>(json_sources.largest_bound_shape.kind)},{"success",json_sources.largest_bound_shape.success}}},
         {"shape_inline_bytes",sizeof(CatalogJsonSourceShape)},{"process_counters_inline_bytes",sizeof(CatalogJsonSourceSnapshot)},
+        {"document_inline_bytes",sizeof(CatalogJsonDocument)},{"sax_inline_bytes",sizeof(detail::CatalogJsonSax)},
         {"scope","Per-source MSVC container/parser/destructor request model;not measured heap or simultaneous process peak;no compiled candidate/publication/CRT/GL cap"}};
     const auto stbi_process=GetStbiProcessAllocationSnapshot();
     report["stbi_process_allocation"]={{"schema","stbi-allocation-requests.v1"},

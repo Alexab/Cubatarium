@@ -133,7 +133,7 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
 
   try
   {
-    json data = ParseCatalogSourceJson(file,CatalogJsonKind::Prefab);
+    auto data = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Prefab);
     WorldObjectDefinition object;
     object.Name = registerName.empty()
                       ? data.value("name",

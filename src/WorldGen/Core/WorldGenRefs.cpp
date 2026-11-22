@@ -24,7 +24,7 @@ bool UWorldGenRefs::LoadFromFile(const std::filesystem::path &path)
   }
   try
   {
-    const nlohmann::json root = ParseCatalogSourceJson(in,CatalogJsonKind::Refs);
+    const auto root = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Refs);
     if (!root.contains("slots") || !root["slots"].is_object())
     {
       std::cerr << "WorldGenRefs: missing slots object in " << path << std::endl;

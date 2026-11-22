@@ -1,0 +1,348 @@
+{
+  "schema": "s4-catalog-file-lifetime-acceptance.v1",
+  "status": "SCOPED_FILE_ROOT_RETIREMENT_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "19 production catalog file reads now close FILE/OS handle before compiled candidate construction,including parser exceptions. Managed CatalogJsonDocument carries pre-admitted geometric depth retirement path,cleans partial DOM on parser failure and complete DOM during candidate unwinding without new allocation. Duplicate-key old subtrees retired before builder replacement;same nlohmann DOM builder/no second parse. Initial persistent-refusal fixture terminated before report (3221226505),diagnostic reached refusal prefix9;library destroy(value_t) source allocates flatten stack. Fixed7 file/equivalence cases +2221 persistent prefixes/retries PASS;5 candidate-refusal retirements make0 new requests;128 file cohorts46->46 handles;Unicode path and actual native capacity16487 bytes exact. Full biome/scatter,JSON16 new-request cases,settings/resolver/retained/catalog/cache/pinned regressions PASS. Native2184 parses,active0,paired largest48442bytes/model1115150;document40/SAX136 inline bytes. Full C05/C06/E12/S4.06/S6/S0..S6 OPEN,23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenPack.cpp": "94d8a8656fd6694e5a1d0ab4e06859f6a372053f7cc396f30a9ad7341c6ac4f5",
+    "src/WorldGen/Core/WorldGenRefs.cpp": "0ec0a67eeeb342a85fe13865423e6d21cb70c6fc373aca9e7acf720e17e19a48",
+    "src/WorldGen/Features/ObjectFeatureConfig.cpp": "e7976a46b6fa32020314ffafcd4c9b96985c593f53b0c416c71f3bd9ee8cfea5",
+    "src/World/Objects/ObjectLibrary.cpp": "d657b29b98b224922043773b7d30817b4c9aed0e1b810557e3d7c9b652971f55",
+    "src/Blocks/BlockDefinitionStorage.cpp": "8b76d45d954b10fa715fd04c2dafbe75c942fbf7452a97ddea0873ea65a3bc37",
+    "src/Render/Textures/TextureCube.cpp": "2cf32208fcbd9b64ed7404fe4b657d9ad36b362c78217c33e1f746a87af68915",
+    "src/ResourcePacks/ResourcePack.cpp": "2187196ae3c05b11f959455f603efeb689d867e975bfc8c8c56acaebdc72f540",
+    "src/WorldGen/Core/CatalogJsonSource.h": "693d4840ac6964516c99861beccadb33c738e75da7861ad33ac2a412c7046f81",
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+    "src/Test/CatalogFileLifetimeFixture.h": "342583348efaaebf851f7a5acab226de0b402fee216eb8af67fcb5f962759283",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "ce9bbb2521a75428a2669e6738fa39dac05841b3d1a2010128ba85aefbd3936d",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "35342a0cbb3abdfb2e1501b5f82945d5121f05211e349400e15755bd6844b0fc"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1"
+  },
+  "exe_sha256": "e614319bc4c294a3c1236f42899d3ec547e8493b812f25aceface53e630ee4ef",
+  "provenance": "build/desktop-msvc/s4-catalog-files-provenance-20261122.json",
+  "initial_terminal": {
+    "returncode": 3221226505,
+    "report_written": false,
+    "exe_sha256": "4ed85817cc78bf3daa69b82805f4f341cef3b367fa56a463d66278a76b511ce0",
+    "scope": "Initial catalog file lifetime fixture,terminal process result;not a live wait"
+  },
+  "diagnostic_log": "build/desktop-msvc/s4-catalog-files-diagnostic-run-20261122.log",
+  "root_cause_evidence": "Source-supported inference:json_value::destroy in pinned nlohmann allocates stack.reserve before releasing nonempty object/array. Initial process exit+prefix9 preserved;no debugger stack trace asserted. Same persistent-refusal protocol now passes2221 positions and candidate retirement explicitly requests0 allocations.",
+  "baseline_control": "Current generic stream API deliberately leaves caller file open;captures previous production statement lifetime,not a defect in generic caller-owned API or full historical binary replay.",
+  "verification": {
+    "files": {
+      "returncode": 0,
+      "exe_sha256": "d76a47b3ad0280cfd8ee84012f11dd9e03ac413d0ccbb9c4ae61ad17f6254930",
+      "log": "build\\desktop-msvc\\s4-catalog-files-files-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-files-files-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "settings-input": {
+      "returncode": 0,
+      "exe_sha256": "d76a47b3ad0280cfd8ee84012f11dd9e03ac413d0ccbb9c4ae61ad17f6254930",
+      "log": "build\\desktop-msvc\\s4-catalog-files-settings-input-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-files-settings-input-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "retained-inputs": {
+      "returncode": 0,
+      "exe_sha256": "d76a47b3ad0280cfd8ee84012f11dd9e03ac413d0ccbb9c4ae61ad17f6254930",
+      "log": "build\\desktop-msvc\\s4-catalog-files-retained-inputs-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-files-retained-inputs-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "resolver": {
+      "returncode": 0,
+      "exe_sha256": "d76a47b3ad0280cfd8ee84012f11dd9e03ac413d0ccbb9c4ae61ad17f6254930",
+      "log": "build\\desktop-msvc\\s4-catalog-files-resolver-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-files-resolver-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "json-new-requests": {
+      "returncode": 0,
+      "exe_sha256": "0a9871b071a6ab2107fc7b246dc4ecad480369b723607d76ee52ff0acb9b64f8",
+      "log": "build\\desktop-msvc\\s4-catalog-files-json-new-requests-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-files-json-new-requests-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "biomes": {
+      "returncode": 0,
+      "exe_sha256": "1d26504ed33a0129d98a1e8e11e0261f2cdc0998df497d54ba4384bc77c0bd19",
+      "log": "build\\desktop-msvc\\s4-catalog-files-biomes-accepted-20261122.log"
+    },
+    "scatter": {
+      "returncode": 0,
+      "exe_sha256": "251cc088e34c14e9c35a9e8c344ea733f2e89442413517c4bb841634cc810bd9",
+      "log": "build\\desktop-msvc\\s4-catalog-files-scatter-accepted-20261122.log"
+    },
+    "catalog-storage": {
+      "returncode": 0,
+      "exe_sha256": "f9bc0c7e6ac784a6a9f9e99f2961af93331f24b8735df607747cb070a5847bb7",
+      "log": "build\\desktop-msvc\\s4-catalog-files-catalog-storage-accepted-20261122.log"
+    },
+    "pipeline-cache-owner": {
+      "returncode": 0,
+      "exe_sha256": "f9bc0c7e6ac784a6a9f9e99f2961af93331f24b8735df607747cb070a5847bb7",
+      "log": "build\\desktop-msvc\\s4-catalog-files-pipeline-cache-owner-accepted-20261122.log"
+    },
+    "pinned-factory-catalog": {
+      "returncode": 0,
+      "exe_sha256": "f9bc0c7e6ac784a6a9f9e99f2961af93331f24b8735df607747cb070a5847bb7",
+      "log": "build\\desktop-msvc\\s4-catalog-files-pinned-factory-catalog-accepted-20261122.log"
+    }
+  },
+  "unit": {
+    "baseline": [
+      {
+        "exception": false,
+        "exclusive_open": false,
+        "file_still_open": true,
+        "malformed": false
+      },
+      {
+        "exception": true,
+        "exclusive_open": false,
+        "file_still_open": true,
+        "malformed": true
+      }
+    ],
+    "candidate_failure_retirement": [
+      {
+        "name": "valid",
+        "new_requests_during_retirement": 0,
+        "pass": true
+      },
+      {
+        "name": "BOM_CRLF",
+        "new_requests_during_retirement": 0,
+        "pass": true
+      },
+      {
+        "name": "long",
+        "new_requests_during_retirement": 0,
+        "pass": true
+      },
+      {
+        "name": "duplicate_subtrees",
+        "new_requests_during_retirement": 0,
+        "pass": true
+      },
+      {
+        "name": "deep",
+        "new_requests_during_retirement": 0,
+        "pass": true
+      }
+    ],
+    "failed_cases": 0,
+    "fixed": [
+      {
+        "attempts": 22,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "valid",
+        "pass": true,
+        "peak": 453,
+        "retained_request_components_exact": true,
+        "source_upper": 2170
+      },
+      {
+        "attempts": 16,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "BOM_CRLF",
+        "pass": true,
+        "peak": 255,
+        "retained_request_components_exact": true,
+        "source_upper": 1408
+      },
+      {
+        "attempts": 56,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "long",
+        "pass": true,
+        "peak": 29927,
+        "retained_request_components_exact": true,
+        "source_upper": 84050
+      },
+      {
+        "attempts": 39,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "duplicate_subtrees",
+        "pass": true,
+        "peak": 721,
+        "retained_request_components_exact": true,
+        "source_upper": 3918
+      },
+      {
+        "attempts": 2126,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "deep",
+        "pass": true,
+        "peak": 67863,
+        "retained_request_components_exact": true,
+        "source_upper": 271496
+      },
+      {
+        "attempts": 16,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "malformed",
+        "pass": true,
+        "peak": 467,
+        "retained_request_components_exact": true,
+        "source_upper": 17040
+      },
+      {
+        "attempts": 19,
+        "closed_before_outer_stream_destruction": true,
+        "final_live": 0,
+        "name": "trailing",
+        "pass": true,
+        "peak": 470,
+        "retained_request_components_exact": true,
+        "source_upper": 17232
+      }
+    ],
+    "handle_cohorts": 128,
+    "handle_count_after": 46,
+    "handle_count_before": 46,
+    "paths": [
+      {
+        "heap_components": 16487,
+        "inline_bytes": 64,
+        "large_alignment_extra": 39,
+        "name": "native_capacity_join_and_duplicate",
+        "observed_live": 16487,
+        "pass": true
+      }
+    ],
+    "persistent_refusal_and_retry_cases": 2221,
+    "schema": "catalog-file-source-lifetime.v1",
+    "scope": "19 production catalog file statements use close-before-candidate helper;valid/error/ordinary-new refusal file handle release and actual native path capacity. Stream public object sizes are inline;direct CRT buffer/locale/filesystem runtime/OS search handle metadata and all caller source paths remain separate E12/source-domain obligations.",
+    "status": "PASS",
+    "unopened_stream_rejected": true
+  },
+  "source_envelope": {
+    "schema": "catalog-managed-json-source-envelope.v2",
+    "status": "SCOPED_SOURCE_AND_REQUEST_PASS",
+    "source_formula": "Previous shape terms O*(sizeof(object_t)+sizeof(treeNode))+K*sizeof(treeNode)+A*sizeof(array_t)+S*sizeof(string_t)+2*T+32*(K+S)+8*V*sizeof(json)+12*D*sizeof(json*)+16*ceil(D/32)+lexer/error allowance. All checked/saturating.",
+    "lexer_error_allowance": "8*B+512 success;64*B+16640 failure.",
+    "input_corollary": "Current pinned host F(N)=586*N+16*ceil(N/32)+16640;all shape counts/depth and decoded text<=finite consumed byte domain N. Source envelope,not production quota or process cap.",
+    "depth_vectors": "Library ref_stack plus active container path and pre-admitted retirement path:each conservative4*D pointer live/growth allowance. Geometric1.5x+1 reserve before admitting container;remaining returned retirement path capacity retained through candidate construction.",
+    "retained_document": "DOM retained census +document.RetirementRequestedBytes() for managed document;root16+vector24 inline bytes separate. Plain nlohmann root census cannot infer this owner-side buffer. Model covers library flatten destructor conservatively for generic stream API;managed roots use allocation-free postorder retirement.",
+    "contract": "Selected production documents borrowed/read after parse,not extended with deeper mutable subtrees. Concrete derived JSON value owner,never polymorphically deleted. Generic ParseCatalogSourceJson still returns ordinary caller-owned nlohmann::json;after-return plain DOM retirement is caller policy. Unsupported JSON_DIAGNOSTIC_POSITIONS keeps legacy parser/retirement behavior and source model remains explicitly unsupported.",
+    "source_sha256": {
+      "src/WorldGen/Core/WorldGenPack.cpp": "94d8a8656fd6694e5a1d0ab4e06859f6a372053f7cc396f30a9ad7341c6ac4f5",
+      "src/WorldGen/Core/WorldGenRefs.cpp": "0ec0a67eeeb342a85fe13865423e6d21cb70c6fc373aca9e7acf720e17e19a48",
+      "src/WorldGen/Features/ObjectFeatureConfig.cpp": "e7976a46b6fa32020314ffafcd4c9b96985c593f53b0c416c71f3bd9ee8cfea5",
+      "src/World/Objects/ObjectLibrary.cpp": "d657b29b98b224922043773b7d30817b4c9aed0e1b810557e3d7c9b652971f55",
+      "src/Blocks/BlockDefinitionStorage.cpp": "8b76d45d954b10fa715fd04c2dafbe75c942fbf7452a97ddea0873ea65a3bc37",
+      "src/Render/Textures/TextureCube.cpp": "2cf32208fcbd9b64ed7404fe4b657d9ad36b362c78217c33e1f746a87af68915",
+      "src/ResourcePacks/ResourcePack.cpp": "2187196ae3c05b11f959455f603efeb689d867e975bfc8c8c56acaebdc72f540",
+      "src/WorldGen/Core/CatalogJsonSource.h": "693d4840ac6964516c99861beccadb33c738e75da7861ad33ac2a412c7046f81",
+      "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+      "src/Test/CatalogFileLifetimeFixture.h": "342583348efaaebf851f7a5acab226de0b402fee216eb8af67fcb5f962759283",
+      "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "ce9bbb2521a75428a2669e6738fa39dac05841b3d1a2010128ba85aefbd3936d",
+      "src/App/Platform/TerrainSaveFailureProbe.h": "35342a0cbb3abdfb2e1501b5f82945d5121f05211e349400e15755bd6844b0fc"
+    },
+    "dependency_sha256": {
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+      "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1"
+    },
+    "native_sizes": {
+      "document_inline_bytes": 40,
+      "sax_inline_bytes": 136,
+      "shape_inline_bytes": 80,
+      "process_counters_inline_bytes": 192
+    }
+  },
+  "phase_composition": {
+    "read": "P_read<=L_paths/priorOwners+B_json+explicit stream/CRT/platform terms. Existing fresh default-exception ifstream policy;close guard matches nonthrowing destructor close.",
+    "candidate": "P_candidate<=L_paths/priorOwners+retained DOM+retirement arena+B_candidate+explicit excluded platform terms. Source file OS handle closed before candidate;ifstream shell/locale state remain until caller scope ends.",
+    "retire": "Prepared path clears leaf values/empty containers iteratively;no fresh allocation needed even during persistent refusal. File gate covers parser errors;managed DOM owner spans candidate errors.",
+    "remaining": "C05: finish source file/path-construction/directory traversal domains and other compiled catalog candidate allocation/reallocation,then prior/current publication composition with accepted per-operation/retained-input bounds. File handle/read phase is now separated from candidate phase at19 routes;path retained capacities observable,not all path temporaries/runtime metadata. C06 all-world/thread/global/publisher/escaped counts and E12 CRT/file/stream/locale/search/runtime/stack/control/GPU plus original S6 process/performance matrix remain OPEN;no arbitrary asset cap."
+  },
+  "native": {
+    "runner_exit_code": 2,
+    "runtime_exit_code": 0,
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "json_sources": {
+      "active_parsers": 0,
+      "attempts_by_kind": [
+        27,
+        1,
+        1,
+        130,
+        0,
+        266,
+        1757,
+        2
+      ],
+      "completed": 2184,
+      "document_inline_bytes": 40,
+      "failed": 0,
+      "largest_input_bytes": 48442,
+      "largest_model_shape": {
+        "arrays": 4,
+        "bytes": 48442,
+        "keys": 2257,
+        "kind": 3,
+        "max_depth": 3,
+        "objects": 564,
+        "string_bytes": 10879,
+        "strings": 569,
+        "success": true,
+        "values": 2825
+      },
+      "largest_requested_heap_upper": 1115150,
+      "peak_active_parsers": 1,
+      "process_counters_inline_bytes": 192,
+      "sax_inline_bytes": 136,
+      "schema": "catalog-json-source-model.v1",
+      "scope": "Per-source MSVC container/parser/destructor request model;not measured heap or simultaneous process peak;no compiled candidate/publication/CRT/GL cap",
+      "shape_inline_bytes": 80
+    },
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "limitation": "Startup-only overall smoke UNTESTED retained;no whole process/CRT heap/other JSON callsites/all-backend/fatal disk-full/relocation acceptance."
+  },
+  "remaining": "C05: finish source file/path-construction/directory traversal domains and other compiled catalog candidate allocation/reallocation,then prior/current publication composition with accepted per-operation/retained-input bounds. File handle/read phase is now separated from candidate phase at19 routes;path retained capacities observable,not all path temporaries/runtime metadata. C06 all-world/thread/global/publisher/escaped counts and E12 CRT/file/stream/locale/search/runtime/stack/control/GPU plus original S6 process/performance matrix remain OPEN;no arbitrary asset cap.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;S4.06/S6/full S0..S6 retained,no audit restart."
+}

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.catalog-file-root-retirement",
+      "status": "SCOPED_FILE_HANDLE_DOM_REFUSAL_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-files-acceptance-20261122.json",
+      "certificate": "S4_02_C05_CATALOG_FILE_LIFETIME_CERTIFICATE_2026_11_22.json",
+      "scope": "19 production catalog file reads now close FILE/OS handle before compiled candidate construction,including parser exceptions. Managed CatalogJsonDocument carries pre-admitted geometric depth retirement path,cleans partial DOM on parser failure and complete DOM during candidate unwinding without new allocation. Duplicate-key old subtrees retired before builder replacement;same nlohmann DOM builder/no second parse. Initial persistent-refusal fixture terminated before report (3221226505),diagnostic reached refusal prefix9;library destroy(value_t) source allocates flatten stack. Fixed7 file/equivalence cases +2221 persistent prefixes/retries PASS;5 candidate-refusal retirements make0 new requests;128 file cohorts46->46 handles;Unicode path and actual native capacity16487 bytes exact. Full biome/scatter,JSON16 new-request cases,settings/resolver/retained/catalog/cache/pinned regressions PASS. Native2184 parses,active0,paired largest48442bytes/model1115150;document40/SAX136 inline bytes. Full C05/C06/E12/S4.06/S6/S0..S6 OPEN,23/42 unchanged."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.retained-settings-dom-inputs",
       "status": "SCOPED_EXACT_RETAINED_NEW_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-source-input-retained-acceptance-20261122.json",

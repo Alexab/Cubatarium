@@ -3,6 +3,24 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "catalog-file-retained-through-candidate",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Fresh caller-owned ifstream remained open through compiled candidate scope;control valid/malformed statements keep Windows exclusive reopen unavailable until outer stream destruction.",
+      "fix": "Use ParseAndCloseCatalogFileJson at19 existing routes;nonthrowing close guard releases file on parser return/throw before candidate work.128 cohorts stable46 handles and Unicode/equivalence/error/refusal checks PASS.",
+      "acceptance_receipt": "build/desktop-msvc/s4-catalog-files-acceptance-20261122.json",
+      "next_action": "C05: finish source file/path-construction/directory traversal domains and other compiled catalog candidate allocation/reallocation,then prior/current publication composition with accepted per-operation/retained-input bounds. File handle/read phase is now separated from candidate phase at19 routes;path retained capacities observable,not all path temporaries/runtime metadata. C06 all-world/thread/global/publisher/escaped counts and E12 CRT/file/stream/locale/search/runtime/stack/control/GPU plus original S6 process/performance matrix remain OPEN;no arbitrary asset cap."
+    },
+    {
+      "id": "catalog-json-retirement-allocates-under-refusal",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Persistent ordinary-new refusal fixture terminated before report,exit3221226505;diagnostic last phase prefix9. Pinned nlohmann nonempty object/array destructor allocates flatten vector;source inference,not captured stack trace.",
+      "fix": "Prepare active/recovery paths before admitting containers,clean partial root on throw,pre-retire duplicate values;19 file callers retain concrete managed DOM owner through candidate unwinding.2221 prefix/retry and5 candidate retirement cases0 new requests PASS.",
+      "acceptance_receipt": "build/desktop-msvc/s4-catalog-files-acceptance-20261122.json",
+      "next_action": "C05: finish source file/path-construction/directory traversal domains and other compiled catalog candidate allocation/reallocation,then prior/current publication composition with accepted per-operation/retained-input bounds. File handle/read phase is now separated from candidate phase at19 routes;path retained capacities observable,not all path temporaries/runtime metadata. C06 all-world/thread/global/publisher/escaped counts and E12 CRT/file/stream/locale/search/runtime/stack/control/GPU plus original S6 process/performance matrix remain OPEN;no arbitrary asset cap."
+    },
+    {
       "id": "worldgen-sets-overridden-global-pool-copy",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",

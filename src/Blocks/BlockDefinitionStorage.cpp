@@ -127,10 +127,10 @@ void UBlockDefinitionStorage::Load(const std::string &modelsPath)
       {
         continue;
       }
-      json d;
+      CatalogJsonDocument d;
       try
       {
-        d = ParseCatalogSourceJson(file,CatalogJsonKind::Definitions);
+        d = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Definitions);
       }
       catch (const json::exception &e)
       {

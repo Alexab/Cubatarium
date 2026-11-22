@@ -10,6 +10,7 @@ struct SourceInputStorageCensus
 {
   CatalogStorageCensus storage;
   size_t settings_roots{},json_values{},json_root_references{},settings_inline_bytes{};
+  size_t path_roots{},path_inline_bytes{};
   size_t msvc_large_allocation_extra_bytes{};
   bool overflow{};
   // Excludes caller-owned inline roots/reference arrays, collector scratch,
@@ -30,6 +31,7 @@ class SourceInputStorageInspector:public CatalogStorageInspector
 {
   std::unordered_set<const WorldGenSets*> SettingsSeen;
   std::unordered_set<const nlohmann::json*> JsonSeen;
+  std::unordered_set<const std::filesystem::path*> PathsSeen;
   void Add(size_t &total,size_t value) {
     if(value>std::numeric_limits<size_t>::max()-total) {Extra.overflow=true;total=std::numeric_limits<size_t>::max();}
     else total+=value;
@@ -47,6 +49,13 @@ class SourceInputStorageInspector:public CatalogStorageInspector
   }
 public:
   SourceInputStorageCensus Extra;
+  void Path(const std::filesystem::path *path) {
+    if(!path || !PathsSeen.insert(path).second) return;
+#if defined(_MSVC_STL_VERSION)
+    static_assert(sizeof(std::filesystem::path)==sizeof(std::filesystem::path::string_type));
+#endif
+    Add(Extra.path_roots,1);Add(Extra.path_inline_bytes,sizeof(std::filesystem::path));Text(path->native());
+  }
   template<class T> void Text(const T &text) {
     CatalogStorageInspector::Text(text);
     const auto address=reinterpret_cast<uintptr_t>(text.data()),object=reinterpret_cast<uintptr_t>(&text);
@@ -115,11 +124,13 @@ public:
 // not an additional heap allocation. No lazy catalogs or retained strong refs.
 inline SourceInputStorageCensus MeasureSourceInputStorage(
     const WorldGenSets *const *settings,size_t settings_count,
-    const nlohmann::json *const *documents=nullptr,size_t document_count=0)
+    const nlohmann::json *const *documents=nullptr,size_t document_count=0,
+    const std::filesystem::path *const *paths=nullptr,size_t path_count=0)
 {
   detail::SourceInputStorageInspector inspector;
   for(size_t i=0;i<settings_count;++i) inspector.Settings(settings[i]);
   for(size_t i=0;i<document_count;++i) inspector.Json(documents[i]);
+  for(size_t i=0;i<path_count;++i) inspector.Path(paths[i]);
   return inspector.Finish();
 }
 } // namespace cutum
