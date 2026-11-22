@@ -1,0 +1,326 @@
+{
+  "schema": "s4-settings-input-source-acceptance.v1",
+  "status": "SCOPED_SOURCE_REQUEST_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "WorldGenSets DOM/default/upgrade source-request envelopes scoped PASS:17 parse cases,3 defaults (unloaded,loaded4 modes,pinned enum source),6 schema/profile upgrade cases,238 persistent ordinary-new refusal prefixes+exact retries,negative allocation control. Wide257-entry peak1155143/model23546468;257-section rehash peak245735/model13112074;ignored depth4096 uses iterative shape walk. Upgrade observes arbitrary256KiB caller spare string capacity;old+new capacity is not inferred from string length.53 resolver regressions PASS. No production behavior or new process/TLS counters introduced;full C05/Q09/C06/E12/S0..S6 OPEN,23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
+    "src/WorldGen/Core/WorldGenSets.cpp": "303f4450afdb53fbf94533c149e1d34fec5c6ed4ce7d7a5ecdb6e484707315a8",
+    "src/WorldGen/Core/WorldGenSets.h": "06184fe1352ee2ff1cffffa394d9e04de734a8191edbecd73b76f071c3c167c2",
+    "src/WorldGen/Features/ObjectFeatureConfig.cpp": "c6d5d306f90b37a2c2fd0cbc0db258bcc796150ec09c151bc70c0f6a48e430d7",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "2f6e81853d19d1214888cd9d6d7adcc3245240135ec193f4414b28b63ea29812",
+    "src/WorldGen/Sampling/BiomeRegistry.cpp": "b686ebff1f4e41428c9efedd5b9b488557ca5c752d1376c93cc090f017ce2d93",
+    "src/Test/WorldGenSetsInputEnvelopeFixture.h": "3d6a1432ce12cfa2d191964467e92baec934a8ffc97d65afbffb037bc71f1b8a",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "59ab03b97d0acdeda4a31630f4d56591e3c8b8c836514e4019700e64c4e91a44"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b"
+  },
+  "exe_sha256": "97b37b7844d9597710eddf273b6919cd57cdf136f6280f8ffc01427866fa04c1",
+  "provenance": "build/desktop-msvc/s4-worldgen-sets-input-provenance-20261122.json",
+  "verification": {
+    "exe_sha256": "d5b514fbe87e7e22afd4fa8d62031014b9ebfe66ecd2f3a67fc4a3cf431864f5",
+    "settings_input": {
+      "returncode": 0,
+      "report": "build\\desktop-msvc\\s4-worldgen-sets-input-accepted-20261122.json"
+    },
+    "resolver": {
+      "returncode": 0,
+      "report": "build\\desktop-msvc\\s4-worldgen-sets-resolver-regression-20261122.json"
+    }
+  },
+  "unit": {
+    "defaults": [
+      {
+        "attempts": 12,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "unloaded",
+        "pass": true,
+        "peak": 1192,
+        "source_upper": 5356
+      },
+      {
+        "attempts": 104,
+        "final_live": 0,
+        "max_request": 8247,
+        "name": "loaded_all4_modes",
+        "pass": true,
+        "peak": 69496,
+        "source_upper": 546524
+      },
+      {
+        "attempts": 20,
+        "final_live": 0,
+        "max_request": 448,
+        "name": "pinned_enum_keys_and_invalid_filter",
+        "pass": true,
+        "peak": 2024,
+        "source_upper": 11775
+      }
+    ],
+    "failed_cases": 0,
+    "parse": [
+      {
+        "attempts": 132,
+        "final_live": 0,
+        "max_request": 8247,
+        "name": "full_schema1",
+        "pass": true,
+        "peak": 76606,
+        "source_upper": 1570066
+      },
+      {
+        "attempts": 132,
+        "final_live": 0,
+        "max_request": 8247,
+        "name": "full_schema2",
+        "pass": true,
+        "peak": 76606,
+        "source_upper": 1570066
+      },
+      {
+        "attempts": 132,
+        "final_live": 0,
+        "max_request": 8247,
+        "name": "full_schema3",
+        "pass": true,
+        "peak": 76606,
+        "source_upper": 1570066
+      },
+      {
+        "attempts": 1660,
+        "final_live": 0,
+        "max_request": 141607,
+        "name": "wide257_partial_vector_growth",
+        "pass": true,
+        "peak": 1155143,
+        "source_upper": 23546468
+      },
+      {
+        "attempts": 13,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "non_object_null",
+        "pass": true,
+        "peak": 1224,
+        "source_upper": 21881
+      },
+      {
+        "attempts": 13,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "non_object_array",
+        "pass": true,
+        "peak": 1224,
+        "source_upper": 21881
+      },
+      {
+        "attempts": 13,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "missing_schema",
+        "pass": true,
+        "peak": 1240,
+        "source_upper": 21881
+      },
+      {
+        "attempts": 13,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "unsupported_schema",
+        "pass": true,
+        "peak": 1240,
+        "source_upper": 24654
+      },
+      {
+        "attempts": 15,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_schema_kind",
+        "pass": true,
+        "peak": 1368,
+        "source_upper": 24806
+      },
+      {
+        "attempts": 12,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_objects_kind",
+        "pass": true,
+        "peak": 1192,
+        "source_upper": 27371
+      },
+      {
+        "attempts": 12,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_pool_kind",
+        "pass": true,
+        "peak": 1192,
+        "source_upper": 30112
+      },
+      {
+        "attempts": 15,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_mode_kind",
+        "pass": true,
+        "peak": 1368,
+        "source_upper": 1569890
+      },
+      {
+        "attempts": 15,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_object_name_kind",
+        "pass": true,
+        "peak": 1368,
+        "source_upper": 1569890
+      },
+      {
+        "attempts": 15,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_terrain_slot_kind",
+        "pass": true,
+        "peak": 1336,
+        "source_upper": 30088
+      },
+      {
+        "attempts": 15,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "wrong_ore_slot_kind",
+        "pass": true,
+        "peak": 1336,
+        "source_upper": 30056
+      },
+      {
+        "attempts": 1813,
+        "final_live": 0,
+        "max_request": 8231,
+        "name": "map_rehash257_sections",
+        "pass": true,
+        "peak": 245735,
+        "source_upper": 13112074
+      },
+      {
+        "attempts": 12,
+        "final_live": 0,
+        "max_request": 128,
+        "name": "iterative_deep4096_ignored_domain",
+        "pass": true,
+        "peak": 1192,
+        "source_upper": 10402539
+      }
+    ],
+    "persistent_refusal_and_retry_cases": 238,
+    "schema": "worldgen-sets-input-construction-source.v1",
+    "scope": "DOM-to-sets/default/legacy upgrade ordinary-new requests;input DOM/previous output capacities/global source ownership separate;partial exception outputs destroyed;no publication rollback,file/CRT/stack/process-cap acceptance",
+    "status": "PASS",
+    "unmodeled_allocation_negative_control": "PASS",
+    "upgrade": [
+      {
+        "attempts": 0,
+        "final_live": 0,
+        "max_request": 0,
+        "name": "schema1_profile1",
+        "pass": true,
+        "peak": 0,
+        "source_upper": 0
+      },
+      {
+        "attempts": 2,
+        "final_live": 0,
+        "max_request": 5047,
+        "name": "schema1_profile2",
+        "pass": true,
+        "peak": 9198,
+        "source_upper": 839574
+      },
+      {
+        "attempts": 0,
+        "final_live": 0,
+        "max_request": 0,
+        "name": "schema2_profile1",
+        "pass": true,
+        "peak": 0,
+        "source_upper": 0
+      },
+      {
+        "attempts": 0,
+        "final_live": 0,
+        "max_request": 0,
+        "name": "schema2_profile2",
+        "pass": true,
+        "peak": 0,
+        "source_upper": 0
+      },
+      {
+        "attempts": 0,
+        "final_live": 0,
+        "max_request": 0,
+        "name": "schema3_profile1",
+        "pass": true,
+        "peak": 0,
+        "source_upper": 0
+      },
+      {
+        "attempts": 0,
+        "final_live": 0,
+        "max_request": 0,
+        "name": "schema3_profile2",
+        "pass": true,
+        "peak": 0,
+        "source_upper": 0
+      }
+    ]
+  },
+  "resolver_regression": {
+    "cases": 53,
+    "status": "PASS"
+  },
+  "model": {
+    "parse": "V=input DOM values,T=string+key count,B=their character bytes. Six-map reset allowance12*(maxNode+8*2*sizeof(pointer)+39);V*(maxNode+16*2*sizeof(pointer)+2*39);V*[4*(sizeof(entry)+2*sizeof(string)+sizeof(pointer))+39];8*B+128*T+16384 error/cold-registry text allowance. Checked additions/products. Source-input shape inspector pointer growth is a separate included phase.",
+    "defaults": "Six-map reset+4 output nodes/bucket growth;4x entry and string-list old/new vector growth;8*source text length+128 per copy;enum-derived spelling<=64 bytes;global source retained separately.",
+    "upgrade": "Matched original5 profile strings:3*original capacity+3*authored length+192 each. Mode/schema/profile matching follows existing source. Unlike copied resolver builders,this in-place operation cannot assume canonical caller capacity.",
+    "platform": "MSVC14.51.36231 Release ordinary-new requests;STL/dependency sources pinned above. No direct CRT/runtime/native stack/shared-control/GPU/RSS cap.",
+    "state": "Model/fixture helpers only;no new production ownership ledger/TLS/history. Actual input/model/report/oracle allocations outside observed app operation. Cold feature-type registry initialized before cleanup checks and remains a separate finite process owner.",
+    "semantics": "No production parse/default/upgrade algorithm changed. Source cases include existing partial-output/exception behavior. Wider valid-domain property is supported by source derivation;fixtures do not exhaust every authored JSON value."
+  },
+  "phase_composition": {
+    "scope": "Conservative owner-aware construction composition rule,not measured aggregate/native process cap;remaining supplied-root/input/candidate terms still OPEN.",
+    "retained_domain": "L_phase is actual live input DOM/global catalogs/settings/caller error capacity/previous resolved-publication payload at that phase,with shared pointees counted once. Arbitrary spare capacity of pre-parsed input is not bounded by source length/DOM cardinality alone.",
+    "parse": "P_parse <= L_parse + B_parse(DOM). Parse resets supplied out before filling;on failure it may contain a partial result. No strong publication rollback inferred.",
+    "defaults": "P_defaults <= L_defaults + B_defaults(actual immutable selected source). Pin/read source remains live separately.",
+    "upgrade": "P_upgrade <= L_upgrade + B_upgrade(actual sets capacities,global,profile). Partial in-place mutation on allocation refusal is existing behavior;test verifies cleanup/retry,not transactional publication.",
+    "resolve": "P_resolve <= L_resolve + B_resolve(actual sets,global,profile). Old ResolvedObjectFeatures remains live until rvalue construction completes and assignment retires it.",
+    "chain": "Sequential synchronous phases compose as max(P_parse,P_defaults,P_upgrade,P_resolve,other candidate phases),not sum of unrelated cumulative/native peaks. No finite global root count or source/file/application candidate total established by this rule."
+  },
+  "native": {
+    "runner_exit_code": 2,
+    "runtime_exit_code": 0,
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+    "limitation": "Native regression does not measure aggregate settings heap or close S4.06 fatal disk-full/relocation or full S6 matrix."
+  },
+  "remaining": "C05: compose retained external/pre-parsed input payloads and actual source file/path/stream resources,other compiled catalog candidates/reallocation,prior/current publications with accepted JSON/decoder/WorldGenSets per-operation envelopes. WorldGenSets Parse/default/upgrade and Resolve per-call construction now scoped accepted. C06 finite all-thread/world/global/publisher/escaped roots,E12 and original S6 process/CRT/stack/GPU/performance obligations remain OPEN;no arbitrary new gameplay asset cap.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;S4.06/S6/full S0..S6 retained,no audit restart."
+}

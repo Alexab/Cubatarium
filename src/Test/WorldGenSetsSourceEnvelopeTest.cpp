@@ -103,8 +103,10 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
     actual.structureCellSize==expected.structureCellSize && actual.structureChancePerCell==expected.structureChancePerCell &&
     actual.structureMinSpacing==expected.structureMinSpacing && !actual.Diagnostics.Snapshot();
 }
+#include "Test/WorldGenSetsInputEnvelopeFixture.h"
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--settings-input") return RunWorldGenSetsInputEnvelopeFixture(argc>2?argv[2]:nullptr);
   ObjectFeatureConfig global;
   ObjectFeatureRule rule;rule.ObjectName="selected";rule.Biomes={BiomeId::Plains};rule.BiomeKeys={"plains"};rule.SubBiomes={SubBiomeIdFromString("none")};
   rule.Spacing=17;rule.Weight=7;rule.ChancePerColumn=13;rule.SeedOffset=29;rule.PlacementYOffset=-4;
