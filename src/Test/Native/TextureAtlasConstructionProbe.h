@@ -3,6 +3,7 @@
 #include "Render/Textures/TextureCube.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Core/Memory/StbiAllocation.h"
+#include "Core/Memory/StbiSourceEnvelope.h"
 #include "Test/StbiAllocationFixture.h"
 #include <array>
 #include <filesystem>
@@ -117,6 +118,13 @@ inline nlohmann::json RunTextureAtlasConstructionProbe(const std::filesystem::pa
   const auto decoder=std::make_shared<UStbiAllocationLedger>();
   {UStbiAllocationScope active(decoder);storage.PatchDescriptors({decoded});}
   const auto decoderCounts=decoder->GetSnapshot();
+  const auto decoderLayout=GetStbiDecoderLayout();
+  StbiSourceDomain pngDomain;pngDomain.width=pngDomain.height=64;
+  pngDomain.png_idat_capacity_upper=16384;pngDomain.png_expanded_capacity_upper=64*64*3+64;
+  const auto decoderEnvelope=BoundStbiOrdinarySource(pngDomain);
+  require(decoderEnvelope.supported && !decoderEnvelope.overflow &&
+      decoderCounts.peak_admitted_request_bytes<=decoderEnvelope.admitted_peak_upper,
+      "native PNG decode requests exceed declared source envelope");
   require(decoderCounts.reallocations>=2 && decoderCounts.live_request_bytes==0 && decoderCounts.reserved_request_bytes==0,
       "native decoded atlas batch left STBI allocations/reservations behind");
   glBindTexture(GL_TEXTURE_2D,storage.GetTextures().at(decoded.Id).GetTexture());
@@ -140,6 +148,10 @@ inline nlohmann::json RunTextureAtlasConstructionProbe(const std::filesystem::pa
           {"successful_allocations",decoderCounts.successful_allocations},{"reallocations",decoderCounts.reallocations},
           {"peak_admitted_request_bytes",decoderCounts.peak_admitted_request_bytes},
           {"peak_live_request_bytes",decoderCounts.peak_live_request_bytes},
+          {"source_peak_upper",decoderEnvelope.admitted_peak_upper},{"compiled_format_mask",decoderLayout.format_mask},
+          {"jpeg_heap_state",decoderLayout.jpeg_heap_state},{"gif_info_heap_state",decoderLayout.gif_info_heap_state},
+          {"context_inline",decoderLayout.context_inline},{"png_inline",decoderLayout.png_inline},
+          {"zlib_inline",decoderLayout.zlib_inline},{"gif_inline",decoderLayout.gif_inline},
           {"final_live_request_bytes",decoderCounts.live_request_bytes},{"readback_vector_capacity",decodedPixels.capacity()},
           {"scope","STBI requested payload+prefix only; atlas readback buffer is separate,not a process/GPU cap"}}},
       {"scope","Isolated real desktop GL texture transfers, not framebuffer/backend/performance/GPU-memory acceptance"}};

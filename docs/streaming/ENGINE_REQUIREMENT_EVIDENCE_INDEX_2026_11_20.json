@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.decoder-source-formats",
+      "status": "SCOPED_SOURCE_REQUEST_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-decoder-formats-acceptance-20261122.json",
+      "certificate": "S4_02_C05_DECODER_FORMATS_CERTIFICATE_2026_11_22.json",
+      "scope": "Ordinary RGB/RGBA decoder source request envelopes for all9 compiled families;18 fixtures/72 file-memory cases,111 persistent allocation refusal prefixes,36 byte refusals/36 retries/36 short headers PASS. Checked conversion element counts before allocation; size_t byte multiplication preserves supported2GiB intermediate; allocation refusal frees input and returns before flip. PIC incomplete core and PNG signed initial-size fixes PASS. Native world startup and8 real GL texture readbacks PASS. C05 file/path/stream/preparsed settings/compiled candidate/prior-current overlap,C06/E12/S4.06/S6/full S0..S6 OPEN;23/42 unchanged."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.catalog-json-source-envelope",
       "status": "SCOPED_SOURCE_MODEL_NEW_REQUESTS_AND_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-json-source-acceptance-20261121.json",

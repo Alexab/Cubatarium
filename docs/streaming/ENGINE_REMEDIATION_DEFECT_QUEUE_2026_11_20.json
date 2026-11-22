@@ -3,6 +3,33 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "stbi-png-initial-inflate-signed-range",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Oversized declared PNG initial guess crossed signed int domain;baseline admitted request18446744071562100800.",
+      "fix": "Reject raw_len above INT_MAX before passing initial guess to inflater.",
+      "acceptance_receipt": "build/desktop-msvc/s4-decoder-formats-acceptance-20261122.json",
+      "next_action": "Scoped focused and9-family matrix PASS;remaining C05 composition,C06/E12 and full S0..S6 retained."
+    },
+    {
+      "id": "stbi-pic-incomplete-core-conversion",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Incomplete PIC core returned null then entered component conversion;isolated baseline did not terminate normally.",
+      "fix": "Return immediately after freeing failed PIC core result.",
+      "acceptance_receipt": "build/desktop-msvc/s4-decoder-formats-acceptance-20261122.json",
+      "next_action": "Scoped focused and9-family matrix PASS;remaining C05 composition,C06/E12 and full S0..S6 retained."
+    },
+    {
+      "id": "stbi-conversion-sizing-and-refusal-ownership",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Focused baseline retained56 requested bytes after16-to8 allocation refusal;flip continuation did not terminate normally. Three oversized conversion routes attempted allocation before range rejection.",
+      "fix": "Validate element/byte domains before arithmetic/allocation;free owned input on refusal;return before vertical flip on null;size_t format16 byte product retains supported2GiB intermediate.",
+      "acceptance_receipt": "build/desktop-msvc/s4-decoder-formats-acceptance-20261122.json",
+      "next_action": "Scoped focused and9-family matrix PASS;remaining C05 composition,C06/E12 and full S0..S6 retained."
+    },
+    {
       "id": "texture-atlas-duplicate-construction-and-frame-layout",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_CPU_REAL_GL_PASS_FULL_RENDER_MATRIX_OPEN",

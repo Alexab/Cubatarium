@@ -1,0 +1,179 @@
+{
+  "schema": "s4-decoder-formats-acceptance.v1",
+  "status": "SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "Ordinary RGB/RGBA decoder source request envelopes for all9 compiled families;18 fixtures/72 file-memory cases,111 persistent allocation refusal prefixes,36 byte refusals/36 retries/36 short headers PASS. Checked conversion element counts before allocation; size_t byte multiplication preserves supported2GiB intermediate; allocation refusal frees input and returns before flip. PIC incomplete core and PNG signed initial-size fixes PASS. Native world startup and8 real GL texture readbacks PASS. C05 file/path/stream/preparsed settings/compiled candidate/prior-current overlap,C06/E12/S4.06/S6/full S0..S6 OPEN;23/42 unchanged.",
+  "scope": "Requested payload+32-byte STBI prefix and conservative admitted realloc reservations for ordinary8bit output RGB3/RGBA4. Not CRT heap/RSS/native stack/file-stream/path/source input/application candidate/GL/process budget. GIF all-frames is not an engine consumer.18 fixtures cover9 families,not every subvariant/backend.26 truncated payload cases preserve permissive legacy return behavior.",
+  "source_sha256": {
+    "src/ThirdParty/stb_image.h": "beccdcfcfa57f30b64330eddfc02bbd922263aa4890545c467ac9a1edec61427",
+    "src/ThirdParty/stb_image.cpp": "d97bcf97452f20266d821a6de9c6f3706024c0dbd57d8271679ce632737930c4",
+    "src/Core/Memory/StbiSourceEnvelope.h": "cbe449727fec86489921e30fe871bf89dec9fe8895776399e54796f05603fa76",
+    "src/Test/StbiFormatFixtures.h": "d955a77da67ed2ac4a7d8837bfb1bc7b3f77f9a26db2d4df40c53c4d281fc2c1",
+    "src/Test/StbiSourceEnvelopeTest.cpp": "9491b6d83556b85fb1b728dc73492071fa94f91cf31bd31340c2c0643b861d48",
+    "src/Test/Native/TextureAtlasConstructionProbe.h": "cf80db1bd34969348de3c6efd7f910d6dbbdfbae5c69f4397657f183fb84c3b1"
+  },
+  "executable_sha256": "65521de9c1ada3411a053771c3d34f596e1ef7400a297f21f0896e8324c89af6",
+  "provenance": "build/desktop-msvc/s4-decoder-formats-provenance-20261122.json",
+  "verification": {
+    "exe_sha256": "f85a9da4f2f9d415c1531417fd62bde0a903ecb897bd9e95d595197169515cec",
+    "results": {
+      "conversion-range": {
+        "returncode": 0,
+        "status": "PASS",
+        "report": "build/desktop-msvc/s4-decoder-formats-conversion-range-accepted-20261122.json"
+      },
+      "conversion-failure": {
+        "returncode": 0,
+        "status": "PASS",
+        "report": "build/desktop-msvc/s4-decoder-formats-conversion-failure-accepted-20261122.json"
+      },
+      "pic-malformed": {
+        "returncode": 0,
+        "status": "PASS",
+        "report": "build/desktop-msvc/s4-decoder-formats-pic-malformed-accepted-20261122.json"
+      },
+      "png-size-check": {
+        "returncode": 0,
+        "status": "PASS",
+        "report": "build/desktop-msvc/s4-decoder-formats-png-size-check-accepted-20261122.json"
+      },
+      "all": {
+        "returncode": 0,
+        "status": "PASS",
+        "report": "build/desktop-msvc/s4-decoder-formats-all-accepted-20261122.json"
+      }
+    }
+  },
+  "regressions": {
+    "worldgen_biome_features_test": {
+      "returncode": 0,
+      "log": "build/desktop-msvc/s4-decoder-formats-worldgen_biome_features_test-20261122.log",
+      "exe_sha256": "096e3ae106333fab6d980c5aa88d35494892184fabc976adddaa6cb0db12d440"
+    },
+    "worldgen_scatter_block_resolve_test": {
+      "returncode": 0,
+      "log": "build/desktop-msvc/s4-decoder-formats-worldgen_scatter_block_resolve_test-20261122.log",
+      "exe_sha256": "e80a3b21cda73db777c04ead6cc26b56e6c928a101da08757001eadf5c22108a"
+    },
+    "catalog-storage": {
+      "returncode": 0,
+      "log": "build/desktop-msvc/s4-decoder-formats-catalog-storage-20261122.log",
+      "exe_sha256": "b4d613c8334d4c0153e1e909b80c285c1c9a1f343fd3fea2283c750001ba9af4"
+    },
+    "pipeline-cache-owner": {
+      "returncode": 0,
+      "log": "build/desktop-msvc/s4-decoder-formats-pipeline-cache-owner-20261122.log",
+      "exe_sha256": "b4d613c8334d4c0153e1e909b80c285c1c9a1f343fd3fea2283c750001ba9af4"
+    },
+    "pinned-factory-catalog": {
+      "returncode": 0,
+      "log": "build/desktop-msvc/s4-decoder-formats-pinned-factory-catalog-20261122.log",
+      "exe_sha256": "b4d613c8334d4c0153e1e909b80c285c1c9a1f343fd3fea2283c750001ba9af4"
+    }
+  },
+  "matrix_counts": {
+    "fixture_count": 18,
+    "format_mask": 511,
+    "persistent_allocation_failure_cases": 111,
+    "byte_refusal_cases": 36,
+    "normal_retry_cases": 36,
+    "truncated_header_cases": 36,
+    "truncated_returned_data_cases": 26
+  },
+  "normal_cases": 72,
+  "native": {
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup_status": "PASS",
+    "provenance_status": "PASS",
+    "direct_probe_status": "PASS",
+    "save_ui_status": "PASS",
+    "atlas": {
+      "dimension_replacement": true,
+      "explicit_list_frames": 2,
+      "invalid_legacy_descriptor_skipped": true,
+      "invalid_replacement_retained": true,
+      "legacy_loader_bom_crlf": true,
+      "negative_pixel_control": true,
+      "real_GL_readbacks": 8,
+      "same_size_frame_metadata_updated": true,
+      "same_size_reused": true,
+      "schema": "texture-atlas-construction-native.v1",
+      "scope": "Isolated real desktop GL texture transfers, not framebuffer/backend/performance/GPU-memory acceptance",
+      "status": "PASS",
+      "stbi_decode_allocation": {
+        "compiled_format_mask": 511,
+        "context_inline": 224,
+        "final_live_request_bytes": 0,
+        "gif_info_heap_state": 34928,
+        "gif_inline": 34928,
+        "header_bytes": 32,
+        "jpeg_heap_state": 18568,
+        "peak_admitted_request_bytes": 29216,
+        "peak_live_request_bytes": 29216,
+        "png_inline": 40,
+        "readback_vector_capacity": 98304,
+        "reallocations": 2,
+        "scope": "STBI requested payload+prefix only; atlas readback buffer is separate,not a process/GPU cap",
+        "source_peak_upper": 219840,
+        "successful_allocations": 6,
+        "zlib_inline": 4104
+      }
+    },
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "aggregate_scope": "startup publication/input readiness only; no frontier, pixel or physical-light acceptance",
+    "limitation": "Aggregate smoke remains UNTESTED; direct reports are separately inspected. Direct save UI probe does not close fatal disk-full/relocation policy S4.06."
+  },
+  "envelope": "build/desktop-msvc/s4-decoder-formats-envelope-20261122.json",
+  "baseline_artifacts": [
+    "build/desktop-msvc/s4-decoder-formats-baseline-20261121.json",
+    "build/desktop-msvc/s4-decoder-formats-conversion-baseline-20261121.json",
+    "build/desktop-msvc/s4-decoder-formats-range-baseline-20261121.json"
+  ],
+  "full_plan": "S0..S6 retained,23/42 COMPLETE; S4.02 Q09 CHECK/E11 OPEN/E12 OPEN_DEPENDENCY. No audit restart.",
+  "source_envelope": {
+    "schema": "stbi-source-envelope-certificate.v1",
+    "status": "SCOPED_PASS",
+    "scope": "Requested payload+32-byte STBI prefix and conservative admitted realloc reservations for ordinary8bit output RGB3/RGBA4. Not CRT heap/RSS/native stack/file-stream/path/source input/application candidate/GL/process budget. GIF all-frames is not an engine consumer.18 fixtures cover9 families,not every subvariant/backend.26 truncated payload cases preserve permissive legacy return behavior.",
+    "source_sha256": {
+      "src/ThirdParty/stb_image.h": "beccdcfcfa57f30b64330eddfc02bbd922263aa4890545c467ac9a1edec61427",
+      "src/ThirdParty/stb_image.cpp": "d97bcf97452f20266d821a6de9c6f3706024c0dbd57d8271679ce632737930c4",
+      "src/Core/Memory/StbiSourceEnvelope.h": "cbe449727fec86489921e30fe871bf89dec9fe8895776399e54796f05603fa76",
+      "src/Test/StbiFormatFixtures.h": "d955a77da67ed2ac4a7d8837bfb1bc7b3f77f9a26db2d4df40c53c4d281fc2c1",
+      "src/Test/StbiSourceEnvelopeTest.cpp": "9491b6d83556b85fb1b728dc73492071fa94f91cf31bd31340c2c0643b861d48",
+      "src/Test/Native/TextureAtlasConstructionProbe.h": "cf80db1bd34969348de3c6efd7f910d6dbbdfbae5c69f4397657f183fb84c3b1"
+    },
+    "layout": {
+      "context_inline": 224,
+      "format_mask": 511,
+      "gif_info_heap_state": 34928,
+      "gif_inline": 34928,
+      "jpeg_heap_state": 18568,
+      "png_inline": 40,
+      "prefix_bytes": 32,
+      "zlib_inline": 4104
+    },
+    "domains": "Positive width/height; requested components3/4. PNG explicit IDAT and expanded capacity upper domains default UINT32_MAX each,not inferred from file length. TGA palette upper65535. All size_t arithmetic checked.",
+    "symbols": {
+      "P": "width*height",
+      "Q": "(width+31)*(height+31)",
+      "R": "P*requested_components + JPEG1 + header32",
+      "peak": "max(JPEG probe18568+32,family bound)"
+    },
+    "family_bounds": {
+      "JPEG": "18568+12*Q+4*width+P*components+133+14*32",
+      "PNG": "3*(idat_capacity_upper+expanded_capacity_upper)+32*P+32*width+16*32",
+      "BMP": "8*P+2*32",
+      "TGA": "8*P+4*palette_entries_upper+3*32",
+      "PSD": "16*P+3*32",
+      "PIC": "8*P+2*32",
+      "GIF": "12*P+4*32",
+      "HDR": "20*P+4*width+3*32",
+      "PNM": "24*P+3*32"
+    },
+    "remaining": "Compose with source storage,parser,candidate and version overlap under original C05. C06 root counts,E12 bookkeeping and original S6 process budgets remain open."
+  }
+}
