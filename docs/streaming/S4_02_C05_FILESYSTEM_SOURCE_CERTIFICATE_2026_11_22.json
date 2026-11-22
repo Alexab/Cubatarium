@@ -1,0 +1,236 @@
+{
+  "schema": "s4-filesystem-source-acceptance.v1",
+  "status": "SCOPED_NORMAL_SOURCE_NEW_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Normal filesystem traversal/name source-domain bound scoped PASS on pinned MSVC Release SDK. W=max full native path length high-water;D=max attempted directory descents including empty dirs;P=prefix bytes. One current entry path,recursive vector stores handle cells.6 cases:empty,81 files,deep18/empty19/Unicode,large8193-byte qualified-name prefix,input spare native capacity not copied.384 persistent ordinary-new refusal prefixes+exact retries:all source requests below bound,final0,OS handle count restored;entry-sampled handle high-water19 <=source upper20. Iterator copies allocate0 and last copy retains implementation. Initial shared block+path request bytes match exactly. Overflow and unrelated-allocation negative controls PASS. File2221/refusal and retained-input regressions PASS. Native compiled layout88/120 shared blocks,8 handle cell,16 iterator,64 entry,640 creator,592 find-data bytes matches unit. No production traversal algorithm changed;C05/C06/E12/full S0..S6 OPEN,23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/CatalogFilesystemSourceEnvelope.h": "85c5f29364efd66723ac4af48d50927939489e36aff3d5f9c841b0125861a5ce",
+    "src/Test/CatalogFilesystemSourceFixture.h": "4bd82b6b645a92b1d50e3b3bf32fb15c508469867dcd5c3701b451271c3e8304",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "4de8907efc34f322c558e2d33be9bd51028fec16dbf9d6e9ddba183d5e0364f9",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "ec1b895cba1744c1743efd638af6d121ec04c9f86993ffaf5017d1a0c62a9434",
+    "src/ResourcePacks/BlockNameUtil.cpp": "13430d247547d08ff18e39ec2b200b7f6af4595d4e4dba11a1d5c70c08a4dd0f",
+    "src/World/Objects/ObjectLibrary.cpp": "d657b29b98b224922043773b7d30817b4c9aed0e1b810557e3d7c9b652971f55"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98"
+  },
+  "exe_sha256": "1c2218bef207bbe246e7a72a89d7bcb632da4badd2747dd5340e3a0d3a5b07a9",
+  "provenance": "build/desktop-msvc/s4-filesystem-source-provenance-20261122.json",
+  "verification": {
+    "exe_sha256": "a4193106d07ac427431ba62d40cc9084e9c44490aa9624c3764fa91868f4c2ee",
+    "checks": {
+      "filesystem-source": {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-filesystem-source-filesystem-source-accepted-20261122.json",
+        "log": "build\\desktop-msvc\\s4-filesystem-source-filesystem-source-accepted-20261122.log"
+      },
+      "catalog-files": {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-filesystem-source-catalog-files-accepted-20261122.json",
+        "log": "build\\desktop-msvc\\s4-filesystem-source-catalog-files-accepted-20261122.log"
+      },
+      "retained-inputs": {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-filesystem-source-retained-inputs-accepted-20261122.json",
+        "log": "build\\desktop-msvc\\s4-filesystem-source-retained-inputs-accepted-20261122.log"
+      }
+    }
+  },
+  "unit": {
+    "cases": [
+      {
+        "attempts": 2,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 0,
+        "last_copy_retains_implementation": true,
+        "name": "empty_flat",
+        "pass": true,
+        "peak": 224,
+        "search_handle_upper": 1,
+        "shared_block_and_path_exact": true,
+        "source_upper": 1332,
+        "visited": 0
+      },
+      {
+        "attempts": 86,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 1,
+        "last_copy_retains_implementation": true,
+        "name": "flat81",
+        "pass": true,
+        "peak": 990,
+        "search_handle_upper": 1,
+        "shared_block_and_path_exact": true,
+        "source_upper": 3812,
+        "visited": 81
+      },
+      {
+        "attempts": 251,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 1,
+        "last_copy_retains_implementation": true,
+        "name": "flat_names_large_prefix",
+        "pass": true,
+        "peak": 21261,
+        "search_handle_upper": 1,
+        "shared_block_and_path_exact": true,
+        "source_upper": 80004,
+        "visited": 81
+      },
+      {
+        "attempts": 54,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 19,
+        "last_copy_retains_implementation": true,
+        "name": "deep18_empty19_unicode",
+        "pass": true,
+        "peak": 922,
+        "search_handle_upper": 20,
+        "shared_block_and_path_exact": true,
+        "source_upper": 3266,
+        "visited": 39
+      },
+      {
+        "attempts": 133,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 19,
+        "last_copy_retains_implementation": true,
+        "name": "deep_names_large_prefix",
+        "pass": true,
+        "peak": 9017,
+        "search_handle_upper": 20,
+        "shared_block_and_path_exact": true,
+        "source_upper": 75570,
+        "visited": 39
+      },
+      {
+        "attempts": 86,
+        "copy_allocates": false,
+        "final_live": 0,
+        "handle_count_restored": true,
+        "handle_delta_max": 1,
+        "last_copy_retains_implementation": true,
+        "name": "input_spare_capacity_not_copied",
+        "pass": true,
+        "peak": 990,
+        "search_handle_upper": 1,
+        "shared_block_and_path_exact": true,
+        "source_upper": 3812,
+        "visited": 81
+      }
+    ],
+    "failed_cases": 0,
+    "layout": {
+      "creator_inline": 640,
+      "entry_inline": 64,
+      "find_data_inline": 592,
+      "handle_cell": 8,
+      "iterator_inline": 16,
+      "recursive_iterator_inline": 16,
+      "recursive_shared_block": 120,
+      "simple_shared_block": 88,
+      "supported": true
+    },
+    "overflow_rejected": true,
+    "persistent_refusal_and_retry_cases": 384,
+    "schema": "catalog-filesystem-source-requests.v1",
+    "scope": "Pinned MSVC valid directory scans/name operations and persistent ordinary-new refusal cleanup;input/candidate payload,localized filesystem_error text,CRT/OS internals and total process memory separate. D includes attempted empty directories. No production traversal algorithm changed.",
+    "status": "PASS",
+    "unmodeled_allocation_negative_control": "PASS"
+  },
+  "model": {
+    "domains": "W includes root/full constructed entry paths and all high-water history,not current short name. D includes empty directories attempted even when no yielded entry at that depth. P covers caller prefix byte length. Input path/prefix retained capacities are separate L owners;fresh canonical copies discard arbitrary input reserve history.",
+    "terms": {
+      "T(W)": "2*(W+16)*sizeof(wchar_t)+39 per native backing allowance",
+      "simple": "sizeof(actual _Ref_count_obj2<_Dir_enum_impl>)+4*T(W)",
+      "recursive": "sizeof(actual _Ref_count_obj2<_Recursive_dir_enum_impl>)+4*T(W)+4*(D+1)*sizeof(_Find_file_handle)+78",
+      "handles": "1 simple;D+1 recursive independent search handles. Copied iterators share implementation,inline16-byte slots separate.",
+      "names": "4*T(W)+4*[2*(4*W+P+2+16)+39] for extension/stem/string/qualified-name temporaries and simultaneous old/new buffers.",
+      "combined": "traversal+names,checked/saturating size_t add/multiply. Not source input/candidate/process RSS."
+    },
+    "source_derivation": "_Creator const path copy,_Open_dir original/wildcard path,_Refresh replacement filename/current entry old+new buffers;<=4 live native backings. _Recursive_dir_enum_impl::_Stack vector owns find handles only;MSVC geometric old+new growth<=4*(D+1) cells plus alignment. Source name operations use fresh derived paths/strings;arbitrary mutation of caller-reserved path buffers not covered.",
+    "encoding": "Accepted source-name conversion profile assumes<=4 narrow bytes/native UTF16 unit. Observed host ANSI1251/OEM866 max-char1 and UTF8 max-char4 metadata retained;Unicode fixture passes. Not exhaustive encoding/error formatting oracle.",
+    "exclusions": "Localized filesystem_error text/formatting,Windows internal/kernel allocations,CRT/locale/search metadata,other caller paths and compiled catalog candidates,collector scratch/native stack/global roots. Valid scans and bad_alloc cleanup accepted;no permission-denied/broken junction/error-format matrix claim.",
+    "inline": "640 Creator already contains592 find-data bytes;do not add mutually exclusive/transitively embedded type sizes as measured native stack peaks. No complete call-stack bound inferred.",
+    "scope": "Exact initial coallocation+path component equality,conservative traversal/name request peak and source search-handle upper. Entry sampling does not measure every transient Windows handle/heap allocation;source proves attempted-empty-directory allowance."
+  },
+  "host_codepages": {
+    "scope": "Observed system ANSI/OEM and UTF8 byte-width metadata;not an exhaustive encoding/error conversion oracle or a native scan census",
+    "code_pages": [
+      {
+        "code_page": 1251,
+        "max_char_size": 1
+      },
+      {
+        "code_page": 866,
+        "max_char_size": 1
+      },
+      {
+        "code_page": 65001,
+        "max_char_size": 4
+      }
+    ]
+  },
+  "native": {
+    "runner_exit_code": 2,
+    "runtime_exit_code": 0,
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "filesystem_layout": {
+      "creator_inline": 640,
+      "entry_inline": 64,
+      "find_data_inline": 592,
+      "handle_cell": 8,
+      "iterator_inline": 16,
+      "recursive_iterator_inline": 16,
+      "recursive_shared_block": 120,
+      "schema": "filesystem-source-layout.v1",
+      "scope": "Compiled MSVC Release layout only;native does not sample all scan path/depth high-water domains or OS/CRT heap.",
+      "simple_shared_block": 88,
+      "supported": true
+    },
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "limitation": "Native proves matching compiled layout/current runtime regression,not complete W/D/P scan-domain census or process heap. Startup-only aggregate UNTESTED,S4.06 fatal disk-full/relocation and S6 full matrix remain open."
+  },
+  "remaining": "C05: finish remaining filesystem diagnostic/path-conversion error domains and compiled application catalog candidate allocation/reallocation,then prior/current publication composition with accepted JSON/decoder/settings/retained-input/normal filesystem bounds. Normal enumeration+name scratch and const path copy high-water now scoped accepted;not a cap for localized filesystem_error text/CRT/OS internals. C06 finite all-world/thread/global/publisher/escaped owner counts and E12 source/platform/control/stack/GPU plus original S6 process-memory/performance matrix remain OPEN;no arbitrary asset cap.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;S4.06/S6/full S0..S6 retained,no audit restart.",
+  "native_reuse_identity": {
+    "native_provenance": "build\\desktop-msvc\\s4-filesystem-source-native-provenance-20261122.json",
+    "current_source_provenance": "build\\desktop-msvc\\s4-filesystem-source-provenance-20261122.json",
+    "changed_sources_after_native": [
+      "src/Test/CatalogFilesystemSourceFixture.h"
+    ],
+    "native_and_current_exe_sha256": "e614319bc4c294a3c1236f42899d3ec547e8493b812f25aceface53e630ee4ef",
+    "reason": "Only fixture cleanup target verification changed after native run;exact application executable unchanged. Current source/EXE build record reissued and retained;reuse existing native runtime/layout scope without another unchanged launch."
+  }
+}

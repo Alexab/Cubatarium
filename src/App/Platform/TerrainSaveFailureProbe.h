@@ -37,6 +37,7 @@
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
 #include "WorldGen/Core/SourceInputStorageCensus.h"
+#include "WorldGen/Core/CatalogFilesystemSourceEnvelope.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -132,6 +133,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   {
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
+    const auto filesystem_layout=GetCatalogFilesystemLayout();
+    report["filesystem_source_layout"]={{"schema","filesystem-source-layout.v1"},{"supported",filesystem_layout.supported},
+        {"simple_shared_block",filesystem_layout.simple_shared_block},{"recursive_shared_block",filesystem_layout.recursive_shared_block},
+        {"handle_cell",filesystem_layout.handle_cell},{"iterator_inline",filesystem_layout.iterator_inline},
+        {"recursive_iterator_inline",filesystem_layout.recursive_iterator_inline},{"entry_inline",filesystem_layout.entry_inline},
+        {"creator_inline",filesystem_layout.creator_inline},{"find_data_inline",filesystem_layout.find_data_inline},
+        {"scope","Compiled MSVC Release layout only;native does not sample all scan path/depth high-water domains or OS/CRT heap."}};
     report["catalog_json_sources"]={{"schema","catalog-json-source-model.v1"},
         {"active_parsers",json_sources.active},{"peak_active_parsers",json_sources.peak_active},
         {"completed",json_sources.completed},{"failed",json_sources.failed},{"largest_input_bytes",json_sources.largest_input},

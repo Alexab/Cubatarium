@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.normal-filesystem-source",
+      "status": "SCOPED_NORMAL_SOURCE_NEW_REFUSAL_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-filesystem-source-acceptance-20261122.json",
+      "certificate": "S4_02_C05_FILESYSTEM_SOURCE_CERTIFICATE_2026_11_22.json",
+      "scope": "Normal filesystem traversal/name source-domain bound scoped PASS on pinned MSVC Release SDK. W=max full native path length high-water;D=max attempted directory descents including empty dirs;P=prefix bytes. One current entry path,recursive vector stores handle cells.6 cases:empty,81 files,deep18/empty19/Unicode,large8193-byte qualified-name prefix,input spare native capacity not copied.384 persistent ordinary-new refusal prefixes+exact retries:all source requests below bound,final0,OS handle count restored;entry-sampled handle high-water19 <=source upper20. Iterator copies allocate0 and last copy retains implementation. Initial shared block+path request bytes match exactly. Overflow and unrelated-allocation negative controls PASS. File2221/refusal and retained-input regressions PASS. Native compiled layout88/120 shared blocks,8 handle cell,16 iterator,64 entry,640 creator,592 find-data bytes matches unit. No production traversal algorithm changed;C05/C06/E12/full S0..S6 OPEN,23/42 unchanged."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.catalog-file-root-retirement",
       "status": "SCOPED_FILE_HANDLE_DOM_REFUSAL_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-files-acceptance-20261122.json",
