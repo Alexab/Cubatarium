@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -16,6 +17,8 @@ struct WorldGenSlotSpec
 };
 
 using WorldGenRefsCatalog = std::unordered_map<std::string, WorldGenSlotSpec>;
+
+std::shared_ptr<const WorldGenRefsCatalog> CompileWorldGenRefsCatalog(const nlohmann::json &root);
 
 class UWorldGenRefs
 {

@@ -1,0 +1,606 @@
+{
+  "schema": "s4-catalog-candidate-source-acceptance.v1",
+  "status": "SCOPED_FOUR_CANDIDATE_SOURCE_PUBLICATION_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Four production DOM-to-candidate stages source/refusal scoped PASS:shared CompileObjectFeatureCatalog(+diagnostic prepare),CompileWorldGenRefsCatalog,CompileResourcePackManifest and existing ParseBlockFromJson. Feature/refs object allocation now after input parse,not overlapping parser before candidate use.19 semantic/long/wide/wrong-kind/fallback cases,1708 persistent ordinary-new refusal prefixes+exact retries including129 rule diagnostics and257 slot rehash;all final0,pure builders leave active snapshots unchanged. Parsed resource block definition/type/texture/node payload adopted by pointer identity instead of deep copy. End-to-end feature loader baseline prefix39 threw after publishing new snapshot because post-commit path logging allocated;logging moved before no-throw atomic publication. All40 final loader failure boundaries keep original active snapshot and release credits. Full biome/scatter and scoped catalog/cache/pinned regressions PASS. C05/C06/E12/full S0..S6 OPEN,23/42 unchanged.",
+  "source_sha256": {
+    "src/WorldGen/Core/CatalogCandidateSourceEnvelope.h": "f6183bf29eaafa7c3a5f9a4d61287a481a780bb5f982207bc0345367ac0e586e",
+    "src/Test/CatalogCandidateSourceFixture.h": "ba7852ecbfdb91e72b63d328b3795ef4d4edb2f2a2bc321143e94163d145bdea",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "118bd2a1022bf40bfdd3fe0e9c6f5d3afab41195f60b8bde24e4921b5b482102",
+    "src/WorldGen/Core/WorldGenRefs.cpp": "38c4d97062d5f99576799423f6d7c81f5ee0e5514d040ac98b4489de9604241c",
+    "src/WorldGen/Core/WorldGenRefs.h": "54fdf2f7e2e36d7d1dee9c4b1bc78014807e03687dbf56f8b5a6f616ba22e1c4",
+    "src/WorldGen/Features/ObjectFeatureConfig.cpp": "526a36f59cd22c3b89d28c13565b5cbf74e084431cbb5069e28189bc379c8561",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "d56c18cd996a2632f9a06059b38c493235bfc47d21fe0f7177d1a1cad9fa2b41",
+    "src/ResourcePacks/ResourcePack.cpp": "b162e9d3c47ff672a31bf35268e48f7aa098419bb82476ef05ee0e538b2f50be",
+    "src/ResourcePacks/ResourcePack.h": "61987ba7e24dc6af1096872f5f76187b12622a8317ee692108029b63a595e158",
+    "src/Blocks/BlockDefinition.cpp": "68ba09b492b61d42db9f029848f755485b6ed010a90c0a04d3d026135aa038a8",
+    "src/Blocks/BlockDefinition.h": "3479c9f0eb6d74b5d74680ba00e98f0dc199296adbbd783338d9ab052c5f8c79",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "92cbd34dcec393c5d0e5ffaa9197c3a17060814c5ce230e2071834d01fc02a0f"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "exe_sha256": "ab3577d644f22f03f5e92ed72d7a8eec258ded0d2c5f5f80ca196a1bad320aa8",
+  "provenance": "build/desktop-msvc/s4-catalog-candidate-provenance-20261122.json",
+  "verification": {
+    "source": {
+      "returncode": 0,
+      "exe_sha256": "c835418158838feac68ef6a71f88d0b1baea244788f3ac69af0ad35e79b987f6",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-source-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-candidate-source-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "publication": {
+      "returncode": 0,
+      "exe_sha256": "c835418158838feac68ef6a71f88d0b1baea244788f3ac69af0ad35e79b987f6",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-publication-accepted-20261122.log",
+      "report": "build\\desktop-msvc\\s4-catalog-candidate-publication-accepted-20261122.json",
+      "status": "PASS"
+    },
+    "biomes": {
+      "returncode": 0,
+      "exe_sha256": "3d1944e5ff9273e2a51e49da3dffc3999a67d47b69ad9893d57d9275909739ad",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-biomes-accepted-20261122.log"
+    },
+    "scatter": {
+      "returncode": 0,
+      "exe_sha256": "4640503b9e91383381d40e142168829e8ab8fa9b7ea092177d174bba641c6b4d",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-scatter-accepted-20261122.log"
+    },
+    "catalog-storage": {
+      "returncode": 0,
+      "exe_sha256": "78ebc000a00e1db72ef6ad4453546982dedb947520b838e36b9610557a3311e2",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-catalog-storage-accepted-20261122.log"
+    },
+    "pipeline-cache-owner": {
+      "returncode": 0,
+      "exe_sha256": "78ebc000a00e1db72ef6ad4453546982dedb947520b838e36b9610557a3311e2",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-pipeline-cache-owner-accepted-20261122.log"
+    },
+    "pinned-factory-catalog": {
+      "returncode": 0,
+      "exe_sha256": "78ebc000a00e1db72ef6ad4453546982dedb947520b838e36b9610557a3311e2",
+      "log": "build\\desktop-msvc\\s4-catalog-candidate-pinned-factory-catalog-accepted-20261122.log"
+    }
+  },
+  "unit": {
+    "cases": [
+      {
+        "attempts": 45,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features_all_pools",
+        "pass": true,
+        "path_units": 0,
+        "peak": 4401,
+        "shared_blocks_included": 368,
+        "source_upper": 318336,
+        "text_bytes": 2112,
+        "values": 80
+      },
+      {
+        "attempts": 1081,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features129_diagnostics_and_growth",
+        "pass": true,
+        "path_units": 0,
+        "peak": 159858,
+        "shared_blocks_included": 368,
+        "source_upper": 7930259,
+        "text_bytes": 64576,
+        "values": 1999
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features_nonobject",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 368,
+        "source_upper": 19677,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features_nonobject",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 368,
+        "source_upper": 19677,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features_nonobject",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 368,
+        "source_upper": 19677,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 2,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "features_empty",
+        "pass": true,
+        "path_units": 0,
+        "peak": 368,
+        "shared_blocks_included": 368,
+        "source_upper": 19677,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 4,
+        "exception_id": 302,
+        "final_live": 0,
+        "name": "features_wrong_name",
+        "pass": true,
+        "path_units": 0,
+        "peak": 368,
+        "shared_blocks_included": 368,
+        "source_upper": 314208,
+        "text_bytes": 1983,
+        "values": 80
+      },
+      {
+        "attempts": 9,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs_names_fallback_and_filter",
+        "pass": true,
+        "path_units": 0,
+        "peak": 5663,
+        "shared_blocks_included": 80,
+        "source_upper": 187352,
+        "text_bytes": 5059,
+        "values": 10
+      },
+      {
+        "attempts": 519,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs257_rehash",
+        "pass": true,
+        "path_units": 0,
+        "peak": 43367,
+        "shared_blocks_included": 80,
+        "source_upper": 303772,
+        "text_bytes": 1694,
+        "values": 259
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs_missing_or_empty",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 80,
+        "source_upper": 17364,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs_missing_or_empty",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 80,
+        "source_upper": 17364,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 0,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs_missing_or_empty",
+        "pass": true,
+        "path_units": 0,
+        "peak": 0,
+        "shared_blocks_included": 80,
+        "source_upper": 18424,
+        "text_bytes": 5,
+        "values": 2
+      },
+      {
+        "attempts": 3,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "refs_missing_or_empty",
+        "pass": true,
+        "path_units": 0,
+        "peak": 312,
+        "shared_blocks_included": 80,
+        "source_upper": 18424,
+        "text_bytes": 5,
+        "values": 2
+      },
+      {
+        "attempts": 10,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "manifest_fields_and_root",
+        "pass": true,
+        "path_units": 5001,
+        "peak": 25157,
+        "shared_blocks_included": 0,
+        "source_upper": 707420,
+        "text_bytes": 13739,
+        "values": 19
+      },
+      {
+        "attempts": 4,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "manifest_filename_defaults",
+        "pass": true,
+        "path_units": 5001,
+        "peak": 25157,
+        "shared_blocks_included": 0,
+        "source_upper": 258052,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 6,
+        "exception_id": 306,
+        "final_live": 0,
+        "name": "manifest_root_rejection",
+        "pass": true,
+        "path_units": 5001,
+        "peak": 25301,
+        "shared_blocks_included": 0,
+        "source_upper": 258052,
+        "text_bytes": 0,
+        "values": 1
+      },
+      {
+        "attempts": 17,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "block_profiles_types_dig_textures",
+        "pass": true,
+        "path_units": 0,
+        "peak": 31514,
+        "shared_blocks_included": 0,
+        "source_upper": 1019500,
+        "text_bytes": 30735,
+        "values": 23
+      },
+      {
+        "attempts": 14,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "block_invalid_texture",
+        "pass": true,
+        "path_units": 0,
+        "peak": 16373,
+        "shared_blocks_included": 0,
+        "source_upper": 859468,
+        "text_bytes": 25734,
+        "values": 23
+      },
+      {
+        "attempts": 4,
+        "exception_id": 0,
+        "final_live": 0,
+        "name": "block_missing_name",
+        "pass": true,
+        "path_units": 0,
+        "peak": 368,
+        "shared_blocks_included": 0,
+        "source_upper": 17236,
+        "text_bytes": 0,
+        "values": 1
+      }
+    ],
+    "failed_cases": 0,
+    "overflow_rejected": true,
+    "persistent_refusal_and_retry_cases": 1708,
+    "resource_block_payload_adopted": true,
+    "schema": "catalog-candidate-source-requests.v1",
+    "scope": "Four shared production DOM-to-candidate stages including result move/shared/diagnostic allocations;input DOM/root/published owners/file/parser/CRT/platform terms separate. Full resource directory aggregation,WorldGenPack/prefab/merge candidates and publication graph still open.",
+    "status": "PASS",
+    "unmodeled_allocation_negative_control": "PASS"
+  },
+  "publication": {
+    "cases": [
+      {
+        "prefix": 0,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 1,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 2,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 3,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 4,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 5,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 6,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 7,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 8,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 9,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 10,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 11,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 12,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 13,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 14,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 15,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 16,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 17,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 18,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 19,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 20,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 21,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 22,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 23,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 24,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 25,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 26,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 27,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 28,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 29,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 30,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 31,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 32,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 33,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 34,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 35,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 36,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 37,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 38,
+        "published_on_failure": false,
+        "refused": true
+      },
+      {
+        "prefix": 39,
+        "published_on_failure": false,
+        "refused": true
+      }
+    ],
+    "failed_cases": 0,
+    "normal_attempts": 40,
+    "publication_after_refusal_reproduced": false,
+    "schema": "catalog-candidate-publication-refusal.v1",
+    "status": "PASS"
+  },
+  "baseline": {
+    "exe_sha256": "8db26a92327bad8d5c18fd43c900e4e3f674263afd7b0c058a22709030a9cc01",
+    "report": "build/desktop-msvc/s4-catalog-candidate-publication-baseline-20261122.json",
+    "status": "REPRODUCED",
+    "source_hash_not_captured": true,
+    "scope": "WIP production wrapper before moving post-publication path logging;last allocation prefix39 throws after active snapshot changed. No retrospective source hash or historical HEAD replay claimed."
+  },
+  "baseline_result": {
+    "cases": [
+      {
+        "prefix": 39,
+        "published_on_failure": true,
+        "refused": true
+      }
+    ],
+    "failed_cases": 0,
+    "normal_attempts": 40,
+    "publication_after_refusal_reproduced": true,
+    "schema": "catalog-candidate-publication-refusal.v1",
+    "status": "REPRODUCED"
+  },
+  "model": {
+    "domains": "Current input DOM V values and B total key/string bytes,including ignored fields;manifest root native UTF16 units W. Iterator inspection is a separate temporary pointer-stack phase,not another parse/copy. Input DOM/retirement arena/root storage/prior publications are separate L terms.",
+    "common": "B_candidate=fixed16384 + INCLUDED shared coallocation blocks + V*(typed cells+diagnostics+map metadata+4*39+256) +32*B. Checked/saturating. Fixed allowance includes default/cold-registry/empty-table/type-error text and result-move bookkeeping;not a configured runtime quota.",
+    "features": "typed cells4*(sizeof(ObjectFeatureRule)+sizeof(CaveFeatureRule)+sizeof(BiomeKey)+sizeof(BiomeId)+sizeof(SubBiomeId));diagnostic cells sizeof(counters)+sizeof(size_t alias)+sizeof(flag)+sizeof(size_t sorting scratch) per V. Actual cfg+diagnostic make_shared object/control sizes included.",
+    "refs": "4*sizeof(string) vector growth per V;actual list node per admitted map entry+<16 old/new buckets*2 pointers. Ref catalog make_shared block included.",
+    "manifest": "4*sizeof(string) vector growth per V;4 native canonical/growth backings and4 narrow backings from W. Normal source encoding profile<=4 narrow bytes/native unit;filesystem conversion diagnostic terms separately use accepted filesystem-error envelope. Return/result moves included conservatively.",
+    "block": "Existing parser type-vector growth and DigGroups actual MSVC node/buckets;32*B covers six textures and name/profile/error copies. Individual parsed-to-resource transfer adopts payload. Full directory vector old/new payload copy overlap remains OPEN.",
+    "scope": "Current default MSVC Release allocators/source schema. Includes builder/result/shared/derived diagnostic ordinary-new requests,not parser/input/prior owners,CRT/runtime/stream/path error/GPU/process RSS. Built-in registry initialized before isolated cleanup observation;no new production global ledger or TLS history.",
+    "publication": "Loader completes allocation-capable path logging before final shared_ptr atomic store. Baseline/40 failure-prefix checks use actual LoadFromFile and active snapshot identity,not only pure builders. This is one publication route,not all catalog/root versions."
+  },
+  "native": {
+    "runner_exit_code": 2,
+    "runtime_exit_code": 0,
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct_probe": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "candidate_fixed_terms": {
+      "feature_and_diagnostic_shared_blocks": 368,
+      "refs_shared_block": 80,
+      "schema": "catalog-candidate-fixed-terms.v1",
+      "scope": "Compiled coallocation terms included in per-input candidate bound;not native construction peak or process cap. Input DOM/prior pubs/platform terms separate.",
+      "supported": true
+    },
+    "config_bytes_restored": true,
+    "aggregate_smoke": "UNTESTED",
+    "limitation": "Compiled fixed terms/current runtime regression,not measured aggregate catalog construction/process peak. Startup-only overall UNTESTED;full S4.06/S6 matrix remains open."
+  },
+  "remaining": "C05: finish remaining WorldGenPack/prefab compiled candidates and block/resource merge/directory aggregate growth,then compose all source/retained/prior/current publication owners. These4 per-document builders do not close whole-directory publication:MSVC ResourcePackBlock map move can throw,so vector growth may copy existing payload;must account for this aggregate overlap. Retain accepted JSON/decoder/settings/filesystem properties. C06 finite all-world/thread/global/publisher/escaped roots,E12 CRT/control/stack/OS/GPU and original S6 process-memory/performance matrix remain OPEN;no arbitrary asset cap.",
+  "full_plan": "23/42 COMPLETE;S4.02 Q09 CHECK,E11 OPEN,E12 OPEN_DEPENDENCY;S4.06/S6/full S0..S6 retained,no audit restart."
+}

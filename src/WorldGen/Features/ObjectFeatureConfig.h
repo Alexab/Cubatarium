@@ -9,6 +9,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <nlohmann/json_fwd.hpp>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -237,6 +238,9 @@ struct ObjectFeatureConfig
   int structureChancePerCell{12};
   int structureMinSpacing{128};
 };
+
+// Pure DOM-to-candidate stage. Publication/file ownership stays with caller.
+std::shared_ptr<const ObjectFeatureConfig> CompileObjectFeatureCatalog(const nlohmann::json &root);
 
 class UObjectFeatureConfigStorage
 {

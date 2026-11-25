@@ -50,6 +50,9 @@ struct ResourcePackBlock
   std::array<std::string, 6> TextureStems{};
 };
 
+std::optional<ResourcePackManifest> CompileResourcePackManifest(const nlohmann::json &root,const std::filesystem::path &directory);
+ResourcePackBlock AdoptParsedResourceBlock(ParsedBlockJson &&parsed);
+
 /// Runtime texture atlas key: isolates same stem name across packs (e.g. stone).
 std::string PackQualifiedTextureStem(const std::string &packId,
                                      const std::string &stem);

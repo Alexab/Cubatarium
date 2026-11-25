@@ -631,10 +631,53 @@ std::shared_ptr<ObjectFeatureDiagnosticCatalog> ObjectFeatureDiagnosticStorage::
   return state;
 }
 
+std::shared_ptr<const ObjectFeatureConfig> CompileObjectFeatureCatalog(const nlohmann::json &root)
+{
+  if (!root.is_object()) return {};
+  auto next = std::make_shared<ObjectFeatureConfig>();
+  const auto parseRules = [&](const char *name, auto &rules)
+  {
+    const auto member = root.find(name);
+    if (member != root.end())
+    {
+      ParseRuleArray(*member, rules);
+    }
+  };
+  parseRules("vegetation", next->Vegetation);
+  parseRules("ground_cover", next->GroundCover);
+  parseRules("decoration", next->Decoration);
+  parseRules("structures", next->Structures);
+  const auto caves = root.find("cave_features");
+  if (caves != root.end())
+  {
+    ParseCaveFeatureArray(*caves, next->CaveFeatures);
+  }
+  if (root.contains("spatial_distribution") &&
+      root["spatial_distribution"].is_object())
+  {
+    const nlohmann::json &distribution = root["spatial_distribution"];
+    ParseDistributionProfile(distribution, "vegetation",
+                             next->VegetationDistribution);
+    ParseDistributionProfile(distribution, "ground_cover",
+                             next->GroundCoverDistribution);
+  }
+  if (root.contains("structure_placement") &&
+      root["structure_placement"].is_object())
+  {
+    const auto &sp = root["structure_placement"];
+    next->structureCellSize = std::max(16, sp.value("cell_size", 64));
+    next->structureChancePerCell =
+        std::max(1, sp.value("chance_per_cell", 12));
+    next->structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
+  }
+  (void)next->Diagnostics.Get(next->Decoration);
+  return next;
+}
+
 bool UObjectFeatureConfigStorage::LoadFromFile(
     const std::filesystem::path &path)
 {
-  auto next = std::make_shared<ObjectFeatureConfig>();
+  std::shared_ptr<const ObjectFeatureConfig> next;
   std::ifstream in(path);
   if (!in.is_open())
   {
@@ -644,48 +687,11 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   try
   {
     const auto root = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Features);
-    // value<json>() deep-copies the complete group while both the source DOM
-    // and the compiled candidate are live. Borrow members until root dies.
-    // Keep value()'s previous rejection of a non-object root.
-    if (!root.is_object())
+    next = CompileObjectFeatureCatalog(root);
+    if (!next)
     {
       std::cerr << "ObjectFeatureConfig: expected object in " << path << std::endl;
       return false;
-    }
-    const auto parseRules = [&](const char *name, auto &rules)
-    {
-      const auto member = root.find(name);
-      if (member != root.end())
-      {
-        ParseRuleArray(*member, rules);
-      }
-    };
-    parseRules("vegetation", next->Vegetation);
-    parseRules("ground_cover", next->GroundCover);
-    parseRules("decoration", next->Decoration);
-    parseRules("structures", next->Structures);
-    const auto caves = root.find("cave_features");
-    if (caves != root.end())
-    {
-      ParseCaveFeatureArray(*caves, next->CaveFeatures);
-    }
-    if (root.contains("spatial_distribution") &&
-        root["spatial_distribution"].is_object())
-    {
-      const nlohmann::json &distribution = root["spatial_distribution"];
-      ParseDistributionProfile(distribution, "vegetation",
-                               next->VegetationDistribution);
-      ParseDistributionProfile(distribution, "ground_cover",
-                               next->GroundCoverDistribution);
-    }
-    if (root.contains("structure_placement") &&
-        root["structure_placement"].is_object())
-    {
-      const auto &sp = root["structure_placement"];
-      next->structureCellSize = std::max(16, sp.value("cell_size", 64));
-      next->structureChancePerCell =
-          std::max(1, sp.value("chance_per_cell", 12));
-      next->structureMinSpacing = std::max(32, sp.value("min_spacing", 128));
     }
   }
   catch (const nlohmann::json::exception &e)
@@ -697,12 +703,11 @@ bool UObjectFeatureConfigStorage::LoadFromFile(
   const size_t rule_count = next->Vegetation.size() + next->GroundCover.size() +
                             next->Decoration.size() + next->Structures.size() +
                             next->CaveFeatures.size();
-  (void)next->Diagnostics.Get(next->Decoration);
-  std::atomic_store_explicit(
-      &Active, std::shared_ptr<const ObjectFeatureConfig>(std::move(next)),
-      std::memory_order_release);
+  // Path formatting may allocate. Complete it before the no-throw publication
+  // so callers never observe an exception after the active version changed.
   std::cout << "ObjectFeatureConfig: loaded " << rule_count << " rules from "
             << path << std::endl;
+  std::atomic_store_explicit(&Active,std::move(next),std::memory_order_release);
   return true;
 }
 

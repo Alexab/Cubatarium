@@ -13,9 +13,43 @@ namespace cutum
 std::shared_ptr<const WorldGenRefsCatalog> UWorldGenRefs::Active =
     std::make_shared<WorldGenRefsCatalog>();
 
+std::shared_ptr<const WorldGenRefsCatalog> CompileWorldGenRefsCatalog(const nlohmann::json &root)
+{
+  if (!root.contains("slots") || !root["slots"].is_object()) return {};
+  auto next = std::make_shared<WorldGenRefsCatalog>();
+  for (const auto &[slotName, slotVal] : root["slots"].items())
+  {
+    if (!slotVal.is_object())
+    {
+      continue;
+    }
+    WorldGenSlotSpec spec;
+    if (slotVal.contains("block_names") && slotVal["block_names"].is_array())
+    {
+      for (const auto &name : slotVal["block_names"])
+      {
+        if (name.is_string())
+        {
+          spec.BlockNames.push_back(name.get<std::string>());
+        }
+      }
+    }
+    if (spec.BlockNames.empty())
+    {
+      spec.BlockNames.push_back(slotName);
+    }
+    if (slotVal.contains("fallback_slot") && slotVal["fallback_slot"].is_string())
+    {
+      spec.FallbackSlot = slotVal["fallback_slot"].get<std::string>();
+    }
+    (*next)[slotName] = std::move(spec);
+  }
+  return next->empty() ? std::shared_ptr<const WorldGenRefsCatalog>{} : next;
+}
+
 bool UWorldGenRefs::LoadFromFile(const std::filesystem::path &path)
 {
-  auto next = std::make_shared<WorldGenRefsCatalog>();
+  std::shared_ptr<const WorldGenRefsCatalog> next;
   std::ifstream in(path);
   if (!in.is_open())
   {
@@ -30,33 +64,7 @@ bool UWorldGenRefs::LoadFromFile(const std::filesystem::path &path)
       std::cerr << "WorldGenRefs: missing slots object in " << path << std::endl;
       return false;
     }
-    for (const auto &[slotName, slotVal] : root["slots"].items())
-    {
-      if (!slotVal.is_object())
-      {
-        continue;
-      }
-      WorldGenSlotSpec spec;
-      if (slotVal.contains("block_names") && slotVal["block_names"].is_array())
-      {
-        for (const auto &name : slotVal["block_names"])
-        {
-          if (name.is_string())
-          {
-            spec.BlockNames.push_back(name.get<std::string>());
-          }
-        }
-      }
-      if (spec.BlockNames.empty())
-      {
-        spec.BlockNames.push_back(slotName);
-      }
-      if (slotVal.contains("fallback_slot") && slotVal["fallback_slot"].is_string())
-      {
-        spec.FallbackSlot = slotVal["fallback_slot"].get<std::string>();
-      }
-      (*next)[slotName] = std::move(spec);
-    }
+    next = CompileWorldGenRefsCatalog(root);
   }
   catch (const nlohmann::json::exception &e)
   {
@@ -64,13 +72,8 @@ bool UWorldGenRefs::LoadFromFile(const std::filesystem::path &path)
               << std::endl;
     return false;
   }
-  if (next->empty())
-  {
-    return false;
-  }
-  std::atomic_store_explicit(&Active, std::shared_ptr<const WorldGenRefsCatalog>(
-                                          std::move(next)),
-                              std::memory_order_release);
+  if (!next) return false;
+  std::atomic_store_explicit(&Active,std::move(next),std::memory_order_release);
   return true;
 }
 

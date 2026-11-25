@@ -18,6 +18,58 @@ std::string PackQualifiedTextureStem(const std::string &packId,
   return packId + "/" + stem;
 }
 
+std::optional<ResourcePackManifest> CompileResourcePackManifest(const json &d,const fs::path &root)
+{
+  ResourcePackManifest m;
+  m.Root = root;
+  m.Id = d.value("id", root.filename().string());
+  m.Name = d.value("name", m.Id);
+  m.License = d.value("license", "");
+  m.Version = d.value("version", 1);
+  m.Priority = d.value("priority", 0);
+  m.Resolution = d.value("resolution", 16);
+  m.PackFormat = d.value("pack_format", 1);
+  m.MinGameVersion = d.value("min_game_version", "");
+  m.AllowResolutionMix = d.value("allow_resolution_mix", false);
+  if (d.contains("depends") && d["depends"].is_array())
+  {
+    for (const auto &dep : d["depends"])
+    {
+      if (dep.is_string())
+      {
+        m.Depends.push_back(dep.get<std::string>());
+      }
+    }
+  }
+  if (d.contains("conflicts") && d["conflicts"].is_array())
+  {
+    for (const auto &c : d["conflicts"])
+    {
+      if (c.is_string())
+      {
+        m.Conflicts.push_back(c.get<std::string>());
+      }
+    }
+  }
+  const std::string role = d.value("worldgen_role", "secondary");
+  m.Role =
+      (role == "primary") ? WorldgenRole::Primary : WorldgenRole::Secondary;
+  const std::string merge = d.value("merge_mode", "skip_existing");
+  if (merge == "override")
+  {
+    m.MergeMode = PackMergeMode::Override;
+  }
+  else if (merge == "duplicate")
+  {
+    m.MergeMode = PackMergeMode::Duplicate;
+  }
+  else
+  {
+    m.MergeMode = PackMergeMode::SkipExisting;
+  }
+  return m;
+}
+
 std::optional<ResourcePackManifest>
 UResourcePack::LoadManifest(const fs::path &root)
 {
@@ -36,54 +88,7 @@ UResourcePack::LoadManifest(const fs::path &root)
   {
     // The JSON lexer consumes UTF-8 BOM directly from the stream as well.
     const auto d = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Manifest);
-    ResourcePackManifest m;
-    m.Root = root;
-    m.Id = d.value("id", root.filename().string());
-    m.Name = d.value("name", m.Id);
-    m.License = d.value("license", "");
-    m.Version = d.value("version", 1);
-    m.Priority = d.value("priority", 0);
-    m.Resolution = d.value("resolution", 16);
-    m.PackFormat = d.value("pack_format", 1);
-    m.MinGameVersion = d.value("min_game_version", "");
-    m.AllowResolutionMix = d.value("allow_resolution_mix", false);
-    if (d.contains("depends") && d["depends"].is_array())
-    {
-      for (const auto &dep : d["depends"])
-      {
-        if (dep.is_string())
-        {
-          m.Depends.push_back(dep.get<std::string>());
-        }
-      }
-    }
-    if (d.contains("conflicts") && d["conflicts"].is_array())
-    {
-      for (const auto &c : d["conflicts"])
-      {
-        if (c.is_string())
-        {
-          m.Conflicts.push_back(c.get<std::string>());
-        }
-      }
-    }
-    const std::string role = d.value("worldgen_role", "secondary");
-    m.Role =
-        (role == "primary") ? WorldgenRole::Primary : WorldgenRole::Secondary;
-    const std::string merge = d.value("merge_mode", "skip_existing");
-    if (merge == "override")
-    {
-      m.MergeMode = PackMergeMode::Override;
-    }
-    else if (merge == "duplicate")
-    {
-      m.MergeMode = PackMergeMode::Duplicate;
-    }
-    else
-    {
-      m.MergeMode = PackMergeMode::SkipExisting;
-    }
-    return m;
+    return CompileResourcePackManifest(d,root);
   }
   catch (const json::exception &e)
   {
@@ -116,17 +121,14 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     try
     {
       const auto d = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::ResourceBlocks);
-      const ParsedBlockJson parsed = ParseBlockFromJson(d, true);
+      ParsedBlockJson parsed = ParseBlockFromJson(d, true);
       if (!parsed.Valid)
       {
         std::cerr << "UResourcePack: skip invalid block " << entry.path()
                   << std::endl;
         continue;
       }
-      ResourcePackBlock block;
-      block.Definition = parsed.Definition;
-      block.TextureStems = parsed.TextureStems;
-      blocks.push_back(std::move(block));
+      blocks.push_back(AdoptParsedResourceBlock(std::move(parsed)));
     }
     catch (const json::exception &e)
     {
@@ -135,6 +137,14 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     }
   }
   return blocks;
+}
+
+ResourcePackBlock AdoptParsedResourceBlock(ParsedBlockJson &&parsed)
+{
+  ResourcePackBlock block;
+  block.Definition = std::move(parsed.Definition);
+  block.TextureStems = std::move(parsed.TextureStems);
+  return block;
 }
 
 fs::path UResourcePack::TexturePath(const ResourcePackManifest &manifest,

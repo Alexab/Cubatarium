@@ -108,6 +108,7 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
 #include "Test/CatalogFileLifetimeFixture.h"
 #include "Test/CatalogFilesystemSourceFixture.h"
 #include "Test/CatalogFilesystemErrorFixture.h"
+#include "Test/CatalogCandidateSourceFixture.h"
 int main(int argc,char **argv)
 {
   if(argc>1 && std::string(argv[1])=="--settings-input") return RunWorldGenSetsInputEnvelopeFixture(argc>2?argv[2]:nullptr);
@@ -115,6 +116,9 @@ int main(int argc,char **argv)
   if(argc>1 && std::string(argv[1])=="--catalog-files") return RunCatalogFileLifetimeFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--filesystem-source") return RunCatalogFilesystemSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--filesystem-errors") return RunCatalogFilesystemErrorFixture(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--candidate-source") return RunCatalogCandidateSourceFixture(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--candidate-publication-baseline") return RunCatalogCandidatePublicationFixture(argc>2?argv[2]:nullptr,true);
+  if(argc>1 && std::string(argv[1])=="--candidate-publication") return RunCatalogCandidatePublicationFixture(argc>2?argv[2]:nullptr,false);
   ObjectFeatureConfig global;
   ObjectFeatureRule rule;rule.ObjectName="selected";rule.Biomes={BiomeId::Plains};rule.BiomeKeys={"plains"};rule.SubBiomes={SubBiomeIdFromString("none")};
   rule.Spacing=17;rule.Weight=7;rule.ChancePerColumn=13;rule.SeedOffset=29;rule.PlacementYOffset=-4;

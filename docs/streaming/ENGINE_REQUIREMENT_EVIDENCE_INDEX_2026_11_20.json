@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.four-compiled-candidates",
+      "status": "SCOPED_SOURCE_REFUSAL_PUBLICATION_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-candidate-acceptance-20261122.json",
+      "certificate": "S4_02_C05_CATALOG_CANDIDATE_CERTIFICATE_2026_11_22.json",
+      "scope": "Four production DOM-to-candidate stages source/refusal scoped PASS:shared CompileObjectFeatureCatalog(+diagnostic prepare),CompileWorldGenRefsCatalog,CompileResourcePackManifest and existing ParseBlockFromJson. Feature/refs object allocation now after input parse,not overlapping parser before candidate use.19 semantic/long/wide/wrong-kind/fallback cases,1708 persistent ordinary-new refusal prefixes+exact retries including129 rule diagnostics and257 slot rehash;all final0,pure builders leave active snapshots unchanged. Parsed resource block definition/type/texture/node payload adopted by pointer identity instead of deep copy. End-to-end feature loader baseline prefix39 threw after publishing new snapshot because post-commit path logging allocated;logging moved before no-throw atomic publication. All40 final loader failure boundaries keep original active snapshot and release credits. Full biome/scatter and scoped catalog/cache/pinned regressions PASS. C05/C06/E12/full S0..S6 OPEN,23/42 unchanged."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.filesystem-error-source",
       "status": "SCOPED_DIAGNOSTIC_SOURCE_NEW_REFUSAL_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-filesystem-error-source-acceptance-20261122.json",

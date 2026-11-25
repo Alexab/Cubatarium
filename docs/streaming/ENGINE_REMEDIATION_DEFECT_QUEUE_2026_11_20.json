@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "feature-catalog-path-log-throws-after-publication",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "Actual feature LoadFromFile with persistent ordinary-new refusal at normal prefix39 throws bad_alloc while active snapshot already changed. Path ostream formatting after atomic publication allocates. WIP executable baseline/source-hash limitation explicitly recorded.",
+      "fix": "Complete path log before final no-throw shared_ptr atomic publication. All40 loader refusal boundaries preserve old active snapshot and release observed requests;pure4-builder1708 prefix/retry matrix and native regression PASS.",
+      "acceptance_receipt": "build/desktop-msvc/s4-catalog-candidate-acceptance-20261122.json",
+      "next_action": "C05: finish remaining WorldGenPack/prefab compiled candidates and block/resource merge/directory aggregate growth,then compose all source/retained/prior/current publication owners. These4 per-document builders do not close whole-directory publication:MSVC ResourcePackBlock map move can throw,so vector growth may copy existing payload;must account for this aggregate overlap. Retain accepted JSON/decoder/settings/filesystem properties. C06 finite all-world/thread/global/publisher/escaped roots,E12 CRT/control/stack/OS/GPU and original S6 process-memory/performance matrix remain OPEN;no arbitrary asset cap."
+    },
+    {
       "id": "catalog-file-retained-through-candidate",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
