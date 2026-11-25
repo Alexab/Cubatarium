@@ -469,9 +469,11 @@ static void TestResourceCatalogCensus()
 #include "Test/FingerprintSourceFixture.h"
 #include "Test/MergePublicationFixture.h"
 #include "Test/CatalogCompositionFixture.h"
+#include "Test/SettingsCompositionFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--settings-composition") return settings_composition_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--catalog-composition") return catalog_composition_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--merge-publication") return merge_publication_fixture::Accepted(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--merge-publication-baseline") return merge_publication_fixture::Baseline(argc>2?argv[2]:nullptr);

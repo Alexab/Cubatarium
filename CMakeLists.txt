@@ -2910,6 +2910,7 @@ cubatarium_add_test(NAME worldgen_scatter_block_resolve_test
         src/ThirdParty/stb_image.cpp
         src/WorldGen/Core/WorldGenBlockResolver.cpp
         src/WorldGen/Core/WorldGenRefs.cpp
+        src/WorldGen/Core/WorldGenSets.cpp
         src/WorldGen/Core/WorldGenPack.cpp
         src/WorldGen/Core/WorldGenStageMask.cpp
         src/WorldGen/Sampling/BiomeRegistry.cpp

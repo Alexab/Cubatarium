@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.settings-file-composition",
+      "status": "SCOPED_SETTINGS_FILE_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
+      "receipt": "build/desktop-msvc/s4-settings-composition-acceptance.json",
+      "certificate": "S4_02_C05_SETTINGS_FILE_COMPOSITION_CERTIFICATE_2026_11_25.json",
+      "scope": "Settings and file construction schedules composed scoped PASS. New default file-stage envelope combines accepted raw-byte managed parser F(N),candidate conversion,path/stream/publication terms;legacy definition directory adds accumulated conversion payload and typed ById/name-map nodes. Actual8-phase epoch executes feature-file publication,refs publication,manifest returned result,legacy definition-directory publication,preparsed WorldGenSets parse,BuildDefaultWorldGenSets,legacy upgrade and ResolveObjectFeatures while old/current catalogs stay live. Independent SourceInputStorageCensus adds DOM/settings capacities once,including256KiB ignored-string reserve and repeated parent/child/settings aliases. Returned resolved rules counted through nonowning supplied root;calling-thread default-source keep-alive explicitly included and refreshed on cleanup. Old/new feature/ref/block/manifest and schema/frequency/profile/rule oracles PASS;retained331037<=upper339094,input heap283429,all tracked graph roots retire to0. Four real file routes328 persistent allocation refusals+exact retries preserve failed-result publication guards and clean to0.8 regression groups and Release/native runtime/startup/direct save/UI/provenance/8 real GL readbacks PASS;aggregate smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.source-retained-composition-graph",
       "status": "SCOPED_PACK_RESOURCE_GRAPH_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
       "receipt": "build/desktop-msvc/s4-composition-acceptance.json",

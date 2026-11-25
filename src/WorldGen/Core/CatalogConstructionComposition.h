@@ -92,4 +92,44 @@ inline CatalogCandidateEnvelope ComposeCatalogConstruction(const RetainedCatalog
   CatalogCandidateEnvelope out;out.supported=entry.supported && source_supported;out.overflow=entry.overflow || source_overflow;
   out.requested_heap_upper=entry.requested_heap_upper;detail::CandidateAdd(out.requested_heap_upper,additional,out.overflow);return out;
 }
+
+struct CatalogFileSourceDomain
+{
+  CatalogCandidateKind kind{CatalogCandidateKind::Features};
+  size_t bytes{},path_units{},manifest_root_units{},extra_filesystem_diagnostic_upper{};
+};
+// Real default file read+managed DOM+conversion/publication,with input path,
+// old publications and external source owners supplied separately as entry.
+inline CatalogCandidateEnvelope BoundCatalogFileSource(const CatalogFileSourceDomain &d)
+{
+  CatalogCandidateEnvelope out;
+  const auto add=[&](size_t a,size_t b){detail::CandidateAdd(a,b,out.overflow);return a;};
+  const auto mul=[&](size_t a,size_t b){if(b && a>SIZE_MAX/b){out.overflow=true;return SIZE_MAX;}return a*b;};
+  const auto conversion=BoundCatalogCandidateSource(d.kind,{add(d.bytes,1),d.bytes,out.overflow},d.manifest_root_units);
+  out.supported=conversion.supported;out.overflow=out.overflow || conversion.overflow;
+  auto total=add(add(mul(d.bytes,586),mul(d.bytes/32+(d.bytes%32!=0),16)),16640);
+  total=add(total,conversion.requested_heap_upper);
+  total=add(total,add(16384,mul(add(d.path_units,32),64)));
+  out.requested_heap_upper=add(total,d.extra_filesystem_diagnostic_upper);return out;
+}
+struct DefinitionDirectorySourceDomain
+{
+  size_t files{},file_source_sum{},max_path_units{},extra_filesystem_diagnostic_upper{};
+  bool supported{true},overflow{};
+};
+inline CatalogCandidateEnvelope BoundDefinitionDirectorySource(const DefinitionDirectorySourceDomain &d)
+{
+  CatalogCandidateEnvelope out;out.supported=d.supported;out.overflow=d.overflow;
+  const auto add=[&](size_t a,size_t b){detail::CandidateAdd(a,b,out.overflow);return a;};
+  const auto mul=[&](size_t a,size_t b){if(b && a>SIZE_MAX/b){out.overflow=true;return SIZE_MAX;}return a*b;};
+  size_t nodes=0;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  nodes=sizeof(std::_List_node<decltype(BlockDefinitionCatalog::ById)::value_type,void*>)+
+      sizeof(std::_List_node<decltype(BlockDefinitionCatalog::NameToId)::value_type,void*>);
+#endif
+  const auto fs=BoundCatalogFilesystemSource({d.max_path_units,0,0,false});out.supported=out.supported && fs.supported;out.overflow=out.overflow || fs.overflow;
+  out.requested_heap_upper=add(add(add(add(65536,mul(d.file_source_sum,8)),
+      mul(d.files,add(nodes,32*2*sizeof(void*)+256))),fs.combined_heap_upper),d.extra_filesystem_diagnostic_upper);
+  return out;
+}
 } // namespace cutum

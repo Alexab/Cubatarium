@@ -1,0 +1,274 @@
+{
+  "schema": "s4-settings-file-construction-composition-certificate.v1",
+  "status": "SCOPED_SETTINGS_FILE_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
+  "summary": "Settings and file construction schedules composed scoped PASS. New default file-stage envelope combines accepted raw-byte managed parser F(N),candidate conversion,path/stream/publication terms;legacy definition directory adds accumulated conversion payload and typed ById/name-map nodes. Actual8-phase epoch executes feature-file publication,refs publication,manifest returned result,legacy definition-directory publication,preparsed WorldGenSets parse,BuildDefaultWorldGenSets,legacy upgrade and ResolveObjectFeatures while old/current catalogs stay live. Independent SourceInputStorageCensus adds DOM/settings capacities once,including256KiB ignored-string reserve and repeated parent/child/settings aliases. Returned resolved rules counted through nonowning supplied root;calling-thread default-source keep-alive explicitly included and refreshed on cleanup. Old/new feature/ref/block/manifest and schema/frequency/profile/rule oracles PASS;retained331037<=upper339094,input heap283429,all tracked graph roots retire to0. Four real file routes328 persistent allocation refusals+exact retries preserve failed-result publication guards and clean to0.8 regression groups and Release/native runtime/startup/direct save/UI/provenance/8 real GL readbacks PASS;aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:compose merged prefab directory/rebind and legacy cube/texture loading plus CPU atlas/decode batches with retained old/current/returned owners. Pack/resource5-phase graph and settings/file8-phase graph now composed under accepted default MSVC/source profiles;remaining per-operation certificates stay authoritative. C06 finite all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,new asset quota or reduced acceptance.",
+  "unit": {
+    "failed_cases": 0,
+    "file_refusal_and_exact_retry_cases": 328,
+    "file_refusals": [
+      {
+        "attempts": 139,
+        "kind": 0,
+        "pass": true,
+        "peak": 21810,
+        "upper": 26458243
+      },
+      {
+        "attempts": 68,
+        "kind": 1,
+        "pass": true,
+        "peak": 2312,
+        "upper": 626038
+      },
+      {
+        "attempts": 59,
+        "kind": 2,
+        "pass": true,
+        "peak": 16610,
+        "upper": 5020576
+      },
+      {
+        "attempts": 62,
+        "kind": 3,
+        "pass": true,
+        "peak": 2998,
+        "upper": 2637092
+      }
+    ],
+    "graph_final_zero": true,
+    "negative_control": true,
+    "old_current_oracles": true,
+    "overflow_rejected": true,
+    "phases": [
+      {
+        "entry_observed": 288261,
+        "entry_upper": 291773,
+        "name": "feature_file_publication",
+        "pass": true,
+        "peak": 310263,
+        "upper": 26750016
+      },
+      {
+        "entry_observed": 297941,
+        "entry_upper": 303460,
+        "name": "refs_file_publication",
+        "pass": true,
+        "peak": 300429,
+        "upper": 929498
+      },
+      {
+        "entry_observed": 298829,
+        "entry_upper": 304786,
+        "name": "manifest_file_result",
+        "pass": true,
+        "peak": 315439,
+        "upper": 5325362
+      },
+      {
+        "entry_observed": 303236,
+        "entry_upper": 309349,
+        "name": "definition_directory_publication",
+        "pass": true,
+        "peak": 306410,
+        "upper": 2946441
+      },
+      {
+        "entry_observed": 304780,
+        "entry_upper": 311292,
+        "name": "preparsed_settings",
+        "pass": true,
+        "peak": 305972,
+        "upper": 377237
+      },
+      {
+        "entry_observed": 305364,
+        "entry_upper": 311876,
+        "name": "default_settings",
+        "pass": true,
+        "peak": 315875,
+        "upper": 387608
+      },
+      {
+        "entry_observed": 314683,
+        "entry_upper": 320731,
+        "name": "legacy_settings_upgrade",
+        "pass": true,
+        "peak": 321794,
+        "upper": 343150
+      },
+      {
+        "entry_observed": 321794,
+        "entry_upper": 327842,
+        "name": "resolved_features",
+        "pass": true,
+        "peak": 331037,
+        "upper": 358978
+      }
+    ],
+    "retained": {
+      "ignored_spare_capacity": 262159,
+      "input_alias_deduplicated": true,
+      "input_heap": 283429,
+      "observed": 331037,
+      "upper": 339094
+    },
+    "schema": "settings-file-construction-composition.v1",
+    "scope": "Eight actual file/settings phases with supplied old/current/global/TLS and returned rules,preparsed DOM/settings capacities deduplicated independently. Standard warmed MSVC Release/default files. No prefab/legacy cube/atlas/all-world/thread/CRT/OS/GPU/process acceptance;input inspector scratch and native exception objects separate.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "settings-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "6bee3f42d5192fe80f8072841b13b3315c8753cc29d1d8a11c2480e82b4b757c"
+    },
+    {
+      "name": "pack-resource-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-pack-resource.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "6bee3f42d5192fe80f8072841b13b3315c8753cc29d1d8a11c2480e82b4b757c"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "6bee3f42d5192fe80f8072841b13b3315c8753cc29d1d8a11c2480e82b4b757c"
+    },
+    {
+      "name": "settings-input",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--settings-input",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-input.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    },
+    {
+      "name": "resolved-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-resolved.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    },
+    {
+      "name": "retained-input",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--retained-inputs",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-retained.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    },
+    {
+      "name": "candidate-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-candidate.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    },
+    {
+      "name": "candidate-publication",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-publication",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-settings-composition-publication.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    }
+  ],
+  "source_sha256": {
+    "CMakeLists.txt": "3f3d1ab5297dae926dc16d38a442beac06257f0fff2fab7c0344c42968eb25fc",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+    "src/Test/SettingsCompositionFixture.h": "22309227284e30fe7e11259c62946547c35334eaf701790a38354797a635963a",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "75bee6555a445a46b9a9731b2c3c8cf74bae9905c1d14670e9df1e23f973f367",
+    "src/WorldGen/Core/WorldGenSets.cpp": "303f4450afdb53fbf94533c149e1d34fec5c6ed4ce7d7a5ecdb6e484707315a8",
+    "src/WorldGen/Core/WorldGenRefs.cpp": "38c4d97062d5f99576799423f6d7c81f5ee0e5514d040ac98b4489de9604241c",
+    "src/WorldGen/Features/ObjectFeatureConfig.cpp": "526a36f59cd22c3b89d28c13565b5cbf74e084431cbb5069e28189bc379c8561",
+    "src/Blocks/BlockDefinitionStorage.cpp": "8b76d45d954b10fa715fd04c2dafbe75c942fbf7452a97ddea0873ea65a3bc37",
+    "src/ResourcePacks/ResourcePack.cpp": "792b94b53b6196ea60196646e509659cb6b41757827609ff76376b53c37b34c4"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5"
+  },
+  "test_exe_sha256": "6bee3f42d5192fe80f8072841b13b3315c8753cc29d1d8a11c2480e82b4b757c",
+  "desktop_exe_sha256": "fc04dd7266eb8bb953589eb3f81627dd4d08e239d7c331e12119e7196e681c37",
+  "provenance": "build/desktop-msvc/s4-settings-composition-provenance.json",
+  "composition": {
+    "file": "For N actual file bytes,V<=N+1 and text<=N. New file upper=coarse managed JSON F(N)+accepted candidate source upper+default stream/path work and explicit optional filesystem diagnostic allowance. Manifest conversion includes actual root path length. Directory upper adds8*sum file envelopes,typed ById/name-map growth and filesystem scan. No second input JSON parse or observed-peak-tuned budget.",
+    "entry": "Shared old/current global feature/ref catalogs,diagnostics,old/current block snapshots and current definition storage deduplicated by existing catalog census. Independent manifest results/error leaf are separate typed caller-owned backings. DOM/settings/path input census excludes caller inline shells and deduplicates parent/child pointers and repeated settings roots. Distinct output buffers stay distinct.",
+    "input_capacity": "Observed DOM is copied before phases with ignored string capacity262159. Retained input heap283429 is a separate entry term;fresh parse/copy envelope derives from source values/lengths and does not pretend an ignored spare buffer was newly allocated. Repeated/overlapping roots produce identical requested input components.",
+    "source_lifecycle": "BuildDefaultWorldGenSets reads real published feature source and installs calling-thread keep-alive. That root is supplied explicitly,shares existing control and is refreshed to reset source before final credit0. Resolve output is a concrete value with nonowning census alias,use_count0,so no invented shared control allocation.",
+    "compatibility": "Existing schema1->3 upgrade changes authored metadata while keeping spacing37/weight7/custom biome key;returned procedural tree profile matches new global source. Old global feature trunk/refs/legacy block and old manifest stay intact. No parser or application semantics altered.",
+    "failures": "Four standalone real file loaders include file open/parser/candidate/log/path/publication and328 persistent ordinary-new refusals;exact retries use same fixture. Failed result/throw must not change active feature/ref/definition version. Existing per-operation parse/default/upgrade/resolve refusal and partial-output policies retained as dependencies,not silently promoted to transactional settings mutation.",
+    "limits": "Current default MSVC Release allocator/stable file/warmed read-only type registries and streams. Supplied source graph only. Collector scratch,caller inline slots,CRT/locale/exception/native-stack/GPU/process bytes and all-thread/world/weak-only multiplicities stay separate C06/E12 terms."
+  },
+  "initial_checks": {
+    "compile": "Missing assumed type-registry header removed;class already in ObjectFeatureConfig.h. WorldGenSets.cpp absent in scatter target,added specifically to that test target. Original failed compile/link logs retained.",
+    "fixture": "build/desktop-msvc/s4-settings-composition-source-first.json FAIL:other three feature pools omitted required biome lists and cave omitted kind. Added authored valid fields;unchanged production parsers. All phase bounds/cleanup were already PASS but output oracles correctly rejected initial data."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-settings-composition-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "reason": "Model/fixture/test target change,but desktop bytes differ after CMake regeneration;fresh native run recorded rather than reusing previous EXE identity."
+  }
+}
