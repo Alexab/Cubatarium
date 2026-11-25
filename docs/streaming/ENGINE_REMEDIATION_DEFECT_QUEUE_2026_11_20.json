@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "merge-placeholder-global-history-and-shared-memo-pointer",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "observed": "Global warning strings survive retired owners and suppress second registry;global memo pointer names caller-local maps across independent registry locks. Parallel Rebuild also reaches process-shared mutable stage clock.",
+      "fix": "Merge diagnostic/memo ownership correction scoped PASS. Removed process-global placeholder string history and global pointer to caller-local stem memo. Warnings now use6 inline flags per current merged entry,retired/replaced with normal entry owner;no diagnostic strings/history allocate. ResolveStemInPack receives actual call-local memo by reference. Baseline first owner6 warnings/second0 and656 bytes14 blocks remain after owner destruction. Fixed both owners6 warnings,new rebuild6,retired0;actual quiescent flags6/marked6,entry value528 bytes incl flags.64 parallel independent Rebuild calls,same pack ID/different path existence,0 mismatches. All246 persistent ordinary-new refusal boundaries clean fresh registry/cache to0 and recover on exact retry. Existing stage marker mutable clock made per-thread8-byte cell instead of process clock,so concurrent diagnostic calls do not share that timestamp;compiler TLS/runtime overhead remains E12. Full scatter,merge staging,placeholder263 and override2817 regressions PASS. Release/native runtime/startup/save/UI/provenance PASS;aggregate smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-merge-diagnostics-acceptance.json",
+      "next_action": "C05 OPEN:general whole-directory/resource merge envelope for pending/local memo/map/IDs/descriptors/atlas sources,pack biome-image adoption and full source/retained/prior-current publication composition. Global placeholder string history eliminated;warning storage now inline6/current entry and memo lifetime exactly one ResolveTextureAtlas call. C06 finite all-world/thread/global/publisher/escaped roots,E12 clock cell*T plus compiler guard/TLS/CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart."
+    },
+    {
       "id": "placeholder-key-admission-before-pixels-and-unchecked-layout",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_NATIVE_PASS_FULL_C05_OPEN",

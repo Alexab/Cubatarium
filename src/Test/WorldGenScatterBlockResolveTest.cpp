@@ -464,9 +464,11 @@ static void TestResourceCatalogCensus()
 #include "Test/MergeStagingOwnershipFixture.h"
 #include "Test/PlaceholderRecoveryFixture.h"
 #include "Test/PlaceholderSourceFixture.h"
+#include "Test/MergeDiagnosticOwnershipFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--merge-diagnostics") return RunMergeDiagnosticOwnershipFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="baseline");
   if(argc>1 && std::string(argv[1])=="--placeholder-source") return RunPlaceholderSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--placeholder-recovery") return RunPlaceholderRecoveryFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="baseline");
   if(argc>1 && std::string(argv[1])=="--merge-staging") return RunMergeStagingOwnershipFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="matrix");

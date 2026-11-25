@@ -191,17 +191,10 @@ void UBlockMergeRegistry::ApplyTextureOverrides(
   }
 }
 
-namespace
-{
-/// Per-call memo of "does <pack>/textures/blocks/<stem>.png exist". Most stems
-/// are shared by several faces and blocks; without it every face costs a
-/// filesystem stat (seconds for a ~1800-block catalog).
-std::unordered_map<std::string, bool> *gStemExistsMemo = nullptr;
-} // namespace
-
 std::string
 UBlockMergeRegistry::ResolveStemInPack(const std::string &stem,
-                                       const ResourcePackManifest &pack) const
+                                       const ResourcePackManifest &pack,
+                                       std::unordered_map<std::string,bool> &memo) const
 {
   if (stem.empty())
   {
@@ -211,42 +204,17 @@ UBlockMergeRegistry::ResolveStemInPack(const std::string &stem,
   {
     return stem;
   }
-  bool exists = false;
-  if (gStemExistsMemo)
-  {
-    const std::string key = pack.Id + '\n' + stem;
-    const auto hit = gStemExistsMemo->find(key);
-    if (hit != gStemExistsMemo->end())
-    {
-      exists = hit->second;
-    }
-    else
-    {
-      exists = fs::exists(UResourcePack::TexturePath(pack, stem));
-      (*gStemExistsMemo)[key] = exists;
-    }
-  }
-  else
-  {
-    exists = fs::exists(UResourcePack::TexturePath(pack, stem));
-  }
+  const std::string key = pack.Id + '\n' + stem;
+  auto hit = memo.find(key);
+  if(hit==memo.end())
+    hit=memo.emplace(key,fs::exists(UResourcePack::TexturePath(pack,stem))).first;
+  const bool exists=hit->second;
   if (exists)
   {
     return PackQualifiedTextureStem(pack.Id, stem);
   }
   return {};
 }
-
-namespace
-{
-
-std::unordered_set<std::string> &LoggedPlaceholderStems()
-{
-  static std::unordered_set<std::string> logged;
-  return logged;
-}
-
-} // namespace
 
 void UBlockMergeRegistry::ResolveTextureAtlas(
     const std::vector<ResourcePackManifest> &sorted)
@@ -259,16 +227,6 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
   }
 
   std::unordered_map<std::string, bool> stem_exists;
-  struct MemoScope
-  {
-    explicit MemoScope(std::unordered_map<std::string, bool> *memo)
-        : Previous(gStemExistsMemo)
-    {
-      gStemExistsMemo = memo;
-    }
-    ~MemoScope() { gStemExistsMemo = Previous; }
-    std::unordered_map<std::string, bool> *Previous;
-  } memo_scope(&stem_exists);
 
   size_t processed = 0;
   for (auto &pair : BlocksByName)
@@ -288,7 +246,7 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
     for (int face = 0; face < 6; ++face)
     {
       const std::string rawStem = pair.second.Stems[static_cast<size_t>(face)];
-      std::string resolved = ResolveStemInPack(rawStem, ownerPack);
+      std::string resolved = ResolveStemInPack(rawStem, ownerPack,stem_exists);
       if (resolved.empty())
       {
         for (const auto &pack : sorted)
@@ -297,7 +255,7 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
           {
             continue;
           }
-          resolved = ResolveStemInPack(rawStem, pack);
+          resolved = ResolveStemInPack(rawStem, pack,stem_exists);
           if (!resolved.empty())
           {
             break;
@@ -310,14 +268,13 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
       }
       else if (PlaceholderCache)
       {
-        const std::string logKey =
-            pair.first + ":" + std::to_string(face) + ":" + rawStem;
-        if (LoggedPlaceholderStems().insert(logKey).second)
+        if (!pair.second.PlaceholderWarned[static_cast<size_t>(face)])
         {
           std::cerr << "BlockMergeRegistry: placeholder texture stem for '"
                     << pair.first << "' face " << face
                     << " (owner=" << pair.second.OwnerPackId
                     << ", stem=" << rawStem << ")" << std::endl;
+          pair.second.PlaceholderWarned[static_cast<size_t>(face)]=true;
         }
         pair.second.Stems[static_cast<size_t>(face)] =
             PlaceholderCache->GetOrCreateStem(pair.first, face,

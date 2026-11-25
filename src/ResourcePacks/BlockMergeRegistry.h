@@ -118,6 +118,8 @@ private:
     std::array<std::string, 6> Stems{};
     std::string OwnerPackId;
     bool IsQualifiedDuplicate{false};
+    // Bounded by current entries;no retained asset-name history after reload.
+    std::array<bool,6> PlaceholderWarned{};
   };
 
   void MergeBlockCatalog(const std::vector<ResourcePackManifest> &sorted);
@@ -126,7 +128,8 @@ private:
   void ApplyTextureOverrides(const std::vector<ResourcePackManifest> &sorted);
 
   std::string ResolveStemInPack(const std::string &stem,
-                                const ResourcePackManifest &pack) const;
+                                const ResourcePackManifest &pack,
+                                std::unordered_map<std::string,bool> &memo) const;
   void AssignRuntimeIds();
   BlockId CreateSyntheticBlock(const std::string &name);
   static bool IsPackOwnedEntry(const MergedEntry &entry);

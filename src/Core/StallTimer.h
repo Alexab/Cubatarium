@@ -57,12 +57,12 @@ private:
   std::chrono::steady_clock::time_point Begin;
 };
 
-/// Sequential stage marker: reports the time since the previous mark, i.e. the
-/// stage that just finished. Use for linear startup / prepare sequences.
+/// Sequential stage marker per calling thread: reports time since that
+/// thread's previous mark. Use for linear startup / prepare sequences.
 inline void StallStageMark(const char *finished_stage,
                            double threshold_ms = 50.0)
 {
-  static std::chrono::steady_clock::time_point last =
+  static thread_local std::chrono::steady_clock::time_point last =
       std::chrono::steady_clock::now();
   const auto now = std::chrono::steady_clock::now();
   const double ms =

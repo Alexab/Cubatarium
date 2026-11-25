@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.merge-diagnostics",
+      "status": "SCOPED_OWNER_RETIREMENT_PARALLEL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-merge-diagnostics-acceptance.json",
+      "certificate": "S4_02_C05_MERGE_DIAGNOSTICS_CERTIFICATE_2026_11_25.json",
+      "scope": "Merge diagnostic/memo ownership correction scoped PASS. Removed process-global placeholder string history and global pointer to caller-local stem memo. Warnings now use6 inline flags per current merged entry,retired/replaced with normal entry owner;no diagnostic strings/history allocate. ResolveStemInPack receives actual call-local memo by reference. Baseline first owner6 warnings/second0 and656 bytes14 blocks remain after owner destruction. Fixed both owners6 warnings,new rebuild6,retired0;actual quiescent flags6/marked6,entry value528 bytes incl flags.64 parallel independent Rebuild calls,same pack ID/different path existence,0 mismatches. All246 persistent ordinary-new refusal boundaries clean fresh registry/cache to0 and recover on exact retry. Existing stage marker mutable clock made per-thread8-byte cell instead of process clock,so concurrent diagnostic calls do not share that timestamp;compiler TLS/runtime overhead remains E12. Full scatter,merge staging,placeholder263 and override2817 regressions PASS. Release/native runtime/startup/save/UI/provenance PASS;aggregate smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.placeholder-source",
       "status": "SCOPED_REQUEST_TRANSFER_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-placeholder-source-acceptance.json",

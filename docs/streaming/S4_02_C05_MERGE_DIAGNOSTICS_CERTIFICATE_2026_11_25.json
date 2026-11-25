@@ -1,0 +1,141 @@
+{
+  "schema": "s4-merge-diagnostic-ownership-certificate.v1",
+  "status": "SCOPED_OWNER_RETIREMENT_PARALLEL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Merge diagnostic/memo ownership correction scoped PASS. Removed process-global placeholder string history and global pointer to caller-local stem memo. Warnings now use6 inline flags per current merged entry,retired/replaced with normal entry owner;no diagnostic strings/history allocate. ResolveStemInPack receives actual call-local memo by reference. Baseline first owner6 warnings/second0 and656 bytes14 blocks remain after owner destruction. Fixed both owners6 warnings,new rebuild6,retired0;actual quiescent flags6/marked6,entry value528 bytes incl flags.64 parallel independent Rebuild calls,same pack ID/different path existence,0 mismatches. All246 persistent ordinary-new refusal boundaries clean fresh registry/cache to0 and recover on exact retry. Existing stage marker mutable clock made per-thread8-byte cell instead of process clock,so concurrent diagnostic calls do not share that timestamp;compiler TLS/runtime overhead remains E12. Full scatter,merge staging,placeholder263 and override2817 regressions PASS. Release/native runtime/startup/save/UI/provenance PASS;aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:general whole-directory/resource merge envelope for pending/local memo/map/IDs/descriptors/atlas sources,pack biome-image adoption and full source/retained/prior-current publication composition. Global placeholder string history eliminated;warning storage now inline6/current entry and memo lifetime exactly one ResolveTextureAtlas call. C06 finite all-world/thread/global/publisher/escaped roots,E12 clock cell*T plus compiler guard/TLS/CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "cleanup_failures": 0,
+    "current_marked_faces": 6,
+    "current_warning_slots": 6,
+    "first_warnings": 6,
+    "merge_entry_value_bytes": 528,
+    "parallel_mismatches": 0,
+    "parallel_rebuilds": 64,
+    "persistent_refusal_and_retry_cases": 246,
+    "rebuild_warnings": 6,
+    "retired_blocks": 0,
+    "retired_live": 0,
+    "retry_failures": 0,
+    "same_entry_repeat_resolve_warnings": 6,
+    "schema": "merge-diagnostic-ownership.v1",
+    "scope": "Actual registry warning/memo lifecycle;serial baseline only. Fixed parallel independent registries have same pack ID/different path existence. Pixel/backend acceptance separate;no mutable Rebuild rollback claim.",
+    "second_warnings": 6,
+    "stage_clock_cell_bytes": 8,
+    "status": "PASS"
+  },
+  "baseline": {
+    "first_warnings": 6,
+    "rebuild_warnings": 0,
+    "retired_blocks": 14,
+    "retired_live": 656,
+    "schema": "merge-diagnostic-ownership.v1",
+    "scope": "Actual registry warning/memo lifecycle;serial baseline only. Fixed parallel independent registries have same pack ID/different path existence. Pixel/backend acceptance separate;no mutable Rebuild rollback claim.",
+    "second_warnings": 0,
+    "status": "REPRODUCED"
+  },
+  "baseline_identity": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "79646c7b9592cb3e310e83099bb23b3d8f6a199150df6b7d7d843fec5e943179",
+    "src/ResourcePacks/BlockMergeRegistry.h": "4cbdbb602903907aa571f63af304488c6898c34ca7f34b525d03b542f109c569",
+    "src/Core/StallTimer.h": "74be906274c4df3e968d7d00cf555959a3c8a80a9aa062f55d87d480b4f286af",
+    "src/Test/MergeDiagnosticOwnershipFixture.h": "855b04ed7ad53605d806199e52c18a2e1051e88ab61e95ede4b35da35fb4d292",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "1a361cd58cceb842311ec542474b239766bbb634a2d2e32328a657c59e236dfb",
+    "build/desktop-msvc/Release/worldgen_scatter_block_resolve_test.exe": "aba5f10c3721a58bab462dcfd0eda1018b9759f711d93f907f00793bc01a33e6"
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2088d54f52f594ebd6ce768284b1e295f76e8c834010f4dd545c72cc92d2ba9c"
+    },
+    {
+      "name": "merge-staging",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-staging",
+        "build\\desktop-msvc\\s4-merge-diagnostics-staging-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2088d54f52f594ebd6ce768284b1e295f76e8c834010f4dd545c72cc92d2ba9c"
+    },
+    {
+      "name": "placeholder",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--placeholder-source",
+        "build\\desktop-msvc\\s4-merge-diagnostics-placeholder-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2088d54f52f594ebd6ce768284b1e295f76e8c834010f4dd545c72cc92d2ba9c"
+    },
+    {
+      "name": "overrides",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--texture-overrides",
+        "build\\desktop-msvc\\s4-merge-diagnostics-overrides-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "10aba378354a39a2f39f877520f16fcb02ac319c2d5cc4c19a68931918c5cdae"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "7b7b96efdbcf0e7d084ba167e1657124ce9c6799c81cfdcff394784eafdebad5",
+    "src/ResourcePacks/BlockMergeRegistry.h": "7a0071886b7313d325227eccbf0ac932f70925816b2d37f7ac4c509ce0c1625b",
+    "src/Core/StallTimer.h": "4e227ebdc8f89ebc8ef7b2378ae88fe53d4e5a7992b0b748f446e2a66be99542",
+    "src/Test/MergeDiagnosticOwnershipFixture.h": "454e347b89218105d5765e10d8dc18667c0d5c1a948302d42e3c4db6eeac2ed4",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "1a361cd58cceb842311ec542474b239766bbb634a2d2e32328a657c59e236dfb"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b"
+  },
+  "test_exe_sha256": "2088d54f52f594ebd6ce768284b1e295f76e8c834010f4dd545c72cc92d2ba9c",
+  "desktop_exe_sha256": "0c62e9ccdae6cc1607af5db9fbe84232d86d64720229e3405c90f81560b1f84b",
+  "provenance": "build/desktop-msvc/s4-merge-diagnostics-provenance.json",
+  "ownership_terms": {
+    "warning_flags": "6*sizeof(bool) field per live merged entry,already included in actual map value size528 and node census. No per-warning key allocation or process-global retired-name history. At most6 marked faces per current entry. New entry/rebuild resets flags;repeat resolve in same entry does not add history.",
+    "memo": "Exactly one local unordered_map per active ResolveTextureAtlas invocation,passed by reference. Unique keys<=6*current merged entries*sorted pack count;key text comes from pack ID and raw stem. Its heap/node/bucket/text bound is part of remaining composed merge envelope. No global or TLS memo pointer/root.",
+    "clock": "Old process-static stage timestamp replaced by per-thread time_point,sizeof8. Count8*T logical clock bytes with live/touched thread domain,plus compiler guard/TLS block/CRT overhead under E12. Not a new heap history;not claimed to fully account physical TLS.",
+    "coverage": "Parallel functional probe uses no installed UI work-pump handler and marker files witness only existence,not decoded image or GPU parity. This is no exhaustive race detector claim;existing window/UI thread contract and full S6 remain separate. Refusal probes destroy partially changed fresh registry/cache then retry,not mutable published-registry rollback."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-merge-diagnostics-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}
