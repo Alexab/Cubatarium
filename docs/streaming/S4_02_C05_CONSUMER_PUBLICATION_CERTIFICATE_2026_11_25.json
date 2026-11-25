@@ -1,0 +1,282 @@
+{
+  "schema": "s4-consumer-publication-source-certificate.v1",
+  "status": "SCOPED_STAGED_PUBLICATION_REFUSAL_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Consumer definition/texture publication and source envelopes scoped PASS. Definition ById reserves once and insert_or_assign copies directly;existing atomic snapshot publication stays last. Full texture replacement and missing-stem refresh prepare independent registration tree before allocation-free swap/node-transfer commit. Registry read locks pin sources;all-present descriptor predicate borrows strings and allocates0 instead of building a set. Baseline old target changed under refusal at prefix0 for replacement and13 for refresh. Fixed102 texture and773 definition persistent refusal boundaries preserve prior target/snapshot and exact retry recovers full independently authored output.0/17/65 definitions,three packs,duplicate texture stems,absent directory,.PNG exclusion and legacy directory.png registration retained;4 real placeholder tiles match independent FNV golden. No-allocation commit preserves transferred node/pixel addresses;output survives cache/merge/input retirement. Prior/current texture and definition owner requests independently censused and composed within bounds;real localized OS directory error preserves both target routes. Overflow and extra-allocation controls PASS.10 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 real GL readbacks PASS;aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:final composition of accepted decoder/JSON/file/path/stream/settings/candidate/merge/fingerprint/publication source phases with deduplicated retained,prior/current and escaped world/catalog owners. Three named merge consumer publication routes are now source-bounded;texture commits are quiescent/no-allocation,not concurrent texture RCU. Stable default MSVC file profile and explicit localized filesystem diagnostic source allowance retained. C06 finite all-world/thread/global/publisher/returned roots,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Existing ecology mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance.",
+  "baseline": {
+    "cases": [
+      {
+        "normal_attempts": 42,
+        "normal_peak": 1310,
+        "old_target_changed": true,
+        "prefix": 0,
+        "route": "full_replacement"
+      },
+      {
+        "normal_attempts": 44,
+        "normal_peak": 1366,
+        "old_target_changed": true,
+        "prefix": 13,
+        "route": "missing_stem_refresh"
+      }
+    ],
+    "schema": "merge-publication-baseline.v1",
+    "status": "REPRODUCED"
+  },
+  "baseline_identity": {
+    "files": {
+      "src/ResourcePacks/BlockMergeRegistry.cpp": "fc6abe2615f892f821a9240c1aca97311586df0fc5f0d2ca0c346e3b53830d51",
+      "src/ResourcePacks/BlockMergeRegistry.h": "6571ed1d492fbf61a35b1fbca3e514809d58bd59a99f8b05b80141449b936ee2",
+      "src/Render/Textures/TextureBase.cpp": "3a8e0c2bf8e8252d69d6c4760497093e823634d757b948a476c789ab71099eb9",
+      "src/Render/Textures/TextureBase.h": "3d3354b4365857c4b4d1a9e35e836d1c851f9a965fc988933e9c6b5320180986",
+      "src/Test/MergePublicationFixture.h": "3dba100db5f5f2d8f6f69c0160b5d66028cf1b05340cca26093cb511808dfce0",
+      "src/Test/WorldGenScatterBlockResolveTest.cpp": "4064b2f4870487c5c53345db0a0c9997f9eae84935436edf64acc414d2fdae15"
+    },
+    "test_exe_sha256": "6783f1cdf1b20ff276fac419acac7d4e1a8c9d632a08219b9dd3ddc6673c1c9b"
+  },
+  "unit": {
+    "all_present_zero_allocations": true,
+    "definition_cases": [
+      {
+        "attempts": 11,
+        "pass": true,
+        "peak": 1856,
+        "rows": 0,
+        "upper": 18312
+      },
+      {
+        "attempts": 165,
+        "pass": true,
+        "peak": 26879,
+        "rows": 17,
+        "upper": 270600
+      },
+      {
+        "attempts": 597,
+        "pass": true,
+        "peak": 79782,
+        "rows": 65,
+        "upper": 837896
+      }
+    ],
+    "definition_prior_current": {
+      "entry_observed": 9671,
+      "entry_upper": 9914,
+      "pass": true,
+      "peak": 89453,
+      "upper": 847810
+    },
+    "definition_refusal_and_retry_cases": 773,
+    "failed_cases": 0,
+    "filesystem_error": {
+      "pass": true,
+      "peak": 824,
+      "upper": 29800
+    },
+    "negative_controls": true,
+    "overflow_rejected": true,
+    "pixel_golden": true,
+    "prepared_commit_zero_allocations": true,
+    "schema": "merge-publication-source.v1",
+    "scope": "Actual staged definition/texture publication,stable default MSVC filesystem profile plus real localized OS directory error. Prior/escaped targets separate;no concurrent texture RCU claim,OS/CRT/GPU/process cap or full C05 composition acceptance. PNG markers prove registration only;pixel oracle comes from real cached RGBA files/golden.",
+    "status": "PASS",
+    "texture_cases": [
+      {
+        "attempts": 51,
+        "pass": true,
+        "peak": 5728,
+        "png_registration_rows": 6,
+        "route": "full_replacement",
+        "upper": 112134
+      },
+      {
+        "attempts": 51,
+        "pass": true,
+        "peak": 5728,
+        "png_registration_rows": 6,
+        "route": "missing_stem_refresh",
+        "upper": 112134
+      }
+    ],
+    "texture_output_outlives_sources": true,
+    "texture_prior_current": {
+      "entry_observed": 4827,
+      "entry_upper": 5217,
+      "pass": true,
+      "peak": 10555,
+      "upper": 117351
+    },
+    "texture_refusal_and_retry_cases": 102
+  },
+  "regressions": [
+    {
+      "name": "source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-publication",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "merge-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-merge-source.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "staging",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-staging",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-staging.json",
+        "matrix"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "placeholder",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--placeholder-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-placeholder.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "fingerprint",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--fingerprint-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-fingerprint.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be"
+    },
+    {
+      "name": "census",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "04fe49ab61e95bb2f4918baffce4847368c96ff0535c2eb4b1a81c851f532258"
+    },
+    {
+      "name": "pipeline",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "04fe49ab61e95bb2f4918baffce4847368c96ff0535c2eb4b1a81c851f532258"
+    },
+    {
+      "name": "factory",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "04fe49ab61e95bb2f4918baffce4847368c96ff0535c2eb4b1a81c851f532258"
+    },
+    {
+      "name": "retained",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--retained-inputs",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-publication-retained.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7a095f87bacaa040323c67f7c2f74fecc02e604a91de636ed9faebe2cb97213"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "4557aa5c85fe577270087e2b39db77b4288c8099b8ecb5f4833229ae639bc0b8",
+    "src/ResourcePacks/BlockMergeRegistry.h": "a8b6558b015df456b8cea3ff245764ada094f586801fcc4fe6ad40e2a69c1207",
+    "src/Render/Textures/TextureBase.cpp": "12b364d6d8f4693298f62eb3f6b923a67c8a672b4cc811e2fcbc428f20b23e9d",
+    "src/Render/Textures/TextureBase.h": "eb8d2a9504178c00329075bb008ed74683eb4d8a81e54ff368190c1c8139403c",
+    "src/WorldGen/Core/MergePublicationEnvelope.h": "624256230db97b787217f3a9d8f7b925e744d3246f6ca3f7975713a605df81cd",
+    "src/Test/MergePublicationFixture.h": "b61564bf6471bf713a6bd30de7b1395487bdd34bbd4b6680c7211334235b5696",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "c764efbfb429fce5de04590a2b51dd0d13d2b5f2435d58b9f9b5bc1ef55a382a",
+    "src/WorldGen/Core/PlaceholderSourceEnvelope.h": "1689a64b59a564e03f00a1537dbd7caa30ca5ceac5cdb753cac4b418d18ccabe",
+    "src/WorldGen/Core/CatalogFilesystemSourceEnvelope.h": "ee7f9548be5ceeacaf92e8e90de96abc83a841c60bdd2f83b6d929984a1a9214",
+    "src/Blocks/BlockDefinitionStorage.cpp": "8b76d45d954b10fa715fd04c2dafbe75c942fbf7452a97ddea0873ea65a3bc37"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5"
+  },
+  "test_exe_sha256": "2311d86afba20cf78f06f66be7ac9583b8239862529f2e5ff500b73db425b9be",
+  "desktop_exe_sha256": "208a2e89c2afdc38e02bc15329941707a3aeba7eb7babc5c4679bfcd783f23aa",
+  "provenance": "build/desktop-msvc/s4-publication-provenance.json",
+  "model": {
+    "definitions": "Inspector selects actual definition deep capacities and NameToId map/key backing;manifest/texture roots excluded,pending runtime definitions conservatively included. Typed output ById node,shared catalog/control and MSVC growth/parameter-map/default sentinel allowances;borrowed registry and old/shared snapshots are separate entry owners. Existing ReplaceAll atomic store remains after all copies/moves.",
+    "textures": "P packs,T actual .png extension rows (including directory.png),W max full native path including missing roots,I max pack ID. Typed tree nodes plus checked qualification/path/UTF conversion/string growth terms,one sequential filesystem scratch and accepted PlaceholderRegistration envelope. Old target and original cache pixels are entry owners;new independent pixel copy appears once in preparation. Source allowance for real localized FS error uses actual category message length and declared operation/path domain.",
+    "commit": "Default allocator std::map trees transfer new nodes without allocation;existing rows receive noexcept UTextureBase moves. String comparator only reads current std::string data. Swap is compile-time noexcept;UTextureBase move assignment compile-time noexcept. Zero-allowance test covers duplicate/new keys,pixel/node pointer transfer,swap and self-merge. No texture-reader concurrency/atomic multi-thread publication claim.",
+    "failure": "Preparation fails before commit;target remains byte/content-identical. Missing predicate scans borrowed descriptors and performs no allocations when all nonempty stems already present. Logical last-registration-wins and full-replace/additive behavior unchanged on success.",
+    "entry": "Texture prior observed4827<=independent upper5217,combined peak10555<=117351. Definition old/current entry and peak recorded in unit;old escaped snapshot remains intact while new active catalog is published. Inspector scratch is outside allocator epoch and weak handles retire before final0 check.",
+    "overheads": "No new process counters,TLS/history or production allocator ledger. Extra staged tree/lock inline variables and old/new target overlap accounted as explicit source/entry terms. CRT/OS/filesystem exception internals/native stack/GPU/process physical memory remain E12."
+  },
+  "initial_fixture": {
+    "artifact": "build/desktop-msvc/s4-publication-source-first.json",
+    "status": "FAIL",
+    "reason": "New definition test files omitted required six texture stems;loader rejected them and17/65 expected-row checks failed. Added valid authored six-stem field;production parser unchanged. Original failed artifact retained."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-publication-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

@@ -140,6 +140,7 @@ private:
   void ResolveBlockDefinitions(const std::vector<ResourcePackManifest> &sorted);
   void ResolveTextureAtlas(const std::vector<ResourcePackManifest> &sorted);
   void ApplyTextureOverrides(const std::vector<ResourcePackManifest> &sorted);
+  void RegisterTextureSources(UTextureBaseStorage &out) const;
 
   std::string ResolveStemInPack(const std::string &stem,
                                 const ResourcePackManifest &pack,

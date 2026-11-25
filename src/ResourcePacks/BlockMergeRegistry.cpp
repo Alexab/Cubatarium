@@ -633,11 +633,12 @@ void UBlockMergeRegistry::PopulateBlockDefinitionStorage(
 {
   std::shared_lock lock(CatalogMutex);
   std::unordered_map<BlockId, BlockDefinition> byId;
+  byId.reserve(BlocksByName.size());
   for (const auto &pair : BlocksByName)
   {
     const BlockId id = NameToId.at(pair.first);
-    byId[id] = pair.second.Definition;
-    byId[id].Id = id;
+    const auto entry=byId.insert_or_assign(id,pair.second.Definition).first;
+    entry->second.Id = id;
   }
   out.ReplaceAll(std::move(byId), NameToId);
 }
@@ -645,7 +646,14 @@ void UBlockMergeRegistry::PopulateBlockDefinitionStorage(
 void UBlockMergeRegistry::PopulateTextureBaseStorage(
     UTextureBaseStorage &out) const
 {
-  out.Clear();
+  std::shared_lock lock(CatalogMutex);
+  UTextureBaseStorage prepared;
+  RegisterTextureSources(prepared);
+  out.Swap(prepared);
+}
+
+void UBlockMergeRegistry::RegisterTextureSources(UTextureBaseStorage &out) const
+{
   for (const auto &pack : ActivePacks)
   {
     UResourcePack::RegisterTextures(pack, out);
@@ -660,39 +668,28 @@ void UBlockMergeRegistry::RegisterMissingTextureStems(
     UTextureBaseStorage &out,
     const std::vector<MergedCubeDesc> &descriptors) const
 {
-  std::unordered_set<std::string> needed;
+  std::shared_lock lock(CatalogMutex);
+  const auto &have=out.GetBaseTextures();
+  bool anyMissing=false;
   for (const MergedCubeDesc &desc : descriptors)
   {
     for (const std::string &stem : desc.Stems)
     {
-      if (!stem.empty())
+      if (!stem.empty() && !have.count(stem))
       {
-        needed.insert(stem);
+        anyMissing=true;
+        break;
       }
     }
-  }
-  const auto &have = out.GetBaseTextures();
-  bool anyMissing = false;
-  for (const std::string &stem : needed)
-  {
-    if (!have.count(stem))
-    {
-      anyMissing = true;
-      break;
-    }
+    if(anyMissing)break;
   }
   if (!anyMissing)
   {
     return;
   }
-  for (const auto &pack : ActivePacks)
-  {
-    UResourcePack::RegisterTextures(pack, out);
-  }
-  if (PlaceholderCache)
-  {
-    PlaceholderCache->RegisterAll(out);
-  }
+  UTextureBaseStorage prepared;
+  RegisterTextureSources(prepared);
+  out.MergePrepared(std::move(prepared));
 }
 
 std::unordered_map<std::string, BlockId>

@@ -467,9 +467,12 @@ static void TestResourceCatalogCensus()
 #include "Test/MergeDiagnosticOwnershipFixture.h"
 #include "Test/MergeSourceFixture.h"
 #include "Test/FingerprintSourceFixture.h"
+#include "Test/MergePublicationFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--merge-publication") return merge_publication_fixture::Accepted(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--merge-publication-baseline") return merge_publication_fixture::Baseline(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--fingerprint-source") return fingerprint_fixture::Accepted(argc>2?argv[2]:nullptr);
   if(argc>2 && std::string(argv[1])=="--fingerprint-baseline") return fingerprint_fixture::Baseline(argv[2],argc>3?static_cast<size_t>(std::stoull(argv[3])):SIZE_MAX);
   if(argc>1 && std::string(argv[1])=="--merge-source") return RunMergeSourceFixture(argc>2?argv[2]:nullptr);

@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "texture-registration-clears-or-partially-mutates-prior-target-under-refusal",
+      "stage": "S4.02",
+      "status": "SCOPED_STAGED_PUBLICATION_REFUSAL_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "observed": "Existing texture output changes under ordinary-new refusal:full replacement prefix0,missing-stem refresh prefix13. Exact baseline/source/EXE identity and both records are retained in the consumer publication certificate.",
+      "fix": "Consumer definition/texture publication and source envelopes scoped PASS. Definition ById reserves once and insert_or_assign copies directly;existing atomic snapshot publication stays last. Full texture replacement and missing-stem refresh prepare independent registration tree before allocation-free swap/node-transfer commit. Registry read locks pin sources;all-present descriptor predicate borrows strings and allocates0 instead of building a set. Baseline old target changed under refusal at prefix0 for replacement and13 for refresh. Fixed102 texture and773 definition persistent refusal boundaries preserve prior target/snapshot and exact retry recovers full independently authored output.0/17/65 definitions,three packs,duplicate texture stems,absent directory,.PNG exclusion and legacy directory.png registration retained;4 real placeholder tiles match independent FNV golden. No-allocation commit preserves transferred node/pixel addresses;output survives cache/merge/input retirement. Prior/current texture and definition owner requests independently censused and composed within bounds;real localized OS directory error preserves both target routes. Overflow and extra-allocation controls PASS.10 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 real GL readbacks PASS;aggregate smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-publication-acceptance.json",
+      "next_action": "C05 OPEN:final composition of accepted decoder/JSON/file/path/stream/settings/candidate/merge/fingerprint/publication source phases with deduplicated retained,prior/current and escaped world/catalog owners. Three named merge consumer publication routes are now source-bounded;texture commits are quiescent/no-allocation,not concurrent texture RCU. Stable default MSVC file profile and explicit localized filesystem diagnostic source allowance retained. C06 finite all-world/thread/global/publisher/returned roots,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Existing ecology mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance."
+    },
+    {
       "id": "catalog-fingerprint-constructed-json-retirement-under-refusal",
       "stage": "S4.02",
       "status": "SCOPED_CANONICAL_FINGERPRINT_REFUSAL_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",

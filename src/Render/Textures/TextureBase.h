@@ -45,6 +45,9 @@ public:
   void Clear();
   void Register(const std::string &stem, const std::string &file_path);
   void RegisterPixels(const std::string &stem, TexturePixelData pixels);
+  // Quiescent publication of fully prepared registrations; no allocations.
+  void Swap(UTextureBaseStorage &other) noexcept;
+  void MergePrepared(UTextureBaseStorage &&prepared) noexcept;
 
   const std::map<std::string, UTextureBase> &GetBaseTextures() const;
   template<class Inspector> void InspectStorage(Inspector &out) const {

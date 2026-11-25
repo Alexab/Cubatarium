@@ -1,6 +1,8 @@
 #include "Render/Textures/TextureBase.h"
 #include <filesystem>
 #include <iostream>
+#include <type_traits>
+#include <utility>
 
 namespace cutum
 {
@@ -52,6 +54,24 @@ void UTextureBaseStorage::Load(const std::string &textures_path)
 }
 
 void UTextureBaseStorage::Clear() { BaseTextures.clear(); }
+
+void UTextureBaseStorage::Swap(UTextureBaseStorage &other) noexcept
+{
+  static_assert(noexcept(BaseTextures.swap(other.BaseTextures)));
+  BaseTextures.swap(other.BaseTextures);
+}
+
+void UTextureBaseStorage::MergePrepared(UTextureBaseStorage &&prepared) noexcept
+{
+  if(this==&prepared)return;
+  static_assert(std::is_nothrow_move_assignable_v<UTextureBase>);
+  // Both trees have the same default allocator and std::less<std::string>.
+  // Merge transfers nodes without allocation; comparison only reads strings.
+  BaseTextures.merge(prepared.BaseTextures);
+  // Duplicated keys remain in prepared. Preserve the registration rule that
+  // the prepared value wins; moving strings/optional pixels cannot allocate.
+  for(auto &entry:prepared.BaseTextures)BaseTextures.find(entry.first)->second=std::move(entry.second);
+}
 
 void UTextureBaseStorage::Register(const std::string &stem,
                                    const std::string &file_path)

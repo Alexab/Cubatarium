@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.consumer-publication",
+      "status": "SCOPED_STAGED_PUBLICATION_REFUSAL_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-publication-acceptance.json",
+      "certificate": "S4_02_C05_CONSUMER_PUBLICATION_CERTIFICATE_2026_11_25.json",
+      "scope": "Consumer definition/texture publication and source envelopes scoped PASS. Definition ById reserves once and insert_or_assign copies directly;existing atomic snapshot publication stays last. Full texture replacement and missing-stem refresh prepare independent registration tree before allocation-free swap/node-transfer commit. Registry read locks pin sources;all-present descriptor predicate borrows strings and allocates0 instead of building a set. Baseline old target changed under refusal at prefix0 for replacement and13 for refresh. Fixed102 texture and773 definition persistent refusal boundaries preserve prior target/snapshot and exact retry recovers full independently authored output.0/17/65 definitions,three packs,duplicate texture stems,absent directory,.PNG exclusion and legacy directory.png registration retained;4 real placeholder tiles match independent FNV golden. No-allocation commit preserves transferred node/pixel addresses;output survives cache/merge/input retirement. Prior/current texture and definition owner requests independently censused and composed within bounds;real localized OS directory error preserves both target routes. Overflow and extra-allocation controls PASS.10 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 real GL readbacks PASS;aggregate smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.fingerprint-source",
       "status": "SCOPED_CANONICAL_FINGERPRINT_REFUSAL_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-fingerprint-acceptance.json",
