@@ -3,11 +3,17 @@
 #include "WorldGen/Sampling/BiomeTypes.h"
 #include <algorithm>
 #include <string>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
 namespace cutum
 {
+
+constexpr bool BiomeHandleCountFits(size_t count) noexcept
+{
+  return count <= std::numeric_limits<uint32_t>::max();
+}
 
 /// Compiled immutable key/handle table owned by one WorldGenPack snapshot.
 /// Handles must never be persisted or resolved against another snapshot.
@@ -18,10 +24,12 @@ public:
   {
     std::sort(keys.begin(), keys.end());
     keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+    if (!BiomeHandleCountFits(keys.size()))
+      throw std::length_error("biome key count exceeds handle domain");
     Keys = std::move(keys);
-    for (uint32_t i = 0; i < Keys.size(); ++i)
+    for (size_t i = 0; i < Keys.size(); ++i)
     {
-      Handles.emplace(Keys[i], BiomeHandle{i});
+      Handles.emplace(Keys[i], BiomeHandle{static_cast<uint32_t>(i)});
     }
   }
 

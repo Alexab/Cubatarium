@@ -111,8 +111,10 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
 #include "Test/CatalogCandidateSourceFixture.h"
 #include "Test/PrefabCandidateSourceFixture.h"
 #include "Test/PackCandidateSourceFixture.h"
+#include "Test/PackBiomeIndexSourceFixture.h"
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--pack-biome-index") return RunPackBiomeIndexSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--pack-candidate") return RunPackCandidateSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--prefab-candidate") return RunPrefabCandidateSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--pack-publication") return RunPackPublicationFixture(argc>2?argv[2]:nullptr,argc>3?static_cast<size_t>(std::stoull(argv[3])):SIZE_MAX);

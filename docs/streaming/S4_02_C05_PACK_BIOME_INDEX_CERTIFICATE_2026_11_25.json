@@ -1,0 +1,160 @@
+{
+  "schema": "s4-pack-biome-index-source-certificate.v1",
+  "status": "SCOPED_FINALIZATION_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "WorldGenPack biome registry finalization source/refusal scoped PASS. CompileWorldGenPackBiomeIndex builds registry and both climate handle vectors in standalone result from borrowed pack;loader installs completed owners with move assignments. Failure leaves input registry/vectors unchanged. Registry validates deduplicated count<=UINT32_MAX because that index value is invalid sentinel;size_t loops and checked key-reserve sum avoid narrowing/wrap.5 sorted/dedup/roundtrip/builtin/custom/inactive/prior-output/257-key/long-key scenes,407 persistent ordinary-new refusals+exact retries,final live/blocks0 and active pack unchanged. Returned index owns keys after input destruction. Integer predicate boundary/overflow and unrelated allocation controls PASS. Full biome,document879 and prefab616 regressions PASS. Release desktop source/EXE provenance and native runtime/startup/save/UI PASS;aggregate startup smoke UNTESTED retained.",
+  "remaining": "C05 OPEN:complete pack/directory/resource merge growth,existing target capacities and source/retained/prior-current publication composition. Finalization source now includes one new registry/control/keys/map/climate-vector result;input Biomes and previous/escaped registries remain separate owners. Optional file partial-value semantics still unchanged. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU/full process matrix and S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "cases": [
+      {
+        "attempts": 22,
+        "keys": 0,
+        "name": "builtin_only",
+        "pass": true,
+        "peak": 2680,
+        "text": 0,
+        "upper": 50552
+      },
+      {
+        "attempts": 23,
+        "keys": 17,
+        "name": "builtin_duplicates",
+        "pass": true,
+        "peak": 3224,
+        "text": 142,
+        "upper": 72776
+      },
+      {
+        "attempts": 28,
+        "keys": 3,
+        "name": "mixed_and_prior_outputs",
+        "pass": true,
+        "peak": 2952,
+        "text": 24,
+        "upper": 54440
+      },
+      {
+        "attempts": 307,
+        "keys": 257,
+        "name": "257_keys_rehash_both_domains",
+        "pass": true,
+        "peak": 34046,
+        "text": 2460,
+        "upper": 396552
+      },
+      {
+        "attempts": 27,
+        "keys": 1,
+        "name": "long_key_direct_api",
+        "pass": true,
+        "peak": 19266,
+        "text": 8193,
+        "upper": 313768
+      }
+    ],
+    "failed_cases": 0,
+    "handle_count_boundaries": true,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "persistent_prefix_and_retry_cases": 407,
+    "returned_index_owns_keys": true,
+    "schema": "pack-biome-index-source.v1",
+    "scope": "Standalone finalization result,new registry/control and key/map/climate-vector backing;borrowed Biomes/prior outputs and escaped versions separate. No real huge allocation for integer boundary. Not whole directory/process memory cap.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "index",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--pack-biome-index",
+        "build\\desktop-msvc\\s4-pack-biome-index-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "68ac7f37ec7bad45472b9f51ed915e88fef95d27c201c218c898d28cf7733c69"
+    },
+    {
+      "name": "biome",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_biome_features_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "611433bd1d5c792053dce125e7e31b6d3e4f6cff2492de2f998d9791dc8147a9"
+    },
+    {
+      "name": "documents",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--pack-candidate",
+        "build\\desktop-msvc\\s4-pack-biome-index-documents-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "68ac7f37ec7bad45472b9f51ed915e88fef95d27c201c218c898d28cf7733c69"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-candidate",
+        "build\\desktop-msvc\\s4-pack-biome-index-prefab-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "68ac7f37ec7bad45472b9f51ed915e88fef95d27c201c218c898d28cf7733c69"
+    }
+  ],
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenPack.cpp": "5a4a340bb0b91bf0c0878574399941c9e32b804296107431dbb56d3d9460a6fc",
+    "src/WorldGen/Core/WorldGenPack.h": "58ff9d6465620f00f0e5e9057a1df21afdb6c7c2fcecf6f299a497b67f76dada",
+    "src/WorldGen/Sampling/BiomeDefinitionRegistry.h": "77423c18440f7baba216a694a14ba9b2eb2bfb6cef50091a8cbfcd114a482636",
+    "src/WorldGen/Core/PackBiomeIndexSourceEnvelope.h": "d6bd5f7b3866e24feb0480dbd2e9e6f14d0965f04b5416daf04591931289a850",
+    "src/Test/PackBiomeIndexSourceFixture.h": "7f592ee3fb9ed8dd4230eedf25c329b9f9a1e93efa8225f188b20cf29d92a526",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "d8b549c5eb7ad3064f6f46c3e13cba2e8bd0414b3750afcfbb42dfc0be17d98b"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "68ac7f37ec7bad45472b9f51ed915e88fef95d27c201c218c898d28cf7733c69",
+  "desktop_exe_sha256": "0cbbfcac8b35c078548fef096c60866e321e860e44b43f3f767abd324cfdd9a6",
+  "provenance": "build/desktop-msvc/s4-pack-biome-index-provenance.json",
+  "model": {
+    "domain": "N authored map keys and B summed authored key bytes;builtin table17 keys142 bytes independently checked,conservative512 text allowance. Arbitrary prior input key capacities/values and old result owners outside new-source stage.",
+    "upper": "16384+actual const-registry MSVC shared coallocation+(N+17)*(4*sizeof(BiomeKey)+8*sizeof(BiomeHandle)+actual handle-map list node+16*2*sizeof(pointer)+8*39+256)+32*(B+512). Checked/saturating,not runtime/process quota.",
+    "included": "Initializer/reserve old+new key vectors,sort/dedup/moves,new map nodes and old/new buckets,key text copies and both climate-vector growth,alignment and cold/default bookkeeping. New registry object/control INCLUDED once.",
+    "limits": "Source expression is ordinary-new requested memory,not process RSS. Sort recursion stack/CRT/OS/GPU E12 remain separate. Finalized return may escape via normal shared ownership;cardinality C06 remains open.",
+    "integer_test": "Predicate count0,max,max+1 verified without giant vector allocation. Constructor calls predicate after unique;no claim to have allocated UINT32_MAX keys."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-pack-biome-index-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

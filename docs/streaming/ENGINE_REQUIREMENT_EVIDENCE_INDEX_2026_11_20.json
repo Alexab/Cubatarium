@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.pack-biome-index",
+      "status": "SCOPED_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-pack-biome-index-acceptance.json",
+      "certificate": "S4_02_C05_PACK_BIOME_INDEX_CERTIFICATE_2026_11_25.json",
+      "scope": "WorldGenPack biome registry finalization source/refusal scoped PASS. CompileWorldGenPackBiomeIndex builds registry and both climate handle vectors in standalone result from borrowed pack;loader installs completed owners with move assignments. Failure leaves input registry/vectors unchanged. Registry validates deduplicated count<=UINT32_MAX because that index value is invalid sentinel;size_t loops and checked key-reserve sum avoid narrowing/wrap.5 sorted/dedup/roundtrip/builtin/custom/inactive/prior-output/257-key/long-key scenes,407 persistent ordinary-new refusals+exact retries,final live/blocks0 and active pack unchanged. Returned index owns keys after input destruction. Integer predicate boundary/overflow and unrelated allocation controls PASS. Full biome,document879 and prefab616 regressions PASS. Release desktop source/EXE provenance and native runtime/startup/save/UI PASS;aggregate startup smoke UNTESTED retained."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.pack-documents",
       "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-pack-document-acceptance.json",

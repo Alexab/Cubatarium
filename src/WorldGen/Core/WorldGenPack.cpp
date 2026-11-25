@@ -1126,6 +1126,46 @@ BiomePackDefinition CompileWorldGenBiomeCatalog(const nlohmann::json &biomeJson,
   return biomeDef;
 }
 
+WorldGenPackBiomeIndex CompileWorldGenPackBiomeIndex(const WorldGenPack &pack)
+{
+  WorldGenPackBiomeIndex index;
+  std::vector<BiomeKey> biomeKeys = BuiltinBiomeKeys();
+  if (pack.Biomes.size() > biomeKeys.max_size() - biomeKeys.size())
+    throw std::length_error("biome key capacity overflow");
+  biomeKeys.reserve(biomeKeys.size() + pack.Biomes.size());
+  for (const auto &[key, definition] : pack.Biomes)
+  {
+    (void)definition;
+    biomeKeys.push_back(key);
+  }
+  index.Registry =
+      std::make_shared<const UBiomeDefinitionRegistry>(std::move(biomeKeys));
+  for (size_t i = 0; i < index.Registry->Size(); ++i)
+  {
+    const BiomeHandle handle{static_cast<uint32_t>(i)};
+    const BiomeKey *key = index.Registry->Key(handle);
+    if (!key || BiomeIdFromString(*key) != BiomeId::Invalid)
+    {
+      continue;
+    }
+    const auto definition = pack.Biomes.find(*key);
+    if (definition == pack.Biomes.end() || !definition->second.Climate.Enabled)
+    {
+      continue;
+    }
+    if (definition->second.Domain == BiomeDomain::Surface)
+    {
+      index.Surface.push_back(handle);
+    }
+    else
+    {
+      index.Cave.push_back(handle);
+    }
+  }
+
+  return index;
+}
+
 bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
 {
   WorldGenPack pack{};
@@ -1193,37 +1233,10 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
     }
   }
 
-  std::vector<BiomeKey> biomeKeys = BuiltinBiomeKeys();
-  biomeKeys.reserve(biomeKeys.size() + pack.Biomes.size());
-  for (const auto &[key, definition] : pack.Biomes)
-  {
-    (void)definition;
-    biomeKeys.push_back(key);
-  }
-  pack.BiomeRegistry =
-      std::make_shared<const UBiomeDefinitionRegistry>(std::move(biomeKeys));
-  for (uint32_t i = 0; i < pack.BiomeRegistry->Size(); ++i)
-  {
-    const BiomeHandle handle{i};
-    const BiomeKey *key = pack.BiomeRegistry->Key(handle);
-    if (!key || BiomeIdFromString(*key) != BiomeId::Invalid)
-    {
-      continue;
-    }
-    const auto definition = pack.Biomes.find(*key);
-    if (definition == pack.Biomes.end() || !definition->second.Climate.Enabled)
-    {
-      continue;
-    }
-    if (definition->second.Domain == BiomeDomain::Surface)
-    {
-      pack.SurfaceClimateBiomes.push_back(handle);
-    }
-    else
-    {
-      pack.CaveClimateBiomes.push_back(handle);
-    }
-  }
+  auto biomeIndex = CompileWorldGenPackBiomeIndex(pack);
+  pack.BiomeRegistry = std::move(biomeIndex.Registry);
+  pack.SurfaceClimateBiomes = std::move(biomeIndex.Surface);
+  pack.CaveClimateBiomes = std::move(biomeIndex.Cave);
 
   if (pack.BiomeMode == WorldGenBiomeMode::Image &&
       !pack.BiomeMapImagePath.empty())

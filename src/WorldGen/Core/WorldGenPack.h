@@ -284,6 +284,14 @@ void ApplyWorldGenPackDocument(WorldGenPackDocument kind,
 BiomePackDefinition CompileWorldGenBiomeCatalog(const nlohmann::json &json,
     const std::string &biomeId);
 
+struct WorldGenPackBiomeIndex
+{
+  std::shared_ptr<const UBiomeDefinitionRegistry> Registry;
+  std::vector<BiomeHandle> Surface;
+  std::vector<BiomeHandle> Cave;
+};
+WorldGenPackBiomeIndex CompileWorldGenPackBiomeIndex(const WorldGenPack &pack);
+
 class UWorldGenPack
 {
 public:
