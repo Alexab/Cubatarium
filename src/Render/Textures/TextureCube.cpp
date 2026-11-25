@@ -6,6 +6,8 @@
 // #include <QJsonArray>
 // #include <QFile>
 #include "Core/UiPump.h"
+#include "Core/Memory/TexturePublicationObservation.h"
+#include "Core/Memory/StbiAllocation.h"
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/GlIncludes.h"
@@ -18,6 +20,7 @@
 #include <nlohmann/json.hpp>
 #include <memory>
 #include <limits>
+#include <stdexcept>
 #include <unordered_map>
 
 using json = nlohmann::json;
@@ -81,58 +84,143 @@ void UTextureCubeStorage::SetBlockDefinitions(
 
 void UTextureCubeStorage::GenerateCubeTextures() {}
 
+// Prepared maps borrow existing GL names until publication. Newly created
+// names belong to Pending until the no-allocation map swap commits ownership.
+struct UTextureCubeStorage::TexturePublication
+{
+  struct Pending
+  {
+    UTextureCube *Target{};
+    int Width{},Height{},Frames{},StripFrames{};
+    GLuint NewName{},ReuseName{};
+    bool AllowReuse{};
+    ~Pending(){if(NewName)glDeleteTextures(1,&NewName);}
+  };
+  UTextureCubeStorage &Storage;
+  bool Replace;
+  bool HasRemovals{};
+  std::shared_ptr<const BlockDefinitionCatalog> Definitions;
+  std::map<size_t,UTextureCube> NextTextures;
+  std::map<std::string,size_t> NextNames;
+  std::map<size_t,Pending> Rows;
+  AtlasDecodeBatch Batch;
+  CubeAtlasPixels Scratch;
+
+  TexturePublication(UTextureCubeStorage &storage,bool replace)
+      :Storage(storage),Replace(replace),Definitions(storage.BlockDefinitions?storage.BlockDefinitions->GetCatalogSnapshot():nullptr)
+  {
+    if(!Replace){NextTextures=storage.Textures;NextNames=storage.TexturesNames;}
+  }
+  int StripById(BlockId id,int fallback)const
+  {
+    if(!Definitions)return fallback;
+    const auto value=Definitions->ById.find(id);
+    return value!=Definitions->ById.end() && value->second.Animation.FrameCount>1?value->second.Animation.FrameCount:0;
+  }
+  int StripByName(const std::string &name)const
+  {
+    if(!Definitions)return 0;
+    const auto id=Definitions->NameToId.find(name);return id==Definitions->NameToId.end()?0:StripById(id->second,0);
+  }
+  void Remove(BlockId id)
+  {
+    const auto target=NextTextures.find(static_cast<size_t>(id));if(target==NextTextures.end())return;
+    const auto alias=NextNames.find(target->second.GetName());if(alias!=NextNames.end() && alias->second==id)NextNames.erase(alias);
+    NextTextures.erase(target);HasRemovals=true;
+  }
+  void Prepare(const std::string &name,size_t id,const std::vector<std::string> &stems,int strip)
+  {
+    CubeAtlasPixels layout;
+    const auto failure=GetStbiThreadFailureGeneration();
+    const bool valid=Storage.BuildCubeAtlasPixelsInto(layout,name,stems,strip,&Batch,false);
+    // A malformed/missing source keeps legacy skip/transparent behavior. An
+    // allocator refusal must reject publication,including a secondary face.
+    if(failure!=GetStbiThreadFailureGeneration())throw std::bad_alloc{};
+    if(!valid)return;
+    UTextureCube cube(name,id,stems);cube.SetNumTextureFrames(static_cast<size_t>(layout.Frames));
+    const auto previous=NextTextures.find(id);
+    if(previous!=NextTextures.end() && previous->second.GetName()!=name){
+      const auto alias=NextNames.find(previous->second.GetName());
+      if(alias!=NextNames.end() && alias->second==id)NextNames.erase(alias);
+    }
+    NextNames.insert_or_assign(name,id);
+    const bool existed=previous!=NextTextures.end();
+    auto target=NextTextures.insert_or_assign(id,cube).first;
+    const auto pending=Rows.try_emplace(id);auto &row=pending.first->second;
+    if(pending.second)row.AllowReuse=existed;
+    row.Target=&target->second;row.Width=layout.Width;row.Height=layout.Height;row.Frames=layout.Frames;row.StripFrames=strip;
+  }
+  void Fill(const Pending &row)
+  {
+    const bool ok=Storage.BuildCubeAtlasPixelsInto(Scratch,row.Target->GetName(),row.Target->GetTextureNames(),row.StripFrames,&Batch,true);
+    if(!ok || Scratch.Width!=row.Width || Scratch.Height!=row.Height || Scratch.Frames!=row.Frames)
+      throw std::logic_error("Texture sources changed during publication");
+  }
+  void Publish()
+  {
+    if(Rows.empty() && !Replace && !HasRemovals)return;
+    size_t maximum=0;
+    if(!Rows.empty()){
+      if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("Pending GL error before texture publication");
+      GLint limit=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&limit);
+      for(auto &entry:Rows){auto &row=entry.second;
+        if(row.Width>limit || row.Height>limit)throw std::runtime_error("Texture atlas exceeds backend dimensions");
+        const auto bytes=static_cast<size_t>(row.Width)*static_cast<size_t>(row.Height)*4;
+        maximum=std::max(maximum,bytes);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+        const auto current=Storage.Textures.find(entry.first);
+        if(!Replace && row.AllowReuse && current!=Storage.Textures.end() && current->second.GetTexture()){
+          const auto name=current->second.GetTexture();glBindTexture(GL_TEXTURE_2D,name);
+          GLint w=0,h=0;glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&w);glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_HEIGHT,&h);glBindTexture(GL_TEXTURE_2D,0);
+          if(w==row.Width && h==row.Height)row.ReuseName=name;
+        }
+#endif
+      }
+      // All source owners/map nodes/metadata exist. One maximum-size scratch
+      // allocation serves every row;subsequent assigns cannot grow its backing.
+      Scratch.Rgba.resize(maximum);
+      for(auto &entry:Rows){auto &row=entry.second;if(!row.ReuseName){Fill(row);row.NewName=Storage.UploadCubeAtlas(Scratch);row.Target->SetTexture(row.NewName);}}
+      // New resources are ready before the first in-place update. No callbacks,
+      // metadata construction,decoder allocations or growing vectors follow.
+      for(auto &entry:Rows){auto &row=entry.second;if(row.ReuseName){Fill(row);glBindTexture(GL_TEXTURE_2D,row.ReuseName);ObserveTextureMutation(row.ReuseName);
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,row.Width,row.Height,GL_RGBA,GL_UNSIGNED_BYTE,Scratch.Rgba.data());glBindTexture(GL_TEXTURE_2D,0);
+        if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("GL texture update failed");row.Target->SetTexture(row.ReuseName);
+      }}
+    }
+    static_assert(noexcept(Storage.Textures.swap(NextTextures)));
+    static_assert(noexcept(Storage.TexturesNames.swap(NextNames)));
+    Storage.Textures.swap(NextTextures);Storage.TexturesNames.swap(NextNames);
+    for(auto &entry:Rows)entry.second.NewName=0;
+    for(const auto &old:NextTextures){const auto name=old.second.GetTexture();const auto current=Storage.Textures.find(old.first);
+      if(name && (current==Storage.Textures.end() || current->second.GetTexture()!=name))glDeleteTextures(1,&name);
+    }
+  }
+};
+
+UTextureCubeStorage::PublicationSourceLayout UTextureCubeStorage::GetPublicationSourceLayout()
+{
+  PublicationSourceLayout out;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  out.supported=true;out.stage_bytes=sizeof(TexturePublication);
+  out.row_node_bytes=sizeof(std::_Tree_node<decltype(TexturePublication::Rows)::value_type,void*>);
+  out.cube_node_bytes=sizeof(std::_Tree_node<decltype(Textures)::value_type,void*>);
+  out.name_node_bytes=sizeof(std::_Tree_node<decltype(TexturesNames)::value_type,void*>);
+#endif
+  return out;
+}
+
 void UTextureCubeStorage::Load(const std::string &textures_path)
 {
-#ifdef CUBATARIUM_DEBUG
-  std::cout << "UTextureCubeStorage::Load: Loading from " << textures_path
-            << std::endl;
-#endif
-
-  try
-  {
-    int loaded_count = 0;
-    for (const auto &entry : fs::directory_iterator(textures_path))
-    {
-      auto ext = entry.path().extension();
-      if (ext.string() == ".json")
-      {
-        std::string Name;
-        size_t Id;
-        std::vector<std::string> textures;
-        if (LoadJson(entry.path().string(), Name, Id, textures))
-        {
-          int stripFrames = 0;
-          if (BlockDefinitions)
-          {
-            if (const BlockDefinition *def = BlockDefinitions->GetByName(Name))
-            {
-              if (textures.size() == 6 && def->Animation.FrameCount > 1)
-              {
-                stripFrames = def->Animation.FrameCount;
-              }
-            }
-          }
-          UTextureCube descr =
-              CreateCubeTexture(Name, Id, textures, stripFrames);
-          Textures[descr.GetTypeId()] = descr;
-          loaded_count++;
-#ifdef CUBATARIUM_DEBUG
-          std::cout << "UTextureCubeStorage::Load: Added texture '" << Name
-                    << "'" << std::endl;
-#endif
-        }
-      }
+  TexturePublication prepared(*this,false);
+  try{
+    for(const auto &entry:fs::directory_iterator(textures_path)){
+      if(entry.path().extension().string()!=".json")continue;
+      UBlockingWorkPump::Pump("Building block textures");
+      auto value=LoadLegacyCubeDescriptorFile(entry.path().string());
+      if(value){const int strip=value->Textures.size()==6?prepared.StripByName(value->Name):0;prepared.Prepare(value->Name,value->Id,value->Textures,strip);}
     }
-
-#ifdef CUBATARIUM_DEBUG
-    std::cout << "UTextureCubeStorage::Load: Total loaded textures: "
-              << loaded_count << std::endl;
-#endif
-  }
-  catch (std::filesystem::filesystem_error &ex)
-  {
-    std::cerr << ex.what();
-  }
+    prepared.Publish();
+  }catch(const fs::filesystem_error &error){std::cerr<<error.what();}
 }
 
 const std::map<size_t, UTextureCube> &UTextureCubeStorage::GetTextures() const
@@ -252,103 +340,32 @@ UTextureCubeStorage::AtlasDecodeSourceLayout UTextureCubeStorage::GetAtlasDecode
   return out;
 }
 
-void UTextureCubeStorage::BuildFromDescriptors(
-    const std::vector<MergedCubeDesc> &descriptors)
+void UTextureCubeStorage::BuildFromDescriptors(const std::vector<MergedCubeDesc> &descriptors)
 {
-  Clear();
-  PatchDescriptors(descriptors);
+  if(descriptors.empty()){Clear();return;}
+  PublishDescriptors(descriptors,true);
 }
-
-void UTextureCubeStorage::PatchDescriptors(
-    const std::vector<MergedCubeDesc> &descriptors)
+void UTextureCubeStorage::PatchDescriptors(const std::vector<MergedCubeDesc> &descriptors)
 {
-  AtlasDecodeBatch batch;
-
-  size_t processed = 0;
-  for (const MergedCubeDesc &desc : descriptors)
-  {
-    UBlockingWorkPump::Pump("Building block textures",
-                            static_cast<float>(processed++) /
-                                static_cast<float>(descriptors.size()));
-    const size_t typeId = static_cast<size_t>(desc.Id);
-    std::vector<std::string> stems(desc.Stems.begin(), desc.Stems.end());
-    int stripFrames = 0;
-    if (BlockDefinitions)
-    {
-      if (const BlockDefinition *def = BlockDefinitions->GetById(desc.Id))
-      {
-        if (stems.size() == 6 && def->Animation.FrameCount > 1)
-        {
-          stripFrames = def->Animation.FrameCount;
-        }
-      }
-    }
-    else if (desc.AnimFrames > 1 && stems.size() == 6)
-    {
-      stripFrames = desc.AnimFrames;
-    }
-
-    const auto existing = Textures.find(typeId);
-    if (existing == Textures.end())
-    {
-      // Fresh cube: build it once. (An atlas used to be composed here only to
-      // test for emptiness and then composed again inside CreateCubeTexture.)
-      UTextureCube cube =
-          CreateCubeTexture(desc.Name, typeId, stems, stripFrames,&batch);
-      if (cube.GetTexture() != 0)
-      {
-        Textures[cube.GetTypeId()] = cube;
-      }
-      continue;
-    }
-
-    const CubeAtlasPixels atlas =
-        BuildCubeAtlasPixelsImpl(desc.Name, stems, stripFrames,&batch);
-    if (atlas.Rgba.empty() || atlas.Width <= 0 || atlas.Height <= 0)
-    {
-      continue;
-    }
-
-    {
-      GLuint tex = existing->second.GetTexture();
-      if (tex != 0)
-      {
-#if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
-        // GLES build keeps this path simple and portable: recreate texture.
-        glDeleteTextures(1, &tex);
-#else
-        glBindTexture(GL_TEXTURE_2D, tex);
-        GLint existing_w = 0;
-        GLint existing_h = 0;
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH,
-                                 &existing_w);
-        glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT,
-                                 &existing_h);
-        if (existing_w == atlas.Width && existing_h == atlas.Height)
-        {
-          glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, atlas.Width, atlas.Height,
-                          GL_RGBA, GL_UNSIGNED_BYTE, atlas.Rgba.data());
-          glBindTexture(GL_TEXTURE_2D, 0);
-          UTextureCube cube(desc.Name, typeId, stems);
-          cube.SetNumTextureFrames(static_cast<size_t>(atlas.Frames));
-          cube.SetTexture(tex);
-          Textures[typeId] = cube;
-          TexturesNames[desc.Name] = typeId;
-          continue;
-        }
-        glDeleteTextures(1, &tex);
-#endif
-      }
-      TexturesNames.erase(existing->second.GetName());
-      Textures.erase(existing);
-    }
-
-    UTextureCube cube = UploadCubeAtlas(desc.Name, typeId, stems, atlas);
-    if (cube.GetTexture() != 0)
-    {
-      Textures[cube.GetTypeId()] = cube;
-    }
+  if(descriptors.empty())return;
+  PublishDescriptors(descriptors,false);
+}
+void UTextureCubeStorage::PatchDescriptors(const std::vector<MergedCubeDesc> &descriptors,const std::vector<BlockId> &removed)
+{
+  if(descriptors.empty()){RemoveCubeDescriptors(removed);return;}
+  PublishDescriptors(descriptors,false,&removed);
+}
+void UTextureCubeStorage::PublishDescriptors(const std::vector<MergedCubeDesc> &descriptors,bool replace,const std::vector<BlockId> *removed)
+{
+  TexturePublication prepared(*this,replace);size_t processed=0;
+  if(removed)for(const auto id:*removed)prepared.Remove(id);
+  for(const auto &desc:descriptors){
+    UBlockingWorkPump::Pump("Building block textures",static_cast<float>(processed++)/static_cast<float>(descriptors.size()));
+    std::vector<std::string> stems(desc.Stems.begin(),desc.Stems.end());
+    const int strip=prepared.StripById(desc.Id,desc.AnimFrames>1?desc.AnimFrames:0);
+    prepared.Prepare(desc.Name,static_cast<size_t>(desc.Id),stems,strip);
   }
+  prepared.Publish();
 }
 
 void UTextureCubeStorage::RemoveCubeDescriptors(
@@ -367,7 +384,8 @@ void UTextureCubeStorage::RemoveCubeDescriptors(
     {
       glDeleteTextures(1, &tex);
     }
-    TexturesNames.erase(it->second.GetName());
+    const auto alias=TexturesNames.find(it->second.GetName());
+    if(alias!=TexturesNames.end() && alias->second==typeId)TexturesNames.erase(alias);
     Textures.erase(it);
   }
 }
@@ -390,10 +408,17 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsIm
     const std::string &cube_type_name,const std::vector<std::string> &texture_names,
     int stripFrameCount,AtlasDecodeBatch *batch) const
 {
-  CubeAtlasPixels atlas;
+  CubeAtlasPixels atlas;BuildCubeAtlasPixelsInto(atlas,cube_type_name,texture_names,stripFrameCount,batch,true);return atlas;
+}
+
+bool UTextureCubeStorage::BuildCubeAtlasPixelsInto(CubeAtlasPixels &atlas,
+    const std::string &cube_type_name,const std::vector<std::string> &texture_names,
+    int stripFrameCount,AtlasDecodeBatch *batch,bool fill) const
+{
+  atlas.Width=atlas.Height=atlas.Frames=0;atlas.Rgba.clear();
   if (!TextureBaseStorageInstance || texture_names.empty())
   {
-    return atlas;
+    return false;
   }
   const auto &bases = TextureBaseStorageInstance->GetBaseTextures();
   const auto first = bases.find(texture_names.front());
@@ -401,19 +426,19 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsIm
   {
     std::cerr << "UTextureCubeStorage::BuildCubeAtlasPixels: unknown base texture '"
               << texture_names.front() << "' for " << cube_type_name << std::endl;
-    return atlas;
+    return false;
   }
   const LoadedStem firstLoaded = LoadStemRgba(first->second,batch);
   if (!firstLoaded.Ok)
   {
-    return atlas;
+    return false;
   }
   const bool vertical = stripFrameCount > 1 && texture_names.size() == 6;
   const size_t frames = vertical ? static_cast<size_t>(stripFrameCount)
                                 : std::max(size_t{1}, texture_names.size() / 6);
   if (frames > static_cast<size_t>(std::numeric_limits<int>::max()))
   {
-    return atlas;
+    return false;
   }
   const int width = firstLoaded.Width;
   const int height = vertical ? firstLoaded.Height / static_cast<int>(frames)
@@ -423,19 +448,19 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsIm
   if (height <= 0 || width > std::numeric_limits<int>::max() / 6 ||
       static_cast<size_t>(height) > static_cast<size_t>(std::numeric_limits<int>::max()) / frames)
   {
-    return atlas;
+    return false;
   }
   const int totalWidth = width * 6;
   const int totalHeight = height * static_cast<int>(frames);
   size_t bytes = 0;
   if (!RgbaByteCount(totalWidth, totalHeight, bytes) || bytes > atlas.Rgba.max_size())
   {
-    return atlas;
+    return false;
   }
   atlas.Width = totalWidth;
   atlas.Height = totalHeight;
   atlas.Frames = static_cast<int>(frames);
-  atlas.Rgba.assign(bytes, 0);
+  if(fill)atlas.Rgba.assign(bytes, 0);
   for (size_t frame = 0; frame < frames; ++frame)
   {
     for (size_t face = 0; face < 6; ++face)
@@ -463,7 +488,7 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsIm
       }
       const size_t copyWidth = std::min(static_cast<size_t>(width), static_cast<size_t>(loaded.Width));
       const size_t copyHeight = std::min(static_cast<size_t>(height), static_cast<size_t>(loaded.Height) - sourceY);
-      for (size_t y = 0; y < copyHeight; ++y)
+      if(fill)for (size_t y = 0; y < copyHeight; ++y)
       {
         const size_t sourceOffset = ((sourceY + y) * static_cast<size_t>(loaded.Width)) * 4;
         const size_t destinationOffset = ((frame * height + y) * totalWidth + face * width) * 4;
@@ -472,78 +497,20 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsIm
       }
     }
   }
-  return atlas;
+  return true;
 }
 
-UTextureCube UTextureCubeStorage::CreateCubeTexture(
-    const std::string &cube_type_name, size_t cube_type_id,
-    const std::vector<std::string> &texture_names, int stripFrameCount,
-    AtlasDecodeBatch *batch)
+GLuint UTextureCubeStorage::UploadCubeAtlas(const CubeAtlasPixels &atlas)
 {
-  const auto atlas = BuildCubeAtlasPixelsImpl(cube_type_name, texture_names, stripFrameCount,batch);
-  return UploadCubeAtlas(cube_type_name, cube_type_id, texture_names, atlas);
-}
-
-UTextureCube UTextureCubeStorage::UploadCubeAtlas(
-    const std::string &cube_type_name, size_t cube_type_id,
-    const std::vector<std::string> &texture_names, const CubeAtlasPixels &atlas)
-{
-  UTextureCube result(cube_type_name, cube_type_id, texture_names);
-  if (atlas.Rgba.empty())
-  {
-    return result;
-  }
-  result.SetNumTextureFrames(static_cast<size_t>(atlas.Frames));
-  GLuint textureId;
-  glGenTextures(1, &textureId);
-  glBindTexture(GL_TEXTURE_2D, textureId);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, atlas.Width, atlas.Height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, atlas.Rgba.data());
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  result.SetTexture(textureId);
-  TexturesNames[cube_type_name] = cube_type_id;
-  return result;
-}
-
-GLuint UTextureCubeStorage::LoadTexture(const std::string &image_path)
-{
-  GLuint textureId;
-  glGenTextures(1, &textureId);
-  glBindTexture(GL_TEXTURE_2D, textureId);
-
-  int width, height, channels;
-  unsigned char *data =
-      stbi_load(image_path.c_str(), &width, &height, &channels, 4);
-  if (!data)
-  {
-    std::cerr << "Failed to load texture: " << image_path << std::endl;
-    return 0;
-  }
-
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, data);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  stbi_image_free(data);
-  return textureId;
-}
-
-bool UTextureCubeStorage::LoadJson(const std::string &file_name,
-                                   std::string &Name, size_t &Id,
-                                   std::vector<std::string> &textures)
-{
-  auto value=LoadLegacyCubeDescriptorFile(file_name);
-  if(!value)return false;
-  Name=std::move(value->Name);Id=value->Id;textures=std::move(value->Textures);return true;
+  GLuint name=0;glGenTextures(1,&name);
+  struct Retire {GLuint Name;~Retire(){if(Name)glDeleteTextures(1,&Name);}} pending{name};
+  if(!name)throw std::runtime_error("GL texture name allocation failed");
+  glBindTexture(GL_TEXTURE_2D,name);ObserveTextureCreated(name);ObserveTextureMutation(name);
+  glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA,atlas.Width,atlas.Height,0,GL_RGBA,GL_UNSIGNED_BYTE,atlas.Rgba.data());
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);glBindTexture(GL_TEXTURE_2D,0);
+  if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("GL texture allocation/upload failed");
+  pending.Name=0;return name;
 }
 
 std::optional<LegacyCubeDescriptor> CompileLegacyCubeDescriptor(const json &d)

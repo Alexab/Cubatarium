@@ -1,0 +1,454 @@
+{
+  "schema": "s4-texture-publication-source-retained-certificate.v1",
+  "status": "SCOPED_TEXTURE_GPU_PUBLICATION_SOURCE_RETAINED_RELEASE_NATIVE_PASS_C06_E12_OPEN",
+  "summary": "Texture GPU consumer construction/publication source and requested-data lifetime scoped PASS with actual desktop GL. Baseline full replacement prefix0 loses old catalog,fresh patch prefix6 leaves orphan GL name,same-size prefix4 changes old pixels before failed metadata,resize prefix4 retires old output,legacy Load prefix60 partially publishes/orphans;callback remains in-handler after throw. New TexturePublication prepares copied metadata/name maps,final valid rows and scoped decoder cache before GL mutation;one maximum atlas scratch serves all rows. New/replacement GL names have pending RAII owners before reused names update;no new ordinary/decoder allocation or progress callback follows first GL mutation on successful profile. No-allocation map swap commits ownership,then replaced/removed old names retire. Same-size names/animation preserved,rename aliases retire only their owner,duplicates last-valid win. Missing/invalid first legacy image now skips unusable zero-texture metadata and preserves prior GPU value. STBI own-thread failure generation rejects GPU publication on decoder allocation refusal while standalone CPU fallback behavior remains unchanged;allocator TLS ledger+generation24 bytes tracked separately. Actual bootstrap redundant Clear removed and runtime removals+patch bound atomically,with allocation-free removal-only path retained.613 ordinary-new and30 decoder refusal boundaries plus exact retries preserve old GPU names/pixels/full metadata with no generated orphan;real changed GPU pixel rejected. Two observed actual publication phases retain old target/base and escaped CPU atlas;retained9080<=upper14403,64 aliases deduplicate,explicit Clear+owner retirement credits0. Source model includes typed row/map/shadow metadata,one max scratch,new cache+single decoder and supplied callback allocation profile;unknown callback profile/overflow/unmodeled allocation rejected.15 dependent Release groups and fresh desktop/native runtime/startup/direct save/UI/provenance plus8 existing real GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+  "remaining": "C05 named file/settings/catalog/decoder/merge/fingerprint/texture construction schedules now have scoped source+supplied-root composition certificates under declared default MSVC/stream/backend/callback profiles;this is not whole-process memory acceptance. Next C06:finish finite all-thread/global/world/publisher/escaped/returned root counts using accepted8-job/4-worker-per-host-pool graph;include7 reader slots160 bytes,registry name buffers,STBI ledger+failure generation24 inline bytes per calling thread and weak coallocated shells. E12 still requires general glog constructor refusal retention,window/OS callback and CRT/locale/exception/stack/TLS/driver/GPU/process terms and original full native/performance/memory matrix. S4.02 stays OPEN;then S4.03..06/S5/S6 including known ecology fixture mismatch S6.05.23/42 unchanged;full S0..S6 retained,no audit restart or arbitrary asset cap.",
+  "unit": {
+    "allocator_failure_generation_thread_isolation": true,
+    "allocator_thread_inline_bytes": 24,
+    "backend_dimension_rejected_before_publication": true,
+    "callback_recovers_after_throw": true,
+    "changed_real_GL_pixel_rejected": true,
+    "combined_removal_patch": {
+      "attempts": 55,
+      "no_late_allocations": true,
+      "pass": true,
+      "peak": 2920,
+      "prefixes": 55,
+      "upper": 113800
+    },
+    "decoder_refusal_and_exact_retry_cases": 30,
+    "duplicate_id_last_valid_wins": true,
+    "extended_routes": [
+      {
+        "decoder_attempts": 0,
+        "decoder_peak": 0,
+        "decoder_prefixes": 0,
+        "decoder_upper": 0,
+        "kind": 0,
+        "no_late_allocations": true,
+        "ordinary_attempts": 30,
+        "ordinary_peak": 2232,
+        "ordinary_prefixes": 30,
+        "ordinary_upper": 117464,
+        "pass": true,
+        "route": 2
+      },
+      {
+        "decoder_attempts": 6,
+        "decoder_peak": 29216,
+        "decoder_prefixes": 6,
+        "decoder_upper": 416832,
+        "kind": 1,
+        "no_late_allocations": true,
+        "ordinary_attempts": 27,
+        "ordinary_peak": 100319,
+        "ordinary_prefixes": 27,
+        "ordinary_upper": 227999,
+        "pass": true,
+        "route": 0
+      },
+      {
+        "decoder_attempts": 6,
+        "decoder_peak": 29216,
+        "decoder_prefixes": 6,
+        "decoder_upper": 416832,
+        "kind": 2,
+        "no_late_allocations": true,
+        "ordinary_attempts": 37,
+        "ordinary_peak": 101423,
+        "ordinary_prefixes": 37,
+        "ordinary_upper": 227999,
+        "pass": true,
+        "route": 1
+      },
+      {
+        "decoder_attempts": 6,
+        "decoder_peak": 29216,
+        "decoder_prefixes": 6,
+        "decoder_upper": 416832,
+        "kind": 3,
+        "no_late_allocations": true,
+        "ordinary_attempts": 31,
+        "ordinary_peak": 100319,
+        "ordinary_prefixes": 31,
+        "ordinary_upper": 227999,
+        "pass": true,
+        "route": 2
+      },
+      {
+        "decoder_attempts": 6,
+        "decoder_peak": 29216,
+        "decoder_prefixes": 6,
+        "decoder_upper": 416832,
+        "kind": 4,
+        "no_late_allocations": true,
+        "ordinary_attempts": 31,
+        "ordinary_peak": 100319,
+        "ordinary_prefixes": 31,
+        "ordinary_upper": 227999,
+        "pass": true,
+        "route": 3
+      },
+      {
+        "decoder_attempts": 6,
+        "decoder_peak": 29216,
+        "decoder_prefixes": 6,
+        "decoder_upper": 416832,
+        "kind": 5,
+        "no_late_allocations": true,
+        "ordinary_attempts": 142,
+        "ordinary_peak": 101423,
+        "ordinary_prefixes": 142,
+        "ordinary_upper": 3886299,
+        "pass": true,
+        "route": 4
+      }
+    ],
+    "failed_cases": 0,
+    "graph_final_zero": true,
+    "invalid_source_and_empty_operations": true,
+    "legacy_missing_source_preserves_existing_texture": true,
+    "name_alias_owner_retirement": true,
+    "ordinary_refusal_and_exact_retry_cases": 613,
+    "overflow_rejected": true,
+    "phases": [
+      {
+        "entry_observed": 8112,
+        "entry_upper": 12850,
+        "name": "multi_texture_patch",
+        "observed_components": 11112,
+        "pass": true,
+        "upper": 136122
+      },
+      {
+        "entry_observed": 8112,
+        "entry_upper": 12850,
+        "name": "legacy_explicit_frames",
+        "observed_components": 13126,
+        "pass": true,
+        "upper": 3105974
+      }
+    ],
+    "retained": {
+      "alias64_deduplicated": true,
+      "observed": 9080,
+      "upper": 14403
+    },
+    "retained_and_independent_pixel_oracles": true,
+    "routes": [
+      {
+        "attempts": 24,
+        "no_allocation_after_first_GL_mutation": true,
+        "ordinary_upper": 116440,
+        "pass": true,
+        "peak": 2232,
+        "prefixes": 24,
+        "route": 0
+      },
+      {
+        "attempts": 34,
+        "no_allocation_after_first_GL_mutation": true,
+        "ordinary_upper": 116440,
+        "pass": true,
+        "peak": 3336,
+        "prefixes": 34,
+        "route": 1
+      },
+      {
+        "attempts": 28,
+        "no_allocation_after_first_GL_mutation": true,
+        "ordinary_upper": 116440,
+        "pass": true,
+        "peak": 2232,
+        "prefixes": 28,
+        "route": 2
+      },
+      {
+        "attempts": 28,
+        "no_allocation_after_first_GL_mutation": true,
+        "ordinary_upper": 116488,
+        "pass": true,
+        "peak": 2232,
+        "prefixes": 28,
+        "route": 3
+      },
+      {
+        "attempts": 146,
+        "no_allocation_after_first_GL_mutation": true,
+        "ordinary_upper": 4193428,
+        "pass": true,
+        "peak": 3806,
+        "prefixes": 146,
+        "route": 4
+      }
+    ],
+    "same_extent_animation_and_definition_priority": true,
+    "schema": "texture-publication-real-gl.v1",
+    "status": "PASS",
+    "unknown_callback_profile_rejected": true,
+    "unmodeled_allocation_control": true
+  },
+  "regressions": [
+    {
+      "name": "texture-publication-driver",
+      "command": [
+        "build\\desktop-msvc\\Release\\texture_publication_driver_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e64b76e56728dad2854a4c81929b879d2922bf8d91e7d5178c4efe7974711358"
+    },
+    {
+      "name": "texture-construction",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-construction",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "pack-resource-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-pack-resource.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "settings-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-settings-composition.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "merge-publication",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-publication",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-merge-publication.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "resource-census",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--resource-census-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "125726fca3b0480b04f77996774fa2751d01b9a26979052dfa0dd62bc03343c3"
+    },
+    {
+      "name": "catalog-storage",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "71252642d477cdfe613de829b4563d73200d3ca94a517bbb1c26fdc07f3746fd"
+    },
+    {
+      "name": "pinned-factory-catalog",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "71252642d477cdfe613de829b4563d73200d3ca94a517bbb1c26fdc07f3746fd"
+    },
+    {
+      "name": "prefab-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-prefab.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "3013949e9e3937b2bbcaff37328be8e74fd83dbf1f3e3393f901d1a23c959bef"
+    },
+    {
+      "name": "resolved-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-resolved.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "3013949e9e3937b2bbcaff37328be8e74fd83dbf1f3e3393f901d1a23c959bef"
+    },
+    {
+      "name": "retained-input",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--retained-inputs",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-input.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "3013949e9e3937b2bbcaff37328be8e74fd83dbf1f3e3393f901d1a23c959bef"
+    },
+    {
+      "name": "biome-features",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_biome_features_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e94e6d21cec5d1cb7d66bc1fdd199620c5ba49d98e07e5075686c0d79433fa6d"
+    },
+    {
+      "name": "stbi-nine-formats",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-stbi.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23"
+    },
+    {
+      "name": "stbi-conversion-range",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-texture-publication-conversion-range.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23"
+    }
+  ],
+  "source_sha256": {
+    "CMakeLists.txt": "90ada8c2505c5fb686842a620df891c1010bd4a49cc92762eb31a4f5d7eb5be5",
+    "src/Render/Textures/TextureCube.cpp": "619da5c396eea9ffa75b2f40094bed0a64f0c34d79537e6793cfc7817e86ae1c",
+    "src/Render/Textures/TextureCube.h": "941189553621f7d05b1fa5b0019d6a94a2bf56f51883466664b4328b5787251b",
+    "src/Core/Memory/StbiAllocation.h": "6cf8810e973c3445c08782fb314e7edfc02811e5f5f24a0fecb9f041da30a245",
+    "src/Core/Memory/TexturePublicationObservation.h": "4d76e09e73ae5e5dddf22a45cadb4dff66364c3b65ce02b608ab69af99bd8132",
+    "src/Core/UiPump.h": "887196e7e2db46e917df840908829e0d2c0c4915b962304d506253f45d01b640",
+    "src/App/ResourcePackBootstrap.cpp": "67a439e2a23a05a85444d8f9ee777af41944bd327f5b20d6afa2f2ee7ac45d23",
+    "src/App/Platform/AppRunner.cpp": "ad10b0c395ae4b98c2d9d530d080f41798a107599f06df57e85d116225dbfdde",
+    "src/App/Platform/DesktopPlatformWindow.cpp": "fc0b00603529c70bd42cd7256139fec5567e01b19427b4e1ed5d9f251f58a44f",
+    "src/Render/Engine/TextRenderer.cpp": "8892c8a8c253cd8d1d99e0154817c3a6e6c7030d61446a047cb141594b1c1f3e",
+    "src/WorldGen/Core/TexturePublicationSourceEnvelope.h": "2d8ef22b386549a82f0c5d33ca1b60dd8f8c7f5846f4211a0172f639faaa4c7a",
+    "src/WorldGen/Core/TextureConstructionComposition.h": "18a35226b1a0810c1e65ee0bc907138b68e99db7cbe67c18b3b39c7f0096d6f1",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
+    "src/Test/TexturePublicationDriverTest.cpp": "3e6acaba0ab29623ba34e952f1cbf7930afc4d143a51dccfd99fe27569e40aae",
+    "src/Test/OrdinaryNewObservation.h": "fdb91853b99b10fe6fee34d1044a913624cfe8a15186eb95652e4346afeb84e9"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c"
+  },
+  "baseline": {
+    "receipt": "build\\desktop-msvc\\s4-texture-publication-baseline.json",
+    "identity": {
+      "source_sha256": {
+        "CMakeLists.txt": "90ada8c2505c5fb686842a620df891c1010bd4a49cc92762eb31a4f5d7eb5be5",
+        "src/Render/Textures/TextureCube.cpp": "d4dfbedffe66cf151fc3de84f64032f0c425a3580f412983e2d216be599b070d",
+        "src/Render/Textures/TextureCube.h": "06cdb6f5364047f28fd0d41f88d4ad6a05c8b24a63ec2e3572b042c7629b3cc6",
+        "src/Core/UiPump.h": "6a9524e1d8a368906f910c78b6e33cec5937ff9b0701db3dd697585d2425bc0f",
+        "src/Core/Memory/StbiAllocation.h": "0931a1f0d8b397724fbae6b07e96153214ed5abf1ab511a7b7deb0ddad308e50",
+        "src/Core/Memory/TexturePublicationObservation.h": "94c98812c30388e1b2610c0244fe9d90a1930e3975f5ed9ab8b3082aca975a46",
+        "src/Test/TexturePublicationDriverTest.cpp": "be4a2729cbd1bb8857e8332b8296fcfebc2b991ea9cc19f09b9e03c0f079d3a5",
+        "src/Test/OrdinaryNewObservation.h": "fdb91853b99b10fe6fee34d1044a913624cfe8a15186eb95652e4346afeb84e9"
+      },
+      "exe_sha256": "9fb4a918aa2b8453f76a2be951fb57b354f6eaea0de35ef8799b57d36b6f7c0e",
+      "base_git_sha": "e3589a6dd"
+    }
+  },
+  "actual_caller_source_binding": {
+    "status": "PASS",
+    "source": "src\\App\\ResourcePackBootstrap.cpp",
+    "base_git_sha": "e3589a6ddf1f2dabad531cb8fda1ba63fa7ccea3",
+    "before_sha256": "82539ee9a78660eecb9bdf10063e357ba823354f406837c824615f1eafb616f6",
+    "after_sha256": "295c3e9cb6a1b37b02ebec4504eca56c1dd5754237a0caf1f1e36f189e130430",
+    "exact_only_changes": [
+      "remove redundant cube clear before staged full replacement",
+      "replace remove-before-patch with combined removal/patch call"
+    ],
+    "scope": "Actual caller source binding,not whole ApplyResourcePacks transaction;definition/base publication order and mesh wait unchanged.",
+    "hash_encoding": "UTF-8 with LF normalization by read_text"
+  },
+  "receipt_recovery": {
+    "status": "RECOVERED_EXACT_STRUCTURED_LOG_RESULT",
+    "reason": "Two runner outputs shared a path;GPU driver raw stdout retained exact report. Original command records unchanged.",
+    "driver_log": "build\\desktop-msvc\\s4-texture-publication-regression-texture-publication-driver.log",
+    "driver_log_sha256": "fcbdafc6dab89f3edcab0cea12c9123b8b7b3b5d85f9d67c1046d2f224ac64a6",
+    "driver_receipt": "build\\desktop-msvc\\s4-texture-publication-source-accepted.json",
+    "cpu_preserved_copy": "build\\desktop-msvc\\s4-texture-publication-cpu-source-accepted.json",
+    "cpu_sha256": "0cb338cbd99aaccfe80ddac163965da339504015b0b917d86fbee9ab5f90c9df"
+  },
+  "composition": {
+    "ordinary_source": "New preparation upper uses8*actual current metadata requested-data upper,typed private stage/row/cube/name nodes,source row string counts/bytes,one maximum RGBA scratch plus large-alignment allowance,accepted cache source envelope and declared callback count*heap-per-call. Legacy directory additionally sums accepted raw-byte file/managed parser/owned descriptor envelopes with conservative outer copy allowance and filesystem scan. Old target/base/definition/returned owners remain independent retained entry. Typed SourceLayout comes from same production TU.",
+    "decoder_source": "Private explicit cache retains returned STBI requests;new decoder peak upper=sum potential returned bounds+max one active decode. Thread-local failure generation changes on allocator size/refusal/system/reallocation failure;other decoder threads cannot trigger publication failure. New8-byte scalar plus16-byte ActiveStbiLedger inline storage require per-thread C06/E12 term;no allocator request-size/prefix/ordinary fallback semantics changed.",
+    "callback_profile": "Driver exercises absent callback and stable installed callback with512-byte transient requested allocation per call,including exception/retry. Source-only normal app callback binding:AppRunner label23 bytes plus percentage<=6 bytes,initialized text renderer uses lookups and stack6x4 vertices,normal line backing bounded conservatively64 bytes. PollEvents platform/error/input callback work,invalid/uninitialized shader diagnostics,driver and window/OS memory remain explicit external E12 terms,not silently treated as0.",
+    "publication": "Existing map copies borrow GL names. Pending names retire on preparation/upload error before publication. Successful map swaps and metadata setters allocate0. Test-only noexcept notifications observe real glGen/bind/mutation;glIsTexture and actual RGBA readbacks verify ownership/content;no GL dispatch stub. Combined runtime removal/patch stages erasures and prevents reuse of explicitly retired ID. Actual caller proof shows only redundant Clear removal and combined call replacement;definition/base order/mesh wait unchanged.",
+    "limits": "One current context,quiescent stable registrations/definition snapshot and healthy declared GL state. Tested ordinary-new/STBI refusal atomicity and backend dimension rejection;not general GPU device-failure rollback. Explicit Clear+CPU-owner retirement tested,not proof of all application teardown threads/contexts or arbitrary copied external storage. No whole ApplyResourcePacks/world multi-catalog transaction,all-root multiplicity,custom owners/weak-only shells,other backend/CRT/platform/GPU/process cap acceptance."
+  },
+  "desktop_exe_sha256": "a58d3254bd5e624b2a1f3099abde6fad0ed7a2baee4b3bcf8896213bb96e6251",
+  "provenance": "build\\desktop-msvc\\s4-texture-publication-provenance.json",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-texture-publication-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

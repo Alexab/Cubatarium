@@ -43,8 +43,8 @@ public:
     }
     s.Last = now;
     s.InHandler = true;
+    struct ResetHandlerFlag {bool &Flag;~ResetHandlerFlag(){Flag=false;}} reset{s.InHandler};
     s.Fn(label, fraction);
-    s.InHandler = false;
   }
 
 private:

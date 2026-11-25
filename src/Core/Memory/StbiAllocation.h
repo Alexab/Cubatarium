@@ -79,6 +79,9 @@ namespace detail
 {
 inline UStbiAllocationLedger StbiProcessLedger;
 inline thread_local std::shared_ptr<UStbiAllocationLedger> ActiveStbiLedger;
+// Caller-local failure generation;other decoder threads cannot affect it.
+inline thread_local size_t StbiThreadFailureGeneration{};
+inline void RecordStbiThreadFailure() noexcept {++StbiThreadFailureGeneration;}
 struct alignas(std::max_align_t) StbiAllocationHeader
 {
   size_t PayloadBytes;
@@ -99,14 +102,14 @@ inline void *AllocateStbiForOwner(size_t bytes,const std::shared_ptr<UStbiAlloca
 {
   constexpr size_t prefix=StbiPrefixBytes;
   if(bytes>std::numeric_limits<size_t>::max()-prefix) {
-    StbiProcessLedger.InvalidSize();if(owner) owner->InvalidSize();return nullptr;
+    StbiProcessLedger.InvalidSize();if(owner) owner->InvalidSize();RecordStbiThreadFailure();return nullptr;
   }
   const size_t requested=prefix+bytes;
-  if(!StbiProcessLedger.Reserve(requested)) return nullptr;
-  if(owner && !owner->Reserve(requested)) {StbiProcessLedger.Cancel(requested,false);return nullptr;}
+  if(!StbiProcessLedger.Reserve(requested)) {RecordStbiThreadFailure();return nullptr;}
+  if(owner && !owner->Reserve(requested)) {StbiProcessLedger.Cancel(requested,false);RecordStbiThreadFailure();return nullptr;}
   void *memory=std::malloc(requested);
   if(!memory) {
-    StbiProcessLedger.Cancel(requested,true);if(owner) owner->Cancel(requested,true);return nullptr;
+    StbiProcessLedger.Cancel(requested,true);if(owner) owner->Cancel(requested,true);RecordStbiThreadFailure();return nullptr;
   }
   ::new(memory) StbiAllocationHeader{bytes,owner};
   StbiProcessLedger.Commit(requested,bytes);if(owner) owner->Commit(requested,bytes);
@@ -131,6 +134,8 @@ private:
 
 inline auto GetStbiProcessAllocationSnapshot() {return detail::StbiProcessLedger.GetSnapshot();}
 inline constexpr size_t StbiAllocationHeaderBytes() {return detail::StbiPrefixBytes;}
+inline size_t GetStbiThreadFailureGeneration() noexcept {return detail::StbiThreadFailureGeneration;}
+inline constexpr size_t StbiCallingThreadInlineBytes() {return sizeof(detail::ActiveStbiLedger)+sizeof(detail::StbiThreadFailureGeneration);}
 struct StbiAllocationInfo
 {
   size_t payload_bytes{},request_bytes{};
@@ -163,6 +168,7 @@ inline void *StbiReallocate(void *pointer,size_t bytes) noexcept
   const auto owner=header->Owner;
   const size_t oldPayload=header->PayloadBytes,oldRequest=oldPayload+detail::StbiPrefixBytes;
   const auto failed=[&] {
+    detail::RecordStbiThreadFailure();
     detail::StbiProcessLedger.Reallocation(false);if(owner) owner->Reallocation(false);
   };
   if(bytes>std::numeric_limits<size_t>::max()-detail::StbiPrefixBytes) {

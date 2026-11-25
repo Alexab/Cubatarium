@@ -97,6 +97,8 @@ public:
   };
   struct AtlasDecodeSourceLayout {size_t cache_node_bytes{},control_request_upper{};bool supported{};};
   static AtlasDecodeSourceLayout GetAtlasDecodeSourceLayout();
+  struct PublicationSourceLayout {size_t stage_bytes{},row_node_bytes{},cube_node_bytes{},name_node_bytes{};bool supported{};};
+  static PublicationSourceLayout GetPublicationSourceLayout();
   UTextureCubeStorage(std::shared_ptr<UTextureBaseStorage> base_textures);
 
   void
@@ -106,6 +108,8 @@ public:
   void Clear();
   void BuildFromDescriptors(const std::vector<MergedCubeDesc> &descriptors);
   void PatchDescriptors(const std::vector<MergedCubeDesc> &descriptors);
+  void PatchDescriptors(const std::vector<MergedCubeDesc> &descriptors,
+                        const std::vector<BlockId> &removed);
   void RemoveCubeDescriptors(const std::vector<BlockId> &blockIds);
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
@@ -136,22 +140,17 @@ public:
       const std::vector<std::string> &texture_names,int stripFrameCount,
       AtlasDecodeBatch &batch) const;
 private:
+  struct TexturePublication;
+  void PublishDescriptors(const std::vector<MergedCubeDesc> &descriptors,bool replace,
+                          const std::vector<BlockId> *removed=nullptr);
   static LoadedStem LoadStemRgba(const UTextureBase &base,AtlasDecodeBatch *batch);
   CubeAtlasPixels BuildCubeAtlasPixelsImpl(const std::string &cube_type_name,
       const std::vector<std::string> &texture_names,int stripFrameCount,
       AtlasDecodeBatch *batch) const;
-  UTextureCube CreateCubeTexture(const std::string &cube_type_name,
-                                 size_t cube_type_id,
-                                 const std::vector<std::string> &texture_names,
-                                 int stripFrameCount,AtlasDecodeBatch *batch=nullptr);
-  UTextureCube UploadCubeAtlas(const std::string &cube_type_name,
-                              size_t cube_type_id,
-                              const std::vector<std::string> &texture_names,
-                              const CubeAtlasPixels &atlas);
-  GLuint LoadTexture(const std::string &image_path);
-
-  bool LoadJson(const std::string &file_name, std::string &Name, size_t &Id,
-                std::vector<std::string> &textures);
+  bool BuildCubeAtlasPixelsInto(CubeAtlasPixels &atlas,const std::string &cube_type_name,
+      const std::vector<std::string> &texture_names,int stripFrameCount,
+      AtlasDecodeBatch *batch,bool fill) const;
+  static GLuint UploadCubeAtlas(const CubeAtlasPixels &atlas);
 
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UBlockDefinitionStorage> BlockDefinitions;

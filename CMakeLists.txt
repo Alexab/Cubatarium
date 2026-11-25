@@ -3838,3 +3838,22 @@ foreach(_item_test inventory_transactions_test armor_equipment_test resource_eco
     endif()
     set_tests_properties(${_item_test} PROPERTIES LABELS "unit;items")
 endforeach()
+
+if(NOT ANDROID AND TARGET glfw AND TARGET GLEW::GLEW)
+  cubatarium_add_test(NAME texture_publication_driver_test
+    SOURCES
+      src/Render/Textures/TextureBase.cpp
+      src/Render/Textures/TextureCube.cpp
+      src/Blocks/BlockDefinition.cpp
+      src/Blocks/BlockDefinitionStorage.cpp
+      src/World/Physics/MaterialReactionRulesRegistry.cpp
+      src/ThirdParty/stb_image.cpp
+      src/Test/TexturePublicationDriverTest.cpp
+    DEFINITIONS CUBA_TEXTURE_PUBLICATION_TEST=1
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json GLEW::GLEW OpenGL::GL glfw)
+  if(WIN32)
+    target_compile_definitions(texture_publication_driver_test PRIVATE GLEW_STATIC)
+  endif()
+  add_test(NAME texture_publication_driver_test COMMAND $<TARGET_FILE:texture_publication_driver_test>)
+  set_tests_properties(texture_publication_driver_test PROPERTIES LABELS "gpu;integration;texture;memory" SKIP_RETURN_CODE 77 TIMEOUT 120)
+endif()

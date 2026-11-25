@@ -162,7 +162,6 @@ void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
   core.BlockMergeRegistryInstance->PopulateTextureBaseStorage(
       *core.TextureBaseStorageInstance);
   StallStageMark("rebuildtex.PopulateTextureBaseStorage");
-  core.TextureCubeStorageInstance->Clear();
   core.TextureCubeStorageInstance->SetBlockDefinitions(
       core.BlockDefinitionsInstance);
   core.TextureCubeStorageInstance->BuildFromDescriptors(
@@ -196,15 +195,8 @@ void UResourcePackBootstrap::PatchRuntimeBlockTextures(
   }
   core.TextureCubeStorageInstance->SetBlockDefinitions(
       core.BlockDefinitionsInstance);
-  if (!flush.RemovedBlockIds.empty())
-  {
-    core.TextureCubeStorageInstance->RemoveCubeDescriptors(
-        flush.RemovedBlockIds);
-  }
-  if (!flush.PatchedDescriptors.empty())
-  {
-    core.TextureCubeStorageInstance->PatchDescriptors(flush.PatchedDescriptors);
-  }
+  core.TextureCubeStorageInstance->PatchDescriptors(flush.PatchedDescriptors,
+                                                   flush.RemovedBlockIds);
 }
 
 bool UResourcePackBootstrap::RegisterRuntimeBlock(
