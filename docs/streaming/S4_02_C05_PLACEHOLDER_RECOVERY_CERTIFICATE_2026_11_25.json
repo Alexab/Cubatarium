@@ -1,0 +1,530 @@
+{
+  "schema": "s4-placeholder-recovery-certificate.v1",
+  "status": "SCOPED_RECOVERY_PIXEL_SIZES_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Placeholder-cache recovery/pixel-size blocker fixed scoped PASS. Real baseline refusal prefix6 leaves key/stem without pixels;exact retry stays incomplete. Fixed GetOrCreateStem prepares pixels/return string,stages maps+LRU and rolls back new rows on failure;hit refresh uses allocation-free splice. Eviction completes allocation-capable file/path work before victim removal;shared-stem payload not retired while another key references it. Checked size_t RGBA product/index/stripe addition replaces signed int expressions. Cached header must match requested normalized square,size and exact file payload before pixel allocation;save checks uint32 format representation.22 miss+1 hit+25 eviction refusal boundaries preserve consistent prior entries,recover exact pixel output and clean observed allocations to0.5 valid/oversized/mismatched/truncated/trailing payload file scenarios recover. Logical4GiB pixel request verified with allocation ceiling before raster work;actual MSVC request4GiB+39,not giant allocation.16x16 RGBA matches preserved pre-fix bytes by FNV64 and SHA256. Full scatter,merge staging and resource growth regressions PASS;Release/native runtime/startup/save/UI/provenance PASS,aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:placeholder per-source requested-memory formula (including prior/global diagnostic roots and shared-stem collision states),texture override JSON/YAML source candidates,whole directory/merge pending/map/ID/descriptor/stem memo/atlas growth,pack biome-image adoption and full source/retained/prior-current composition. Targeted inspection found TextureOverrides.cpp LoadFromJson still uses plain json::parse(in) and keeps stream live through conversion;managed parse/retirement and override/YAML bounds are next concrete source dependency,not a restarted audit. C06 all-world/thread/global/publisher/escaped finite roots,E12 CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap.",
+  "unit": {
+    "additional_scenes": [
+      {
+        "attempts": 1,
+        "cases": [
+          {
+            "cleaned": true,
+            "prefix": 0,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          }
+        ],
+        "name": "hit"
+      },
+      {
+        "attempts": 25,
+        "cases": [
+          {
+            "cleaned": true,
+            "prefix": 0,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 1,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 2,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 3,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 4,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 5,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 6,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 7,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 8,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 9,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 10,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 11,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 12,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 13,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 14,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 15,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 16,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 17,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 18,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 19,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 20,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 21,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 22,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 23,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          },
+          {
+            "cleaned": true,
+            "prefix": 24,
+            "prior_consistent": true,
+            "recovered": true,
+            "refused": true
+          }
+        ],
+        "name": "evict"
+      }
+    ],
+    "cases": [
+      {
+        "cleaned": true,
+        "prefix": 0,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 1,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 2,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 3,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 4,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 5,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 6,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 7,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 8,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 9,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 10,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 11,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 12,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 13,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 14,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 15,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 16,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 17,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 18,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 19,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 20,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 21,
+        "refused": true,
+        "retry_has_pixels": true
+      }
+    ],
+    "checked_arithmetic": true,
+    "file_cases": [
+      {
+        "cleaned": true,
+        "kind": 0,
+        "valid_pixels": true
+      },
+      {
+        "cleaned": true,
+        "kind": 1,
+        "valid_pixels": true
+      },
+      {
+        "cleaned": true,
+        "kind": 2,
+        "valid_pixels": true
+      },
+      {
+        "cleaned": true,
+        "kind": 3,
+        "valid_pixels": true
+      },
+      {
+        "cleaned": true,
+        "kind": 4,
+        "valid_pixels": true
+      }
+    ],
+    "large_request_no_allocation": {
+      "logical_rgba_bytes": 4294967296,
+      "pass": true,
+      "requested_bytes": 4294967335
+    },
+    "normal_attempts": 22,
+    "normal_peak": 1416,
+    "schema": "placeholder-recovery.v1",
+    "stale_stem_reproduced": false,
+    "status": "PASS"
+  },
+  "baseline": {
+    "cases": [
+      {
+        "cleaned": true,
+        "prefix": 0,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 1,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 2,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 3,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 4,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 5,
+        "refused": true,
+        "retry_has_pixels": true
+      },
+      {
+        "cleaned": true,
+        "prefix": 6,
+        "refused": true,
+        "retry_has_pixels": false
+      }
+    ],
+    "normal_attempts": 22,
+    "normal_peak": 1424,
+    "schema": "placeholder-recovery.v1",
+    "stale_stem_reproduced": true,
+    "status": "REPRODUCED"
+  },
+  "baseline_identity": {
+    "src/ResourcePacks/PlaceholderTextureCache.cpp": "828ed77cda0044d0eab2aaf1bae0ef0aab962e20a4731cf182b202e74f4edaac",
+    "src/Test/PlaceholderRecoveryFixture.h": "ff4cb8d66590e638cd3a18584980b38eb1b0411d23016c62bb707674009c6901",
+    "src/Test/OrdinaryNewObservation.h": "fdb91853b99b10fe6fee34d1044a913624cfe8a15186eb95652e4346afeb84e9",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "fe43ecde01fa43b49ca036010e05afb7586ff030d4112ee4882ba64cc6c9f4d1",
+    "build/desktop-msvc/Release/worldgen_scatter_block_resolve_test.exe": "bdae066146c2d187a0d7cf162b68a2a0c1e236f6f90b44ceb7da8ad81c583054"
+  },
+  "baseline_pixel": {
+    "artifact": "build/desktop-msvc/s4-placeholder-pixel-baseline.rgba",
+    "file_sha256": "511c39b354b8915fc3e38564bdef6f04cdb5954a5c6ace9ff670c083fce17e68",
+    "rgba_sha256": "1b01b3014b87d3b7c906122b9618c7022b6a79bfd433c1b7ec554aa51b0c3514",
+    "fnv64": "fbc66fccbb979734"
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "b0aadf2a05fdf90551c319a8ad8a895e64043d47d06f19895cf3f19bdff013ba"
+    },
+    {
+      "name": "merge-staging",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-staging",
+        "build\\desktop-msvc\\s4-placeholder-merge-staging-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "b0aadf2a05fdf90551c319a8ad8a895e64043d47d06f19895cf3f19bdff013ba"
+    },
+    {
+      "name": "resource-growth",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--resource-block-growth",
+        "build\\desktop-msvc\\s4-placeholder-resource-growth-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "813b4eee7de424db7d529e2f2b3ec077cb58b620e245743dd67e3badcce14cee"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/PlaceholderTextureCache.cpp": "a8f4e0e2dfeb3dd8dfa00e6ca09f613a254e96f26ed68d4c381138911a1275dd",
+    "src/ResourcePacks/PlaceholderPixelLayout.h": "8de41bab11de039bfd236ab98c0d8460aeeddedbd2ea4d6c0176a9a01c8c0632",
+    "src/Test/PlaceholderRecoveryFixture.h": "33d806bd27e37fc5e9915366690635fa91457c6d8c79db2639c06d1669169f62",
+    "src/Test/OrdinaryNewObservation.h": "fdb91853b99b10fe6fee34d1044a913624cfe8a15186eb95652e4346afeb84e9",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "fe43ecde01fa43b49ca036010e05afb7586ff030d4112ee4882ba64cc6c9f4d1"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "b0aadf2a05fdf90551c319a8ad8a895e64043d47d06f19895cf3f19bdff013ba",
+  "desktop_exe_sha256": "0c6cf749e01e6fd89b0b694e143d6560736f383912931e8a12a11403d491c77b",
+  "provenance": "build/desktop-msvc/s4-placeholder-recovery-provenance.json",
+  "first_fixed_result": {
+    "artifact": "build/desktop-msvc/s4-placeholder-recovery-first-fixed.json",
+    "status": "FAIL",
+    "reason": "Recovery/file cases already pass;4GiB request oracle omitted MSVC39-byte large-allocation alignment. Corrected fixture only,production unchanged."
+  },
+  "limits": {
+    "cache_transaction": "Single-thread consistent cache admission/eviction exercised;bucket spare capacity may grow after refusal. Derived file can remain after refused in-memory admission and is reused on retry. World/player saves and notification policy unchanged.",
+    "shape": "No arbitrary asset limit. size_t multiplication/vector representability checked;uint32 byte limit applies only to existing derived-file format. CPU layout can represent4GiB even though file header cannot. Header and actual file length checked before advertised allocation.",
+    "coverage": "Miss/hit/single-victim eviction and16x16 independent pixel baseline;other cache collision/large-state source bounds and full native graphics/memory matrix not inferred.",
+    "observer": "First cold baseline process aborted before report;explicit stream formatter warm outside observation yields normal cleanup0. Initial build macro conflict fixed;all actual accepted runs/current source hashes retained.",
+    "cleanup": "Automatic approval review rejected optional deletion of the one cold-fixture temp folder with reason blocked by policy. Folder left in place;baseline RGBA copied to ignored evidence artifact. No alternative deletion attempted."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-placeholder-recovery-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

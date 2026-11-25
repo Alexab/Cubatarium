@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.placeholder-recovery",
+      "status": "SCOPED_RECOVERY_PIXEL_SIZES_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-placeholder-recovery-acceptance.json",
+      "certificate": "S4_02_C05_PLACEHOLDER_RECOVERY_CERTIFICATE_2026_11_25.json",
+      "scope": "Placeholder-cache recovery/pixel-size blocker fixed scoped PASS. Real baseline refusal prefix6 leaves key/stem without pixels;exact retry stays incomplete. Fixed GetOrCreateStem prepares pixels/return string,stages maps+LRU and rolls back new rows on failure;hit refresh uses allocation-free splice. Eviction completes allocation-capable file/path work before victim removal;shared-stem payload not retired while another key references it. Checked size_t RGBA product/index/stripe addition replaces signed int expressions. Cached header must match requested normalized square,size and exact file payload before pixel allocation;save checks uint32 format representation.22 miss+1 hit+25 eviction refusal boundaries preserve consistent prior entries,recover exact pixel output and clean observed allocations to0.5 valid/oversized/mismatched/truncated/trailing payload file scenarios recover. Logical4GiB pixel request verified with allocation ceiling before raster work;actual MSVC request4GiB+39,not giant allocation.16x16 RGBA matches preserved pre-fix bytes by FNV64 and SHA256. Full scatter,merge staging and resource growth regressions PASS;Release/native runtime/startup/save/UI/provenance PASS,aggregate smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.merge-staging",
       "status": "SCOPED_COPY_REMOVAL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-merge-staging-acceptance.json",

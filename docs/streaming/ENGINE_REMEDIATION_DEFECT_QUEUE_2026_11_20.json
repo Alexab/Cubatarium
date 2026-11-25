@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "placeholder-key-admission-before-pixels-and-unchecked-layout",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "observed": "Actual persistent ordinary-new refusal prefix6 leaves a stem without pixels after exact retry;Rasterize used signed int square*4/index addition and file loader trusted advertised size/shape.",
+      "fix": "Placeholder-cache recovery/pixel-size blocker fixed scoped PASS. Real baseline refusal prefix6 leaves key/stem without pixels;exact retry stays incomplete. Fixed GetOrCreateStem prepares pixels/return string,stages maps+LRU and rolls back new rows on failure;hit refresh uses allocation-free splice. Eviction completes allocation-capable file/path work before victim removal;shared-stem payload not retired while another key references it. Checked size_t RGBA product/index/stripe addition replaces signed int expressions. Cached header must match requested normalized square,size and exact file payload before pixel allocation;save checks uint32 format representation.22 miss+1 hit+25 eviction refusal boundaries preserve consistent prior entries,recover exact pixel output and clean observed allocations to0.5 valid/oversized/mismatched/truncated/trailing payload file scenarios recover. Logical4GiB pixel request verified with allocation ceiling before raster work;actual MSVC request4GiB+39,not giant allocation.16x16 RGBA matches preserved pre-fix bytes by FNV64 and SHA256. Full scatter,merge staging and resource growth regressions PASS;Release/native runtime/startup/save/UI/provenance PASS,aggregate smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-placeholder-recovery-acceptance.json",
+      "next_action": "C05 OPEN:placeholder per-source requested-memory formula (including prior/global diagnostic roots and shared-stem collision states),texture override JSON/YAML source candidates,whole directory/merge pending/map/ID/descriptor/stem memo/atlas growth,pack biome-image adoption and full source/retained/prior-current composition. Targeted inspection found TextureOverrides.cpp LoadFromJson still uses plain json::parse(in) and keeps stream live through conversion;managed parse/retirement and override/YAML bounds are next concrete source dependency,not a restarted audit. C06 all-world/thread/global/publisher/escaped finite roots,E12 CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap."
+    },
+    {
       "id": "worldgen-pack-directory-copy-after-publication",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",

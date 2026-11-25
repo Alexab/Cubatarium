@@ -50,4 +50,3 @@ void *operator new(size_t n,const std::nothrow_t &) noexcept {try{return observa
 void *operator new[](size_t n,const std::nothrow_t &) noexcept {try{return observation::Allocate(n);}catch(...){return nullptr;}}
 void operator delete(void *p,const std::nothrow_t &) noexcept {observation::Free(p);}
 void operator delete[](void *p,const std::nothrow_t &) noexcept {observation::Free(p);}
-

@@ -1,4 +1,5 @@
 #include "ResourcePacks/PlaceholderTextureCache.h"
+#include "ResourcePacks/PlaceholderPixelLayout.h"
 #include "Core/ColorUtil.h"
 #include <algorithm>
 #include <cctype>
@@ -7,6 +8,8 @@
 #include <functional>
 #include <iomanip>
 #include <sstream>
+#include <stdexcept>
+#include <type_traits>
 
 namespace cutum
 {
@@ -23,6 +26,8 @@ std::filesystem::path PlaceholderFilePath(const std::filesystem::path &cacheDir,
 bool SavePlaceholderFile(const std::filesystem::path &path,
                          const TexturePixelData &pixels)
 {
+  if (!PlaceholderFileShapeFits(pixels.Width,pixels.Height,pixels.Rgba.size()))
+    return false;
   std::ofstream out(path, std::ios::binary);
   if (!out.is_open())
   {
@@ -42,7 +47,7 @@ bool SavePlaceholderFile(const std::filesystem::path &path,
 }
 
 bool LoadPlaceholderFile(const std::filesystem::path &path,
-                         TexturePixelData &out)
+                         TexturePixelData &out, int tileSize)
 {
   std::ifstream in(path, std::ios::binary);
   if (!in.is_open())
@@ -55,10 +60,14 @@ bool LoadPlaceholderFile(const std::filesystem::path &path,
   in.read(reinterpret_cast<char *>(&width), sizeof(width));
   in.read(reinterpret_cast<char *>(&height), sizeof(height));
   in.read(reinterpret_cast<char *>(&size), sizeof(size));
-  if (!in.good())
+  if (!in.good() || !PlaceholderHeaderMatches(width,height,size,tileSize))
   {
     return false;
   }
+  // Reject truncated/mismatched payloads before allocating their advertised size.
+  const auto payload=in.tellg();in.seekg(0,std::ios::end);const auto end=in.tellg();
+  if(payload<0 || end<payload || static_cast<uint64_t>(end-payload)!=size)return false;
+  in.seekg(payload);if(!in.good())return false;
   std::vector<uint8_t> rgba(size);
   if (size > 0)
   {
@@ -91,28 +100,32 @@ void UPlaceholderTextureCache::TouchLru(const std::string &key)
   const auto it = LruIt.find(key);
   if (it != LruIt.end())
   {
-    LruOrder.erase(it->second);
+    LruOrder.splice(LruOrder.begin(),LruOrder,it->second);
   }
-  LruOrder.push_front(key);
-  LruIt[key] = LruOrder.begin();
 }
 
 void UPlaceholderTextureCache::EvictIfNeeded()
 {
   while (KeyToStem.size() > MaxEntries && !LruOrder.empty())
   {
-    const std::string victim = LruOrder.back();
-    LruOrder.pop_back();
-    LruIt.erase(victim);
+    const std::string &victim = LruOrder.back();
     const auto stemIt = KeyToStem.find(victim);
     if (stemIt != KeyToStem.end())
     {
-      std::error_code ec;
-      std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second),
-                              ec);
-      StemPixels.erase(stemIt->second);
+      // A hash-colliding stem can be referenced by another key. Keep that
+      // shared payload/file until the last key is retired.
+      bool shared=false;
+      for(const auto &entry:KeyToStem)
+        if(entry.first!=victim && entry.second==stemIt->second){shared=true;break;}
+      if(!shared){
+        std::error_code ec;
+        std::filesystem::remove(PlaceholderFilePath(CacheDir, stemIt->second),ec);
+        StemPixels.erase(stemIt->second);
+      }
       KeyToStem.erase(stemIt);
     }
+    LruIt.erase(victim);
+    LruOrder.pop_back();
   }
 }
 
@@ -140,7 +153,10 @@ UPlaceholderTextureCache::Rasterize(const std::string &blockName, int faceIndex,
   const int size = std::max(1, tileSize);
   out.Width = size;
   out.Height = size;
-  out.Rgba.resize(static_cast<size_t>(size * size * 4));
+  size_t bytes=0;
+  if(!CheckedRgbaByteCount(static_cast<size_t>(size),static_cast<size_t>(size),bytes) || bytes>out.Rgba.max_size())
+    throw std::length_error("placeholder pixel size overflow");
+  out.Rgba.resize(bytes);
 
   // Keep placeholders unmistakable in-world: high-contrast warning stripes,
   // a yellow frame, and a large question mark. The configured background still
@@ -154,7 +170,7 @@ UPlaceholderTextureCache::Rasterize(const std::string &blockName, int faceIndex,
     {
       return;
     }
-    const size_t index = static_cast<size_t>((y * size + x) * 4);
+    const size_t index = (static_cast<size_t>(y)*static_cast<size_t>(size)+static_cast<size_t>(x))*4;
     out.Rgba[index] = r;
     out.Rgba[index + 1] = g;
     out.Rgba[index + 2] = b;
@@ -182,7 +198,7 @@ UPlaceholderTextureCache::Rasterize(const std::string &blockName, int faceIndex,
   {
     for (int x = 0; x < size; ++x)
     {
-      const bool stripe = ((x + y) / std::max(1, size / 5)) % 2 == 0;
+      const bool stripe = ((static_cast<size_t>(x)+static_cast<size_t>(y)) / static_cast<size_t>(std::max(1, size / 5))) % 2 == 0;
       set_pixel(x, y, stripe ? warning_r : 18, stripe ? warning_g : 18,
                 stripe ? warning_b : 18);
     }
@@ -241,21 +257,42 @@ UPlaceholderTextureCache::GetOrCreateStem(const std::string &blockName,
   const auto it = KeyToStem.find(key);
   if (it != KeyToStem.end())
   {
+    std::string result=it->second;
     TouchLru(key);
-    return it->second;
+    return result;
   }
   const std::string stem = MakeStem(key);
-  KeyToStem[key] = stem;
   TexturePixelData pixels;
-  if (!LoadPlaceholderFile(PlaceholderFilePath(CacheDir, stem), pixels))
+  if (!LoadPlaceholderFile(PlaceholderFilePath(CacheDir, stem), pixels,tileSize))
   {
     pixels = Rasterize(blockName, faceIndex, tileSize);
     SavePlaceholderFile(PlaceholderFilePath(CacheDir, stem), pixels);
   }
-  StemPixels[stem] = std::move(pixels);
-  TouchLru(key);
-  EvictIfNeeded();
-  return stem;
+  // Prepare the return string before admission. Returning this local moves
+  // without allocation even when NRVO is unavailable.
+  std::string result=stem;
+  decltype(StemPixels)::iterator pixel;
+  decltype(LruIt)::iterator lru;
+  decltype(KeyToStem)::iterator published;
+  bool newPixel=false,newLru=false,newKey=false,listNode=false;
+  try {
+    const auto inserted=StemPixels.try_emplace(stem);pixel=inserted.first;newPixel=inserted.second;
+    LruOrder.push_front(key);listNode=true;
+    const auto indexed=LruIt.emplace(key,LruOrder.begin());lru=indexed.first;newLru=indexed.second;
+    const auto admitted=KeyToStem.emplace(key,stem);published=admitted.first;newKey=admitted.second;
+    // With a consistent cache one new key can evict at most one old key.
+    // All allocation-capable file/path work precedes that victim's removal.
+    EvictIfNeeded();
+    static_assert(std::is_nothrow_move_assignable_v<TexturePixelData>);
+    pixel->second=std::move(pixels);
+  } catch (...) {
+    if(newKey)KeyToStem.erase(published);
+    if(newLru)LruIt.erase(lru);
+    if(listNode)LruOrder.pop_front();
+    if(newPixel)StemPixels.erase(pixel);
+    throw;
+  }
+  return result;
 }
 
 void UPlaceholderTextureCache::RegisterAll(UTextureBaseStorage &storage) const
