@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.pack-documents",
+      "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-pack-document-acceptance.json",
+      "certificate": "S4_02_C05_PACK_DOCUMENT_CERTIFICATE_2026_11_25.json",
+      "scope": "WorldGenPack per-document/biome candidate source scoped PASS. Root and nine optional document bodies mechanically moved into ApplyWorldGenPackDocument;CompileWorldGenBiomeCatalog exports same prior biome body. Independent exact saved-body comparison PASS for all11 bodies;file-wrapper catch/partial mutation/default semantics unchanged.18 semantic/default/clamp/long/wide/error cases cover all10 document kinds plus biome conversion;879 persistent ordinary-new refusal prefixes+exact retries,final live/blocks0 and active pack unchanged.257-stage growth,129 ore strings and129 feature/sub-biome map rehash within checked source bound. Full biome,prefab616 and four-candidate1708 regressions PASS. Release desktop source/EXE provenance PASS."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.prefab-candidate",
       "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-prefab-candidate-acceptance.json",

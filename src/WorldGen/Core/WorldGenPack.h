@@ -276,6 +276,14 @@ struct WorldGenPack
   std::vector<BiomeHandle> CaveClimateBiomes;
 };
 
+enum class WorldGenPackDocument {Root, Pipeline, Height, Climate, Ores,
+  Valleys, Lakes, Ravines, Caves, Aquifers};
+// Borrowed DOM application shared by file loaders and source/semantic checks.
+void ApplyWorldGenPackDocument(WorldGenPackDocument kind,
+    const nlohmann::json &json, WorldGenPack &pack);
+BiomePackDefinition CompileWorldGenBiomeCatalog(const nlohmann::json &json,
+    const std::string &biomeId);
+
 class UWorldGenPack
 {
 public:

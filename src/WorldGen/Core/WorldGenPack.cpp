@@ -296,25 +296,7 @@ void LoadPipelineJson(const std::filesystem::path &root, WorldGenPack &pack)
   {
     std::ifstream file(pipelineJson);
     const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
-    if (!json.contains("stages") || !json["stages"].is_array())
-    {
-      return;
-    }
-    pack.Pipeline = WorldGenPackPipeline{};
-    pack.Pipeline.Loaded = true;
-    for (const auto &stage : json["stages"])
-    {
-      if (stage.is_string())
-      {
-        const std::string stage_name = stage.get<std::string>();
-        ParsePipelineStage(stage_name, pack.Pipeline);
-        if (const std::optional<WorldGenStageId> stage_id =
-                WorldGenStageIdFromPipelineString(stage_name))
-        {
-          pack.Pipeline.StageOrder.push_back(*stage_id);
-        }
-      }
-    }
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Pipeline,json,pack);
   }
   catch (const std::exception &e)
   {
@@ -374,6 +356,241 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
   {
     std::ifstream file(heightJson);
     const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Height,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: height.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path climateJson = root / "climate.json";
+  if (!std::filesystem::exists(climateJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(climateJson);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Climate,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: climate.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path oresJson = root / "ores.json";
+  if (!std::filesystem::exists(oresJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(oresJson);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Ores,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ores.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path valleys_json = root / "valleys.json";
+  if (!std::filesystem::exists(valleys_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(valleys_json);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Valleys,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: valleys.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path lakes_json = root / "lakes.json";
+  if (!std::filesystem::exists(lakes_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(lakes_json);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Lakes,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: lakes.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path ravines_json = root / "ravines.json";
+  if (!std::filesystem::exists(ravines_json))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(ravines_json);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Ravines,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: ravines.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path cavesJson = root / "caves.json";
+  if (!std::filesystem::exists(cavesJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(cavesJson);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Caves,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: caves.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
+{
+  const std::filesystem::path aquifersJson = root / "aquifers.json";
+  if (!std::filesystem::exists(aquifersJson))
+  {
+    return;
+  }
+  try
+  {
+    std::ifstream file(aquifersJson);
+    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Aquifers,json,pack);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "WorldGenPack: aquifers.json parse error: " << e.what()
+              << std::endl;
+  }
+}
+
+
+bool IsValidBiomeKey(const std::string &key)
+{
+  if (key.empty() || key.size() > 64 || key.front() < 'a' || key.front() > 'z')
+  {
+    return false;
+  }
+  for (const unsigned char ch : key)
+  {
+    if (!((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_'))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+} // namespace
+
+void ApplyWorldGenPackDocument(WorldGenPackDocument kind,
+    const nlohmann::json &json, WorldGenPack &pack)
+{
+  switch(kind)
+  {
+  case WorldGenPackDocument::Root:
+  {
+    pack.Id = json.value("id", "default");
+    const std::string mode = json.value("biome_mode", "procedural");
+    pack.BiomeMode = mode == "image" ? WorldGenBiomeMode::Image
+                                     : WorldGenBiomeMode::Procedural;
+    pack.BiomeMapBlockScale =
+        std::max(1, json.value("biome_map_block_scale", 4));
+    if (json.contains("biome_blend_radius"))
+    {
+      pack.BiomeBlendRadius = json["biome_blend_radius"].get<float>();
+    }
+    if (json.contains("biome_map_image") &&
+        json["biome_map_image"].is_string())
+    {
+      pack.BiomeMapImagePath = json["biome_map_image"].get<std::string>();
+    }
+    if (json.contains("pipeline") && json["pipeline"].is_array())
+    {
+      pack.Pipeline = WorldGenPackPipeline{};
+      pack.Pipeline.Loaded = true;
+      for (const auto &stage : json["pipeline"])
+      {
+        if (stage.is_string())
+        {
+          const std::string stage_name = stage.get<std::string>();
+          ParsePipelineStage(stage_name, pack.Pipeline);
+          if (const std::optional<WorldGenStageId> stage_id =
+                  WorldGenStageIdFromPipelineString(stage_name))
+          {
+            pack.Pipeline.StageOrder.push_back(*stage_id);
+          }
+        }
+      }
+    }
+    return;
+  }
+  case WorldGenPackDocument::Pipeline:
+  {
+    if (!json.contains("stages") || !json["stages"].is_array())
+    {
+      return;
+    }
+    pack.Pipeline = WorldGenPackPipeline{};
+    pack.Pipeline.Loaded = true;
+    for (const auto &stage : json["stages"])
+    {
+      if (stage.is_string())
+      {
+        const std::string stage_name = stage.get<std::string>();
+        ParsePipelineStage(stage_name, pack.Pipeline);
+        if (const std::optional<WorldGenStageId> stage_id =
+                WorldGenStageIdFromPipelineString(stage_name))
+        {
+          pack.Pipeline.StageOrder.push_back(*stage_id);
+        }
+      }
+    }
+    return;
+  }
+  case WorldGenPackDocument::Height:
+  {
     pack.Height.SchemaVersion = json.value("schema_version", 1);
     if (pack.Height.SchemaVersion < 1 || pack.Height.SchemaVersion > 2)
     {
@@ -471,25 +688,10 @@ void LoadHeightJson(const std::filesystem::path &root, WorldGenPack &pack)
       }
     }
     pack.Height.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: height.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path climateJson = root / "climate.json";
-  if (!std::filesystem::exists(climateJson))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Climate:
   {
-    std::ifstream file(climateJson);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     if (json.contains("temperature"))
     {
       ParseClimateAxis(json["temperature"], pack.Climate.Temperature);
@@ -519,25 +721,10 @@ void LoadClimateJson(const std::filesystem::path &root, WorldGenPack &pack)
                               pack.Climate.TemperatureLapsePerBlock),
                    0.0f, 0.004f);
     pack.Climate.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: climate.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path oresJson = root / "ores.json";
-  if (!std::filesystem::exists(oresJson))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Ores:
   {
-    std::ifstream file(oresJson);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     if (!json.contains("ores") || !json["ores"].is_array())
     {
       return;
@@ -563,25 +750,10 @@ void LoadOresJson(const std::filesystem::path &root, WorldGenPack &pack)
       pack.Ores.Rules.push_back(rule);
     }
     pack.Ores.Loaded = !pack.Ores.Rules.empty();
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: ores.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path valleys_json = root / "valleys.json";
-  if (!std::filesystem::exists(valleys_json))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Valleys:
   {
-    std::ifstream file(valleys_json);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     pack.Valleys.Enabled = json.value("enabled", pack.Valleys.Enabled);
     pack.Valleys.MaxDepth = json.value("max_depth", pack.Valleys.MaxDepth);
     pack.Valleys.WidthSigma =
@@ -602,25 +774,10 @@ void LoadValleysJson(const std::filesystem::path &root, WorldGenPack &pack)
                               pack.Valleys.WaterMaxElevationAboveSea),
                    0, 256);
     pack.Valleys.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: valleys.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path lakes_json = root / "lakes.json";
-  if (!std::filesystem::exists(lakes_json))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Lakes:
   {
-    std::ifstream file(lakes_json);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     pack.Lakes.Enabled = json.value("enabled", pack.Lakes.Enabled);
     pack.Lakes.CellSize =
         std::clamp(json.value("cell_size", pack.Lakes.CellSize), 48, 512);
@@ -656,25 +813,10 @@ void LoadLakesJson(const std::filesystem::path &root, WorldGenPack &pack)
     pack.Lakes.MaxTemperature = std::clamp(
         json.value("max_temperature", pack.Lakes.MaxTemperature), 0.0f, 1.0f);
     pack.Lakes.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: lakes.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path ravines_json = root / "ravines.json";
-  if (!std::filesystem::exists(ravines_json))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Ravines:
   {
-    std::ifstream file(ravines_json);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     pack.Ravines.Enabled = json.value("enabled", pack.Ravines.Enabled);
     pack.Ravines.Rarity = json.value("rarity", pack.Ravines.Rarity);
     pack.Ravines.MinDepth = json.value("min_depth", pack.Ravines.MinDepth);
@@ -685,25 +827,10 @@ void LoadRavinesJson(const std::filesystem::path &root, WorldGenPack &pack)
     pack.Ravines.FeatherMode =
         json.value("feather_mode", pack.Ravines.FeatherMode);
     pack.Ravines.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: ravines.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path cavesJson = root / "caves.json";
-  if (!std::filesystem::exists(cavesJson))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Caves:
   {
-    std::ifstream file(cavesJson);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     pack.Caves.MaxDepthBelowSurface =
         json.value("max_depth_below_surface", pack.Caves.MaxDepthBelowSurface);
     pack.Caves.MinDepthBelowSurface =
@@ -740,25 +867,10 @@ void LoadCavesJson(const std::filesystem::path &root, WorldGenPack &pack)
       }
     }
     pack.Caves.Loaded = true;
-  }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: caves.json parse error: " << e.what()
-              << std::endl;
-  }
-}
-
-void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
-{
-  const std::filesystem::path aquifersJson = root / "aquifers.json";
-  if (!std::filesystem::exists(aquifersJson))
-  {
     return;
   }
-  try
+  case WorldGenPackDocument::Aquifers:
   {
-    std::ifstream file(aquifersJson);
-    const auto json = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
     pack.Aquifers.CellSizeX =
         json.value("cell_size_x", pack.Aquifers.CellSizeX);
     pack.Aquifers.CellSizeY =
@@ -784,15 +896,12 @@ void LoadAquifersJson(const std::filesystem::path &root, WorldGenPack &pack)
     pack.Aquifers.LavaCellChance =
         json.value("lava_cell_chance", pack.Aquifers.LavaCellChance);
     pack.Aquifers.Loaded = true;
+    return;
   }
-  catch (const std::exception &e)
-  {
-    std::cerr << "WorldGenPack: aquifers.json parse error: " << e.what()
-              << std::endl;
   }
 }
 
-BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
+BiomePackDefinition CompileWorldGenBiomeCatalog(const nlohmann::json &biomeJson,
                                    const std::string &biomeId)
 {
   BiomePackDefinition biomeDef;
@@ -1017,24 +1126,6 @@ BiomePackDefinition ParseBiomeJson(const nlohmann::json &biomeJson,
   return biomeDef;
 }
 
-bool IsValidBiomeKey(const std::string &key)
-{
-  if (key.empty() || key.size() > 64 || key.front() < 'a' || key.front() > 'z')
-  {
-    return false;
-  }
-  for (const unsigned char ch : key)
-  {
-    if (!((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '_'))
-    {
-      return false;
-    }
-  }
-  return true;
-}
-
-} // namespace
-
 bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
 {
   WorldGenPack pack{};
@@ -1050,39 +1141,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   {
     std::ifstream file(packJson);
     const auto rootJson = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Pack);
-    pack.Id = rootJson.value("id", "default");
-    const std::string mode = rootJson.value("biome_mode", "procedural");
-    pack.BiomeMode = mode == "image" ? WorldGenBiomeMode::Image
-                                     : WorldGenBiomeMode::Procedural;
-    pack.BiomeMapBlockScale =
-        std::max(1, rootJson.value("biome_map_block_scale", 4));
-    if (rootJson.contains("biome_blend_radius"))
-    {
-      pack.BiomeBlendRadius = rootJson["biome_blend_radius"].get<float>();
-    }
-    if (rootJson.contains("biome_map_image") &&
-        rootJson["biome_map_image"].is_string())
-    {
-      pack.BiomeMapImagePath = rootJson["biome_map_image"].get<std::string>();
-    }
-    if (rootJson.contains("pipeline") && rootJson["pipeline"].is_array())
-    {
-      pack.Pipeline = WorldGenPackPipeline{};
-      pack.Pipeline.Loaded = true;
-      for (const auto &stage : rootJson["pipeline"])
-      {
-        if (stage.is_string())
-        {
-          const std::string stage_name = stage.get<std::string>();
-          ParsePipelineStage(stage_name, pack.Pipeline);
-          if (const std::optional<WorldGenStageId> stage_id =
-                  WorldGenStageIdFromPipelineString(stage_name))
-          {
-            pack.Pipeline.StageOrder.push_back(*stage_id);
-          }
-        }
-      }
-    }
+    ApplyWorldGenPackDocument(WorldGenPackDocument::Root,rootJson,pack);
   }
   catch (const std::exception &e)
   {
@@ -1123,7 +1182,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
         {
           throw std::runtime_error("duplicate biome ID '" + biomeId + "'");
         }
-        pack.Biomes.emplace(biomeId, ParseBiomeJson(biomeJson, biomeId));
+        pack.Biomes.emplace(biomeId, CompileWorldGenBiomeCatalog(biomeJson, biomeId));
       }
       catch (const std::exception &e)
       {

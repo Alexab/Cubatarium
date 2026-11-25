@@ -1,0 +1,272 @@
+{
+  "schema": "s4-pack-document-source-certificate.v1",
+  "status": "SCOPED_DOCUMENT_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "WorldGenPack per-document/biome candidate source scoped PASS. Root and nine optional document bodies mechanically moved into ApplyWorldGenPackDocument;CompileWorldGenBiomeCatalog exports same prior biome body. Independent exact saved-body comparison PASS for all11 bodies;file-wrapper catch/partial mutation/default semantics unchanged.18 semantic/default/clamp/long/wide/error cases cover all10 document kinds plus biome conversion;879 persistent ordinary-new refusal prefixes+exact retries,final live/blocks0 and active pack unchanged.257-stage growth,129 ore strings and129 feature/sub-biome map rehash within checked source bound. Full biome,prefab616 and four-candidate1708 regressions PASS. Release desktop source/EXE provenance PASS.",
+  "remaining": "C05 OPEN:biome registry finalization and complete pack/directory/resource merge growth,existing target capacities and source/retained/prior-current publication composition. Fresh one-document bound excludes preexisting target capacity;new default pack shared block included exactly once. Optional wrappers still may keep partial optional values on caught failure,matching prior semantics;not transactional directory reload. Decoded image payload/source composition retained from earlier certificates. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU/full process matrix and S4.03..06/S5/S6 remain OPEN;23/42 unchanged.",
+  "unit": {
+    "cases": [
+      {
+        "attempts": 9,
+        "name": "root_fields",
+        "pass": true,
+        "peak": 14642,
+        "rejected": false,
+        "upper": 470568
+      },
+      {
+        "attempts": 3,
+        "name": "root_defaults",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 26888
+      },
+      {
+        "attempts": 18,
+        "name": "pipeline257_growth",
+        "pass": true,
+        "peak": 3436,
+        "rejected": false,
+        "upper": 452136
+      },
+      {
+        "attempts": 274,
+        "name": "ores129_growth",
+        "pass": true,
+        "peak": 45751,
+        "rejected": false,
+        "upper": 2171560
+      },
+      {
+        "attempts": 3,
+        "name": "height",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 30440
+      },
+      {
+        "attempts": 3,
+        "name": "climate",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 32776
+      },
+      {
+        "attempts": 3,
+        "name": "valleys",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 28680
+      },
+      {
+        "attempts": 3,
+        "name": "lakes",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 28680
+      },
+      {
+        "attempts": 3,
+        "name": "ravines",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 28584
+      },
+      {
+        "attempts": 3,
+        "name": "caves",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 29128
+      },
+      {
+        "attempts": 3,
+        "name": "aquifers",
+        "pass": true,
+        "peak": 1328,
+        "rejected": false,
+        "upper": 28744
+      },
+      {
+        "attempts": 6,
+        "name": "wrong_root",
+        "pass": true,
+        "peak": 1472,
+        "rejected": true,
+        "upper": 26888
+      },
+      {
+        "attempts": 16,
+        "name": "biome_authored",
+        "pass": true,
+        "peak": 11070,
+        "rejected": false,
+        "upper": 239016
+      },
+      {
+        "attempts": 530,
+        "name": "biome129_map_rehash",
+        "pass": true,
+        "peak": 64892,
+        "rejected": false,
+        "upper": 1434248
+      },
+      {
+        "attempts": 8,
+        "name": "builtin_v1_defaults",
+        "pass": true,
+        "peak": 816,
+        "rejected": false,
+        "upper": 26888
+      },
+      {
+        "attempts": 4,
+        "name": "custom_requires_v2",
+        "pass": true,
+        "peak": 408,
+        "rejected": true,
+        "upper": 26888
+      },
+      {
+        "attempts": 6,
+        "name": "invalid_climate",
+        "pass": true,
+        "peak": 504,
+        "rejected": true,
+        "upper": 239016
+      },
+      {
+        "attempts": 14,
+        "name": "long_unknown_pool",
+        "pass": true,
+        "peak": 18660,
+        "rejected": true,
+        "upper": 400552
+      }
+    ],
+    "failed_cases": 0,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "persistent_prefix_and_retry_cases": 879,
+    "schema": "pack-document-source.v1",
+    "scope": "Fresh pack per document/all10 kinds and biome conversion;actual shared production code,input DOM/old capacities/directory registry finalization/image/publication graph separate. Optional-file wrapper catch/partial mutation behavior preserved,not transactional directory loading.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "biome",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_biome_features_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "cba35c76b42710285c51659fcc8538d6d71ccf147813350947adb30b0aaf11fe"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-candidate",
+        "build\\desktop-msvc\\s4-pack-document-prefab-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94f7bad4e54eb44415ab4268dde5079dc59e533c60577ceaeaa49b1c0a4c3042"
+    },
+    {
+      "name": "four-candidates",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "build\\desktop-msvc\\s4-pack-document-four-candidate-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94f7bad4e54eb44415ab4268dde5079dc59e533c60577ceaeaa49b1c0a4c3042"
+    }
+  ],
+  "production_extraction_equivalence": {
+    "status": "PASS",
+    "prior_commit": "e648b153e7e7598f585fe62553a92ddbd6e8772b",
+    "document_bodies": [
+      "Root",
+      "Pipeline",
+      "Height",
+      "Climate",
+      "Ores",
+      "Valleys",
+      "Lakes",
+      "Ravines",
+      "Caves",
+      "Aquifers"
+    ],
+    "biome_body_unchanged_except_function_name": true,
+    "scope": "Mechanically moved exact original bodies;root parameter rootJson renamed json. Wrapper catch/control/default behavior preserved.",
+    "independently_compared_bodies": [
+      "Root",
+      "Pipeline",
+      "Height",
+      "Climate",
+      "Ores",
+      "Valleys",
+      "Lakes",
+      "Ravines",
+      "Caves",
+      "Aquifers"
+    ],
+    "biome_body_compared": true
+  },
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenPack.cpp": "7f627b6a16ccf19aed55fdac2ebae6fce4b64fa8d7d212dad041f8440e239020",
+    "src/WorldGen/Core/WorldGenPack.h": "9c097d4747a9abff2ae8f917533c7413a50f74641a653b246b3fc7dce4242d9d",
+    "src/WorldGen/Core/PackCandidateSourceEnvelope.h": "5990886ef884862fe1aa5e9910d4ec3cded37371000a42d0724b9ca5bf631a82",
+    "src/Test/PackCandidateSourceFixture.h": "270be7477aebf10e99ba4cce628308e55592ce69a9981ef8b47c157531eed312",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "1d0cd315818f7465aea455ece9bea37d0db18558df618d1abb4bd9e66e773618",
+    "src/WorldGen/Core/WorldGenStageMask.cpp": "0b476b3456bad9548e91c24f7718dce1077e719899b6e553ce013908758cad49"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "94f7bad4e54eb44415ab4268dde5079dc59e533c60577ceaeaa49b1c0a4c3042",
+  "desktop_exe_sha256": "dd70cd3cc0d85df24f8cc40d56d5af6d31256b0deb0f81d92052cb8d11bf4e38",
+  "provenance": "build/desktop-msvc/s4-pack-document-provenance.json",
+  "first_fixture_result": {
+    "artifact": "build/desktop-msvc/s4-pack-document-first.json",
+    "status": "FAIL",
+    "reason": "Three fixture expectations corrected:terrain is deliberately absent from explicit StageOrder;wide fixture now caves/ores for257 actual stages;height sea_bias belongs under overworld. Production unchanged after extraction."
+  },
+  "model": {
+    "domain": "DOM values V,key+string bytes B and biome id byte length I. Fresh target/default allocator MSVC Release. Existing target capacity/input DOM/directory/prior versions separate.",
+    "upper": "16384+sizeof(actual MSVC WorldGenPack make_shared coallocation)+V*(4*(sizeof(PackOreRule)+sizeof(WorldGenStageId))+actual feature/sub-biome list nodes+2*16*2*sizeof(pointer)+8*39+256)+32*(B+I). Checked/saturating. One conservative bound for pack document and biome conversion;not configured runtime/process cap.",
+    "included": "New candidate/default map heads,ore/stage old+new vector growth,feature/sub-biome new map nodes and buckets,string temporaries/copies and return moves,JSON error text and authored unknown pool text. Pack shared object/control is INCLUDED in this source term;do not add twice.",
+    "limits": "File/path/parser/DOM/prior target capacity,final biome directory aggregate and registry,image decoder/payload,published/escaped versions,CRT/runtime/OS/stack/GPU separate."
+  },
+  "native": {
+    "status": "NOT_RUN_FOR_THIS_SLICE",
+    "reason": "Exact production DOM conversion extraction,verified directly with actual allocations/refusals and full biome loader regression. Prior native evidence retained but not attributed to this rebuilt executable."
+  }
+}
