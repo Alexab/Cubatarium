@@ -1,0 +1,560 @@
+{
+  "schema": "s4-catalog-root-owner-ledger.v1",
+  "status": "OPEN_C06_FINITE_GT01_RQ01_COMP01",
+  "scope": "Continuation of C06,not a new audit or process-memory cap. Current R installed/cached/returned graph has scoped proof;all declaration candidates/value/capture roots below must be composed before C06 closes.",
+  "current_certificate": "S4_02_C06_PUBLICATION_ROOTS_CERTIFICATE_2026_11_26.json",
+  "rows": [
+    {
+      "id": "G01",
+      "owner": "global snapshots",
+      "source": "src/WorldGen/Core/WorldGenContentPin.cpp",
+      "bound_or_obligation": "Pack/features/refs Active3;Pack owns registry/image;Biomes handle aliases Pack registry. Reload candidates overlap old/current via accepted C05 source phases.",
+      "status": "SOURCE_IDENTIFIED_GT01"
+    },
+    {
+      "id": "G02",
+      "owner": "resource/storage wrappers",
+      "source": "src/App/Core.h",
+      "bound_or_obligation": "Core5 resource handles;World/registry/texture cube/Application/geometry/viewmodel/GUI wrappers and launcher locals may alias or retain another storage. Count distinct storage/library/texture objects,not one payload per wrapper. Current BlockDefinitionStorage Active1 each.",
+      "status": "OPEN_GT01_ENTRYPOINT_UNION"
+    },
+    {
+      "id": "G03",
+      "owner": "world values and primary pipeline",
+      "source": "src/World/Core/World.h",
+      "bound_or_obligation": "WorldGenSets and resolved config1 per live world,plus one primary generator. ObjectLibrary raw;copied pipeline settings/config are source payload,not another shared catalog owner. Additional native diagnostic worlds separate profile.",
+      "status": "SOURCE_IDENTIFIED_GT01"
+    },
+    {
+      "id": "G04",
+      "owner": "escaped biome/sample keys",
+      "source": "src/WorldGen/Sampling/BiomeTypes.h",
+      "bound_or_obligation": "BiomeKeyRef owns aliasing key handle;key owner can preserve whole registry after Pack retirement. Caller-returned refs and fixed builtin table must be counted,not inferred zero from expired Pack.",
+      "status": "OPEN_GT01_ESCAPED_ROOTS"
+    },
+    {
+      "id": "T01",
+      "owner": "generation scheduler readers",
+      "source": "src/World/Chunks/ChunkLoadScheduler.cpp",
+      "bound_or_obligation": "Existing default process8 admitted mesh/relight/generation work graph;this scheduler input4 handles per admitted request. Generation reader guard retires7 convenience slots/name before work credit;idle0,at most56 scheduler-generation reader slot references while running.",
+      "status": "SCOPED_PRIOR_WORKER_READER_CERTIFICATE"
+    },
+    {
+      "id": "T02",
+      "owner": "thread convenience and pins",
+      "source": "src/WorldGen/Core/WorldGenContentPin.h",
+      "bound_or_obligation": "Per participating thread7 strong convenience slots160 inline bytes plus registry-name backing. One active nonnested pin4 strong handles and TLS borrowed pointer8 bytes;STBI ledger/failure-generation24 per participating thread. Main/other-pool/cooperative readers not covered by scheduler guard.",
+      "status": "OPEN_GT01_ALL_THREADS"
+    },
+    {
+      "id": "T03",
+      "owner": "weak pipeline and validation owners",
+      "source": "src/WorldGen/Core/PipelineChunkPopulator.cpp",
+      "bound_or_obligation": "One TLS pipeline per participating generation thread;6 weak owner slots+borrowed objects pointer. Coallocated shells survive last payload. UBlockWorld memo entries hold weak input contexts and strong geometry identity;bounded by2*field_count+1024. Numeric noise/TLS histories remain E12.",
+      "status": "SOURCE_IDENTIFIED_GT01_E12"
+    },
+    {
+      "id": "T04",
+      "owner": "actual application pools",
+      "source": "src/Core/Jobs/JobThreadBudget.h",
+      "bound_or_obligation": "Per owner generation<=4,coop<=4,relight<=4,mesh<=8,IO load<=4,optional IO background1,light-flags1. Capture worker disabled (class supports1 created worker);count actual construction/replace overlap and all live world owners. Auxiliary watchdog/audio/fluid-summary/profiler/window/Sky future threads have no named catalog snapshots;native/runtime TLS overhead remains E12.",
+      "status": "OPEN_GT01_POOL_INSTANCE_COUNTS"
+    },
+    {
+      "id": "RQ01",
+      "owner": "cooperative generation",
+      "source": "src/World/Core/WorldCooperativeOps.cpp",
+      "bound_or_obligation": "Separate session graph:max_inflight=2*ComputeWorkerThreadCount(CoopGeneration)<=8,input4 handles,captures/pins alias;worker<=4. Not governed by default shared8 work credits. Session Save.Catalog1 can remain after save until next reset.",
+      "status": "OPEN_RQ01_COUNT_COMPOSITION"
+    },
+    {
+      "id": "RQ02",
+      "owner": "mesh queued/running/completed",
+      "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
+      "bound_or_obligation": "Active callable work credits shared8;catalogKeep plus captured snapshot field. Returned MeshBuildResult direct InputCatalog/GeometryInputs/optional RenderLight/PendingSnapshot/batch bindings. Completion cap runtime tuning or6*worker_count<=48 default;drained/escaped vectors supplied separately.",
+      "status": "OPEN_RQ01_CURRENT_QUEUE_UNION"
+    },
+    {
+      "id": "RQ03",
+      "owner": "relight queued/running/completed",
+      "source": "src/World/Lighting/AsyncRelightBuilder.cpp",
+      "bound_or_obligation": "Input snapshot catalog and callable keep alias;result direct catalog and content certificate may retain after work credit. Completed cap tuning or6*worker_count<=24 default;drained/escaped results supplied separately. Retry specs contain coordinates/numeric config,not catalog pointers.",
+      "status": "OPEN_RQ01_CURRENT_QUEUE_UNION"
+    },
+    {
+      "id": "R01",
+      "owner": "installed fields and memo",
+      "source": "src/World/Lighting/SectionLightField.h",
+      "bound_or_obligation": "At most2 shared input contexts per actual field,regardless current proof validity;distinct contexts each direct catalog plus optional certificate catalog. Map/chunk aliases deduplicate. BlockWorld memo adds one strong catalog;memo weak input slots and geometry owner separate.",
+      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+    },
+    {
+      "id": "R02",
+      "owner": "CPU/GPU cached artifacts",
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "bound_or_obligation": "Per mesh RenderGeometryInputs,optional RenderLight,CPU/GPU bindings,CPU batch bindings,optional no-surface geometry. Cross light ranges and packed draw refs may retain aliases beyond a source mesh. Current iterator visits actual stored cells,not only drawable/valid artifacts.",
+      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+    },
+    {
+      "id": "R03",
+      "owner": "pending/capture/awaiting",
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "bound_or_obligation": "Awaiting geometry<=32/32MiB,result catalog-bearing members;pending GPU inputCatalog+snapshot light. Capture store<=512 snapshots. Current iterator follows those actual stored objects;worker callable/completion queues supplied separately. Existing queue receipts remain authoritative for payload/byte caps.",
+      "status": "SCOPED_VISITOR_SOURCE_HOOKS_RQ01_COUNTS_OPEN"
+    },
+    {
+      "id": "R04",
+      "owner": "binding lease and backend batches",
+      "source": "src/Render/Lighting/SectionRenderLightBinding.h",
+      "bound_or_obligation": "Each binding owns geometry and light snapshot (2 catalog-handle cells). Real entry weak State;State/table hold volume/identity,not catalog. Invalid/reset Entry still owns CPU catalog. GreedyGPU pass batches and CrossGPU light ranges own leases;collector accepts draw batches,Cross supplied separately.",
+      "status": "SCOPED_REAL_GL_LEASE_RQ01_BACKEND_INSTANCE_COUNTS_OPEN"
+    },
+    {
+      "id": "R05",
+      "owner": "no-surface proof",
+      "source": "src/Render/Mesh/GreedyMesher.h",
+      "bound_or_obligation": "Mesher-created SectionNoSurfaceProof owns1 SectionGeometryRenderInputs catalog;cached and returned proof nodes must be followed even if other mesh slots are empty.",
+      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+    },
+    {
+      "id": "R06",
+      "owner": "persistence and cooperative save",
+      "source": "src/World/Persistence/WorldPersistence.h",
+      "bound_or_obligation": "UnloadSaveReceipt1 catalog per live receipt;LightSignatureCatalog1 per persistence owner;cooperative Save.Catalog1. Save snapshots/returned receipts and current-field light certificates require input-domain counts. Terrain save snapshots clear copied calculation authority;do not invent extra full catalog per serialized byte buffer.",
+      "status": "OPEN_RQ01_SAVE_OWNER_UNION"
+    },
+    {
+      "id": "P01",
+      "owner": "publisher and returned roots",
+      "source": "src/WorldGen/Core/CatalogStorageCensus.h",
+      "bound_or_obligation": "CatalogSnapshot/Compile/DOM/file/resource/texture returned objects and old/current/candidate overlap from accepted C05. Count all caller-owned results and aliases via supplied roots;arbitrary external caller histories are not bounded by active jobs and unknown domains cannot be certified as0.",
+      "status": "OPEN_COMP01_SUPPLIED_ROOT_CARDINALITIES"
+    }
+  ],
+  "declaration_candidates": [
+    {
+      "source": "src/App/Application.h",
+      "line": 261,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefinitions"
+    },
+    {
+      "source": "src/App/Core.h",
+      "line": 263,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefinitionsInstance"
+    },
+    {
+      "source": "src/App/Core.h",
+      "line": 264,
+      "type": "UBlockMergeRegistry",
+      "candidate": "BlockMergeRegistryInstance"
+    },
+    {
+      "source": "src/App/Core.h",
+      "line": 266,
+      "type": "UTextureBaseStorage",
+      "candidate": "TextureBaseStorageInstance"
+    },
+    {
+      "source": "src/App/Core.h",
+      "line": 267,
+      "type": "UTextureCubeStorage",
+      "candidate": "TextureCubeStorageInstance"
+    },
+    {
+      "source": "src/App/Core.h",
+      "line": 269,
+      "type": "UObjectLibrary",
+      "candidate": "ObjectLibraryInstance"
+    },
+    {
+      "source": "src/Blocks/BlockDefinitionStorage.h",
+      "line": 73,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "Active"
+    },
+    {
+      "source": "src/Blocks/BlockRegistry.h",
+      "line": 24,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "definitions"
+    },
+    {
+      "source": "src/Blocks/BlockRegistry.h",
+      "line": 83,
+      "type": "UTextureCubeStorage",
+      "candidate": "Textures"
+    },
+    {
+      "source": "src/Blocks/BlockRegistry.h",
+      "line": 84,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "Definitions"
+    },
+    {
+      "source": "src/Blocks/BlockRegistry.h",
+      "line": 85,
+      "type": "UBlockMergeRegistry",
+      "candidate": "MergeRegistry"
+    },
+    {
+      "source": "src/Gui/Cache/ObjectIconCache.h",
+      "line": 57,
+      "type": "UObjectLibrary",
+      "candidate": "Objects"
+    },
+    {
+      "source": "src/Gui/Cache/ObjectIconCache.h",
+      "line": 58,
+      "type": "UTextureCubeStorage",
+      "candidate": "Textures"
+    },
+    {
+      "source": "src/Gui/Cache/ObjectIconCache.h",
+      "line": 59,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefs"
+    },
+    {
+      "source": "src/Gui/Core/GuiIconSource.h",
+      "line": 48,
+      "type": "UTextureCubeStorage",
+      "candidate": "Textures"
+    },
+    {
+      "source": "src/Gui/Preview/ContentPreviewRenderer.h",
+      "line": 56,
+      "type": "UObjectLibrary",
+      "candidate": "Objects"
+    },
+    {
+      "source": "src/Gui/Preview/ContentPreviewRenderer.h",
+      "line": 57,
+      "type": "UTextureCubeStorage",
+      "candidate": "Textures"
+    },
+    {
+      "source": "src/Gui/Preview/ContentPreviewRenderer.h",
+      "line": 58,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefs"
+    },
+    {
+      "source": "src/Items/FpViewmodelRenderer.h",
+      "line": 215,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "Blocks"
+    },
+    {
+      "source": "src/Items/FpViewmodelRenderer.h",
+      "line": 216,
+      "type": "UTextureCubeStorage",
+      "candidate": "Textures"
+    },
+    {
+      "source": "src/Render/Engine/GeometryEngine.h",
+      "line": 300,
+      "type": "UTextureBaseStorage",
+      "candidate": "TextureBaseStorageInstance"
+    },
+    {
+      "source": "src/Render/Engine/GeometryEngine.h",
+      "line": 301,
+      "type": "UTextureCubeStorage",
+      "candidate": "TextureCubeStorageInstance"
+    },
+    {
+      "source": "src/Render/Engine/GreedyGpuBackend.h",
+      "line": 26,
+      "type": "SectionRenderLightBinding",
+      "candidate": "renderLightBinding"
+    },
+    {
+      "source": "src/Render/Mesh/AsyncMeshBuilder.h",
+      "line": 66,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "InputCatalog"
+    },
+    {
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "line": 1391,
+      "type": "SectionRenderLightBinding",
+      "candidate": "GpuRenderLightBinding"
+    },
+    {
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "line": 1417,
+      "type": "SectionRenderLightBinding",
+      "candidate": "RenderLightBinding"
+    },
+    {
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "line": 1461,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "inputCatalog"
+    },
+    {
+      "source": "src/Render/Mesh/CrossInstanceBatch.h",
+      "line": 33,
+      "type": "SectionRenderLightBinding",
+      "candidate": "binding"
+    },
+    {
+      "source": "src/Render/Mesh/GpuPackedMeshTypes.h",
+      "line": 28,
+      "type": "SectionRenderLightBinding",
+      "candidate": "renderLightBinding"
+    },
+    {
+      "source": "src/Render/Mesh/GreedyMeshBatch.h",
+      "line": 30,
+      "type": "SectionRenderLightBinding",
+      "candidate": "renderLightBinding"
+    },
+    {
+      "source": "src/Render/Textures/TextureCube.h",
+      "line": 155,
+      "type": "UTextureBaseStorage",
+      "candidate": "TextureBaseStorageInstance"
+    },
+    {
+      "source": "src/Render/Textures/TextureCube.h",
+      "line": 156,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefinitions"
+    },
+    {
+      "source": "src/World/Core/BlockWorld.h",
+      "line": 218,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "catalog"
+    },
+    {
+      "source": "src/World/Core/BlockWorld.h",
+      "line": 221,
+      "type": "RelightComputeResult",
+      "candidate": "input"
+    },
+    {
+      "source": "src/World/Core/World.h",
+      "line": 1813,
+      "type": "UTextureCubeStorage",
+      "candidate": "TextureCubeInstance"
+    },
+    {
+      "source": "src/World/Core/World.h",
+      "line": 1820,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "BlockDefinitions"
+    },
+    {
+      "source": "src/World/Core/World.h",
+      "line": 1821,
+      "type": "UBlockMergeRegistry",
+      "candidate": "BlockMergeRegistry"
+    },
+    {
+      "source": "src/World/Core/WorldCooperativeOps.h",
+      "line": 271,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "Catalog"
+    },
+    {
+      "source": "src/World/Lighting/ChunkRelightSnapshot.h",
+      "line": 108,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "input_catalog"
+    },
+    {
+      "source": "src/World/Lighting/ChunkRelightSnapshot.h",
+      "line": 116,
+      "type": "RelightContentCertificate",
+      "candidate": "content_certificate"
+    },
+    {
+      "source": "src/World/Lighting/ChunkRelightSnapshot.h",
+      "line": 218,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "InputCatalog"
+    },
+    {
+      "source": "src/World/Lighting/RelightContentCertificate.h",
+      "line": 77,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "Catalog"
+    },
+    {
+      "source": "src/World/Lighting/SectionLightField.h",
+      "line": 137,
+      "type": "RelightComputeResult",
+      "candidate": "input"
+    },
+    {
+      "source": "src/World/Lighting/SectionRenderLightSnapshot.h",
+      "line": 23,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "catalog"
+    },
+    {
+      "source": "src/World/Objects/ObjectLibrary.h",
+      "line": 98,
+      "type": "WorldObjectDefinition",
+      "candidate": "keep"
+    },
+    {
+      "source": "src/World/Persistence/WorldPersistence.h",
+      "line": 338,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "catalog"
+    },
+    {
+      "source": "src/World/Persistence/WorldPersistence.h",
+      "line": 397,
+      "type": "BlockDefinitionCatalog",
+      "candidate": "LightSignatureCatalog"
+    },
+    {
+      "source": "src/WorldGen/Core/CatalogStorageCensus.h",
+      "line": 22,
+      "type": "UBlockMergeRegistry",
+      "candidate": "merge"
+    },
+    {
+      "source": "src/WorldGen/Core/CatalogStorageCensus.h",
+      "line": 24,
+      "type": "UTextureBaseStorage",
+      "candidate": "texture_bases"
+    },
+    {
+      "source": "src/WorldGen/Core/CatalogStorageCensus.h",
+      "line": 25,
+      "type": "UTextureCubeStorage",
+      "candidate": "texture_cubes"
+    },
+    {
+      "source": "src/WorldGen/Core/CatalogStorageCensus.h",
+      "line": 26,
+      "type": "UBlockDefinitionStorage",
+      "candidate": "block_storage"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenContentPin.h",
+      "line": 18,
+      "type": "WorldGenPack",
+      "candidate": "Pack"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenContentPin.h",
+      "line": 19,
+      "type": "UBiomeDefinitionRegistry",
+      "candidate": "Biomes"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenContentPin.h",
+      "line": 20,
+      "type": "ObjectFeatureConfig",
+      "candidate": "Features"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenContentPin.h",
+      "line": 21,
+      "type": "WorldGenRefsCatalog",
+      "candidate": "Refs"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenPack.h",
+      "line": 295,
+      "type": "UBiomeDefinitionRegistry",
+      "candidate": "BiomeRegistry"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenPack.h",
+      "line": 310,
+      "type": "UBiomeDefinitionRegistry",
+      "candidate": "Registry"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenPack.h",
+      "line": 360,
+      "type": "WorldGenPack",
+      "candidate": "Active"
+    },
+    {
+      "source": "src/WorldGen/Core/WorldGenRefs.h",
+      "line": 35,
+      "type": "WorldGenRefsCatalog",
+      "candidate": "Active"
+    },
+    {
+      "source": "src/WorldGen/Features/ObjectFeatureConfig.h",
+      "line": 257,
+      "type": "ObjectFeatureConfig",
+      "candidate": "Active"
+    },
+    {
+      "source": "src/WorldGen/Sampling/BiomeTypes.h",
+      "line": 24,
+      "type": "BiomeKey",
+      "candidate": "Key"
+    }
+  ],
+  "declaration_rule": "Header regex candidate list only;includes some parameters,does not cover aliases/value wrappers/cpp TLS or capture sites. It is NOT a proof that all owners are enumerated. Named rows include those additional sites.",
+  "source_sha256": {
+    "src/App/Application.h": "15dadcc0062867565075a0405286166f6fc50d2c1826f5698e97be1be680a986",
+    "src/App/Core.h": "8891f9955631241088aabfc748182fc06e0ef39ddf28822d62f8cff89944e5fa",
+    "src/Blocks/BlockDefinitionStorage.h": "5d2bb66f4debf7d7dd0e82b3bdb5a365939714ae01696a8f7c6c9db9ca0f4172",
+    "src/Blocks/BlockRegistry.h": "15be2ecad34350eabd4248ad42a333e1fd514f44dd80c0a6aac76e4d806b03ff",
+    "src/Core/Jobs/JobThreadBudget.h": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424",
+    "src/Gui/Cache/ObjectIconCache.h": "e746761e563c732761a0815de46e847b27dcab49a16e23c42d4166e7f9f05fd9",
+    "src/Gui/Core/GuiIconSource.h": "78e537e6e7034d5f423b4d8ddacf87087c290ed05c0ba2abe8c1c45d96913b1f",
+    "src/Gui/Preview/ContentPreviewRenderer.h": "f6d002ddd4fe44a50b25336eb114bbb35f5bd8a6182b5ce6f3f002165062182c",
+    "src/Items/FpViewmodelRenderer.h": "92d45b3403586028c6623b39de71940491407e15ac0a236f0049e49a96e94f2e",
+    "src/Render/Engine/GeometryEngine.h": "74a17e763f70296efef210fdb72a5fae7627537c3e953944ca01912be9dafe35",
+    "src/Render/Engine/GreedyGpuBackend.h": "06ee550979f9d4625a69bc6f4c2862991bc07cdf550b07fd511025d00cfe885f",
+    "src/Render/Lighting/SectionRenderLightBinding.h": "f7d42b7e580ea2a8ef17c903cf464bd2f42fdf3948174029201258351570894b",
+    "src/Render/Mesh/AsyncMeshBuilder.cpp": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50",
+    "src/Render/Mesh/AsyncMeshBuilder.h": "8e437229abbf37e52be999a8db2c829b1704c6334e41f56cf0a62ece92b2c6f0",
+    "src/Render/Mesh/ChunkMeshCache.h": "219bff14416c960b9153084f6ac3662699d0f342a120fa61b783ed82a752de02",
+    "src/Render/Mesh/CrossInstanceBatch.h": "69152cb38f441947758b3541bbfb2a6973d2eca33570e14720bd9eca99e0b8d4",
+    "src/Render/Mesh/GpuPackedMeshTypes.h": "09319d15969eda258957a46f5539ab4ae22a33a160352ade55946dfe2fc205cd",
+    "src/Render/Mesh/GreedyMeshBatch.h": "cfb2001b1312b681ad106441b44ed27ca2282700292c55de222d5e9dd43751aa",
+    "src/Render/Mesh/GreedyMesher.h": "39c295d102762f5e0f17cf255dd1ff63ddb71b27673826852c31587adcd8ab47",
+    "src/Render/Textures/TextureCube.h": "941189553621f7d05b1fa5b0019d6a94a2bf56f51883466664b4328b5787251b",
+    "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
+    "src/World/Core/BlockWorld.h": "37d1d21fed798f4a925c80b923e18e7376ab4dd36ef95c4112485778c1146c07",
+    "src/World/Core/World.h": "b98b64a16bd1bb5cebad4a54e60ea1bbc9ceb66862860b045233634b16b6e443",
+    "src/World/Core/WorldCooperativeOps.cpp": "4f77361c795f621356ff85cd66cc8209f739c9f85d9051acdc9159c858433c19",
+    "src/World/Core/WorldCooperativeOps.h": "1ee9159271ecd7e434727aa90c5f38f82f68721457b38a6433acc68bb17866ba",
+    "src/World/Lighting/AsyncRelightBuilder.cpp": "6d3835fb0c54f7286526008518239a3446d2663c721323ebf2676d35fb42055a",
+    "src/World/Lighting/ChunkRelightSnapshot.h": "5653dd499b68da909afd772214ced8fe9fd04ac8456f757b1d46ce0a1d7a3511",
+    "src/World/Lighting/RelightContentCertificate.h": "307a82e8a695e671b21cdb418e98ec96b7d50b0f5ebdba7bf7a8e4bad68d27d4",
+    "src/World/Lighting/SectionLightField.h": "406af5b55af26a88526fde6eab8676c3e2a80f1551b6e85f25ba37f9494d24a4",
+    "src/World/Lighting/SectionRenderLightSnapshot.h": "5611eb8fadbb11082f6561215073303e96c020436fa4c5b2f67083ad700a7a8a",
+    "src/World/Objects/ObjectLibrary.h": "cbc000871b0bc855ce641edd8c14637d64d660084c3b8fe30ed1db6fbf381cba",
+    "src/World/Persistence/WorldPersistence.h": "4c8eed56c96261b6ffd1603fa0cc54a7244ac872d71bb171aedbed0836706247",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
+    "src/WorldGen/Core/WorldGenContentPin.cpp": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133",
+    "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
+    "src/WorldGen/Core/WorldGenPack.h": "90d5dfa131b90ddb9c9b37aa76c7a6316312793942918cea8254fd40d89bd457",
+    "src/WorldGen/Core/WorldGenRefs.h": "c6607038d631783be1a83aa93f5f664426227acdc81a2487c03e6c129da5b16d",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "b1a90688f72ed37393f58f5356856829d4fe03adb6a2b232677b446de26a9b64",
+    "src/WorldGen/Sampling/BiomeTypes.h": "16d7ea9929d59d7cebb2a6c900e79ac8e31d36d9e6a3ec12ce213bff8d0dfcf1"
+  },
+  "remaining_order": [
+    {
+      "id": "GT01",
+      "result": "Exact normal and diagnostic entrypoint root/pool/thread multiplicities,launcher/current/GUI wrappers,escaped key refs,pins and weak shells;bind to actual source profile and retain supplied unknown-owner rejection."
+    },
+    {
+      "id": "RQ01",
+      "result": "Compose actual queued/running/completed/drained/installed/backend/save/cooperative counts,including prior/current roots and source-bounded owner containers;reuse unchanged queue lifecycle proofs by exact mechanism."
+    },
+    {
+      "id": "COMP01",
+      "result": "Checked root-cardinality/source composition with overflow/omitted-owner/alias controls and actual old/current/returned union. No process/CRT/GPU/full matrix acceptance inferred;then finish E12."
+    }
+  ],
+  "remaining": "Continue finite C06 owner ledger in order:GT01 exact normal/diagnostic entrypoint resource/storage/world/pool/thread and escaped BiomeKeyRef/pin/TLS/weak-shell multiplicities;RQ01 queued/active/completed mesh/relight plus save receipts/cooperative inputs/backend draw-owner supplied counts;COMP01 checked source/root composition and actual old/current/returned graph union. Installed/cached/returned publication traversal now scoped PASS;existing generation-only8 admitted jobs/7 reader slots per running task and idle0 remain accepted,not a cap on cooperative/other-pool/main/caller owners. Cooperative generation has separate <=8 queued/running/ready inputs per session and<=4 workers;include its pins/TLS explicitly. Installed field contexts<=2 per field;memo strong catalog1 and weak entries<=2*field_count+1024;source bounds of those objects/weak shells remain E12. All main/launcher/UI/resource wrapper aliases,default entrypoint locals,backend batches,publication candidates and escaped owners must be supplied/count-bound before whole C06 closes. E12 glog constructor refusal retention,CRT/locale/exception/stack/TLS/window/OS/driver/GPU/process and original S6 native/performance/memory matrix remain OPEN. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged,ecology mismatch S6.05 preserved. Full S0..S6,no audit restart/new asset quota/reduced acceptance."
+}

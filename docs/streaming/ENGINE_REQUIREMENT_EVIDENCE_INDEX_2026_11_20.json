@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C06.publication-roots",
+      "status": "SCOPED_RETAINED_PUBLICATION_CATALOG_ROOTS_RELEASE_REAL_GL_NATIVE_PASS_C06_GT_RQ_COMP_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-publication-roots-acceptance.json",
+      "certificate": "S4_02_C06_PUBLICATION_ROOTS_CERTIFICATE_2026_11_26.json",
+      "scope": "Retained publication catalog-root traversal scoped PASS. Read-only owner-thread hooks follow installed field two-domain input contexts/certificates,UBlockWorld validation-memo catalog,CPU/GPU mesh geometry/light/bindings,CPU batches,Cross/packed draw leases,awaiting results,pending GPU/capture-store snapshots,and mesher-created no-surface proof geometry. Typed collector also accepts returned mesh/relight results and backend draw batches;catalog payload/control identities deduplicate,including invalid-but-owning/stale objects. Collector scratch holds weak controls only and is not catalog/field/mesh/process memory. Actual solver/install plus actual CPU mesh worker/publication and desktop real GL binding driver retain two distinct old32768-byte display-name catalogs across replacement;joined current/old union3,omitted-root control1,64 alias/permuted submissions preserve identical payload union. Each driver observes2 real certificate/binding/returned no-surface nodes. Removing actual owners leaves only explicit escaped field/context/binding;reset invalidates real GL lease without erasing its CPU ownership. Last cross-thread explicit input-context release expires old payload while inspectors remain alive;final graph has current catalog only. CPU and realGL rooted union109248 bytes;2 independent real GL field readbacks PASS. Full decor integration plus light-proof/geometry-halo and both new root groups5 Release groups PASS. Fresh desktop/native runtime/startup/direct save/UI/provenance and8 existing GL readbacks PASS;aggregate startup-only smoke UNTESTED. CTest CPU/desktop-GL root groups registered with120s deadlines."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C06.worker-readers",
       "status": "SCOPED_GENERATION_WORKER_READERS_RELEASE_NATIVE_PASS_C06_ROOT_COUNTS_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-worker-acceptance.json",

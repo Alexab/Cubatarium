@@ -62,6 +62,11 @@ public:
   }
   uint8_t GetPaddedDomains() const { return PaddedDomains; }
 
+  // Quiescent owner-thread diagnostic. Include stale proofs too: validity
+  // checks do not change the lifetime of their immutable input owners.
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {for(const auto &proof:LightProofs)out.RelightResult(proof.input);}
+
 private:
   friend class UBlockWorld;
   friend class UChunk;

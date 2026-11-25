@@ -1,0 +1,198 @@
+{
+  "schema": "s4-catalog-publication-root-certificate.v1",
+  "status": "SCOPED_RETAINED_PUBLICATION_CATALOG_ROOTS_RELEASE_REAL_GL_NATIVE_PASS_C06_GT_RQ_COMP_E12_OPEN",
+  "summary": "Retained publication catalog-root traversal scoped PASS. Read-only owner-thread hooks follow installed field two-domain input contexts/certificates,UBlockWorld validation-memo catalog,CPU/GPU mesh geometry/light/bindings,CPU batches,Cross/packed draw leases,awaiting results,pending GPU/capture-store snapshots,and mesher-created no-surface proof geometry. Typed collector also accepts returned mesh/relight results and backend draw batches;catalog payload/control identities deduplicate,including invalid-but-owning/stale objects. Collector scratch holds weak controls only and is not catalog/field/mesh/process memory. Actual solver/install plus actual CPU mesh worker/publication and desktop real GL binding driver retain two distinct old32768-byte display-name catalogs across replacement;joined current/old union3,omitted-root control1,64 alias/permuted submissions preserve identical payload union. Each driver observes2 real certificate/binding/returned no-surface nodes. Removing actual owners leaves only explicit escaped field/context/binding;reset invalidates real GL lease without erasing its CPU ownership. Last cross-thread explicit input-context release expires old payload while inspectors remain alive;final graph has current catalog only. CPU and realGL rooted union109248 bytes;2 independent real GL field readbacks PASS. Full decor integration plus light-proof/geometry-halo and both new root groups5 Release groups PASS. Fresh desktop/native runtime/startup/direct save/UI/provenance and8 existing GL readbacks PASS;aggregate startup-only smoke UNTESTED. CTest CPU/desktop-GL root groups registered with120s deadlines.",
+  "remaining": "Continue finite C06 owner ledger in order:GT01 exact normal/diagnostic entrypoint resource/storage/world/pool/thread and escaped BiomeKeyRef/pin/TLS/weak-shell multiplicities;RQ01 queued/active/completed mesh/relight plus save receipts/cooperative inputs/backend draw-owner supplied counts;COMP01 checked source/root composition and actual old/current/returned graph union. Installed/cached/returned publication traversal now scoped PASS;existing generation-only8 admitted jobs/7 reader slots per running task and idle0 remain accepted,not a cap on cooperative/other-pool/main/caller owners. Cooperative generation has separate <=8 queued/running/ready inputs per session and<=4 workers;include its pins/TLS explicitly. Installed field contexts<=2 per field;memo strong catalog1 and weak entries<=2*field_count+1024;source bounds of those objects/weak shells remain E12. All main/launcher/UI/resource wrapper aliases,default entrypoint locals,backend batches,publication candidates and escaped owners must be supplied/count-bound before whole C06 closes. E12 glog constructor refusal retention,CRT/locale/exception/stack/TLS/window/OS/driver/GPU/process and original S6 native/performance/memory matrix remain OPEN. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged,ecology mismatch S6.05 preserved. Full S0..S6,no audit restart/new asset quota/reduced acceptance.",
+  "unit_cpu": {
+    "alias64_payload_deduplicated": true,
+    "binding_nodes": 2,
+    "catalog_reference_visits": 19,
+    "certificate_nodes": 2,
+    "field_nodes": 4,
+    "final_catalogs": 1,
+    "invalid_owning_geometry_counted": true,
+    "last_cross_thread_payloads": 0,
+    "no_surface_proof_nodes": 2,
+    "observer_does_not_retain_payload": true,
+    "old_distinct_versions": 2,
+    "omitted_root_catalogs": 1,
+    "real_GL": false,
+    "real_GL_readbacks": 0,
+    "result_nodes": 2,
+    "schema": "catalog-publication-root-graph.v2",
+    "status": "PASS",
+    "union_catalogs": 3,
+    "union_known_catalog_bytes": 109248
+  },
+  "unit_real_gl": {
+    "alias64_payload_deduplicated": true,
+    "binding_nodes": 2,
+    "catalog_reference_visits": 19,
+    "certificate_nodes": 2,
+    "field_nodes": 4,
+    "final_catalogs": 1,
+    "invalid_owning_geometry_counted": true,
+    "last_cross_thread_payloads": 0,
+    "no_surface_proof_nodes": 2,
+    "observer_does_not_retain_payload": true,
+    "old_distinct_versions": 2,
+    "omitted_root_catalogs": 1,
+    "real_GL": true,
+    "real_GL_readbacks": 2,
+    "result_nodes": 2,
+    "schema": "catalog-publication-root-graph.v2",
+    "status": "PASS",
+    "union_catalogs": 3,
+    "union_known_catalog_bytes": 109248
+  },
+  "regressions": [
+    {
+      "name": "roots-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-publication-roots-cpu.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "5a93613970e2368ad3ed0cb0124d6d144b8cc585769dd75b5ace827bd6d588b8",
+      "log": "build\\desktop-msvc\\s4-catalog-publication-roots-roots-cpu.log"
+    },
+    {
+      "name": "roots-real-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-publication-roots-gl.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "5a93613970e2368ad3ed0cb0124d6d144b8cc585769dd75b5ace827bd6d588b8",
+      "log": "build\\desktop-msvc\\s4-catalog-publication-roots-roots-real-gl.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "5a93613970e2368ad3ed0cb0124d6d144b8cc585769dd75b5ace827bd6d588b8",
+      "log": "build\\desktop-msvc\\s4-catalog-publication-roots-decor-full.log"
+    },
+    {
+      "name": "light-proof",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\relight_result_install_test.exe",
+        "--light-proof"
+      ],
+      "returncode": 0,
+      "exe_sha256": "bbb103c7fbd09ca9d8e88681370bf4a544b61e5878d0a7d6a22959101b51dd4e",
+      "log": "build\\desktop-msvc\\s4-catalog-publication-roots-light-proof.log"
+    },
+    {
+      "name": "geometry-halo",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\relight_result_install_test.exe",
+        "--geometry-halo"
+      ],
+      "returncode": 0,
+      "exe_sha256": "bbb103c7fbd09ca9d8e88681370bf4a544b61e5878d0a7d6a22959101b51dd4e",
+      "log": "build\\desktop-msvc\\s4-catalog-publication-roots-geometry-halo.log"
+    }
+  ],
+  "source_sha256": {
+    "CMakeLists.txt": "2953ee8d9d71337501b3c061bd4e878835e22fb0f02d85e632e953140e4c5793",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "32d70e5853f78fa5ac8de981681a41e906e2e86b99a4ecb0f6b4acc6df925b39",
+    "src/World/Lighting/SectionLightField.h": "406af5b55af26a88526fde6eab8676c3e2a80f1551b6e85f25ba37f9494d24a4",
+    "src/World/Lighting/RelightContentCertificate.h": "307a82e8a695e671b21cdb418e98ec96b7d50b0f5ebdba7bf7a8e4bad68d27d4",
+    "src/World/Chunks/ChunkManager.h": "e44b01f566b846e7b13e2c05dd9aeac21193f9ad3a79aee1769cc0ff87843eba",
+    "src/World/Core/BlockWorld.h": "37d1d21fed798f4a925c80b923e18e7376ab4dd36ef95c4112485778c1146c07",
+    "src/Render/Mesh/GreedyMesher.h": "39c295d102762f5e0f17cf255dd1ff63ddb71b27673826852c31587adcd8ab47",
+    "src/Render/Mesh/ChunkMeshCache.h": "219bff14416c960b9153084f6ac3662699d0f342a120fa61b783ed82a752de02",
+    "src/Render/Mesh/MeshCaptureStore.h": "87b5093a819daa4e89d187b2df49fff46684b8056642c5e894c0a44868501eae",
+    "src/Test/DecorMeshIntegrationTest.cpp": "30fb495f618c37e53f5225e483b1d4978c8fa5b08a44ee85d0cdcca57b8496a0",
+    "src/World/Core/BlockWorld.cpp": "22a8335815ea77b2e9d0646084841147d2baf689557f75b9058cd77a8379d068",
+    "src/World/Lighting/SectionRenderLightSnapshot.h": "5611eb8fadbb11082f6561215073303e96c020436fa4c5b2f67083ad700a7a8a",
+    "src/Render/Lighting/SectionRenderLightBinding.h": "f7d42b7e580ea2a8ef17c903cf464bd2f42fdf3948174029201258351570894b",
+    "src/Render/Lighting/SectionRenderLightBindings.cpp": "721eca3171aa509c1a28fe84a42160aa1c90839ae3edf74234181481ab29d4a6",
+    "src/Render/Mesh/AsyncMeshBuilder.cpp": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50",
+    "src/World/Lighting/ChunkRelightSnapshot.cpp": "f1d327652d9b1953664dd54cc4b51f80732e2de475615e7f69fa4ebaaff7d276"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c"
+  },
+  "owner_ledger": "S4_02_C06_ROOT_OWNER_LEDGER_2026_11_26.json",
+  "earlier_scoped_receipts_identity": {
+    "status": "SCOPED_PASS_BEFORE_NO_SURFACE_SOURCE_FOLLOWUP",
+    "reason": "SectionNoSurfaceProof private Geometry retains a catalog independently of validity and other mesh geometry slots;source-ledger traversal found this additional node. Add it to same R category and actual mesher-created returned proof oracle before final acceptance. No prior all-root acceptance claimed.",
+    "source_sha256": {
+      "src/WorldGen/Core/CatalogPublicationRoots.h": "3b08f913c4d1ad2912592f20c607a87139ae332a8db74ef28f389599e5ed511d",
+      "src/Test/DecorMeshIntegrationTest.cpp": "ea5cf578115a610bf65884f8a9fbc4435e2f98b8d7aaef76a3e2db9946f38929",
+      "src/Render/Mesh/ChunkMeshCache.h": "33fc18249347210b7bcf3ba0d04fcb0df59797945d3e0769c80b1649c9b9617e"
+    },
+    "exe_sha256": "a786d58ba6d0e0b5861aada7a1a2d83128ab7f74f1f55dbc4f7003d179ea35a6"
+  },
+  "prior_worker_rule_reuse": {
+    "certificate": "S4_02_C06_WORKER_READER_RETIREMENT_CERTIFICATE_2026_11_26.json",
+    "unchanged_named_source_sha256": {
+      "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
+      "src/World/Chunks/ChunkLoadScheduler.h": "0a7beed8c4cdd55ee9d96980605da7b636d10bf0e73fd2a0675f5589e9805dc7",
+      "src/WorldGen/Core/CatalogThreadReads.h": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672",
+      "src/Core/Jobs/JobThreadPool.cpp": "a61e629b24750daa5c677c52709fb382e7855bb436b3a13955986f52a14fd40c",
+      "src/Test/CatalogWorkerRetirementTest.cpp": "bf4695ebd55309e2cc17b886998e28da98466c0b9f38bf09af57a74b2cf7e1fb"
+    },
+    "scope": "Previously executed worker/root rule,not a new whole-current-EXE worker test. Added const diagnostic templates do not add data members or change those reader/dispatch functions."
+  },
+  "limits": "Quiescent supplied publication graph only;collector transient vectors/weak controls excluded from catalog payload totals. Reference-visit counters include supplied aliases;object/control/payload union deduplicates. Field/mesh/volume/GPU/CRT/weak-shell bytes and all application instances/other threads/queues are separate obligations. No surface-proof/field validity or render/save behavior changed. CPU binding test double explicitly distinct from real desktop GL Entry and shader readback mode. No process cap or general escaped caller-history bound claimed.",
+  "desktop_exe_sha256": "c8934bbefa889bf683080eb0e1716cc5b028d6b9f2b50ec6c970ba144ebeb34c",
+  "provenance": "build\\desktop-msvc\\s4-catalog-publication-roots-provenance.json",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-catalog-publication-roots-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

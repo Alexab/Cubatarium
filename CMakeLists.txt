@@ -2538,9 +2538,19 @@ cubatarium_add_test(NAME decor_mesh_integration_test
 if(WIN32)
     target_link_libraries(decor_mesh_integration_test dbghelp)
 endif()
+add_test(NAME catalog_publication_roots_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --catalog-publication-roots
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-publication-roots-cpu.json)
+set_tests_properties(catalog_publication_roots_test PROPERTIES
+    LABELS "integration;catalog" TIMEOUT 120)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   target_link_libraries(decor_mesh_integration_test glfw)
   target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1 CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+  add_test(NAME catalog_publication_roots_driver_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --catalog-publication-roots-driver
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-publication-roots-gl.json)
+  set_tests_properties(catalog_publication_roots_driver_test PROPERTIES
+    LABELS "gpu;integration;catalog" SKIP_RETURN_CODE 77 TIMEOUT 120)
   add_test(NAME gpu_material_visibility_gles_driver_test
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --face-visibility-gles-driver)
   set_tests_properties(gpu_material_visibility_gles_driver_test PROPERTIES

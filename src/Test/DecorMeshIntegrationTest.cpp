@@ -31,6 +31,9 @@
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/FlatLightingPipeline.h"
 #include "World/Streaming/DependencyStampBuilder.h"
+#include "WorldGen/Core/CatalogPublicationRoots.h"
+#include <nlohmann/json.hpp>
+#include <thread>
 
 #include <algorithm>
 #include <cstdlib>
@@ -8842,6 +8845,92 @@ static void TestWorldDemandIsolation()
 
 } // namespace
 
+static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
+{
+  using namespace cutum;using Json=nlohmann::json;
+  struct Epoch {
+    UBlockWorld world;UChunkMeshCache cache;SectionRenderLightBindings resources;
+    std::unique_ptr<MeshBuildResult> returned;
+    std::shared_ptr<const SectionNoSurfaceProof> no_surface;
+    std::weak_ptr<const BlockDefinitionCatalog> old;
+  } first,second;
+  auto definitions=MakeDefinitions();UBlockRegistry registry(nullptr,definitions);
+  const auto publish=[&](char tag){
+    auto catalog=definitions->GetCatalogSnapshot();auto by_id=catalog->ById;auto names=catalog->NameToId;
+    by_id.at(kStone).DisplayName=std::string(32768,tag);
+    definitions->ReplaceAll(std::move(by_id),std::move(names));
+  };
+  const auto build=[&](Epoch &epoch,char tag){
+    publish(tag);epoch.old=definitions->GetCatalogSnapshot();
+    auto &world=epoch.world;auto &cache=epoch.cache;
+    world.SetFluidDefinitions(definitions.get());world.SetKnownOpenSkyAbsentQuery([](glm::ivec3){return true;});
+    const glm::ivec3 root(0);world.SetBlock({4,4,4},kStone);
+    RelightJobSpec spec;spec.min_world_y=world.GetVerticalProfile().MinY;spec.max_world_y=world.GetVerticalProfile().MaxY;
+    auto result=UChunkRelightSnapshot::CaptureSections(world,spec,{root}).Compute(registry);
+    Expect(result.inputs_complete && result.chunks.size()==1 && result.content_certificate,"catalog roots use real solver-created certificate");
+    world.GetChunkManager().GetChunk(root)->ReplaceComputedLightVolume(*result.chunks[0].padded_light,true,true);
+    Expect(world.RecordLightCalculation(result,definitions->GetCatalogSnapshot())==1,"catalog roots install real two-domain field proof");
+    auto source=world.CaptureRenderLightSnapshot(root);Expect(bool(source),"catalog roots capture real certified field");
+    if(gpu)Expect(epoch.resources.BeginWorld(cache.GetCaptureStore().WorldEpoch(),source->GeometryInputs().world_geometry_identity,16,8u*SectionLightVolume::CellCount,8),"catalog roots initialize real GL binding store");
+    cache.SetPrepareRenderLightFn([&epoch,gpu](uint64_t version,const SectionGeometryRenderInputs &geometry,const SectionRenderLightSnapshot &light)->std::shared_ptr<SectionRenderLightBinding>{
+      if(gpu)return epoch.resources.Prepare(version,geometry,light);
+      return std::make_shared<TestRenderLightBinding>(version,geometry,light);
+    });
+    auto settings=MakeFrustumMeshSettings();settings.AsyncMeshing=false;settings.FrustumCulling=false;cache.SetRenderSettings(settings);
+    cache.RebuildChunkImmediate(world,registry,root);
+    auto geometry=cache.GetPublishedGeometryRenderInputs(root);auto binding=cache.GetPublishedRenderLightBinding(root);
+    Expect(geometry && geometry->catalog==definitions->GetCatalogSnapshot() && binding && binding->IsLive(),"real CPU mesh publication retains catalog in geometry and field binding");
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+    if(gpu)ProbeCertifiedBinding(epoch.resources,binding);
+#endif
+    auto snapshot=ChunkMeshCaptureAdmissionTestAccess::CaptureOwned(cache,world,root);
+    UAsyncMeshBuilder builder(1);Expect(builder.Enqueue(snapshot,registry) && builder.WaitIdleFor(std::chrono::seconds(10)),"actual worker returns catalog-bearing mesh result");
+    auto completed=builder.DrainCompleted(1);Expect(completed.size()==1 && completed[0].InputCatalog,"returned mesh result owns immutable input catalog");
+    epoch.returned=std::make_unique<MeshBuildResult>(std::move(completed[0]));
+    auto stored=cache.GetCaptureStore().CaptureAndStore(world,root,cache.GetChunkMeshRevision(root));
+    Expect(bool(stored),"actual capture cache owns its snapshot");
+    world.GetChunkManager().EnsureChunk({2,0,0});
+    auto proof=UGreedyMesher::CaptureNoSurface(world,{2,0,0},registry,definitions->GetCatalogSnapshot());
+    Expect(bool(proof),"actual mesher creates no-surface proof with owned geometry catalog");
+    epoch.no_surface=std::make_shared<SectionNoSurfaceProof>(std::move(*proof));
+  };
+  build(first,'a');build(second,'b');publish('c');UBlockDefinitionStorage::ReleaseThreadReads();
+  auto current=definitions->GetCatalogSnapshot();
+  Expect(!first.old.expired() && !second.old.expired(),"distinct old payloads remain after actual current publication replacement");
+  const auto visit=[&](CatalogPublicationRootInspector &out,Epoch &epoch){epoch.world.InspectCatalogRoots(out);epoch.cache.InspectCatalogRoots(out);out.MeshResult(*epoch.returned);out.NoSurface(epoch.no_surface);};
+  CatalogPublicationRootInspector observer;observer.BlockCatalog(current);visit(observer,first);visit(observer,second);
+  const auto union_census=observer.Catalogs();
+  Expect(union_census.Objects(CatalogObjectKind::Blocks)==3 && union_census.text_bytes>=3*32769 && !union_census.overflow,"publication graph finds current plus two independent old catalog payloads and authored name capacities");
+  Expect(observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Certificate)==2 && observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)==2 && observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Mesh)==2,"real result/certificate/binding nodes counted once");
+  Expect(observer.Counts.Nodes(CatalogPublicationRootInspector::Node::NoSurface)==2,"both returned mesher-created proof catalog owners included");
+  CatalogPublicationRootInspector fields,caches,omitted,aliases;
+  fields.BlockCatalog(current);first.world.InspectCatalogRoots(fields);second.world.InspectCatalogRoots(fields);
+  caches.BlockCatalog(current);first.cache.InspectCatalogRoots(caches);second.cache.InspectCatalogRoots(caches);
+  omitted.BlockCatalog(current);
+  Expect(fields.Catalogs().Objects(CatalogObjectKind::Blocks)==3 && caches.Catalogs().Objects(CatalogObjectKind::Blocks)==3 && omitted.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"field and published mesh owners independently retain both old versions;omitted-root control misses them");
+  for(int i=0;i<64;++i){visit(aliases,second);aliases.BlockCatalog(current);visit(aliases,first);}
+  Expect(aliases.Catalogs().known_storage_bytes==union_census.known_storage_bytes && aliases.Catalogs().shared_owners==union_census.shared_owners && aliases.Catalogs().objects==union_census.objects,"64 alias/permuted root traversals deduplicate all catalog payloads and controls");
+  auto escaped_field=first.world.GetChunkManager().GetSectionLightField({0,0,0});
+  auto escaped_context=first.world.GetRecordedLightInputContext({0,0,0},LightDomain::Sky);
+  auto escaped_binding=first.cache.GetPublishedRenderLightBinding({0,0,0});
+  SectionGeometryRenderInputs invalid;invalid.catalog=escaped_context->input_catalog;
+  CatalogPublicationRootInspector invalid_observer;invalid_observer.Geometry(invalid);
+  Expect(!invalid.valid && invalid_observer.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"invalid geometry still has an owning catalog slot");invalid={};
+  for(auto *epoch:{&first,&second}){epoch->cache.RemoveChunk({0,0,0});epoch->cache.GetCaptureStore().InvalidateAll();epoch->returned.reset();epoch->no_surface.reset();epoch->world.Clear();epoch->resources.Reset();}
+  UBlockDefinitionStorage::ReleaseThreadReads();
+  Expect(second.old.expired() && !first.old.expired(),"collectors retain no strong payload after real owner removal;escaped first roots remain");
+  CatalogPublicationRootInspector escaped;escaped.LightField(escaped_field);escaped.RelightResult(escaped_context);escaped.Binding(escaped_binding);
+  Expect(escaped.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"escaped field/context/binding join one old catalog");
+  if(gpu)Expect(!escaped_binding->IsLive(),"reset real GL binding remains an owning CPU object");
+  escaped_binding.reset();escaped_field.reset();
+  std::thread final_owner([context=std::move(escaped_context)]()mutable{context.reset();});final_owner.join();
+  Expect(first.old.expired(),"last cross-thread explicit input context retires old payload despite live weak-only inspectors");
+  CatalogPublicationRootInspector final_graph;final_graph.BlockCatalog(current);first.world.InspectCatalogRoots(final_graph);first.cache.InspectCatalogRoots(final_graph);second.world.InspectCatalogRoots(final_graph);second.cache.InspectCatalogRoots(final_graph);
+  Expect(final_graph.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"cleared production graph has only current catalog");
+  Json report={{"schema","catalog-publication-root-graph.v2"},{"status","PASS"},{"real_GL",gpu},{"old_distinct_versions",2},{"union_catalogs",3},{"union_known_catalog_bytes",union_census.known_storage_bytes},{"omitted_root_catalogs",1},{"certificate_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Certificate)},{"binding_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)},{"no_surface_proof_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::NoSurface)},{"result_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Relight)},{"field_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Field)},{"catalog_reference_visits",observer.Counts.catalog_handles},{"alias64_payload_deduplicated",true},{"invalid_owning_geometry_counted",true},{"observer_does_not_retain_payload",true},{"last_cross_thread_payloads",0},{"final_catalogs",1},{"real_GL_readbacks",gpu?2:0}};
+  std::ofstream output(report_path);output<<report.dump(2)<<'\n';Expect(bool(output),"catalog root report writes");std::cout<<report.dump()<<'\n';
+}
+
 int main(int argc, char **argv)
 {
   const std::shared_ptr<cutum::UBlockDefinitionStorage> definitions =
@@ -8850,6 +8939,10 @@ int main(int argc, char **argv)
 
   cutum::UBlockWorld world;
   world.SetFluidDefinitions(definitions.get());
+
+  if(argc==3 && std::string(argv[1])=="--catalog-publication-roots"){
+    TestCatalogPublicationRoots(argv[2],false);return 0;
+  }
 
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   const bool gles_visibility_driver =
@@ -8863,7 +8956,8 @@ int main(int argc, char **argv)
   const bool packed_lifecycle_driver =
       argc == 2 &&
       std::string(argv[1]) == "--gpu-geometry-light-lifecycle-driver";
-  if (visibility_driver || gles_cross_driver || packed_lifecycle_driver ||
+  const bool catalog_roots_driver=argc==3 && std::string(argv[1])=="--catalog-publication-roots-driver";
+  if (catalog_roots_driver || visibility_driver || gles_cross_driver || packed_lifecycle_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
     if (!glfwInit())
@@ -8907,6 +9001,11 @@ int main(int argc, char **argv)
     }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
+    if(catalog_roots_driver){
+      TestCatalogPublicationRoots(argv[2],true);
+      Expect(glGetError()==GL_NO_ERROR,"real catalog root GL lifecycle leaves no error");
+      glfwDestroyWindow(window);glfwTerminate();return 0;
+    }
     if (packed_lifecycle_driver)
     {
       TestPhysicalGeometryCapture(registry, definitions.get(), true);

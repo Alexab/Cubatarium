@@ -39,6 +39,8 @@ struct GreedyQuad
 class SectionNoSurfaceProof
 {
 public:
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {out.Geometry(Geometry);}
   bool Matches(const SectionGeometryRenderInputs &inputs) const
   {
     return Geometry.Matches(inputs);

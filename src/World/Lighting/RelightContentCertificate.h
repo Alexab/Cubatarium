@@ -24,6 +24,8 @@ public:
   static constexpr size_t MaxInputs = PersistedSectionLight::MaxDependencies;
   static constexpr size_t MaxOutputs = 4096;
   ~RelightContentCertificate() = default;
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {out.BlockCatalog(Catalog);}
   const std::vector<PersistedSectionLight::Input> &Inputs() const
   {
     return Contents;

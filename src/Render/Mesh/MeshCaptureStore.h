@@ -20,6 +20,8 @@ class UMeshCaptureStore
 {
 public:
   static constexpr size_t kMaxRetainedEntries = 512;
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {for(const auto &entry:Store_)out.MeshSnapshot(entry.second.data);}
 
   void Invalidate(glm::ivec3 coord);
   void InvalidateAll();

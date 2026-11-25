@@ -540,6 +540,26 @@ public:
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
+  // Quiescent publication-thread diagnostic; worker callable/completion
+  // queues and caller-owned copies are separate supplied roots.
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {
+    for(const auto &entry:GreedyCache){
+      const auto &mesh=entry.second;out.Geometry(mesh.RenderGeometryInputs);
+      if(mesh.RenderLight)out.LightSnapshot(*mesh.RenderLight);
+      out.Binding(mesh.RenderLightBinding);out.Binding(mesh.GpuRenderLightBinding);
+      out.NoSurface(mesh.PublishedNoSurface);
+      for(const auto &batch:mesh.batches)out.DrawBatch(batch);
+    }
+    for(const auto &ref:GpuPackedOpaqueRefs)out.DrawBatch(ref);
+    for(const auto &ref:GpuPackedTransparentRefs)out.DrawBatch(ref);
+    for(const auto &batch:CrossBatches)out.CrossBatch(batch);
+    for(const auto &entry:GeometryAwaitingLight_)out.MeshResult(entry.second.result);
+    for(const auto &pending:PendingGpuApplies){
+      out.BlockCatalog(pending.inputCatalog);out.MeshSnapshot(pending.snapshot);
+    }
+    CaptureStore.InspectCatalogRoots(out);
+  }
   /// Budgeted round-robin sweep: any published mesh whose recorded geometry
   /// input stamps no longer match the resident chunks (and that has no pending
   /// rebuild) is re-dirtied. Guarantees eventual consistency even if an

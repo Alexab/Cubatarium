@@ -155,6 +155,8 @@ public:
   /// geometry-only provenance from the same main-thread observation.
   std::optional<SectionRenderLightSnapshot>
   CaptureRenderLightSnapshot(glm::ivec3 coord) const;
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {Chunks.InspectCatalogRoots(out);out.BlockCatalog(LightInputMemo.catalog);}
 
   /// Read the canonical field independently of geometry residency. The caller
   /// must select Flat explicitly; runtime configuration identities are opaque.

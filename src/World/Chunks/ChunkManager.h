@@ -127,6 +127,11 @@ public:
   RetireAbsentSectionLightFields(size_t visit_budget,
                                  const std::function<bool(glm::ivec3)> &keep);
   size_t GetSectionLightFieldCount() const { return LightFields.size(); }
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {
+    for(const auto &entry:LightFields)out.LightField(entry.second);
+    ForEachChunk([&](const UChunk &chunk){out.Field(chunk.GetSectionLightField());});
+  }
   /// Fired when a chunk transitions to non-air (its first populated block
   /// arrives via SetBlock). Subscriber handles cross-thread sync; set once
   /// before async IO starts.
