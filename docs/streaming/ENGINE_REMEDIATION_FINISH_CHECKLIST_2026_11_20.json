@@ -255,7 +255,7 @@
     }
   ],
   "progress_checkpoint": "S4.01 COMPLETE: actual section proof ownership, derived scheduling/completion, retained GPU versus current CPU/GPU/Flat publication and AIR/Cross retirement. Current Release Full20/20, Flat1/1, policy2/2 PASS. Parent S4 and full S0..S6 remain OPEN.",
-  "next_action": "C05 still OPEN:WorldGenPack/prefab compiled candidate source bounds,optional subfile failure semantics,resource merge/directory growth and prior/current owner composition. This isolated first-publication test is not concurrent reload atomicity,all optional subfile paths,CRT/cache allocation bounds or process RSS. C06/E12,S4.03..06,S5/S6/full original criteria retained;23/42 unchanged.",
+  "next_action": "C05 OPEN:WorldGenPack compiled candidates and directory/resource merge/prior-current composition;prefab publication map and existing unknown-log roots remain separate terms. Unknown diagnostics may remain admitted on failed file conversion,matching existing semantics;not transactional directory load. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU and full S4.03..06/S5/S6 remain OPEN.23/42 complete unchanged;no audit restart or arbitrary asset cap.",
   "forecast_policy": "После завершения каждого этапа уточнять прогноз по фактическому числу исправлений и длительности проверок. Не обещать срок закрытия неизвестной реализации GPU/backend или полного переноса сохранений до локализации объёма.",
   "queue_outcome_ledger": "S4_02_QUEUE_OUTCOME_LEDGER_2026_11_21.json"
 }

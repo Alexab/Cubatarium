@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.prefab-candidate",
+      "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-prefab-candidate-acceptance.json",
+      "certificate": "S4_02_C05_PREFAB_CANDIDATE_CERTIFICATE_2026_11_25.json",
+      "scope": "Prefab shared production candidate source scoped PASS. CompilePrefabCatalog extracted exact prior body modulo indentation/diagnostic set parameter:LoadFile and isolated fixture share field parsing/defaults/unknown logging.9 authored/default/placement/user-origin/129-voxel/17 distinct unknown+duplicates/empty/wrong-type cases;616 persistent ordinary-new refusal prefixes+exact retries. All observed candidates/new log-set backing released to0,registry snapshot unchanged. Independent field/id/anchor/bounds/tag/default oracles,overflow and unrelated allocation negative control PASS. Requested-memory model includes candidate shared coallocation,tag/voxel vector old/new growth,temporary text and new unknown diagnostic nodes/buckets with prior count/bucket terms. Four dependent catalog/storage/pinned/scatter regressions PASS;Release desktop source/EXE provenance PASS."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.pack-publication",
       "status": "SCOPED_REFUSAL_RELEASE_STARTUP_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-pack-publication-acceptance.json",

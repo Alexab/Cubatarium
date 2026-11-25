@@ -120,6 +120,95 @@ void UObjectLibrary::Load(const std::string &objects_folder,
   LoadMerged(std::filesystem::path(objects_folder), {}, registry);
 }
 
+WorldObjectDefinition CompilePrefabCatalog(const json &data, UBlockRegistry &registry,
+    const std::string &path, const std::string &registerName, ObjectOrigin origin,
+    const std::string &sourcePackId, std::unordered_set<std::string> &loggedUnknownTypes)
+{
+  WorldObjectDefinition object;
+  object.Name = registerName.empty()
+                    ? data.value("name",
+                                 std::filesystem::path(path).stem().string())
+                    : registerName;
+  if (data.contains("tags") && data["tags"].is_array())
+  {
+    for (const auto &tag : data["tags"])
+    {
+      if (tag.is_string())
+      {
+        object.Tags.push_back(tag.get<std::string>());
+      }
+    }
+  }
+  if (object.Tags.empty())
+  {
+    object.Tags.push_back(kDefaultTag);
+  }
+  object.DisplayName = data.value("displayName", object.Name);
+  object.Origin = data.contains("origin")
+                      ? OriginFromString(data["origin"].get<std::string>())
+                      : origin;
+  object.SourcePackId = sourcePackId;
+  object.Hidden = data.value("visibility", "") == "hidden";
+  if (data.contains("placement") && data["placement"].is_object())
+  {
+    const json &placement = data["placement"];
+    object.PlacementYOffset =
+        placement.value("y_offset", object.PlacementYOffset);
+    const std::string mode = placement.value("mode", std::string{});
+    if (mode == "surface_layer")
+    {
+      object.PlacementMode = ObjectPlacementMode::SurfaceLayer;
+    }
+    else if (mode == "vertical_plant")
+    {
+      object.PlacementMode = ObjectPlacementMode::VerticalPlant;
+    }
+  }
+
+  if (data.contains("anchor") && data["anchor"].is_array() &&
+      data["anchor"].size() == 3)
+  {
+    object.anchor =
+        glm::ivec3(data["anchor"][0].get<int>(), data["anchor"][1].get<int>(),
+                   data["anchor"][2].get<int>());
+  }
+
+  object.boundsMin = glm::ivec3(std::numeric_limits<int>::max());
+  object.boundsMax = glm::ivec3(std::numeric_limits<int>::min());
+
+  for (const auto &blockEntry : data.at("blocks"))
+  {
+    const int dx = blockEntry.at("dx").get<int>();
+    const int dy = blockEntry.at("dy").get<int>();
+    const int dz = blockEntry.at("dz").get<int>();
+    const std::string type = blockEntry.at("type").get<std::string>();
+    const BlockId Id = registry.GetPackBlockIdByTypeName(type);
+    if (Id == BLOCK_AIR)
+    {
+      const std::string logKey = object.Name + '\x1f' + type + '\x1f' +
+                                 sourcePackId;
+      if (loggedUnknownTypes.insert(logKey).second)
+      {
+        std::cerr << "UObjectLibrary: unknown type (object=" << object.Name
+                  << ",type=" << type << ",pack=" << sourcePackId
+                  << ",path=" << path << ")" << std::endl;
+      }
+      continue;
+    }
+    ObjectVoxel voxel;
+    voxel.offset = glm::ivec3(dx, dy, dz);
+    voxel.Type = type;
+    voxel.Id = Id;
+    object.voxels.push_back(voxel);
+
+    const glm::ivec3 worldOffset = object.anchor + voxel.offset;
+    object.boundsMin = glm::min(object.boundsMin, worldOffset);
+    object.boundsMax = glm::max(object.boundsMax, worldOffset);
+  }
+
+  return object;
+}
+
 bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
                               const std::string &registerName,
                               ObjectOrigin origin,
@@ -134,87 +223,8 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
   try
   {
     auto data = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::Prefab);
-    WorldObjectDefinition object;
-    object.Name = registerName.empty()
-                      ? data.value("name",
-                                   std::filesystem::path(path).stem().string())
-                      : registerName;
-    if (data.contains("tags") && data["tags"].is_array())
-    {
-      for (const auto &tag : data["tags"])
-      {
-        if (tag.is_string())
-        {
-          object.Tags.push_back(tag.get<std::string>());
-        }
-      }
-    }
-    if (object.Tags.empty())
-    {
-      object.Tags.push_back(kDefaultTag);
-    }
-    object.DisplayName = data.value("displayName", object.Name);
-    object.Origin = data.contains("origin")
-                        ? OriginFromString(data["origin"].get<std::string>())
-                        : origin;
-    object.SourcePackId = sourcePackId;
-    object.Hidden = data.value("visibility", "") == "hidden";
-    if (data.contains("placement") && data["placement"].is_object())
-    {
-      const json &placement = data["placement"];
-      object.PlacementYOffset =
-          placement.value("y_offset", object.PlacementYOffset);
-      const std::string mode = placement.value("mode", std::string{});
-      if (mode == "surface_layer")
-      {
-        object.PlacementMode = ObjectPlacementMode::SurfaceLayer;
-      }
-      else if (mode == "vertical_plant")
-      {
-        object.PlacementMode = ObjectPlacementMode::VerticalPlant;
-      }
-    }
-
-    if (data.contains("anchor") && data["anchor"].is_array() &&
-        data["anchor"].size() == 3)
-    {
-      object.anchor =
-          glm::ivec3(data["anchor"][0].get<int>(), data["anchor"][1].get<int>(),
-                     data["anchor"][2].get<int>());
-    }
-
-    object.boundsMin = glm::ivec3(std::numeric_limits<int>::max());
-    object.boundsMax = glm::ivec3(std::numeric_limits<int>::min());
-
-    for (const auto &blockEntry : data.at("blocks"))
-    {
-      const int dx = blockEntry.at("dx").get<int>();
-      const int dy = blockEntry.at("dy").get<int>();
-      const int dz = blockEntry.at("dz").get<int>();
-      const std::string type = blockEntry.at("type").get<std::string>();
-      const BlockId Id = registry.GetPackBlockIdByTypeName(type);
-      if (Id == BLOCK_AIR)
-      {
-        const std::string logKey = object.Name + '\x1f' + type + '\x1f' +
-                                   sourcePackId;
-        if (LoggedUnknownTypes.insert(logKey).second)
-        {
-          std::cerr << "UObjectLibrary: unknown type (object=" << object.Name
-                    << ",type=" << type << ",pack=" << sourcePackId
-                    << ",path=" << path << ")" << std::endl;
-        }
-        continue;
-      }
-      ObjectVoxel voxel;
-      voxel.offset = glm::ivec3(dx, dy, dz);
-      voxel.Type = type;
-      voxel.Id = Id;
-      object.voxels.push_back(voxel);
-
-      const glm::ivec3 worldOffset = object.anchor + voxel.offset;
-      object.boundsMin = glm::min(object.boundsMin, worldOffset);
-      object.boundsMax = glm::max(object.boundsMax, worldOffset);
-    }
+    auto object = CompilePrefabCatalog(data, registry, path, registerName, origin,
+                                       sourcePackId, LoggedUnknownTypes);
 
     if (object.voxels.empty())
     {

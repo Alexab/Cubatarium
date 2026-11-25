@@ -1,0 +1,187 @@
+{
+  "schema": "s4-prefab-candidate-source-certificate.v1",
+  "status": "SCOPED_CANDIDATE_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "Prefab shared production candidate source scoped PASS. CompilePrefabCatalog extracted exact prior body modulo indentation/diagnostic set parameter:LoadFile and isolated fixture share field parsing/defaults/unknown logging.9 authored/default/placement/user-origin/129-voxel/17 distinct unknown+duplicates/empty/wrong-type cases;616 persistent ordinary-new refusal prefixes+exact retries. All observed candidates/new log-set backing released to0,registry snapshot unchanged. Independent field/id/anchor/bounds/tag/default oracles,overflow and unrelated allocation negative control PASS. Requested-memory model includes candidate shared coallocation,tag/voxel vector old/new growth,temporary text and new unknown diagnostic nodes/buckets with prior count/bucket terms. Four dependent catalog/storage/pinned/scatter regressions PASS;Release desktop source/EXE provenance PASS.",
+  "remaining": "C05 OPEN:WorldGenPack compiled candidates and directory/resource merge/prior-current composition;prefab publication map and existing unknown-log roots remain separate terms. Unknown diagnostics may remain admitted on failed file conversion,matching existing semantics;not transactional directory load. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU and full S4.03..06/S5/S6 remain OPEN.23/42 complete unchanged;no audit restart or arbitrary asset cap.",
+  "unit": {
+    "cases": [
+      {
+        "attempts": 11,
+        "error": 0,
+        "name": "authored_fields",
+        "pass": true,
+        "peak": 6663,
+        "prior_unknown": 0,
+        "upper": 611184
+      },
+      {
+        "attempts": 11,
+        "error": 0,
+        "name": "filename_defaults",
+        "pass": true,
+        "peak": 1456,
+        "prior_unknown": 0,
+        "upper": 135704
+      },
+      {
+        "attempts": 9,
+        "error": 0,
+        "name": "vertical_user",
+        "pass": true,
+        "peak": 1456,
+        "prior_unknown": 0,
+        "upper": 224080
+      },
+      {
+        "attempts": 405,
+        "error": 0,
+        "name": "129_voxel_growth",
+        "pass": true,
+        "peak": 43031,
+        "prior_unknown": 0,
+        "upper": 12818200
+      },
+      {
+        "attempts": 175,
+        "error": 0,
+        "name": "unknown_duplicates_rehash",
+        "pass": true,
+        "peak": 11328,
+        "prior_unknown": 17,
+        "upper": 3297440
+      },
+      {
+        "attempts": 5,
+        "error": 0,
+        "name": "empty_candidate",
+        "pass": true,
+        "peak": 816,
+        "prior_unknown": 0,
+        "upper": 69904
+      },
+      {
+        "attempts": 7,
+        "error": 403,
+        "name": "missing_blocks",
+        "pass": true,
+        "peak": 736,
+        "prior_unknown": 0,
+        "upper": 51656
+      },
+      {
+        "attempts": 7,
+        "error": 302,
+        "name": "invalid_coordinate",
+        "pass": true,
+        "peak": 768,
+        "prior_unknown": 0,
+        "upper": 168888
+      },
+      {
+        "attempts": 6,
+        "error": 306,
+        "name": "invalid_root",
+        "pass": true,
+        "peak": 848,
+        "prior_unknown": 0,
+        "upper": 43400
+      }
+    ],
+    "failed_cases": 0,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "persistent_prefix_and_retry_cases": 616,
+    "schema": "prefab-candidate-source.v1",
+    "scope": "One actual shared production candidate plus newly allocated unknown-log set backing;input DOM/registry/prior diagnostic nodes and publication map separate. No rollback of diagnostic set claimed on allocation failure;caller may keep admitted diagnostics. Default MSVC allocator/load factor. Not directory aggregate/process RSS.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "326675d50d493b798dbd72f64200554dd2b369d24ca5658e26b314f8adf42a44"
+    },
+    {
+      "name": "catalog-storage",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "73234bb35a26bddb6b8a5505b596c8b476a8d88c544e937e7505e54f58e17268"
+    },
+    {
+      "name": "pinned-catalog",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "73234bb35a26bddb6b8a5505b596c8b476a8d88c544e937e7505e54f58e17268"
+    },
+    {
+      "name": "four-candidates",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "build\\desktop-msvc\\s4-prefab-four-candidates-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "fa71546fe5e12353baf696da14dd1ba9edeac05056d87e1f077e5a0dd3555f26"
+    }
+  ],
+  "production_extraction_equivalence": {
+    "status": "PASS",
+    "prior_commit": "b952804578ed6b2246cc40f87b5f728ba0fd6321",
+    "scope": "Exact prior production candidate body matches extracted production function modulo indentation and caller-owned diagnostic-set parameter name."
+  },
+  "source_sha256": {
+    "src/World/Objects/ObjectLibrary.cpp": "f19a20ad4345d2235965ff76354d9592407d7a87d06f96e10951f02e397f426d",
+    "src/World/Objects/ObjectLibrary.h": "d03fe275313bd66d112cec71defa48a2a4a4a3a92a92de72fa8295af6fb5224c",
+    "src/WorldGen/Core/PrefabCandidateSourceEnvelope.h": "8a5ce601ecebd3b50411620651778f6ea72ef471d1f2315f5394a0da80569c00",
+    "src/Test/PrefabCandidateSourceFixture.h": "ca68f8a753003d06553b67ff72169dfd298d60d81eb3398a4c950c1df7a0a006",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "b0e00611da2e6c5be5d5f01f3e7073989c937010c630504accb8ceba83e31e10",
+    "src/Blocks/BlockRegistry.cpp": "9b8ebad7509400923b4ce52fe4a03954bb729f63e37bda97218dc3d94a6bae74",
+    "src/Blocks/BlockDefinitionStorage.cpp": "8b76d45d954b10fa715fd04c2dafbe75c942fbf7452a97ddea0873ea65a3bc37"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "fa71546fe5e12353baf696da14dd1ba9edeac05056d87e1f077e5a0dd3555f26",
+  "desktop_exe_sha256": "0501f56951b53dfb5306dafda556c5274c9eaead9917e77efb7a3d374fe33f97",
+  "provenance": "build/desktop-msvc/s4-prefab-provenance.json",
+  "model": {
+    "domain": "DOM values V/key+string text B;caller path/register-name/source-pack byte lengths C;prior unknown set count K and actual bucket count H. Default MSVC allocators,load factor1. Borrowed DOM/registry/caller/prior set node payload and publication map separate.",
+    "upper": "16384 + sizeof(actual MSVC candidate make_shared coallocation) + V*(4*(sizeof(string)+sizeof(ObjectVoxel))+actual set list node+16*2*sizeof(pointer)+8*39+256) +32*(B+(V+1)*C) +32*K*sizeof(pointer)+2*H*sizeof(pointer). Checked/saturating. Not runtime quota/process cap.",
+    "shared": "Candidate object/control block INCLUDED in source bound;do not add again when composing new candidate. Retained prior/returned versions separate.",
+    "diagnostics": "Unknown log keys duplicate object name/type/source per candidate;prior-set rehash terms included. Diagnostic side effects preserved on failure;only local test set destruction asserted0. Ordinary-new allocator/platform cache scratch beyond model/E12 separate."
+  },
+  "native": {
+    "status": "NOT_RUN_FOR_THIS_SLICE",
+    "reason": "Exact production conversion extraction;source/ownership/refusal properties verified directly without renderer. Prior native witnesses retained but not attributed to current executable. Release desktop rebuilt with matching provenance."
+  }
+}

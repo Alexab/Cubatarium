@@ -55,6 +55,14 @@ struct WorldObjectDefinition
 
 class UBlockRegistry;
 
+// Builds one candidate; registry/input are borrowed. Unknown-type diagnostics
+// keep the same caller-owned deduplication set used by LoadFile.
+WorldObjectDefinition CompilePrefabCatalog(const nlohmann::json &data,
+    UBlockRegistry &registry, const std::string &path,
+    const std::string &registerName, ObjectOrigin origin,
+    const std::string &sourcePackId,
+    std::unordered_set<std::string> &loggedUnknownTypes);
+
 class UObjectLibrary
 {
 public:
