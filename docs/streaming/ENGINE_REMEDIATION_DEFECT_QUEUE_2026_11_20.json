@@ -3,6 +3,36 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "glog-logstream-constructor-retains-allocations-under-refusal",
+      "stage": "S4.02",
+      "status": "OPEN",
+      "observed": "Exact Release stack/map identifies two16-byte ordinary-new allocations in MSVC basic_ios::init/basic_streambuf from glog LogStream construction. Worker exit and logger shutdown preserve32 bytes after persistent refusal. Initial main-thread30344 remainder not wholly source-attributed. Duplicate glog call removed only from LoadMerged;general logger exception/lifetime acceptance remains open.",
+      "evidence": [
+        "build/desktop-msvc/s4-prefab-composition-glog-identity.json",
+        "build/desktop-msvc/s4-prefab-composition-allocation-symbols.txt"
+      ],
+      "next_action": "E12:resolve general logging backend construction exception safety/finite ownership;C05 LoadMerged no longer invokes duplicate glog record. Keep full memory acceptance open.",
+      "owner": "E12"
+    },
+    {
+      "id": "prefab-rebind-mutates-escaped-const-definition",
+      "stage": "S4.02",
+      "status": "SCOPED_PREFAB_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_E12_OPEN",
+      "observed": "Serial baseline escaped shared_ptr<const> ID changes101->201 in place after registry replacement.",
+      "fix": "Merged prefab directory/rebind publication and selected source/retained graph scoped PASS. LoadMerged prepares an independent complete library and diagnostic set before no-allocation swap;separate writer mutex serializes load/rebind. Rebind stages deep copies only for changed objects and commits all shared handles/diagnostics after successful preparation. Escaped immutable definitions preserve IDs/metadata/bounds;unchanged definitions keep pointer identity. Removed duplicate glog success record from this data-construction route;existing stdout loaded-count diagnostic now includes base path and is prepared before commit.9 JSON files across6 simple/recursive/missing roots exercise base/imported/user and pack replacement,qualified names,hidden/empty/unknown/malformed/uppercase/ignored files and deepest empty directories. 688 persistent ordinary-new refusal boundaries plus exact same-case retries across full/empty directory and two-object rebind preserve current pointers/payloads/diagnostics and retire selected requests to0. Existing unknown-key backing is copied transactionally;repeated missing-type diagnostics deduplicate and unchanged rebind allocates0. Two actual source+entry phases retain old/current/escaped objects;64 aliases deduplicate,retained4904<=upper7502,final graph credits0. Concurrent fixed-code reader checks32 writer cycles and pinned old payload;baseline mutation shown serially only. Overflow/unmodeled allocation and actual filesystem-error prior-preservation controls PASS.12 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 actual GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-prefab-composition-acceptance.json",
+      "next_action": "C05 OPEN:legacy cube/texture loading and CPU atlas/decode batches composed with retained old/current/returned owners. Accepted pack/resource5-phase,settings/file8-phase and prefab2-phase supplied-root graphs stay authoritative. C06 finite all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 glog constructor refusal retention plus CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,new asset quota or reduced acceptance."
+    },
+    {
+      "id": "prefab-load-clears-current-before-fallible-work",
+      "stage": "S4.02",
+      "status": "SCOPED_PREFAB_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_E12_OPEN",
+      "observed": "Serial baseline ordinary-new refusal prefix0 loses previously loaded item index.",
+      "fix": "Merged prefab directory/rebind publication and selected source/retained graph scoped PASS. LoadMerged prepares an independent complete library and diagnostic set before no-allocation swap;separate writer mutex serializes load/rebind. Rebind stages deep copies only for changed objects and commits all shared handles/diagnostics after successful preparation. Escaped immutable definitions preserve IDs/metadata/bounds;unchanged definitions keep pointer identity. Removed duplicate glog success record from this data-construction route;existing stdout loaded-count diagnostic now includes base path and is prepared before commit.9 JSON files across6 simple/recursive/missing roots exercise base/imported/user and pack replacement,qualified names,hidden/empty/unknown/malformed/uppercase/ignored files and deepest empty directories. 688 persistent ordinary-new refusal boundaries plus exact same-case retries across full/empty directory and two-object rebind preserve current pointers/payloads/diagnostics and retire selected requests to0. Existing unknown-key backing is copied transactionally;repeated missing-type diagnostics deduplicate and unchanged rebind allocates0. Two actual source+entry phases retain old/current/escaped objects;64 aliases deduplicate,retained4904<=upper7502,final graph credits0. Concurrent fixed-code reader checks32 writer cycles and pinned old payload;baseline mutation shown serially only. Overflow/unmodeled allocation and actual filesystem-error prior-preservation controls PASS.12 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 actual GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-prefab-composition-acceptance.json",
+      "next_action": "C05 OPEN:legacy cube/texture loading and CPU atlas/decode batches composed with retained old/current/returned owners. Accepted pack/resource5-phase,settings/file8-phase and prefab2-phase supplied-root graphs stay authoritative. C06 finite all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 glog constructor refusal retention plus CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,new asset quota or reduced acceptance."
+    },
+    {
       "id": "bootstrap-clears-texture-target-before-staged-replacement",
       "stage": "S4.02",
       "status": "SCOPED_PACK_RESOURCE_GRAPH_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",

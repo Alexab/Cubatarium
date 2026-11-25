@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.prefab-composition",
+      "status": "SCOPED_PREFAB_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-prefab-composition-acceptance.json",
+      "certificate": "S4_02_C05_PREFAB_COMPOSITION_CERTIFICATE_2026_11_26.json",
+      "scope": "Merged prefab directory/rebind publication and selected source/retained graph scoped PASS. LoadMerged prepares an independent complete library and diagnostic set before no-allocation swap;separate writer mutex serializes load/rebind. Rebind stages deep copies only for changed objects and commits all shared handles/diagnostics after successful preparation. Escaped immutable definitions preserve IDs/metadata/bounds;unchanged definitions keep pointer identity. Removed duplicate glog success record from this data-construction route;existing stdout loaded-count diagnostic now includes base path and is prepared before commit.9 JSON files across6 simple/recursive/missing roots exercise base/imported/user and pack replacement,qualified names,hidden/empty/unknown/malformed/uppercase/ignored files and deepest empty directories. 688 persistent ordinary-new refusal boundaries plus exact same-case retries across full/empty directory and two-object rebind preserve current pointers/payloads/diagnostics and retire selected requests to0. Existing unknown-key backing is copied transactionally;repeated missing-type diagnostics deduplicate and unchanged rebind allocates0. Two actual source+entry phases retain old/current/escaped objects;64 aliases deduplicate,retained4904<=upper7502,final graph credits0. Concurrent fixed-code reader checks32 writer cycles and pinned old payload;baseline mutation shown serially only. Overflow/unmodeled allocation and actual filesystem-error prior-preservation controls PASS.12 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 actual GL readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.settings-file-composition",
       "status": "SCOPED_SETTINGS_FILE_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
       "receipt": "build/desktop-msvc/s4-settings-composition-acceptance.json",

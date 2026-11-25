@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <memory>
+#include <mutex>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -72,7 +73,7 @@ public:
                   UBlockRegistry &registry);
   void RebindBlockIds(UBlockRegistry &registry);
   bool ValidateCriticalPrefabs() const;
-  /// Thread-safe; returned shared_ptr keeps the definition alive across reloads.
+  /// Thread-safe; returned immutable definition survives reload and rebind.
   std::shared_ptr<const WorldObjectDefinition>
   GetShared(const std::string &Name) const;
   /// Convenience for main-thread short reads. Holds a TLS shared_ptr keep-alive.
@@ -108,6 +109,8 @@ private:
   std::unordered_map<std::string, std::shared_ptr<WorldObjectDefinition>>
       Objects;
   std::unordered_set<std::string> LoggedUnknownTypes;
+  // Serialize complete writer operations while readers can keep old versions.
+  mutable std::mutex MutationMutex;
   mutable std::shared_mutex ObjectsMutex;
 };
 

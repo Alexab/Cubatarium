@@ -9,7 +9,9 @@
 #include <iostream>
 #include <limits>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <shared_mutex>
+#include <type_traits>
 
 using json = nlohmann::json;
 
@@ -92,26 +94,27 @@ void UObjectLibrary::LoadMerged(
     const std::filesystem::path &baseFolder,
     const std::vector<ResourcePackManifest> &packs, UBlockRegistry &registry)
 {
-  {
-    std::unique_lock lock(ObjectsMutex);
-    Objects.clear();
-  }
-  LoggedUnknownTypes.clear();
-  LoadDirectory(baseFolder, "", ObjectOrigin::Builtin, registry);
-  LoadDirectoryRecursive(baseFolder / "imported", "", ObjectOrigin::Imported,
-                         registry);
-  LoadDirectoryRecursive(baseFolder / "user", "", ObjectOrigin::User, registry);
+  std::lock_guard writer(MutationMutex);
+  UObjectLibrary prepared;
+  prepared.LoadDirectory(baseFolder, "", ObjectOrigin::Builtin, registry);
+  prepared.LoadDirectoryRecursive(baseFolder / "imported", "",
+                                 ObjectOrigin::Imported, registry);
+  prepared.LoadDirectoryRecursive(baseFolder / "user", "", ObjectOrigin::User, registry);
   for (const auto &pack : packs)
   {
-    LoadDirectoryRecursive(pack.Root / "objects", pack.Id,
-                           ObjectOrigin::ResourcePack, registry);
+    prepared.LoadDirectoryRecursive(pack.Root / "objects", pack.Id,
+                                    ObjectOrigin::ResourcePack, registry);
   }
-  std::shared_lock lock(ObjectsMutex);
-  CubatariumLogInfo("ObjectLibrary",
-                    "LoadMerged mapSize=" + std::to_string(Objects.size()) +
-                        " base=" + baseFolder.string());
-  std::cout << "UObjectLibrary: loaded " << Objects.size() << " objects"
-            << std::endl;
+  // Prepare the existing stdout diagnostic before replacing live data. Avoid
+  // a duplicate glog record: its stream constructor is not refusal-safe.
+  const std::string summary = "UObjectLibrary: loaded " +
+      std::to_string(prepared.Objects.size()) + " objects base=" + baseFolder.string();
+  std::cout << summary << std::endl;
+  std::unique_lock lock(ObjectsMutex);
+  static_assert(noexcept(Objects.swap(prepared.Objects)));
+  static_assert(noexcept(LoggedUnknownTypes.swap(prepared.LoggedUnknownTypes)));
+  Objects.swap(prepared.Objects);
+  LoggedUnknownTypes.swap(prepared.LoggedUnknownTypes);
 }
 
 void UObjectLibrary::Load(const std::string &objects_folder,
@@ -250,34 +253,74 @@ bool UObjectLibrary::LoadFile(const std::string &path, UBlockRegistry &registry,
 
 void UObjectLibrary::RebindBlockIds(UBlockRegistry &registry)
 {
+  std::lock_guard writer(MutationMutex);
   std::unique_lock lock(ObjectsMutex);
+  using Pending = std::pair<std::shared_ptr<WorldObjectDefinition> *,
+                            std::shared_ptr<WorldObjectDefinition>>;
+  std::vector<Pending> pending;
+  std::optional<decltype(LoggedUnknownTypes)> diagnostics;
   for (auto &pair : Objects)
   {
     if (!pair.second)
     {
       continue;
     }
-    for (ObjectVoxel &voxel : pair.second->voxels)
+    std::shared_ptr<WorldObjectDefinition> updated;
+    for (size_t index = 0; index < pair.second->voxels.size(); ++index)
     {
+      const ObjectVoxel &voxel = pair.second->voxels[index];
       if (voxel.Type.empty())
       {
         continue;
       }
       const BlockId id = registry.GetPackBlockIdByTypeName(voxel.Type);
-      voxel.Id = id;
+      if (voxel.Id != id)
+      {
+        if (!updated)
+        {
+          updated = std::make_shared<WorldObjectDefinition>(*pair.second);
+        }
+        updated->voxels[index].Id = id;
+      }
       if (id == BLOCK_AIR)
       {
         const WorldObjectDefinition &object = *pair.second;
         const std::string logKey = object.Name + '\x1f' + voxel.Type + '\x1f' +
                                    object.SourcePackId;
-        if (LoggedUnknownTypes.insert(logKey).second)
+        if (!LoggedUnknownTypes.count(logKey))
         {
-          std::cerr << "UObjectLibrary: rebind failed (object=" << object.Name
-                    << ",type=" << voxel.Type << ",pack=" << object.SourcePackId
-                    << "); voxel reset to AIR" << std::endl;
+          if (!diagnostics)
+          {
+            diagnostics.emplace(LoggedUnknownTypes);
+          }
+          if (diagnostics->insert(logKey).second)
+          {
+            std::cerr << "UObjectLibrary: rebind failed (object=" << object.Name
+                      << ",type=" << voxel.Type << ",pack=" << object.SourcePackId
+                      << "); voxel reset to AIR" << std::endl;
+          }
         }
       }
     }
+    if (updated)
+    {
+      if (pending.empty())
+      {
+        pending.reserve(Objects.size());
+      }
+      pending.emplace_back(&pair.second, std::move(updated));
+    }
+  }
+  // All lookups, clones, diagnostics and growth finish before the first commit.
+  static_assert(std::is_nothrow_move_assignable_v<std::shared_ptr<WorldObjectDefinition>>);
+  static_assert(noexcept(LoggedUnknownTypes.swap(*diagnostics)));
+  for (auto &entry : pending)
+  {
+    *entry.first = std::move(entry.second);
+  }
+  if (diagnostics)
+  {
+    LoggedUnknownTypes.swap(*diagnostics);
   }
 }
 

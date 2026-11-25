@@ -68,8 +68,11 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
 #include "Test/PackBiomeIndexSourceFixture.h"
 #include "Test/ResourceBlockGrowthFixture.h"
 #include "Test/TextureOverrideSourceFixture.h"
+#include "Test/PrefabCompositionFixture.h"
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--prefab-composition-baseline") return prefab_composition_fixture::Baseline(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--prefab-composition") return prefab_composition_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--texture-overrides") return RunTextureOverrideSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--resource-block-growth") return RunResourceBlockGrowthFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--pack-biome-index") return RunPackBiomeIndexSourceFixture(argc>2?argv[2]:nullptr);

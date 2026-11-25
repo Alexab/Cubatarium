@@ -1,0 +1,297 @@
+{
+  "schema": "s4-prefab-construction-composition-certificate.v1",
+  "status": "SCOPED_PREFAB_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_E12_OPEN",
+  "summary": "Merged prefab directory/rebind publication and selected source/retained graph scoped PASS. LoadMerged prepares an independent complete library and diagnostic set before no-allocation swap;separate writer mutex serializes load/rebind. Rebind stages deep copies only for changed objects and commits all shared handles/diagnostics after successful preparation. Escaped immutable definitions preserve IDs/metadata/bounds;unchanged definitions keep pointer identity. Removed duplicate glog success record from this data-construction route;existing stdout loaded-count diagnostic now includes base path and is prepared before commit.9 JSON files across6 simple/recursive/missing roots exercise base/imported/user and pack replacement,qualified names,hidden/empty/unknown/malformed/uppercase/ignored files and deepest empty directories. 688 persistent ordinary-new refusal boundaries plus exact same-case retries across full/empty directory and two-object rebind preserve current pointers/payloads/diagnostics and retire selected requests to0. Existing unknown-key backing is copied transactionally;repeated missing-type diagnostics deduplicate and unchanged rebind allocates0. Two actual source+entry phases retain old/current/escaped objects;64 aliases deduplicate,retained4904<=upper7502,final graph credits0. Concurrent fixed-code reader checks32 writer cycles and pinned old payload;baseline mutation shown serially only. Overflow/unmodeled allocation and actual filesystem-error prior-preservation controls PASS.12 Release regression groups,desktop/native runtime/startup/direct save/UI/provenance and8 actual GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+  "remaining": "C05 OPEN:legacy cube/texture loading and CPU atlas/decode batches composed with retained old/current/returned owners. Accepted pack/resource5-phase,settings/file8-phase and prefab2-phase supplied-root graphs stay authoritative. C06 finite all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 glog constructor refusal retention plus CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,new asset quota or reduced acceptance.",
+  "unit": {
+    "concurrent_reader": {
+      "pass": true,
+      "reads": 94766,
+      "writer_cycles": 32
+    },
+    "directory_domain": {
+      "depth_including_empty": 3,
+      "files": 9,
+      "max_path_units": 94,
+      "prefix_bytes": 81,
+      "scans": 6
+    },
+    "failed_cases": 0,
+    "filesystem_error_preserves_prior": true,
+    "graph_final_zero": true,
+    "negative_control": true,
+    "old_current_oracles": true,
+    "overflow_rejected": true,
+    "phases": [
+      {
+        "entry_observed": 2600,
+        "entry_upper": 4001,
+        "name": "rebind_current_library",
+        "pass": true,
+        "peak": 4304,
+        "upper": 113897
+      },
+      {
+        "entry_observed": 3304,
+        "entry_upper": 5182,
+        "name": "merged_directory_publication",
+        "pass": true,
+        "peak": 10163,
+        "upper": 728291888
+      }
+    ],
+    "refusal_and_exact_retry_cases": 688,
+    "refusals": [
+      {
+        "attempts": 658,
+        "pass": true,
+        "peak": 6582,
+        "prefixes": 658,
+        "route": 0,
+        "upper": 728286706
+      },
+      {
+        "attempts": 13,
+        "pass": true,
+        "peak": 656,
+        "prefixes": 13,
+        "route": 1,
+        "upper": 152926
+      },
+      {
+        "attempts": 17,
+        "pass": true,
+        "peak": 1704,
+        "prefixes": 17,
+        "route": 2,
+        "upper": 109896
+      }
+    ],
+    "repeated_missing_type_diagnostics_deduplicated": true,
+    "retained": {
+      "alias64_deduplicated": true,
+      "observed": 4904,
+      "upper": 7502
+    },
+    "schema": "prefab-construction-composition.v1",
+    "scope": "Actual merged directory/rebind source+selected library/escaped-owner graph;borrowed registry/manifests/paths separate. Default MSVC Release allocator,warmed standard streams,ordinary-new requests. C06 all-world/thread/weak-only multiplicities and E12 glog/CRT/OS/stack/GPU/process totals remain open.",
+    "status": "PASS",
+    "unchanged_zero_allocation": true
+  },
+  "regressions": [
+    {
+      "name": "prefab-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ffcbf3c4bc95dd2f9f84469d527e9b913b337a8a390018f0ea2c52fc173179ea"
+    },
+    {
+      "name": "prefab-candidate",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-candidate",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-candidate.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ffcbf3c4bc95dd2f9f84469d527e9b913b337a8a390018f0ea2c52fc173179ea"
+    },
+    {
+      "name": "resolved-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-resolved.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ffcbf3c4bc95dd2f9f84469d527e9b913b337a8a390018f0ea2c52fc173179ea"
+    },
+    {
+      "name": "candidate-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-catalog-candidate.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ffcbf3c4bc95dd2f9f84469d527e9b913b337a8a390018f0ea2c52fc173179ea"
+    },
+    {
+      "name": "settings-input",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--settings-input",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-settings.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ffcbf3c4bc95dd2f9f84469d527e9b913b337a8a390018f0ea2c52fc173179ea"
+    },
+    {
+      "name": "settings-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-settings-composition.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "b8f4e4faa62e05b40e52d8ed8900372f141cb8b6f3bd1e9b3a03d76d5c24a290"
+    },
+    {
+      "name": "pack-resource-composition",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-pack-resource.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "b8f4e4faa62e05b40e52d8ed8900372f141cb8b6f3bd1e9b3a03d76d5c24a290"
+    },
+    {
+      "name": "catalog-storage",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "8f3c808141ca7da54fbf82fcc769d49add27e68f45f460b831bb19e93dade4c0"
+    },
+    {
+      "name": "pinned-factory-catalog",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "8f3c808141ca7da54fbf82fcc769d49add27e68f45f460b831bb19e93dade4c0"
+    },
+    {
+      "name": "stbi-nine-formats-conversion",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-stbi.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "f85a9da4f2f9d415c1531417fd62bde0a903ecb897bd9e95d595197169515cec"
+    },
+    {
+      "name": "stbi-conversion-range",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-prefab-composition-conversion-range.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "f85a9da4f2f9d415c1531417fd62bde0a903ecb897bd9e95d595197169515cec"
+    },
+    {
+      "name": "decor-mesh-integration",
+      "command": [
+        "build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "07b31e454d150272aa13e9b6339e52c10fc8e40635ef53adb989aa9e7ccd6ace"
+    }
+  ],
+  "source_sha256": {
+    "src/World/Objects/ObjectLibrary.cpp": "adc8548cdb4e52b8349ae610efab8e2700b3d5d12203e5a3232a49c2b8ef487e",
+    "src/World/Objects/ObjectLibrary.h": "7621c62db088a71ac349b9ee1c312ff0d0a8166b575ad78d90ee1a360cabf750",
+    "src/Test/PrefabCompositionFixture.h": "cac16274b8a077c987acf2d5eacccf0480bf27af8adf1888324ae67684621e71",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "ce0ecd308b05d7b4739625209ee8da3d7a52216e41c10c4f304eeaad0e1529a0",
+    "src/WorldGen/Core/PrefabConstructionComposition.h": "34472a086adf3dd4165e3746d3e7576eb33437b3786f21ab8e887fbafe82775c",
+    "src/WorldGen/Core/PrefabCandidateSourceEnvelope.h": "8a5ce601ecebd3b50411620651778f6ea72ef471d1f2315f5394a0da80569c00",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "a9fb3de30387fa2e208ecb82b3e19842e796dc3a8466eebeb577e5d502130b77",
+    "src/Test/OrdinaryNewObservation.h": "fdb91853b99b10fe6fee34d1044a913624cfe8a15186eb95652e4346afeb84e9"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f"
+  },
+  "baseline": {
+    "receipt": "build\\desktop-msvc\\s4-prefab-composition-baseline-accepted.json",
+    "identity": {
+      "source_sha256": {
+        "src/World/Objects/ObjectLibrary.cpp": "f19a20ad4345d2235965ff76354d9592407d7a87d06f96e10951f02e397f426d",
+        "src/World/Objects/ObjectLibrary.h": "d03fe275313bd66d112cec71defa48a2a4a4a3a92a92de72fa8295af6fb5224c",
+        "src/Test/PrefabCompositionFixture.h": "05d9781cc281d4d359a9d757538ba5cd82b908c28f5432dd21a72fa65bfb5645",
+        "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "493bc1f02cd03565f917670714d4bcd004134483b2976e55ed44e4f6dc93a5ec"
+      },
+      "test_exe_sha256": "6a4233a3bd2a9d0781c43411b9826e5d1c81c1db2f77fa9d0c47d52343c6d86d"
+    }
+  },
+  "related_open_logger_defect": {
+    "status": "OPEN_E12",
+    "identity": {
+      "status": "REPRODUCED_GLOG_STREAM_CONSTRUCTOR_RETENTION",
+      "source_sha256": {
+        "CMakeLists.txt": "43d209b80bba38d29644b575590fadde7c13696134aa87b4e62cd5b99d8b9edb",
+        "src/Test/OrdinaryNewObservation.h": "6fbbf61b6c5a5d5c7edd95149d6ff737974646377728be66340ef12aea20c7bd",
+        "src/Test/PrefabCompositionFixture.h": "8db827f57c9efdb71f288ae8f416f04ac534225c4436f995f56a761ba2ed14a3",
+        "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "ce0ecd308b05d7b4739625209ee8da3d7a52216e41c10c4f304eeaad0e1529a0",
+        "src/World/Objects/ObjectLibrary.cpp": "6d3582cab541b06563856d74749cc3c89ddb7a3816a507543d69a34941dc7b2a",
+        "src/World/Objects/ObjectLibrary.h": "7621c62db088a71ac349b9ee1c312ff0d0a8166b575ad78d90ee1a360cabf750",
+        "src/WorldGen/Core/PrefabConstructionComposition.h": "752cf5d1dc3b94feec86992e8fde22483ccbb70e5f5808ba9a96f1ad3208cc1b"
+      },
+      "test_exe_sha256": "45edbe8de3a95b267a281d79e309d021d4dab13089f8817ffd0015ecd97906cf",
+      "symbols": "s4-prefab-composition-allocation-symbols.txt",
+      "note": "Two surviving16-byte allocations resolve to MSVC basic_ios::init and basic_streambuf construction from google::LogMessage::LogStream -> LogMessage::Init -> CubatariumLogInfo -> UObjectLibrary::LoadMerged. Trace proof is exact Release executable/link map,not inferred attribution."
+    },
+    "trace_receipt": "build/desktop-msvc/s4-prefab-composition-source-trace.json",
+    "resolved_stacks": "build/desktop-msvc/s4-prefab-composition-allocation-symbols.txt",
+    "trace_map_sha256": "e63ee43786d1434f9d65e58b1ff6b4e4b2af74641202721a58ca1b6dd18c4826",
+    "note": "Exact Release stack/map identifies two16-byte ordinary-new allocations in MSVC basic_ios::init/basic_streambuf from glog LogStream construction. Worker exit and logger shutdown preserve32 bytes after persistent refusal. Initial main-thread30344 remainder not wholly source-attributed. Duplicate glog call removed only from LoadMerged;general logger exception/lifetime acceptance remains open."
+  },
+  "composition": {
+    "source": "New directory preparation:coarse managed JSON F(N),8*accepted candidate sums with raw byte V<=N+1/text<=N,prior unknown growth,typed map/control nodes,all6 scan domains with global path/depth/prefix maxima and default stream/summary work. Maxima collected before candidate evaluation. Rebind:8*retained library payload upper plus typed pending rows and per-voxel max(name+type+pack) diagnostic products;borrowed registry lookup and supplied input owners remain separate. Conservative request envelope,not process RAM/asset cap.",
+    "lifetime": "Observed library plus old/current/escaped definitions one epoch;deduplicated retained census. Registry/manifests/path input objects borrowed outside selected credits. Refusal trials run serialized worker operations;caller observation waits for thread exit before testing retired credits. No concurrent allocation observation;real concurrent reader schedule is separate and only uses fixed code.",
+    "errors": "Load JSON-invalid/empty/unknown skip policy preserved;successful later scan wins same registration key. Rebind missing IDs become AIR without recomputing authored bounds;old returned const definition unchanged. Failed whole load/rebind must preserve full current map/pointer/payload/diagnostic snapshot. Actual filesystem error tested for preservation separately;arbitrary localized error memory requires supplied diagnostic allowance.",
+    "limits": "Current standard MSVC Release allocator/default stable files and warmed standard streams. No custom deleters/external weak-only owners/all-world-thread cardinality acceptance. Collector/caller inline slots,arbitrary CRT/locale/OS/native-stack/logger/GPU/process totals stay C06/E12."
+  },
+  "desktop_exe_sha256": "2d1938fbe12ce5812048a880a317a834efada25028de9bb39647b22ef1fd86bc",
+  "provenance": "build\\desktop-msvc\\s4-prefab-composition-provenance.json",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-prefab-composition-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}
