@@ -1,0 +1,348 @@
+{
+  "schema": "s4-fingerprint-source-certificate.v1",
+  "status": "SCOPED_CANONICAL_FINGERPRINT_REFUSAL_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Catalog fingerprint construction/refusal/source envelope scoped PASS. Removed composed pack/block JSON DOM and its deep copies plus copied sorted names;canonical structural text uses same pinned library scalar serializer,one reusable owning string and borrowed sorted row pointers under existing registry read lock. Exact legacy payload/hash and strict UTF8 error316 text retained. Baseline real registry148 ordinary-new attempts,peak5266;prefix6 reaches test-only termination handler with2 refusals. Fixed same fingerprint15877548034598418822,12 attempts/peak1042.7 empty/real/escaping-UTF8-NUL/integer-edge/wide/long/invalid cases,100 persistent refusals plus exact retries clean to0;returned payload outlives inputs,prior/current independent retained202108 and combined468595 within source bound.4-pack18-block old/new executables yield identical normalized definitions and fingerprint;full merge staging refusal matrix and existing merge source/diagnostic/full scatter regressions PASS. Release/native runtime/startup/direct save/UI/provenance and8 actual GL readbacks PASS;aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:consumer catalog publication copies/source envelopes (PopulateBlockDefinitionStorage,PopulateTextureBaseStorage,RegisterMissingTextureStems) and final source/retained/prior-current world/catalog owner composition. Fingerprint standalone construction now byte-compatible,refusal-safe and source-bounded;borrowed input catalogs and prior/returned strings remain separate live owners. C06 finite all-world/thread/global/publisher/escaped roots,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Existing ecology fixture mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance.",
+  "baseline": {
+    "status": "REPRODUCED",
+    "test_exe_sha256": "e7dedfd20468d7b7cffb753931e5fc25402977337c94b17019ece0033e6568be",
+    "source_sha256": "379b839bdd5ec93063adb4efd7fd567391c29f520a41a6c625701e2a9be51435",
+    "records": [
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-normal.json",
+        "result": {
+          "attempts": 148,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 5266,
+          "prefix": 18446744073709551615,
+          "refused": false,
+          "retained_result": 32,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-0.json",
+        "result": {
+          "attempts": 1,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 0,
+          "prefix": 0,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-1.json",
+        "result": {
+          "attempts": 2,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 24,
+          "prefix": 1,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-2.json",
+        "result": {
+          "attempts": 3,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 56,
+          "prefix": 2,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-3.json",
+        "result": {
+          "attempts": 4,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 88,
+          "prefix": 3,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-4.json",
+        "result": {
+          "attempts": 5,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 120,
+          "prefix": 4,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 0,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-5.json",
+        "result": {
+          "attempts": 6,
+          "final_blocks": 0,
+          "final_live": 0,
+          "fingerprint": "15877548034598418822",
+          "peak": 144,
+          "prefix": 5,
+          "refused": true,
+          "retained_result": 0,
+          "status": "PASS"
+        }
+      },
+      {
+        "returncode": 86,
+        "report": "build\\desktop-msvc\\s4-fingerprint-baseline-prefix-6.json",
+        "result": {
+          "status": "TERMINATION_OBSERVED",
+          "prefix": 6,
+          "attempts": 8,
+          "refusals": 2,
+          "live": 176,
+          "blocks": 6
+        }
+      }
+    ]
+  },
+  "unit": {
+    "cases": [
+      {
+        "attempts": 4,
+        "name": "empty",
+        "pass": true,
+        "payload_bytes": 24,
+        "peak": 624,
+        "upper": 16524
+      },
+      {
+        "attempts": 11,
+        "name": "real_registry_inputs",
+        "pass": true,
+        "payload_bytes": 224,
+        "peak": 1042,
+        "upper": 19884
+      },
+      {
+        "attempts": 11,
+        "name": "escaping_utf8_nul_integer_edges",
+        "pass": true,
+        "payload_bytes": 442,
+        "peak": 1509,
+        "upper": 20876
+      },
+      {
+        "attempts": 20,
+        "name": "257_names",
+        "pass": true,
+        "payload_bytes": 7376,
+        "peak": 17760,
+        "upper": 133284
+      },
+      {
+        "attempts": 22,
+        "name": "long_fields",
+        "pass": true,
+        "payload_bytes": 147624,
+        "peak": 468595,
+        "upper": 4507980
+      },
+      {
+        "attempts": 10,
+        "error_id": 316,
+        "name": "invalid_utf8_name",
+        "pass": true,
+        "peak": 855,
+        "upper": 19428
+      },
+      {
+        "attempts": 10,
+        "error_id": 316,
+        "name": "invalid_utf8_pack",
+        "pass": true,
+        "peak": 847,
+        "upper": 18732
+      }
+    ],
+    "failed_cases": 0,
+    "map_insertion_order_irrelevant": true,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "pack_order_preserved": true,
+    "persistent_refusal_cases": 100,
+    "prior_current": {
+      "entry_observed": 202108,
+      "entry_request": 202108,
+      "pass": true,
+      "peak": 468595,
+      "upper": 4507980
+    },
+    "real_registry": {
+      "attempts": 12,
+      "fingerprint": "15877548034598418822",
+      "pass": true,
+      "peak": 1042,
+      "source_unchanged": true
+    },
+    "returned_payload_outlives_inputs": true,
+    "schema": "fingerprint-source.v1",
+    "scope": "Exact legacy canonical payload/hash and strict UTF8 errors;source ordinary-new model through cleanup/returned result. Borrowed catalog,prior returned buffers,CRT/locale/exception runtime/stack/process memory separate. Not full C05 publication acceptance.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--fingerprint-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-fingerprint-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f"
+    },
+    {
+      "name": "legacy-four-pack",
+      "command": [
+        "build\\desktop-msvc\\s4-fingerprint-baseline.exe",
+        "--merge-staging",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-fingerprint-legacy-four-pack.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e7dedfd20468d7b7cffb753931e5fc25402977337c94b17019ece0033e6568be"
+    },
+    {
+      "name": "four-pack",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-staging",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-fingerprint-four-pack.json",
+        "matrix"
+      ],
+      "returncode": 0,
+      "exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f"
+    },
+    {
+      "name": "merge-source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-fingerprint-merge-source.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f"
+    },
+    {
+      "name": "diagnostics",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-diagnostics",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-fingerprint-diagnostics.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f"
+    }
+  ],
+  "four_pack_equivalence": {
+    "status": "PASS",
+    "old_fingerprint": "7588755686804937662",
+    "new_fingerprint": "7588755686804937662",
+    "normalized_identical": true,
+    "packs": 4,
+    "blocks": 18,
+    "new_merge_prefix_cases": 2897
+  },
+  "source_sha256": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "fc6abe2615f892f821a9240c1aca97311586df0fc5f0d2ca0c346e3b53830d51",
+    "src/ResourcePacks/BlockMergeRegistry.h": "6571ed1d492fbf61a35b1fbca3e514809d58bd59a99f8b05b80141449b936ee2",
+    "src/ResourcePacks/CatalogFingerprint.h": "be8b87a868571d1218513d04589a5f36bdbc08548b4567112e47c8cacb559fd2",
+    "src/WorldGen/Core/FingerprintSourceEnvelope.h": "5c4c7796200d5a4119c9ba5c9934be39aa57b088550a0476b27fd22ffdab4c5b",
+    "src/Test/FingerprintSourceFixture.h": "110d27f36c21886c53d07d10d4bd287c9d5ffae0b04f96ed5df6a564bebefe44",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "e684f49f97ea1399db1c3c873206281d231b925724564bbd3d2d4a27d8d48e9c"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5"
+  },
+  "test_exe_sha256": "df2c9622503dec73036bad9ba2e51dc6469fff5a8be8d98555a06e3c3125f09f",
+  "desktop_exe_sha256": "c4a4f9a96908c94b33c026b6314a98ff6c30b699c691805a6e7ae7d905395431",
+  "provenance": "build/desktop-msvc/s4-fingerprint-provenance.json",
+  "model": {
+    "canonical": "Previous default-json map ordering:root blocks,packs;block keys id,name;pack keys id,version. Name map sorted by string,pack array retains original ActivePacks order. Same library scalar serializer strict/ensure_ascii=false/compact output,integer IDs/versions and std::hash<string> conversion. No escaping/hash algorithm substitution.",
+    "bound": "P packs,N names,B total raw pack-id/name bytes,M largest field. E=32+64*(P+N)+6*B. Additional ordinary-new upper=16384+N*sizeof(void*)+4*(E+1)+8*(M+1). Includes sorted vector,output/scalar MSVC old/new string growth,serializer indent,adapter/control,scalar object,hash string,strict UTF8 diagnostics and big-allocation alignment allowance. Checked saturation;not tuned to observed peak.",
+    "lifetime": "No constructed array/object JSON exists in production fingerprint path. Reused string scalar and primitive integer destructors free storage without structured JSON flatten allocation. Caller read lock pins borrowed row addresses;returned payload owns bytes. Existing source catalogs/escaped old versions retained separately.",
+    "prior": "Independent MSVC string capacity+terminator+39 big-align descriptor gives202108 bytes;observer matches. One epoch across old/new outputs verifies source composition;not an empirical whole-process budget.",
+    "baseline_limit": "Test-only terminate guard uses preopened C stdio then exit86,recording real termination and ordinary-new prefix6/attempts8/refusals2/live176 at handler. Pinned library structured destruction allocates flatten vector;causal path inferred from source,no captured stack. Production application does not install this handler.",
+    "overheads": "No application counter/TLS/cache/history added. Library serializer native stack,locale/CRT exception objects,allocator metadata and all other roots/process/GPU terms remain E12. Request observations exclude test observer prefix/diagnostic reporting."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-fingerprint-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

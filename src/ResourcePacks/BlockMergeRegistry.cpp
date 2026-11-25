@@ -5,6 +5,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/Textures/TextureBase.h"
 #include "ResourcePacks/BlockNameUtil.h"
+#include "ResourcePacks/CatalogFingerprint.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -394,29 +395,7 @@ bool UBlockMergeRegistry::IsPackOwnedEntry(const MergedEntry &entry)
 std::string UBlockMergeRegistry::ComputeCatalogFingerprint() const
 {
   std::shared_lock lock(CatalogMutex);
-  nlohmann::json root;
-  nlohmann::json packs = nlohmann::json::array();
-  for (const ResourcePackManifest &pack : ActivePacks)
-  {
-    packs.push_back({{"id", pack.Id}, {"version", pack.Version}});
-  }
-  root["packs"] = packs;
-
-  nlohmann::json blocks = nlohmann::json::array();
-  std::vector<std::pair<std::string, BlockId>> sorted;
-  sorted.reserve(NameToId.size());
-  for (const auto &pair : NameToId)
-  {
-    sorted.emplace_back(pair.first, pair.second);
-  }
-  std::sort(sorted.begin(), sorted.end());
-  for (const auto &entry : sorted)
-  {
-    blocks.push_back({{"name", entry.first}, {"id", entry.second}});
-  }
-  root["blocks"] = blocks;
-
-  const std::string payload = root.dump();
+  const std::string payload=BuildCatalogFingerprintPayload(ActivePacks,NameToId);
   return std::to_string(std::hash<std::string>{}(payload));
 }
 
