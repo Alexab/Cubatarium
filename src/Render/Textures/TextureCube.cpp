@@ -167,30 +167,6 @@ void UTextureCubeStorage::Clear()
 namespace
 {
 
-/// Read-only pixel span; keeps the source alive through `Owner` when decoded.
-struct PixelView
-{
-  const unsigned char *Ptr{nullptr};
-  size_t Count{0};
-  const unsigned char *data() const { return Ptr; }
-  size_t size() const { return Count; }
-  bool empty() const { return Count == 0; }
-  unsigned char operator[](size_t i) const { return Ptr[i]; }
-};
-
-struct LoadedStem
-{
-  int Width{0};
-  int Height{0};
-  PixelView Rgba;
-  std::shared_ptr<const unsigned char> Owner;
-  bool Ok{false};
-};
-
-/// While a batch (PatchDescriptors) is running, decoded stem files are shared
-/// between cubes instead of being re-read and re-decoded for every use.
-std::unordered_map<std::string, LoadedStem> *gStemBatchCache = nullptr;
-
 bool RgbaByteCount(int width, int height, size_t &bytes)
 {
   if (width <= 0 || height <= 0 ||
@@ -202,7 +178,10 @@ bool RgbaByteCount(int width, int height, size_t &bytes)
   return true;
 }
 
-LoadedStem LoadStemRgba(const UTextureBase &base)
+} // namespace
+
+UTextureCubeStorage::LoadedStem UTextureCubeStorage::LoadStemRgba(
+    const UTextureBase &base,AtlasDecodeBatch *batch)
 {
   LoadedStem out;
   if (base.HasPixelData())
@@ -224,10 +203,10 @@ LoadedStem LoadStemRgba(const UTextureBase &base)
   {
     return out;
   }
-  if (gStemBatchCache)
+  if (batch)
   {
-    const auto hit = gStemBatchCache->find(base.GetFileName());
-    if (hit != gStemBatchCache->end())
+    const auto hit = batch->Stems.find(base.GetFileName());
+    if (hit != batch->Stems.end())
     {
       return hit->second;
     }
@@ -238,9 +217,9 @@ LoadedStem LoadStemRgba(const UTextureBase &base)
       &stbi_image_free);
   if (!data)
   {
-    if (gStemBatchCache)
+    if (batch)
     {
-      (*gStemBatchCache)[base.GetFileName()] = out; // remember the failure
+      batch->Stems[base.GetFileName()] = out; // remember the failure
     }
     return out;
   }
@@ -254,14 +233,24 @@ LoadedStem LoadStemRgba(const UTextureBase &base)
   out.Owner = std::shared_ptr<const unsigned char>(std::move(data));
   out.Rgba = PixelView{out.Owner.get(), bytes};
   out.Ok = true;
-  if (gStemBatchCache)
+  if (batch)
   {
-    (*gStemBatchCache)[base.GetFileName()] = out;
+    batch->Stems[base.GetFileName()] = out;
   }
   return out;
 }
 
-} // namespace
+UTextureCubeStorage::AtlasDecodeSourceLayout UTextureCubeStorage::GetAtlasDecodeSourceLayout()
+{
+  AtlasDecodeSourceLayout out;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  out.supported=true;
+  out.cache_node_bytes=sizeof(std::_List_node<decltype(AtlasDecodeBatch::Stems)::value_type,void*>);
+  static_assert(sizeof(std::_Ref_count_resource<unsigned char *,decltype(&stbi_image_free)>)<=64);
+  out.control_request_upper=64;
+#endif
+  return out;
+}
 
 void UTextureCubeStorage::BuildFromDescriptors(
     const std::vector<MergedCubeDesc> &descriptors)
@@ -273,17 +262,7 @@ void UTextureCubeStorage::BuildFromDescriptors(
 void UTextureCubeStorage::PatchDescriptors(
     const std::vector<MergedCubeDesc> &descriptors)
 {
-  std::unordered_map<std::string, LoadedStem> batch_cache;
-  struct BatchScope
-  {
-    explicit BatchScope(std::unordered_map<std::string, LoadedStem> *cache)
-        : Previous(gStemBatchCache)
-    {
-      gStemBatchCache = cache;
-    }
-    ~BatchScope() { gStemBatchCache = Previous; }
-    std::unordered_map<std::string, LoadedStem> *Previous;
-  } batch_scope(&batch_cache);
+  AtlasDecodeBatch batch;
 
   size_t processed = 0;
   for (const MergedCubeDesc &desc : descriptors)
@@ -315,7 +294,7 @@ void UTextureCubeStorage::PatchDescriptors(
       // Fresh cube: build it once. (An atlas used to be composed here only to
       // test for emptiness and then composed again inside CreateCubeTexture.)
       UTextureCube cube =
-          CreateCubeTexture(desc.Name, typeId, stems, stripFrames);
+          CreateCubeTexture(desc.Name, typeId, stems, stripFrames,&batch);
       if (cube.GetTexture() != 0)
       {
         Textures[cube.GetTypeId()] = cube;
@@ -324,7 +303,7 @@ void UTextureCubeStorage::PatchDescriptors(
     }
 
     const CubeAtlasPixels atlas =
-        BuildCubeAtlasPixels(desc.Name, stems, stripFrames);
+        BuildCubeAtlasPixelsImpl(desc.Name, stems, stripFrames,&batch);
     if (atlas.Rgba.empty() || atlas.Width <= 0 || atlas.Height <= 0)
     {
       continue;
@@ -397,6 +376,20 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
     const std::string &cube_type_name,
     const std::vector<std::string> &texture_names, int stripFrameCount) const
 {
+  return BuildCubeAtlasPixelsImpl(cube_type_name,texture_names,stripFrameCount,nullptr);
+}
+
+UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
+    const std::string &cube_type_name,const std::vector<std::string> &texture_names,
+    int stripFrameCount,AtlasDecodeBatch &batch) const
+{
+  return BuildCubeAtlasPixelsImpl(cube_type_name,texture_names,stripFrameCount,&batch);
+}
+
+UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixelsImpl(
+    const std::string &cube_type_name,const std::vector<std::string> &texture_names,
+    int stripFrameCount,AtlasDecodeBatch *batch) const
+{
   CubeAtlasPixels atlas;
   if (!TextureBaseStorageInstance || texture_names.empty())
   {
@@ -410,7 +403,7 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
               << texture_names.front() << "' for " << cube_type_name << std::endl;
     return atlas;
   }
-  const LoadedStem firstLoaded = LoadStemRgba(first->second);
+  const LoadedStem firstLoaded = LoadStemRgba(first->second,batch);
   if (!firstLoaded.Ok)
   {
     return atlas;
@@ -458,7 +451,7 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
         continue;
       }
       // Repeated first faces share its decoded owner even outside a batch.
-      const LoadedStem loaded = source == first ? firstLoaded : LoadStemRgba(source->second);
+      const LoadedStem loaded = source == first ? firstLoaded : LoadStemRgba(source->second,batch);
       if (!loaded.Ok)
       {
         continue;
@@ -484,9 +477,10 @@ UTextureCubeStorage::CubeAtlasPixels UTextureCubeStorage::BuildCubeAtlasPixels(
 
 UTextureCube UTextureCubeStorage::CreateCubeTexture(
     const std::string &cube_type_name, size_t cube_type_id,
-    const std::vector<std::string> &texture_names, int stripFrameCount)
+    const std::vector<std::string> &texture_names, int stripFrameCount,
+    AtlasDecodeBatch *batch)
 {
-  const auto atlas = BuildCubeAtlasPixels(cube_type_name, texture_names, stripFrameCount);
+  const auto atlas = BuildCubeAtlasPixelsImpl(cube_type_name, texture_names, stripFrameCount,batch);
   return UploadCubeAtlas(cube_type_name, cube_type_id, texture_names, atlas);
 }
 
@@ -547,41 +541,41 @@ bool UTextureCubeStorage::LoadJson(const std::string &file_name,
                                    std::string &Name, size_t &Id,
                                    std::vector<std::string> &textures)
 {
+  auto value=LoadLegacyCubeDescriptorFile(file_name);
+  if(!value)return false;
+  Name=std::move(value->Name);Id=value->Id;textures=std::move(value->Textures);return true;
+}
+
+std::optional<LegacyCubeDescriptor> CompileLegacyCubeDescriptor(const json &d)
+{
+  LegacyCubeDescriptor value;
+  value.Name=d.value("name","");
+  // Preserve the legacy int default/conversion before the size_t ID cast.
+  value.Id=d.value("id",0);
+  const auto textures=d.find("textures");
+  if(value.Name.empty() || value.Id==0 || textures==d.end() || textures->empty() || !textures->is_array())return {};
+  for(const auto &texture:*textures)value.Textures.push_back(texture.get<std::string>());
+  return value;
+}
+
+std::optional<LegacyCubeDescriptor> LoadLegacyCubeDescriptorFile(const std::string &file_name)
+{
   std::ifstream file(file_name);
   if (!file.is_open())
   {
     std::cerr << "Failed to open JSON file: " << file_name << std::endl;
-    return false;
+    return {};
   }
 
   try
   {
     const auto d = ParseAndCloseCatalogFileJson(file,CatalogJsonKind::LegacyCube);
-    std::string name_value = d.value("name", "");
-    size_t id_value = d.value("id", 0);
-    const auto textures_member = d.find("textures");
-
-    if (name_value.empty() || id_value == 0 || textures_member == d.end() || textures_member->empty())
-      return false;
-
-    Name = name_value;
-    Id = id_value;
-
-    if (!textures_member->is_array())
-      return false;
-
-    textures.clear();
-    for (const auto &texture : *textures_member)
-    {
-      textures.push_back(texture.get<std::string>());
-    }
-
-    return true;
+    return CompileLegacyCubeDescriptor(d);
   }
   catch (const json::exception &e)
   {
     std::cerr << "JSON parsing error in LoadJson: " << e.what() << std::endl;
-    return false;
+    return {};
   }
 }
 

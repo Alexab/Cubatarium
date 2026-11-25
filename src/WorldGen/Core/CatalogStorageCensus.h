@@ -6,6 +6,7 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Memory/StbiAllocation.h"
 #include <array>
 #include <limits>
 #include <list>
@@ -13,7 +14,8 @@
 namespace cutum
 {
 enum class CatalogObjectKind {Pack,Biomes,Features,Refs,Image,Diagnostics,Blocks,PrefabIndex,Prefab,
-  Merge,Placeholder,TextureBases,TextureCubes,BlockStorage,Registry,RegistryIdentity,Count};
+  Merge,Placeholder,TextureBases,TextureCubes,BlockStorage,Registry,RegistryIdentity,
+  TextureDecodeBatch,TextureDecodeOwner,TextureAtlasPixels,LegacyCubeDescriptor,Count};
 
 struct CatalogResourceRoots
 {
@@ -73,8 +75,8 @@ class CatalogStorageInspector
     for(const auto &seen:Seen) if(seen.kind==kind && seen.address==address) return false;
     Seen.push_back({kind,address});++Result.objects[static_cast<size_t>(kind)];Bytes(Result.object_bytes,bytes);return true;
   }
-  template<class T> bool Shared(CatalogObjectKind kind,const std::shared_ptr<T> &value) {
-    if(!value || !Object(kind,value.get(),sizeof(T))) return false;
+  template<class T> bool Shared(CatalogObjectKind kind,const std::shared_ptr<T> &value,size_t shell_bytes=sizeof(T)) {
+    if(!value || !Object(kind,value.get(),shell_bytes)) return false;
     std::shared_ptr<const void> owner=value;
     bool owner_seen=owner.use_count()==0;
     for(const auto &previous:Owners) if(!previous.owner_before(owner) && !owner.owner_before(previous)) {owner_seen=true;break;}
@@ -235,6 +237,21 @@ public:
   }
   void TextureCubes(const std::shared_ptr<const UTextureCubeStorage> &cubes) {
     if(Shared(CatalogObjectKind::TextureCubes,cubes)) cubes->InspectStorage(*this);
+  }
+  void DecodedTexture(const std::shared_ptr<const unsigned char> &owner) {
+    if(Shared(CatalogObjectKind::TextureDecodeOwner,owner,0)) {
+      const auto request=InspectStbiAllocation(owner.get()).request_bytes;
+      Bytes(Result.decoder_request_bytes,request);if(request)++Result.decoder_allocations;
+    }
+  }
+  void AtlasBatch(const UTextureCubeStorage::AtlasDecodeBatch *batch) {
+    if(Object(CatalogObjectKind::TextureDecodeBatch,batch,sizeof(*batch)))batch->InspectStorage(*this);
+  }
+  void AtlasPixels(const UTextureCubeStorage::CubeAtlasPixels *atlas) {
+    if(Object(CatalogObjectKind::TextureAtlasPixels,atlas,sizeof(*atlas)))Vector(atlas->Rgba);
+  }
+  void LegacyCube(const LegacyCubeDescriptor *value) {
+    if(Object(CatalogObjectKind::LegacyCubeDescriptor,value,sizeof(*value))){Text(value->Name);Vector(value->Textures);for(const auto &name:value->Textures)Text(name);}
   }
   void CallingThreadReads() {
     Pack(UWorldGenPack::GetThreadReadSnapshot());Features(UObjectFeatureConfigStorage::GetThreadReadSnapshot());

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.texture-construction",
+      "status": "SCOPED_TEXTURE_CPU_SOURCE_RETAINED_RELEASE_NATIVE_PASS_GPU_CONSUMER_PUBLICATION_OPEN",
+      "receipt": "build/desktop-msvc/s4-texture-construction-acceptance.json",
+      "certificate": "S4_02_C05_TEXTURE_CONSTRUCTION_CERTIFICATE_2026_11_26.json",
+      "scope": "Legacy texture registration/descriptor sources and CPU atlas/decode-batch supplied-root graph scoped PASS. Actual UTextureBaseStorage::Load stages independent registrations and merges nodes only after complete scan;additive/duplicate replacement and legacy lowercase .png/directory.png behavior retained. Baseline persistent ordinary-new prefix8 changed prior target;fixed21 prefixes preserve all old file/pixel payloads and exact retry publishes full result. Actual legacy cube loader shares extracted owned descriptor/file conversion,with managed JSON retirement and legacy int-to-size_t ID/default/skip behavior unchanged. Valid BOM/CRLF,malformed/wrong-element/open-failure files and9 direct DOM cases are source-bounded. Removed implicit process-global stem-cache pointer;actual PatchDescriptors and CPU builder share explicit scoped AtlasDecodeBatch,with default calls independent.20 single/batch cases cover borrowed pixel/real PNG/PNM/mixed sources,clipping,transparent missing faces,strip/explicit frames and invalid inputs.225 persistent ordinary-new and36 decoder refusal boundaries plus same-case retries retire selected credits to0. Four actual registration/file/new-atlas/cache-hit phases retain old/current decoded owners and independent returned atlas vectors;retained40579<=upper45426,decoder32972 across5 allocations counted once,64 repeated batch/atlas/descriptor roots deduplicate,final graph0. Cache hit allocates only one returned atlas vector and performs0 decoder requests. Old returned pixels survive cross-thread final old-batch release. Explicit cache/isolation,fresh standalone recovery after negative-cache entry,independent concurrent batches and pixel/overflow/unmodeled allocation/FS controls PASS.14 Release regression groups and fresh desktop/native runtime/startup/direct save/UI/provenance plus8 real GL readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.prefab-composition",
       "status": "SCOPED_PREFAB_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-prefab-composition-acceptance.json",

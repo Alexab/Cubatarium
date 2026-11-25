@@ -470,9 +470,12 @@ static void TestResourceCatalogCensus()
 #include "Test/MergePublicationFixture.h"
 #include "Test/CatalogCompositionFixture.h"
 #include "Test/SettingsCompositionFixture.h"
+#include "Test/TextureConstructionFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--texture-construction-baseline")return texture_construction_fixture::Baseline(argc>2?argv[2]:nullptr);
+  if(argc>1 && std::string(argv[1])=="--texture-construction")return texture_construction_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--settings-composition") return settings_composition_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--catalog-composition") return catalog_composition_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--merge-publication") return merge_publication_fixture::Accepted(argc>2?argv[2]:nullptr);

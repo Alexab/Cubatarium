@@ -34,6 +34,7 @@ const TexturePixelData *UTextureBase::GetPixelData() const
 
 void UTextureBaseStorage::Load(const std::string &textures_path)
 {
+  UTextureBaseStorage prepared;
   try
   {
     for (const auto &entry : fs::directory_iterator(textures_path))
@@ -42,15 +43,16 @@ void UTextureBaseStorage::Load(const std::string &textures_path)
       auto ext = entry.path().extension();
       if (ext.string() == ".png")
       {
-        UTextureBase descr(stem.string(), entry.path().string());
-        BaseTextures[stem.string()] = descr;
+        prepared.Register(stem.string(), entry.path().string());
       }
     }
   }
   catch (std::filesystem::filesystem_error &ex)
   {
     std::cerr << ex.what();
+    return;
   }
+  MergePrepared(std::move(prepared));
 }
 
 void UTextureBaseStorage::Clear() { BaseTextures.clear(); }

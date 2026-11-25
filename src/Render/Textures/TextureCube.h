@@ -3,8 +3,11 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
+#include <nlohmann/json_fwd.hpp>
 typedef unsigned int GLuint;
 #include "Render/Textures/TextureBase.h"
 #include "World/Math/BlockTypes.h"
@@ -14,6 +17,15 @@ namespace cutum
 
 class UBlockDefinitionStorage;
 struct MergedCubeDesc;
+struct LegacyCubeDescriptor
+{
+  std::string Name;
+  size_t Id{};
+  std::vector<std::string> Textures;
+};
+// Owned descriptor shared by the actual legacy loader and CPU verification.
+std::optional<LegacyCubeDescriptor> CompileLegacyCubeDescriptor(const nlohmann::json &data);
+std::optional<LegacyCubeDescriptor> LoadLegacyCubeDescriptorFile(const std::string &path);
 
 class UTextureCube
 {
@@ -52,7 +64,39 @@ private:
 
 class UTextureCubeStorage
 {
+  struct PixelView
+  {
+    const unsigned char *Ptr{nullptr};
+    size_t Count{0};
+    const unsigned char *data() const {return Ptr;}
+    size_t size() const {return Count;}
+    bool empty() const {return Count==0;}
+    unsigned char operator[](size_t i) const {return Ptr[i];}
+  };
+  struct LoadedStem
+  {
+    int Width{0},Height{0};
+    PixelView Rgba;
+    std::shared_ptr<const unsigned char> Owner;
+    bool Ok{false};
+  };
 public:
+  // Explicit owner; independent builders never inherit another batch's cache.
+  // Use one batch at a time and keep source registrations stable during builds.
+  class AtlasDecodeBatch
+  {
+    friend class UTextureCubeStorage;
+    std::unordered_map<std::string,LoadedStem> Stems;
+  public:
+    AtlasDecodeBatch()=default;
+    AtlasDecodeBatch(const AtlasDecodeBatch &)=delete;
+    AtlasDecodeBatch &operator=(const AtlasDecodeBatch &)=delete;
+    template<class Inspector>void InspectStorage(Inspector &out)const {
+      out.Map(Stems);for(const auto &entry:Stems){out.Text(entry.first);out.DecodedTexture(entry.second.Owner);}
+    }
+  };
+  struct AtlasDecodeSourceLayout {size_t cache_node_bytes{},control_request_upper{};bool supported{};};
+  static AtlasDecodeSourceLayout GetAtlasDecodeSourceLayout();
   UTextureCubeStorage(std::shared_ptr<UTextureBaseStorage> base_textures);
 
   void
@@ -88,11 +132,18 @@ public:
   BuildCubeAtlasPixels(const std::string &cube_type_name,
                        const std::vector<std::string> &texture_names,
                        int stripFrameCount) const;
+  CubeAtlasPixels BuildCubeAtlasPixels(const std::string &cube_type_name,
+      const std::vector<std::string> &texture_names,int stripFrameCount,
+      AtlasDecodeBatch &batch) const;
 private:
+  static LoadedStem LoadStemRgba(const UTextureBase &base,AtlasDecodeBatch *batch);
+  CubeAtlasPixels BuildCubeAtlasPixelsImpl(const std::string &cube_type_name,
+      const std::vector<std::string> &texture_names,int stripFrameCount,
+      AtlasDecodeBatch *batch) const;
   UTextureCube CreateCubeTexture(const std::string &cube_type_name,
                                  size_t cube_type_id,
                                  const std::vector<std::string> &texture_names,
-                                 int stripFrameCount);
+                                 int stripFrameCount,AtlasDecodeBatch *batch=nullptr);
   UTextureCube UploadCubeAtlas(const std::string &cube_type_name,
                               size_t cube_type_id,
                               const std::vector<std::string> &texture_names,
