@@ -1,0 +1,222 @@
+{
+  "schema": "s4-placeholder-source-certificate.v1",
+  "status": "SCOPED_REQUEST_TRANSFER_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "Placeholder per-request/CPU transfer source envelope scoped PASS. Existing quiescent census separates old structural requests S from old pixel backing P;GetOrCreateStem bound covers at most one new checked tile,MSVC hash growth and key/path/stream scratch,without counting old pixels as newly copied data.8 miss/hit/disk/evict/long-key/65-key-rehash/129-square/actual-hash-collision scenes,129 persistent allocation refusals+exact retries;all peaks within bound and final observed live/blocks0. RegisterAll CPU copies into independent texture storage:0/3/65 cached tiles and prior overlapping target,134 refusal prefixes+retry same partial target,output survives cache deletion. Real MSVC FNV low32 colliding keys produce __ph_e61552fa;shared payload/file survive first-key retirement and disappear at last retirement. Two keys copy only one distinct tile (1192 observed/model21763). Overflow and unrelated allocation controls for both entry points PASS. Full scatter,recovery48,merge fixture and override2817 regressions PASS;Release desktop provenance PASS. No production allocator counter/TLS/history added.",
+  "remaining": "C05 OPEN:merge-global placeholder warning strings and per-call stem-exists memo ownership/source terms;whole directory/resource merge envelope for pending/map/ID/descriptor/atlas growth,pack biome-image adoption and full source/retained/prior-current publication composition. Placeholder GetOrCreateStem and RegisterAll source stages now include prior container capacity,one new pixel backing and independent output copies. C06 all-world/thread/global/publisher/escaped finite roots,E12 CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "actual_hash_collision_shared_stem": true,
+    "cases": [
+      {
+        "attempts": 18,
+        "name": "miss16",
+        "pass": true,
+        "path_units": 67,
+        "peak": 1288,
+        "prior_pixel_upper": 0,
+        "prior_structural_upper": 987,
+        "upper": 42687
+      },
+      {
+        "attempts": 0,
+        "name": "hit16",
+        "pass": true,
+        "path_units": 66,
+        "peak": 0,
+        "prior_pixel_upper": 1024,
+        "prior_structural_upper": 1446,
+        "upper": 46231
+      },
+      {
+        "attempts": 13,
+        "name": "disk16",
+        "pass": true,
+        "path_units": 67,
+        "peak": 1288,
+        "prior_pixel_upper": 0,
+        "prior_structural_upper": 987,
+        "upper": 42687
+      },
+      {
+        "attempts": 21,
+        "name": "evict16",
+        "pass": true,
+        "path_units": 68,
+        "peak": 1544,
+        "prior_pixel_upper": 1024,
+        "prior_structural_upper": 1446,
+        "upper": 46487
+      },
+      {
+        "attempts": 22,
+        "name": "long_key",
+        "pass": true,
+        "path_units": 69,
+        "peak": 34276,
+        "prior_pixel_upper": 0,
+        "prior_structural_upper": 987,
+        "upper": 566719
+      },
+      {
+        "attempts": 21,
+        "name": "wide65_rehash",
+        "pass": true,
+        "path_units": 74,
+        "peak": 25981,
+        "prior_pixel_upper": 65536,
+        "prior_structural_upper": 33067,
+        "upper": 300223
+      },
+      {
+        "attempts": 18,
+        "name": "tile129",
+        "pass": true,
+        "path_units": 68,
+        "peak": 66867,
+        "prior_pixel_upper": 0,
+        "prior_structural_upper": 987,
+        "upper": 108355
+      },
+      {
+        "attempts": 16,
+        "name": "collision_eviction",
+        "pass": true,
+        "path_units": 79,
+        "peak": 1400,
+        "prior_pixel_upper": 1024,
+        "prior_structural_upper": 1606,
+        "upper": 50647
+      }
+    ],
+    "collision_registration_copies_one_tile": true,
+    "failed_cases": 0,
+    "last_reference_retires_payload": true,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "persistent_prefix_and_retry_cases": 129,
+    "registration_cases": [
+      {
+        "attempts": 0,
+        "pass": true,
+        "peak": 0,
+        "tiles": 0,
+        "upper": 18326
+      },
+      {
+        "attempts": 5,
+        "pass": true,
+        "peak": 3408,
+        "tiles": 3,
+        "upper": 25349
+      },
+      {
+        "attempts": 129,
+        "pass": true,
+        "peak": 77312,
+        "tiles": 65,
+        "upper": 218907
+      }
+    ],
+    "registration_prefix_and_retry_cases": 134,
+    "schema": "placeholder-source-envelope.v1",
+    "scope": "One real cache operation ordinary-new requests;prior structural/pixel backing and caller root separate. Standard streams/default allocators;CRT/OS/GPU/sort-stack and merge-global diagnostic strings outside. Input inspection scratch outside observation. No arbitrary asset cap.",
+    "shared_registration_peak": 1192,
+    "shared_registration_upper": 21763,
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "7f20605a36b08a5d6e1a37deac03376d9440267b8fd14af39dd3e0d19edb805d"
+    },
+    {
+      "name": "recovery",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--placeholder-recovery",
+        "build\\desktop-msvc\\s4-placeholder-source-recovery-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "7f20605a36b08a5d6e1a37deac03376d9440267b8fd14af39dd3e0d19edb805d"
+    },
+    {
+      "name": "merge",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-staging",
+        "build\\desktop-msvc\\s4-placeholder-source-merge-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "7f20605a36b08a5d6e1a37deac03376d9440267b8fd14af39dd3e0d19edb805d"
+    },
+    {
+      "name": "overrides",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--texture-overrides",
+        "build\\desktop-msvc\\s4-placeholder-source-overrides-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "1bd67a51a7efdf60144692e71f893bedb02bd3ccb07a64adc5f16731c34f6bf6"
+    }
+  ],
+  "source_sha256": {
+    "src/WorldGen/Core/PlaceholderSourceEnvelope.h": "1689a64b59a564e03f00a1537dbd7caa30ca5ceac5cdb753cac4b418d18ccabe",
+    "src/Test/PlaceholderSourceFixture.h": "a1f238b3f6c134e4b244cfca3a751cb7aa70b7cf1dad2152f5a906438bb95d1f",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "cc82f17b3dcef6d6948dd2c126014bf5cb7e353f4d34a40363e2f160de61f7d6",
+    "src/ResourcePacks/PlaceholderTextureCache.cpp": "a8f4e0e2dfeb3dd8dfa00e6ca09f613a254e96f26ed68d4c381138911a1275dd",
+    "src/ResourcePacks/PlaceholderTextureCache.h": "3e40803603695a171f08bcbbaa5a843b01ca559a2ec90853e6005c0a44b7db47",
+    "src/ResourcePacks/PlaceholderPixelLayout.h": "8de41bab11de039bfd236ab98c0d8460aeeddedbd2ea4d6c0176a9a01c8c0632",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "de0e8f51426a80cc5a1074a172de6f04fadea0e5e4eb5293ee45df46f1f59348",
+    "src/Render/Textures/TextureBase.cpp": "3a8e0c2bf8e8252d69d6c4760497093e823634d757b948a476c789ab71099eb9",
+    "src/Render/Textures/TextureBase.h": "3d3354b4365857c4b4d1a9e35e836d1c851f9a965fc988933e9c6b5320180986"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\type_traits": "c04ca6a9f8e48aaa077714c8a34cb52f00216d5de9e0d05065642c19cf41c1d5"
+  },
+  "test_exe_sha256": "7f20605a36b08a5d6e1a37deac03376d9440267b8fd14af39dd3e0d19edb805d",
+  "desktop_exe_sha256": "0bf3e45371d18004f7072ad7fb1dbd85d037f0ce6965e272fb231e011f841cb1",
+  "provenance": "build/desktop-msvc/s4-placeholder-source-provenance.json",
+  "model": {
+    "input": "S=prior structural capacity/node/sentinel/bucket/list/text heap upper using existing CatalogStorageInspector,plus39 per possible aligned backing;pixel vector backing excluded. P=prior pixel capacities plus39 for each>=4096 backing. W=cache root native UTF16 units;B=caller block-name bytes;M=distinct pixel rows.",
+    "get_or_create": "A=16384+8*S+64*(B+2*W+128)+4*max(1,tileSize)^2+39. Checked/saturating.8*S covers default MSVC hash bucket growth up to8x;new nodes and key/path/text scratch included. Caller input/cache object and original S/P remain separate live entry owners.",
+    "registration": "A_register=16384+P+2*S+M*(actual MSVC output tree node+39). RegisterPixels copies each distinct pixel row once,then moves pixel vector through texture values. Existing output storage is separate entry owner;new copy is included here.",
+    "composition": "Get peak<=L_prior_structural+L_prior_pixels+L_other_entry+A. Registration peak<=L_cache+L_old_output+L_other_entry+A_register. Output may escape independently;C06 owner counts remain separate.",
+    "limits": "Default MSVC allocators/load factors and standard streams;file/header layout checked in accepted recovery fix. Requested ordinary-new,not allocator physical size/process RSS. CRT/OS/stack/GPU and merge-global log strings excluded,not silently bounded. Input inspection scratch is a separate phase;no new production collector/ledger/TLS."
+  },
+  "hash_collision": {
+    "first": "collision_asset_119dd336068b3c23",
+    "second": "collision_asset_b85df5af9754de83",
+    "stem": "__ph_e61552fa",
+    "profile": "MSVC std::hash<string> FNV1a low32,no forced production hash hook"
+  },
+  "native": {
+    "status": "NOT_RUN_FOR_MODEL_ONLY_SLICE",
+    "reason": "No game production behavior changed;new diagnostic header/isolated fixtures and Windows test macro guard only. Cache lifecycle/refusal/pixel properties verified directly. Prior native witnesses retained without attributing their source record to current executable."
+  }
+}

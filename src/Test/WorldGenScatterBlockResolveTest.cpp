@@ -1,3 +1,6 @@
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include "Test/FluidTestHelpers.h"
 
 #include "Blocks/BlockRegistry.h"
@@ -460,9 +463,11 @@ static void TestResourceCatalogCensus()
 
 #include "Test/MergeStagingOwnershipFixture.h"
 #include "Test/PlaceholderRecoveryFixture.h"
+#include "Test/PlaceholderSourceFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--placeholder-source") return RunPlaceholderSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--placeholder-recovery") return RunPlaceholderRecoveryFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="baseline");
   if(argc>1 && std::string(argv[1])=="--merge-staging") return RunMergeStagingOwnershipFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="matrix");
   if(argc>1 && std::string(argv[1])=="--atlas-cpu-baseline-only") {TestAtlasCpuConstruction(false);return 0;}

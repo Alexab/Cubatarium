@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.placeholder-source",
+      "status": "SCOPED_REQUEST_TRANSFER_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-placeholder-source-acceptance.json",
+      "certificate": "S4_02_C05_PLACEHOLDER_SOURCE_CERTIFICATE_2026_11_25.json",
+      "scope": "Placeholder per-request/CPU transfer source envelope scoped PASS. Existing quiescent census separates old structural requests S from old pixel backing P;GetOrCreateStem bound covers at most one new checked tile,MSVC hash growth and key/path/stream scratch,without counting old pixels as newly copied data.8 miss/hit/disk/evict/long-key/65-key-rehash/129-square/actual-hash-collision scenes,129 persistent allocation refusals+exact retries;all peaks within bound and final observed live/blocks0. RegisterAll CPU copies into independent texture storage:0/3/65 cached tiles and prior overlapping target,134 refusal prefixes+retry same partial target,output survives cache deletion. Real MSVC FNV low32 colliding keys produce __ph_e61552fa;shared payload/file survive first-key retirement and disappear at last retirement. Two keys copy only one distinct tile (1192 observed/model21763). Overflow and unrelated allocation controls for both entry points PASS. Full scatter,recovery48,merge fixture and override2817 regressions PASS;Release desktop provenance PASS. No production allocator counter/TLS/history added."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.texture-override",
       "status": "SCOPED_JSON_YAML_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-texture-override-acceptance.json",
