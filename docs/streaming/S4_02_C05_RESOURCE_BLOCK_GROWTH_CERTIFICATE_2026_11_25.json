@@ -1,0 +1,182 @@
+{
+  "schema": "s4-resource-block-growth-certificate.v1",
+  "status": "SCOPED_GROWTH_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+  "summary": "Resource block vector growth source/refusal scoped PASS. Production LoadBlocks shares exact previous push_back(AdoptParsedResourceBlock(move(parsed))) through AppendResourcePackBlock. Current MSVC ResourcePackBlock move may throw;vector growth copies existing payload. New-source model uses actual prior payload capacities/node/bucket census plus conservative alignment,checked MSVC array growth and copy overlap.5 empty/spare/single/full17/large-prior-bucket scenes;213 persistent ordinary-new refusals+exact retries preserve prior vector data/capacity/fields/texture identity;after releasing destination AND moved-from parsed input observed live/blocks0. Input retains184 bytes new empty-map backing until end-of-file destruction;not a leak. Full17 peak116222/model253091,spare append368/model55996. Overflow/unmodeled allocation controls PASS. Five catalog/prefab/pack/biome-index/retained-input regressions PASS;Release desktop source/EXE provenance PASS.",
+  "remaining": "C05 OPEN:whole directory/resource merge candidate growth (pending rows/manifests,merge maps/IDs/descriptors/overrides/atlas sources),pack biome-map adoption and full source/retained/prior-current publication composition. This append stage covers old block payload copy overlap only;existing array/payload and incoming parsed payload are separate entry owners. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU/full process matrix and S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "block_move_is_nothrow": false,
+    "cases": [
+      {
+        "attempts": 5,
+        "capacity": 0,
+        "final_live": 0,
+        "live_before_moved_input_destroy": 184,
+        "name": "empty",
+        "new_source_upper": 16911,
+        "pass": true,
+        "peak": 856,
+        "prior_payload_upper": 0,
+        "size": 0
+      },
+      {
+        "attempts": 4,
+        "capacity": 40,
+        "final_live": 0,
+        "live_before_moved_input_destroy": 184,
+        "name": "spare_no_array_growth",
+        "new_source_upper": 55996,
+        "pass": true,
+        "peak": 368,
+        "prior_payload_upper": 19806,
+        "size": 3
+      },
+      {
+        "attempts": 14,
+        "capacity": 1,
+        "final_live": 0,
+        "live_before_moved_input_destroy": 184,
+        "name": "single_full",
+        "new_source_upper": 30603,
+        "pass": true,
+        "peak": 7439,
+        "prior_payload_upper": 6602,
+        "size": 1
+      },
+      {
+        "attempts": 158,
+        "capacity": 17,
+        "final_live": 0,
+        "live_before_moved_input_destroy": 184,
+        "name": "17_full_payload_copies",
+        "new_source_upper": 253091,
+        "pass": true,
+        "peak": 116222,
+        "prior_payload_upper": 112234,
+        "size": 17
+      },
+      {
+        "attempts": 32,
+        "capacity": 3,
+        "final_live": 0,
+        "live_before_moved_input_destroy": 184,
+        "name": "prior_spare_map_buckets",
+        "new_source_upper": 106371,
+        "pass": true,
+        "peak": 44914,
+        "prior_payload_upper": 43998,
+        "size": 3
+      }
+    ],
+    "failed_cases": 0,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "persistent_prefix_and_retry_cases": 213,
+    "schema": "resource-block-growth-source.v1",
+    "scope": "Additional ordinary-new append requests including existing-payload copies on vector growth;prior block array/payload and parsed input are separate live terms. Failed append preserves vector,may consume incoming parsed object. Not whole directory/merge/process bound.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "four-candidates",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "build\\desktop-msvc\\s4-resource-growth-four-candidates-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-candidate",
+        "build\\desktop-msvc\\s4-resource-growth-prefab-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--pack-candidate",
+        "build\\desktop-msvc\\s4-resource-growth-pack-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982"
+    },
+    {
+      "name": "biome-index",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--pack-biome-index",
+        "build\\desktop-msvc\\s4-resource-growth-biome-index-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982"
+    },
+    {
+      "name": "retained-inputs",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--retained-inputs",
+        "build\\desktop-msvc\\s4-resource-growth-retained-inputs-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/ResourcePack.cpp": "792b94b53b6196ea60196646e509659cb6b41757827609ff76376b53c37b34c4",
+    "src/ResourcePacks/ResourcePack.h": "31e7ad2c37fd8c570c86f7d371a0a2aaf2bd0a27b79e375cbe9aa972217e4a75",
+    "src/WorldGen/Core/ResourceBlockGrowthEnvelope.h": "3fc8c897d1c6819cc791efe70cf8434bb16be8c70ceaf2c13541d3a518be696a",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "de0e8f51426a80cc5a1074a172de6f04fadea0e5e4eb5293ee45df46f1f59348",
+    "src/Test/ResourceBlockGrowthFixture.h": "dbfc33d1e7b713e6a93ff669dfed93856d8e51abf63ba1c024a376a58d92a382",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "bbd1b9f210e840f9ad0470ddb268775a41e8c3e8119629fa9528bd19542131b8"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "ccca3ac8b654f45ad925acd5ec87a5e86d1b5d953f22687f80c4149722408982",
+  "desktop_exe_sha256": "24fb6c677df4c82a96fdac21c683e3310bfafd65864ae14e914ecafe0009870e",
+  "provenance": "build/desktop-msvc/s4-resource-block-growth-provenance.json",
+  "first_fixture_result": {
+    "artifact": "build/desktop-msvc/s4-resource-block-growth-first.json",
+    "status": "FAIL",
+    "reason": "Zero-live was asserted before moved-from parsed input destruction. Final fixture records184 retained bytes then final0;production expression unchanged. Initial compile C3538 auto multi-declarator corrected before first execution."
+  },
+  "model": {
+    "domain": "S=size,C=capacity,P=upper prior live payload requests from existing CatalogStorageInspector definition/type/texture/map census;P excludes block root array. Default MSVC Release allocators.",
+    "prior_payload": "P=known storage+actual MSVC unordered node/sentinel/bucket metadata+39*(all strings+allocated vectors+tables). Per-backing alignment conservative even for SSO/small allocations;no per-object shared owner here.",
+    "new_source": "A=16384+(S==C ? max(S+1,C+floor(C/2))*sizeof(ResourcePackBlock)+39 : 0)+2*P. Checked/saturating;invalid S>C rejected. Includes new block array and possible deep copies of old payload,new temporary/empty-map bookkeeping.",
+    "composition": "Peak <= L_entry_old_block_array + L_entry_old_payload + L_entry_parsed_payload + A. Parser/DOM/file/path and other/prior publications separate. A counts newly allocated old-payload copies,not the original old-payload allocations again. Adopted parsed backing is not freshly copied.",
+    "lifetime": "New empty-map backing can escape append into moved-from parsed input,which production destroys at file-loop end. Failed append preserves destination but may consume input;fixture recreates exact parsed input for each retry.",
+    "limits": "Requested ordinary-new bounds,not process RSS/runtime quota;allocator/CRT/platform/stack/GPU E12 and aggregate directory/merge/cardinality C06 remain open."
+  },
+  "native": {
+    "status": "NOT_RUN_FOR_THIS_SLICE",
+    "reason": "Production append expression unchanged,shared helper extraction and allocation/copy/lifetime properties tested directly. Prior native witnesses not attributed to rebuilt EXE."
+  }
+}

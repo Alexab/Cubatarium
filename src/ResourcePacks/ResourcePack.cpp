@@ -128,7 +128,7 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
                   << std::endl;
         continue;
       }
-      blocks.push_back(AdoptParsedResourceBlock(std::move(parsed)));
+      AppendResourcePackBlock(blocks,std::move(parsed));
     }
     catch (const json::exception &e)
     {
@@ -137,6 +137,12 @@ UResourcePack::LoadBlocks(const ResourcePackManifest &manifest)
     }
   }
   return blocks;
+}
+
+void AppendResourcePackBlock(std::vector<ResourcePackBlock> &blocks,
+    ParsedBlockJson &&parsed)
+{
+  blocks.push_back(AdoptParsedResourceBlock(std::move(parsed)));
 }
 
 ResourcePackBlock AdoptParsedResourceBlock(ParsedBlockJson &&parsed)

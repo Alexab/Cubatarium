@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.resource-block-growth",
+      "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-resource-block-growth-acceptance.json",
+      "certificate": "S4_02_C05_RESOURCE_BLOCK_GROWTH_CERTIFICATE_2026_11_25.json",
+      "scope": "Resource block vector growth source/refusal scoped PASS. Production LoadBlocks shares exact previous push_back(AdoptParsedResourceBlock(move(parsed))) through AppendResourcePackBlock. Current MSVC ResourcePackBlock move may throw;vector growth copies existing payload. New-source model uses actual prior payload capacities/node/bucket census plus conservative alignment,checked MSVC array growth and copy overlap.5 empty/spare/single/full17/large-prior-bucket scenes;213 persistent ordinary-new refusals+exact retries preserve prior vector data/capacity/fields/texture identity;after releasing destination AND moved-from parsed input observed live/blocks0. Input retains184 bytes new empty-map backing until end-of-file destruction;not a leak. Full17 peak116222/model253091,spare append368/model55996. Overflow/unmodeled allocation controls PASS. Five catalog/prefab/pack/biome-index/retained-input regressions PASS;Release desktop source/EXE provenance PASS."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.pack-biome-index",
       "status": "SCOPED_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-pack-biome-index-acceptance.json",
