@@ -3,6 +3,15 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "bootstrap-clears-texture-target-before-staged-replacement",
+      "stage": "S4.02",
+      "status": "SCOPED_PACK_RESOURCE_GRAPH_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
+      "observed": "Actual bootstrap wrapper still cleared texture bases before staged PopulateTextureBaseStorage,defeating prior-output preservation established in consumer slice. Exact previous/current source route retained.",
+      "fix": "Pack/resource construction+retained composition scoped PASS. Removed redundant TextureBaseStorage Clear in actual bootstrap before staged replacement;source proof shows this is the only wrapper change. Existing deduplicated census now composes a current standard make_shared/default-allocator requested-data upper with STL backing/control allowances;decoder requests are already inside retained entry and process counters are mirrors. Whole WorldGenPack directory source envelope combines12 JSON raw byte/path domains,2 authored biomes,managed parser/pack conversion,index,outer map,publication/stream/path and fresh PNG decoder terms. One allocator epoch retains old PPM pack/image and escaped block catalog while actual new-pack load,merge Rebuild,definition publication,texture publication and fingerprint execute sequentially. All5 per-phase entry+new-request bounds PASS;old/new pixels and hardness1->78 oracles stable,64 aliases deduplicate,all tracked graph storage retires to0. Retained components38084<=upper47716,decoder12364 counted once. Entire directory loader441 persistent ordinary-new refusal boundaries+exact retries clean to0,with no failed-result/throw publication;source limit22608174 is conservative ordinary-new envelope,not RAM/asset cap.6 regression groups and Release/native runtime/startup/direct save/UI/provenance/8 real GL readbacks PASS;aggregate smoke UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-composition-acceptance.json",
+      "next_action": "C05 OPEN:finish remaining construction schedules for preparsed WorldGenSets/defaults/upgrade/resolved features;manifest/refs/feature/definition and prefab/legacy file-directory loader publication;CPU atlas/decode batches and their prior/current/returned roots. Accepted per-operation certificates remain authoritative;next compose these with supplied graph without double-counting shared storage. Pack-directory and5-phase pack/merge/definition/texture/fingerprint supplied-root graph now composed. C06 all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance."
+    },
+    {
       "id": "texture-registration-clears-or-partially-mutates-prior-target-under-refusal",
       "stage": "S4.02",
       "status": "SCOPED_STAGED_PUBLICATION_REFUSAL_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",

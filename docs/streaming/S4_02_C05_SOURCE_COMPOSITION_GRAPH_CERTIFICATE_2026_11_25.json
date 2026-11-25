@@ -1,0 +1,232 @@
+{
+  "schema": "s4-source-retained-composition-graph-certificate.v1",
+  "status": "SCOPED_PACK_RESOURCE_GRAPH_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
+  "summary": "Pack/resource construction+retained composition scoped PASS. Removed redundant TextureBaseStorage Clear in actual bootstrap before staged replacement;source proof shows this is the only wrapper change. Existing deduplicated census now composes a current standard make_shared/default-allocator requested-data upper with STL backing/control allowances;decoder requests are already inside retained entry and process counters are mirrors. Whole WorldGenPack directory source envelope combines12 JSON raw byte/path domains,2 authored biomes,managed parser/pack conversion,index,outer map,publication/stream/path and fresh PNG decoder terms. One allocator epoch retains old PPM pack/image and escaped block catalog while actual new-pack load,merge Rebuild,definition publication,texture publication and fingerprint execute sequentially. All5 per-phase entry+new-request bounds PASS;old/new pixels and hardness1->78 oracles stable,64 aliases deduplicate,all tracked graph storage retires to0. Retained components38084<=upper47716,decoder12364 counted once. Entire directory loader441 persistent ordinary-new refusal boundaries+exact retries clean to0,with no failed-result/throw publication;source limit22608174 is conservative ordinary-new envelope,not RAM/asset cap.6 regression groups and Release/native runtime/startup/direct save/UI/provenance/8 real GL readbacks PASS;aggregate smoke UNTESTED.",
+  "remaining": "C05 OPEN:finish remaining construction schedules for preparsed WorldGenSets/defaults/upgrade/resolved features;manifest/refs/feature/definition and prefab/legacy file-directory loader publication;CPU atlas/decode batches and their prior/current/returned roots. Accepted per-operation certificates remain authoritative;next compose these with supplied graph without double-counting shared storage. Pack-directory and5-phase pack/merge/definition/texture/fingerprint supplied-root graph now composed. C06 all-world/thread/global/publisher/returned/weak-only root multiplicities,E12 CRT/locale/exception runtime/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Ecology mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance.",
+  "unit": {
+    "directory": {
+      "biome_files": 2,
+      "decoder_upper": 219840,
+      "json_files": 12,
+      "legacy_publications_after_refusal": 0,
+      "ordinary_attempts": 441,
+      "ordinary_peak": 8120,
+      "ordinary_upper": 22608174,
+      "pass": true,
+      "refusal_and_exact_retry_cases": 441
+    },
+    "failed_cases": 0,
+    "graph_final_zero": true,
+    "negative_control": true,
+    "old_current_oracles": true,
+    "overflow_rejected": true,
+    "phases": [
+      {
+        "composed_upper": 22851819,
+        "entry_observed": 17212,
+        "entry_upper": 23805,
+        "name": "whole_pack_directory",
+        "new_decoder_peak": 28800,
+        "observed_component_envelope": 54132,
+        "ordinary_peak": 25288,
+        "pass": true,
+        "retained_decoder": 44
+      },
+      {
+        "composed_upper": 4100473,
+        "entry_observed": 36716,
+        "entry_upper": 46066,
+        "name": "merge_rebuild",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 39266,
+        "ordinary_peak": 26902,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 70874,
+        "entry_observed": 36716,
+        "entry_upper": 46066,
+        "name": "definition_publication",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 39132,
+        "ordinary_peak": 26768,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 149563,
+        "entry_observed": 38052,
+        "entry_upper": 47684,
+        "name": "texture_publication",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 40204,
+        "ordinary_peak": 27840,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 65928,
+        "entry_observed": 38052,
+        "entry_upper": 47684,
+        "name": "fingerprint",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 38916,
+        "ordinary_peak": 26552,
+        "pass": true,
+        "retained_decoder": 12364
+      }
+    ],
+    "retained": {
+      "alias64_deduplicated": true,
+      "decoder_requests_once": 12364,
+      "observed_components": 38084,
+      "owners": 14,
+      "upper": 47716
+    },
+    "schema": "catalog-construction-composition.v1",
+    "scope": "Real sequential pack+merge+definitions+textures+fingerprint graph. Prior source roots and new decoder scope separated;process decoder counters mirror census bytes,not extra ownership. Observed component envelope sums individual peaks conservatively,not synchronized RSS. Supplied default make_shared root profile only;all-world/thread/weak/unknown owner counts C06,CRT/OS/stack/GPU E12 and other loader/atlas/settings schedules still open.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-composition-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    },
+    {
+      "name": "publication",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-publication",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-composition-publication.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    },
+    {
+      "name": "merge",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--merge-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-composition-merge.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    },
+    {
+      "name": "placeholder",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--placeholder-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-composition-placeholder.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    },
+    {
+      "name": "fingerprint",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--fingerprint-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-composition-fingerprint.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750"
+    }
+  ],
+  "bootstrap_source_route": {
+    "status": "PASS",
+    "prior_commit": "9addceb99568ce611c4b518203d9c5590d663cbc",
+    "change": "Only caller Clear removed;actual staged texture replacement invoked with existing target intact. Definition/GPU sequence unchanged;not a whole ApplyResourcePacks transaction claim.",
+    "only_redundant_texture_clear_removed": true,
+    "current_source_sha256": "cf7ffb29e2f8ba73c04816cd86716d6f7215029d23d5894a0a06f0aa750c7a9b"
+  },
+  "source_sha256": {
+    "src/App/ResourcePackBootstrap.cpp": "cf7ffb29e2f8ba73c04816cd86716d6f7215029d23d5894a0a06f0aa750c7a9b",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "0be0f1817b554bf600d32c4f20a73d83c19e5e5a780466f2fbccabec3cd632c3",
+    "src/Test/CatalogCompositionFixture.h": "47262dd94e488662c5f370d5198caf25122c7fff8cd8644254c49d4781a5a546",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "7eea1d05b0941c3635ab84b8eeff5a9983711b6612a9a131de6ff97aafa8a9a5",
+    "src/WorldGen/Core/WorldGenPack.cpp": "ac7d30fa3443e95b6a169d103ffa90f3b56cb2f8e50b273252ed8ba190b5c693",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "a9fb3de30387fa2e208ecb82b3e19842e796dc3a8466eebeb577e5d502130b77",
+    "src/WorldGen/Core/MergeSourceEnvelope.h": "f0b93d1d5eb13c12c66bf68644e63442a636141843c262295a999338f40d92ae",
+    "src/WorldGen/Core/MergePublicationEnvelope.h": "624256230db97b787217f3a9d8f7b925e744d3246f6ca3f7975713a605df81cd",
+    "src/WorldGen/Core/PackCandidateSourceEnvelope.h": "5990886ef884862fe1aa5e9910d4ec3cded37371000a42d0724b9ca5bf631a82",
+    "src/WorldGen/Core/PackBiomeIndexSourceEnvelope.h": "d6bd5f7b3866e24feb0480dbd2e9e6f14d0965f04b5416daf04591931289a850",
+    "src/WorldGen/Core/BiomeMapSourceEnvelope.h": "8b982e65752c40e53cc7a3da892e8fa949ebbf0f31abfc932d5515599f2e9e0d"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5"
+  },
+  "test_exe_sha256": "94605992866a6db4d2cc75bfd97084f45368266a9ebfeb2d6724b7213722a750",
+  "desktop_exe_sha256": "fe3183d6ff8d6ef0f3bbf8e86a7014a5840fd8424bee7d5d4835ebb5ef74e92e",
+  "provenance": "build/desktop-msvc/s4-composition-provenance.json",
+  "composition": {
+    "retained": "Actual supplied old/current snapshot/resource graph deduplicated by object/owner identity. Known data+actual current STL node/bucket terms+39 per possible large backing+64 per distinct default shared control. Typed representative make_shared control deltas compile-time checked. Inline shells conservatively included. Arbitrary external deleter/allocator backing and expired weak-only shells require separate terms;not inferred covered.",
+    "directory": "For n file bytes,DOM values<=n+1,text<=n;accepted coarse F(n)=586*n+16*ceil(n/32)+16640 and PackCandidate(n+1,n,biome ID upper). Sum parser bounds+8*sum candidate bounds conservatively covers accumulated candidate and conversion growth,then typed outer biome-map/key/bucket,index,default path/stream/publication allowances and new decoder source envelope. Includes directory/profile input domain,not merely observed peak.",
+    "phase": "U_phase=L_supplied_entry+A_new. Observed conservative component envelope=ordinary_new_peak+R_decoder_entry+D_new_scoped. Ordinary observer excludes STBI malloc requests;old R is already within entry census,new diagnostic decoder scope only counts new allocations. Independent peaks may occur at different instants;this is an upper envelope,not synchronized RSS.",
+    "decoder_alias": "Before new PNG load old PPM request44. After load old44+new12320=12364;same12364 retained census bytes and process mirror counts throughout remaining phases. No second mirror term added to retained composition. Optional test ledgers/control and collector scratch are separate diagnostic roots outside observed epochs.",
+    "lifecycle": "Old/current pack and image owners,old escaped definition map and new mutable publishers are all supplied explicitly. Final source-independent RGB oracles,hardness1->78,fingerprint legacy oracle and last-owner retirement verified. Global publication target restored to an unobserved reset fixture before tracked roots retire.",
+    "bootstrap": "Old caller cleared bases before invoking the staged producer. Only that redundant Clear is removed. Per-method texture rollback now reaches actual wrapper;definition and GPU steps still follow their own existing contracts. This is not a whole ApplyResourcePacks atomic transaction or concurrent texture RCU claim.",
+    "profile_limits": "Current MSVC Release standard warmed streams,default allocators,stable files and no unbounded work-pump callback. Supplied roots only;global/thread/world multiplicities C06. Filesystem diagnostic terms can be supplied explicitly;no OS diagnostic fault injected in this composition fixture. Native/CRT/locale/TLS/exception internals,GPU and physical process bounds E12/S6 remain open."
+  },
+  "initial_compile": {
+    "artifact": "build/desktop-msvc/s4-composition-unit-build.log",
+    "reason": "Windows RPC small macro conflicted with new fixture local variable;renamed to phaseUpperForNegative. No runtime baseline acceptance attributed to failed compile."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-composition-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

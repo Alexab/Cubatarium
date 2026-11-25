@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.source-retained-composition-graph",
+      "status": "SCOPED_PACK_RESOURCE_GRAPH_SOURCE_RETAINED_RELEASE_NATIVE_PASS_OTHER_C05_SCHEDULES_OPEN",
+      "receipt": "build/desktop-msvc/s4-composition-acceptance.json",
+      "certificate": "S4_02_C05_SOURCE_COMPOSITION_GRAPH_CERTIFICATE_2026_11_25.json",
+      "scope": "Pack/resource construction+retained composition scoped PASS. Removed redundant TextureBaseStorage Clear in actual bootstrap before staged replacement;source proof shows this is the only wrapper change. Existing deduplicated census now composes a current standard make_shared/default-allocator requested-data upper with STL backing/control allowances;decoder requests are already inside retained entry and process counters are mirrors. Whole WorldGenPack directory source envelope combines12 JSON raw byte/path domains,2 authored biomes,managed parser/pack conversion,index,outer map,publication/stream/path and fresh PNG decoder terms. One allocator epoch retains old PPM pack/image and escaped block catalog while actual new-pack load,merge Rebuild,definition publication,texture publication and fingerprint execute sequentially. All5 per-phase entry+new-request bounds PASS;old/new pixels and hardness1->78 oracles stable,64 aliases deduplicate,all tracked graph storage retires to0. Retained components38084<=upper47716,decoder12364 counted once. Entire directory loader441 persistent ordinary-new refusal boundaries+exact retries clean to0,with no failed-result/throw publication;source limit22608174 is conservative ordinary-new envelope,not RAM/asset cap.6 regression groups and Release/native runtime/startup/direct save/UI/provenance/8 real GL readbacks PASS;aggregate smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.consumer-publication",
       "status": "SCOPED_STAGED_PUBLICATION_REFUSAL_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-publication-acceptance.json",

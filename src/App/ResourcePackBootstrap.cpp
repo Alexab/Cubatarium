@@ -159,7 +159,6 @@ void UResourcePackBootstrap::RebuildBlockTexturesFromMergeRegistry(UCore &core)
   core.BlockMergeRegistryInstance->PopulateBlockDefinitionStorage(
       *core.BlockDefinitionsInstance);
   StallStageMark("rebuildtex.PopulateBlockDefinitionStorage");
-  core.TextureBaseStorageInstance->Clear();
   core.BlockMergeRegistryInstance->PopulateTextureBaseStorage(
       *core.TextureBaseStorageInstance);
   StallStageMark("rebuildtex.PopulateTextureBaseStorage");
