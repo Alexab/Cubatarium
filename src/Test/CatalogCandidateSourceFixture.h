@@ -115,6 +115,32 @@ static int RunCatalogCandidateSourceFixture(const char *reportPath)
   std::cout<<report.dump()<<std::endl;return failures?1:0;
 }
 
+static int RunPackPublicationFixture(const char *reportPath,size_t prefix)
+{
+  namespace fs=std::filesystem;
+  const auto parent=fs::temp_directory_path()/(L"cuba_pack_pub_"+std::to_wstring(GetCurrentProcessId()));
+  const auto directory=parent/std::wstring(129,L'p');fs::create_directories(directory);
+  {std::ofstream out(directory/"pack.json");out<<R"({"id":"publication_candidate","pipeline":["terrain","caves"]})";}
+  const auto path=directory.string();const auto old=UWorldGenPack::GetSnapshot();
+  const auto oldDirectory=UWorldGenPack::GetActiveDirectoryForCensus();
+  // MSVC initializes retained numeric ostream locale state on first use.
+  // Keep that runtime cache outside the catalog allocation/cleanup epoch.
+  std::cout<<size_t{0}<<std::endl;
+  bool loaded=false,threw=false;
+  {observation::Scope scope(prefix);try{loaded=UWorldGenPack::LoadFromDirectory(path);}catch(const std::bad_alloc &){threw=true;}}
+  const auto counts=observation::State;const auto current=UWorldGenPack::GetSnapshot();
+  const bool changed=current!=old;
+  const bool pathChanged=UWorldGenPack::GetActiveDirectoryForCensus()!=oldDirectory;
+  const bool ok=counts.refusals ? (!loaded && !changed && !pathChanged && !counts.live && !counts.blocks) :
+    (loaded && !threw && changed && UWorldGenPack::GetActiveDirectoryForCensus()==path && current->Id=="publication_candidate" && current->Pipeline.Caves);
+  Json report={{"schema","pack-publication-refusal.v1"},{"status",ok?"PASS":"FAIL"},
+    {"attempts",counts.attempts},{"refusals",counts.refusals},{"threw",threw},{"loaded",loaded},
+    {"snapshot_changed",changed},{"directory_changed",pathChanged},{"observed_live",counts.live},{"observed_blocks",counts.blocks}};
+  const auto resolved=fs::weakly_canonical(parent),temp=fs::weakly_canonical(fs::temp_directory_path());
+  if(resolved.parent_path()!=temp || resolved!=temp/parent.filename()) return 1;fs::remove_all(resolved);
+  if(reportPath){std::ofstream out(reportPath);out<<report.dump(2)<<'\n';}std::cout<<report.dump()<<std::endl;return ok?0:1;
+}
+
 static int RunCatalogCandidatePublicationFixture(const char *reportPath,bool baseline)
 {
   namespace fs=std::filesystem;

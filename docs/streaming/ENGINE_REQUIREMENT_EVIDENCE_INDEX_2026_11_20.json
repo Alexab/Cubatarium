@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.pack-publication",
+      "status": "SCOPED_REFUSAL_RELEASE_STARTUP_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-pack-publication-acceptance.json",
+      "certificate": "S4_02_C05_PACK_PUBLICATION_CERTIFICATE_2026_11_25.json",
+      "scope": "WorldGenPack real LoadFromDirectory publication correction:prepare reload directory and shared candidate before publishing,then noexcept directory swap. Baseline final allocation prefix83 threw after snapshot changed while reload directory stayed old. Exact baseline source/test/exe hashes retained. Fixed fresh-process fixture warms retained MSVC numeric ostream locale before epoch;all82 persistent ordinary-new refusal boundaries keep initial snapshot and directory unchanged,observed live/blocks0. Successful publication verifies pack id,pipeline and matching directory. Four-candidate1708/refusal and feature-publication40 plus full biome regressions PASS. Release desktop startup/provenance/runtime PASS;startup-only smoke remains UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.four-compiled-candidates",
       "status": "SCOPED_SOURCE_REFUSAL_PUBLICATION_AND_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-candidate-acceptance-20261122.json",

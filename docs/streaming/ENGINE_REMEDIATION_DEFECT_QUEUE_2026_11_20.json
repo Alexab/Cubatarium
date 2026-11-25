@@ -3,6 +3,14 @@
   "policy": "Do not switch away from current package unless defect blocks its acceptance or risks data loss. Retain failed artifacts; a repeat requires a new hypothesis.",
   "defects": [
     {
+      "id": "worldgen-pack-directory-copy-after-publication",
+      "stage": "S4.02",
+      "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",
+      "observed": "WorldGenPack real LoadFromDirectory publication correction:prepare reload directory and shared candidate before publishing,then noexcept directory swap. Baseline final allocation prefix83 threw after snapshot changed while reload directory stayed old. Exact baseline source/test/exe hashes retained. Fixed fresh-process fixture warms retained MSVC numeric ostream locale before epoch;all82 persistent ordinary-new refusal boundaries keep initial snapshot and directory unchanged,observed live/blocks0. Successful publication verifies pack id,pipeline and matching directory. Four-candidate1708/refusal and feature-publication40 plus full biome regressions PASS. Release desktop startup/provenance/runtime PASS;startup-only smoke remains UNTESTED.",
+      "acceptance_receipt": "build/desktop-msvc/s4-pack-publication-acceptance.json",
+      "next_action": "C05 still OPEN:WorldGenPack/prefab compiled candidate source bounds,optional subfile failure semantics,resource merge/directory growth and prior/current owner composition. This isolated first-publication test is not concurrent reload atomicity,all optional subfile paths,CRT/cache allocation bounds or process RSS. C06/E12,S4.03..06,S5/S6/full original criteria retained;23/42 unchanged."
+    },
+    {
       "id": "feature-catalog-path-log-throws-after-publication",
       "stage": "S4.02",
       "status": "FIXED_SCOPED_RELEASE_PASS_FULL_C05_OPEN",

@@ -1182,8 +1182,12 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
   std::cout << "WorldGenPack: loaded '" << pack.Id << "' with "
             << pack.Biomes.size() << " biome profile(s)"
             << (pack.Pipeline.Loaded ? " + pipeline" : "") << std::endl;
-  Publish(std::make_shared<const WorldGenPack>(std::move(pack)));
-  ActivePackDir = packDir;
+  // Prepare both owners before changing the active state. In particular,
+  // copying the reload directory may throw even after the pack was built.
+  std::string nextDirectory(packDir);
+  auto next = std::make_shared<const WorldGenPack>(std::move(pack));
+  Publish(std::move(next));
+  ActivePackDir.swap(nextDirectory);
   return true;
 }
 
