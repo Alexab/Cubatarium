@@ -53,6 +53,7 @@ public:
   const BlockDefinition *GetByName(const std::string &Name) const;
   static std::array<std::shared_ptr<const BlockDefinitionCatalog>,3> GetThreadReadSnapshots();
   static size_t ThreadReadInlineBytes();
+  static void ReleaseThreadReads() noexcept;
 
 private:
   struct ReadCaches {

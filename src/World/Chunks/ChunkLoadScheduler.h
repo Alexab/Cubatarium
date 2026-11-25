@@ -114,6 +114,7 @@ public:
   int GetLastCommitsThisFrame() const { return LastCommitsThisFrame; }
 
 private:
+  friend struct CatalogWorkerRetirementProbe;
   friend void RunTerrainSaveFailureProbe(UCore &core);
   struct SettingsBudgetState
   {

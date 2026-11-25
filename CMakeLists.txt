@@ -3135,6 +3135,17 @@ cubatarium_add_test(NAME worldgen_sets_source_envelope_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
     WIN32_LIBRARIES dbghelp)
 
+cubatarium_add_test(NAME catalog_worker_retirement_test
+    SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
+        src/Core/Jobs/JobThreadPool.cpp
+        src/Core/Jobs/JobThreadBudget.cpp
+        src/Core/Jobs/PipelineAdmission.cpp
+        src/World/Chunks/ChunkLoadScheduler.cpp
+        src/Test/CatalogWorkerRetirementTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
+    WIN32_LIBRARIES dbghelp)
+
 cubatarium_add_test(NAME worldgen_vegetation_placement_integration_test
     SOURCES
         ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}

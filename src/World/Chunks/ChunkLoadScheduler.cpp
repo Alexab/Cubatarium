@@ -6,6 +6,7 @@
 #include "Core/Jobs/PipelineAdmission.h"
 #include "World/Streaming/WorldColumnRequestId.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/CatalogThreadReads.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -512,6 +513,10 @@ bool UChunkLoadScheduler::ScheduleWorker(
        worker_active_at_submit, worker_count,
        generation_start_cap_per_frame, work_slot = std::move(work_slot), result_slot]() mutable
       {
+        // Populate and its pins/borrowed views end before this guard. Retire
+        // convenience roots while the callable still owns its work credit;
+        // the pool publishes idle only after releasing the callable itself.
+        UCatalogThreadReadsScope catalog_reads;
         auto &populateRequest=worker_input.value;
         PendingResult pending;
         pending.resultSlot = result_slot;

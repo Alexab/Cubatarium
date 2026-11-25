@@ -1,0 +1,221 @@
+{
+  "schema": "s4-catalog-worker-reader-retirement-certificate.v1",
+  "status": "SCOPED_GENERATION_WORKER_READERS_RELEASE_NATIVE_PASS_C06_ROOT_COUNTS_E12_OPEN",
+  "summary": "Generation worker convenience-reader retirement scoped PASS. Real scheduler baseline retains28 old reader slot references across4 idle workers and65552-byte copied registry name backing per worker. New quiescent calling-thread release resets Pack/features/refs/prefab/three block slots,fast owner/revision and registry name backing. RAII spans whole generation callable,after Populate pins/borrowed views and before closure work credit/idle release. Nine same-pool full-worker rounds preserve success/discard outcomes,token cancellation retires old readers,and4 caught budget refusals complete exact-coordinate retries. All old convenience payloads retire to0 at actual Pool.WaitIdleFor;next reused worker has empty slots/name. Explicit7 owning snapshots and active pin preserve payload;last cross-thread owner retires it. Release under persistent ordinary-new refusal allocates0,is idempotent,and same-owner/revision fast read reloads;standalone caught scope unwind and fresh-thread release PASS. Five dependent Release groups and fresh desktop/native runtime/startup/direct save/UI/provenance plus8 existing real GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+  "remaining": "Continue C06 finite all-thread/global/world/publisher/escaped/returned root cardinalities and weak coallocated shells. Generation convenience roots now retire before corresponding admitted work credit:under existing default8-job graph at most56 such slot references while jobs run,0 on idle generation workers;this source-derived term is not all-thread or process-memory acceptance. Include retained160-byte convenience TLS,active pin handles/pointer,STBI ledger+failure generation24 bytes per participating thread,and6 weak pipeline owner slots per generation worker with their surviving coallocated shells. Count main/other-pool readers,actual world/pool multiplicities,publication candidates,escaped/returned/diagnostic owners separately,then compose accepted C05 source/supplied-root schedules. E12 glog constructor refusal retention,window/OS callbacks,CRT/locale/exception/runtime/stack/TLS/driver/GPU/process terms and original full native/performance/memory matrix remain OPEN. S4.02 then S4.03..06/S5/S6 remain OPEN;23/42 unchanged,ecology mismatch S6.05 preserved. Full S0..S6,no audit restart or arbitrary asset cap.",
+  "unit": {
+    "explicit_owners": {
+      "active_pin_preserved": true,
+      "caught_scope_unwind": true,
+      "explicit_roots": 7,
+      "fast_same_revision_reload": true,
+      "fresh_thread_release": true,
+      "last_cross_thread_payloads": 0,
+      "release_new_attempts": 0
+    },
+    "mode": "acceptance",
+    "scenarios": [
+      {
+        "budget_refusal": false,
+        "cancel": false,
+        "filled_slots": 28,
+        "live_old_reader_slots_after_idle": 0,
+        "name_bytes_per_worker": 65552,
+        "same_pool_full_overlap_rounds": 9,
+        "success_and_discard_terminal_states": true,
+        "workers": 4
+      },
+      {
+        "budget_refusal": false,
+        "cancel": true,
+        "filled_slots": 28,
+        "live_old_reader_slots_after_idle": 0,
+        "name_bytes_per_worker": 65552,
+        "workers": 4
+      },
+      {
+        "budget_refusal": true,
+        "cancel": false,
+        "exact_retries_committed": 4,
+        "filled_slots": 28,
+        "live_old_reader_slots_after_idle": 0,
+        "name_bytes_per_worker": 65552,
+        "workers": 4
+      }
+    ],
+    "schema": "catalog-worker-retirement.v1",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "worker-retirement",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-worker-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "ce919813aeaa139049e8857674e1e3c1c7d8c7ace429e7a806fc6d2325576835",
+      "log": "build\\desktop-msvc\\s4-catalog-worker-regression-worker-retirement.log"
+    },
+    {
+      "name": "thread-readers",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-thread-reads-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e90fc295182a69aa2c71bac5fe1fe38f93e4722b9593bcd656a802ae682fb342",
+      "log": "build\\desktop-msvc\\s4-catalog-worker-regression-thread-readers.log"
+    },
+    {
+      "name": "catalog-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e90fc295182a69aa2c71bac5fe1fe38f93e4722b9593bcd656a802ae682fb342",
+      "log": "build\\desktop-msvc\\s4-catalog-worker-regression-catalog-storage.log"
+    },
+    {
+      "name": "pipeline-owner",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e90fc295182a69aa2c71bac5fe1fe38f93e4722b9593bcd656a802ae682fb342",
+      "log": "build\\desktop-msvc\\s4-catalog-worker-regression-pipeline-owner.log"
+    },
+    {
+      "name": "pinned-factory",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "e90fc295182a69aa2c71bac5fe1fe38f93e4722b9593bcd656a802ae682fb342",
+      "log": "build\\desktop-msvc\\s4-catalog-worker-regression-pinned-factory.log"
+    }
+  ],
+  "source_sha256": {
+    "CMakeLists.txt": "179d20989ef3bbff071895eeb6b32e05fe9e6639845c43b94798eeef247df986",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "bf4695ebd55309e2cc17b886998e28da98466c0b9f38bf09af57a74b2cf7e1fb",
+    "src/WorldGen/Core/CatalogThreadReads.h": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672",
+    "src/World/Chunks/ChunkLoadScheduler.h": "0a7beed8c4cdd55ee9d96980605da7b636d10bf0e73fd2a0675f5589e9805dc7",
+    "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
+    "src/Core/Jobs/JobThreadPool.cpp": "a61e629b24750daa5c677c52709fb382e7855bb436b3a13955986f52a14fd40c",
+    "src/Core/Jobs/JobThreadBudget.h": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424",
+    "src/Core/Jobs/PipelineAdmission.h": "b3741f201e5491a9b1ccad985e3d8edd0c97fb18dcf7d6f63bd851d58bd67ef6",
+    "src/Blocks/BlockDefinitionStorage.h": "5d2bb66f4debf7d7dd0e82b3bdb5a365939714ae01696a8f7c6c9db9ca0f4172",
+    "src/Blocks/BlockDefinitionStorage.cpp": "028af917b45dbaeeb679d443157690afabcc48a2dd0e79450a446254b9ac50eb",
+    "src/Blocks/BlockRegistry.h": "15be2ecad34350eabd4248ad42a333e1fd514f44dd80c0a6aac76e4d806b03ff",
+    "src/Blocks/BlockRegistry.cpp": "b7c64e9beafd56351db377353b45fb541c5d3f2aa52f706248cfbed09609ecb3",
+    "src/World/Objects/ObjectLibrary.h": "cbc000871b0bc855ce641edd8c14637d64d660084c3b8fe30ed1db6fbf381cba",
+    "src/WorldGen/Core/WorldGenPack.h": "90d5dfa131b90ddb9c9b37aa76c7a6316312793942918cea8254fd40d89bd457",
+    "src/WorldGen/Core/WorldGenPack.cpp": "24c0e1433520b5e9dea4844d08a63d64d07c74942e58a20ed394a8da29742329",
+    "src/WorldGen/Core/WorldGenRefs.h": "c6607038d631783be1a83aa93f5f664426227acdc81a2487c03e6c129da5b16d",
+    "src/WorldGen/Core/WorldGenRefs.cpp": "28d60cf9fb0cb5ca1b86da053d2badef6837039e57e9cd7aac6eef4eac4e68c8",
+    "src/WorldGen/Features/ObjectFeatureConfig.h": "b1a90688f72ed37393f58f5356856829d4fe03adb6a2b232677b446de26a9b64",
+    "src/WorldGen/Features/ObjectFeatureConfig.cpp": "6aea98e71ea0d1bc58d39f892fd8942969a782e85ea96146259ea0848762c247",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
+    "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c"
+  },
+  "baseline": {
+    "receipt": "build/desktop-msvc/s4-catalog-worker-baseline.json",
+    "identity": {
+      "command": [
+        "build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--baseline",
+        "build\\desktop-msvc\\s4-catalog-worker-baseline.json"
+      ],
+      "exit": 0,
+      "exe_sha256": "7c60df83db0fdaa6f95be019a506805b83f4b86b6fc64e7bdbc2cb2e5dcaa19b",
+      "source_sha256": {
+        "CMakeLists.txt": "179d20989ef3bbff071895eeb6b32e05fe9e6639845c43b94798eeef247df986",
+        "src/Test/CatalogWorkerRetirementTest.cpp": "8ef2d1f25c47a015751f549c51126944b3ee073a6ea4a105d1a751ee54ba1b9d",
+        "src/World/Chunks/ChunkLoadScheduler.cpp": "bd00fbcd6f7e5c4bc83a0fffe41f79e06a5dcd2c49fc0e303c2b90c78504598a",
+        "src/Core/Jobs/JobThreadPool.cpp": "a61e629b24750daa5c677c52709fb382e7855bb436b3a13955986f52a14fd40c"
+      }
+    },
+    "base_commit": "e7517e552"
+  },
+  "fixture_wait_correction": {
+    "reason": "First accepted reader-retirement assertion passed;later normal commit assertion failed because fixture called existing destructive WaitForWorkersIdle,which drains Completed. Correct fixture to actual Pool.WaitIdleFor without changing production wait semantics.",
+    "source_sha256": {
+      "src/Test/CatalogWorkerRetirementTest.cpp": "a2dec1d07279c60dc5a9f89bdcc00f13fb28dfd19fb13936bac5ca7ef4f10d33",
+      "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
+      "src/WorldGen/Core/CatalogThreadReads.h": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672"
+    },
+    "exe_sha256": "3d73c44c360bdf90cfed507d1cd141e1b397a314059b44b40754e5a8d9ae3b66",
+    "log_sha256": "c9f43d18812f518e8537bfb678f2e963cdd3a2829dc9c74d65af864be579adb8"
+  },
+  "root_rule": {
+    "scope": "Production generation callable only;default accepted8-work graph. Source derivation,not measured simultaneous8-worker process total.",
+    "reader_slots_per_job": 7,
+    "default_admitted_jobs_upper": 8,
+    "reader_slot_references_upper": 56,
+    "idle_generation_reader_payloads": 0,
+    "calling_thread_convenience_inline_bytes": 160,
+    "other_owners": "Captured request4 handles and active pin4 aliases remain separate;no clearing active pins/explicit snapshots. Main/other threads and escaped owners not bounded by this term. Pipeline6 weak owners can retain coallocated shells and require all-pool/thread counts.",
+    "test_seam": "Friend accessor calls real Pool.WaitIdleFor without draining Completed. No substitute queue/pool/reader implementation. Existing WaitForWorkersIdle teardown drain and uncaught worker exception policy unchanged.",
+    "lifetime": "Borrowed views must end before release;actual scheduler result contains independently owned buffer and no borrowed catalog pointers. Pipeline owner-identity and pinned factory regressions verify reuse/retired source behavior."
+  },
+  "desktop_exe_sha256": "b0a3bdf142ea68a31da530c79ffbd96ebca30013cf7e344120b35f12a817c142",
+  "provenance": "build\\desktop-msvc\\s4-catalog-worker-provenance.json",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-catalog-worker-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

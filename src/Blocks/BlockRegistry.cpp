@@ -187,6 +187,9 @@ std::string &UBlockRegistry::ThreadNameKeep()
 const std::string &UBlockRegistry::GetThreadNameForCensus()
 {return ThreadNameKeep();}
 
+void UBlockRegistry::ReleaseThreadName() noexcept
+{std::string{}.swap(ThreadNameKeep());}
+
 const std::string &UBlockRegistry::GetTypeNameById(BlockId Id) const
 {
   static const std::string empty;

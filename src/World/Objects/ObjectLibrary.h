@@ -79,6 +79,7 @@ public:
   /// Convenience for main-thread short reads. Holds a TLS shared_ptr keep-alive.
   const WorldObjectDefinition *Get(const std::string &Name) const;
   static std::shared_ptr<const WorldObjectDefinition> GetThreadReadSnapshot() {return ThreadReadKeep();}
+  static void ReleaseThreadRead() noexcept {ThreadReadKeep().reset();}
   std::vector<std::string> ListNames() const;
   std::string GetDisplayName(const std::string &Name) const;
   std::vector<std::string> GetTags(const std::string &Name) const;

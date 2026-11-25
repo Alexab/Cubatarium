@@ -249,6 +249,7 @@ public:
   static const ObjectFeatureConfig &Get();
   static std::shared_ptr<const ObjectFeatureConfig> GetSnapshot();
   static std::shared_ptr<const ObjectFeatureConfig> GetThreadReadSnapshot();
+  static void ReleaseThreadRead() noexcept;
   static bool IsLoaded();
 
 private:

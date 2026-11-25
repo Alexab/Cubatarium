@@ -88,6 +88,9 @@ std::shared_ptr<const WorldGenRefsCatalog> &UWorldGenRefs::ThreadReadKeep()
 std::shared_ptr<const WorldGenRefsCatalog> UWorldGenRefs::GetThreadReadSnapshot()
 {return ThreadReadKeep();}
 
+void UWorldGenRefs::ReleaseThreadRead() noexcept
+{ThreadReadKeep().reset();}
+
 const WorldGenSlotSpec *UWorldGenRefs::GetSlot(const std::string &slotName)
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())

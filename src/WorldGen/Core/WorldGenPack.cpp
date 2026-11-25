@@ -1371,6 +1371,9 @@ std::shared_ptr<const WorldGenPack> &UWorldGenPack::ThreadReadKeep()
 std::shared_ptr<const WorldGenPack> UWorldGenPack::GetThreadReadSnapshot()
 {return ThreadReadKeep();}
 
+void UWorldGenPack::ReleaseThreadRead() noexcept
+{ThreadReadKeep().reset();}
+
 const WorldGenPack &UWorldGenPack::Get()
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())

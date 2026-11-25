@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C06.worker-readers",
+      "status": "SCOPED_GENERATION_WORKER_READERS_RELEASE_NATIVE_PASS_C06_ROOT_COUNTS_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-worker-acceptance.json",
+      "certificate": "S4_02_C06_WORKER_READER_RETIREMENT_CERTIFICATE_2026_11_26.json",
+      "scope": "Generation worker convenience-reader retirement scoped PASS. Real scheduler baseline retains28 old reader slot references across4 idle workers and65552-byte copied registry name backing per worker. New quiescent calling-thread release resets Pack/features/refs/prefab/three block slots,fast owner/revision and registry name backing. RAII spans whole generation callable,after Populate pins/borrowed views and before closure work credit/idle release. Nine same-pool full-worker rounds preserve success/discard outcomes,token cancellation retires old readers,and4 caught budget refusals complete exact-coordinate retries. All old convenience payloads retire to0 at actual Pool.WaitIdleFor;next reused worker has empty slots/name. Explicit7 owning snapshots and active pin preserve payload;last cross-thread owner retires it. Release under persistent ordinary-new refusal allocates0,is idempotent,and same-owner/revision fast read reloads;standalone caught scope unwind and fresh-thread release PASS. Five dependent Release groups and fresh desktop/native runtime/startup/direct save/UI/provenance plus8 existing real GL readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.texture-publication",
       "status": "SCOPED_TEXTURE_GPU_PUBLICATION_SOURCE_RETAINED_RELEASE_NATIVE_PASS_C06_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-texture-publication-acceptance.json",

@@ -27,6 +27,7 @@ public:
   static const WorldGenSlotSpec *GetSlot(const std::string &slotName);
   static std::shared_ptr<const WorldGenRefsCatalog> GetSnapshot();
   static std::shared_ptr<const WorldGenRefsCatalog> GetThreadReadSnapshot();
+  static void ReleaseThreadRead() noexcept;
   static bool IsLoaded();
 
 private:

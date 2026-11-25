@@ -325,6 +325,7 @@ public:
   static const WorldGenPack &Get();
   static std::shared_ptr<const WorldGenPack> GetSnapshot();
   static std::shared_ptr<const WorldGenPack> GetThreadReadSnapshot();
+  static void ReleaseThreadRead() noexcept;
   static const std::string &GetActiveDirectoryForCensus() {return ActivePackDir;}
   static const PackHeightConfig &HeightConfig();
   static const PackClimateConfig &ClimateConfig();

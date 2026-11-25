@@ -46,6 +46,7 @@ public:
   BlockId GetPackBlockIdByTypeName(const std::string &Name) const;
   const std::string &GetTypeNameById(BlockId Id) const;
   static const std::string &GetThreadNameForCensus();
+  static void ReleaseThreadName() noexcept;
 
   bool IsSolid(BlockId Id) const;
   bool BlocksMovement(BlockId Id) const;

@@ -33,6 +33,9 @@ std::array<std::shared_ptr<const BlockDefinitionCatalog>,3> UBlockDefinitionStor
 
 size_t UBlockDefinitionStorage::ThreadReadInlineBytes() {return sizeof(ReadCaches);}
 
+void UBlockDefinitionStorage::ReleaseThreadReads() noexcept
+{ThreadReads()=ReadCaches{};}
+
 const std::shared_ptr<const BlockDefinitionCatalog> &
 UBlockDefinitionStorage::ThreadSnapshot() const
 {

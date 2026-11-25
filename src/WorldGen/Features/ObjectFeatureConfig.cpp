@@ -723,6 +723,9 @@ std::shared_ptr<const ObjectFeatureConfig> &UObjectFeatureConfigStorage::ThreadR
 std::shared_ptr<const ObjectFeatureConfig> UObjectFeatureConfigStorage::GetThreadReadSnapshot()
 {return ThreadReadKeep();}
 
+void UObjectFeatureConfigStorage::ReleaseThreadRead() noexcept
+{ThreadReadKeep().reset();}
+
 const ObjectFeatureConfig &UObjectFeatureConfigStorage::Get()
 {
   if (const WorldGenContentSnapshot *pin = GetPinnedWorldGenContent())
