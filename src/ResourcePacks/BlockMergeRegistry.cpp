@@ -85,19 +85,20 @@ void UBlockMergeRegistry::MergeBlockCatalog(
     std::string RegistryName;
     std::string LocalName;
     ResourcePackBlock Block;
-    ResourcePackManifest Pack;
+    // sorted is immutable and outlives every pending row in this call.
+    const ResourcePackManifest *Pack{nullptr};
   };
   std::vector<PendingBlock> pending;
 
   for (const auto &pack : sorted)
   {
-    for (const auto &block : UResourcePack::LoadBlocks(pack))
+    for (auto &block : UResourcePack::LoadBlocks(pack))
     {
       PendingBlock pb;
       pb.LocalName = block.Definition.Name;
       pb.RegistryName = block.Definition.Name;
-      pb.Block = block;
-      pb.Pack = pack;
+      pb.Block = std::move(block);
+      pb.Pack = &pack;
       if (pack.MergeMode == PackMergeMode::Duplicate)
       {
         pb.RegistryName = MakeQualifiedBlockName(pack.Id, pb.LocalName);
@@ -109,30 +110,30 @@ void UBlockMergeRegistry::MergeBlockCatalog(
   for (const auto &pb : pending)
   {
     const auto existing = BlocksByName.find(pb.RegistryName);
-    if (existing != BlocksByName.end() && !pb.Pack.Id.empty() &&
-        existing->second.OwnerPackId == pb.Pack.Id &&
+    if (existing != BlocksByName.end() && !pb.Pack->Id.empty() &&
+        existing->second.OwnerPackId == pb.Pack->Id &&
         pb.RegistryName == pb.LocalName)
     {
       continue;
     }
     if (existing != BlocksByName.end())
     {
-      if (pb.Pack.MergeMode == PackMergeMode::SkipExisting)
+      if (pb.Pack->MergeMode == PackMergeMode::SkipExisting)
       {
         continue;
       }
-      if (pb.Pack.MergeMode == PackMergeMode::Override)
+      if (pb.Pack->MergeMode == PackMergeMode::Override)
       {
         MergedEntry entry;
         entry.Definition = pb.Block.Definition;
         entry.Definition.Name = pb.RegistryName;
         entry.Stems = pb.Block.TextureStems;
-        entry.OwnerPackId = pb.Pack.Id;
+        entry.OwnerPackId = pb.Pack->Id;
         entry.IsQualifiedDuplicate = pb.RegistryName != pb.LocalName;
         BlocksByName[pb.RegistryName] = entry;
         continue;
       }
-      if (pb.Pack.MergeMode == PackMergeMode::Duplicate)
+      if (pb.Pack->MergeMode == PackMergeMode::Duplicate)
       {
         if (BlocksByName.find(pb.RegistryName) != BlocksByName.end())
         {
@@ -148,7 +149,7 @@ void UBlockMergeRegistry::MergeBlockCatalog(
     entry.Definition = pb.Block.Definition;
     entry.Definition.Name = pb.RegistryName;
     entry.Stems = pb.Block.TextureStems;
-    entry.OwnerPackId = pb.Pack.Id;
+    entry.OwnerPackId = pb.Pack->Id;
     entry.IsQualifiedDuplicate = pb.RegistryName != pb.LocalName;
     BlocksByName[pb.RegistryName] = entry;
   }
@@ -250,10 +251,11 @@ std::unordered_set<std::string> &LoggedPlaceholderStems()
 void UBlockMergeRegistry::ResolveTextureAtlas(
     const std::vector<ResourcePackManifest> &sorted)
 {
-  std::unordered_map<std::string, ResourcePackManifest> packById;
+  // Borrow only during this call; persistent entries keep owned IDs/stems.
+  std::unordered_map<std::string, const ResourcePackManifest *> packById;
   for (const auto &pack : sorted)
   {
-    packById[pack.Id] = pack;
+    packById[pack.Id] = &pack;
   }
 
   std::unordered_map<std::string, bool> stem_exists;
@@ -282,7 +284,7 @@ void UBlockMergeRegistry::ResolveTextureAtlas(
     {
       continue;
     }
-    const ResourcePackManifest &ownerPack = packIt->second;
+    const ResourcePackManifest &ownerPack = *packIt->second;
     for (int face = 0; face < 6; ++face)
     {
       const std::string rawStem = pair.second.Stems[static_cast<size_t>(face)];

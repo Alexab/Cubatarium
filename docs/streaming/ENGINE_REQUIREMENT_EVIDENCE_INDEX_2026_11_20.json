@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.merge-staging",
+      "status": "SCOPED_COPY_REMOVAL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-merge-staging-acceptance.json",
+      "certificate": "S4_02_C05_MERGE_STAGING_CERTIFICATE_2026_11_25.json",
+      "scope": "Merge staging ownership scoped correction PASS. Pending rows borrow immutable sorted-manifest pointers for call lifetime instead of copying whole manifests per block;block payload moved from temporary LoadBlocks output instead of copied. Atlas owner lookup also borrows sorted manifests instead of deep copies. Persistent ActivePacks and final entries still own data;no borrowed manifest pointer escapes either function. Real4-pack20-block Rebuild skip/override/duplicate fixture with large unused manifest metadata:baseline ordinary-new peak3748609,fixed687158 (-81.669%),retained348235 unchanged;attempts3382->2897. Exact normalized definitions/display/hardness/types/dig/stems/stable IDs/descriptors/fingerprint identical before/after. Caller mutation after Rebuild cannot change retained catalog. All2897 persistent refusal prefixes clean fresh target to0 and exact retries recover same catalog. Full scatter/resource-growth213/four-candidate1708 regressions PASS. Release desktop and native runtime/startup/save/UI/provenance PASS;startup-only aggregate smoke UNTESTED retained."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.resource-block-growth",
       "status": "SCOPED_SOURCE_REFUSAL_RELEASE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-resource-block-growth-acceptance.json",

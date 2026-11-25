@@ -1,0 +1,888 @@
+{
+  "schema": "s4-merge-staging-ownership-certificate.v1",
+  "status": "SCOPED_COPY_REMOVAL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Merge staging ownership scoped correction PASS. Pending rows borrow immutable sorted-manifest pointers for call lifetime instead of copying whole manifests per block;block payload moved from temporary LoadBlocks output instead of copied. Atlas owner lookup also borrows sorted manifests instead of deep copies. Persistent ActivePacks and final entries still own data;no borrowed manifest pointer escapes either function. Real4-pack20-block Rebuild skip/override/duplicate fixture with large unused manifest metadata:baseline ordinary-new peak3748609,fixed687158 (-81.669%),retained348235 unchanged;attempts3382->2897. Exact normalized definitions/display/hardness/types/dig/stems/stable IDs/descriptors/fingerprint identical before/after. Caller mutation after Rebuild cannot change retained catalog. All2897 persistent refusal prefixes clean fresh target to0 and exact retries recover same catalog. Full scatter/resource-growth213/four-candidate1708 regressions PASS. Release desktop and native runtime/startup/save/UI/provenance PASS;startup-only aggregate smoke UNTESTED retained.",
+  "remaining": "C05 OPEN:general whole-directory/resource merge source envelope (remaining pending vector/map/IDs/descriptors/overrides/stem memo/atlas source growth),pack biome-image adoption and full source/retained/prior-current publication composition. Observed scoped reduction is not general bound or process cap;existing mutable Rebuild failure rollback not proved. C06 finite world/thread/global/publisher/escaped roots,E12 CRT/stack/platform/GPU/full process matrix and S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "completed_after_observed_refusal": 0,
+    "failed_cases": 0,
+    "fingerprint": "7588755686804937662",
+    "normal_attempts": 2897,
+    "normal_peak": 687158,
+    "normal_retained": 348235,
+    "normalized": {
+      "base_1": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 102,
+        "name": "base_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_2": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 103,
+        "name": "base_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_3": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 104,
+        "name": "base_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_4": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 105,
+        "name": "base_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_1": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 132,
+        "name": "duplicate::duplicate_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_2": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 133,
+        "name": "duplicate::duplicate_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_3": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 134,
+        "name": "duplicate::duplicate_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_4": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 135,
+        "name": "duplicate::duplicate_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::shared": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 131,
+        "name": "duplicate::shared",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_1": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 122,
+        "name": "override_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_2": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 123,
+        "name": "override_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_3": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 124,
+        "name": "override_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_4": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 125,
+        "name": "override_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "shared": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 121,
+        "name": "shared",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_1": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 112,
+        "name": "skip_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_2": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 113,
+        "name": "skip_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_3": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 114,
+        "name": "skip_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_4": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 115,
+        "name": "skip_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      }
+    },
+    "retained_catalog_owns_data": true,
+    "schema": "merge-staging-ownership.v1",
+    "scope": "Actual four-pack Rebuild with raw missing texture stems and no placeholder/GPU;skip/override/duplicate,stable IDs and all fixture fields. Allocation refusals release fresh target and retry;mutable Rebuild rollback is not asserted. Scoped observed peak,not general source/process bound.",
+    "status": "PASS",
+    "refusal_matrix": {
+      "cases": 2897,
+      "all_threw_and_cleaned": true,
+      "artifact": "build/desktop-msvc/s4-merge-staging-accepted.json",
+      "artifact_sha256": "9cf2f922b4ccc0d48e1a65db15dd96de8962238951b98ab4fbd5a3bd67550ce4"
+    }
+  },
+  "baseline": {
+    "completed_after_observed_refusal": 0,
+    "failed_cases": 0,
+    "fingerprint": "7588755686804937662",
+    "normal_attempts": 3382,
+    "normal_peak": 3748609,
+    "normal_retained": 348235,
+    "normalized": {
+      "base_1": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 102,
+        "name": "base_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_2": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 103,
+        "name": "base_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_3": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 104,
+        "name": "base_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "base_4": {
+        "dig": {
+          "pickaxe": 2
+        },
+        "display": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "hardness": 1.0,
+        "id": 105,
+        "name": "base_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_1": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 132,
+        "name": "duplicate::duplicate_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_2": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 133,
+        "name": "duplicate::duplicate_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_3": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 134,
+        "name": "duplicate::duplicate_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::duplicate_4": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 135,
+        "name": "duplicate::duplicate_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "duplicate::shared": {
+        "dig": {
+          "pickaxe": 5
+        },
+        "display": "ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "hardness": 4.0,
+        "id": 131,
+        "name": "duplicate::shared",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_1": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 122,
+        "name": "override_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_2": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 123,
+        "name": "override_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_3": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 124,
+        "name": "override_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "override_4": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 125,
+        "name": "override_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "shared": {
+        "dig": {
+          "pickaxe": 4
+        },
+        "display": "ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "hardness": 3.0,
+        "id": 121,
+        "name": "shared",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_1": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 112,
+        "name": "skip_1",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_2": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 113,
+        "name": "skip_2",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_3": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 114,
+        "name": "skip_3",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      },
+      "skip_4": {
+        "dig": {
+          "pickaxe": 3
+        },
+        "display": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "hardness": 2.0,
+        "id": 115,
+        "name": "skip_4",
+        "stems": [
+          "one",
+          "two",
+          "three",
+          "four",
+          "five",
+          "six"
+        ],
+        "types": [
+          "solid",
+          "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+        ]
+      }
+    },
+    "retained_catalog_owns_data": true,
+    "schema": "merge-staging-ownership.v1",
+    "scope": "Actual four-pack Rebuild with raw missing texture stems and no placeholder/GPU;skip/override/duplicate,stable IDs and all fixture fields. Allocation refusals release fresh target and retry;mutable Rebuild rollback is not asserted. Scoped observed peak,not general source/process bound.",
+    "status": "PASS"
+  },
+  "baseline_identity": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "e557e6e071b327c131b752034b65291dfebae47ead60d9a20e751aec15a723e6",
+    "src/Test/OrdinaryNewObservation.h": "349cde41d20461f68d2586cb919662fab7fc90ac2c1961449ab82c24bc3f205c",
+    "src/Test/MergeStagingOwnershipFixture.h": "69e431ce4c655027517db97673361bbad16a9fd64a74c1c9baaa685296b2624a",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "c071db0c6d7f487a737fed5140b39ac0b136e2560962970b86a1346d5f2769bd",
+    "build/desktop-msvc/Release/worldgen_scatter_block_resolve_test.exe": "02db833b9d1fcbe3c8036b9ad2efd4b90a2854285bf4a50b092d700a32986667"
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2a013fe2c157f9439b62a32f2e2beec0f00d4b719290eb53a309dfac7d0fff01"
+    },
+    {
+      "name": "resource-growth",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--resource-block-growth",
+        "build\\desktop-msvc\\s4-merge-staging-resource-growth-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "4332af7e5fd9b6d7765129ed5f53d04f4e6d2e5e1e2f9f7e3d8551e1efb1243f"
+    },
+    {
+      "name": "four-candidates",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "build\\desktop-msvc\\s4-merge-staging-candidates-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "4332af7e5fd9b6d7765129ed5f53d04f4e6d2e5e1e2f9f7e3d8551e1efb1243f"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/BlockMergeRegistry.cpp": "79646c7b9592cb3e310e83099bb23b3d8f6a199150df6b7d7d843fec5e943179",
+    "src/Test/OrdinaryNewObservation.h": "349cde41d20461f68d2586cb919662fab7fc90ac2c1961449ab82c24bc3f205c",
+    "src/Test/MergeStagingOwnershipFixture.h": "69e431ce4c655027517db97673361bbad16a9fd64a74c1c9baaa685296b2624a",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "c071db0c6d7f487a737fed5140b39ac0b136e2560962970b86a1346d5f2769bd",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "6645bcf6a328409a1299d56dce146aaa4b7df78f9a8f27818a9bc09ba474d78d"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "2a013fe2c157f9439b62a32f2e2beec0f00d4b719290eb53a309dfac7d0fff01",
+  "desktop_exe_sha256": "f347fecc85344375f1a39bf143b2c63bf3c87ef25c225ac5e444b56256879ef0",
+  "provenance": "build/desktop-msvc/s4-merge-staging-provenance.json",
+  "ownership_contract": {
+    "pending": "Only pointer to sorted vector element;sorted is const,not modified while all pending rows exist. Temporary loaded blocks moved before source vector destruction. Pending own block payload/names;may still deep-copy on vector growth because map move may throw.",
+    "atlas": "Local lookup stores pointers to same immutable sorted vector;last matching ID remains last-wins as before. No atlas lookup pointer stored in persistent registry.",
+    "persistent": "ActivePacks continues to deep-copy caller manifests;entries own definitions/stems/owner IDs;retained byte count and caller mutation oracle preserved.",
+    "failure": "Fresh target may partially change during mutable Rebuild;test destroys target on refusal then repeats exact input. No rollback of existing published registry claimed.",
+    "scope": "Actual scoped ordinary-new observation on default MSVC Release,not process RSS or general directory bound. No GPU/placeholder inside direct fixture;native probes separate."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-merge-staging-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  }
+}

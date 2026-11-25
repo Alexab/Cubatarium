@@ -458,8 +458,11 @@ static void TestResourceCatalogCensus()
 
 } // namespace
 
+#include "Test/MergeStagingOwnershipFixture.h"
+
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--merge-staging") return RunMergeStagingOwnershipFixture(argc>2?argv[2]:nullptr,argc>3 && std::string(argv[3])=="matrix");
   if(argc>1 && std::string(argv[1])=="--atlas-cpu-baseline-only") {TestAtlasCpuConstruction(false);return 0;}
   if(argc>1 && std::string(argv[1])=="--atlas-cpu-only") {TestAtlasCpuConstruction(true);return 0;}
   if(argc>1 && std::string(argv[1])=="--source-json-load-only") {TestSourceJsonLoading();return 0;}
