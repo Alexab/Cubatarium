@@ -21,6 +21,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include "Test/BiomeMapSourceFixture.h"
 
 namespace fs = std::filesystem;
 
@@ -166,12 +167,12 @@ static void TestPinnedBiomeImageReload()
   FluidTest::Expect(first.Pack->BiomeMapImage && first.Pack->BiomeMapImage->Width==2 && first.Pack->BiomeMapImage->Height==1 &&
       second.Pack->BiomeMapImage && second.Pack->BiomeMapImage->Width==1 && second.Pack->BiomeMapImage->Height==2 &&
       first.Pack->BiomeMapImage!=second.Pack->BiomeMapImage,kTestName,"image dimensions and immutable payload identity are publication-owned");
-  const auto first_data=first.Pack->BiomeMapImage->Pixels.data();
-  const auto image_bytes=first.Pack->BiomeMapImage->Pixels.capacity();
+  const auto first_data=first.Pack->BiomeMapImage->Data();
+  const auto image_bytes=first.Pack->BiomeMapImage->ByteCount();
   std::vector<std::shared_ptr<const cutum::WorldGenPack>> copies;
   for(int n=0;n<64;++n) {
     auto copy=std::make_shared<cutum::WorldGenPack>(*first.Pack);
-    FluidTest::Expect(copy->BiomeMapImage==first.Pack->BiomeMapImage && copy->BiomeMapImage->Pixels.data()==first_data,
+    FluidTest::Expect(copy->BiomeMapImage==first.Pack->BiomeMapImage && copy->BiomeMapImage->Data()==first_data,
         kTestName,"pack copies share exact immutable decoded payload instead of copying pixels");
     copies.push_back(std::move(copy));
   }
@@ -231,7 +232,7 @@ static void TestPinnedBiomeImageReload()
   FluidTest::Expect(retired_pack.expired() && !retired_image.expired(),kTestName,
       "escaped payload and pack copies retain pixels without retaining original pack");
   copies.clear();
-  FluidTest::Expect(!retired_image.expired() && escaped_image->Pixels.data()==first_data,kTestName,
+  FluidTest::Expect(!retired_image.expired() && escaped_image->Data()==first_data,kTestName,
       "last explicit image owner still owns original allocation after pack copies retire");
   escaped_image.reset();
   FluidTest::Expect(retired_image.expired(),kTestName,"last strong image owner retires old decoded payload");
@@ -497,12 +498,15 @@ static void TestStbiAllocationEnvelope()
   {std::ofstream pack(root/"pack.json");pack << R"({"id":"stbi_accounting","biome_mode":"image","biome_map_image":"map.png"})";}
   auto packLedger=std::make_shared<UStbiAllocationLedger>();
   {UStbiAllocationScope active(packLedger);FluidTest::Expect(UWorldGenPack::LoadFromDirectory(root.string()),kTestName,"actual image Pack loads through STBI accounting");}
-  const auto loaded=UWorldGenPack::GetSnapshot();
-  FluidTest::Expect(loaded->BiomeMapImage && loaded->BiomeMapImage->Pixels.size()==64*64*3 &&
-      packLedger->GetSnapshot().live_request_bytes==0 && packLedger->GetSnapshot().reallocations>=2,kTestName,
-      "Pack owns copied RGB vector while decoder allocation and internals have retired");
-  check(loaded->BiomeMapImage->Pixels.data(),3);
+  auto loaded=UWorldGenPack::GetSnapshot();
+  FluidTest::Expect(loaded->BiomeMapImage && loaded->BiomeMapImage->ByteCount()==64*64*3 &&
+      packLedger->GetSnapshot().live_request_bytes==loaded->BiomeMapImage->DecodedRequestBytes() &&
+      packLedger->GetSnapshot().live_allocations==1 && packLedger->GetSnapshot().reallocations>=2,kTestName,
+      "Pack adopts exact RGB decoder allocation while internal scratch has retired");
+  check(loaded->BiomeMapImage->Data(),3);
   FluidTest::Expect(UWorldGenPack::LoadPackId("default"),kTestName,"restore default Pack through normal loader");
+  const auto packBytes=loaded->BiomeMapImage->ByteCount();loaded.reset();
+  FluidTest::Expect(packLedger->GetSnapshot().live_request_bytes==0,kTestName,"last Pack owner retires adopted decoder request");
   const auto after=GetStbiProcessAllocationSnapshot();
   FluidTest::Expect(after.live_request_bytes==before.live_request_bytes && after.live_allocations==before.live_allocations &&
       after.reserved_request_bytes==0,kTestName,"all STBI hook paths return process live/request credits to baseline");
@@ -511,7 +515,7 @@ static void TestStbiAllocationEnvelope()
       << " decode_admitted_peak=" << retained.peak_admitted_request_bytes << " reallocations=" << retained.reallocations
       << " allocation_failure_cases=" << retained.allocation_attempts << " failed_decodes=" << allocationFailures
       << " pack_decode_peak=" << packLedger->GetSnapshot().peak_admitted_request_bytes
-      << " pack_rgb_capacity=" << loaded->BiomeMapImage->Pixels.capacity()
+      << " pack_rgb_bytes=" << packBytes
       << " concurrent_retained_request=" << concurrent.live_request_bytes << " final_live_delta=0" << std::endl;
 }
 
@@ -571,6 +575,7 @@ static void TestCatalogJsonSourceEnvelope()
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--biome-map-source") return RunBiomeMapSourceFixture(argc>2?argv[2]:nullptr);
   const fs::path repo_root = FindRepoRoot();
   std::error_code ec;
   fs::current_path(repo_root, ec);

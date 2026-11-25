@@ -6,6 +6,8 @@
 #include "WorldGen/Sampling/BiomeDefinitionRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
 #include <memory>
+#include <limits>
+#include <utility>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -245,12 +247,31 @@ struct WorldGenPackInfo
   std::string Description;
 };
 
-struct WorldGenBiomeMapImage
+inline bool CheckedBiomeMapRgbBytes(size_t width,size_t height,size_t &bytes) noexcept
 {
-  int Width{0};
-  int Height{0};
-  std::vector<uint8_t> Pixels;
+  bytes=0;
+  if(!width || !height || width>std::numeric_limits<size_t>::max()/3/height) return false;
+  bytes=width*height*3;return true;
+}
+
+class WorldGenBiomeMapImage
+{
+public:
+  struct DecoderFree {void operator()(unsigned char *pixels) const noexcept;};
+  using OwnedPixels=std::unique_ptr<unsigned char,DecoderFree>;
+  WorldGenBiomeMapImage(int width,int height,OwnedPixels pixels,size_t bytes) noexcept
+      :Width(width),Height(height),Pixels(std::move(pixels)),Bytes(bytes) {}
+  const int Width,Height;
+  const unsigned char *Data() const noexcept {return Pixels.get();}
+  size_t ByteCount() const noexcept {return Bytes;}
+  size_t DecodedRequestBytes() const noexcept;
+private:
+  OwnedPixels Pixels;
+  size_t Bytes;
 };
+
+// The path is borrowed; the immutable result owns the decoder allocation.
+std::shared_ptr<const WorldGenBiomeMapImage> DecodeWorldGenBiomeMapImage(const char *path);
 
 struct WorldGenPack
 {

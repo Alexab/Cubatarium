@@ -1,0 +1,266 @@
+{
+  "schema": "s4-biome-map-source-certificate.v1",
+  "status": "SCOPED_RGB_ADOPTION_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Biome-map RGB decoder adoption/source overlap scoped PASS. Production loader transfers the exact STBI allocation into immutable shared image ownership instead of vector assign;dimensions and RGB size checked before publication. Read-only pixel API preserves snapshot isolation. PNG64x64,PPM and16-bit PGM conversion have one40-byte shared object/control ordinary-new request;PNG returned decoder request12320 bytes and no12288-byte vector backing.3 owner-allocation refusals and12 persistent decoder refusal boundaries clean to0 and exact retries recover independent authored RGB. Prior/current images coexist,old pixel oracle remains valid,escaped final owner released on another thread returns all decoder/ordinary credits. Checked RGB arithmetic,malformed/null/empty input,overflow and extra-allocation controls PASS. Catalog census counts actual STBI payload+prefix once per shared image,separate from vectors;duplicate Pack roots do not duplicate decoder backing. Full biome/image/allocator and related scoped census/pipeline/factory/scatter/retained-input/9-family decoder/conversion regressions PASS. Release desktop/native runtime/startup/direct save/UI/provenance and8 real GL texture readbacks PASS;aggregate startup-only smoke UNTESTED.",
+  "remaining": "C05 OPEN:consumer publication copies/fingerprint construction and final source/retained/prior-current world/catalog owner composition. Biome-map source peak now max(decoder admitted bound,returned decoder request+typed shared owner);prior/escaped owners remain separate live entry terms. C06 finite all-world/thread/global/publisher/escaped roots,E12 CRT/stack/TLS/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. Existing ecology fixture mismatch remains S6.05. No audit restart,arbitrary asset cap or reduced acceptance.",
+  "unit": {
+    "cases": [
+      {
+        "combined_peak": 28800,
+        "combined_upper": 219840,
+        "decoder_attempts": 6,
+        "decoder_peak": 28800,
+        "eliminated_rgb_vector_bytes": 12288,
+        "name": "png",
+        "ordinary_attempts": 1,
+        "owner_request": 40,
+        "pass": true,
+        "retained_decoder_request": 12320
+      },
+      {
+        "combined_peak": 18600,
+        "combined_upper": 18600,
+        "decoder_attempts": 2,
+        "decoder_peak": 18600,
+        "eliminated_rgb_vector_bytes": 12,
+        "name": "ppm",
+        "ordinary_attempts": 1,
+        "owner_request": 40,
+        "pass": true,
+        "retained_decoder_request": 44
+      },
+      {
+        "combined_peak": 18600,
+        "combined_upper": 18600,
+        "decoder_attempts": 4,
+        "decoder_peak": 18600,
+        "eliminated_rgb_vector_bytes": 12,
+        "name": "pgm16",
+        "ordinary_attempts": 1,
+        "owner_request": 40,
+        "pass": true,
+        "retained_decoder_request": 44
+      }
+    ],
+    "checked_sizing_and_overflow": true,
+    "decoder_refusal_and_exact_retries": 12,
+    "failed_cases": 0,
+    "malformed_clean": true,
+    "negative_control": true,
+    "owner_refusal_and_exact_retries": 3,
+    "prior_current": {
+      "combined_observed_upper": 30960,
+      "cross_thread_final_zero": true,
+      "escaped_valid": true,
+      "pass": true,
+      "source_upper": 219840
+    },
+    "process_live_restored": true,
+    "schema": "biome-map-source.v1",
+    "scope": "Actual production RGB file decode,one shared owner,no copied vector. Source STBI requested/admitted bounds plus ordinary object/control;borrowed path,file CRT,optional ledger,thread runtime,prior escaped roots separate. Not physical process memory or whole C05 acceptance.",
+    "status": "PASS"
+  },
+  "regressions": [
+    {
+      "name": "source",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_biome_features_test.exe",
+        "--biome-map-source",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-biome-map-source-accepted.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "300443bdd7da3657602ad97eb45067cf6be67889e41e242c44257a210103f0e5"
+    },
+    {
+      "name": "biomes",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_biome_features_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "300443bdd7da3657602ad97eb45067cf6be67889e41e242c44257a210103f0e5"
+    },
+    {
+      "name": "census",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--catalog-storage-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2c53eb451ec9e16d45c6112256502d281d39cea4a65f56f50bc89f4a8e05c460"
+    },
+    {
+      "name": "pipeline-owners",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2c53eb451ec9e16d45c6112256502d281d39cea4a65f56f50bc89f4a8e05c460"
+    },
+    {
+      "name": "pinned-factory",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pinned-factory-catalog-only"
+      ],
+      "returncode": 0,
+      "exe_sha256": "2c53eb451ec9e16d45c6112256502d281d39cea4a65f56f50bc89f4a8e05c460"
+    },
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "b8d402ffbba5aff75cfa87a303bcaa6ac0d019078e3e604771a76dc9e2c10857"
+    },
+    {
+      "name": "retained-inputs",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--retained-inputs",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-biome-map-retained-inputs.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "3983289e3ac0d0414c014ca52f487c46c95481cccb5884d2cc10e0301d23d64c"
+    },
+    {
+      "name": "decoder-formats",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-biome-map-decoder-formats.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "f85a9da4f2f9d415c1531417fd62bde0a903ecb897bd9e95d595197169515cec"
+    },
+    {
+      "name": "conversion-range",
+      "command": [
+        "build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-biome-map-conversion-range.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "f85a9da4f2f9d415c1531417fd62bde0a903ecb897bd9e95d595197169515cec"
+    }
+  ],
+  "source_sha256": {
+    "src/WorldGen/Core/WorldGenPack.h": "64913951deb6af5e9199278fcb981444a45b7902cd66a628022f4f5e977ca8ef",
+    "src/WorldGen/Core/WorldGenPack.cpp": "ac7d30fa3443e95b6a169d103ffa90f3b56cb2f8e50b273252ed8ba190b5c693",
+    "src/WorldGen/Core/BiomeMapSourceEnvelope.h": "8b982e65752c40e53cc7a3da892e8fa949ebbf0f31abfc932d5515599f2e9e0d",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "a9fb3de30387fa2e208ecb82b3e19842e796dc3a8466eebeb577e5d502130b77",
+    "src/Test/BiomeMapSourceFixture.h": "1fcf816fab7041f8d5a0b3a02ff63c5e6f4c63d6c197d7dd552a2ee563e32cbc",
+    "src/Test/WorldGenBiomeFeaturesTest.cpp": "51a40ec5521e0c74180d4ac873421a39d085dc8aa6454373056ad24e9e7fb782",
+    "src/Test/WorldGenVegetationPlacementIntegrationTest.cpp": "5b2c421d07cbc4662d61bada130ba290aacc2519e825ce53a24fec6a39e2343a",
+    "src/Core/Memory/StbiAllocation.h": "0931a1f0d8b397724fbae6b07e96153214ed5abf1ab511a7b7deb0ddad308e50",
+    "src/Core/Memory/StbiSourceEnvelope.h": "cbe449727fec86489921e30fe871bf89dec9fe8895776399e54796f05603fa76",
+    "src/ThirdParty/stb_image.cpp": "d97bcf97452f20266d821a6de9c6f3706024c0dbd57d8271679ce632737930c4",
+    "src/ThirdParty/stb_image.h": "beccdcfcfa57f30b64330eddfc02bbd922263aa4890545c467ac9a1edec61427"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d"
+  },
+  "test_exe_sha256": "300443bdd7da3657602ad97eb45067cf6be67889e41e242c44257a210103f0e5",
+  "desktop_exe_sha256": "b37e61d5b28392714145b27a6800a4f6072901b577c5d02a150f0bc0b09f08dd",
+  "provenance": "build/desktop-msvc/s4-biome-map-provenance.json",
+  "model": {
+    "standalone_decode": "Borrowed const char path. Default production RGB file decode;STBI direct allocator requests (prefix32 included),followed by sizeof(std::_Ref_count_obj2<WorldGenBiomeMapImage>)==40 ordinary-new request. Phase upper=max(D,R+40);retained upper=R+40. No vector payload or second shared pixel control. Typed code uses source/domain bound,not observed peak.",
+    "entry_composition": "Existing images/escaped handles remain live owners. Fixture one allocator epoch retains old PNG through current PPM decode. Source upper=max(A_old,L_old+A_new);observed conservative paired envelope30960<=219840. Duplicate Pack publications share image/control/backing.",
+    "census": "New decoder_request_bytes/decoder_allocations fields add16 inline bytes per diagnostic census record,no global/TLS counters. known_storage_bytes includes actual decoder requested payload+STBI prefix exactly once per shared image. Existing STBI process ledger describes these same requests,not additional image memory to be summed again. Actual shared control remains separate current owner census term.",
+    "limits": "File/CRT buffers,path storage,optional scoped ledger/control,thread runtime/stack,allocator metadata,GPU and all other catalog/publication owners remain separate. No measured whole-process cap or claim of lower overall decoder peak;removed vector copy phase may be below decoder scratch peak.3 consumer scenes cover adoption;accepted9-family source decoder matrix retained separately.",
+    "lifecycle": "Failed owner construction leaves decoder RAII intact. Returned const image exposes only const pixels. STBI prefix retains original diagnostic owner and normal free works after scope exit/on another thread. Actual old/new publication concurrency exercised by existing full biome image tests."
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-biome-map-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "real_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  },
+  "decoder_regression": {
+    "status": "PASS",
+    "fixture_count": 18,
+    "persistent_allocation_failure_cases": 111,
+    "byte_refusal_cases": 36,
+    "normal_retry_cases": 36,
+    "truncated_header_cases": 36,
+    "truncated_returned_data_cases": 26,
+    "file_memory_rgb_rgba_cases": 72
+  },
+  "conversion_range_regression": {
+    "cases": [
+      {
+        "allocation_attempts": 0,
+        "live_request_bytes": 0,
+        "refusals": 0,
+        "route": 0
+      },
+      {
+        "allocation_attempts": 0,
+        "live_request_bytes": 0,
+        "refusals": 0,
+        "route": 1
+      },
+      {
+        "allocation_attempts": 0,
+        "live_request_bytes": 0,
+        "refusals": 0,
+        "route": 2
+      },
+      {
+        "allocation_attempts": 1,
+        "live_request_bytes": 0,
+        "refusals": 1,
+        "route": 3
+      }
+    ],
+    "layout": {
+      "context_inline": 224,
+      "format_mask": 511,
+      "gif_info_heap_state": 34928,
+      "gif_inline": 34928,
+      "jpeg_heap_state": 18568,
+      "png_inline": 40,
+      "prefix_bytes": 32,
+      "zlib_inline": 4104
+    },
+    "process_admitted_peak": 2147483720,
+    "schema": "stbi-ordinary-source-envelope-test.v1",
+    "status": "PASS",
+    "supported_intermediate_bytes": 2147483648
+  }
+}

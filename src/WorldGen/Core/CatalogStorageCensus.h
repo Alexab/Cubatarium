@@ -39,6 +39,8 @@ struct CatalogStorageCensus
 {
   size_t known_storage_bytes{0},object_bytes{0},vector_bytes{0},map_value_bytes{0};
   size_t text_bytes{0},diagnostic_bytes{0},vectors{0},tables{0},nodes{0},bucket_slots{0},strings{0};
+  // Decoder requests include their STBI prefix; they are not vector backing.
+  size_t decoder_request_bytes{0},decoder_allocations{0};
   size_t shared_owners{0},input_snapshot_handle_bytes{0},vector_allocations{0},msvc_unordered_extra_bytes{0};
   size_t list_value_bytes{0},tree_tables{0},tree_nodes{0},lists{0},list_nodes{0};
   size_t msvc_tree_extra_bytes{0},msvc_list_extra_bytes{0},calling_thread_inline_bytes{0};
@@ -171,7 +173,10 @@ public:
       Map(biome.SubBiomes);for(const auto &sub:biome.SubBiomes) {Text(sub.first);Text(sub.second.SubsurfaceSlot);}
     }
     Biomes(pack->BiomeRegistry);
-    if(Shared(CatalogObjectKind::Image,pack->BiomeMapImage)) Vector(pack->BiomeMapImage->Pixels);
+    if(Shared(CatalogObjectKind::Image,pack->BiomeMapImage)) {
+      const auto request=pack->BiomeMapImage->DecodedRequestBytes();
+      Bytes(Result.decoder_request_bytes,request);if(request) ++Result.decoder_allocations;
+    }
   }
   void Features(const std::shared_ptr<const ObjectFeatureConfig> &features) {
     if(!Shared(CatalogObjectKind::Features,features)) return;

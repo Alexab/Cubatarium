@@ -2,6 +2,7 @@
 
 #include "Blocks/BlockRegistry.h"
 #include "Core/Memory/GenerationString.h"
+#include "Core/Memory/StbiAllocation.h"
 #include "ResourcePacks/ResourcePack.h"
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
@@ -2675,16 +2676,21 @@ int main(int argc, char **argv)
     const auto registry=cutum::MeasureCatalogStorage(&custom,1);
     FluidTest::Expect(registry.Objects(cutum::CatalogObjectKind::Biomes)==1 && registry.text_bytes>=text.text_bytes+2*(64*1024+1),
         kTestName,"registry key vector and handle-map key copies both count, shared Pack/Biomes roots count once");
-    auto image=std::make_shared<cutum::WorldGenBiomeMapImage>();image->Width=1;image->Height=1;
-    image->Pixels={0xe8,0xd4,0x6a};image->Pixels.reserve(4096);pack->BiomeMapImage=image;
+    cutum::WorldGenBiomeMapImage::OwnedPixels imagePixels(static_cast<unsigned char *>(cutum::StbiAllocate(4096)));
+    FluidTest::Expect(bool(imagePixels),kTestName,"census image allocation succeeds");
+    imagePixels.get()[0]=0xe8;imagePixels.get()[1]=0xd4;imagePixels.get()[2]=0x6a;
+    auto image=std::make_shared<cutum::WorldGenBiomeMapImage>(1,1,std::move(imagePixels),3);pack->BiomeMapImage=image;
     const auto image_count=cutum::MeasureCatalogStorage(&custom,1);
-    FluidTest::Expect(image_count.vector_bytes-registry.vector_bytes==image->Pixels.capacity() &&
-        image_count.Objects(cutum::CatalogObjectKind::Image)==1,kTestName,"image spare bytes counted as one shared payload");
+    FluidTest::Expect(image_count.vector_bytes==registry.vector_bytes &&
+        image_count.decoder_request_bytes-registry.decoder_request_bytes==4096+cutum::StbiAllocationHeaderBytes() &&
+        image_count.decoder_allocations-registry.decoder_allocations==1 &&
+        image_count.Objects(cutum::CatalogObjectKind::Image)==1,kTestName,"adopted image request includes spare payload and decoder prefix once,without vector backing");
     std::array<cutum::WorldGenContentSnapshot,2> two={custom,custom};
     two[1].Pack=std::make_shared<cutum::WorldGenPack>(*pack);
     const auto copies=cutum::MeasureCatalogStorage(two.data(),two.size());
     FluidTest::Expect(copies.Objects(cutum::CatalogObjectKind::Pack)==2 && copies.Objects(cutum::CatalogObjectKind::Biomes)==1 &&
-        copies.Objects(cutum::CatalogObjectKind::Image)==1,kTestName,"distinct Pack shells count separately while their image and registry remain shared");
+        copies.Objects(cutum::CatalogObjectKind::Image)==1 && copies.decoder_request_bytes==image_count.decoder_request_bytes &&
+        copies.decoder_allocations==1,kTestName,"distinct Pack shells count separately while their image request and registry remain shared");
 
     auto features=std::make_shared<cutum::ObjectFeatureConfig>();features->Decoration.resize(2);custom.Features=features;
     const auto unprepared=cutum::MeasureCatalogStorage(&custom,1);
@@ -2759,7 +2765,7 @@ int main(int argc, char **argv)
     }
     FluidTest::Expect(node_budget->UsedBytes()==0,kTestName,"all tree/list nodes and sentinels retire");
     std::cout << "catalog_known_storage_bytes=" << one.known_storage_bytes << " shared_snapshots=128 deduplicated=1"
-        << " retained_text_capacity=" << pack->Id.capacity()+1 << " image_capacity=" << image->Pixels.capacity()
+        << " retained_text_capacity=" << pack->Id.capacity()+1 << " image_request=" << image->DecodedRequestBytes()
         << " diagnostic_bytes=" << prepared.diagnostic_bytes << " asset_known_bytes=" << with_assets.known_storage_bytes
         << " blocks=1 prefabs=" << with_assets.Objects(cutum::CatalogObjectKind::Prefab)
         << " tables=" << with_assets.tables << " nodes=" << with_assets.nodes << " buckets=" << with_assets.bucket_slots
@@ -2788,8 +2794,10 @@ int main(int argc, char **argv)
     procedural->BiomeMode=cutum::WorldGenBiomeMode::Procedural;
     auto image=std::make_shared<cutum::WorldGenPack>(*procedural);
     image->BiomeMode=cutum::WorldGenBiomeMode::Image;
-    auto pixels=std::make_shared<cutum::WorldGenBiomeMapImage>();
-    pixels->Width=1;pixels->Height=1;pixels->Pixels={0xe8,0xd4,0x6a}; // independent desert marker
+    cutum::WorldGenBiomeMapImage::OwnedPixels marker(static_cast<unsigned char *>(cutum::StbiAllocate(3)));
+    FluidTest::Expect(bool(marker),kTestName,"independent desert marker allocation succeeds");
+    marker.get()[0]=0xe8;marker.get()[1]=0xd4;marker.get()[2]=0x6a;
+    auto pixels=std::make_shared<cutum::WorldGenBiomeMapImage>(1,1,std::move(marker),3);
     image->BiomeMapImage=pixels;
     cutum::ChunkPopulateRequest request; request.content=content; request.content.Pack=procedural;
     request.settings=MakeVegetationSettings();request.settings.TerrainBackendMode=cutum::TerrainBackend::Heightmap;

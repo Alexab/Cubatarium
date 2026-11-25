@@ -1,6 +1,7 @@
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "Core/Memory/GenerationString.h"
+#include "Core/Memory/StbiAllocation.h"
 #include "ThirdParty/stb_image.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
@@ -80,21 +81,18 @@ BiomeId BiomeFromMapColor(uint8_t r, uint8_t g, uint8_t b)
   return BiomeId::Plains;
 }
 
-std::shared_ptr<const WorldGenBiomeMapImage> LoadBiomeMapImage(const std::string &path)
+std::shared_ptr<const WorldGenBiomeMapImage> LoadBiomeMapImage(const char *path)
 {
+  if(!path || !*path) return {};
   int width=0,height=0,comp=0;
-  const std::unique_ptr<unsigned char,decltype(&stbi_image_free)> data(
-      stbi_load(path.c_str(),&width,&height,&comp,3),&stbi_image_free);
+  WorldGenBiomeMapImage::OwnedPixels data(stbi_load(path,&width,&height,&comp,3));
+  size_t bytes=0;
   if (!data || width<=0 || height<=0 ||
-      static_cast<size_t>(width)>std::numeric_limits<size_t>::max()/3/static_cast<size_t>(height))
+      !CheckedBiomeMapRgbBytes(static_cast<size_t>(width),static_cast<size_t>(height),bytes))
   {
     return {};
   }
-  auto image=std::make_shared<WorldGenBiomeMapImage>();
-  image->Width=width; image->Height=height;
-  const auto bytes=static_cast<size_t>(width)*static_cast<size_t>(height)*3;
-  image->Pixels.assign(data.get(),data.get()+bytes);
-  return image;
+  return std::make_shared<WorldGenBiomeMapImage>(width,height,std::move(data),bytes);
 }
 
 void ParseBiomeHeight(const nlohmann::json &height, BiomeHeightProfile &out)
@@ -523,6 +521,15 @@ bool IsValidBiomeKey(const std::string &key)
 }
 
 } // namespace
+
+void WorldGenBiomeMapImage::DecoderFree::operator()(unsigned char *pixels) const noexcept
+{stbi_image_free(pixels);}
+
+size_t WorldGenBiomeMapImage::DecodedRequestBytes() const noexcept
+{return InspectStbiAllocation(Pixels.get()).request_bytes;}
+
+std::shared_ptr<const WorldGenBiomeMapImage> DecodeWorldGenBiomeMapImage(const char *path)
+{return LoadBiomeMapImage(path);}
 
 void ApplyWorldGenPackDocument(WorldGenPackDocument kind,
     const nlohmann::json &json, WorldGenPack &pack)
@@ -1242,7 +1249,7 @@ bool UWorldGenPack::LoadFromDirectory(const std::string &packDir)
       !pack.BiomeMapImagePath.empty())
   {
     const std::filesystem::path imagePath = root / pack.BiomeMapImagePath;
-    pack.BiomeMapImage=LoadBiomeMapImage(imagePath.string());
+    pack.BiomeMapImage=DecodeWorldGenBiomeMapImage(imagePath.string().c_str());
     if (!pack.BiomeMapImage)
     {
       std::cerr << "WorldGenPack: failed to load biome map image "
@@ -1524,7 +1531,7 @@ BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)
 {
   const auto &pack=Get();
   const auto &image=pack.BiomeMapImage;
-  if (!image || image->Pixels.empty() || image->Width<=0 || image->Height<=0)
+  if (!image || !image->Data() || !image->ByteCount() || image->Width<=0 || image->Height<=0)
   {
     return BiomeId::Plains;
   }
@@ -1536,11 +1543,12 @@ BiomeId UWorldGenPack::BiomeAtImage(int worldX, int worldZ)
       (static_cast<size_t>(pz) * static_cast<size_t>(image->Width) +
        static_cast<size_t>(px)) *
       3;
-  if (idx + 2 >= image->Pixels.size())
+  if (idx >= image->ByteCount() || image->ByteCount()-idx<3)
   {
     return BiomeId::Plains;
   }
-  return BiomeFromMapColor(image->Pixels[idx],image->Pixels[idx+1],image->Pixels[idx+2]);
+  const auto *pixels=image->Data();
+  return BiomeFromMapColor(pixels[idx],pixels[idx+1],pixels[idx+2]);
 }
 
 } // namespace cutum

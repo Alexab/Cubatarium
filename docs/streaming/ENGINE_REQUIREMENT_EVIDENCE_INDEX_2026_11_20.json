@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.biome-map-source",
+      "status": "SCOPED_RGB_ADOPTION_OWNERSHIP_SOURCE_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-biome-map-acceptance.json",
+      "certificate": "S4_02_C05_BIOME_MAP_SOURCE_CERTIFICATE_2026_11_25.json",
+      "scope": "Biome-map RGB decoder adoption/source overlap scoped PASS. Production loader transfers the exact STBI allocation into immutable shared image ownership instead of vector assign;dimensions and RGB size checked before publication. Read-only pixel API preserves snapshot isolation. PNG64x64,PPM and16-bit PGM conversion have one40-byte shared object/control ordinary-new request;PNG returned decoder request12320 bytes and no12288-byte vector backing.3 owner-allocation refusals and12 persistent decoder refusal boundaries clean to0 and exact retries recover independent authored RGB. Prior/current images coexist,old pixel oracle remains valid,escaped final owner released on another thread returns all decoder/ordinary credits. Checked RGB arithmetic,malformed/null/empty input,overflow and extra-allocation controls PASS. Catalog census counts actual STBI payload+prefix once per shared image,separate from vectors;duplicate Pack roots do not duplicate decoder backing. Full biome/image/allocator and related scoped census/pipeline/factory/scatter/retained-input/9-family decoder/conversion regressions PASS. Release desktop/native runtime/startup/direct save/UI/provenance and8 real GL texture readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.merge-source-composition",
       "status": "SCOPED_REBUILD_COMPOSITION_REFUSAL_RETAINED_RELEASE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-merge-source-acceptance.json",
