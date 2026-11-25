@@ -14,6 +14,8 @@
 #include <fstream>
 #include <mutex>
 #include <thread>
+#include <set>
+#include "Test/CatalogCooperativeOwners.h"
 
 // Ordinary-new refusal is thread-local. Concurrent worker setup is never
 // charged to a single-thread observer or rejected by another thread's test.
@@ -270,6 +272,9 @@ Json RuntimeDomain()
 }
 int main(int argc,char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--cooperative-owners"){
+    const auto result=TestCatalogCooperativeOwners();catalog_queue_test::WriteReport(argv[2],result);return 0;
+  }
   if(argc==3 && std::string(argv[1])=="--runtime-domain"){
     const auto result=RuntimeDomain();std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';Check(bool(out),"runtime domain receipt write");std::cout<<result.dump()<<std::endl;return 0;
   }

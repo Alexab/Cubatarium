@@ -35,6 +35,8 @@ public:
                                         RelightJobSpec spec,
                                         const UBlockRegistry &registry);
   std::vector<RelightComputeResult> DrainCompleted(int max_per_frame);
+  template<class Inspector> void InspectCompletedCatalogRoots(Inspector &out) const
+  {Completed.InspectValues([&](const auto &result){out.RelightResult(result);});}
   bool HasPendingWork() const;
   int GetInFlightCount() const;
   bool HasInFlightJob(uint64_t job_id) const;

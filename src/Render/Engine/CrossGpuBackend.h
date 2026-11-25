@@ -28,6 +28,8 @@ struct CrossGpuBatch
 
 struct CrossGpuPassCache
 {
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {for(const auto &batch:batches)out.CrossBatch(batch);}
   std::vector<CrossGpuBatch> batches;
   uint64_t meshRevision{0};
   uint64_t cullRevision{0};

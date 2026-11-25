@@ -117,6 +117,8 @@ struct PublicationDelta
 
 struct GreedyGpuPassCache
 {
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const
+  {for(const auto &batch:batches)out.DrawBatch(batch);}
   SectionLightDrawTable LightDrawTable;
   std::vector<GreedyGpuBatch> batches;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingGeometryDirty;

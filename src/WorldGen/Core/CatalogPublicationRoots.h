@@ -65,7 +65,7 @@ public:
   // carry this lease. Include retained invalid leases as owning objects.
   template<class Batch> void DrawBatch(const Batch &batch)
   {if(Enter(Node::DrawBatch,&batch))Binding(batch.renderLightBinding);}
-  void CrossBatch(const CrossInstanceBatch &batch)
+  template<class Batch> void CrossBatch(const Batch &batch)
   {if(Enter(Node::CrossBatch,&batch))for(const auto &range:batch.lightRanges)Binding(range.binding);}
   void NoSurface(const std::shared_ptr<const SectionNoSurfaceProof> &proof)
   {if(proof && Enter(Node::NoSurface,proof.get()))proof->InspectCatalogRoots(*this);}

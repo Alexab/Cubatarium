@@ -1,6 +1,6 @@
 {
   "schema": "s4-catalog-root-owner-ledger.v1",
-  "status": "OPEN_C06_RQ01_COMP01_GT01_NAMED_DOMAIN_SCOPED_PASS",
+  "status": "OPEN_C06_COMP01_GT01_RQ01_NAMED_DOMAIN_SCOPED_PASS",
   "scope": "Continuation of C06,not a new audit or process-memory cap. Current R installed/cached/returned graph has scoped proof;all declaration candidates/value/capture roots below must be composed before C06 closes.",
   "current_certificate": "S4_02_C06_PUBLICATION_ROOTS_CERTIFICATE_2026_11_26.json",
   "rows": [
@@ -72,22 +72,25 @@
       "id": "RQ01",
       "owner": "cooperative generation",
       "source": "src/World/Core/WorldCooperativeOps.cpp",
-      "bound_or_obligation": "Separate session graph:max_inflight=2*ComputeWorkerThreadCount(CoopGeneration)<=8,input4 handles,captures/pins alias;worker<=4. Not governed by default shared8 work credits. Session Save.Catalog1 can remain after save until next reset.",
-      "status": "OPEN_RQ01_COUNT_COMPOSITION"
+      "bound_or_obligation": "Separate session W<=4,logical InFlight<=2W<=8;actual captured callable upper3W<=12 includes up toW completed-publication tails before callable destruction. One scheduling local request separate;4 content handles/request and pin aliases. No shared global8 credit. Save.Catalog1 until reset/destruction;COMP01 composition required.",
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "RQ02",
       "owner": "mesh queued/running/completed",
       "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
       "bound_or_obligation": "Active callable work credits shared8;catalogKeep plus captured snapshot field. Returned MeshBuildResult direct InputCatalog/GeometryInputs/optional RenderLight/PendingSnapshot/batch bindings. Completion cap runtime tuning or6*worker_count<=48 default;drained/escaped vectors supplied separately.",
-      "status": "OPEN_RQ01_CURRENT_QUEUE_UNION"
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "RQ03",
       "owner": "relight queued/running/completed",
       "source": "src/World/Lighting/AsyncRelightBuilder.cpp",
-      "bound_or_obligation": "Input snapshot catalog and callable keep alias;result direct catalog and content certificate may retain after work credit. Completed cap tuning or6*worker_count<=24 default;drained/escaped results supplied separately. Retry specs contain coordinates/numeric config,not catalog pointers.",
-      "status": "OPEN_RQ01_CURRENT_QUEUE_UNION"
+      "bound_or_obligation": "Actual input snapshot/callable/result/certificate alias one captured catalog;shared work credit8 through callable destruction. Completed runtime tuning or8*workers<=32 default,not6W. Drained/escaped values supplied separately;cap0 supplies no count cap. Retry metadata owns no catalogs.",
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R01",
@@ -108,14 +111,16 @@
       "owner": "pending/capture/awaiting",
       "source": "src/Render/Mesh/ChunkMeshCache.h",
       "bound_or_obligation": "Awaiting geometry<=32/32MiB,result catalog-bearing members;pending GPU inputCatalog+snapshot light. Capture store<=512 snapshots. Current iterator follows those actual stored objects;worker callable/completion queues supplied separately. Existing queue receipts remain authoritative for payload/byte caps.",
-      "status": "SCOPED_VISITOR_SOURCE_HOOKS_RQ01_COUNTS_OPEN"
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R04",
       "owner": "binding lease and backend batches",
       "source": "src/Render/Lighting/SectionRenderLightBinding.h",
-      "bound_or_obligation": "Each binding owns geometry and light snapshot (2 catalog-handle cells). Real entry weak State;State/table hold volume/identity,not catalog. Invalid/reset Entry still owns CPU catalog. GreedyGPU pass batches and CrossGPU light ranges own leases;collector accepts draw batches,Cross supplied separately.",
-      "status": "SCOPED_REAL_GL_LEASE_RQ01_BACKEND_INSTANCE_COUNTS_OPEN"
+      "bound_or_obligation": "Binding owns geometry+light snapshot2 catalog cells,weak GL State;invalid/reset lease still owns CPU catalog. Actual GreedyGPU batches and CrossGPU lightRanges visited by const pass adapters;actual batch/range counts and staging/escaped overlaps supplied COMP01. Direct metadata population is not upload transaction proof.",
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R05",
@@ -129,7 +134,8 @@
       "owner": "persistence and cooperative save",
       "source": "src/World/Persistence/WorldPersistence.h",
       "bound_or_obligation": "UnloadSaveReceipt1 catalog per live receipt;LightSignatureCatalog1 per persistence owner;cooperative Save.Catalog1. Save snapshots/returned receipts and current-field light certificates require input-domain counts. Terrain save snapshots clear copied calculation authority;do not invent extra full catalog per serialized byte buffer.",
-      "status": "OPEN_RQ01_SAVE_OWNER_UNION"
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "P01",
@@ -364,7 +370,7 @@
     },
     {
       "source": "src/World/Core/WorldCooperativeOps.h",
-      "line": 277,
+      "line": 279,
       "type": "BlockDefinitionCatalog",
       "candidate": "Catalog"
     },
@@ -509,54 +515,72 @@
   ],
   "declaration_rule": "Header regex candidate list only;includes some parameters,does not cover aliases/value wrappers/cpp TLS or capture sites. It is NOT a proof that all owners are enumerated. Named rows include those additional sites.",
   "source_sha256": {
-    "CMakeLists.txt": "ab139242b0b6029e54ef9a6fb6bad787479f3bf5a55e353cc6538b4f42321323",
+    "CMakeLists.txt": "a423585fa3f4cd490e0a745428ab7d6b5d1104b35e3ea04a4b7fd67a36108778",
     "src/App/Application.cpp": "f92982c7fe179a0e936ba945e4705c95c5e7a253612f2b8b491124b1ce01b4fc",
     "src/App/Application.h": "3d8dd2c708b9de5e705ce377bf5752d0bdcd4c9cea25bf8fbc6875d21abf8eec",
     "src/App/Core.cpp": "833fa0ee090430480ceca3fd8b7981b52541c051ee8f2e0b912e9eed2dd0a219",
     "src/App/Core.h": "086d2a91065eebb9e75655363fdcb52778f8991543a2f1c4de40873c100f0d73",
     "src/App/Platform/AppRunner.cpp": "9be66edf7483252c3bac913a7e2870dbf116cd433eb6773789ded9fcef629fae",
     "src/App/Platform/CatalogRuntimeDomainProbe.h": "8b1ade3bf154c8eae287de9fea908a2de5f03f4de2523b74e5b5f50786d16d84",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "c0346f955bead091faf18ff11aed8f7b2136101cba681d2b42eb0449842c568b",
     "src/App/Utils.cpp": "a4dff5f3908325603356389ebe9e45ae0223b8561a77e7fbb602733381204f40",
     "src/Blocks/BlockDefinitionStorage.h": "5d2bb66f4debf7d7dd0e82b3bdb5a365939714ae01696a8f7c6c9db9ca0f4172",
     "src/Blocks/BlockRegistry.h": "15be2ecad34350eabd4248ad42a333e1fd514f44dd80c0a6aac76e4d806b03ff",
     "src/Core/Jobs/JobThreadBudget.cpp": "25cfb724251471439d386ed8572932c8ef44efac3fb5d66c8618ab7bbfbc6f56",
     "src/Core/Jobs/JobThreadBudget.h": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424",
+    "src/Core/Jobs/JobThreadPool.cpp": "a61e629b24750daa5c677c52709fb382e7855bb436b3a13955986f52a14fd40c",
+    "src/Core/Jobs/JobThreadPool.h": "b1c4f2fb9da766464b2f9d0086dc36fc2e0a6c549f7bb1440c56f3115cd00e66",
+    "src/Core/Jobs/PipelineAdmission.h": "b3741f201e5491a9b1ccad985e3d8edd0c97fb18dcf7d6f63bd851d58bd67ef6",
     "src/Gui/Cache/ObjectIconCache.h": "4bdb2498a55b51bc30cfd2f59c03417b6adacc01ecd26a8f0ed0a68f291b4a3d",
     "src/Gui/Core/GuiIconSource.h": "024055b637d12908b73d4ea404043bfadccfe9381c44337552b2563b3b451056",
     "src/Gui/Preview/ContentPreviewRenderer.h": "ee9783e75e7c24a97bc393c12c58bb28575ddef45bf3dbd6c9bb0101dd9b1b29",
     "src/Gui/Preview/ItemLabSceneRenderer.h": "4d5b7ea043eb368116faa31b8e8dd9a6c7816967cd3ced909162fc7d847ef1a9",
     "src/Gui/Screens/ItemLabScreen.h": "a8861c9c9f6a44db2a7ccc9061e5ec71b35d7c0bd7e707c9bdc2f4b56c7628cf",
     "src/Items/FpViewmodelRenderer.h": "27684f0ac740dc4daa0305d9638f3778f55491c25867e27ab4978c8f8e9b77e5",
+    "src/Render/Engine/CrossGpuBackend.h": "b362374740ff3e98d6e51c00cc96ca9fa47f3066686fd7b08779ecaf6d3e91d6",
     "src/Render/Engine/GeometryEngine.h": "b237936f180c9568a2bbd7b38c603a9ffadc2b1f64bd37ca2f014011b877d702",
-    "src/Render/Engine/GreedyGpuBackend.h": "06ee550979f9d4625a69bc6f4c2862991bc07cdf550b07fd511025d00cfe885f",
+    "src/Render/Engine/GreedyGpuBackend.h": "24aee5379674bae4422f4cb94cddf5150b5844c12da1d6f23118210eda2ecf52",
     "src/Render/Lighting/SectionRenderLightBinding.h": "f7d42b7e580ea2a8ef17c903cf464bd2f42fdf3948174029201258351570894b",
     "src/Render/Mesh/AsyncMeshBuilder.cpp": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50",
-    "src/Render/Mesh/AsyncMeshBuilder.h": "1fbe4dacd1ab27fc452681f69491d70288524b45573a65cc2e4eea056412f18e",
+    "src/Render/Mesh/AsyncMeshBuilder.h": "fa0fc04cfa1a7564305bf3602f33f69284c780161cb499f0df1728dd67e7f23b",
     "src/Render/Mesh/ChunkMeshCache.h": "69c59cfc5b2c74296eb96546d1894cdceb916822477d7f5b5aeead27c8ae1629",
+    "src/Render/Mesh/ChunkMeshSnapshot.cpp": "bd8846e91d7a91faec3bdad861ce747425ac59823ac629fb80d54e6f08383774",
     "src/Render/Mesh/CrossInstanceBatch.h": "69152cb38f441947758b3541bbfb2a6973d2eca33570e14720bd9eca99e0b8d4",
     "src/Render/Mesh/GpuPackedMeshTypes.h": "09319d15969eda258957a46f5539ab4ae22a33a160352ade55946dfe2fc205cd",
     "src/Render/Mesh/GreedyMeshBatch.h": "cfb2001b1312b681ad106441b44ed27ca2282700292c55de222d5e9dd43751aa",
     "src/Render/Mesh/GreedyMesher.h": "39c295d102762f5e0f17cf255dd1ff63ddb71b27673826852c31587adcd8ab47",
     "src/Render/Mesh/MeshCaptureWorker.h": "868cb90f5355f0eeffa7bc7460d26d82eb976dd3592920edb34aeb35426be75e",
     "src/Render/Textures/TextureCube.h": "941189553621f7d05b1fa5b0019d6a94a2bf56f51883466664b4328b5787251b",
-    "src/Test/CatalogWorkerRetirementTest.cpp": "b718767679eaae619ecfcbba1506343b8389ae14c1fc87c58c950f2610ad0960",
+    "src/Test/AsyncRelightLifecycleTest.cpp": "163df9b70db44391acfe077251998b6f4e64d58e859ad60a816c0817ad76071b",
+    "src/Test/CatalogCooperativeOwners.h": "e399ffd8c4de526c5f5f60d548fd64b6dbb4fbd8d79aab310297c89b9820b02f",
+    "src/Test/CatalogMeshQueueOwners.h": "5b67b39f642a90c4613fbda527c0a981de59da5c74765385bc102bfdbaa0d4b2",
+    "src/Test/CatalogQueueOwnersCommon.h": "5f502c189a38a3fd7bf85577c263d59253830b1aea0a2605d8276c893d2ddbf4",
+    "src/Test/CatalogRelightQueueOwners.h": "6a8c7528b8be03a09aed5b7563d5dc5a2e788412e2dc2bf20e1f8c9886577e2b",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "60d0e85f97149a05be86faaf9ace2523c3a32b296838bb22759b5f6f02cba86c",
+    "src/Test/DecorMeshIntegrationTest.cpp": "a347fe5e6947cd5d44f28dce0a469982fe546f6f96463beb0d6b06aa41ee0211",
     "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
     "src/World/Chunks/ChunkLoadScheduler.h": "c06556200675b26c636b29ff8f0f50514f1710b41f3c103cfa04d29884a6c02f",
     "src/World/Core/BlockWorld.h": "37d1d21fed798f4a925c80b923e18e7376ab4dd36ef95c4112485778c1146c07",
     "src/World/Core/World.h": "34fec9b85145e14d76a4fad046c8ffcd686f88c14c27678989c526564ac85749",
-    "src/World/Core/WorldCooperativeOps.cpp": "539363a1cee23e4509e9f2d197d56b8ea0b76352e3b62b32aba0aa9fb3271df9",
-    "src/World/Core/WorldCooperativeOps.h": "840969bea4d5c16369907b009b4ddc5c4a67e80d38d39cfa94c2d15752748f07",
+    "src/World/Core/WorldCooperativeOps.cpp": "f0aa5d9e5479d050d4eb95e8995edad22ffc02bc53779c9f124066d8f572f422",
+    "src/World/Core/WorldCooperativeOps.h": "e1014461e9e1c89c7bd6fccbddf86f42dc1f17610da71fef19b449467d0ce133",
+    "src/World/IO/AsyncChunkIO.cpp": "ee9a2fcbbc5a37cc2c72b7f5080f1c1d822229851402276e8c0f34e2fe36993e",
     "src/World/IO/AsyncChunkIO.h": "79fbac9d8f67af6e5efef8835484cf2e3a012868d9af3f8a0446c82b49cd2fa0",
     "src/World/Lighting/AsyncRelightBuilder.cpp": "6d3835fb0c54f7286526008518239a3446d2663c721323ebf2676d35fb42055a",
-    "src/World/Lighting/AsyncRelightBuilder.h": "eae3c6f057371922a47a9ff984a7d5371a0f36d2c034d464f1419eb23143c76f",
+    "src/World/Lighting/AsyncRelightBuilder.h": "ff7043b6542a75daea41be197ca5f9c21c8db839f9559929eb22b05ef2ae0f42",
+    "src/World/Lighting/ChunkRelightSnapshot.cpp": "f1d327652d9b1953664dd54cc4b51f80732e2de475615e7f69fa4ebaaff7d276",
     "src/World/Lighting/ChunkRelightSnapshot.h": "5653dd499b68da909afd772214ced8fe9fd04ac8456f757b1d46ce0a1d7a3511",
     "src/World/Lighting/RelightContentCertificate.h": "307a82e8a695e671b21cdb418e98ec96b7d50b0f5ebdba7bf7a8e4bad68d27d4",
     "src/World/Lighting/SectionLightField.h": "406af5b55af26a88526fde6eab8676c3e2a80f1551b6e85f25ba37f9494d24a4",
     "src/World/Lighting/SectionRenderLightSnapshot.h": "5611eb8fadbb11082f6561215073303e96c020436fa4c5b2f67083ad700a7a8a",
     "src/World/Objects/ObjectLibrary.h": "cbc000871b0bc855ce641edd8c14637d64d660084c3b8fe30ed1db6fbf381cba",
+    "src/World/Persistence/WorldPersistence.cpp": "dadb3a87e3847cc77eb32d7366e4501686ee64ce0c39a3a97cc8e6b90d26c564",
     "src/World/Persistence/WorldPersistence.h": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "3ec445681e96775fef36c1236b13c7775573df9586369c02a4683661521644d5",
     "src/WorldGen/Core/CatalogRuntimeDomain.h": "9ec6234ddfb2c9d98b658003f63ed218285e34d48f3c9b838f44a8cf67c9d7e4",
     "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
+    "src/WorldGen/Core/CooperativePopulateDispatch.h": "3e7d40cc0f177a01007cc5d151032a72e4a6f2785d87403f145bb0c9af78e819",
+    "src/WorldGen/Core/IUChunkPopulator.h": "9a969a1b5c9a6089acc54f106a9ffee891181f455a9819020e522cd73fdadbb5",
     "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
     "src/WorldGen/Core/WorldGenContentPin.cpp": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133",
     "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
@@ -568,15 +592,13 @@
   },
   "remaining_order": [
     {
-      "id": "RQ01",
-      "result": "Compose actual queued/running/completed/drained/installed/backend/save/cooperative counts,including prior/current roots and source-bounded owner containers;reuse unchanged queue lifecycle proofs by exact mechanism."
-    },
-    {
       "id": "COMP01",
       "result": "Checked root-cardinality/source composition with overflow/omitted-owner/alias controls and actual old/current/returned union. No process/CRT/GPU/full matrix acceptance inferred;then finish E12."
     }
   ],
-  "remaining": "GT01 named source/runtime owner domain accepted under declared default Windows/resource/factory/caller profiles. Next RQ01:compose queued/active/completed/drained mesh and relight catalog owners,cooperative<=8 independent inflight inputs per session,backend draw bindings and persistence/cooperative save catalogs with actual source-bounded counts. Then COMP01:checked all supplied root cardinalities against accepted C05 source/retained schedules,alias/omitted-owner/overflow controls and old/current/returned union;unknown external owner/callback/world/thread domains cannot be silently0. Source thread upper is caller main threads+all live named pool workers plus explicit construction/caller overlap;native10 menu/20 first-game are current observations,not fixed all-process thread caps.6 weak pipeline owners per participating generation thread and memo weak entries<=2*field_count+1024 require E12 shell/control bytes. E12 glog refusal retention,CRT/locale/exception/stack/TLS/numeric caches/window/OS/driver/GPU/process and original full native/performance/memory matrix remain OPEN. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged,ecology mismatch S6.05 preserved. Full S0..S6,no audit restart,new asset quota or reduced acceptance.",
+  "remaining": "Next COMP01 within S4.02 LIMIT.Q09 E11/C06:checked composition of supplied source cardinalities with accepted C05 source/retained schedules,aliases,old/current/candidate/returned roots,omitted-owner and overflow controls. Include cooperative3W callable tail overlap<=12 plus one main scheduling request/local construction terms;do not substitute logical InFlight<=8 or global work8 for actual coop callable roots. Count actual completed capacities6W mesh/8W relight or supplied positive K,all escaped/drained results,actual backend batch/range cells,save receipts and constructor/component/world overlap. Queue capacity0 supplies no queue count bound;unknown caller/world/thread/callback or escaped history domains cannot be silently0. T02 conservative per-thread convenience readers and pin aliases remain explicit;cooperative fixture does not run full procedural pipeline. Then E12:weak/coallocated shells,upstream/control/CRT/glog refusal/locale/exception/stack/TLS/numeric cache/OS/driver/GPU/process and full native/performance/memory matrix OPEN. S4.02 then S4.03..06,S5,S6 remain OPEN;23/42 unchanged;known ecology mismatch S6.05 remains. Full S0..S6 preserved,no audit restart or reduced acceptance.",
   "runtime_domain_certificate": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
-  "runtime_source_profiles": "S4_02_C06_GT01_SOURCE_PROFILES_2026_11_26.json"
+  "runtime_source_profiles": "S4_02_C06_GT01_SOURCE_PROFILES_2026_11_26.json",
+  "queue_owner_certificate": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+  "queue_source_profiles": "S4_02_C06_RQ01_SOURCE_COUNTS_2026_11_26.json"
 }

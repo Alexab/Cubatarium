@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <future>
 #include <iostream>
+#include <fstream>
 
 namespace cutum
 {
@@ -64,12 +65,15 @@ bool SameRequest(const cutum::RelightJobSpec &a,
 }
 }
 
-int main()
+#include "Test/CatalogRelightQueueOwners.h"
+
+int main(int argc,char **argv)
 {
   using namespace cutum;
   using namespace std::chrono_literals;
   // Environment flags are process-constant and cached on first use.
   _putenv_s("CUBATARIUM_RELIGHT_AUDIT", "1");
+  if(argc==3 && std::string(argv[1])=="--catalog-queue-owners")return TestCatalogRelightQueueOwners(argv[2]);
   auto definitions = std::make_shared<UBlockDefinitionStorage>();
   UBlockRegistry registry(nullptr, definitions);
   UBlockWorld world;

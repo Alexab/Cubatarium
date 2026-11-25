@@ -2108,6 +2108,10 @@ cubatarium_add_test(NAME async_relight_lifecycle_test
 add_test(NAME async_relight_lifecycle_test
     COMMAND $<TARGET_FILE:async_relight_lifecycle_test>)
 set_tests_properties(async_relight_lifecycle_test PROPERTIES TIMEOUT 20)
+add_test(NAME catalog_relight_queue_owners_test
+    COMMAND $<TARGET_FILE:async_relight_lifecycle_test> --catalog-queue-owners
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-relight-queue-owners.json)
+set_tests_properties(catalog_relight_queue_owners_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 
 cubatarium_add_test(NAME relight_result_install_test
     SOURCES
@@ -2543,6 +2547,10 @@ add_test(NAME catalog_publication_roots_test
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-publication-roots-cpu.json)
 set_tests_properties(catalog_publication_roots_test PROPERTIES
     LABELS "integration;catalog" TIMEOUT 120)
+add_test(NAME catalog_mesh_queue_owners_test
+    COMMAND $<TARGET_FILE:decor_mesh_integration_test> --catalog-queue-owners
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-mesh-queue-owners.json)
+set_tests_properties(catalog_mesh_queue_owners_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   target_link_libraries(decor_mesh_integration_test glfw)
   target_compile_definitions(decor_mesh_integration_test PRIVATE SECTION_LIGHT_BINDING_DRIVER=1 CUBATARIUM_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
@@ -3159,6 +3167,10 @@ add_test(NAME catalog_runtime_domain_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --runtime-domain
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-runtime-domain-unit.json)
 set_tests_properties(catalog_runtime_domain_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
+add_test(NAME catalog_cooperative_owners_test
+    COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --cooperative-owners
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-cooperative-owners.json)
+set_tests_properties(catalog_cooperative_owners_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 
 cubatarium_add_test(NAME worldgen_vegetation_placement_integration_test
     SOURCES

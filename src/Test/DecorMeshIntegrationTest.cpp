@@ -32,6 +32,7 @@
 #include "World/Lighting/FlatLightingPipeline.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include "WorldGen/Core/CatalogPublicationRoots.h"
+#include "Test/CatalogQueueOwnersCommon.h"
 #include <nlohmann/json.hpp>
 #include <thread>
 
@@ -109,6 +110,8 @@ struct CrossGpuBackendDriverTestAccess
 #endif
 struct MeshBuilderAdmissionTestAccess
 {
+  static void BlockWorker(UAsyncMeshBuilder &builder,catalog_queue_test::Gate &gate)
+  {builder.Pool.Enqueue([&gate]{gate.Pause();});}
   static void LimitPool(UAsyncMeshBuilder &builder) { builder.Pool.SetMaxPendingJobCount(1); }
   // Controlled stale-delivery fault: the real completed result retains its
   // retry permission while the submission epoch changes before delivery.
@@ -8845,6 +8848,8 @@ static void TestWorldDemandIsolation()
 
 } // namespace
 
+#include "Test/CatalogMeshQueueOwners.h"
+
 static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
 {
   using namespace cutum;using Json=nlohmann::json;
@@ -8916,8 +8921,21 @@ static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
   SectionGeometryRenderInputs invalid;invalid.catalog=escaped_context->input_catalog;
   CatalogPublicationRootInspector invalid_observer;invalid_observer.Geometry(invalid);
   Expect(!invalid.valid && invalid_observer.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"invalid geometry still has an owning catalog slot");invalid={};
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  GreedyGpuPassCache greedy_metadata;CrossGpuPassCache cross_metadata;
+  greedy_metadata.batches.resize(1);cross_metadata.batches.resize(1);
+  greedy_metadata.batches[0].renderLightBinding=second.cache.GetPublishedRenderLightBinding({0,0,0});
+  cross_metadata.batches[0].lightRanges.push_back({0,1,greedy_metadata.batches[0].renderLightBinding});
+  CatalogPublicationRootInspector metadata;greedy_metadata.InspectCatalogRoots(metadata);cross_metadata.InspectCatalogRoots(metadata);
+  Expect(metadata.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"actual backend metadata types deduplicate shared binding catalog");
+#endif
   for(auto *epoch:{&first,&second}){epoch->cache.RemoveChunk({0,0,0});epoch->cache.GetCaptureStore().InvalidateAll();epoch->returned.reset();epoch->no_surface.reset();epoch->world.Clear();epoch->resources.Reset();}
   UBlockDefinitionStorage::ReleaseThreadReads();
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  Expect(!second.old.expired(),"backend metadata retains catalog after source cache removal and resource reset");
+  greedy_metadata.batches.clear();Expect(!second.old.expired(),"cross metadata independently owns invalid or CPU lease");
+  cross_metadata.batches.clear();
+#endif
   Expect(second.old.expired() && !first.old.expired(),"collectors retain no strong payload after real owner removal;escaped first roots remain");
   CatalogPublicationRootInspector escaped;escaped.LightField(escaped_field);escaped.RelightResult(escaped_context);escaped.Binding(escaped_binding);
   Expect(escaped.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"escaped field/context/binding join one old catalog");
@@ -8928,11 +8946,17 @@ static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
   CatalogPublicationRootInspector final_graph;final_graph.BlockCatalog(current);first.world.InspectCatalogRoots(final_graph);first.cache.InspectCatalogRoots(final_graph);second.world.InspectCatalogRoots(final_graph);second.cache.InspectCatalogRoots(final_graph);
   Expect(final_graph.Catalogs().Objects(CatalogObjectKind::Blocks)==1,"cleared production graph has only current catalog");
   Json report={{"schema","catalog-publication-root-graph.v2"},{"status","PASS"},{"real_GL",gpu},{"old_distinct_versions",2},{"union_catalogs",3},{"union_known_catalog_bytes",union_census.known_storage_bytes},{"omitted_root_catalogs",1},{"certificate_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Certificate)},{"binding_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)},{"no_surface_proof_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::NoSurface)},{"result_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Relight)},{"field_nodes",observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Field)},{"catalog_reference_visits",observer.Counts.catalog_handles},{"alias64_payload_deduplicated",true},{"invalid_owning_geometry_counted",true},{"observer_does_not_retain_payload",true},{"last_cross_thread_payloads",0},{"final_catalogs",1},{"real_GL_readbacks",gpu?2:0}};
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+  report["backend_metadata_lease_roots"]={{"greedy_and_cross_catalogs",1},{"source_owner_removal_retains",true},{"last_metadata_release_retires",true},{"scope","Actual metadata types and CPU/GL binding leases;metadata populated directly,no GPU upload transaction acceptance"}};
+#endif
   std::ofstream output(report_path);output<<report.dump(2)<<'\n';Expect(bool(output),"catalog root report writes");std::cout<<report.dump()<<'\n';
 }
 
 int main(int argc, char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--catalog-queue-owners"){
+    TestCatalogMeshQueueOwners(argv[2]);return 0;
+  }
   const std::shared_ptr<cutum::UBlockDefinitionStorage> definitions =
       MakeDefinitions();
   cutum::UBlockRegistry registry(nullptr, definitions);

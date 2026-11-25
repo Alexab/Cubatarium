@@ -36,6 +36,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
+#include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "WorldGen/Core/SourceInputStorageCensus.h"
 #include "WorldGen/Core/CatalogFilesystemSourceEnvelope.h"
 #include "WorldGen/Core/CatalogCandidateSourceEnvelope.h"
@@ -271,6 +272,61 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       settings.Lighting=LightingMode::Flat; settings.LightingModeExplicit=true;
       settings.AsyncMeshing=false; settings.GpuPackedMeshing=false; settings.FrustumCulling=false;
       world.SetRenderSettings(settings);
+      if(const char *queue_roots=std::getenv("CUBA_CATALOG_QUEUE_ROOTS");queue_roots && std::string(queue_roots)=="1") RunTerrainProbePhase([&] {
+        // This independent world uses copied definitions and a new save folder.
+        // No current application content or live save is replaced.
+        auto defs=std::make_shared<UBlockDefinitionStorage>();
+        const auto publish=[&](char marker){
+          const auto source=definitions->GetCatalogSnapshot();auto ids=source->ById;auto names=source->NameToId;
+          ids.at(8).DisplayName=std::string(4096,marker);defs->ReplaceAll(std::move(ids),std::move(names));
+          return std::weak_ptr<const BlockDefinitionCatalog>(defs->GetCatalogSnapshot());
+        };
+        const auto release_reads=[] {UBlockDefinitionStorage::ReleaseThreadReads();UBlockRegistry::ReleaseThreadName();};
+        struct Domain:CatalogRuntimeDomain {void Io(const UAsyncChunkIO *io){if(io)io->InspectJobPools(*this);}};
+        auto old_a=publish('a');auto owner=std::make_unique<UWorld>(nullptr,nullptr);auto &test=*owner;
+        test.ProceduralTemplate.MinHeight=0;test.ProceduralTemplate.MaxHeight=15;test.ProceduralTemplate.SeaLevel=8;
+        test.ProceduralTemplate.AsyncChunkIo=true;test.ProceduralTemplate.AsyncRelight=false;
+        test.BlockWorld.SetVerticalProfile({0,15,8});test.BlockRegistry=std::make_unique<UBlockRegistry>(nullptr,defs);
+        test.BlockWorld.SetFluidDefinitions(defs.get());test.SetRenderSettings(settings);
+        const auto folder=root/"catalog-save-owner-roots";fs::create_directories(folder);test.SetWorldFolderPath(folder.string());
+        const glm::ivec3 column(0),edit(4,4,4);UBinaryChunkSerializer serializer;
+        auto frame=std::make_unique<UChunk>(column);frame->SetBlockLocal(edit,8);
+        const auto decoded=serializer.Deserialize(serializer.Serialize(column,*frame,*test.BlockRegistry).bytes,column,*test.BlockRegistry);
+        require(ApplyTerrainSliceLoad(test.BlockWorld,column,&decoded,nullptr,{column,1},1,false),"catalog save uses complete real decoded terrain");
+        test.BlockWorld.SetBlock({5,4,4},8);test.ModifiedChunks.insert(column);
+        auto &p=*test.Persistence;p.EnsureChunkIoInitialized();p.CurrentLightCacheSignature();
+        auto gate=std::make_shared<AsyncSaveWriteProbeGate>();
+        struct Release {std::shared_ptr<AsyncSaveWriteProbeGate> gate;~Release(){gate->released.store(true);}} release{gate};
+        p.AsyncChunkIo->SaveWriteProbeGate=gate;
+        require(!p.TrySaveTerrainColumnForUnload(test,column) && p.UnloadSaveReceipts.size()==1,"real unload receipt owns captured catalog");
+        const auto entered_by=std::chrono::steady_clock::now()+std::chrono::seconds(3);
+        while(!gate->entered.load() && std::chrono::steady_clock::now()<entered_by)std::this_thread::yield();
+        require(gate->entered.load(),"catalog save writer entered");
+        auto old_b=publish('b');p.CurrentLightCacheSignature();release_reads();
+        Domain receipt;p.InspectCatalogDomain(receipt);receipt.BlockCatalog(defs->GetCatalogSnapshot());
+        require(!old_a.expired() && receipt.Catalogs().Objects(CatalogObjectKind::Blocks)==2,"actual pending receipt joins old and current catalogs");
+        gate->released.store(true);p.AsyncChunkIo->SaveWriteProbeGate.reset();
+        const auto wait_ack=[&]{
+          const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(10);
+          while(p.GetChunkStorage().IsColumnSavePending(column)){
+            p.TickAsyncChunkIo(test,32,6.0);require(std::chrono::steady_clock::now()<deadline,"catalog save ACK deadline");std::this_thread::yield();
+          }
+        };
+        wait_ack();require(!p.TrySaveTerrainColumnForUnload(test,column),"catalog identity change requires current write before ACK");release_reads();
+        require(old_a.expired(),"replaced unload receipt retires old catalog payload");
+        wait_ack();require(p.TrySaveTerrainColumnForUnload(test,column) && test.ModifiedChunks.empty(),"current receipt ACK retires dirty obligation");
+        UBlockWorld cold;cold.SetVerticalProfile({0,15,8});
+        require(p.GetChunkStorage().LoadTerrainColumn(column,cold,folder.string(),*test.BlockRegistry,15,0)>0 && cold.GetBlock(edit)==8 && cold.GetBlock({5,4,4})==8,"current actual save cold data matches");
+        auto session=std::make_unique<UWorldCooperativeSession>();session->ScanSaveChunkCoords(test);
+        auto old_c=publish('c');p.CurrentLightCacheSignature();release_reads();
+        Domain cooperative;session->InspectCatalogDomain(cooperative);p.InspectCatalogDomain(cooperative);cooperative.BlockCatalog(defs->GetCatalogSnapshot());
+        require(!old_b.expired() && cooperative.Catalogs().Objects(CatalogObjectKind::Blocks)==2,"actual cooperative save stage retains its captured catalog");
+        session.reset();require(old_b.expired(),"cooperative session destruction retires save catalog");
+        publish('d');release_reads();Domain signature;p.InspectCatalogDomain(signature);signature.BlockCatalog(defs->GetCatalogSnapshot());
+        require(!old_c.expired() && signature.Catalogs().Objects(CatalogObjectKind::Blocks)==2,"signature memo retains previous catalog until refresh");
+        p.CurrentLightCacheSignature();release_reads();require(old_c.expired(),"signature refresh retires previous catalog despite weak inspectors");
+        report["catalog_save_owner_roots"]={{"status","PASS"},{"receipt_union_catalogs",2},{"old_receipt_payloads_after_replace",0},{"current_ack",true},{"cold_latest",true},{"cooperative_save_union_catalogs",2},{"after_session_release",0},{"signature_union_catalogs",2},{"after_signature_refresh",0},{"scope","Actual isolated async save receipt,ACK,cold load,cooperative ScanSaveChunkCoords and signature memo;not full cooperative save,UI relocation or process heap acceptance"}};
+      });
       if(!face_only) RunTerrainProbePhase([&] {
         const auto idle_deadline=std::chrono::steady_clock::now()+std::chrono::seconds(5);
         while(UPipelineAdmission::Get().WorkSlotsInUse()!=0 &&

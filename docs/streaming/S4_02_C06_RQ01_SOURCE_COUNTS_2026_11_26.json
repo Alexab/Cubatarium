@@ -1,0 +1,65 @@
+{
+  "schema": "catalog-queue-owner-source-counts.v1",
+  "status": "SCOPED_SOURCE_PROFILE_PASS_COMP01_E12_OPEN",
+  "scope": "Named production source graph,catalog payload references,not all-process quotas or allocation-byte upper. Actual controls and storage E12;checked source/retained composition COMP01.",
+  "mesh": {
+    "active_callable_rule": "2 catalog publications per active callable:catalogKeep/current geometry and optional captured Baked renderLight.Geometry catalog. Shared work credit is held through callable destruction;global active mesh+relight+scheduler default8. Main schedule-local/construction phases separate.",
+    "completed_default": "6*actual workers<=48 per builder;actual positive tuning/SetCompletedCapacity K supersedes default",
+    "completed_rule": "At most2 source catalog publications/result;batch bindings and pending snapshots deduplicate aliases. Count supplied actual completed/drained/escaped values. Capacity0 has no queue count cap."
+  },
+  "relight": {
+    "active_callable_rule": "1 captured material catalog per job in actual Enqueue and EnqueueJob;input snapshot/result/certificate alias it. Shared global work8 governs callable lifetime,not all escaped results.",
+    "completed_default": "8*actual workers<=32 per builder;actual positive tuning/custom K supersedes default",
+    "completed_rule": "One material publication per actual source-built result/certificate;public caller-modified results require actual traversal. Capacity0 has no queue count cap. Retry specs/coordinates have no catalog handles."
+  },
+  "cooperative": {
+    "workers_upper": 4,
+    "logical_inflight_upper": 8,
+    "callable_upper": 12,
+    "content_handle_cells_per_request": 4,
+    "global_work_credit_governed": false,
+    "rule": "For W source workers,logical InFlight<=2W. Drain can reduce counter before run={} retires published callable;up toW tail callables overlap new accepted work:queued+running capture upper3W<=12. One constructing main request and call-stack phases additional;pin copies alias same4 payload roots. Completed ChunkPopulateResult holds coordinate/token/buffer/flags,no catalogs. Fixture tests dispatch8/pool4 independently of global work8,not worst-case12 scheduling overlap or procedural algorithm."
+  },
+  "installed_and_backend": {
+    "field": "At most2 recorded input contexts per actual field plus BlockWorld validation memo catalog1;retain stale proofs too. Map/chunk alias same field. Source-built context input/certificate alias one catalog.",
+    "mesh_cache": "Visit all actual cached geometries,optional renderLight,CPU/GPU binding handles,batch leases,Cross ranges,no-surface proofs,awaiting results,pending GPU input catalog/snapshot,capture snapshots. Reuse retained graph certificate;actual cardinalities and constructor overlap supplied COMP01.",
+    "backend": "1 optional lease per GreedyGpuBatch;one optional lease per CrossLightRange. Binding contains2 catalog-bearing geometry/light snapshot cells;deduplicate actual shared owners with source caches and other batches. Invalid/reset leases still own catalogs. Current tests populate actual metadata types directly;actual GL leases/readbacks tested,upload transactions outside this receipt."
+  },
+  "save": {
+    "rule": "1 catalog per actual UnloadSaveReceipt +1 LightSignatureCatalog/persistence owner +1 Save.Catalog/cooperative session. Save.Catalog can persist after completion/Cancel until reset/destruction. Async serialized IO values/terrain save snapshot authorities do not own another catalog by byte-buffer count. Arbitrarily retained histories require supplied domain.",
+    "native": "Isolated copied definitions;actual held async writer and receiptA,currentB;old A expires only at recapture;actual B write ACK/cold data;ScanSaveChunkCoords retainsB until session destruction;signature retainsC until refresh. No full cooperative-save/UI relocation acceptance inferred."
+  },
+  "source_sha256_raw": {
+    "CMakeLists.txt": "a423585fa3f4cd490e0a745428ab7d6b5d1104b35e3ea04a4b7fd67a36108778",
+    "src/Core/Jobs/JobThreadPool.h": "b1c4f2fb9da766464b2f9d0086dc36fc2e0a6c549f7bb1440c56f3115cd00e66",
+    "src/Core/Jobs/JobThreadPool.cpp": "a61e629b24750daa5c677c52709fb382e7855bb436b3a13955986f52a14fd40c",
+    "src/Core/Jobs/PipelineAdmission.h": "b3741f201e5491a9b1ccad985e3d8edd0c97fb18dcf7d6f63bd851d58bd67ef6",
+    "src/Render/Mesh/AsyncMeshBuilder.h": "fa0fc04cfa1a7564305bf3602f33f69284c780161cb499f0df1728dd67e7f23b",
+    "src/Render/Mesh/AsyncMeshBuilder.cpp": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50",
+    "src/Render/Mesh/ChunkMeshSnapshot.cpp": "bd8846e91d7a91faec3bdad861ce747425ac59823ac629fb80d54e6f08383774",
+    "src/World/Lighting/AsyncRelightBuilder.h": "ff7043b6542a75daea41be197ca5f9c21c8db839f9559929eb22b05ef2ae0f42",
+    "src/World/Lighting/AsyncRelightBuilder.cpp": "6d3835fb0c54f7286526008518239a3446d2663c721323ebf2676d35fb42055a",
+    "src/World/Lighting/ChunkRelightSnapshot.cpp": "f1d327652d9b1953664dd54cc4b51f80732e2de475615e7f69fa4ebaaff7d276",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "3ec445681e96775fef36c1236b13c7775573df9586369c02a4683661521644d5",
+    "src/WorldGen/Core/CatalogRuntimeDomain.h": "9ec6234ddfb2c9d98b658003f63ed218285e34d48f3c9b838f44a8cf67c9d7e4",
+    "src/WorldGen/Core/CooperativePopulateDispatch.h": "3e7d40cc0f177a01007cc5d151032a72e4a6f2785d87403f145bb0c9af78e819",
+    "src/WorldGen/Core/IUChunkPopulator.h": "9a969a1b5c9a6089acc54f106a9ffee891181f455a9819020e522cd73fdadbb5",
+    "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
+    "src/World/Core/WorldCooperativeOps.h": "e1014461e9e1c89c7bd6fccbddf86f42dc1f17610da71fef19b449467d0ce133",
+    "src/World/Core/WorldCooperativeOps.cpp": "f0aa5d9e5479d050d4eb95e8995edad22ffc02bc53779c9f124066d8f572f422",
+    "src/World/Persistence/WorldPersistence.h": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b",
+    "src/World/Persistence/WorldPersistence.cpp": "dadb3a87e3847cc77eb32d7366e4501686ee64ce0c39a3a97cc8e6b90d26c564",
+    "src/World/IO/AsyncChunkIO.h": "79fbac9d8f67af6e5efef8835484cf2e3a012868d9af3f8a0446c82b49cd2fa0",
+    "src/World/IO/AsyncChunkIO.cpp": "ee9a2fcbbc5a37cc2c72b7f5080f1c1d822229851402276e8c0f34e2fe36993e",
+    "src/Render/Engine/GreedyGpuBackend.h": "24aee5379674bae4422f4cb94cddf5150b5844c12da1d6f23118210eda2ecf52",
+    "src/Render/Engine/CrossGpuBackend.h": "b362374740ff3e98d6e51c00cc96ca9fa47f3066686fd7b08779ecaf6d3e91d6",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "c0346f955bead091faf18ff11aed8f7b2136101cba681d2b42eb0449842c568b",
+    "src/Test/CatalogQueueOwnersCommon.h": "5f502c189a38a3fd7bf85577c263d59253830b1aea0a2605d8276c893d2ddbf4",
+    "src/Test/CatalogMeshQueueOwners.h": "5b67b39f642a90c4613fbda527c0a981de59da5c74765385bc102bfdbaa0d4b2",
+    "src/Test/CatalogRelightQueueOwners.h": "6a8c7528b8be03a09aed5b7563d5dc5a2e788412e2dc2bf20e1f8c9886577e2b",
+    "src/Test/CatalogCooperativeOwners.h": "e399ffd8c4de526c5f5f60d548fd64b6dbb4fbd8d79aab310297c89b9820b02f",
+    "src/Test/DecorMeshIntegrationTest.cpp": "a347fe5e6947cd5d44f28dce0a469982fe546f6f96463beb0d6b06aa41ee0211",
+    "src/Test/AsyncRelightLifecycleTest.cpp": "163df9b70db44391acfe077251998b6f4e64d58e859ad60a816c0817ad76071b",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "60d0e85f97149a05be86faaf9ace2523c3a32b296838bb22759b5f6f02cba86c"
+  }
+}

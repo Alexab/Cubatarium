@@ -30,6 +30,7 @@
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "WorldGen/Core/CooperativePopulateDispatch.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 #include "glog/logging.h"
@@ -1252,12 +1253,7 @@ bool UWorldCooperativeSession::AdvanceParallelGeneration(UWorld &world,
     UPipelineChunkPopulator *populator = ParallelGen->Populator.get();
     UCompletedJobQueue<ChunkPopulateResult> *completed =
         &ParallelGen->Completed;
-    ParallelGen->Pool.Enqueue(
-        [populator, request, completed]()
-        {
-          ChunkPopulateResult result = populator->Populate(request);
-          completed->Push(std::move(result));
-        });
+    EnqueueCooperativePopulate(ParallelGen->Pool,populator,request,completed);
   }
 
   const bool queue_empty =

@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C06.RQ01",
+      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-queue-owners-acceptance.json",
+      "certificate": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "scope": "RQ01 actual mesh/relight queued8, ninth shared-credit refusal, queued and running cancellation, completed overflow2/shrink1/drained caller1/final0 and cap0 retaining2 PASS. Real Baked mesh capture can retain old field A and current material B;cancel retires both. Relight legacy and job paths retain one captured material publication shared with certificate. Cooperative production dispatch with actual pool4/TLS pin retains8 independent requests while unrelated global8 credits are held;completed buffers and queued cancellation release all4 catalog roots/request. Source cooperative closure upper is3W<=12,not only logical InFlight2W<=8:main may drain a completed result before worker releases its callable;up toW returning callables overlap successors. Default mesh completed6W<=48,relight8W<=32 corrected;positive tuning/custom K and escaped values require supplied counts,zero is lossless without a queue count cap. Actual Greedy/Cross metadata types retain CPU/GL binding catalogs after source removal/reset until final lease release;direct metadata population does not prove GPU upload transactions. Native isolated async unload receipts,recapture on catalog change,current ACK/cold data,cooperative save stage and signature memo all PASS. Eight Release groups and frozen desktop/native startup/runtime/direct save/UI/provenance PASS;8 native plus2 unit actual GL readbacks,aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C06.GT01",
       "status": "SCOPED_GT01_SOURCE_AND_NATIVE_DOMAIN_PASS_RQ01_COMP01_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-runtime-domain-acceptance.json",

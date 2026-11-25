@@ -103,6 +103,8 @@ public:
                                                   UBlockRegistry &registry,
                                                   bool force_cpu = false);
   std::vector<MeshBuildResult> DrainCompleted(int maxPerFrame);
+  template<class Inspector> void InspectCompletedCatalogRoots(Inspector &out) const
+  {Completed.InspectValues([&](const auto &result){out.MeshResult(result);});}
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
   int GetWorkerCount() const { return WorkerCount; }

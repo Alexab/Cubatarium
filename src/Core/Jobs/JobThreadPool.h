@@ -109,6 +109,13 @@ private:
 template <typename T> class UCompletedJobQueue
 {
 public:
+  // Synchronous const inspection of actual retained values. Does not copy or
+  // drain owners; callback runs under this queue's mutex and must not reenter.
+  template<class Visit> void InspectValues(Visit &&visit) const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    for(size_t i=0;i<Count;++i)visit(Items[(Head+i)%Items.size()]);
+  }
   struct StorageSnapshot { size_t count{0},slots{0},bytes{0}; };
   StorageSnapshot GetStorageSnapshot() const
   {

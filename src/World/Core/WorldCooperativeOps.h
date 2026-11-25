@@ -17,6 +17,7 @@ struct EnterWarmupStepSample;
 struct BlockDefinitionCatalog;
 
 class UWorld;
+class UCore;
 
 struct CooperativeParallelGenState;
 
@@ -29,6 +30,7 @@ enum class WorldCoopKind
 
 class UWorldCooperativeSession
 {
+  friend void RunTerrainSaveFailureProbe(UCore &core);
 public:
   struct GenerationPoolDomain {const void *identity{nullptr};std::size_t workers{},pending{},active{};};
   GenerationPoolDomain GetGenerationPoolDomain() const;
