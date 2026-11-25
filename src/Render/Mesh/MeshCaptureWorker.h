@@ -30,6 +30,8 @@ public:
   UMeshCaptureWorker &operator=(const UMeshCaptureWorker &) = delete;
 
   bool IsEnabled() const { return kWorkerCaptureEnabled; }
+  template<class Inspector> void InspectJobPools(Inspector &out) const
+  {if(Pool)out.Pool("capture",*Pool,1);}
 
   void Enqueue(ChunkMeshSnapshot band, WorkToken token, DependencyStamp deps);
 

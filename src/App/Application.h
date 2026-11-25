@@ -75,6 +75,11 @@ class UApplication : public IUGuiMenuHost
 {
   friend class UScreenNavigator;
   friend class UInputRouter;
+public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.BlockStorage(BlockDefinitions,"application");out.Core(Core.get());out.World(World.get());out.Geometry(Geometry.get());
+    out.GuiIcon(IconSource.get());out.Preview(ContentPreviewRenderer.get());out.Viewmodel(FpViewmodelRenderer.get());out.ItemLab(ItemLabScreen);
+  }
   friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
 
 public:

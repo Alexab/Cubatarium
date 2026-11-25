@@ -122,6 +122,12 @@ public:
   {
     return ObjectLibraryInstance;
   }
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.BlockStorage(BlockDefinitionsInstance,"core");out.Merge(BlockMergeRegistryInstance);
+    out.Placeholder(PlaceholderCacheInstance);out.TextureBases(TextureBaseStorageInstance);
+    out.TextureCubes(TextureCubeStorageInstance);out.Library(ObjectLibraryInstance);
+    out.World(WorldInstance.get());out.Geometry(GeometryEngineInstance.get());
+  }
   std::shared_ptr<UItemDefinitionStorage> GetItemDefinitionStorage() const
   {
     return ItemDefinitionsInstance;

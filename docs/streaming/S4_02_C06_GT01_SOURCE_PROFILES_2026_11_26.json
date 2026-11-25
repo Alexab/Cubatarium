@@ -1,0 +1,115 @@
+{
+  "schema": "s4-catalog-runtime-owner-source-profiles.v1",
+  "status": "SCOPED_NAMED_SOURCE_AND_NATIVE_DOMAIN_PASS",
+  "scope": "Pinned immutable E11 catalogs. Constructor/source domain and actual supplied native owner graph,not universal process enumeration. RQ01/COMP01/E12 remain separate.",
+  "desktop_entrypoints": [
+    {
+      "entrypoint": "RunCubatarium",
+      "constructor_counts": {
+        "UWorld": 1,
+        "UCore": 1,
+        "UApplication": 1,
+        "UBlockDefinitionStorage": 1
+      },
+      "region_sha256_utf8_LF": "c7acdf00f8b8b413c00c3c1bc4b3b02d549a29a5c9ce0e43f79ddb16e273ef57"
+    },
+    {
+      "entrypoint": "RunEnterGameSmoke",
+      "constructor_counts": {
+        "UWorld": 1,
+        "UCore": 1,
+        "UApplication": 1,
+        "UBlockDefinitionStorage": 1
+      },
+      "region_sha256_utf8_LF": "1de9860c0949088e0afedba6c57085c5771b091f107ed46029de051f15df9b9e"
+    },
+    {
+      "entrypoint": "RunAutoloadLastWorld",
+      "constructor_counts": {
+        "UWorld": 1,
+        "UCore": 1,
+        "UApplication": 1,
+        "UBlockDefinitionStorage": 1
+      },
+      "region_sha256_utf8_LF": "a9966bcf91f9ff8cab2cb194b6a4d67c6c5f5566a25778cf7dd080fbf24ce69d"
+    },
+    {
+      "entrypoint": "RunFlightSim",
+      "constructor_counts": {
+        "UWorld": 1,
+        "UCore": 1,
+        "UApplication": 1,
+        "UBlockDefinitionStorage": 1
+      },
+      "region_sha256_utf8_LF": "7330159c6f02c6389b6a7495d3bd93bcf3937914445713c073cc4300806eb822"
+    }
+  ],
+  "headless_entrypoints": {
+    "source": "src/App/Utils.cpp",
+    "rule": "Validate-load owns1 local World/Core/base/cube/library/launcher definitions. MakeHeadlessCore returns Core+World and drops constructor locals;Core/World/texture/registry roots retain their actual aliases. LoadConfig replacement can overlap the initial storage;default construction upper2 storages,not a forced exact count after caller release. Further callers must supply their retained roots.",
+    "native_execution_this_certificate": false
+  },
+  "normal_source_and_flight_native_relation": "Four named desktop constructor regions and Application startup/refresh bind the same resource holder types. Actual execution in this certificate is flight menu/first-game plus its auxiliary UWorld,not every interactive/headless/backend workload.",
+  "resource_holder_rule": "Count distinct actual storage objects behind Core,World/registry,texture cube,Application,GUI object icons/content preview,main and optional lab viewmodel,launcher and caller roots. Current defaults alias active consumers;LoadConfig may retire a storage while another holder remains. Never multiply catalog payload by wrapper count without identity deduplication.",
+  "globals": {
+    "active_snapshots": 3,
+    "pack_registry_image": "Registry/image nested once per retained Pack;Biomes snapshot aliases the Pack registry. Active directory backing separate.",
+    "builtin_keys": 18
+  },
+  "thread_rules": {
+    "calling_convenience_slots": 7,
+    "calling_convenience_inline_bytes": 160,
+    "pin_strong_handles_per_active_nonnested_scope": 4,
+    "pin_tls_pointer_bytes": 8,
+    "stbi_ledger_generation_inline_bytes": 24,
+    "pipeline_weak_slots_per_participating_thread": 6,
+    "validation_memo_weak_entry_upper": "2*field_count+1024",
+    "participation": "1 main/calling thread plus all supplied live named pool workers is conservative for this application catalog domain. Generation job guard retires its7 convenience slots/name before work credit;other readers/pins/escaped caller roots remain explicit. No foreign TLS traversal.",
+    "auxiliary_catalog_callers": "Current watchdog/audio/fluid-summary/profiler/window-capture/weather-future work has no named E11 catalog captures;numeric TLS,OS/CRT executor threads and their process memory remain E12. Unknown caller threads require a supplied bound."
+  },
+  "pool_factory_caps": {
+    "stream-generation": 4,
+    "mesh": 8,
+    "capture": 1,
+    "relight": 4,
+    "io-load": 4,
+    "io-background": 1,
+    "io-light-flags": 1,
+    "cooperative-generation": 4
+  },
+  "pool_rule": "At most8 named pool fields and27 source-capped workers per fully initialized supplied World owner. Optional objects may be absent. Disabled capture execution does not imply no created capture pool. A component make_unique replacement can overlap its predecessor;the largest named component pool constructor adds<=8 workers under serialized default main-thread factories. Count constructing/diagnostic/additional Worlds and caller pools explicitly. These are source-profile terms for COMP01,not an implemented global thread cap or process-memory verdict.",
+  "escaped_key_rule": "A16-byte key alias can preserve a registry after Pack payload destruction. Known weak candidates must match shared owner and exact registry key address. Empty-owner nonnull aliases require known fixed builtin addresses. Unknown ownership yields UNSUPPORTED,never0. Standard shared-owner/control/allocator source profile;arbitrary custom owner allocations remain unmodeled E12/caller terms.",
+  "source_sha256": {
+    "CMakeLists.txt": "ab139242b0b6029e54ef9a6fb6bad787479f3bf5a55e353cc6538b4f42321323",
+    "src/WorldGen/Core/CatalogRuntimeDomain.h": "9ec6234ddfb2c9d98b658003f63ed218285e34d48f3c9b838f44a8cf67c9d7e4",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "8b1ade3bf154c8eae287de9fea908a2de5f03f4de2523b74e5b5f50786d16d84",
+    "src/App/Platform/AppRunner.cpp": "9be66edf7483252c3bac913a7e2870dbf116cd433eb6773789ded9fcef629fae",
+    "src/App/Application.h": "3d8dd2c708b9de5e705ce377bf5752d0bdcd4c9cea25bf8fbc6875d21abf8eec",
+    "src/App/Application.cpp": "f92982c7fe179a0e936ba945e4705c95c5e7a253612f2b8b491124b1ce01b4fc",
+    "src/App/Core.h": "086d2a91065eebb9e75655363fdcb52778f8991543a2f1c4de40873c100f0d73",
+    "src/App/Core.cpp": "833fa0ee090430480ceca3fd8b7981b52541c051ee8f2e0b912e9eed2dd0a219",
+    "src/World/Core/World.h": "34fec9b85145e14d76a4fad046c8ffcd686f88c14c27678989c526564ac85749",
+    "src/World/Core/WorldCooperativeOps.h": "840969bea4d5c16369907b009b4ddc5c4a67e80d38d39cfa94c2d15752748f07",
+    "src/World/Core/WorldCooperativeOps.cpp": "539363a1cee23e4509e9f2d197d56b8ea0b76352e3b62b32aba0aa9fb3271df9",
+    "src/World/Persistence/WorldPersistence.h": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b",
+    "src/World/IO/AsyncChunkIO.h": "79fbac9d8f67af6e5efef8835484cf2e3a012868d9af3f8a0446c82b49cd2fa0",
+    "src/World/Chunks/ChunkLoadScheduler.h": "c06556200675b26c636b29ff8f0f50514f1710b41f3c103cfa04d29884a6c02f",
+    "src/Render/Mesh/AsyncMeshBuilder.h": "1fbe4dacd1ab27fc452681f69491d70288524b45573a65cc2e4eea056412f18e",
+    "src/Render/Mesh/ChunkMeshCache.h": "69c59cfc5b2c74296eb96546d1894cdceb916822477d7f5b5aeead27c8ae1629",
+    "src/Render/Mesh/MeshCaptureWorker.h": "868cb90f5355f0eeffa7bc7460d26d82eb976dd3592920edb34aeb35426be75e",
+    "src/World/Lighting/AsyncRelightBuilder.h": "eae3c6f057371922a47a9ff984a7d5371a0f36d2c034d464f1419eb23143c76f",
+    "src/Render/Engine/GeometryEngine.h": "b237936f180c9568a2bbd7b38c603a9ffadc2b1f64bd37ca2f014011b877d702",
+    "src/Gui/Core/GuiIconSource.h": "024055b637d12908b73d4ea404043bfadccfe9381c44337552b2563b3b451056",
+    "src/Gui/Cache/ObjectIconCache.h": "4bdb2498a55b51bc30cfd2f59c03417b6adacc01ecd26a8f0ed0a68f291b4a3d",
+    "src/Gui/Preview/ContentPreviewRenderer.h": "ee9783e75e7c24a97bc393c12c58bb28575ddef45bf3dbd6c9bb0101dd9b1b29",
+    "src/Gui/Preview/ItemLabSceneRenderer.h": "4d5b7ea043eb368116faa31b8e8dd9a6c7816967cd3ced909162fc7d847ef1a9",
+    "src/Gui/Screens/ItemLabScreen.h": "a8861c9c9f6a44db2a7ccc9061e5ec71b35d7c0bd7e707c9bdc2f4b56c7628cf",
+    "src/Items/FpViewmodelRenderer.h": "27684f0ac740dc4daa0305d9638f3778f55491c25867e27ab4978c8f8e9b77e5",
+    "src/WorldGen/Sampling/BiomeTypes.h": "821bb7b8497a793daff32d09245b7f40b8857ea8d5fc50410d3e8774919d3e4a",
+    "src/WorldGen/Sampling/BiomeSampler.cpp": "e7c810fa45f21401a8f04f70d031fec8a1fd9f159edbdb6a9e7ed3f9341d3b15",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "b718767679eaae619ecfcbba1506343b8389ae14c1fc87c58c950f2610ad0960",
+    "src/App/Utils.cpp": "a4dff5f3908325603356389ebe9e45ae0223b8561a77e7fbb602733381204f40",
+    "src/Core/Jobs/JobThreadBudget.h": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424",
+    "src/Core/Jobs/JobThreadBudget.cpp": "25cfb724251471439d386ed8572932c8ef44efac3fb5d66c8618ab7bbfbc6f56"
+  }
+}

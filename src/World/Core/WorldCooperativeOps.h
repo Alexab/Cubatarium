@@ -30,6 +30,12 @@ enum class WorldCoopKind
 class UWorldCooperativeSession
 {
 public:
+  struct GenerationPoolDomain {const void *identity{nullptr};std::size_t workers{},pending{},active{};};
+  GenerationPoolDomain GetGenerationPoolDomain() const;
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.BlockCatalog(Save.Catalog);const auto s=GetGenerationPoolDomain();
+    out.PoolSnapshot("cooperative-generation",s.identity,{s.pending,s.active,s.workers},4);
+  }
   WorldCoopKind Kind{WorldCoopKind::Load};
   bool Active{false};
   bool ResumeStreamingAfterSave{true};

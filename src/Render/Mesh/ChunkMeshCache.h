@@ -540,6 +540,10 @@ public:
   int DrainPendingGpuMeshes(UBlockWorld &world, UBlockRegistry &registry,
                             int max_count, double budget_ms);
   size_t GetGreedyCacheSize() const { return GreedyCache.size(); }
+  template<class Inspector> void InspectJobPools(Inspector &out) const {
+    if(AsyncBuilder)AsyncBuilder->InspectJobPools(out);
+    if(CaptureWorker)CaptureWorker->InspectJobPools(out);
+  }
   // Quiescent publication-thread diagnostic; worker callable/completion
   // queues and caller-owned copies are separate supplied roots.
   template<class Inspector> void InspectCatalogRoots(Inspector &out) const

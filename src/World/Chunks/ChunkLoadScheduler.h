@@ -36,6 +36,8 @@ enum class ChunkLoadState
 class UChunkLoadScheduler
 {
 public:
+  template<class Inspector> void InspectJobPools(Inspector &out) const
+  {out.Pool("stream-generation",Pool,4);}
   static constexpr size_t kMaxRetainedGenerationResults = 8;
   static constexpr size_t kMaxActiveGenerationRequests = 1024;
   static constexpr size_t kSettingsPayloadBudget = 16*1024*1024;

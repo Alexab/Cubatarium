@@ -3155,6 +3155,10 @@ cubatarium_add_test(NAME catalog_worker_retirement_test
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
     WIN32_LIBRARIES dbghelp)
+add_test(NAME catalog_runtime_domain_test
+    COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --runtime-domain
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-runtime-domain-unit.json)
+set_tests_properties(catalog_runtime_domain_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 
 cubatarium_add_test(NAME worldgen_vegetation_placement_integration_test
     SOURCES

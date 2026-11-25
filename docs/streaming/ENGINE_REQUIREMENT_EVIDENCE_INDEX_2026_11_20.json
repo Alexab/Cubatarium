@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C06.GT01",
+      "status": "SCOPED_GT01_SOURCE_AND_NATIVE_DOMAIN_PASS_RQ01_COMP01_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-runtime-domain-acceptance.json",
+      "certificate": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "scope": "GT01 named source/runtime owner domain scoped PASS. Diagnostic const traversal joins Core/Application/world/geometry/GUI/object-icon/content-preview/main and optional ItemLab viewmodel resource handles,plus every supplied launcher storage/base/cube/library/world/geometry root. Actual member generation/mesh/capture/relight/IO/cooperative pool snapshots use existing queue mutexes;no foreign TLS read or persistent strong mirror. Four Windows desktop entrypoint source regions each construct1 World/Core/Application/launcher block storage;Core::LoadConfig creates a different current storage. Real native flight menu and first-game snapshots show1 world/Core/Application,2 block storages/catalogs,1 library;all6 active block roles current while launcher remains distinct. Menu2 pools/9 workers;first-game6 pools/19 workers,including1 capture worker despite disabled capture execution. Source bound includes optional relight/cooperative/IO pools and explicit caller/construction domains;diagnostic auxiliary actual UWorld counts2 worlds without replacing the active world. BiomeKeyRef remains16 bytes;real pinned key API keeps old registry after Pack expiration. Supplied weak typed registry candidates validate shared owner and exact key address and add full65728-byte known registry payload;unknown/mismatched/unrecognized unowned aliases rejected,builtin fixed address recognized.64 resource/key aliases deduplicate;last cross-thread key release retires payload while inspectors/candidates remain weak. Actual independent1+3-worker pools deduplicate to2 pools/4 workers and calling+pool upper5;detached-active and size_t overflow controls rejected. Current worker-retirement regression PASS. Frozen Release desktop/native runtime/startup/direct save/UI/provenance and8 real GL readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C06.publication-roots",
       "status": "SCOPED_RETAINED_PUBLICATION_CATALOG_ROOTS_RELEASE_REAL_GL_NATIVE_PASS_C06_GT_RQ_COMP_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-publication-roots-acceptance.json",

@@ -106,6 +106,8 @@ public:
   bool IsInFlight(glm::ivec3 coord) const;
   int GetInFlightCount() const;
   int GetWorkerCount() const { return WorkerCount; }
+  template<class Inspector> void InspectJobPools(Inspector &out) const
+  {out.Pool("mesh",Pool,8);}
   int GetMaxPipelineDepth() const
   {
     return WorkerCount * kPipelineSlotsPerWorker;

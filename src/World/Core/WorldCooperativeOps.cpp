@@ -92,6 +92,13 @@ struct CooperativeParallelGenState
   size_t InFlight{0};
 };
 
+UWorldCooperativeSession::GenerationPoolDomain UWorldCooperativeSession::GetGenerationPoolDomain() const
+{
+  if(!ParallelGen)return {};
+  const auto state=ParallelGen->Pool.GetSnapshot();
+  return {&ParallelGen->Pool,state.workers,state.pending,state.active};
+}
+
 namespace
 {
 

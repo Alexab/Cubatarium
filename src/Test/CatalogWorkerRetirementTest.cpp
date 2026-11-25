@@ -7,6 +7,8 @@
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
 #include "WorldGen/Core/CatalogThreadReads.h"
+#include "WorldGen/Core/CatalogRuntimeDomain.h"
+#include "WorldGen/Sampling/BiomeSampler.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
 #include <fstream>
@@ -211,9 +213,66 @@ Json ExplicitOwners(const fs::path &root)
   Check(fresh_clean,"fresh-thread release initializes no ordinary-new request");
   return {{"explicit_roots",7},{"last_cross_thread_payloads",0},{"active_pin_preserved",true},{"release_new_attempts",0},{"fast_same_revision_reload",true},{"caught_scope_unwind",true},{"fresh_thread_release",true}};
 }
+Json RuntimeDomain()
+{
+  static_assert(sizeof(BiomeKeyRef)==sizeof(std::shared_ptr<const BiomeKey>));
+  auto storage=std::make_shared<UBlockDefinitionStorage>();BlockDefinition first;first.Name="first";first.DisplayName=std::string(4096,'a');
+  storage->ReplaceAll({{8,first}},{{first.Name,8}});
+  auto retained=std::make_shared<UBlockDefinitionStorage>(*storage);
+  std::weak_ptr<const BlockDefinitionCatalog> old=storage->GetCatalogSnapshot();
+  BlockDefinition second;second.Name="second";second.DisplayName=std::string(8192,'b');storage->ReplaceAll({{9,second}},{{second.Name,9}});
+  CatalogRuntimeDomain domain;domain.BlockStorage(storage,"current");domain.BlockStorage(retained,"retained-copy");
+  const auto union_census=domain.Catalogs();
+  Check(union_census.Objects(CatalogObjectKind::BlockStorage)==2 && union_census.Objects(CatalogObjectKind::Blocks)==2,"distinct live storage wrappers expose old/current immutable catalogs");
+  for(int i=0;i<64;++i){domain.BlockStorage(retained);domain.BlockStorage(storage);}
+  Check(domain.Catalogs().known_storage_bytes==union_census.known_storage_bytes && domain.Catalogs().shared_owners==union_census.shared_owners,"64 resource aliases/permutations count storage/catalog payload once");
+  retained.reset();Check(old.expired(),"domain inspector never retains strong storage/catalog payload");
+
+  const BiomeKey name=std::string(32768,'k');
+  auto registry=std::make_shared<UBiomeDefinitionRegistry>(std::vector<BiomeKey>{name});
+  auto pack=std::make_shared<WorldGenPack>();pack->BiomeRegistry=registry;
+  std::weak_ptr<const WorldGenPack> old_pack=pack;
+  std::weak_ptr<const UBiomeDefinitionRegistry> old_registry=registry;
+  BiomeKeyRef escaped;
+  {WorldGenContentSnapshot content;content.Pack=pack;content.Biomes=registry;UWorldGenContentPinScope pin(std::move(content));escaped=BiomeKeyRefForHandle(registry->Find(name));}
+  registry.reset();pack.reset();
+  Check(old_pack.expired() && !old_registry.expired() && escaped.Get()==name,"real pinned key API retains registry after Pack payload retires");
+  const std::vector<std::weak_ptr<const UBiomeDefinitionRegistry>> candidates{old_registry};
+  CatalogRuntimeDomain biome_domain;biome_domain.BiomeAlias(escaped,candidates);
+  const auto biome_census=biome_domain.Catalogs();
+  Check(biome_domain.Supported() && biome_census.Objects(CatalogObjectKind::Pack)==0 && biome_census.Objects(CatalogObjectKind::Biomes)==1 && biome_census.text_bytes>=2*(name.size()+1),"escaped registry alias adds full registry vector/name-map capacities without resurrecting Pack");
+  for(int i=0;i<64;++i)biome_domain.BiomeAlias(escaped,candidates);
+  Check(biome_domain.Catalogs().known_storage_bytes==biome_census.known_storage_bytes,"escaped registry aliases deduplicate control/payload");
+  CatalogRuntimeDomain unknown;unknown.BiomeAlias(escaped,{});Check(!unknown.Supported() && unknown.unknown_owners==1,"unknown aliased owner rejected instead of counted as zero");
+  {
+    const BiomeKey detached=name;BiomeKeyRef invalid(std::shared_ptr<const BiomeKey>(old_registry.lock(),&detached));
+    CatalogRuntimeDomain mismatch;mismatch.BiomeAlias(invalid,candidates);Check(!mismatch.Supported(),"matching shared control with detached key address rejected");
+  }
+  const auto builtin=BiomeKeyRefForId(BiomeId::Plains);CatalogRuntimeDomain builtin_domain;
+  builtin_domain.BiomeAlias(builtin,{},std::vector<const BiomeKey *>{&builtin.Get()});
+  Check(builtin_domain.Supported() && builtin_domain.builtin_aliases==1 && builtin_domain.Catalogs().shared_owners==0,"actual fixed builtin key is validated nonowning storage");
+  {
+    const BiomeKey detached=builtin.Get();BiomeKeyRef borrowed(std::shared_ptr<const BiomeKey>(std::shared_ptr<const BiomeKey>{},&detached));
+    CatalogRuntimeDomain unowned;unowned.BiomeAlias(borrowed,{},std::vector<const BiomeKey *>{&builtin.Get()});
+    Check(!unowned.Supported(),"unrecognized unowned alias rejected even with matching builtin text");
+  }
+  std::thread final_key([key=std::move(escaped)]()mutable{key=BiomeKeyRef{};});final_key.join();
+  Check(old_registry.expired(),"last cross-thread key releases registry despite live weak inspectors/candidates");
+
+  UJobThreadPool one(1,"CatalogDomainOne"),three(3,"CatalogDomainThree");
+  CatalogRuntimeDomain pools;pools.Pool("test-one",one,1);pools.Pool("test-three",three,3);pools.Pool("test-one",one,1);
+  Check(pools.Supported() && pools.pools.size()==2 && pools.workers==4 && pools.CallingAndPoolThreadUpper()==5,"actual independent pools counted once with conservative calling-thread bound");
+  int detached_pool{},overflow_a{},overflow_b{};
+  CatalogRuntimeDomain detached;detached.PoolSnapshot("detached",&detached_pool,{0,1,0},4);Check(!detached.Supported(),"detached active worker outside vector cannot masquerade as zero threads");
+  CatalogRuntimeDomain overflow;overflow.PoolSnapshot("a",&overflow_a,{0,0,SIZE_MAX},SIZE_MAX);overflow.PoolSnapshot("b",&overflow_b,{0,0,1},1);Check(!overflow.Supported() && overflow.overflow,"thread arithmetic overflow rejected");
+  return {{"schema","catalog-runtime-domain-unit.v1"},{"status","PASS"},{"distinct_storages",2},{"distinct_catalogs",2},{"resource_union_known_bytes",union_census.known_storage_bytes},{"alias64_deduplicated",true},{"old_pack_expired_registry_retained",true},{"escaped_registry_known_bytes",biome_census.known_storage_bytes},{"key_inline_bytes",sizeof(BiomeKeyRef)},{"unknown_owner_rejected",true},{"detached_key_rejected",true},{"builtin_owner_checked",true},{"unrecognized_unowned_key_rejected",true},{"registry_final_payloads",0},{"actual_pools",pools.pools.size()},{"actual_workers",pools.workers},{"calling_and_pool_thread_upper",pools.CallingAndPoolThreadUpper()},{"detached_pool_rejected",true},{"overflow_rejected",true}};
+}
 }
 int main(int argc,char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--runtime-domain"){
+    const auto result=RuntimeDomain();std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';Check(bool(out),"runtime domain receipt write");std::cout<<result.dump()<<std::endl;return 0;
+  }
   const bool baseline=argc>1 && std::string(argv[1])=="--baseline";
   const auto output=fs::path(argc>(baseline?2:1)?argv[baseline?2:1]:"catalog-worker-retirement.json");
   const auto root=fs::absolute(output.parent_path()/"catalog-worker-retirement-fixture");

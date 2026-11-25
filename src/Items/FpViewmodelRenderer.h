@@ -97,6 +97,8 @@ struct FpViewmodelDrawParams
 class UFpViewmodelRenderer
 {
 public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const
+  {out.BlockStorage(Blocks,"viewmodel");out.TextureCubes(Textures);}
   UFpViewmodelRenderer(
       std::shared_ptr<UItemDefinitionStorage> items,
       std::shared_ptr<UBlockDefinitionStorage> blocks,

@@ -1,0 +1,99 @@
+#pragma once
+#include "App/Core.h"
+#include "App/Application.h"
+#include "Render/Engine/GeometryEngine.h"
+#include "Gui/Core/GuiIconSource.h"
+#include "Gui/Cache/ObjectIconCache.h"
+#include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Gui/Preview/ItemLabSceneRenderer.h"
+#include "Gui/Screens/ItemLabScreen.h"
+#include "Items/FpViewmodelRenderer.h"
+#include "World/Core/World.h"
+#include "World/Mesh/WorldMeshService.h"
+#include "World/Streaming/WorldStreaming.h"
+#include "World/Persistence/WorldPersistence.h"
+#include "World/IO/AsyncChunkIO.h"
+#include "World/Lighting/AsyncRelightBuilder.h"
+#include "WorldGen/Core/CatalogRuntimeDomain.h"
+#include <nlohmann/json.hpp>
+#include <cstdlib>
+#include <fstream>
+
+namespace cutum
+{
+struct CatalogApplicationDomain final : CatalogRuntimeDomain
+{
+  void Core(const UCore *v){if(Enter(Kind::Core,v))v->InspectCatalogDomain(*this);}
+  void Application(const UApplication *v){if(Enter(Kind::Application,v))v->InspectCatalogDomain(*this);}
+  void World(const UWorld *v){if(Enter(Kind::World,v))v->InspectCatalogDomain(*this);}
+  void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v))v->InspectCatalogDomain(*this);}
+  void GuiIcon(const UGuiIconSource *v){if(Enter(Kind::GuiIcon,v))v->InspectCatalogDomain(*this);}
+  void ObjectIcon(const UObjectIconCache *v){if(Enter(Kind::ObjectIcon,v))v->InspectCatalogDomain(*this);}
+  void Preview(const UContentPreviewRenderer *v){if(Enter(Kind::Preview,v))v->InspectCatalogDomain(*this);}
+  void Viewmodel(const UFpViewmodelRenderer *v){if(Enter(Kind::Viewmodel,v))v->InspectCatalogDomain(*this);}
+  void ItemLab(const UItemLabScreen *v){if(Enter(Kind::ItemLab,v))v->InspectCatalogDomain(*this);}
+  void ItemLabScene(const UItemLabSceneRenderer *v){if(Enter(Kind::ItemLabScene,v))v->InspectCatalogDomain(*this);}
+  void MeshService(const UWorldMeshService *v){if(Enter(Kind::MeshService,v))MeshCache(&v->GetCache());}
+  void MeshCache(const UChunkMeshCache *v){if(Enter(Kind::MeshCache,v))v->InspectJobPools(*this);}
+  void Streaming(const UWorldStreaming *v){if(Enter(Kind::Streaming,v))if(const auto *scheduler=v->GetChunkScheduler())scheduler->InspectJobPools(*this);}
+  void Persistence(const UWorldPersistence *v){if(Enter(Kind::Persistence,v))v->InspectCatalogDomain(*this);}
+  void Io(const UAsyncChunkIO *v){if(Enter(Kind::Io,v))v->InspectJobPools(*this);}
+  void Relight(const UAsyncRelightBuilder *v){if(v)v->InspectJobPools(*this);}
+  void Coop(const UWorldCooperativeSession *v){if(Enter(Kind::Coop,v))v->InspectCatalogDomain(*this);}
+};
+struct CatalogLauncherRootsView
+{
+  const std::shared_ptr<UBlockDefinitionStorage> &blocks;
+  const std::shared_ptr<UTextureBaseStorage> &bases;
+  const std::shared_ptr<UTextureCubeStorage> &cubes;
+  const std::shared_ptr<UObjectLibrary> &objects;
+  const std::shared_ptr<UWorld> &world;
+  const std::shared_ptr<UGeometryEngine> &geometry;
+};
+inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &application,
+    CatalogLauncherRootsView launcher,const char *entrypoint,const char *phase)
+{
+  const char *directory=std::getenv("CUBA_CATALOG_RUNTIME_DOMAIN");if(!directory || !*directory)return;
+  using Json=nlohmann::json;CatalogApplicationDomain out;
+  out.Core(&core);out.Application(&application);
+  out.World(launcher.world.get());out.Geometry(launcher.geometry.get());
+  out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
+  const auto content=CaptureWorldGenContentSnapshot();out.Content(content);out.CallingThread();out.ActiveDirectory();
+  const auto census=out.Catalogs();Json pools=Json::array(),roles=Json::array();
+  bool active_roles_current=true;
+  for(const auto &role:out.block_roles){
+    const bool current=role.storage==core.GetBlockDefinitionStorage().get();
+    roles.push_back({{"role",role.role},{"current",current}});
+    if(role.role!="launcher" && !current)active_roles_current=false;
+  }
+  for(const auto &pool:out.pools)pools.push_back({{"kind",pool.kind},{"workers",pool.state.workers},{"pending",pool.state.pending},{"active",pool.state.active},{"source_worker_cap",pool.worker_cap}});
+  const auto thread_upper=out.CallingAndPoolThreadUpper();
+  Json report={{"schema","catalog-runtime-domain.v1"},{"status",out.Supported()?"PASS":"UNSUPPORTED"},{"entrypoint",entrypoint},{"phase",phase},
+    {"worlds",out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)]},{"cores",out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Core)]},
+    {"applications",out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Application)]},{"block_storages",census.Objects(CatalogObjectKind::BlockStorage)},
+    {"block_catalogs",census.Objects(CatalogObjectKind::Blocks)},{"libraries",census.Objects(CatalogObjectKind::PrefabIndex)},
+    {"known_catalog_bytes",census.known_storage_bytes},{"block_roles",roles},{"active_roles_current",active_roles_current},
+    {"launcher_distinct_from_core",launcher.blocks.get()!=core.GetBlockDefinitionStorage().get()},
+    {"pool_count",out.pools.size()},{"pool_workers",out.workers},{"calling_and_pool_thread_upper",thread_upper},{"pools",pools},
+    {"unknown_owners",out.unknown_owners},{"calling_thread_convenience_inline_bytes",census.calling_thread_inline_bytes},
+    {"scope","Current supplied Core/Application/launcher/UI/world resources and actual member pools;foreign TLS/queued captures/installed publications/other callers/OS threads/process bytes are separate domains."}};
+  // An actual second UWorld verifies that the traversal counts supplied
+  // diagnostic worlds separately. It never replaces the active world.
+  if(std::string(phase)=="in-game"){
+    CatalogApplicationDomain diagnostic;diagnostic.Core(&core);diagnostic.Application(&application);
+    const auto before=diagnostic.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)];
+    {UWorld auxiliary(nullptr,nullptr);diagnostic.World(&auxiliary);
+      report["diagnostic_worlds_with_auxiliary"]=diagnostic.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)];
+      report["diagnostic_pool_count_with_auxiliary"]=diagnostic.pools.size();
+      report["diagnostic_pool_workers_with_auxiliary"]=diagnostic.workers;
+      report["diagnostic_thread_upper_with_auxiliary"]=diagnostic.CallingAndPoolThreadUpper();}
+    report["auxiliary_world_counted"]=diagnostic.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)]==before+1;
+    report["auxiliary_domain_supported"]=diagnostic.Supported();
+    if(!diagnostic.Supported())report["status"]="UNSUPPORTED";
+  }
+  std::filesystem::create_directories(directory);
+  std::ofstream file(std::filesystem::path(directory)/(std::string(entrypoint)+"-"+phase+".json"));
+  file<<report.dump(2)<<'\n';
+  if(!file)throw std::runtime_error("Catalog runtime domain receipt write failed");
+}
+} // namespace cutum

@@ -80,6 +80,9 @@ public:
   GuiRect GetExportBounds() const;
   int GetMode() const { return Mode; }
 
+public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const
+  {out.ItemLabScene(ScenesRenderer.get());}
 private:
   void Layout();
   void RebuildList();

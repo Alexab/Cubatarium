@@ -25,6 +25,7 @@ class BiomeKeyRef
 public:
   BiomeKeyRef()=default;
   explicit BiomeKeyRef(std::shared_ptr<const BiomeKey> key) noexcept : Key(std::move(key)) {}
+  const std::shared_ptr<const BiomeKey> &OwnerForCensus() const noexcept {return Key;}
   const BiomeKey &Get() const noexcept {static const BiomeKey empty;return Key ? *Key : empty;}
   operator const BiomeKey &() const noexcept {return Get();}
   bool empty() const noexcept {return Get().empty();}

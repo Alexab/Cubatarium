@@ -108,6 +108,9 @@ struct PackedOpaqueDrawTrace
 class UGeometryEngine : public IUGreedyTransparentBackend
 {
 public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.TextureBases(TextureBaseStorageInstance);out.TextureCubes(TextureCubeStorageInstance);out.World(WorldInstance.get());
+  }
   UGeometryEngine(std::shared_ptr<UWorld> world,
                   std::shared_ptr<UTextureBaseStorage> texture_base_storage,
                   std::shared_ptr<UTextureCubeStorage> texture_cube_storage,

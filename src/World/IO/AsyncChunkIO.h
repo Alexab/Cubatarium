@@ -135,6 +135,11 @@ private:
   }
 
 public:
+  template<class Inspector> void InspectJobPools(Inspector &out) const {
+    out.Pool("io-load",LoadPool,4);
+    if(BackgroundIoPool)out.Pool("io-background",*BackgroundIoPool,1);
+    out.Pool("io-light-flags",ColumnLightFlagsPool,1);
+  }
   UAsyncChunkIO()
       : LoadPool(LoadWorkerBudget(), "ChunkIoLoad"),
         BackgroundIoPool(CreateBackgroundIoPool())

@@ -43,6 +43,9 @@ public:
                       float yawDeg, float pitchDeg, float animTimeSec = 0.f,
                       bool animateWalk = false);
 
+public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const
+  {out.Library(Objects);out.TextureCubes(Textures);out.BlockStorage(BlockDefs,"content-preview");}
 private:
   bool EnsureFboSize(int size);
   bool InitCubeMesh();

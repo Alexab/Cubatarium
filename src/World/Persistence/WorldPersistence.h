@@ -94,6 +94,10 @@ struct AsyncChunkIoTickMetrics
 class UWorldPersistence
 {
 public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.Io(AsyncChunkIo.get());out.BlockCatalog(LightSignatureCatalog);
+    for(const auto &entry:UnloadSaveReceipts)out.BlockCatalog(entry.second.catalog);
+  }
   struct TerrainColumnRelightQueueInfo
   {
     bool keyed{false};

@@ -29,6 +29,8 @@ struct ItemLabSceneParams
 class UItemLabSceneRenderer
 {
 public:
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const
+  {out.Viewmodel(Fp.get());}
   UItemLabSceneRenderer(
       std::shared_ptr<UItemDefinitionStorage> items,
       std::shared_ptr<UBlockDefinitionStorage> blocks,

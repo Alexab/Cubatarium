@@ -47,6 +47,8 @@ public:
   std::size_t GetQueuedJobCount() const { return Pool.GetPendingJobCount(); }
   std::size_t GetRunningJobCount() const { return Pool.GetActiveJobCount(); }
   int GetWorkerCount() const { return WorkerCount; }
+  template<class Inspector> void InspectJobPools(Inspector &out) const
+  {out.Pool("relight",Pool,4);}
   int GetMaxPipelineDepth() const
   {
     return WorkerCount * kPipelineSlotsPerWorker;

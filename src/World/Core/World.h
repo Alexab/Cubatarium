@@ -1599,6 +1599,12 @@ public:
   void SetFocusRingVisualSample(const FocusRingVisualSample &sample) const;
   uint64_t GetStreamingFrameEpoch() const { return StreamingFrameEpoch; }
   const UWorldStreaming *GetStreamingService() const { return Streaming.get(); }
+  template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
+    out.BlockStorage(BlockDefinitions,"world");out.Merge(BlockMergeRegistry);out.TextureCubes(TextureCubeInstance);
+    out.Registry(BlockRegistry.get());out.FeaturesValue(ResolvedObjectFeatures);
+    out.MeshService(MeshService.get());out.Streaming(Streaming.get());out.Persistence(Persistence.get());
+    out.Relight(AsyncRelight.get());out.Coop(CoopSession.get());
+  }
   void AdvanceStreamingFrameEpoch() { ++StreamingFrameEpoch; }
   /// Split unfinished focus by movement/view forward (dot>=0 ahead, else
   /// behind).
