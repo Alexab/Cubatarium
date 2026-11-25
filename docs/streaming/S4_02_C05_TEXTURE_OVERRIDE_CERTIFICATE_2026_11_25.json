@@ -1,0 +1,192 @@
+{
+  "schema": "s4-texture-override-source-certificate.v1",
+  "status": "SCOPED_JSON_YAML_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+  "summary": "Texture override JSON/YAML source scoped PASS. JSON file wrapper now uses managed ParseAndCloseCatalogFileJson(Overrides),closing handle/read buffer before conversion and using accepted iterative retirement. Shared CompileTextureOverridesJson/ParseTextureOverridesYaml bodies exactly match prior production conversion modulo indentation;existing YAML subset/stream partial-result policy preserved.8 forms/aliases/default/duplicate/long/wide/ignored-root cases;2591 persistent conversion refusal prefixes+exact retries,observed final0 and within source bound. Real JSON file165 and YAML file61 refusal prefixes+retries,exclusive handle reuse PASS. UTF8 BOM,JSON-before-YAML precedence,malformed JSON stays empty without YAML fallback,duplicate JSON keys last-wins PASS. Overflow/unrelated allocation controls PASS. Full scatter,managed catalog file,candidate and placeholder regressions PASS. Release/native runtime/startup/save/UI/provenance PASS;aggregate smoke UNTESTED. Existing global JSON counter gains one slot:192->200 bytes,no new ledger/TLS/history.",
+  "remaining": "C05 OPEN:placeholder per-source request formula including prior/global diagnostic roots and shared-stem collision states;whole directory/resource merge source envelope for pending/map/ID/descriptor/stem memo/atlas growth,pack biome-image adoption and full source/retained/prior-current publication composition. Texture override DOM conversion and current YAML subset now source-scoped;YAML file buffer/paths and JSON parser/DOM remain separate previously modeled terms. C06 finite all-world/thread/global/publisher/escaped roots,E12 CRT/stack/OS/GPU/full process matrix,S4.03..06/S5/S6 remain OPEN;23/42 unchanged. No arbitrary asset cap or audit restart.",
+  "unit": {
+    "cases": [
+      {
+        "attempts": 43,
+        "name": "json_forms_aliases_defaults",
+        "pass": true,
+        "peak": 10818,
+        "upper": 384672
+      },
+      {
+        "attempts": 4,
+        "name": "json_nonobject",
+        "pass": true,
+        "peak": 400,
+        "upper": 17632
+      },
+      {
+        "attempts": 4,
+        "name": "json_empty",
+        "pass": true,
+        "peak": 400,
+        "upper": 17632
+      },
+      {
+        "attempts": 1296,
+        "name": "json129_map_rehash",
+        "pass": true,
+        "peak": 45655,
+        "upper": 1892960
+      },
+      {
+        "attempts": 53,
+        "name": "yaml_subset_aliases_defaults",
+        "pass": true,
+        "peak": 21626,
+        "upper": 363424
+      },
+      {
+        "attempts": 4,
+        "name": "yaml_empty",
+        "pass": true,
+        "peak": 400,
+        "upper": 18880
+      },
+      {
+        "attempts": 1172,
+        "name": "yaml129_map_rehash",
+        "pass": true,
+        "peak": 46781,
+        "upper": 1539200
+      },
+      {
+        "attempts": 15,
+        "name": "yaml_repeated_block",
+        "pass": true,
+        "peak": 532,
+        "upper": 28384
+      }
+    ],
+    "duplicate_keys_last_wins": true,
+    "failed_cases": 0,
+    "file_closed": true,
+    "file_prefix_and_retry_cases": 165,
+    "json_precedes_yaml": true,
+    "malformed_json_no_yaml_fallback": true,
+    "negative_control": true,
+    "overflow_rejected": true,
+    "override_kind_recorded": true,
+    "persistent_prefix_and_retry_cases": 2591,
+    "process_counters_inline_bytes": 200,
+    "schema": "texture-override-source.v1",
+    "scope": "Shared JSON conversion and existing YAML subset source requests;DOM/istream/ifstream/path/parser/prior outputs separate. Real file loader includes managed parse/close/refusal cleanup. YAML may return partial result when stream sets badbit,matching prior policy;retry exact input required.",
+    "status": "PASS",
+    "yaml_file_prefix_and_retry_cases": 61
+  },
+  "production_extraction_equivalence": {
+    "status": "PASS",
+    "prior_commit": "f93d630f9d7a8ac9cd0beeb7c01d783ae2ae2284",
+    "json_body_identical": true,
+    "yaml_body_identical": true,
+    "scope": "Shared conversion bodies identical modulo indentation;file wrapper changes to managed JSON parse-and-close explicitly separate."
+  },
+  "regressions": [
+    {
+      "name": "scatter",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe"
+      ],
+      "returncode": 0,
+      "exe_sha256": "09d85c2f37254ffc31eeb8c75c94e8952c1d1eb61815ab1b81be36c4ba783870"
+    },
+    {
+      "name": "catalog-files",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--catalog-files",
+        "build\\desktop-msvc\\s4-texture-override-files-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "1bd67a51a7efdf60144692e71f893bedb02bd3ccb07a64adc5f16731c34f6bf6"
+    },
+    {
+      "name": "candidates",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--candidate-source",
+        "build\\desktop-msvc\\s4-texture-override-candidates-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "1bd67a51a7efdf60144692e71f893bedb02bd3ccb07a64adc5f16731c34f6bf6"
+    },
+    {
+      "name": "placeholder",
+      "command": [
+        "build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--placeholder-recovery",
+        "build\\desktop-msvc\\s4-texture-override-placeholder-regression.json"
+      ],
+      "returncode": 0,
+      "exe_sha256": "09d85c2f37254ffc31eeb8c75c94e8952c1d1eb61815ab1b81be36c4ba783870"
+    }
+  ],
+  "source_sha256": {
+    "src/ResourcePacks/TextureOverrides.cpp": "920141452959e674b9036468c259a38348639971d4e6a6e0679aaafded572207",
+    "src/ResourcePacks/TextureOverrides.h": "7c4f4dc48c6fe8dcec30155493d14899c7f0decc78304e7f7fc538c4bba2bf50",
+    "src/WorldGen/Core/CatalogJsonSource.h": "33e1034cd3d56186566c8a86a41b7f1ba614d14dbb47470102eb71146dd6a6d4",
+    "src/WorldGen/Core/TextureOverrideSourceEnvelope.h": "80915fd175f3f87ed535d0d3cbf1946dfe7e4738adbcbe2b1d242fb3e0a8cf0a",
+    "src/Test/TextureOverrideSourceFixture.h": "98d88a2a12a62e3391f84c75d002c5f1472c27dae851ef37ec64e89f0e7af852",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "d11b872adda25836d6987e56755e7d9b72a56e6cc065f54663130cb59974ee7c"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71"
+  },
+  "test_exe_sha256": "1bd67a51a7efdf60144692e71f893bedb02bd3ccb07a64adc5f16731c34f6bf6",
+  "desktop_exe_sha256": "d2c1ad4692e41ee31c1211efab5e2f6290abc6280abfb9587abcb648311326dd",
+  "provenance": "build/desktop-msvc/s4-texture-override-provenance.json",
+  "model": {
+    "domain": "JSON DOM V values and B key/string bytes,including ignored fields. YAML raw bytes B,lines L,commas C;N=L+C+1. Input root/istream/file buffers/path/parser/prior versions separate.",
+    "upper": "16384+N*(4*sizeof(TextureFaceOverride)+4*8*sizeof(int)+actual MSVC override-map list node+16*2*sizeof(pointer)+8*39+256)+64*B,with N=V for JSON. Checked/saturating.",
+    "terms": "Map sentinel/node/bucket old/new storage,override vector growth and entry copies,face alias expansion up to4 per input token/default6,face-vector growth/copies,string temporaries,trim/line/string-stream/copy/return bookkeeping and alignment. One new result and scratch,not runtime or process cap.",
+    "file": "Accepted managed JSON parse/close/retirement model composes with conversion bound. YAML streams/builds in one pass and intentionally keeps file buffer during conversion;generic file/path and stream backing are separate terms. No second parse or DOM copy.",
+    "behavior": "Current YAML subset is not general YAML. badbit may yield partial output,matching prior stream behavior;refusal fixture destroys result and retries exact stream. JSON syntax errors yield empty result and do not fall back when JSON file exists."
+  },
+  "metadata": {
+    "prior_process_counters_bytes": 192,
+    "current_process_counters_bytes": 200,
+    "counter_slots": 9,
+    "new_ledger_or_TLS": false
+  },
+  "native": {
+    "artifact": "build/desktop-msvc/s4-texture-override-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "override_kind_attempts": 1,
+    "scope": "Runtime regression and compiled metadata layout,not native measured complete merge source peak."
+  }
+}

@@ -67,8 +67,10 @@ static bool Verify(const ObjectFeatureConfig &actual,const ObjectFeatureConfig &
 #include "Test/PackCandidateSourceFixture.h"
 #include "Test/PackBiomeIndexSourceFixture.h"
 #include "Test/ResourceBlockGrowthFixture.h"
+#include "Test/TextureOverrideSourceFixture.h"
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--texture-overrides") return RunTextureOverrideSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--resource-block-growth") return RunResourceBlockGrowthFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--pack-biome-index") return RunPackBiomeIndexSourceFixture(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--pack-candidate") return RunPackCandidateSourceFixture(argc>2?argv[2]:nullptr);

@@ -1,3 +1,4 @@
+#include "WorldGen/Core/CatalogJsonSource.h"
 #include "ResourcePacks/TextureOverrides.h"
 #include <cctype>
 #include <fstream>
@@ -137,40 +138,8 @@ TextureOverrideMap LoadFromJson(const std::filesystem::path &path)
   }
   try
   {
-    const nlohmann::json root = nlohmann::json::parse(in);
-    if (!root.is_object())
-    {
-      return result;
-    }
-    for (const auto &[blockName, blockVal] : root.items())
-    {
-      std::vector<TextureFaceOverride> overrides;
-      if (blockVal.is_array())
-      {
-        for (const auto &entry : blockVal)
-        {
-          ParseOverrideEntry(entry, overrides);
-        }
-      }
-      else if (blockVal.is_object())
-      {
-        if (blockVal.contains("overrides") && blockVal["overrides"].is_array())
-        {
-          for (const auto &entry : blockVal["overrides"])
-          {
-            ParseOverrideEntry(entry, overrides);
-          }
-        }
-        else
-        {
-          ParseOverrideEntry(blockVal, overrides);
-        }
-      }
-      if (!overrides.empty())
-      {
-        result[blockName] = std::move(overrides);
-      }
-    }
+    const auto root = ParseAndCloseCatalogFileJson(in,CatalogJsonKind::Overrides);
+    return CompileTextureOverridesJson(root);
   }
   catch (const nlohmann::json::exception &e)
   {
@@ -188,6 +157,53 @@ TextureOverrideMap LoadFromYaml(const std::filesystem::path &path)
   {
     return result;
   }
+  return ParseTextureOverridesYaml(in);
+}
+
+} // namespace
+
+TextureOverrideMap CompileTextureOverridesJson(const nlohmann::json &root)
+{
+  TextureOverrideMap result;
+  if (!root.is_object())
+  {
+    return result;
+  }
+  for (const auto &[blockName, blockVal] : root.items())
+  {
+    std::vector<TextureFaceOverride> overrides;
+    if (blockVal.is_array())
+    {
+      for (const auto &entry : blockVal)
+      {
+        ParseOverrideEntry(entry, overrides);
+      }
+    }
+    else if (blockVal.is_object())
+    {
+      if (blockVal.contains("overrides") && blockVal["overrides"].is_array())
+      {
+        for (const auto &entry : blockVal["overrides"])
+        {
+          ParseOverrideEntry(entry, overrides);
+        }
+      }
+      else
+      {
+        ParseOverrideEntry(blockVal, overrides);
+      }
+    }
+    if (!overrides.empty())
+    {
+      result[blockName] = std::move(overrides);
+    }
+  }
+  return result;
+}
+
+TextureOverrideMap ParseTextureOverridesYaml(std::istream &in)
+{
+  TextureOverrideMap result;
   std::string currentBlock;
   std::vector<TextureFaceOverride> currentOverrides;
   TextureFaceOverride currentEntry;
@@ -245,8 +261,6 @@ TextureOverrideMap LoadFromYaml(const std::filesystem::path &path)
   }
   return result;
 }
-
-} // namespace
 
 TextureOverrideMap LoadTextureOverrides(const std::filesystem::path &packRoot)
 {

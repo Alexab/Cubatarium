@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.texture-override",
+      "status": "SCOPED_JSON_YAML_SOURCE_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-texture-override-acceptance.json",
+      "certificate": "S4_02_C05_TEXTURE_OVERRIDE_CERTIFICATE_2026_11_25.json",
+      "scope": "Texture override JSON/YAML source scoped PASS. JSON file wrapper now uses managed ParseAndCloseCatalogFileJson(Overrides),closing handle/read buffer before conversion and using accepted iterative retirement. Shared CompileTextureOverridesJson/ParseTextureOverridesYaml bodies exactly match prior production conversion modulo indentation;existing YAML subset/stream partial-result policy preserved.8 forms/aliases/default/duplicate/long/wide/ignored-root cases;2591 persistent conversion refusal prefixes+exact retries,observed final0 and within source bound. Real JSON file165 and YAML file61 refusal prefixes+retries,exclusive handle reuse PASS. UTF8 BOM,JSON-before-YAML precedence,malformed JSON stays empty without YAML fallback,duplicate JSON keys last-wins PASS. Overflow/unrelated allocation controls PASS. Full scatter,managed catalog file,candidate and placeholder regressions PASS. Release/native runtime/startup/save/UI/provenance PASS;aggregate smoke UNTESTED. Existing global JSON counter gains one slot:192->200 bytes,no new ledger/TLS/history."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.placeholder-recovery",
       "status": "SCOPED_RECOVERY_PIXEL_SIZES_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-placeholder-recovery-acceptance.json",
