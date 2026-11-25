@@ -77,17 +77,25 @@ void UBlockMergeRegistry::Rebuild(
   RuntimeOverlayDirty = false;
 }
 
+BlockMergeSourceLayout UBlockMergeRegistry::SourceLayout() noexcept
+{
+  BlockMergeSourceLayout out;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  out.supported=true;out.pending=sizeof(PendingBlock);out.block=sizeof(ResourcePackBlock);
+  out.merged_node=sizeof(std::_List_node<decltype(BlocksByName)::value_type,void*>);
+  out.name_node=sizeof(std::_List_node<decltype(NameToId)::value_type,void*>);
+  out.id_node=sizeof(std::_List_node<decltype(IdToName)::value_type,void*>);
+  out.memo_node=sizeof(std::_List_node<std::pair<const std::string,bool>,void*>);
+  out.owner_node=sizeof(std::_List_node<std::pair<const std::string,const ResourcePackManifest*>,void*>);
+  out.descriptor=sizeof(MergedCubeDesc);
+#endif
+  return out;
+}
+
 void UBlockMergeRegistry::MergeBlockCatalog(
     const std::vector<ResourcePackManifest> &sorted)
 {
-  struct PendingBlock
-  {
-    std::string RegistryName;
-    std::string LocalName;
-    ResourcePackBlock Block;
-    // sorted is immutable and outlives every pending row in this call.
-    const ResourcePackManifest *Pack{nullptr};
-  };
+  // sorted is immutable and outlives every pending row in this call.
   std::vector<PendingBlock> pending;
 
   for (const auto &pack : sorted)

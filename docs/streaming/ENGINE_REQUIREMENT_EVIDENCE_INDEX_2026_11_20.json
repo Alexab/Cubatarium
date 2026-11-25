@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C05.merge-source-composition",
+      "status": "SCOPED_REBUILD_COMPOSITION_REFUSAL_RETAINED_RELEASE_PASS_FULL_C05_OPEN",
+      "receipt": "build/desktop-msvc/s4-merge-source-acceptance.json",
+      "certificate": "S4_02_C05_MERGE_SOURCE_CERTIFICATE_2026_11_25.json",
+      "scope": "Composed Rebuild ordinary-new source profile scoped PASS. Model combines caller manifest copies,prior target structural capacities/runtime overlay,raw-file JSON parser/compiled block/override envelopes,actual typed pending/map/ID/descriptor/memo layouts,qualified text,filesystem/default-stream terms and optional placeholder growth. Placeholder part uses retained new cache structure/tiles plus ONE sequential call scratch peak,not sum of all transient peaks.4 packs8 block files with skip/override/duplicate,JSON+YAML overrides;normal/placeholder cases peak282607 within conservative profile-specific source bounds recorded in unit cases.3089 persistent allocation refusal boundaries clean fresh registry/cache to0 and exact retries recover independent ID/stem oracles. Warm Rebuild holds old definition map while changing current hardness1->78;entry observed149708<=independent retained upper159165,combined peak289959 within composed upper,old snapshot preserved. Overflow/unmodeled-allocation controls PASS. Full scatter,diagnostics246/64parallel,placeholder263 and override2817 regressions PASS. Release desktop source/EXE provenance PASS;merge loop body unchanged,only typed layout accessor/same-field pending type relocation."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C05.merge-diagnostics",
       "status": "SCOPED_OWNER_RETIREMENT_PARALLEL_REFUSAL_RELEASE_NATIVE_PASS_FULL_C05_OPEN",
       "receipt": "build/desktop-msvc/s4-merge-diagnostics-acceptance.json",

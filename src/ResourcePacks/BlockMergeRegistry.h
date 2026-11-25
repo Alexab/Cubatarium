@@ -33,9 +33,16 @@ struct RuntimeOverlayFlushResult
   std::vector<BlockId> RemovedBlockIds;
 };
 
+struct BlockMergeSourceLayout
+{
+  size_t pending{},block{},merged_node{},name_node{},id_node{},memo_node{},owner_node{},descriptor{};
+  bool supported{};
+};
+
 class UBlockMergeRegistry
 {
 public:
+  static BlockMergeSourceLayout SourceLayout() noexcept;
   void Rebuild(const std::vector<ResourcePackManifest> &packs,
                std::shared_ptr<UPlaceholderTextureCache> placeholder,
                int placeholderTileSize);
@@ -112,6 +119,13 @@ public:
   }
 
 private:
+  struct PendingBlock
+  {
+    std::string RegistryName;
+    std::string LocalName;
+    ResourcePackBlock Block;
+    const ResourcePackManifest *Pack{nullptr};
+  };
   struct MergedEntry
   {
     BlockDefinition Definition;
