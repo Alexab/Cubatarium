@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 
 #include "Render/GlIncludes.h"
 #include <algorithm>
@@ -55,6 +56,11 @@ void DestroyCreatureBonePaletteGpu()
     glDeleteBuffers(1, &gCreatureBoneUbo);
     gCreatureBoneUbo = 0;
   }
+}
+
+void InspectCreatureBonePaletteGpu(TerrainGpuBufferCensus &out)
+{
+  out.Add(TerrainGpuBufferRole::CreaturePalette, gCreatureBoneUbo);
 }
 
 size_t

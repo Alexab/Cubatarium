@@ -237,8 +237,21 @@ void UFpViewmodelRenderer::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out)
   out.Add(TerrainGpuBufferRole::PreviewViewmodelIndices, CubeEbo);
   out.Add(TerrainGpuBufferRole::PreviewViewmodelVertices, ArmSkinVbo);
   out.Add(TerrainGpuBufferRole::PreviewViewmodelIndices, ArmSkinEbo);
+  HeldScratch.InspectGpuBuffers(out, TerrainGpuBufferRole::PreviewViewmodelVertices, TerrainGpuBufferRole::PreviewViewmodelIndices);
   if (SurfaceRenderer)
     SurfaceRenderer->InspectGpuBuffers(out);
+}
+
+void UFpViewmodelRenderer::InspectActorGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  out.Add(Role::ActorViewmodelVertices, CubeVbo);
+  out.Add(Role::ActorViewmodelIndices, CubeEbo);
+  out.Add(Role::ActorViewmodelVertices, ArmSkinVbo);
+  out.Add(Role::ActorViewmodelIndices, ArmSkinEbo);
+  HeldScratch.InspectGpuBuffers(out, Role::ViewmodelScratchVertices, Role::ViewmodelScratchIndices);
+  if (SurfaceRenderer)
+    SurfaceRenderer->InspectGpuBuffers(out, Role::ViewmodelSurfaceVertices, Role::ViewmodelSurfaceIndices);
 }
 
 void UFpViewmodelRenderer::InspectLegacyVisualAssets(VisualAssetCensus &census)
@@ -278,6 +291,7 @@ bool UFpViewmodelRenderer::Initialize()
 
 void UFpViewmodelRenderer::Shutdown()
 {
+  HeldScratch.Reset();
   SurfaceRenderer.reset();
   auto delTex = [](GLuint &t)
   {
@@ -1294,14 +1308,6 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
     return true;
   }
 
-  static GLuint vao = 0, vbo = 0, ebo = 0;
-  if (vao == 0)
-  {
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glGenBuffers(1, &ebo);
-  }
-
   GLuint fallbackTex = MetalTex;
   if (itemId.find("wood") != std::string::npos)
   {
@@ -1329,27 +1335,8 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
     Shader->SetInt("uAnimFrame", 0);
     Shader->SetInt("uAnimFrameCount", 1);
     Shader->SetMat4("mvp_matrix", mvp);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
-        mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
-        mesh.indices.data(), GL_STREAM_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                          reinterpret_cast<void *>(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
-                   GL_UNSIGNED_INT, nullptr);
-    drew = true;
+    drew |= HeldScratch.Draw(mesh);
   }
-  glBindVertexArray(0);
   return drew;
 }
 

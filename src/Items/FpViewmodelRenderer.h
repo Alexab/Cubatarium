@@ -11,6 +11,7 @@
 #include <glm/vec3.hpp>
 
 #include "Items/ItemVisualInputs.h"
+#include "Creatures/Visual/LegacyItemGpuScratch.h"
 #include "Items/ItemVisualPresetLibrary.h"
 
 typedef unsigned int GLuint;
@@ -111,6 +112,7 @@ public:
   bool Initialize();
   void InspectVisualAssets(VisualAssetCensus &census) const;
   void InspectPreviewGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectActorGpuBuffers(class TerrainGpuBufferCensus &out) const;
   static void InspectLegacyVisualAssets(VisualAssetCensus &census);
   void Shutdown();
 
@@ -232,6 +234,7 @@ private:
   GLuint ArmSkinVao{0};
   GLuint ArmSkinVbo{0};
   GLuint ArmSkinEbo{0};
+  LegacyItemGpuScratch HeldScratch;
   int ArmSkinTexW{0};
   int ArmSkinTexH{0};
   GLuint SkinTex{0};

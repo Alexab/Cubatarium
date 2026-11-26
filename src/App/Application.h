@@ -197,6 +197,7 @@ public:
   void InspectGuiGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectPreviewGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectIconReadbackGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectActorGpuBuffers(class TerrainGpuBufferCensus &out) const;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

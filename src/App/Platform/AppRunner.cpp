@@ -3377,6 +3377,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           application->InspectIconReadbackGpuBuffers(iconReadbacks);
           report << "  \"icon_readback_gpu_buffers_after_loop\": "
                  << DescribeIconReadbackGpuBuffers(iconReadbacks.Read()).dump() << ",\n";
+          TerrainGpuBufferCensus actorBuffers;
+          CreatureMeshGpuCache::Instance().InspectGpuBuffers(actorBuffers);
+          InspectCreatureBonePaletteGpu(actorBuffers);
+          geometry_engine->InspectActorGpuBuffers(actorBuffers);
+          application->InspectActorGpuBuffers(actorBuffers);
+          report << "  \"actor_gpu_buffers_after_loop\": "
+                 << DescribeActorGpuBuffers(actorBuffers.Read()).dump() << ",\n";
           RenderImageCensus renderImages;
           if (texture_cube_instance)
             texture_cube_instance->InspectRenderImages(renderImages);
@@ -3385,8 +3392,13 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           geometry_engine->InspectRenderImages(renderImages);
           application->InspectRenderImages(renderImages);
           report << "  \"render_images_after_loop\": " << DescribeRenderImages(renderImages.Read()).dump() << ",\n";
-          report << "  \"windows_gpu_memory_after_loop\": "
-                 << DescribeWindowsGpuMemory(ReadWindowsGpuMemory()).dump() << ",\n";
+          const auto process = ReadWindowsProcessMemory();
+          const auto driver = ReadWindowsGpuMemory();
+          report << "  \"windows_gpu_memory_after_loop\": " << DescribeWindowsGpuMemory(driver).dump() << ",\n";
+          report << "  \"windows_process_memory_after_loop\": " << nlohmann::json{
+              {"observed", process.observed}, {"working_set_bytes", process.workingSet},
+              {"peak_working_set_bytes", process.peakWorkingSet}, {"private_commit_bytes", process.privateCommit},
+              {"peak_private_commit_bytes", process.peakPrivateCommit}}.dump() << ",\n";
         }
         report
             << "  \"exit_code\": " << exit_code << ",\n"

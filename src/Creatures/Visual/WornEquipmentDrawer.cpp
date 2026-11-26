@@ -1,4 +1,5 @@
 #include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Creatures/Core/Creature.h"
@@ -407,37 +408,12 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
   }
   if (immediate && shader)
   {
-    static GLuint vao = 0, vbo = 0, ebo = 0;
-    if (vao == 0)
-    {
-      glGenVertexArrays(1, &vao);
-      glGenBuffers(1, &vbo);
-      glGenBuffers(1, &ebo);
-    }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     shader->Use();
     shader->SetInt("texture0", 0);
     shader->SetMat4("mvp_matrix", mvp);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
-        mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
-        mesh.indices.data(), GL_STREAM_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                          reinterpret_cast<void *>(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.indices.size()),
-                   GL_UNSIGNED_INT, nullptr);
-    glBindVertexArray(0);
+    CreatureMeshGpuCache::Instance().DrawLegacyEquipment(mesh);
     return;
   }
   if (queue)
@@ -792,39 +768,12 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
       }
       if (immediate && shader)
       {
-        static GLuint vao = 0, vbo = 0, ebo = 0;
-        if (vao == 0)
-        {
-          glGenVertexArrays(1, &vao);
-          glGenBuffers(1, &vbo);
-          glGenBuffers(1, &ebo);
-        }
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, tex);
         shader->Use();
         shader->SetInt("texture0", 0);
         shader->SetMat4("mvp_matrix", mvp);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER,
-                     static_cast<GLsizeiptr>(prim.mesh.interleavedPosUv.size() *
-                                             sizeof(float)),
-                     prim.mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     static_cast<GLsizeiptr>(prim.mesh.indices.size() *
-                                             sizeof(unsigned)),
-                     prim.mesh.indices.data(), GL_STREAM_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                              nullptr);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                              reinterpret_cast<void *>(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        glDrawElements(GL_TRIANGLES,
-                       static_cast<GLsizei>(prim.mesh.indices.size()),
-                       GL_UNSIGNED_INT, nullptr);
-        glBindVertexArray(0);
+        CreatureMeshGpuCache::Instance().DrawLegacyEquipment(prim.mesh);
       }
       else if (queue)
       {

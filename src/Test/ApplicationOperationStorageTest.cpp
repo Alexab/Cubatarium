@@ -7,6 +7,7 @@
 #include "Test/GuiContextStorageFixture.h"
 #include "Test/GuiGpuStorageFixture.h"
 #include "Test/PreviewGpuStorageFixture.h"
+#include "Test/ActorGpuStorageFixture.h"
 #include "Test/MainMenuStorageFixture.h"
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
@@ -510,6 +511,7 @@ int main(int argc,char **argv){
     report["creature_item_icon_owner"]=creature_item_icon_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["status_catalog_owner"]=std::move(statusCatalog);
     report["shared_visual_sources"]=shared_visual_source_fixture::CheckVisualSources();
+    report["actor_gpu_storage"]=actor_gpu_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json",world);
     report["rigid_model_source"]=shared_visual_source_fixture::CheckRigidModels(argc>1?argv[1]:"application-operation-storage.json");
     report["retained_visual_assets"]=shared_visual_source_fixture::CheckRetainedVisualOwners();
     report["visual_loader_construction"]=shared_visual_source_fixture::CheckVisualLoaderConstruction(argc>1?argv[1]:"application-operation-storage.json");

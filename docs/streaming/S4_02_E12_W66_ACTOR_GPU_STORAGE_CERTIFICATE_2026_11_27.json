@@ -1,0 +1,1584 @@
+{
+  "schema": "s4-e12-w66-actor-gpu-storage.v1",
+  "status": "SCOPED_ACTOR_GPU_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "633073db4135858f8360fa391ea40585ba80cd3e",
+  "prior_certificate": "S4_02_E12_W65_PREVIEW_READBACK_CERTIFICATE_2026_11_27.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W66 joins actual creature part, skeletal and skinned stores, the shared bone palette, world-item surfaces and first-person stores. The cache source counts agree with queried GL names in both native profiles. Legacy immediate equipment shares one explicit stream released by the mesh cache. Legacy first-person geometry belongs to its own renderer. The real GL fixture proves distinct viewmodel names, exact uploaded extents, single-stream reuse, a rejected same-size upload with zero draws, retry and explicit retirement. World actor teardown clears the retained palette identity and the item resource revision. The fixture also checks the existing retirement of world item surfaces. The Full native route warms an authored item in the actual application viewmodel without changing the inventory. The menu, gameplay and after-loop checkpoints pair logical actor stores with independent WDDM per-adapter segments and PSAPI process values. All 46 prior Release groups, three related Release tests and scoped Flat and Full startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W66. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. Next, join the remaining geometry-engine static cube and face buffers, instance stores, outline and preview buffers to the logical buffer census. Check their context teardown and complete the matched E12 phase table with outstanding driver retention and process terms explicitly recorded. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Live logical actor buffers and matched menu, gameplay and after-loop Windows memory samples",
+  "composition_rule": "Deduplicate selected GL names in one context. Requested cache bytes and queried buffer sizes describe the same stores, while WDDM reports segment usage and PSAPI reports operating-system process counters. These three observations are independent and are not added. Driver allocations for deleted or in-flight stores and whole-process owner bounds remain open.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix"
+  ],
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetBufferParameter.xml",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_queryvideomemoryinfo",
+    "https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex"
+  ],
+  "actor_fixture": {
+    "authored_extents": [
+      11008,
+      2352
+    ],
+    "cold_world": {
+      "failed_queries": 0,
+      "logical_bytes": 8016,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 7,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_palette": {
+          "logical_bytes": 6144,
+          "objects": 1
+        },
+        "creature_part_indices": {
+          "logical_bytes": 432,
+          "objects": 3
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 1440,
+          "objects": 3
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 7,
+      "whole_runtime_complete": false
+    },
+    "equipment_quad": {
+      "failed_queries": 0,
+      "logical_bytes": 104,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 24,
+          "objects": 1
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 80,
+          "objects": 1
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 2,
+      "whole_runtime_complete": false
+    },
+    "equipment_triangle": {
+      "failed_queries": 0,
+      "logical_bytes": 72,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 12,
+          "objects": 1
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 60,
+          "objects": 1
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 2,
+      "whole_runtime_complete": false
+    },
+    "first_viewmodel": {
+      "failed_queries": 0,
+      "logical_bytes": 14056,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 6,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 12,
+          "objects": 1
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 60,
+          "objects": 1
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 2352,
+          "objects": 1
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 11008,
+          "objects": 1
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 6,
+      "whole_runtime_complete": false
+    },
+    "independent_viewmodel_retirement": true,
+    "retired_world_names": 9,
+    "same_size_refusal_retried": true,
+    "second_viewmodel": {
+      "failed_queries": 0,
+      "logical_bytes": 728,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 24,
+          "objects": 1
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 80,
+          "objects": 1
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 4,
+      "whole_runtime_complete": false
+    },
+    "status": "PASS",
+    "world_held": {
+      "failed_queries": 0,
+      "logical_bytes": 21376,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 9,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_palette": {
+          "logical_bytes": 6144,
+          "objects": 1
+        },
+        "creature_part_indices": {
+          "logical_bytes": 432,
+          "objects": 3
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 1440,
+          "objects": 3
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 2352,
+          "objects": 1
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 11008,
+          "objects": 1
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 9,
+      "whole_runtime_complete": false
+    }
+  },
+  "actual_viewmodel": {
+    "after": {
+      "failed_queries": 0,
+      "logical_bytes": 13984,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 2352,
+          "objects": 1
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 11008,
+          "objects": 1
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 4,
+      "whole_runtime_complete": false
+    },
+    "before": {
+      "failed_queries": 0,
+      "logical_bytes": 624,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "roles": {
+        "actor_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "actor_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "creature_palette": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_part_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skeletal_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "creature_skinned_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "equipment_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "viewmodel_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "world_held_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "actor-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 2,
+      "whole_runtime_complete": false
+    },
+    "item": "bucket",
+    "status": "PASS"
+  },
+  "native": {
+    "flat": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 725,
+      "phases": {
+        "menu": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 8640,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 9,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 9,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 187023360,
+              "peak_working_set_bytes": 198713344,
+              "private_commit_bytes": 234606592,
+              "peak_private_commit_bytes": 244068352
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 69017600,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        },
+        "in-game": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 121200,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 75,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 4320,
+                "objects": 30
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 14400,
+                "objects": 30
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 12240,
+                "objects": 3
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 81600,
+                "objects": 3
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 75,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 416710656,
+              "peak_working_set_bytes": 417652736,
+              "private_commit_bytes": 984952832,
+              "peak_private_commit_bytes": 984952832
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 250236928,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        },
+        "after-loop": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 121200,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 75,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 4320,
+                "objects": 30
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 14400,
+                "objects": 30
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 12240,
+                "objects": 3
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 81600,
+                "objects": 3
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 75,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 495009792,
+              "peak_working_set_bytes": 539836416,
+              "private_commit_bytes": 1222635520,
+              "peak_private_commit_bytes": 1222635520
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 275402752,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        }
+      }
+    },
+    "full": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 580,
+      "phases": {
+        "menu": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 8640,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 9,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 9,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 198914048,
+              "peak_working_set_bytes": 207831040,
+              "private_commit_bytes": 242298880,
+              "peak_private_commit_bytes": 244977664
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 69017600,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        },
+        "in-game": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 121200,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 75,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 4320,
+                "objects": 30
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 14400,
+                "objects": 30
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 12240,
+                "objects": 3
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 81600,
+                "objects": 3
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 75,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 702345216,
+              "peak_working_set_bytes": 703451136,
+              "private_commit_bytes": 1361457152,
+              "peak_private_commit_bytes": 1361457152
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 368209920,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        },
+        "after-loop": {
+          "actor_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 134560,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 77,
+            "roles": {
+              "actor_viewmodel_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "actor_viewmodel_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "creature_palette": {
+                "logical_bytes": 6144,
+                "objects": 1
+              },
+              "creature_part_indices": {
+                "logical_bytes": 432,
+                "objects": 3
+              },
+              "creature_part_vertices": {
+                "logical_bytes": 1440,
+                "objects": 3
+              },
+              "creature_skeletal_indices": {
+                "logical_bytes": 4320,
+                "objects": 30
+              },
+              "creature_skeletal_vertices": {
+                "logical_bytes": 14400,
+                "objects": 30
+              },
+              "creature_skinned_indices": {
+                "logical_bytes": 12240,
+                "objects": 3
+              },
+              "creature_skinned_vertices": {
+                "logical_bytes": 81600,
+                "objects": 3
+              },
+              "equipment_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "equipment_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "viewmodel_surface_indices": {
+                "logical_bytes": 2352,
+                "objects": 1
+              },
+              "viewmodel_surface_vertices": {
+                "logical_bytes": 11008,
+                "objects": 1
+              },
+              "world_held_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "world_held_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "actor-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 77,
+            "whole_runtime_complete": false
+          },
+          "windows_memory": {
+            "process": {
+              "working_set_bytes": 684105728,
+              "peak_working_set_bytes": 739667968,
+              "private_commit_bytes": 1443991552,
+              "peak_private_commit_bytes": 1476091904
+            },
+            "wddm": [
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 407007232,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 32939,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": false
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              },
+              {
+                "luid_high": 0,
+                "luid_low": 36471,
+                "adapter_index": 0,
+                "segment": "non_local",
+                "current_usage_bytes": 0,
+                "software_device": true
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "dd9bef8776897f377e4eeab40e6a86a1e5a47b22176276c4ea7d6516f29f1506"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    }
+  ],
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "b20e12c70a38767511288829b8359a7f266327e89f9d5ef27caf513a801c76f0",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "4471d0c5ce6211034be7e3f6252d8708861e005a4c870d1e81ca31efdcda1390",
+    "src/App/Application.h": "9fc342fa8f254068c46a165fc3e144caca66b1c2213c455b8e3949a027d59b8c",
+    "src/App/Platform/AppRunner.cpp": "bdd348a875fd961610adfb8bc640200eda3abbb259b3c4fb68b22eabbf6e72ab",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "44e466a47ce2e38aefc29b8552f53bdde1a37c3e66535dde1ef28e146962a0cc",
+    "src/Creatures/Visual/CreatureBonePaletteGpu.cpp": "7cc9754d9bb598317a443adc075f67adadf196864064fcd3f28620c2a9ebf483",
+    "src/Creatures/Visual/CreatureBonePaletteGpu.h": "1021c490f59b04ac2479f2daa14f40f385631fec03e23650859a4653a5b746c5",
+    "src/Creatures/Visual/CreatureMeshGpuCache.cpp": "a717d752e3dd9c306236ac8da7ab33e41567dba96767bd380f8dbab5a50bf2aa",
+    "src/Creatures/Visual/CreatureMeshGpuCache.h": "f91b995376f7d4fedfdb672f57ed7bdf70b909c2b76a7c572da3806b252f648d",
+    "src/Creatures/Visual/LegacyItemGpuScratch.h": "135bf1cff641a24c3cbacef743b4986122e480053031744e445ce1b2e86f0ef3",
+    "src/Creatures/Visual/WornEquipmentDrawer.cpp": "fa1e3feb27f5372f0b645a73347ba46b3226e0af1c86369e12dbc4b03a9c2e79",
+    "src/Items/FpViewmodelRenderer.cpp": "91c1552b0655771fe5367c9ff22f2b4b3a5af6caed2613067b94ff47f063dfa7",
+    "src/Items/FpViewmodelRenderer.h": "656bf48c7622fae06356cdea7bcadddf4fc9228f064ec500d3383356905d6d27",
+    "src/Items/ItemSurfaceRenderer.cpp": "06c0d05ed25611a282319f4b0c731fe7fe229abdcc050370be2c656dd17fa9e4",
+    "src/Items/ItemSurfaceRenderer.h": "f44521980d8fc96c673755ce77b7b8908d88bc0f137bbda68bbea5797d42be90",
+    "src/Render/Engine/CreatureDrawPass.cpp": "ec7080b3aab6db79ac048f25c4c6213b115d0c3352ac2a9a8f115a8786469ae3",
+    "src/Render/Engine/CreatureDrawPass.h": "1f9375c8fc577253dd21e273ea2a4a710ecaa096e732d5b48906b88db886966f",
+    "src/Render/Engine/GeometryEngine.h": "6569b22ccef0aedbcf572ea5637c9a277f188dbaa71ae484884a04fb86d18547",
+    "src/Render/Engine/TerrainGpuBufferReport.h": "52c18df914618eef2654b09b9bd64d6234506fe87ae193859bbed7e0b4aeb859",
+    "src/Render/Engine/TerrainGpuBuffers.h": "eea5dcade6d986a631b4aad1a0dfd10aaeda218fe575bb7d507e9a9cacb2bd5e",
+    "src/Test/ActorGpuStorageFixture.h": "59cc9e7cdf328b08ec877b689ad11355a8ce5dd7e7094d0ae61b095cf80216b0",
+    "src/Test/ApplicationOperationStorageTest.cpp": "8b2a71e79858d3a250542cc69bafa99c2fcb742d1dd81a146cd3facf1212c05f",
+    "src/Test/Native/PreviewGpuQa.h": "b20e3f04742c744766868166e66149e89a147bf5d8e5f7ae4441498b330ac585"
+  },
+  "desktop_exe_sha256": "fee0debd070c7c257494cf885aa49adeb3872b3162b5e99f0388d9b836e9cdc9",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-actor-gpu-provenance.json": "b692a685445de2060a9096bf409ff3f786c16a97f19f244f89e160c09ee407e5",
+    "build/desktop-msvc/s4-actor-gpu-frozen-source.json": "f4597ef6240f7058237a37043f6646464caea8c527cd21eff9bbd9e289f1e8c8",
+    "build/desktop-msvc/s4-actor-gpu-regressions.json": "7e4da2eff3a731225824f4b75a7620c0997b55699a78081faa49d600e8e3528f",
+    "build/desktop-msvc/s4-actor-gpu-related.json": "38fb31ebfe64536ffdce6b7a3adabcca2a8c41c68703978b6dbaeafb50374796",
+    "build/desktop-msvc/s4-actor-gpu-focused.json": "cb9f6ef6bf9379938249f386ade09efe32d6ecf902568ba509c275226b6cae46",
+    "build/desktop-msvc/s4-actor-gpu-application-ops.json": "d6b4ecbf73d5b7c590f9d45fad79b24aaaf8c880c7d9a94523f6466e5e0cbd43",
+    "build/desktop-msvc/s4-actor-gpu-flat-native/owner-domain/flight-menu.json": "6ebbc74678ce84f685f85adaec0dc921f2321c333b25c1b94fc5d9620537994f",
+    "build/desktop-msvc/s4-actor-gpu-flat-native/owner-domain/flight-in-game.json": "37dde8ebc685d41bbffc22dfb446b0e44c98affa0ba81e33644d397aeba049bc",
+    "build/desktop-msvc/s4-actor-gpu-flat-native/smoke-verdict.json": "4971f3bbefc8ecde6393b660be5c1ed7b787dabce38de62b2ebd777fbde78a99",
+    "build/desktop-msvc/s4-actor-gpu-flat-native/flight_sim_report.json": "11cec2a630917246eb790542eb27ee332917b481a1514f3cae118da23e9b9879",
+    "build/desktop-msvc/s4-actor-gpu-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-actor-gpu-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-actor-gpu-full-native/owner-domain/flight-menu.json": "44abbfc073c9a5f2527091ad2605af96a2eadc30df79b97a9f08ee9911439aac",
+    "build/desktop-msvc/s4-actor-gpu-full-native/owner-domain/flight-in-game.json": "77a36d46643571eee2eba70839b10e56b387798de89687f2918f103d74d9e50a",
+    "build/desktop-msvc/s4-actor-gpu-full-native/smoke-verdict.json": "946302ea80f29339cd22c3a4a574f297e29ae89cb6389ce6f43186c77e786858",
+    "build/desktop-msvc/s4-actor-gpu-full-native/flight_sim_report.json": "d56e46ae17f1e4393bc0154cafe91c908e3f85924444c75aaea041855b1da625",
+    "build/desktop-msvc/s4-actor-gpu-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-actor-gpu-full-native/preview-gpu-lifecycle.json": "6969bfed9642b4373c3ffea526fae1bce0916dc8c46647d134f28e58bc595d6c"
+  }
+}

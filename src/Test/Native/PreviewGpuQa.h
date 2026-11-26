@@ -2,7 +2,10 @@
 
 #include "App/Application.h"
 #include "Gui/Cache/InventoryIconService.h"
+#include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Preview/PreviewRenderResources.h"
 #include "Gui/Screens/ItemLabScreen.h"
+#include "Items/FpViewmodelRenderer.h"
 #include "Render/Engine/RenderImageStorage.h"
 #include "Render/Engine/TerrainGpuBufferReport.h"
 #include <fstream>
@@ -40,7 +43,40 @@ inline nlohmann::json ObservePreviewReadback(const RenderImageSnapshot &images, 
           {"pack_buffer_bytes_upper", owner.packBufferBytesUpper}};
 }
 
-inline void RunItemLabPreviewGpuQa(UApplication &app, const char *path)
+inline nlohmann::json ObserveWorldViewmodel(UFpViewmodelRenderer *renderer)
+{
+  if (!renderer)
+    return {{"status", "FAIL"}};
+  const auto sample = [&] {
+    TerrainGpuBufferCensus out;
+    renderer->InspectActorGpuBuffers(out);
+    return out.Read();
+  };
+  const auto before = sample();
+  const UGlStateScope state(kGlMaskFpViewmodel3D);
+  PreviewRenderTarget target;
+  if (!target.Initialize(128))
+    return {{"status", "FAIL"}};
+  InventoryEntryRef item;
+  item.empty = false;
+  item.kind = InventoryEntryKind::Item;
+  item.Id = "bucket";
+  item.count = 1;
+  FpViewmodelDrawParams params;
+  params.Active = &item;
+  params.FramebufferW = params.FramebufferH = 128;
+  params.TargetFramebuffer = target.Framebuffer;
+  renderer->DrawWorldOverlay(params);
+  const auto after = sample();
+  const auto &vertex = after.roles[static_cast<std::size_t>(TerrainGpuBufferRole::ViewmodelSurfaceVertices)];
+  const auto &index = after.roles[static_cast<std::size_t>(TerrainGpuBufferRole::ViewmodelSurfaceIndices)];
+  const bool passed = vertex.objects && index.objects == vertex.objects && vertex.bytes && index.bytes &&
+      !before.failedQueries && !after.failedQueries && glGetError() == GL_NO_ERROR;
+  return {{"status", passed ? "PASS" : "FAIL"}, {"item", item.Id}, {"before", DescribeActorGpuBuffers(before)},
+          {"after", DescribeActorGpuBuffers(after)}};
+}
+
+inline void RunItemLabPreviewGpuQa(UApplication &app, const char *path, UFpViewmodelRenderer *viewmodel)
 {
   const auto census = [&] {
     TerrainGpuBufferCensus out;
@@ -98,6 +134,7 @@ inline void RunItemLabPreviewGpuQa(UApplication &app, const char *path)
         !contacts.failedQueries && !images.failedQueries && !oldBuffers.failedQueries &&
         !oldImages.failedQueries && glGetError() == GL_NO_ERROR;
   }
+  report["actual_viewmodel"] = ObserveWorldViewmodel(viewmodel);
   std::ofstream out(path);
   out << report.dump(2) << '\n';
 }

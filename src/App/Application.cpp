@@ -802,6 +802,12 @@ void UApplication::InspectIconReadbackGpuBuffers(TerrainGpuBufferCensus &out) co
     IconSource->InspectIconReadbackGpuBuffers(out);
 }
 
+void UApplication::InspectActorGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (FpViewmodelRenderer)
+    FpViewmodelRenderer->InspectActorGpuBuffers(out);
+}
+
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const
 {
   if (CreaturePreviewRenderer)
@@ -3415,7 +3421,7 @@ void UApplication::UpdateNativeItemsQa(double dt)
     if (const char *path = std::getenv("CUBA_ITEM_LAB_PREVIEW_GPU_QA"); path && *path)
     {
       itemLabPreviewGpuQaDone = true;
-      RunItemLabPreviewGpuQa(*this, path);
+      RunItemLabPreviewGpuQa(*this, path, FpViewmodelRenderer.get());
     }
   if (!itemLabQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEM_LAB_QA"))

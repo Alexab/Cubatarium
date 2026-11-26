@@ -119,6 +119,7 @@ public:
     GreedyGpuTransparent.InspectCatalogRoots(out);CrossGpuPass.InspectCatalogRoots(out);
   }
   void InspectTerrainGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectActorGpuBuffers(class TerrainGpuBufferCensus &out) const { CreatureDraw_.InspectGpuBuffers(out); }
   void InspectRenderImages(class RenderImageCensus &out) const;
   MemberCallbackStorageSnapshot InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known) const noexcept;
   const UWorld *GetWorldForStorage() const noexcept {return WorldInstance.get();}

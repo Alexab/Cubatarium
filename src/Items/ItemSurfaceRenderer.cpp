@@ -52,10 +52,16 @@ void ItemSurfaceRenderer::InspectVisualAssets(VisualAssetCensus &census, VisualA
 
 void ItemSurfaceRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
 {
+  InspectGpuBuffers(out, TerrainGpuBufferRole::PreviewSurfaceVertices, TerrainGpuBufferRole::PreviewSurfaceIndices);
+}
+
+void ItemSurfaceRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out, TerrainGpuBufferRole vertices,
+                                          TerrainGpuBufferRole indices) const
+{
   for (const auto &entry : Geometry)
   {
-    out.Add(TerrainGpuBufferRole::PreviewSurfaceVertices, entry.second.GeometryBuffer.Vbo);
-    out.Add(TerrainGpuBufferRole::PreviewSurfaceIndices, entry.second.GeometryBuffer.Ebo);
+    out.Add(vertices, entry.second.GeometryBuffer.Vbo);
+    out.Add(indices, entry.second.GeometryBuffer.Ebo);
   }
 }
 

@@ -1,4 +1,5 @@
 #include "Render/Engine/CreatureDrawPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
@@ -126,6 +127,8 @@ bool UCreatureDrawPass::InitBuffers(UShaderManager &shader_manager)
 void UCreatureDrawPass::DestroyBuffers()
 {
   ItemRenderer.reset();
+  ItemRevision = 0;
+  FrameBonePalette.reset();
   TimingProbe.Shutdown();
   if (creatureRigidHeadPartEBO)
   {
@@ -521,6 +524,19 @@ void UCreatureDrawPass::DrawItemSurface(const ItemDrawRequest &request,
             " drawn_primitives=" + std::to_string(drawn));
   }
   Stats.CreatureDrawCalls += drawn;
+}
+
+void UCreatureDrawPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  for (const auto name : {creaturePartVBO, creatureHeadPartVBO, creatureBodyPartVBO,
+                         creatureRigidHeadPartVBO, creatureBillboardVBO})
+    out.Add(Role::CreaturePartVertices, name);
+  for (const auto name : {creaturePartEBO, creatureHeadPartEBO, creatureBodyPartEBO,
+                         creatureRigidHeadPartEBO, creatureBillboardEBO})
+    out.Add(Role::CreaturePartIndices, name);
+  if (ItemRenderer)
+    ItemRenderer->InspectGpuBuffers(out, Role::WorldHeldSurfaceVertices, Role::WorldHeldSurfaceIndices);
 }
 
 void UCreatureDrawPass::DrawSkinnedMesh(

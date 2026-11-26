@@ -22,6 +22,7 @@ BuildCreatureBonePaletteData(const std::vector<glm::mat4> &boneMatrices);
 
 void InitCreatureBonePaletteGpu();
 void DestroyCreatureBonePaletteGpu();
+void InspectCreatureBonePaletteGpu(class TerrainGpuBufferCensus &out);
 size_t
 UploadCreatureBonePaletteGpu(const std::vector<glm::mat4> &boneMatrices);
 void BindCreatureBonePaletteBlock(GLuint programId, GLuint bindingPoint = 0);

@@ -3,6 +3,7 @@
 
 #include "Creatures/Visual/Gltf/CreatureGltfTypes.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonTypes.h"
+#include "Creatures/Visual/LegacyItemGpuScratch.h"
 #include <cstddef>
 #include <mutex>
 #include <unordered_map>
@@ -27,7 +28,9 @@ public:
   GLuint GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh,
                                        size_t &outIndexCount);
   void DestroyAll();
+  bool DrawLegacyEquipment(const BoneSkeletonCubeMeshCpu &mesh);
   CreatureMeshGpuStorage InspectOwnedStorage() const;
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const;
 
 private:
   CreatureMeshGpuCache() = default;
@@ -43,6 +46,7 @@ private:
   using MeshTable = std::unordered_map<size_t, MeshBuffers>;
   MeshTable SkeletalCache;
   MeshTable GltfSkinnedCache;
+  LegacyItemGpuScratch EquipmentScratch;
   mutable std::mutex CacheMutex;
 
   static GLuint UploadBuffers(MeshTable &table, size_t hash, const void *vertices,

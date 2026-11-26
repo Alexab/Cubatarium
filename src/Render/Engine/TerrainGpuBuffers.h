@@ -16,7 +16,12 @@ enum class TerrainGpuBufferRole
   PackedReadback, MdiScratch, OverlayQuad, GuiColored, GuiTextured, TextVertices,
   PreviewCubeVertices, PreviewCubeIndices, PreviewScratchVertices, PreviewScratchIndices,
   PreviewSurfaceVertices, PreviewSurfaceIndices, PreviewOverlay, PreviewViewmodelVertices,
-  PreviewViewmodelIndices, InventoryIconReadback, Count
+  PreviewViewmodelIndices, InventoryIconReadback,
+  CreaturePartVertices, CreaturePartIndices, CreatureSkeletalVertices, CreatureSkeletalIndices,
+  CreatureSkinnedVertices, CreatureSkinnedIndices, CreaturePalette,
+  WorldHeldSurfaceVertices, WorldHeldSurfaceIndices, ActorViewmodelVertices, ActorViewmodelIndices,
+  ViewmodelSurfaceVertices, ViewmodelSurfaceIndices, EquipmentScratchVertices, EquipmentScratchIndices,
+  ViewmodelScratchVertices, ViewmodelScratchIndices, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
@@ -25,9 +30,14 @@ inline constexpr std::array TerrainGpuBufferRoleNames{
     "packed_readback", "mdi_scratch", "overlay_quad", "gui_colored", "gui_textured", "text_vertices",
     "preview_cube_vertices", "preview_cube_indices", "preview_scratch_vertices", "preview_scratch_indices",
     "preview_surface_vertices", "preview_surface_indices", "preview_overlay", "preview_viewmodel_vertices",
-    "preview_viewmodel_indices", "inventory_icon_readback"};
+    "preview_viewmodel_indices", "inventory_icon_readback",
+    "creature_part_vertices", "creature_part_indices", "creature_skeletal_vertices", "creature_skeletal_indices",
+    "creature_skinned_vertices", "creature_skinned_indices", "creature_palette",
+    "world_held_surface_vertices", "world_held_surface_indices", "actor_viewmodel_vertices", "actor_viewmodel_indices",
+    "viewmodel_surface_vertices", "viewmodel_surface_indices", "equipment_scratch_vertices", "equipment_scratch_indices",
+    "viewmodel_scratch_vertices", "viewmodel_scratch_indices"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
-static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint32_t>::digits);
+static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint64_t>::digits);
 
 struct TerrainGpuBufferSize
 {
@@ -53,7 +63,7 @@ public:
   {
     if (!name)
       return;
-    Names[name] |= std::uint32_t{1} << static_cast<std::size_t>(role);
+    Names[name] |= std::uint64_t{1} << static_cast<std::size_t>(role);
     ++References;
   }
 
@@ -104,7 +114,7 @@ public:
       result.total.bytes += bytes;
       result.sharedAcrossRoles += (roles & (roles - 1)) != 0;
       for (std::size_t index = 0; index < result.roles.size(); ++index)
-        if (roles & (std::uint32_t{1} << index))
+        if (roles & (std::uint64_t{1} << index))
         {
           ++result.roles[index].objects;
           result.roles[index].bytes += bytes;
@@ -114,7 +124,7 @@ public:
   }
 
 private:
-  std::unordered_map<GLuint, std::uint32_t> Names;
+  std::unordered_map<GLuint, std::uint64_t> Names;
   std::size_t References{};
 };
 } // namespace cutum

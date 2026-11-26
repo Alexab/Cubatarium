@@ -58,6 +58,7 @@ public:
   const CreatureRenderStats &GetStats() const { return Stats; }
   CreatureDrawQueue &GetDrawQueue() { return Queue; }
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const;
 
 private:
   void FlushDrawQueue(UWorld &world, UGeometryEngine &engine,

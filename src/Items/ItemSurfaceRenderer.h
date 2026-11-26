@@ -10,6 +10,7 @@ namespace cutum
 {
 class UShaderManager;
 enum class VisualAssetOwner;
+enum class TerrainGpuBufferRole;
 class UShaderProgram;
 
 struct ItemSurfaceDrawAudit
@@ -66,6 +67,8 @@ public:
   void Clear();
   ItemSurfaceRendererStorage InspectOwnedStorage() const noexcept;
   void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out, TerrainGpuBufferRole vertices,
+                         TerrainGpuBufferRole indices) const;
   void InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const;
   /// Number of nonempty primitive draw calls actually issued.
   size_t Draw(const std::shared_ptr<const ItemRenderAsset> &asset,

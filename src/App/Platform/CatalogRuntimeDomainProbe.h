@@ -1,4 +1,6 @@
 #pragma once
+
+#include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "App/Core.h"
 #include "App/Application.h"
 #include "App/Platform/WindowsGpuMemoryReport.h"
@@ -498,6 +500,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"process_handles", crtFiles.processHandles}, {"process_handles_observed", crtFiles.processHandlesObserved},
       {"whole_runtime_complete", false}};
   const auto memory = ReadWindowsProcessMemory();
+  const auto driverMemory = ReadWindowsGpuMemory();
   report["windows_process_resources"] = {
       {"schema", "windows-process-resources.v1"},
       {"status", memory.observed && crtFiles.processHandlesObserved ? "PASS" : "UNSUPPORTED"},
@@ -511,6 +514,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"per_object_charge_observed", false}, {"whole_runtime_complete", false}};
   report["native_thread_stacks"] = DescribeNativeThreadStacks();
   TerrainGpuBufferCensus terrainBuffers;
+  TerrainGpuBufferCensus actorBuffers;
   RenderImageCensus renderImages;
   if (launcher.cubes)
     launcher.cubes->InspectRenderImages(renderImages);
@@ -519,6 +523,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   for (const auto *geometry : out.member_geometry)
   {
     geometry->InspectTerrainGpuBuffers(terrainBuffers);
+    geometry->InspectActorGpuBuffers(actorBuffers);
     geometry->InspectRenderImages(renderImages);
   }
   for (const auto *world : out.member_worlds)
@@ -533,9 +538,13 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   TerrainGpuBufferCensus iconReadbacks;
   application.InspectIconReadbackGpuBuffers(iconReadbacks);
   report["icon_readback_gpu_buffers"] = DescribeIconReadbackGpuBuffers(iconReadbacks.Read());
+  CreatureMeshGpuCache::Instance().InspectGpuBuffers(actorBuffers);
+  InspectCreatureBonePaletteGpu(actorBuffers);
+  application.InspectActorGpuBuffers(actorBuffers);
+  report["actor_gpu_buffers"] = DescribeActorGpuBuffers(actorBuffers.Read());
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
-  report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());
+  report["windows_gpu_memory"] = DescribeWindowsGpuMemory(driverMemory);
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {

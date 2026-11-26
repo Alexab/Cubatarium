@@ -2,7 +2,9 @@
 
 #include "Core/Memory/StlSourceStorage.h"
 #include "Creatures/Visual/CreatureMeshGpuHash.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
@@ -37,6 +39,77 @@ struct RestoreMeshBindings
 };
 
 } // namespace
+
+bool LegacyItemGpuScratch::Draw(const BoneSkeletonCubeMeshCpu &mesh)
+{
+  constexpr size_t floatsPerVertex = 5;
+  const auto &positionsAndUv = mesh.interleavedPosUv;
+  const auto &indices = mesh.indices;
+  if (positionsAndUv.empty() || positionsAndUv.size() % floatsPerVertex || indices.empty() ||
+      positionsAndUv.size() > MaxBufferBytes / sizeof(float) || indices.size() > MaxBufferBytes / sizeof(unsigned) ||
+      indices.size() > static_cast<size_t>(std::numeric_limits<GLsizei>::max()))
+    return false;
+
+  const bool cold = Vao == 0;
+  if (cold)
+  {
+    glGenVertexArrays(1, &Vao);
+    glGenBuffers(1, &Vbo);
+    glGenBuffers(1, &Ebo);
+    if (!Vao || !Vbo || !Ebo)
+    {
+      Reset();
+      return false;
+    }
+  }
+  const RestoreMeshBindings restore;
+  glBindVertexArray(Vao);
+  glBindBuffer(GL_ARRAY_BUFFER, Vbo);
+  glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(positionsAndUv.size() * sizeof(float)),
+               positionsAndUv.data(), GL_STREAM_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size() * sizeof(unsigned)),
+               indices.data(), GL_STREAM_DRAW);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    if (cold)
+      Reset();
+    return false;
+  }
+  if (cold)
+  {
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, floatsPerVertex * sizeof(float), nullptr);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, floatsPerVertex * sizeof(float),
+                          reinterpret_cast<void *>(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    if (glGetError() != GL_NO_ERROR)
+    {
+      Reset();
+      return false;
+    }
+  }
+  glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, nullptr);
+  return true;
+}
+
+void LegacyItemGpuScratch::Reset() noexcept
+{
+  if (Vao)
+    glDeleteVertexArrays(1, &Vao);
+  if (Vbo)
+    glDeleteBuffers(1, &Vbo);
+  if (Ebo)
+    glDeleteBuffers(1, &Ebo);
+  Vao = Vbo = Ebo = 0;
+}
+
+void LegacyItemGpuScratch::InspectGpuBuffers(TerrainGpuBufferCensus &out, TerrainGpuBufferRole vertices,
+                                           TerrainGpuBufferRole indices) const
+{
+  out.Add(vertices, Vbo);
+  out.Add(indices, Ebo);
+}
 
 CreatureMeshGpuCache &CreatureMeshGpuCache::Instance()
 {
@@ -111,6 +184,29 @@ CreatureMeshGpuStorage CreatureMeshGpuCache::InspectOwnedStorage() const
           table.bytes.supported && vertex.bytes.supported && index.bytes.supported};
 }
 
+bool CreatureMeshGpuCache::DrawLegacyEquipment(const BoneSkeletonCubeMeshCpu &mesh)
+{
+  std::lock_guard<std::mutex> lock(CacheMutex);
+  return EquipmentScratch.Draw(mesh);
+}
+
+void CreatureMeshGpuCache::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  std::lock_guard<std::mutex> lock(CacheMutex);
+  using Role = TerrainGpuBufferRole;
+  for (const auto &[key, buffers] : SkeletalCache)
+  {
+    out.Add(Role::CreatureSkeletalVertices, buffers.vbo);
+    out.Add(Role::CreatureSkeletalIndices, buffers.ebo);
+  }
+  for (const auto &[key, buffers] : GltfSkinnedCache)
+  {
+    out.Add(Role::CreatureSkinnedVertices, buffers.vbo);
+    out.Add(Role::CreatureSkinnedIndices, buffers.ebo);
+  }
+  EquipmentScratch.InspectGpuBuffers(out, Role::EquipmentScratchVertices, Role::EquipmentScratchIndices);
+}
+
 void CreatureMeshGpuCache::DeleteBuffers(const MeshBuffers &buffers) noexcept
 {
   if (buffers.vao)
@@ -124,6 +220,7 @@ void CreatureMeshGpuCache::DeleteBuffers(const MeshBuffers &buffers) noexcept
 void CreatureMeshGpuCache::DestroyAll()
 {
   std::lock_guard<std::mutex> lock(CacheMutex);
+  EquipmentScratch.Reset();
   for (auto *entries : {&SkeletalCache, &GltfSkinnedCache})
   {
     for (const auto &[key, buffers] : *entries)
