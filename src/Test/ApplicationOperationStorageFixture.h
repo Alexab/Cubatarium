@@ -13,6 +13,13 @@ struct ApplicationOperationSourceProbe {
   static void SetPending(UApplication &app,std::function<void()> callback){app.ScheduleDeferredMenuAction(std::move(callback));}
   static void ExecutePending(UApplication &app){app.RunPendingMenuAction();}
   static void Clear(UApplication &app){app.PendingMenuAction={};app.WorldOpOnComplete={};app.WorldOpRunner.reset();}
+  static void ShowProgress(UApplication &app) { app.ShowWorldProgressScreen(); }
+  static const UWorldProgressScreen *Progress(const UApplication &app) { return app.ProgressScreen; }
+  static void DetachProgress(UApplication &app)
+  {
+    app.ProgressScreen = nullptr;
+    app.GetGui().SetScreen(nullptr);
+  }
   static std::function<void()> TakePending(UApplication &app){return std::move(app.PendingMenuAction);}
 };
 inline WorldRunnerRequest ApplicationOperationFixtureRequest(int variant){

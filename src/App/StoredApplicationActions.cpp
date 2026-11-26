@@ -8,6 +8,14 @@ void ApplicationShowMenuAction::operator()()const {owner->ShowMainMenu();}
 void ApplicationRetrySaveAction::operator()()const {
   WorldRunnerRequest retry;retry.op=WorldRunnerOp::Save;retry.saveConfigAfter=false;owner->BeginWorldOperation(std::move(retry));
 }
+void ApplicationScheduleRetrySaveAction::operator()() const
+{
+  owner->ScheduleDeferredMenuAction(ApplicationRetrySaveAction{owner});
+}
+void ApplicationScheduleShowMenuAction::operator()() const
+{
+  owner->ScheduleDeferredMenuAction(ApplicationShowMenuAction{owner});
+}
 void ApplicationShutdownCompleteAction::operator()()const {
   if(owner->GameSession)owner->GameSession->SaveCommandHistory();
   if(owner->Core)owner->Core->SaveConfigFile();

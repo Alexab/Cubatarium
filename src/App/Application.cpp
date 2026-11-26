@@ -444,8 +444,10 @@ void UApplication::ShowWorldProgressScreen()
   PaletteOpen = false;
   FreeCursor = true;
   auto screen = std::make_unique<UWorldProgressScreen>();
-  ProgressScreen = screen.get();
+  auto *progress = screen.get();
+  ProgressScreen = nullptr;
   GuiContext->SetScreen(std::move(screen));
+  ProgressScreen = progress;
   SyncCursorVisibility();
 }
 
@@ -508,12 +510,7 @@ void UApplication::ShowFatalSaveFailure(const std::string &message)
   if (ProgressScreen)
   {
     ProgressScreen->SetFailureActions(
-        [this]()
-        {
-          ScheduleDeferredMenuAction(ApplicationRetrySaveAction{this});
-        },
-        [this]()
-        { ScheduleDeferredMenuAction(ApplicationShowMenuAction{this}); });
+        ApplicationScheduleRetrySaveAction{this}, ApplicationScheduleShowMenuAction{this});
     ProgressScreen->ApplySnapshot(ProgressSink.Get());
   }
   SyncCursorVisibility();
@@ -532,13 +529,7 @@ void UApplication::OnWorldOperationFinished()
     if (ProgressScreen)
     {
       ProgressScreen->SetFailureActions(
-          [this]()
-          {
-            ScheduleDeferredMenuAction(
-                ApplicationRetrySaveAction{this});
-          },
-          [this]()
-          { ScheduleDeferredMenuAction(ApplicationShowMenuAction{this}); });
+          ApplicationScheduleRetrySaveAction{this}, ApplicationScheduleShowMenuAction{this});
       ProgressScreen->ApplySnapshot(ProgressSink.Get());
     }
     else

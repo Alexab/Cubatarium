@@ -42,6 +42,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UWorldProgressScreen;
   glm::vec4 StateColor() const;
 
   const GuiTheme *Theme;

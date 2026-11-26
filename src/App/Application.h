@@ -78,6 +78,8 @@ class UApplication : public IUGuiMenuHost
   friend struct ApplicationBlockCatalogCallback;
   friend struct ApplicationCreatureCatalogCallback;
   friend struct ApplicationShowMenuAction;
+  friend struct ApplicationScheduleRetrySaveAction;
+  friend struct ApplicationScheduleShowMenuAction;
   friend struct ApplicationShutdownCompleteAction;
   friend struct ApplicationOperationSourceProbe;
   friend class UScreenNavigator;

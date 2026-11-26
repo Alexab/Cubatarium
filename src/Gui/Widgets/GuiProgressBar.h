@@ -28,6 +28,7 @@ public:
   void Draw(UGuiRenderer &renderer) override;
 
 private:
+  friend class UWorldProgressScreen;
   const GuiTheme *Theme;
   std::string Label;
   float Value{0.f};

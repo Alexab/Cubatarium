@@ -23,6 +23,15 @@ inline nlohmann::json GuiContextStorageJson(const GuiContextStorage &s)
           {"bindings_match", s.bindings_match}, {"whole_context_complete", false}};
 }
 
+inline nlohmann::json WorldProgressStorageJson(const WorldProgressScreenStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"screen_bytes", s.screen_bytes}, {"widgets", s.widgets}, {"widget_bytes", s.widget_bytes},
+          {"children_bytes", s.children_bytes}, {"text_bytes", s.text_bytes},
+          {"callback_present", s.callback_present}, {"callback_supported", s.callback_supported},
+          {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
+}
+
 namespace gui_context_fixture
 {
 inline void Require(bool condition, const char *message)

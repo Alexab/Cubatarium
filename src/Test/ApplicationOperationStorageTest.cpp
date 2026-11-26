@@ -5,6 +5,7 @@
 #include "Test/OrdinaryNewObservation.h"
 #include "Test/ApplicationOperationStorageFixture.h"
 #include "Test/GuiContextStorageFixture.h"
+#include "Gui/Widgets/GuiButton.h"
 #include <fstream>
 #include <iostream>
 namespace {
@@ -135,6 +136,115 @@ nlohmann::json CheckGuiContextRequests()
           {"notifications", notifications}, {"initialization_refusal_prefixes", prefixes},
           {"listener_growth_refusal", true}, {"opaque_listener_rejected", true}, {"retired", true}};
 }
+
+nlohmann::json CheckWorldProgressRequests(cutum::UApplication &app)
+{
+  using namespace cutum;
+  using gui_context_fixture::Require;
+  using Probe = ApplicationOperationSourceProbe;
+  auto &context = app.GetGui();
+  auto shaders = std::make_shared<UShaderManager>();
+  Require(context.Initialize(shaders, {}), "progress screen storage fixture initializes GUI");
+  const auto active_screen = [&]() -> UWorldProgressScreen & {
+    auto *screen = dynamic_cast<UWorldProgressScreen *>(context.GetScreen());
+    Require(screen && screen == Probe::Progress(app), "actual application progress alias refers to attached screen");
+    return *screen;
+  };
+  const auto observe = [&]() { return active_screen().InspectOwnedStorage(context, &app); };
+  const auto install = [&]() {
+    active_screen().SetFailureActions(ApplicationScheduleRetrySaveAction{&app},
+                                      ApplicationScheduleShowMenuAction{&app});
+  };
+  ProgressSnapshot busy, failed;
+  busy.kind = WorldOperationKind::Save;
+  busy.active = true;
+  busy.message.assign(1200, 'p');
+  busy.subDone = 7;
+  busy.subTotal = 21;
+  failed.kind = WorldOperationKind::Save;
+  failed.succeeded = false;
+  failed.errorMessage = "Save test data: " + std::string(8300, 'x');
+  Probe::ShowProgress(app);
+  active_screen().ApplySnapshot(failed); // warm locale and text wrapping infrastructure
+  Probe::DetachProgress(app);
+
+  WorldProgressScreenStorage built, working, error, recovered;
+  size_t build_attempts = 0, build_peak = 0, peak = 0;
+  {
+    observation::Scope scope;
+    const auto check = [&]() {
+      const auto source = observe();
+      Require(source.supported && source.widgets == 8 && source.requested == observation::State.live,
+              "progress subtree matches independent ordinary requests");
+      return source;
+    };
+    Probe::ShowProgress(app);
+    built = check();
+    build_attempts = observation::State.attempts;
+    build_peak = observation::State.peak;
+    active_screen().ApplySnapshot(busy);
+    working = check();
+    install();
+    active_screen().ApplySnapshot(failed);
+    error = check();
+    Require(error.text_bytes > 16000 && error.callback_present[0] && error.callback_present[1] &&
+                !error.callback_bytes && !active_screen().InspectOwnedStorage(context, nullptr).supported,
+            "typed failure controls borrow the application and long failure text is counted");
+    observation::State.fail_after = observation::State.attempts;
+    const auto no_alloc = observe();
+    Require(no_alloc.supported && no_alloc.requested == error.requested,
+            "progress storage passive query succeeds under allocation refusal");
+    observation::State.fail_after = SIZE_MAX;
+    active_screen().ApplySnapshot(busy);
+    recovered = check();
+    peak = observation::State.peak;
+    Probe::DetachProgress(app);
+    Require(!observation::State.live && !observation::State.blocks && !Probe::Progress(app),
+            "application detaching progress retires both widgets and owned text");
+  }
+  for (size_t n = 0; n < build_attempts; ++n)
+  {
+    observation::Scope scope(n);
+    bool refused = false;
+    try { Probe::ShowProgress(app); }
+    catch (const std::bad_alloc &) { refused = true; }
+    Require(refused && !Probe::Progress(app) && !context.GetScreen() &&
+                context.InspectOwnedStorage().bindings_match && !observation::State.live,
+            "each progress construction refusal clears the unpublished application binding");
+    observation::State.fail_after = SIZE_MAX;
+    Probe::ShowProgress(app);
+    Require(observe().supported && observe().requested == observation::State.live,
+            "same progress construction succeeds after allocation refusal");
+    Probe::DetachProgress(app);
+    Require(!observation::State.live && !observation::State.blocks, "progress retry retires all requests");
+  }
+
+  Probe::ShowProgress(app);
+  install();
+  const auto &slots = active_screen().GetRoot()->GetChildren().front()->GetChildren();
+  auto &retry = static_cast<UGuiButton &>(*slots[4]);
+  auto &back = static_cast<UGuiButton &>(*slots[5]);
+  AllocatorSourcePhase phase(NewRootStorageEpoch(), 1);
+  Require(retry.Activate() && app.InspectOperationStorage(phase, true).actions[0].kind ==
+                                ApplicationActionKind::RetrySave,
+          "retry button schedules typed save work");
+  Require(back.Activate() && app.InspectOperationStorage(phase, true).actions[0].kind ==
+                               ApplicationActionKind::ShowMenu,
+          "back button schedules the typed menu action");
+  Probe::Clear(app);
+  const std::array<char, 128> capture{};
+  active_screen().SetFailureActions([capture] { (void)capture; }, {});
+  Require(!observe().supported && observe().bindings_match, "opaque button handler remains unsupported");
+  slots[0]->AddChild(std::make_unique<UGuiWidget>());
+  Require(!observe().bindings_match, "unexpected nested widget prevents complete subtree census");
+  Probe::DetachProgress(app);
+  context.Shutdown();
+  return {{"status", "PASS"}, {"built", WorldProgressStorageJson(built)},
+          {"working", WorldProgressStorageJson(working)}, {"failure", WorldProgressStorageJson(error)},
+          {"recovered", WorldProgressStorageJson(recovered)}, {"build_peak", build_peak}, {"peak", peak},
+          {"build_refusal_prefixes", build_attempts}, {"opaque_and_tree_controls", true},
+          {"scheduled_actions", true}, {"retired", true}};
+}
 }
 int main(int argc,char **argv){
   using namespace cutum;using Json=nlohmann::json;const auto require=[](bool b,const char *s){if(!b)throw std::runtime_error(s);};
@@ -175,6 +285,7 @@ int main(int argc,char **argv){
     ApplicationOperationSourceProbe::Clear(application);phase.Close();require(!application.InspectOperationStorage(phase,true).supported,"actual closed application source phase");
     report["ordinary_cases"]=observations;report["ordinary_equality_checks"]=checks;report["refusal_prefixes"]=prefixes;report["query_allocate0"]=true;report["move_before_invoke_successor"]=true;report["selected_final_live"]=observation::State.live;
     report["gui_context_storage"]=CheckGuiContextRequests();
+    report["world_progress_storage"]=CheckWorldProgressRequests(application);
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

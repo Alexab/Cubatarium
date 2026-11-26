@@ -27,6 +27,7 @@ public:
   int GetPreferredHeight() const override;
 
 protected:
+  friend class UWorldProgressScreen;
   const GuiTheme *Theme;
   bool DrawBackground{true};
   int StackSpacing{6};

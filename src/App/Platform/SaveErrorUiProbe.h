@@ -145,6 +145,14 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     request.shutdownCloseApplication = true;
     request.saveConfigAfter = false;
     application.BeginWorldOperation(request, [&]() { close_callback = true; });
+    auto progress_storage = [&]() {
+      const auto *screen = dynamic_cast<const UWorldProgressScreen *>(application.GuiContext->GetScreen());
+      require(screen && screen == application.ProgressScreen, "native application progress binding");
+      const auto source = screen->InspectOwnedStorage(*application.GuiContext, &application);
+      require(source.supported, "native progress screen has a supported widget and callback graph");
+      return WorldProgressStorageJson(source);
+    };
+    report["progress_storage_loading"] = progress_storage();
     {
       AllocatorSourcePhase phase(NewRootStorageEpoch(),1);const auto source=application.InspectOperationStorage(phase,true);
       report["unknown_completion_source"]=ApplicationOperationSourceJson(source);
@@ -214,6 +222,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
             "failed save UI retains session and suppresses close callback");
     application.Update(0.0);
     capture("save-failure-640.png", 640, 480);
+    report["progress_storage_failure"] = progress_storage();
     std::function<UGuiButton *(UGuiWidget *)> find_retry =
         [&](UGuiWidget *widget) -> UGuiButton *
     {
@@ -257,6 +266,10 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
             cold.GetBlock(cell) == BLOCK_AIR,
         "clicked retry persists edit without closing session");
     report["retry_via_mouse"] = true;
+    require(!application.ProgressScreen &&
+                !dynamic_cast<const UWorldProgressScreen *>(application.GuiContext->GetScreen()),
+            "successful retry retires the active progress screen");
+    report["progress_storage_retired"] = true;
     application.State = AppState::InGame;
     application.ShowFatalSaveFailure(
         "The save disk is full. Your latest changes remain in memory. "
@@ -271,6 +284,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     capture("disk-full-menu-1280.png", 1280, 720);
     capture("disk-full-menu-640.png", 640, 480);
     report["gui_context_storage"] = GuiContextStorageJson(application.GuiContext->InspectOwnedStorage());
+    report["progress_storage_fatal"] = progress_storage();
     report["gui_context_lifecycle"] = gui_context_fixture::RunLifecycle();
     report["fatal_save_menu"] = "PASS";
     report["fatal_save_scope"] =

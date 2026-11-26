@@ -37,6 +37,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UWorldProgressScreen;
   const GuiTheme *Theme;
   std::string Text;
   GuiTextAlign TextAlign{GuiTextAlign::Left};

@@ -9,6 +9,8 @@ class UApplication;class UNewWorldScreen;class ULoadWorldScreen;
 struct ApplicationReturnMenuAction {UApplication *owner;void operator()() const;};
 struct ApplicationShowMenuAction {UApplication *owner;void operator()() const;};
 struct ApplicationRetrySaveAction {UApplication *owner;void operator()() const;};
+struct ApplicationScheduleRetrySaveAction {UApplication *owner;void operator()() const;};
+struct ApplicationScheduleShowMenuAction {UApplication *owner;void operator()() const;};
 struct ApplicationShutdownCompleteAction {UApplication *owner;void operator()() const;};
 // Const fields preserve the original by-value lambda capture types,including
 // their potentially throwing copies when a function wrapper moves a target.

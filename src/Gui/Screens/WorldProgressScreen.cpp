@@ -1,4 +1,7 @@
 #include "Gui/Screens/WorldProgressScreen.h"
+#include "App/StoredApplicationActions.h"
+#include "Core/Memory/CallbackStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Layout/GuiLayout.h"
@@ -8,6 +11,8 @@
 #include "Gui/Widgets/GuiProgressBar.h"
 #include <algorithm>
 #include <sstream>
+#include <type_traits>
+#include <typeinfo>
 
 namespace cutum
 {
@@ -53,39 +58,112 @@ void UWorldProgressScreen::Build(UGuiContext &ctx)
   auto title = std::make_unique<UGuiLabel>(&ctx.GetTheme(), TitleForKind(
                                                               WorldOperationKind::Load));
   title->SetTextAlign(GuiTextAlign::Center);
-  TitleLabel = title.get();
+  auto *title_label = title.get();
   card->AddChild(std::move(title));
 
   auto phase = std::make_unique<UGuiLabel>(&ctx.GetTheme(), "");
   phase->SetTextAlign(GuiTextAlign::Center);
   phase->SetUseSecondaryColor(true);
-  PhaseLabel = phase.get();
+  auto *phase_label = phase.get();
   card->AddChild(std::move(phase));
 
   auto substage = std::make_unique<UGuiLabel>(&ctx.GetTheme(), " ");
   substage->SetTextAlign(GuiTextAlign::Center);
   substage->SetUseSecondaryColor(true);
-  SubstageLabel = substage.get();
+  auto *substage_label = substage.get();
   card->AddChild(std::move(substage));
 
   auto bar = std::make_unique<UGuiProgressBar>(&ctx.GetTheme());
   bar->SetIndeterminate(true);
   bar->SetShowPercent(true);
-  ProgressBar = bar.get();
+  auto *progress_bar = bar.get();
   card->AddChild(std::move(bar));
 
   auto retry = std::make_unique<UGuiButton>(&ctx.GetTheme(), "Retry save");
   retry->SetVisible(false);
-  RetryButton = retry.get();
+  auto *retry_button = retry.get();
   card->AddChild(std::move(retry));
   auto back = std::make_unique<UGuiButton>(&ctx.GetTheme(), "Back to menu");
   back->SetVisible(false);
-  BackButton = back.get();
+  auto *back_button = back.get();
   card->AddChild(std::move(back));
 
   backdrop->AddChild(std::move(card));
   Root = std::move(backdrop);
+  TitleLabel = title_label;
+  PhaseLabel = phase_label;
+  SubstageLabel = substage_label;
+  ProgressBar = progress_bar;
+  RetryButton = retry_button;
+  BackButton = back_button;
   LayoutCentered();
+}
+
+WorldProgressScreenStorage UWorldProgressScreen::InspectOwnedStorage(
+    const UGuiContext &context, const UApplication *application) const noexcept
+{
+  WorldProgressScreenStorage out;
+  if (typeid(*this) != typeid(UWorldProgressScreen) || context.GetScreen() != this ||
+      Context != &context || !Root || typeid(*Root) != typeid(UGuiPanel))
+    return out;
+
+  const auto &outer = static_cast<const UGuiPanel &>(*Root);
+  const auto &outer_children = outer.GetChildren();
+  if (outer_children.size() != 1 || !outer_children[0] ||
+      typeid(*outer_children[0]) != typeid(UGuiPanel))
+    return out;
+  const auto &card = static_cast<const UGuiPanel &>(*outer_children[0]);
+  const auto &children = card.GetChildren();
+  if (children.size() != 6)
+    return out;
+
+  const auto *theme = &context.GetTheme();
+  const auto matches = [theme](const auto &child, const auto *alias) {
+    using Widget = std::remove_cv_t<std::remove_pointer_t<decltype(alias)>>;
+    return child && child.get() == alias && typeid(*child) == typeid(Widget) &&
+           child->GetChildren().empty() && alias->Theme == theme;
+  };
+  out.bindings_match = outer.Theme == theme && card.Theme == theme &&
+      matches(children[0], TitleLabel) && matches(children[1], PhaseLabel) &&
+      matches(children[2], SubstageLabel) && matches(children[3], ProgressBar) &&
+      matches(children[4], RetryButton) && matches(children[5], BackButton);
+  if (!out.bindings_match)
+    return out;
+
+  out.screen_bytes = sizeof(*this);
+  out.widgets = 2 + children.size();
+  out.widget_bytes = 2 * sizeof(UGuiPanel) + 3 * sizeof(UGuiLabel) +
+                     sizeof(UGuiProgressBar) + 2 * sizeof(UGuiButton);
+  StlSourceStorage slots, texts, total;
+  const auto count_children = [&slots](const UGuiWidget &widget) {
+    slots.Buffer(widget.GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  };
+  count_children(outer);
+  count_children(card);
+  for (const auto &child : children)
+    count_children(*child);
+  texts.Text(FailureMessage);
+  for (const auto *label : {TitleLabel, PhaseLabel, SubstageLabel})
+    texts.Text(label->GetText());
+  texts.Text(ProgressBar->GetLabel());
+  texts.Text(RetryButton->GetLabel());
+  texts.Text(BackButton->GetLabel());
+  const auto retry = InspectKnownOwnerCallback<ApplicationScheduleRetrySaveAction>(
+      RetryButton->OnClick, application, StlSourceStorage::SupportedProfile());
+  const auto back = InspectKnownOwnerCallback<ApplicationScheduleShowMenuAction>(
+      BackButton->OnClick, application, StlSourceStorage::SupportedProfile());
+  out.callback_present = {retry.present, back.present};
+  out.callback_supported = {retry.supported, back.supported};
+  out.callback_bytes = retry.requests + back.requests;
+  out.children_bytes = slots.bytes.requested;
+  out.text_bytes = texts.bytes.requested;
+  for (const auto amount : {out.screen_bytes, out.widget_bytes, out.children_bytes,
+                            out.text_bytes, out.callback_bytes})
+    total.Add(amount);
+  out.requested = total.bytes.requested;
+  out.supported = slots.bytes.supported && texts.bytes.supported && total.bytes.supported &&
+                  retry.supported && back.supported;
+  return out;
 }
 
 void UWorldProgressScreen::OnViewportChanged(int width, int height)
