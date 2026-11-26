@@ -447,7 +447,7 @@ ExportCreatureQaResourceCacheProbe(UCreaturePreviewRenderer &preview,
     CreatureRigidModelCache::Instance().Clear();
     UCreatureDefinitionStorage definitions;
     definitions.Load((root / "creatures").string());
-    const auto oldParts = definitions.Get(original->Id)->visual.Parts;
+    const auto oldParts = definitions.Get(original->Id)->visual.GetParts();
     model["parts"][0]["size"][0] =
         model["parts"][0]["size"][0].get<float>() * 1.25f;
     {
@@ -467,7 +467,7 @@ ExportCreatureQaResourceCacheProbe(UCreaturePreviewRenderer &preview,
     UCreatureTextureStorage unusedTextures;
     ApplyCreaturePackOverlays(definitions, unusedTextures, nullptr,
                               root / "creatures", root / "skins", {});
-    const auto &reloaded = definitions.Get(original->Id)->visual.Parts;
+    const auto &reloaded = definitions.Get(original->Id)->visual.GetParts();
     const bool rigidValid =
         !oldParts.empty() && reloaded.size() == oldParts.size() &&
         std::abs(reloaded[0].sizeBlocks.x - oldParts[0].sizeBlocks.x * 1.25f) <

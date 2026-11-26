@@ -505,7 +505,7 @@ void CheckRigid(const std::string &id, const fs::path &speciesDir,
                 const cutum::CreatureDefinition &def)
 {
   const fs::path texturesDir = speciesDir / "textures";
-  for (const cutum::CreatureVisualPartDef &part : def.visual.Parts)
+  for (const cutum::CreatureVisualPartDef &part : def.visual.GetParts())
   {
     if (glm::any(glm::lessThanEqual(part.sizeBlocks, glm::vec3(0.f))))
     {

@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <algorithm>
 #include <glm/glm.hpp>
+#include <memory>
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <vector>
 
@@ -200,6 +200,8 @@ struct CreatureVisualPartDef
   std::string LimbAxis{"x"};
 };
 
+using CreatureRigidModelParts = std::vector<CreatureVisualPartDef>;
+
 struct CreatureAnimationClipDef
 {
   bool loop{true};
@@ -277,7 +279,13 @@ struct CreatureVisualSpec
   CreatureGltfSpec gltf;
   /// Relative path under species dir (e.g. rigid_model.json).
   std::string rigidModelPath;
-  std::vector<CreatureVisualPartDef> Parts;
+  CreatureRigidModelParts Parts;
+  std::shared_ptr<const CreatureRigidModelParts> RigidParts;
+
+  const CreatureRigidModelParts &GetParts() const
+  {
+    return RigidParts ? *RigidParts : Parts;
+  }
 };
 
 struct ResolvedCreaturePart

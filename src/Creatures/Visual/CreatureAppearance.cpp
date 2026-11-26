@@ -44,12 +44,13 @@ void AppendFallbackPart(const CreatureDefinition &def,
 void ResolvePartsFromSpecies(const CreatureDefinition &def,
                              ResolvedCreatureAppearance &result)
 {
-  if (def.visual.Parts.empty())
+  const auto &parts = def.visual.GetParts();
+  if (parts.empty())
   {
     AppendFallbackPart(def, result);
     return;
   }
-  for (const CreatureVisualPartDef &partDef : def.visual.Parts)
+  for (const CreatureVisualPartDef &partDef : parts)
   {
     ResolvedCreaturePart part;
     part.partId = partDef.Id;

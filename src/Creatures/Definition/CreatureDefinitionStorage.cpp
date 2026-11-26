@@ -262,12 +262,10 @@ void ParseVisualSpec(const nlohmann::json &vis, CreatureDefinition &def,
   {
     const std::string speciesDir =
         std::filesystem::path(path).parent_path().string();
-    std::vector<CreatureVisualPartDef> rigidParts;
-    if (CreatureRigidModelCache::Instance().LoadParts(
-            speciesDir, def.visual.rigidModelPath, rigidParts))
-    {
-      def.visual.Parts = std::move(rigidParts);
-    }
+    def.visual.RigidParts = CreatureRigidModelCache::Instance().LoadParts(
+        speciesDir, def.visual.rigidModelPath);
+    if (def.visual.RigidParts)
+      CreatureRigidModelParts{}.swap(def.visual.Parts);
   }
   if (vis.contains("geometry") || vis.contains("geometry_file") ||
       vis.contains("animation_profile"))

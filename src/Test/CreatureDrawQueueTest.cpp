@@ -95,6 +95,7 @@ int main()
     struct Sink : ICreatureDrawSink
     {
       int Items{0};
+      std::vector<unsigned> MeshIndices;
       glm::vec2 Light{0};
       float Fog{0};
       const ItemDrawRequest *Received{nullptr};
@@ -103,13 +104,15 @@ int main()
       {
       }
       void DrawBoneSkeletonMesh(const glm::mat4 &, GLuint,
-                                const BoneSkeletonCubeMeshCpu &) override
+                                const BoneSkeletonCubeMeshCpu &mesh) override
       {
+        MeshIndices.push_back(mesh.indices.front());
       }
       void DrawSkinnedMesh(
-          const glm::mat4 &, GLuint, const GltfPrimitiveCpu &,
+          const glm::mat4 &, GLuint, const GltfPrimitiveCpu &primitive,
           const std::shared_ptr<const std::vector<glm::mat4>> &) override
       {
+        MeshIndices.push_back(primitive.mesh.indices.front());
       }
       void DrawBoxWireframe(const glm::mat4 &, const glm::vec4 &) override {}
       void DrawBillboard(const glm::mat4 &, GLuint, const glm::vec4 &) override
@@ -136,6 +139,35 @@ int main()
            "queue preserves the item-only payload", failures);
     Expect(sink.Light == glm::vec2(.2f, .7f) && sink.Fog == .35f,
            "item requests inherit carrier light and fog", failures);
+    queue.Clear();
+
+    auto unskinned = std::make_shared<CreatureGltfMeshAsset>();
+    auto skinned = std::make_shared<CreatureGltfMeshAsset>();
+    unskinned->primitives.emplace_back().mesh.indices = {21};
+    skinned->primitives.emplace_back().mesh.indices = {37};
+    std::weak_ptr<CreatureGltfMeshAsset> oldUnskinned = unskinned;
+    std::weak_ptr<CreatureGltfMeshAsset> oldSkinned = skinned;
+    CreatureDrawRequest a, b;
+    a.Kind = CreatureDrawKind::SkeletalMesh;
+    a.SkeletalMesh = {unskinned, &unskinned->primitives.front().mesh};
+    b.Kind = CreatureDrawKind::SkinnedMesh;
+    b.SkinnedPrimitive = {skinned, &skinned->primitives.front()};
+    b.BoneMatrices = std::make_shared<std::vector<glm::mat4>>(1);
+    queue.Push(std::move(a));
+    queue.Push(std::move(b));
+    unskinned.reset();
+    skinned.reset();
+    Expect(!oldUnskinned.expired() && !oldSkinned.expired(),
+           "queued aliases retain their parent buffers", failures);
+    queue.Flush(sink);
+    queue.Flush(sink);
+    Expect(sink.MeshIndices == std::vector<unsigned>({21, 37, 21, 37}),
+           "each pass draws the original buffers after the producer releases them", failures);
+    queue.DiscardSince(1);
+    Expect(!oldUnskinned.expired() && oldSkinned.expired(),
+           "discard releases only the removed request's parent", failures);
+    queue.Clear();
+    Expect(oldUnskinned.expired(), "clear releases the last queued owner", failures);
   }
 
   if (failures != 0)

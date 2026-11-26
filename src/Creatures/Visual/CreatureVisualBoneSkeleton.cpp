@@ -308,7 +308,7 @@ void UCreatureVisualBoneSkeleton::SubmitDraw(const CreatureDrawContext &ctx,
       req.Kind = CreatureDrawKind::SkeletalMesh;
       req.Mvp = viewProj * boneMat * cube.restLocalMatrix;
       req.Texture = tex;
-      req.SkeletalMesh = &cube;
+      req.SkeletalMesh = {MeshAsset, &cube};
       queue.Push(std::move(req));
     }
   }

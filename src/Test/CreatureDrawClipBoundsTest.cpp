@@ -61,12 +61,13 @@ int main()
   Expect(!separated.RangeIntersectsClip(0),
          "a union spanning the camera does not keep two entirely exterior "
          "parts alive");
-  BoneSkeletonCubeMeshCpu mesh;
+  const auto meshOwner = std::make_shared<BoneSkeletonCubeMeshCpu>();
+  auto &mesh = *meshOwner;
   mesh.interleavedPosUv = {-4, 0, 0, 0, 0, 4, 1, 0, 0, 0};
   mesh.GpuHash = 17;
   CreatureDrawRequest part;
   part.Kind = CreatureDrawKind::SkeletalMesh;
-  part.SkeletalMesh = &mesh;
+  part.SkeletalMesh = meshOwner;
   part.Mvp = glm::translate(identity, glm::vec3(3, 0, 0));
   CreatureDrawClipBounds bounds;
   bounds.Add(part);

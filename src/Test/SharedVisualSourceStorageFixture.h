@@ -4,6 +4,7 @@
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Items/ItemRenderAsset.h"
 #include "Test/CreatureItemIconStorageFixture.h"
@@ -16,6 +17,84 @@ using gui_context_fixture::Require;
 using shared_content_preview_fixture::RefuseIndexUpload;
 using shared_content_preview_fixture::ReadCallerState;
 using Json = nlohmann::json;
+
+inline Json CheckRigidModels(const std::filesystem::path &report)
+{
+  auto root = report;
+  root += ".rigid-model";
+  Require(std::filesystem::create_directory(root), "create isolated rigid model input");
+  const auto directory = root.string();
+  const std::string file = "rigid_model.json";
+  const std::string aliasPath = "./rigid_model.json";
+  const std::string id = "fixture_hinged_rigid_model_forelimb";
+  const auto write = [&](float width)
+  {
+    std::ofstream output(root / file);
+    output << Json{{"parts", Json::array({{{"id", id},
+        {"texture", "fixture_external_texture_stem"}, {"size", {width, 1, 1}},
+        {"pivot", {1, 2, 3}}, {"limb", "fixture_extended_limb_name"}}})}};
+    Require(bool(output), "write rigid model input");
+  };
+
+  auto &cache = CreatureRigidModelCache::Instance();
+  cache.Clear();
+  Require(cache.InspectOwnedStorage().cpuBytes == 0, "rigid cache has no dormant table");
+  write(2.f);
+
+  size_t attempts = 0;
+  VisualAssetStorage loaded;
+  {
+    observation::Scope observed;
+    auto parts = cache.LoadParts(directory, file);
+    attempts = observation::State.attempts;
+    loaded = cache.InspectOwnedStorage();
+    Require(loaded.supported && loaded.live == 1 &&
+                loaded.cpuBytes == observation::State.live && parts &&
+                parts->size() == 1 && parts->front().Id == id &&
+                parts->front().HasPivot && parts->front().sizeBlocks.x == 2.f,
+            "rigid table, control and payload match independent live requests");
+    auto alias = cache.LoadParts(directory, aliasPath);
+    Require(alias == parts && observation::State.live == loaded.cpuBytes,
+            "a lexical path alias shares the original immutable payload");
+    cache.Clear();
+    const auto detachedBytes = loaded.controlBytes + loaded.payloadBytes;
+    Require(cache.InspectOwnedStorage().cpuBytes == 0 &&
+                observation::State.live == detachedBytes,
+            "clearing the cache leaves exactly the bytes held by external readers");
+    parts.reset();
+    Require(observation::State.live == detachedBytes &&
+                alias->front().sizeBlocks.x == 2.f,
+            "the earlier generation remains usable until its final reader lets go");
+    alias.reset();
+    Require(observation::State.live == 0 && observation::State.blocks == 0,
+            "the last reader retires all detached rigid storage");
+  }
+
+  Require(attempts > 0, "cold rigid publication performs allocations");
+  {
+    observation::Scope refused(attempts - 1);
+    bool failed = false;
+    try { cache.LoadParts(directory, file); }
+    catch (const std::bad_alloc &) { failed = true; }
+    Require(failed && cache.InspectOwnedStorage().cpuBytes == 0 &&
+                observation::State.live == 0 && observation::State.blocks == 0,
+            "refused rigid publication leaves no cache entry or payload");
+  }
+  auto predecessor = cache.LoadParts(directory, file);
+  Require(bool(predecessor), "refused rigid publication can be retried");
+  write(5.f);
+  cache.Clear();
+  auto successor = cache.LoadParts(directory, file);
+  Require(successor && predecessor != successor &&
+              predecessor->front().sizeBlocks.x == 2.f &&
+              successor->front().sizeBlocks.x == 5.f,
+          "replacement publishes new parts while existing readers retain their earlier data");
+  cache.Clear();
+  return {{"status", "PASS"}, {"table_bytes", loaded.tableBytes},
+          {"control_bytes", loaded.controlBytes}, {"payload_bytes", loaded.payloadBytes},
+          {"publication_refusal_index", attempts - 1},
+          {"detached_bytes", loaded.controlBytes + loaded.payloadBytes}};
+}
 
 inline Json CheckStatusCatalog(const std::filesystem::path &report)
 {

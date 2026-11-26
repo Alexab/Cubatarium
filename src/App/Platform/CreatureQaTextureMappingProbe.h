@@ -73,7 +73,7 @@ ExportCreatureQaTextureMappingProbe(UCreaturePreviewRenderer &preview,
         stems.push_back(primitive.textureStem);
     }
     else
-      for (const auto &part : def->visual.Parts)
+      for (const auto &part : def->visual.GetParts())
         stems.push_back(part.textureStem.empty() ? def->visual.defaultTextureKey
                                                  : part.textureStem);
     if (stems.empty() && def->visual.backend == "rigid_voxels")

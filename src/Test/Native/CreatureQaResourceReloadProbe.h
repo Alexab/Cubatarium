@@ -627,12 +627,15 @@ ExportCreatureQaResourceReloadProbe(UCreaturePreviewRenderer &preview,
         ResolveCreatureAppearance(rigidDefs, *preview.GetSkins(), id, ""), id,
         "");
     const auto absent = Draw(actor, textures);
-    const bool placeholder = missing->visual.Parts.empty() && absent.draws == 1;
+    const bool placeholder = missing->visual.GetParts().empty() && absent.draws == 1;
     copyFile(fs::path(original.visual.sourceDirectory) /
                  original.visual.rigidModelPath,
              target);
     rigidDefs.Load(rigidRoot.string());
     const auto loaded = *rigidDefs.Get(id);
+    const bool sharedParts = loaded.visual.RigidParts &&
+        loaded.visual.RigidParts == rigidDefs.Get(id)->visual.RigidParts &&
+        loaded.visual.Parts.empty();
     actor.visual->SetAppearance(
         ResolveCreatureAppearance(rigidDefs, *preview.GetSkins(), id, ""));
     actor.definition = loaded;
@@ -686,24 +689,30 @@ ExportCreatureQaResourceReloadProbe(UCreaturePreviewRenderer &preview,
     actor.visual->UpdatePose(*actor.creature, actor.facts, CreaturePoseParams{},
                              actor.definition, 0.f);
     const auto restored = Draw(actor, textures);
-    const bool good = placeholder && recovered.hash == originalDraw.hash &&
+    const bool predecessorRetained = sharedParts && modified.visual.RigidParts &&
+        loaded.visual.RigidParts != modified.visual.RigidParts &&
+        loaded.visual.GetParts().front().sizeBlocks.x == before;
+    const bool good = placeholder && sharedParts && predecessorRetained &&
+                      recovered.hash == originalDraw.hash &&
                       changed.hash == freshDraw.hash &&
                       changed.geometryHashes != recovered.geometryHashes &&
                       restored.hash == originalDraw.hash &&
-                      std::abs(modified.visual.Parts[0].sizeBlocks.x -
+                      std::abs(modified.visual.GetParts()[0].sizeBlocks.x -
                                before * 1.125f) < 1e-6f;
     passed = passed && good;
     report["rigid_recovery"].push_back(
         {{"id", id},
          {"placeholder_draws", absent.draws},
          {"placeholder_parts_empty", placeholder},
+         {"shared_parts", sharedParts},
+         {"predecessor_retained", predecessorRetained},
          {"recovered_hash", recovered.hash},
          {"original_hash", originalDraw.hash},
          {"changed_hash", changed.hash},
          {"fresh_hash", freshDraw.hash},
          {"restored_hash", restored.hash},
          {"before_width", before},
-         {"changed_width", modified.visual.Parts[0].sizeBlocks.x},
+         {"changed_width", modified.visual.GetParts()[0].sizeBlocks.x},
          {"changed_geometry",
           changed.geometryHashes != recovered.geometryHashes},
          {"changed_fixture", changedFile.string()},

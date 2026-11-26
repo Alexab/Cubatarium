@@ -5,10 +5,11 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace cutum
 {
+
+struct VisualAssetStorage;
 
 class CreatureRigidModelCache
 {
@@ -16,17 +17,22 @@ public:
   static CreatureRigidModelCache &Instance();
 
   /// Load parts from rigid_model.json relative to species directory.
-  bool LoadParts(const std::string &speciesDir, const std::string &relativePath,
-                 std::vector<CreatureVisualPartDef> &outParts);
+  std::shared_ptr<const CreatureRigidModelParts>
+  LoadParts(const std::string &speciesDir, const std::string &relativePath);
 
   /// Drops cached rigid models (called when pack overlays reload species).
   void Clear();
 
+  VisualAssetStorage InspectOwnedStorage() const;
+
 private:
   CreatureRigidModelCache() = default;
 
-  std::mutex CacheMutex;
-  std::unordered_map<std::string, std::vector<CreatureVisualPartDef>> Cache;
+  using PartTable = std::unordered_map<
+      std::string, std::shared_ptr<const CreatureRigidModelParts>>;
+  mutable std::mutex CacheMutex;
+  uint64_t Revision{};
+  std::unique_ptr<PartTable> Cache;
 };
 
 } // namespace cutum

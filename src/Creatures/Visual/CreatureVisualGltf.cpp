@@ -232,13 +232,13 @@ void UCreatureVisualGltf::SubmitDraw(const CreatureDrawContext &ctx,
         !BoneMatrices->empty())
     {
       req.Kind = CreatureDrawKind::SkinnedMesh;
-      req.SkinnedPrimitive = &prim;
+      req.SkinnedPrimitive = {MeshAsset, &prim};
       req.BoneMatrices = BoneMatrices;
     }
     else
     {
       req.Kind = CreatureDrawKind::SkeletalMesh;
-      req.SkeletalMesh = &prim.mesh;
+      req.SkeletalMesh = {MeshAsset, &prim.mesh};
     }
     queue.Push(std::move(req));
   }

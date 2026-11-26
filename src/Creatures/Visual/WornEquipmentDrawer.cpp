@@ -397,6 +397,7 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
                               const glm::mat4 &mvp, GLuint tex,
                               const BoneSkeletonCubeMeshCpu &mesh,
                               bool immediate,
+                              const std::shared_ptr<const void> &meshOwner,
                               const glm::mat4 *world_model = nullptr)
 {
   if (mesh.interleavedPosUv.empty() || mesh.indices.empty())
@@ -444,7 +445,7 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
     req.Kind = CreatureDrawKind::SkeletalMesh;
     req.Mvp = mvp;
     req.Texture = tex;
-    req.SkeletalMesh = &mesh;
+    req.SkeletalMesh = {meshOwner, &mesh};
     if (world_model)
     {
       glm::vec3 low, high;
@@ -839,7 +840,7 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
         req.Kind = CreatureDrawKind::SkeletalMesh;
         req.Mvp = mvp;
         req.Texture = tex;
-        req.SkeletalMesh = &prim.mesh;
+        req.SkeletalMesh = {asset, &prim.mesh};
         queue->Push(std::move(req));
       }
     }
@@ -852,21 +853,19 @@ struct PartsMeshesFit
   glm::mat4 fit{1.f};
 };
 
-const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
+std::shared_ptr<const PartsMeshesFit> CachedPartsMeshes(const std::string &itemId)
 {
   static std::mutex mu;
-  static std::unordered_map<std::string, std::unique_ptr<PartsMeshesFit>> cache;
+  static std::unordered_map<std::string, std::shared_ptr<const PartsMeshesFit>> cache;
   static uint64_t cacheRevision = 0;
   std::lock_guard<std::mutex> lock(mu);
   // Parts follow the item's model_path: a resource-pack apply reloads the
   // definitions, so the cache must not keep the old pack's meshes.
   SyncItemModelCache(cache, cacheRevision);
-  std::unique_ptr<PartsMeshesFit> &slot = cache[itemId];
-  if (slot)
-  {
-    return *slot;
-  }
-  slot = std::make_unique<PartsMeshesFit>();
+  if (const auto it = cache.find(itemId); it != cache.end())
+    return it->second;
+
+  auto slot = std::make_shared<PartsMeshesFit>();
   slot->meshes = LoadPartsMeshes(itemId);
   if (slot->meshes.empty())
   {
@@ -894,7 +893,7 @@ const PartsMeshesFit &CachedPartsMeshes(const std::string &itemId)
     slot->fit = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
                 glm::translate(glm::mat4(1.f), -center);
   }
-  return *slot;
+  return cache.try_emplace(itemId, std::move(slot)).first->second;
 }
 
 struct WieldGripLocal
@@ -1045,22 +1044,21 @@ void SubmitItemOnSingleBone(CreatureDrawQueue *queue, UShaderProgram *shader,
       {
         tex = fallbackTex;
       }
-      DrawMeshImmediateOrQueue(queue, shader, mvp, tex, prim.mesh, immediate);
+      DrawMeshImmediateOrQueue(queue, shader, mvp, tex, prim.mesh, immediate,
+                               asset);
     }
     return;
   }
 
-  // parts_v1 / procedural rod when glTF missing. Built once per item and
-  // never replaced: queued draws keep pointers into these meshes until the
-  // frame's flush, and rebuilding per call (with a JSON read from disk every
-  // frame) left the queue of an earlier wielder of the same item dangling.
-  const PartsMeshesFit &partsFit = CachedPartsMeshes(itemId);
+  // A queued draw can outlive the cache generation that supplied its mesh.
+  const auto partsFit = CachedPartsMeshes(itemId);
   wear.offset.y += .05f;
   wearLocal = WearLocalMatrix(wear);
-  const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * partsFit.fit;
-  for (const auto &mesh : partsFit.meshes)
+  const glm::mat4 mvp = viewProj * bodyMat * boneMat * wearLocal * partsFit->fit;
+  for (const auto &mesh : partsFit->meshes)
   {
-    DrawMeshImmediateOrQueue(queue, shader, mvp, fallbackTex, mesh, immediate);
+    DrawMeshImmediateOrQueue(queue, shader, mvp, fallbackTex, mesh, immediate,
+                             partsFit);
   }
 }
 
@@ -1114,7 +1112,7 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
       const auto world_model =
           model * FitGltfToBone(*asset, std::max({size.x, size.y, size.z}));
       DrawMeshImmediateOrQueue(&queue, nullptr, vp * world_model, tex,
-                               prim.mesh, false, &world_model);
+                               prim.mesh, false, asset, &world_model);
     }
   }
   else
@@ -1135,7 +1133,7 @@ void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
     const auto world_model = model * glm::scale(glm::mat4(1), size);
     DrawMeshImmediateOrQueue(&queue, nullptr, vp * world_model,
                              blockTexture ? blockTexture : SolidColorTex(id),
-                             cube, false, &world_model);
+                             cube, false, {}, &world_model);
   }
 }
 void WornEquipmentDrawer::SubmitCarried(

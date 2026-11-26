@@ -34,8 +34,9 @@ struct CreatureDrawRequest
   std::optional<DrawWorldBounds> WorldBounds;
   GLuint Texture{0};
   CreaturePartMesh PartMesh{CreaturePartMesh::Box};
-  const BoneSkeletonCubeMeshCpu *SkeletalMesh{nullptr};
-  const GltfPrimitiveCpu *SkinnedPrimitive{nullptr};
+  // Aliasing owners keep the parent CPU mesh and its buffers alive through flush.
+  std::shared_ptr<const BoneSkeletonCubeMeshCpu> SkeletalMesh;
+  std::shared_ptr<const GltfPrimitiveCpu> SkinnedPrimitive;
   /// Shared per-creature palette: primitives of one creature reference the
   /// same immutable vector instead of copying it per primitive (audit V7).
   std::shared_ptr<const std::vector<glm::mat4>> BoneMatrices;

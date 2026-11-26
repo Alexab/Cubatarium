@@ -25,6 +25,7 @@
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Items/ItemGltfTextureCache.h"
@@ -295,12 +296,14 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   };
   const auto gltf = CreatureGltfCache::Instance().InspectOwnedStorage();
   const auto bones = CreatureBoneSkeletonCache::Instance().InspectOwnedStorage();
+  const auto rigid = CreatureRigidModelCache::Instance().InspectOwnedStorage();
   const auto items = InspectItemSurfaceAssetStorage();
   const auto creatureGpu = CreatureMeshGpuCache::Instance().InspectOwnedStorage();
   report["shared_visual_source_storage"] = {
       {"schema", "shared-visual-source-storage.v1"},
-      {"status", gltf.supported && bones.supported && items.supported && creatureGpu.supported ? "PASS" : "UNSUPPORTED"},
+      {"status", gltf.supported && bones.supported && rigid.supported && items.supported && creatureGpu.supported ? "PASS" : "UNSUPPORTED"},
       {"gltf", modelStorage(gltf)}, {"bones", modelStorage(bones)}, {"items", modelStorage(items)},
+      {"rigid", modelStorage(rigid)},
       {"creature_gpu", {{"inline_bytes", creatureGpu.inlineBytes}, {"table_bytes", creatureGpu.tableBytes},
           {"skeletal", creatureGpu.skeletal}, {"skinned", creatureGpu.skinned},
           {"vertex_bytes", creatureGpu.vertexBytes}, {"index_bytes", creatureGpu.indexBytes}}},

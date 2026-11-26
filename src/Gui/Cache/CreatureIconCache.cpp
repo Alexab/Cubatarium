@@ -269,7 +269,7 @@ std::string UCreatureIconCache::BuildSpeciesFingerprint(
       << def->visual.boneSkeleton.geometryId << '|'
       << def->visual.gltf.modelPath << '|' << def->visual.gltf.modelScale
       << '|' << def->visual.gltf.modelOffsetY << '|'
-      << def->visual.Parts.size();
+      << def->visual.GetParts().size();
   if (const auto *paths = IUPlatformPaths::TryGet())
   {
     AppendAssetFingerprint(out, CreatureModelsRoot(paths->AssetRoot()) /
