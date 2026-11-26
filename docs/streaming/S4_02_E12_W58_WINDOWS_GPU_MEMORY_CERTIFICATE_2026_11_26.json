@@ -1,0 +1,748 @@
+{
+  "schema": "s4-e12-w58-windows-gpu-memory.v1",
+  "status": "SCOPED_WDDM_GPU_MEMORY_PASS_E12_OPEN",
+  "baseline_commit": "5ef2a11599dce02234ef3620f1b73793015febbd",
+  "prior_certificate": "S4_02_E12_W57_WINDOWS_EXECUTABLE_TLS_CERTIFICATE_2026_11_26.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "host_and_driver": {
+    "current_build": "19045",
+    "update_build_revision": 6456,
+    "display_version": "22H2",
+    "wddm_query_files": [
+      {
+        "name": "gdi32.dll",
+        "file_version": "10.0.19041.6157",
+        "sha256": "b5f5a3f16d03366cdb02020fc4dadceb0892e243f8aa94d205e124045da9457f"
+      },
+      {
+        "name": "win32u.dll",
+        "file_version": "10.0.19041.6456",
+        "sha256": "20ac4556b0b3fc82bd5632ffc623a45497184483e14a2841ac30213e162daf1f"
+      }
+    ],
+    "controllers": [
+      {
+        "name": "AMD Radeon (TM) Graphics",
+        "driver_version": "31.0.12027.9001"
+      }
+    ]
+  },
+  "summary": "W58 observes current process video memory usage, budget and reservation from WDDM for both segments of every enumerated physical adapter. The observations retain adapter LUID, node index, software and render flags and the result of closing each query handle. A real Release OpenGL fixture validates authored texture pixels, observes the charge increase on the hardware adapter and measures the charge after deleting the object and retiring the context. Native Release reports the same adapter before world load, at first in-game observation and after the flight loop. All 46 Release regression groups, the graphics memory fixture and scoped native startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W58. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. Join GL resource payload and retention, driver or shared-memory overlap, and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "WDDM current-process, per-physical-adapter and per-segment point observations on the tested hardware",
+  "composition_rule": "Preserve WDDM bucket observations alongside verified engine object payload and PSAPI data. Unified-memory charges and driver-owned resources can overlap other accounting domains. The reported budget is a moving OS advisory value.",
+  "remaining_measurements": [
+    "Driver private allocations, shared and kernel storage, and overlap with host process measurements",
+    "Engine resource ownership, upload and readback scratch, and whole GPU high water",
+    "Full native/backend/process/performance matrix and original S4.02 E12 bounds"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtenumadapters2",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_queryvideomemoryinfo",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_physical_adapter_count",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/nf-d3dkmthk-d3dkmtcloseadapter"
+  ],
+  "fixture": {
+    "cold": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "context_retired": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 85471232,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "context_retired_usage_bytes": 85471232,
+    "gl_renderer": "AMD Radeon (TM) Graphics",
+    "live": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 152846336,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "live_usage_bytes": 152846336,
+    "observed_adapter": {
+      "luid_high": 0,
+      "luid_low": 32939,
+      "physical_adapter_index": 0,
+      "segment": "local"
+    },
+    "schema": "windows-gpu-memory-fixture.v1",
+    "status": "PASS",
+    "texture_bytes": 67108864,
+    "texture_deleted": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 85471232,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "texture_deleted_usage_bytes": 85471232,
+    "texture_retired": true,
+    "verified_pixels": 2,
+    "warm": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 13119488,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "warm_usage_bytes": 13119488
+  },
+  "fixture_exe_sha256": "7b90ee553b0d69ffa5669ede60c1db04feb7ce4b063d14eb81b35750d5244368",
+  "native": {
+    "menu": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 73211904,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false,
+      "paired_psapi_bytes": {
+        "working_set_bytes": 190533632,
+        "private_commit_bytes": 233766912,
+        "peak_working_set_bytes": 203550720
+      }
+    },
+    "in-game": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 250236928,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false,
+      "paired_psapi_bytes": {
+        "working_set_bytes": 421576704,
+        "private_commit_bytes": 987828224,
+        "peak_working_set_bytes": 422481920
+      }
+    },
+    "after-loop": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 274354176,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    }
+  },
+  "native_startup_aggregate": "UNTESTED",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "6559d30c70e6c4b774181e6d4fc35565ddfb5b0f76fa9e3a109d472f848e3b14",
+  "source_sha256_raw": {
+    "src/Core/Memory/WindowsGpuMemory.h": "ba9fb2d0111be793618cbc1be39d676ee5bae15c71dbf49506048bec9560c3bf",
+    "src/App/Platform/WindowsGpuMemoryReport.h": "e002b882cd5a487968a5f6604428fb5c56f9deefc3bc6075b4274755aaa044d9",
+    "src/App/Platform/AppRunner.cpp": "dec3d8c1891f9bdd1a5596e351ec3e603449ebc950132de5aec83cb86178a9af",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "3a073c5ecc5ab6f793feba4361bbafa8c4a5fd46d31160861d384d43c22b0b74",
+    "src/Test/Native/WindowsGpuMemoryFixture.h": "96edd33b52152d925fbff1b94ffb2bf1cc71ecc49e06c5f0a97bb8a9c05bb70c",
+    "src/Test/DecorMeshIntegrationTest.cpp": "bb3b5c71c6ebd47e9c35bb73568564b4bc0c2892ff117ee4ad1e29b5b115e257"
+  },
+  "desktop_exe_sha256": "de19a4410812ff1fdb239ce6af2a0d2530bfa53dcfaa678b529b81ba574b9cdb",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-gpu-memory-provenance.json": "f94d9159f2f2dd75436f49fa5e4fb3b407420ebe7e2592b39f41cd8e6efa2da6",
+    "build/desktop-msvc/s4-gpu-memory-frozen-source.json": "f4096923a88f2a78eac171adfbe5f2e02a85216e728af9efe44ad387daa3c52c",
+    "build/desktop-msvc/s4-gpu-memory-host.json": "85e1d01926debd53baf1b931595a16e0f32831e3f324a5aa2a627a6f15de9b55",
+    "build/desktop-msvc/s4-gpu-memory-regressions.json": "e587374c55b9c57aad88bc081bd1a5f3385b430f91741a048cb490cb5abccc2e",
+    "build/desktop-msvc/s4-gpu-memory-final-fixture.json": "d05d7cac36eaced526e6e933f634747ebcd625b2c0920f730e63c4b328030839",
+    "build/desktop-msvc/s4-gpu-memory-native/smoke-verdict.json": "bc4a352ddeb10d12d771def8f55037a583528bd0873c5b426e8178f80776e971",
+    "build/desktop-msvc/s4-gpu-memory-native/flight_sim_report.json": "5b10aa3a5c9eb0f2d618ae5f74cdab4d61bfe5fe21684a8bafff2634c79c6f1c",
+    "build/desktop-msvc/s4-gpu-memory-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-gpu-memory-native/owner-domain/flight-menu.json": "d7ed8d9e95823e3a8a7bfb8c086eb31a37e6fd6b2ed1005b9faecac094a9d796",
+    "build/desktop-msvc/s4-gpu-memory-native/owner-domain/flight-in-game.json": "62a4292c42ab680b624765309aaef0ca16251a5268a49af703f556e27286f916"
+  }
+}

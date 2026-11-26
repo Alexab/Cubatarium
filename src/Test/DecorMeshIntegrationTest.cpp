@@ -12,6 +12,7 @@
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include "Render/Lighting/SectionLightDrawTable.h"
+#include "Test/Native/WindowsGpuMemoryFixture.h"
 #include <GLFW/glfw3.h>
 #endif
 #include "Render/Mesh/ChunkMeshCache.h"
@@ -8990,9 +8991,13 @@ int main(int argc, char **argv)
       argc == 2 &&
       std::string(argv[1]) == "--gpu-geometry-light-lifecycle-driver";
   const bool catalog_roots_driver=argc==3 && std::string(argv[1])=="--catalog-publication-roots-driver";
-  if (catalog_roots_driver || visibility_driver || gles_cross_driver || packed_lifecycle_driver ||
+  const bool gpu_memory_driver = argc == 3 && std::string(argv[1]) == "--windows-gpu-memory";
+  if (catalog_roots_driver || visibility_driver || gles_cross_driver || packed_lifecycle_driver || gpu_memory_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
+    const auto cold_gpu_memory = gpu_memory_driver ? cutum::ReadWindowsGpuMemory() : cutum::WindowsGpuMemory{};
+    if (gpu_memory_driver && !cold_gpu_memory.apiAvailable)
+      return 77;
     if (!glfwInit())
       return 77;
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
@@ -9034,6 +9039,10 @@ int main(int argc, char **argv)
     }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
+#if CUTUM_WINDOWS_GPU_MEMORY_API
+    if (gpu_memory_driver)
+      return cutum::windows_gpu_memory_fixture::Run(window, argv[2], cold_gpu_memory);
+#endif
     if(catalog_roots_driver){
       TestCatalogPublicationRoots(argv[2],true);
       Expect(glGetError()==GL_NO_ERROR,"real catalog root GL lifecycle leaves no error");

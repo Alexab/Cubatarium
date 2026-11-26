@@ -1,6 +1,7 @@
 #pragma once
 #include "App/Core.h"
 #include "App/Application.h"
+#include "App/Platform/WindowsGpuMemoryReport.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Gui/Core/GuiIconSource.h"
 #include "Gui/Cache/CreatureItemIconStorage.h"
@@ -498,6 +499,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"peak_nonpaged_pool_quota_bytes", memory.peakNonpagedPoolQuota},
       {"per_object_charge_observed", false}, {"whole_runtime_complete", false}};
   report["native_thread_stacks"] = DescribeNativeThreadStacks();
+  report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {
