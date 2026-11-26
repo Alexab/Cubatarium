@@ -2,10 +2,14 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Core/Memory/StlSourceStorage.h"
+#include "Core/Memory/StbiAllocation.h"
+#include "Gui/Cache/InventoryIconPng.h"
 #include "Render/GlIncludes.h"
 #include "Render/Textures/GlTextureOwner.h"
 #include "ThirdParty/stb_image.h"
-#include "ThirdParty/stb_image_write.h"
+#include "WorldGen/Core/CatalogJsonSource.h"
+#include <array>
+#include <cstdio>
 #include <cstring>
 #include <list>
 #include <fstream>
@@ -20,6 +24,58 @@ namespace
 constexpr int kManifestVersion = 2;
 constexpr size_t kMaxReadbacks = 256;
 constexpr int kMaxReadbackSize = 512;
+
+template<class Table> NameStorageEnvelope ManifestTableStorage(const Table &entries) noexcept
+{
+  StlSourceStorage table;
+  table.Hash(entries);
+  for (const auto &[key, entry] : entries)
+  {
+    table.Text(key);
+    table.Text(entry.Fingerprint);
+    table.Text(entry.File);
+  }
+  return table.bytes;
+}
+
+bool PublishIconFile(const std::filesystem::path &path, const char *bytes, size_t length,
+                     const InventoryIconIoProbe *manifestProbe = nullptr,
+                     const std::string *manifestPayload = nullptr)
+{
+  auto temporary = path;
+  temporary += ".tmp";
+  if (manifestProbe)
+  {
+    StlSourceStorage storage;
+    storage.Text(temporary.native());
+    storage.Text(*manifestPayload);
+    manifestProbe->sample(manifestProbe->context, {InventoryIconIoPhase::ManifestFile,
+        storage.bytes.requested, 0, 0, length, storage.bytes.supported});
+  }
+  std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
+  if (!out)
+    return false;
+  out.write(bytes, static_cast<std::streamsize>(length));
+  out.close();
+  std::error_code ec;
+  if (out)
+  {
+    std::filesystem::rename(temporary, path, ec);
+    if (!ec)
+      return true;
+  }
+  std::filesystem::remove(temporary, ec);
+  return false;
+}
+
+std::FILE *OpenIconPng(const std::filesystem::path &path)
+{
+#ifdef _WIN32
+  return _wfopen(path.c_str(), L"rb");
+#else
+  return std::fopen(path.c_str(), "rb");
+#endif
+}
 }
 
 // Pixel-pack state belongs to the caller, including distinct read/draw targets.
@@ -50,6 +106,33 @@ struct IconReadbackScope
     glPixelStorei(GL_PACK_ROW_LENGTH, RowLength);
     glPixelStorei(GL_PACK_SKIP_ROWS, SkipRows);
     glPixelStorei(GL_PACK_SKIP_PIXELS, SkipPixels);
+  }
+};
+
+struct IconUnpackScope
+{
+  static constexpr std::array<GLenum, 4> Parameters{
+      GL_UNPACK_ALIGNMENT, GL_UNPACK_ROW_LENGTH, GL_UNPACK_SKIP_ROWS, GL_UNPACK_SKIP_PIXELS};
+  std::array<GLint, Parameters.size()> Values{};
+  GLint UnpackBuffer{}, Texture{};
+
+  IconUnpackScope()
+  {
+    glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &UnpackBuffer);
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &Texture);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    for (size_t i = 0; i < Parameters.size(); ++i)
+    {
+      glGetIntegerv(Parameters[i], &Values[i]);
+      glPixelStorei(Parameters[i], i == 0 ? 1 : 0);
+    }
+  }
+  ~IconUnpackScope()
+  {
+    for (size_t i = 0; i < Parameters.size(); ++i)
+      glPixelStorei(Parameters[i], Values[i]);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(UnpackBuffer));
+    glBindTexture(GL_TEXTURE_2D, GLuint(Texture));
   }
 };
 } // namespace
@@ -104,16 +187,10 @@ InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
     out.serviceRequest = sizeof(std::_Ref_count_obj2<UInventoryIconService>);
 #endif
   out.readbackStateBytes = sizeof(ReadbackState);
-  StlSourceStorage paths, table, jobs, total;
+  StlSourceStorage paths, jobs, total;
   paths.Text(CacheRoot.native());
   paths.Text(ManifestPath.native());
-  table.Hash(Entries);
-  for (const auto &[key, entry] : Entries)
-  {
-    table.Text(key);
-    table.Text(entry.Fingerprint);
-    table.Text(entry.File);
-  }
+  const auto table = ManifestTableStorage(Entries);
   jobs.List(Readbacks->Jobs);
   for (const auto &job : Readbacks->Jobs)
   {
@@ -122,7 +199,7 @@ InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
     jobs.Text(job.File);
   }
   out.pathBytes = paths.bytes.requested;
-  out.manifestBytes = table.bytes.requested;
+  out.manifestBytes = table.requested;
   out.jobBytes = jobs.bytes.requested;
   out.entries = Entries.size();
   const auto readback = InspectReadbackStorage();
@@ -133,7 +210,7 @@ InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
   out.cpuBytes = total.bytes.requested;
   out.bindingsMatch = CacheRoot.empty() == ManifestPath.empty();
   out.supported = out.bindingsMatch && readback.supported && total.bytes.supported &&
-                  paths.bytes.supported && table.bytes.supported && jobs.bytes.supported;
+                  paths.bytes.supported && table.supported && jobs.bytes.supported;
   return out;
 }
 
@@ -162,7 +239,7 @@ UInventoryIconService::ReadbackStorage UInventoryIconService::InspectReadbackSto
   return out;
 }
 
-void UInventoryIconService::DrainReadbacks()
+void UInventoryIconService::DrainReadbacks(const InventoryIconIoProbe *probe)
 {
   auto &jobs = Readbacks->Jobs;
   // Optional disk caching must never wait for unfinished GPU work.
@@ -191,7 +268,7 @@ void UInventoryIconService::DrainReadbacks()
       else
         pixels.clear();
     }
-    if (!pixels.empty() && WritePngRgba(CacheRoot / job.File, job.Size, pixels))
+    if (!pixels.empty() && WritePngRgba(CacheRoot / job.File, job.Size, pixels, probe))
     {
       Entries.insert_or_assign(job.Key, Entry{job.Fingerprint, job.File, job.Size});
       ManifestDirty = true;
@@ -203,7 +280,7 @@ void UInventoryIconService::DrainReadbacks()
   }
 }
 
-bool UInventoryIconService::Initialize(const std::filesystem::path &cacheRoot)
+bool UInventoryIconService::Initialize(const std::filesystem::path &cacheRoot, const InventoryIconIoProbe *probe)
 {
   auto root = cacheRoot;
   if (root.empty())
@@ -219,13 +296,13 @@ bool UInventoryIconService::Initialize(const std::filesystem::path &cacheRoot)
   if (ec)
     return false;
   const bool sameRoot = manifest == ManifestPath;
-  if (ManifestDirty && sameRoot && !SaveManifest())
+  if (ManifestDirty && sameRoot && !SaveManifest(probe))
     return false;
 
   ManifestEntries entries;
   bool versionMismatch = false;
-  if (!LoadManifest(manifest, entries, versionMismatch) ||
-      (ManifestDirty && !sameRoot && !SaveManifest()))
+  if (!LoadManifest(manifest, entries, versionMismatch, probe) ||
+      (ManifestDirty && !sameRoot && !SaveManifest(probe)))
     return false;
 
   CancelPendingItemReadbacks();
@@ -283,7 +360,8 @@ std::string UInventoryIconService::HashFingerprint(const std::string &value)
 }
 
 bool UInventoryIconService::LoadManifest(const std::filesystem::path &path,
-                                         ManifestEntries &entries, bool &versionMismatch)
+                                         ManifestEntries &entries, bool &versionMismatch,
+                                         const InventoryIconIoProbe *probe)
 {
   std::error_code ec;
   if (!std::filesystem::exists(path, ec))
@@ -297,8 +375,7 @@ bool UInventoryIconService::LoadManifest(const std::filesystem::path &path,
   }
   try
   {
-    nlohmann::json doc;
-    in >> doc;
+    const auto doc = ParseAndCloseCatalogFileJson(in, CatalogJsonKind::Manifest);
     if (!doc.contains("entries") || !doc["entries"].is_object())
       return true;
     if (doc.value("version", 1) != kManifestVersion)
@@ -321,6 +398,19 @@ bool UInventoryIconService::LoadManifest(const std::filesystem::path &path,
           entries.emplace(key, std::move(data));
       }
     }
+    if (probe)
+    {
+      const auto parser = GetLastCatalogJsonSource();
+      const auto table = ManifestTableStorage(entries);
+      StlSourceStorage storage;
+      storage.JsonTree(static_cast<const nlohmann::json &>(doc));
+      storage.Add(doc.RetirementRequestedBytes());
+      storage.Add(table.requested);
+      storage.Text(path.native());
+      probe->sample(probe->context, {InventoryIconIoPhase::ManifestRead, storage.bytes.requested,
+          0, parser.requested_heap_upper, parser.bytes,
+          storage.bytes.supported && table.supported && parser.model_supported && !parser.overflow});
+    }
   }
   catch (const nlohmann::json::exception &)
   {
@@ -329,70 +419,33 @@ bool UInventoryIconService::LoadManifest(const std::filesystem::path &path,
   return true;
 }
 
-bool UInventoryIconService::SaveManifest() const
+bool UInventoryIconService::SaveManifest(const InventoryIconIoProbe *probe) const
 {
   if (ManifestPath.empty())
     return false;
-  nlohmann::json doc;
-  doc["version"] = kManifestVersion;
-  nlohmann::json entries = nlohmann::json::object();
-  for (const auto &[key, entry] : Entries)
+  std::string payload;
   {
-    entries[key] = {{"fingerprint", entry.Fingerprint},
-                    {"file", entry.File},
-                    {"size", entry.Size}};
+    nlohmann::json doc;
+    doc["version"] = kManifestVersion;
+    auto &entries = doc["entries"] = nlohmann::json::object();
+    for (const auto &[key, entry] : Entries)
+      entries[key] = {{"fingerprint", entry.Fingerprint}, {"file", entry.File}, {"size", entry.Size}};
+    payload = doc.dump(2);
+    if (probe)
+    {
+      StlSourceStorage storage;
+      storage.JsonTree(doc);
+      storage.Text(payload);
+      probe->sample(probe->context, {InventoryIconIoPhase::ManifestWrite,
+          storage.bytes.requested, 0, 0, payload.size(), storage.bytes.supported});
+    }
   }
-  doc["entries"] = std::move(entries);
-  const auto payload = doc.dump(2);
-  auto temporary = ManifestPath;
-  temporary += ".tmp";
-  std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
-  if (!out)
-    return false;
-  out << payload;
-  out.close();
-  std::error_code ec;
-  if (out)
-  {
-    std::filesystem::rename(temporary, ManifestPath, ec);
-    if (!ec)
-      return true;
-  }
-  std::filesystem::remove(temporary, ec);
-  return false;
-}
-
-bool UInventoryIconService::ReadPngRgba(const std::filesystem::path &path,
-                                        int expectedSize,
-                                        std::vector<unsigned char> &pixels,
-                                        int &outSize) const
-{
-  int width = 0;
-  int height = 0;
-  int channels = 0;
-  const std::unique_ptr<unsigned char, decltype(&stbi_image_free)> data(
-      stbi_load(path.string().c_str(), &width, &height, &channels, 4), stbi_image_free);
-  if (!data || width <= 0 || height <= 0 || width != height)
-  {
-    ++Metrics.PngReadFailures;
-    return false;
-  }
-  if (expectedSize > 0 && width != expectedSize)
-  {
-    ++Metrics.PngReadFailures;
-    return false;
-  }
-  outSize = width;
-  const size_t bytes =
-      static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
-  pixels.resize(bytes);
-  std::memcpy(pixels.data(), data.get(), bytes);
-  return true;
+  return PublishIconFile(ManifestPath, payload.data(), payload.size(), probe, &payload);
 }
 
 bool UInventoryIconService::WritePngRgba(
     const std::filesystem::path &path, int size,
-    const std::vector<unsigned char> &pixels) const
+    const std::vector<unsigned char> &pixels, const InventoryIconIoProbe *probe) const
 {
   if (size <= 0)
   {
@@ -406,8 +459,26 @@ bool UInventoryIconService::WritePngRgba(
     ++Metrics.PngWriteFailures;
     return false;
   }
-  const bool ok = stbi_write_png(path.string().c_str(), size, size, 4,
-                                 pixels.data(), size * 4) != 0;
+  struct PngWriteContext
+  {
+    const std::filesystem::path &path;
+    const std::vector<unsigned char> &pixels;
+    const InventoryIconIoProbe *probe;
+  } context{path, pixels, probe};
+  const bool ok = EncodeInventoryIconPng(pixels.data(), size, &context,
+      [](void *value, const unsigned char *bytes, size_t length, size_t codecBytes)
+      {
+        const auto &sink = *static_cast<const PngWriteContext *>(value);
+        if (sink.probe)
+        {
+          StlSourceStorage storage;
+          storage.Text(sink.path.native());
+          storage.Buffer(sink.pixels.capacity(), sizeof(unsigned char));
+          sink.probe->sample(sink.probe->context, {InventoryIconIoPhase::PngEncode,
+              storage.bytes.requested, codecBytes, 0, length, storage.bytes.supported});
+        }
+        return PublishIconFile(sink.path, reinterpret_cast<const char *>(bytes), length);
+      });
   if (!ok)
   {
     ++Metrics.PngWriteFailures;
@@ -440,28 +511,26 @@ bool UInventoryIconService::CaptureTexturePixels(
   return true;
 }
 
-GLuint UInventoryIconService::CreateTextureFromPixels(
-    int size, const std::vector<unsigned char> &pixels) const
+GLuint UInventoryIconService::CreateTextureFromPixels(int size, const unsigned char *pixels) const
 {
-  if (size <= 0 || pixels.size() != static_cast<size_t>(size) *
-                                        static_cast<size_t>(size) * 4)
+  GLint maxTextureSize = 0;
+  glGetIntegerv(GL_MAX_TEXTURE_SIZE, &maxTextureSize);
+  if (!pixels || size <= 0 || size > maxTextureSize)
   {
     return 0;
   }
-  GLint previousTexture{};
-  glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
+  IconUnpackScope state;
   GLuint tex = 0;
   glGenTextures(1, &tex);
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, pixels.data());
+               GL_UNSIGNED_BYTE, pixels);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glBindTexture(GL_TEXTURE_2D, GLuint(previousTexture));
   return tex;
 }
 
@@ -470,7 +539,7 @@ bool UInventoryIconService::TryLoadIconTexture(const std::string &kind,
                                                const std::string &variantId,
                                                const std::string &fingerprint,
                                                int expectedSize,
-                                               GLuint &outTexture)
+                                               GLuint &outTexture, const InventoryIconIoProbe *probe)
 {
   outTexture = 0;
   if (fingerprint.empty() || entityId.empty() || kind.empty())
@@ -485,15 +554,35 @@ bool UInventoryIconService::TryLoadIconTexture(const std::string &kind,
     ++Metrics.CacheMisses;
     return false;
   }
-  std::vector<unsigned char> pixels;
   const std::filesystem::path filePath = CacheRoot / it->second.File;
-  int pngSize = 0;
-  if (!ReadPngRgba(filePath, expectedSize, pixels, pngSize))
+  std::unique_ptr<unsigned char, decltype(&stbi_image_free)> pixels(nullptr, stbi_image_free);
+  int width = 0, height = 0, channels = 0;
   {
+    const std::unique_ptr<std::FILE, decltype(&std::fclose)> file(OpenIconPng(filePath), std::fclose);
+    constexpr std::array<unsigned char, 8> pngSignature{137, 80, 78, 71, 13, 10, 26, 10};
+    std::array<unsigned char, 8> signature{};
+    if (file && std::fread(signature.data(), 1, signature.size(), file.get()) == signature.size() &&
+        signature == pngSignature && std::fseek(file.get(), 0, SEEK_SET) == 0 &&
+        stbi_info_from_file(file.get(), &width, &height, &channels) && width > 0 &&
+        width == height && (expectedSize <= 0 || width == expectedSize))
+      pixels.reset(stbi_load_from_file(file.get(), &width, &height, &channels, 4));
+  }
+  if (!pixels || width <= 0 || width != height || (expectedSize > 0 && width != expectedSize))
+  {
+    ++Metrics.PngReadFailures;
     ++Metrics.CacheMisses;
     return false;
   }
-  outTexture = CreateTextureFromPixels(pngSize, pixels);
+  if (probe)
+  {
+    const auto decoded = InspectStbiAllocation(pixels.get());
+    StlSourceStorage storage;
+    storage.Text(filePath.native());
+    storage.Text(key);
+    probe->sample(probe->context, {InventoryIconIoPhase::PngDecode, storage.bytes.requested,
+        decoded.request_bytes, 0, decoded.payload_bytes, storage.bytes.supported});
+  }
+  outTexture = CreateTextureFromPixels(width, pixels.get());
   if (outTexture == 0)
   {
     ++Metrics.CacheMisses;
@@ -507,7 +596,7 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
                                              const std::string &entityId,
                                              const std::string &variantId,
                                              const std::string &fingerprint,
-                                             int size, GLuint texture)
+                                             int size, GLuint texture, const InventoryIconIoProbe *probe)
 {
   if (CacheRoot.empty() || texture == 0 || size <= 0 || fingerprint.empty() || entityId.empty() ||
       kind.empty())
@@ -577,7 +666,7 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   const std::string fileName =
       safe + "_" + HashFingerprint(fingerprint) + ".png";
   const std::filesystem::path path = CacheRoot / fileName;
-  if (!WritePngRgba(path, size, pixels))
+  if (!WritePngRgba(path, size, pixels, probe))
   {
     return false;
   }
@@ -589,14 +678,14 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   return true;
 }
 
-void UInventoryIconService::FlushManifest()
+void UInventoryIconService::FlushManifest(const InventoryIconIoProbe *probe)
 {
-  DrainReadbacks();
+  DrainReadbacks(probe);
   if (!ManifestDirty || !Readbacks->Jobs.empty())
   {
     return;
   }
-  if (SaveManifest())
+  if (SaveManifest(probe))
     ManifestDirty = false;
 }
 

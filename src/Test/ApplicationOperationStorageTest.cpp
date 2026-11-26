@@ -20,6 +20,7 @@
 #include "Test/SharedContentPreviewStorageFixture.h"
 #include "Test/ObjectIconStorageFixture.h"
 #include "Test/InventoryIconServiceStorageFixture.h"
+#include "Test/InventoryIconCodecFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include <fstream>
@@ -495,6 +496,7 @@ int main(int argc,char **argv){
     report["content_preview_owner"]=shared_content_preview_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["object_icon_owner"]=object_icon_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["inventory_icon_service_owner"]=inventory_icon_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
+    report["inventory_icon_codec_owner"]=inventory_icon_codec_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

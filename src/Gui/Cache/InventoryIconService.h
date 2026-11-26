@@ -21,6 +21,21 @@ struct InventoryIconStorage
   bool present{}, initialized{}, dirty{}, factoryOwner{}, bindingsMatch{}, supported{};
 };
 
+enum class InventoryIconIoPhase { ManifestRead, ManifestWrite, ManifestFile, PngDecode, PngEncode, Count };
+
+struct InventoryIconIoStorage
+{
+  InventoryIconIoPhase phase;
+  size_t ordinaryBytes{}, codecBytes{}, parserUpper{}, payloadBytes{};
+  bool supported{};
+};
+
+struct InventoryIconIoProbe
+{
+  void *context;
+  void (*sample)(void *, const InventoryIconIoStorage &) noexcept;
+};
+
 class UInventoryIconService
 {
 public:
@@ -38,7 +53,7 @@ public:
   ~UInventoryIconService();
   static std::shared_ptr<UInventoryIconService> Create();
   InventoryIconStorage InspectOwnedStorage() const noexcept;
-  bool Initialize(const std::filesystem::path &cacheRoot = {});
+  bool Initialize(const std::filesystem::path &cacheRoot = {}, const InventoryIconIoProbe *probe = nullptr);
   static std::string BuildCacheKey(const std::string &kind,
                                    const std::string &entityId,
                                    const std::string &variantId);
@@ -47,17 +62,17 @@ public:
   bool TryLoadIconTexture(const std::string &kind, const std::string &entityId,
                           const std::string &variantId,
                           const std::string &fingerprint, int expectedSize,
-                          GLuint &outTexture);
+                          GLuint &outTexture, const InventoryIconIoProbe *probe = nullptr);
 
   /// Item stores enqueue GPU readback; success means accepted for persistence.
   bool StoreIconTexture(const std::string &kind, const std::string &entityId,
                         const std::string &variantId,
                         const std::string &fingerprint, int size,
-                        GLuint texture);
+                        GLuint texture, const InventoryIconIoProbe *probe = nullptr);
   /// UX R2: manifest writes are batched - StoreIconTexture marks the
   /// manifest dirty; FlushManifest() serializes once per batch/frame
   /// instead of a full rewrite per icon.
-  void FlushManifest();
+  void FlushManifest(const InventoryIconIoProbe *probe = nullptr);
   void InvalidateAll();
   void InvalidateKind(const std::string &kind);
 
@@ -74,7 +89,7 @@ public:
 private:
   struct ReadbackState;
   std::unique_ptr<ReadbackState> Readbacks;
-  void DrainReadbacks();
+  void DrainReadbacks(const InventoryIconIoProbe *probe);
 
   struct Entry
   {
@@ -91,19 +106,16 @@ private:
 
   static std::string SanitizeFileToken(const std::string &raw);
 
-  static bool LoadManifest(const std::filesystem::path &path, ManifestEntries &entries, bool &versionMismatch);
-  bool SaveManifest() const;
+  static bool LoadManifest(const std::filesystem::path &path, ManifestEntries &entries,
+                           bool &versionMismatch, const InventoryIconIoProbe *probe);
+  bool SaveManifest(const InventoryIconIoProbe *probe = nullptr) const;
   bool ManifestDirty{false};
   bool FactoryOwner{false};
-  bool ReadPngRgba(const std::filesystem::path &path, int expectedSize,
-                   std::vector<unsigned char> &pixels, int &outSize) const;
   bool WritePngRgba(const std::filesystem::path &path, int size,
-                    const std::vector<unsigned char> &pixels) const;
+                    const std::vector<unsigned char> &pixels, const InventoryIconIoProbe *probe) const;
   bool CaptureTexturePixels(GLuint texture, int size,
                             std::vector<unsigned char> &pixels) const;
-  GLuint
-  CreateTextureFromPixels(int size,
-                          const std::vector<unsigned char> &pixels) const;
+  GLuint CreateTextureFromPixels(int size, const unsigned char *pixels) const;
 };
 
 } // namespace cutum
