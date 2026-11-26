@@ -16,10 +16,22 @@ namespace cutum
 // this selected allocator-path census and require their own source coverage.
 class AllocatorOwnerCensus
 {
+  struct Borrowed {
+    const void *slot{};
+    std::weak_ptr<const void> (*read)(const void*){};
+  };
 public:
   enum class Kind:size_t {Resource,Ledger,Budget,JobDefault,JobCounted,LightDefault,LightCounted,
     SettingsBudget,ResultCounter,SettingsValue,ResultGuard,Count};
   static constexpr size_t KindCount=static_cast<size_t>(Kind::Count);
+  // The caller's weak slot must stay at a stable address and must not be
+  // reassigned to another owner while this history is used. Reset-to-empty
+  // removes this root. The history stores no strong/weak owner. For our
+  // coallocations the object address stays reserved until the final weak free.
+  class SourceHistory {
+    friend class AllocatorOwnerCensus;
+    Borrowed owner,origin;uintptr_t identity{};Kind kind{};size_t bytes{};bool known{};
+  };
   struct Snapshot {
     std::array<size_t,KindCount> blocks{},covered{},weak_only{};
     size_t additional_requests{},covered_requests{},unknown{},aliases{};
@@ -52,6 +64,38 @@ public:
   }
   void CountedField(const std::shared_ptr<SectionLightField> &slot,const std::shared_ptr<UConcurrentAllocationCountingResource> &origin,bool covered){
     Counted(slot,Kind::LightCounted,origin,covered);
+  }
+  static SourceHistory RememberResource(const std::weak_ptr<UConcurrentAllocationCountingResource> &slot){return Remember(slot,Kind::Resource,NormalBytes<UConcurrentAllocationCountingResource>());}
+  static SourceHistory RememberBudget(const std::weak_ptr<UBufferAllocationBudget> &slot){return Remember(slot,Kind::Budget,NormalBytes<UBufferAllocationBudget>());}
+  static SourceHistory RememberResultCounter(const std::weak_ptr<std::atomic<size_t>> &slot){return Remember(slot,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>());}
+  static SourceHistory RememberCountedJob(const std::weak_ptr<BufferBudgetJob> &slot,const std::weak_ptr<UConcurrentAllocationCountingResource> &origin){return Remember(slot,Kind::JobCounted,CountedBytes<BufferBudgetJob>(),Borrow(origin));}
+  static SourceHistory RememberResultGuard(const std::weak_ptr<UChunkLoadScheduler::ResultSlotGuard> &slot,const std::weak_ptr<UConcurrentAllocationCountingResource> &origin){return Remember(slot,Kind::ResultGuard,CountedBytes<UChunkLoadScheduler::ResultSlotGuard>(),Borrow(origin));}
+  static SourceHistory RememberResource(std::weak_ptr<UConcurrentAllocationCountingResource> &&)=delete;
+  static SourceHistory RememberBudget(std::weak_ptr<UBufferAllocationBudget> &&)=delete;
+  static SourceHistory RememberResultCounter(std::weak_ptr<std::atomic<size_t>> &&)=delete;
+  static SourceHistory RememberCountedJob(std::weak_ptr<BufferBudgetJob> &&,const std::weak_ptr<UConcurrentAllocationCountingResource> &)=delete;
+  static SourceHistory RememberCountedJob(const std::weak_ptr<BufferBudgetJob> &,std::weak_ptr<UConcurrentAllocationCountingResource> &&)=delete;
+  static SourceHistory RememberResultGuard(std::weak_ptr<UChunkLoadScheduler::ResultSlotGuard> &&,const std::weak_ptr<UConcurrentAllocationCountingResource> &)=delete;
+  static SourceHistory RememberResultGuard(const std::weak_ptr<UChunkLoadScheduler::ResultSlotGuard> &,std::weak_ptr<UConcurrentAllocationCountingResource> &&)=delete;
+  void History(const SourceHistory &history,bool covered=false){
+    if(!history.known){UnknownOwner();return;}
+    if(Empty(history.owner))return;
+    const auto live=history.owner.read(history.owner.slot).lock();
+    if(live && reinterpret_cast<uintptr_t>(live.get())!=history.identity){UnknownOwner();return;}
+    if(history.origin.slot && !history.origin.read(history.origin.slot).lock()){UnknownOwner();return;}
+    if(ObserveBorrowed(history.owner,history.kind,history.bytes,covered,history.origin,history.identity) && live && history.kind==Kind::Resource)
+      InspectResource(*static_cast<UConcurrentAllocationCountingResource*>(const_cast<void*>(live.get())));
+    if(history.origin.slot)WeakResource(history.origin);
+  }
+  static const BufferBudgetContext *BufferOwners(const UChunkBuffer &buffer){return buffer.Payload?&buffer.Payload->Budget:nullptr;}
+  void ReturnedResults(const std::vector<UChunkLoadScheduler::PendingResult> &results,
+      const std::weak_ptr<UConcurrentAllocationCountingResource> &origin){
+    for(const auto &pending:results){
+      CountedWeakOrigin(pending.resultSlot,Kind::ResultGuard,origin,true);
+      if(pending.resultSlot)Observe(pending.resultSlot->count,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>(),false);
+      if(pending.bufferRetry)Settings(pending.bufferRetry->settings);
+      if(const auto *owners=BufferOwners(pending.result.buffer)){CountedWeakOrigin(owners->job,Kind::JobCounted,origin,true);Context(*owners);}
+    }
   }
   void Context(const BufferBudgetContext &context){
     Observe(context.budget,Kind::Budget,NormalBytes<UBufferAllocationBudget>(),false);
@@ -109,10 +153,22 @@ public:
     for(const auto &entry:manager.Chunks)field(entry.second->Light.field);
     for(const auto &chunk:manager.FreeList)if(chunk)field(chunk->Light.field);
   }
-  void Scheduler(const UChunkLoadScheduler &scheduler){SchedulerImpl(scheduler,0);}
+  void Scheduler(const UChunkLoadScheduler &scheduler){SchedulerImpl(scheduler,0,0);}
+  void SchedulerWithReturned(const UChunkLoadScheduler &scheduler,const std::vector<UChunkLoadScheduler::PendingResult> &results,
+      const std::weak_ptr<UConcurrentAllocationCountingResource> &origin){
+    if(origin.owner_before(scheduler.ControlMemory) || scheduler.ControlMemory.owner_before(origin))UnknownOwner();
+    size_t distinct=0;
+    for(size_t i=0;i<results.size();++i)if(results[i].resultSlot){
+      const auto &counter=results[i].resultSlot->count;
+      if(counter.owner_before(scheduler.RetainedResults) || scheduler.RetainedResults.owner_before(counter))UnknownOwner();
+      bool seen=false;for(size_t j=0;j<i;++j)if(!results[i].resultSlot.owner_before(results[j].resultSlot) && !results[j].resultSlot.owner_before(results[i].resultSlot)){seen=true;break;}
+      if(!seen)++distinct;
+    }
+    SchedulerImpl(scheduler,0,distinct);ReturnedResults(results,origin);
+  }
   // All active workers are paused in the supplied source phase. Their own
   // packets must accompany this main-thread view before accepting the union.
-  void SchedulerAtWorkerBarrier(const UChunkLoadScheduler &scheduler,size_t worker_views){SchedulerImpl(scheduler,worker_views);}
+  void SchedulerAtWorkerBarrier(const UChunkLoadScheduler &scheduler,size_t worker_views){SchedulerImpl(scheduler,worker_views,0);}
   static std::array<size_t,KindCount> RequestWidths(){
     const auto base=GetAllocatorOwnerLayout();std::array<size_t,KindCount> out{};
     for(size_t i=0;i<base.requests.size();++i)out[i]=base.requests[i];
@@ -125,8 +181,10 @@ public:
     for(const auto &row:Rows){
       const auto owner=row.owner.read(row.owner.slot).lock();
       const auto origin=row.origin.slot?row.origin.read(row.origin.slot).lock():std::shared_ptr<const void>{};
-      if(!owner || (row.origin.slot && !origin)){packet.supported=false;continue;}
-      packet.nodes.push_back({reinterpret_cast<uintptr_t>(owner.get()),reinterpret_cast<uintptr_t>(origin.get()),static_cast<size_t>(row.kind),row.bytes,row.covered});
+      if((!owner && !row.identity) || (row.origin.slot && !origin)){packet.supported=false;continue;}
+      const auto identity=owner?reinterpret_cast<uintptr_t>(owner.get()):row.identity;
+      if(owner && row.identity && identity!=row.identity){packet.supported=false;continue;}
+      packet.nodes.push_back({identity,reinterpret_cast<uintptr_t>(origin.get()),static_cast<size_t>(row.kind),row.bytes,row.covered});
     }
   }
 private:
@@ -134,7 +192,7 @@ private:
     if(Observe(slot,Kind::SettingsValue,NormalBytes<UChunkLoadScheduler::OwnedSettings>(),false) && slot)
       Observe(slot->reservation.budget,Kind::SettingsBudget,NormalBytes<UChunkLoadScheduler::SettingsBudgetState>(),false);
   }
-  void SchedulerImpl(const UChunkLoadScheduler &scheduler,size_t worker_views){
+  void SchedulerImpl(const UChunkLoadScheduler &scheduler,size_t worker_views,size_t returned_views){
     // Establish the stable source boundary before acquiring completion or
     // resource locks. A worker without its own view must not be traversed.
     const auto pool=scheduler.Pool.GetSnapshot();
@@ -154,7 +212,7 @@ private:
     });
     // Active/pending closures and caller-held Tick batches need their own
     // stable owner-thread views;an idle queue snapshot cannot certify them.
-    if(scheduler.GetRetainedGenerationResultCount()!=static_cast<size_t>(scheduler.GetCompletedReadyCount())+worker_views)UnknownOwner();
+    if(scheduler.GetRetainedGenerationResultCount()!=static_cast<size_t>(scheduler.GetCompletedReadyCount())+worker_views+returned_views)UnknownOwner();
   }
 public:
   Snapshot Result(bool complete_source_domain)const{
@@ -168,12 +226,23 @@ public:
   }
   void UnknownOwner(){if(Unknown==SIZE_MAX)Overflow=true;else ++Unknown;}
 private:
-  struct Borrowed {
-    const void *slot{};
-    std::weak_ptr<const void> (*read)(const void*){};
-  };
-  struct Row {Borrowed owner,origin;Kind kind{};size_t bytes{};bool covered{},expired{};};
+  struct Row {Borrowed owner,origin;Kind kind{};size_t bytes{};bool covered{},expired{};uintptr_t identity{};};
   std::vector<Row> Rows;size_t Unknown{},Aliases{};bool Overflow{};
+  template<class P> static SourceHistory Remember(const P &slot,Kind kind,size_t bytes,Borrowed origin={}){
+    SourceHistory out;out.owner=Borrow(slot);out.origin=origin;out.kind=kind;out.bytes=bytes;
+    const auto live=out.owner.read(out.owner.slot).lock();
+    if(live && bytes && (!origin.slot || origin.read(origin.slot).lock())){out.identity=reinterpret_cast<uintptr_t>(live.get());out.known=true;}
+    return out;
+  }
+  void WeakResource(Borrowed owner){
+    if(!ObserveBorrowed(owner,Kind::Resource,NormalBytes<UConcurrentAllocationCountingResource>(),false))return;
+    const auto live=owner.read(owner.slot).lock();if(live)InspectResource(*static_cast<UConcurrentAllocationCountingResource*>(const_cast<void*>(live.get())));
+  }
+  template<class T> void CountedWeakOrigin(const std::shared_ptr<T> &slot,Kind kind,const std::weak_ptr<UConcurrentAllocationCountingResource> &origin,bool covered){
+    if(Empty(Borrow(slot)))return;
+    if(origin.expired()){UnknownOwner();return;}
+    Observe(slot,kind,CountedBytes<std::remove_const_t<T>>(),covered,Borrow(origin));WeakResource(Borrow(origin));
+  }
   void InspectResource(UConcurrentAllocationCountingResource &resource){
     // No hook is called. Reentrant resource graphs stop at Observe first.
     std::lock_guard<std::mutex> lock(resource.Mutex);
@@ -208,14 +277,15 @@ private:
   template<class P> bool Observe(const P &slot,Kind kind,size_t bytes,bool covered,Borrowed origin={}){
     return ObserveBorrowed(Borrow(slot),kind,bytes,covered,origin);
   }
-  bool ObserveBorrowed(Borrowed owner,Kind kind,size_t bytes,bool covered,Borrowed origin={}){
+  bool ObserveBorrowed(Borrowed owner,Kind kind,size_t bytes,bool covered,Borrowed origin={},uintptr_t identity=0){
     if(Empty(owner))return false;if(!bytes){UnknownOwner();return false;}
     const auto at=Find(owner);
     if(at!=Rows.size()){
       auto &row=Rows[at];if(row.kind!=kind || row.bytes!=bytes || !Same(row.origin,origin))UnknownOwner();
+      if(identity){if(row.identity && row.identity!=identity)UnknownOwner();row.identity=identity;}
       row.covered=row.covered || covered;if(Aliases==SIZE_MAX)Overflow=true;else ++Aliases;return false;
     }
-    Rows.push_back({owner,origin,kind,bytes,covered,owner.read(owner.slot).expired()});return true;
+    Rows.push_back({owner,origin,kind,bytes,covered,owner.read(owner.slot).expired(),identity});return true;
   }
   template<class T> void Counted(const std::shared_ptr<T> &slot,Kind kind,const std::shared_ptr<UConcurrentAllocationCountingResource> &origin,bool covered){
     Counted<std::remove_const_t<T>,std::shared_ptr<T>>(slot,kind,origin,covered);

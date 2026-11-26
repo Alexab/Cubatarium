@@ -45,6 +45,7 @@
 #include "Core/Memory/AllocatorOwnerSource.h"
 #include "Test/AllocatorOwnerGraphFixture.h"
 #include "Test/AllocatorWorkerThreadFixture.h"
+#include "Test/AllocatorReturnedControlsFixture.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -140,6 +141,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
   {
     report["allocator_owner_graph"]=RunAllocatorOwnerGraphProbe();
     report["allocator_worker_threads"]=RunAllocatorWorkerThreadProbe();
+    report["allocator_returned_controls"]=RunAllocatorReturnedControlsProbe();
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
     const auto feature_candidate=BoundCatalogCandidateSource(CatalogCandidateKind::Features,{});

@@ -3247,6 +3247,9 @@ set_tests_properties(allocator_owner_graph_test PROPERTIES LABELS "integration;m
 add_test(NAME allocator_worker_threads_test COMMAND $<TARGET_FILE:catalog_worker_retirement_test>
     --allocator-workers ${CMAKE_CURRENT_BINARY_DIR}/allocator-worker-threads.json)
 set_tests_properties(allocator_worker_threads_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+add_test(NAME allocator_returned_controls_test COMMAND $<TARGET_FILE:catalog_worker_retirement_test>
+    --returned-controls ${CMAKE_CURRENT_BINARY_DIR}/allocator-returned-controls.json)
+set_tests_properties(allocator_returned_controls_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 endif()
 add_test(NAME scheduler_control_refusal_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --control-refusal

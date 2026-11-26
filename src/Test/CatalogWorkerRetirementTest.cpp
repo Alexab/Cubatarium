@@ -18,6 +18,7 @@
 #include "Test/CatalogCooperativeOwners.h"
 #include "Test/AllocatorOwnerGraphFixture.h"
 #include "Test/AllocatorWorkerThreadFixture.h"
+#include "Test/AllocatorReturnedControlsFixture.h"
 
 // Ordinary-new refusal is thread-local. Concurrent worker setup is never
 // charged to a single-thread observer or rejected by another thread's test.
@@ -327,6 +328,12 @@ Json RuntimeDomain()
 }
 int main(int argc,char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--returned-controls"){
+    try {
+      const auto result=RunAllocatorReturnedControlsProbe();
+      std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<std::endl;return out&&result["status"]=="PASS"?0:1;
+    }catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+  }
   if(argc==3 && std::string(argv[1])=="--allocator-workers"){
     try {
       const auto result=RunAllocatorWorkerThreadProbe({[](bool enabled){if(enabled)allocation_probe::attempts=0;allocation_probe::refuse=enabled;},[](){return allocation_probe::attempts;}},true);
