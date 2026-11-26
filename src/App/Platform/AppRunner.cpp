@@ -3365,6 +3365,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           InspectWorldPackedBuffers(*world, terrainBuffers);
           report << "  \"terrain_gpu_buffers_after_loop\": "
                  << DescribeTerrainGpuBuffers(terrainBuffers.Read()).dump() << ",\n";
+          RenderImageCensus renderImages;
+          geometry_engine->InspectRenderImages(renderImages);
+          application->InspectRenderImages(renderImages);
+          report << "  \"render_images_after_loop\": " << DescribeRenderImages(renderImages.Read()).dump() << ",\n";
           report << "  \"windows_gpu_memory_after_loop\": "
                  << DescribeWindowsGpuMemory(ReadWindowsGpuMemory()).dump() << ",\n";
         }

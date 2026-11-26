@@ -34,6 +34,7 @@ public:
   void OnViewportChanged(int width, int height) override;
   bool BlocksGameInput() const override { return true; }
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   bool WantsClose() const { return CloseRequested; }
   void SelectItem(const std::string &id);
   void SetMode(int mode);

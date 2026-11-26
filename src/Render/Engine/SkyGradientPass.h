@@ -25,6 +25,7 @@ public:
             const glm::mat3 &inv_view_rot, const glm::vec3 &camera_pos,
             const glm::mat4 &inv_projection, float horizon_boost = 0.0f);
   void InvalidateGpuResources();
+  void InspectRenderImages(class RenderImageCensus &out) const;
   double GetLastDrawMs() const { return LastDrawMs; }
 
 private:

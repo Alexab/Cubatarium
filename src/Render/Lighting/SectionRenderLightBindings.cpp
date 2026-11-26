@@ -93,6 +93,12 @@ struct SectionRenderLightBindings::Entry final : SectionRenderLightBinding
 
 SectionRenderLightBindings::~SectionRenderLightBindings() { Reset(); }
 
+void SectionRenderLightBindings::InspectRenderImages(RenderImageCensus &out) const
+{
+  if (Current && Current->active)
+    Current->table.InspectRenderImages(out);
+}
+
 bool SectionRenderLightBindings::BeginWorld(
     uint64_t world_epoch,
     std::shared_ptr<const uint64_t> world_geometry_identity,

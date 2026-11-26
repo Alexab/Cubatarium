@@ -61,6 +61,7 @@ public:
   std::array<uint32_t, 2> ShaderIncarnation() const;
   const SectionLightAtlas &GetAtlas() const { return Atlas; }
   uint32_t Capacity() const { return static_cast<uint32_t>(Slots.size()); }
+  void InspectRenderImages(class RenderImageCensus &out) const;
   /// Common GL3.3 / GLES3 integer-texture interface. Inject after #version and
   /// GLES precision declarations. A failed lookup is explicit, never sky zero.
   static const char *ShaderInterface();

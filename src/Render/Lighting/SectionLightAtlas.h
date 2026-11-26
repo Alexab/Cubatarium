@@ -89,6 +89,7 @@ public:
   bool Bind(unsigned texture_unit) const;
   const Layout &GetLayout() const { return AtlasLayout; }
   Statistics GetStatistics() const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
 private:
   enum class State : uint8_t

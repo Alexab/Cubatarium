@@ -1,4 +1,5 @@
 #include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Render/Engine/RenderImageStorage.h"
 
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -86,6 +87,14 @@ void UContentPreviewRenderer::InspectVisualAssets(VisualAssetCensus &census,
     Creatures->InspectVisualAssets(census);
   if (ItemPreview)
     ItemPreview->InspectVisualAssets(census);
+}
+
+void UContentPreviewRenderer::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::ContentColor, GL_TEXTURE_2D, Target.Color);
+  out.Add(RenderImageRole::ContentDepth, GL_RENDERBUFFER, Target.Depth);
+  if (ItemPreview)
+    ItemPreview->InspectRenderImages(out);
 }
 
 ContentPreviewRendererStorage UContentPreviewRenderer::InspectOwnedStorage(

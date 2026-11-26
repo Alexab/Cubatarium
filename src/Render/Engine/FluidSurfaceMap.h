@@ -42,6 +42,7 @@ public:
 
   void EnsureGpuResources();
   void DestroyGpuResources();
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
   bool Update(UBlockWorld &world, UBlockRegistry &registry, UChunkMeshCache &cache,
               glm::ivec3 cameraBlockXZ, int scanHintY, uint64_t meshRevision,

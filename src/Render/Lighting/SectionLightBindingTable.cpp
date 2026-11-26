@@ -1,4 +1,5 @@
 #include "Render/Lighting/SectionLightBindingTable.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include <algorithm>
 #include <atomic>
 #include <cstring>
@@ -68,6 +69,12 @@ bool SectionLightBindingTable::Handle::operator==(const Handle &other) const
 }
 
 SectionLightBindingTable::~SectionLightBindingTable() { Reset(); }
+
+void SectionLightBindingTable::InspectRenderImages(RenderImageCensus &out) const
+{
+  Atlas.InspectRenderImages(out);
+  out.Add(RenderImageRole::LightMetadata, GL_TEXTURE_2D, Texture);
+}
 
 bool SectionLightBindingTable::Initialize(uint32_t binding_limit,
                                           size_t atlas_bytes,

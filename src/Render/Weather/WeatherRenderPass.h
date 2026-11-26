@@ -37,6 +37,7 @@ class UWeatherRenderPass
 public:
   bool InitShaders(const std::shared_ptr<UShaderManager> &shader_manager);
   void DestroyGpuResources();
+  void InspectRenderImages(class RenderImageCensus &out) const { DepthCapture.InspectRenderImages(out); }
 
   void Render(const WeatherRenderContext &ctx, const UWorld &world);
 

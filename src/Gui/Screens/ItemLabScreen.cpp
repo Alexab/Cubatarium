@@ -6,6 +6,7 @@
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Preview/ItemLabSceneRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiListView.h"
@@ -60,6 +61,14 @@ UItemLabScreen::UItemLabScreen(std::shared_ptr<UItemDefinitionStorage> items,
   if (!Preview->Initialize())
     throw std::runtime_error("Cannot initialize Item Lab renderer");
 }
+void UItemLabScreen::InspectRenderImages(RenderImageCensus &out) const
+{
+  if (Preview)
+    Preview->InspectRenderImages(out);
+  for (const auto name : Textures)
+    out.Add(RenderImageRole::ItemLabColor, GL_TEXTURE_2D, name);
+}
+
 void UItemLabScreen::InspectVisualAssets(VisualAssetCensus &census) const
 {
   if (Preview)

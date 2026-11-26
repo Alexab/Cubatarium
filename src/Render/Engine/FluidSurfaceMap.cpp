@@ -4,6 +4,7 @@
 #include "World/Streaming/OceanCruisePolicy.h"
 
 #include "Render/Engine/FluidSurfaceMapLogic.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
@@ -19,6 +20,12 @@
 
 namespace cutum
 {
+
+void UFluidSurfaceMap::InspectRenderImages(RenderImageCensus &out) const
+{
+  for (const auto name : {SurfaceYTex, FluidIndexTex, FluidBottomTex})
+    out.Add(RenderImageRole::FluidSurfaces, GL_TEXTURE_2D, name);
+}
 
 namespace
 {

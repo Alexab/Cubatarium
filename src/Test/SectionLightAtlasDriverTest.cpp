@@ -1,7 +1,12 @@
+#include "Gui/Preview/PreviewRenderResources.h"
+#include "Render/Engine/RenderImageStorageReport.h"
+#include "Render/Engine/RenderOverlayQuad.h"
+#include "Render/Engine/TerrainGpuBufferReport.h"
 #include "Render/Lighting/SectionLightAtlas.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include <GLFW/glfw3.h>
 #include <array>
+#include <fstream>
 #include <iostream>
 #include <limits>
 #include <stdexcept>
@@ -690,6 +695,169 @@ void Run()
   glDeleteShader(fragment);
   Expect(glGetError() == GL_NO_ERROR, "atlas cleanup has no GL errors");
 }
+void RunImageStorage(const char *path)
+{
+  using namespace cutum;
+  using Role = RenderImageRole;
+  SectionLightBindingTable lights;
+  Expect(lights.Initialize(129, 8 * Volume::CellCount, 8, true),
+         "initialize the production light atlas and binding metadata textures");
+  const auto original = Pattern(3);
+  const auto first = lights.Create({1, 1, 1}, original, {});
+  const auto alias = lights.Create({1, 1, 1}, original, {16, 0, 0});
+  Expect(first && alias && lights.GetAtlas().GetStatistics().live == 1,
+         "two bindings share one light page");
+  PreviewRenderTarget preview;
+  Expect(preview.Initialize(21), "initialize the production preview color and depth target");
+
+  const auto imageSample = [&] {
+    RenderImageCensus census;
+    lights.InspectRenderImages(census);
+    census.Add(Role::ContentColor, GL_TEXTURE_2D, preview.Color);
+    census.Add(Role::ItemPreviewColor, GL_TEXTURE_2D, preview.Color);
+    census.Add(Role::ContentDepth, GL_RENDERBUFFER, preview.Depth);
+    return census.Read();
+  };
+  const auto expectExtents = [&](const RenderImageSnapshot &sample, int side) {
+    Expect(sample.contextAvailable && !sample.failedQueries && !sample.overflow &&
+               sample.images.size() == 4 && sample.references == 5 &&
+               sample.logicalBytes == 64000u + 8192u + std::uint64_t(side) * side * 7,
+           "measure the distinct light textures, preview color and depth image");
+    const auto find = [&](Role role) -> const RenderImageStorage & {
+      const auto row = std::find_if(sample.images.begin(), sample.images.end(), [&](const auto &image) {
+        return (image.roles & (std::uint32_t{1} << static_cast<std::size_t>(role))) != 0;
+      });
+      Expect(row != sample.images.end(), "observe the expected image role");
+      return *row;
+    };
+    Expect(find(Role::LightAtlas).format == GL_R8UI && find(Role::LightAtlas).depth == 40 &&
+               find(Role::LightAtlas).bitsPerSample == 8 &&
+               find(Role::LightMetadata).width == 256 && find(Role::LightMetadata).height == 2 &&
+               find(Role::LightMetadata).format == GL_RGBA32UI && find(Role::LightMetadata).bitsPerSample == 128 &&
+               &find(Role::ContentColor) == &find(Role::ItemPreviewColor) &&
+               find(Role::ContentColor).width == side && find(Role::ContentColor).bitsPerSample == 32 &&
+               find(Role::ContentDepth).height == side && find(Role::ContentDepth).bitsPerSample == 24,
+           "verify actual atlas, metadata and framebuffer formats and count a shared texture once");
+  };
+
+  RenderOverlayQuad overlay;
+  glBindBuffer(GL_TEXTURE_2D, 0);
+  Expect(!overlay.Initialize() && !overlay.VertexArray() && !overlay.VertexBuffer() && !overlay.IndexBuffer(),
+         "a controlled GL error cannot publish an incomplete overlay");
+  Expect(overlay.Initialize(), "initialize the overlay with its owned index buffer");
+  const auto vao = overlay.VertexArray(), vbo = overlay.VertexBuffer(), ebo = overlay.IndexBuffer();
+  Expect(overlay.Initialize() && overlay.IndexBuffer() == ebo, "reuse the live overlay allocation");
+  TerrainGpuBufferCensus overlayBuffers;
+  overlayBuffers.Add(TerrainGpuBufferRole::OverlayQuad, vbo);
+  overlayBuffers.Add(TerrainGpuBufferRole::OverlayQuad, ebo);
+  const auto overlayLive = overlayBuffers.Read();
+  Expect(overlayLive.total.objects == 2 && overlayLive.total.bytes == 88 &&
+             !overlayLive.failedQueries, "measure one overlay vertex store and one element store");
+
+  const auto vs = Compile(GL_VERTEX_SHADER, "#version 330 core\nlayout(location=0) in vec2 p;"
+                                           "void main(){gl_Position=vec4(p,0,1);}");
+  const auto fs = Compile(GL_FRAGMENT_SHADER, "#version 330 core\nout vec4 c;"
+                                             "void main(){c=vec4(1,0,0,1);}");
+  const auto program = glCreateProgram();
+  glAttachShader(program, vs);
+  glAttachShader(program, fs);
+  glLinkProgram(program);
+  GLint linked{};
+  glGetProgramiv(program, GL_LINK_STATUS, &linked);
+  Expect(linked != 0, "compile the controlled overlay output for real index drawing");
+  glBindFramebuffer(GL_FRAMEBUFFER, preview.Framebuffer);
+  glViewport(0, 0, 21, 21);
+  glDisable(GL_DEPTH_TEST);
+  glClearColor(0, 0, 0, 1);
+  glClear(GL_COLOR_BUFFER_BIT);
+  glUseProgram(program);
+  glBindVertexArray(vao);
+  GLint attached{};
+  glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &attached);
+  Expect(static_cast<GLuint>(attached) == ebo, "the live overlay VAO consumes the owned indices");
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+  GLuint readback{};
+  glGenBuffers(1, &readback);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, readback);
+  glBufferData(GL_PIXEL_PACK_BUFFER, 4, nullptr, GL_STREAM_READ);
+  glReadPixels(10, 10, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  glBindVertexArray(0);
+  glUseProgram(0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDeleteProgram(program);
+  glDeleteShader(vs);
+  glDeleteShader(fs);
+
+  lights.Bind(3, 4);
+  glActiveTexture(GL_TEXTURE4);
+  GLint old2d{}, old3d{}, oldDepth{};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &old2d);
+  glGetIntegerv(GL_TEXTURE_BINDING_3D, &old3d);
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, &oldDepth);
+  const auto initial = imageSample();
+  expectExtents(initial, 21);
+  GLint unit{}, after2d{}, after3d{}, afterDepth{};
+  glGetIntegerv(GL_ACTIVE_TEXTURE, &unit);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &after2d);
+  glGetIntegerv(GL_TEXTURE_BINDING_3D, &after3d);
+  glGetIntegerv(GL_RENDERBUFFER_BINDING, &afterDepth);
+  Expect(unit == GL_TEXTURE4 && old2d == after2d && old3d == after3d && oldDepth == afterDepth,
+         "sampling never changes the current texture unit or texture and renderbuffer bindings");
+
+  Expect(lights.Replace(*first, {1, 1, 2}, Pattern(11), {}) &&
+             lights.GetAtlas().GetStatistics().live == 2 && lights.Release(*alias),
+         "publish a new light page and retire the last reference to the predecessor");
+  const auto heldPages = lights.GetAtlas().GetStatistics();
+  Expect(heldPages.live == 1 && heldPages.retired == 1,
+         "the atlas holds its retired page behind the existing fence");
+  const auto oldColor = preview.Color, oldRenderbuffer = preview.Depth, oldFbo = preview.Framebuffer;
+  Expect(!preview.Initialize(0) && preview.Color == oldColor && preview.Depth == oldRenderbuffer &&
+             preview.Framebuffer == oldFbo, "a zero-sized candidate leaves the previous framebuffer published");
+  Expect(preview.Initialize(33) && !glIsTexture(oldColor) && !glIsRenderbuffer(oldRenderbuffer) &&
+             !glIsFramebuffer(oldFbo), "a successful resize retires the three predecessor names");
+  const auto resized = imageSample();
+  expectExtents(resized, 33);
+  overlay.Reset();
+  const auto overlayRetired = overlayBuffers.Read();
+  Expect(!glIsVertexArray(vao) && !glIsBuffer(vbo) && !glIsBuffer(ebo) &&
+             overlayRetired.namesWithoutObject == 2 && !overlayRetired.total.objects,
+         "overlay reset retires the VAO and both buffers while the predecessor commands remain valid");
+  std::array<unsigned char, 4> pixel{};
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, readback);
+  glGetBufferSubData(GL_PIXEL_PACK_BUFFER, 0, 4, pixel.data());
+  glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+  glDeleteBuffers(1, &readback);
+  Expect(pixel == std::array<unsigned char, 4>{255, 0, 0, 255},
+         "the queued read keeps the actual overlay output from the retired framebuffer");
+  glFinish();
+  lights.CollectRetired();
+  Expect(lights.GetAtlas().GetStatistics().retired == 0, "collect the fenced predecessor page after GPU completion");
+
+  const auto lightNames = [&] {
+    RenderImageCensus census;
+    lights.InspectRenderImages(census);
+    return census;
+  }();
+  lights.Reset();
+  preview.Reset();
+  const auto retired = imageSample();
+  const auto stale = lightNames.Read();
+  Expect(retired.images.empty() && !retired.references && !retired.logicalBytes &&
+             stale.namesWithoutObject == 2 && stale.images.empty() && glGetError() == GL_NO_ERROR,
+         "retire all selected images without recreating old texture names");
+
+  const nlohmann::json report{{"schema", "render-image-lifecycle.v1"}, {"status", "PASS"},
+      {"initial", DescribeRenderImages(initial)}, {"resized", DescribeRenderImages(resized)},
+      {"retired", DescribeRenderImages(retired)}, {"stale", DescribeRenderImages(stale)},
+      {"overlay_live", DescribeTerrainGpuBuffers(overlayLive)}, {"overlay_retired", DescribeTerrainGpuBuffers(overlayRetired)},
+      {"light_page_held_after_release", heldPages.retired}, {"light_page_collected", true},
+      {"bindings_preserved", true}, {"failed_resize_retained_target", true},
+      {"queued_overlay_pixel", pixel}};
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+  Expect(static_cast<bool>(out), "write the render image and overlay lifecycle result");
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -727,9 +895,14 @@ int main(int argc, char **argv)
   int exit_code = 0;
   try
   {
-    Run();
-    RunBindings();
-    RunOrderedBindings();
+    if (argc == 3 && std::string(argv[1]) == "--render-image-storage")
+      RunImageStorage(argv[2]);
+    else
+    {
+      Run();
+      RunBindings();
+      RunOrderedBindings();
+    }
   }
   catch (const std::exception &error)
   {

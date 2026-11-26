@@ -3727,10 +3727,11 @@ if(NOT ANDROID AND NOT CUBATARIUM_GLES)
   add_executable(section_light_atlas_driver_test
     src/Render/Lighting/SectionLightAtlas.cpp
     src/Render/Lighting/SectionLightBindingTable.cpp
+    src/Render/Pipeline/GlStateScope.cpp
     src/Test/SectionLightAtlasDriverTest.cpp)
   target_include_directories(section_light_atlas_driver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
   target_link_libraries(section_light_atlas_driver_test PRIVATE
-    glm::glm GLEW::GLEW OpenGL::GL glfw)
+    glm::glm GLEW::GLEW OpenGL::GL glfw nlohmann_json::nlohmann_json)
   add_test(NAME section_light_atlas_driver_test
     COMMAND $<TARGET_FILE:section_light_atlas_driver_test>)
   set_tests_properties(section_light_atlas_driver_test PROPERTIES

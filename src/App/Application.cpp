@@ -760,6 +760,14 @@ InventoryIconStorage UApplication::InspectInventoryIconStorage() const noexcept
   return out;
 }
 
+void UApplication::InspectRenderImages(RenderImageCensus &out) const
+{
+  if (ContentPreviewRenderer)
+    ContentPreviewRenderer->InspectRenderImages(out);
+  if (ItemLabScreen)
+    ItemLabScreen->InspectRenderImages(out);
+}
+
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const
 {
   if (CreaturePreviewRenderer)

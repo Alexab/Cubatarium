@@ -24,6 +24,7 @@ public:
                            bool enable) const;
 
   bool IsValid() const { return Texture != 0 && Width > 0 && Height > 0; }
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
 private:
   void EnsureSize(int width, int height);

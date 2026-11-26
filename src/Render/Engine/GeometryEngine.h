@@ -26,6 +26,7 @@ typedef int GLint;
 #include "Render/Engine/FluidSurfaceMap.h"
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Engine/IUFluidSurfaceProvider.h"
+#include "Render/Engine/RenderOverlayQuad.h"
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/SkyGradientPass.h"
@@ -118,6 +119,7 @@ public:
     GreedyGpuTransparent.InspectCatalogRoots(out);CrossGpuPass.InspectCatalogRoots(out);
   }
   void InspectTerrainGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   MemberCallbackStorageSnapshot InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known) const noexcept;
   const UWorld *GetWorldForStorage() const noexcept {return WorldInstance.get();}
   const std::shared_ptr<UWorld> &GetWorldRootForStorage() const noexcept {return WorldInstance;}
@@ -238,8 +240,6 @@ private:
       glm::ivec3 chunk_coord);
   void RenderFluidOverlay(int width, int height);
   void RenderWeatherOverlay(int width, int height);
-  bool InitOverlayBuffers();
-  void DestroyOverlayBuffers();
   GLuint cubeVAO = 0;
   GLuint cubeVBO = 0;
   GLuint cubeEBO = 0;
@@ -315,8 +315,7 @@ private:
   std::shared_ptr<UShaderProgram> overlayShader;
   std::shared_ptr<UShaderProgram>
       outlineShader; // Shader for block selection outline
-  GLuint overlayVAO{0};
-  GLuint overlayVBO{0};
+  RenderOverlayQuad OverlayQuad;
 
   std::shared_ptr<UTextureBaseStorage> TextureBaseStorageInstance;
   std::shared_ptr<UTextureCubeStorage> TextureCubeStorageInstance;

@@ -1,4 +1,5 @@
 #include "Render/Lighting/SectionLightAtlas.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include <algorithm>
 #include <atomic>
 #include <limits>
@@ -83,6 +84,11 @@ size_t SectionLightAtlas::OwnerHash::operator()(const Owner &owner) const
 }
 
 SectionLightAtlas::~SectionLightAtlas() { Reset(); }
+
+void SectionLightAtlas::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::LightAtlas, GL_TEXTURE_3D, Texture);
+}
 
 bool SectionLightAtlas::Initialize(size_t byte_budget, uint32_t page_limit,
                                    bool reserve_ordered_page)

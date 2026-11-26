@@ -1,11 +1,17 @@
 #include "Render/Pipeline/WeatherDepthCapture.h"
 
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Engine/ShaderManager.h"
 
 #include <glm/glm.hpp>
 
 namespace cutum
 {
+
+void UWeatherDepthCapture::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::WeatherDepth, GL_TEXTURE_2D, Texture);
+}
 
 void UWeatherDepthCapture::DestroyGpuResources()
 {

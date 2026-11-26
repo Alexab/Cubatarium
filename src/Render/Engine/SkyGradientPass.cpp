@@ -1,6 +1,7 @@
 #include "Render/Engine/SkyGradientPass.h"
 
 #include "Core/Memory/NativeThreadStack.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/GlIncludes.h"
@@ -14,6 +15,11 @@
 
 namespace cutum
 {
+
+void USkyGradientPass::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::CloudField, GL_TEXTURE_2D, WeatherFieldTexture);
+}
 
 namespace
 {

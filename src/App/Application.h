@@ -193,6 +193,7 @@ public:
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
   CreatureItemIconStorage InspectCreatureItemIconStorage() const noexcept;
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

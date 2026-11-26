@@ -38,6 +38,7 @@ public:
   static std::shared_ptr<UItemPreviewRenderer> Create(std::shared_ptr<UItemDefinitionStorage> items,
       std::shared_ptr<UShaderManager> shaders);
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   PreviewRendererStorage InspectOwnedStorage(const UItemDefinitionStorage *items,
       const UShaderManager *shaders) const noexcept;
 

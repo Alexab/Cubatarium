@@ -1,11 +1,17 @@
 #include "Render/Pipeline/OpaqueDepthCapture.h"
 
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Engine/ShaderManager.h"
 
 #include <glm/glm.hpp>
 
 namespace cutum
 {
+
+void UOpaqueDepthCapture::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::OpaqueDepth, GL_TEXTURE_2D, Texture);
+}
 
 void UOpaqueDepthCapture::DestroyGpuResources()
 {

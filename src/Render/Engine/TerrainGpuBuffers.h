@@ -13,13 +13,13 @@ enum class TerrainGpuBufferRole
 {
   TerrainScratch, GreedyPool, GreedyBatch, GreedyDraw, GreedyCompute, CrossTemplate, CrossCurrent,
   CrossStaging, LightRowsCurrent, LightRowsAlternate, PackedPool, PackedCompute,
-  PackedReadback, MdiScratch, Count
+  PackedReadback, MdiScratch, OverlayQuad, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
     "terrain_scratch", "greedy_pool", "greedy_batch", "greedy_draw", "greedy_compute", "cross_template", "cross_current",
     "cross_staging", "light_rows_current", "light_rows_alternate", "packed_pool", "packed_compute",
-    "packed_readback", "mdi_scratch"};
+    "packed_readback", "mdi_scratch", "overlay_quad"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
 static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint32_t>::digits);
 

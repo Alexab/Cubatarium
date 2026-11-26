@@ -1,4 +1,5 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Json/JsonVec.h"
 #include "Core/Memory/StlSourceStorage.h"
@@ -90,6 +91,12 @@ void UItemPreviewRenderer::InspectVisualAssets(VisualAssetCensus &census) const
     census.Add(entry.second, VisualAssetOwner::Preview);
   if (SurfaceRenderer)
     SurfaceRenderer->InspectVisualAssets(census, VisualAssetOwner::Preview);
+}
+
+void UItemPreviewRenderer::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::ItemPreviewColor, GL_TEXTURE_2D, Target.Color);
+  out.Add(RenderImageRole::ItemPreviewDepth, GL_RENDERBUFFER, Target.Depth);
 }
 
 PreviewRendererStorage UItemPreviewRenderer::InspectOwnedStorage(const UItemDefinitionStorage *items,

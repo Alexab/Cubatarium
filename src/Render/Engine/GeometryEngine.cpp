@@ -40,6 +40,7 @@
 #include "Render/Engine/IUMeshGpuStore.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Engine/RgbReferenceMaterialCapture.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
@@ -4407,7 +4408,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyOutlineBuffers();
   CreatureDraw_.DestroyBuffers();
   CreatureMeshGpuCache::Instance().DestroyAll();
-  DestroyOverlayBuffers();
+  OverlayQuad.Reset();
   SkyGradientPass_.InvalidateGpuResources();
 }
 
@@ -4525,6 +4526,8 @@ void UGeometryEngine::InspectTerrainGpuBuffers(TerrainGpuBufferCensus &out) cons
 {
   out.Add(TerrainGpuBufferRole::TerrainScratch, greedyMeshVBO);
   out.Add(TerrainGpuBufferRole::TerrainScratch, greedyMeshEBO);
+  out.Add(TerrainGpuBufferRole::OverlayQuad, OverlayQuad.VertexBuffer());
+  out.Add(TerrainGpuBufferRole::OverlayQuad, OverlayQuad.IndexBuffer());
   GreedyGpuOpaque.InspectGpuBuffers(out);
   GreedyGpuCutout.InspectGpuBuffers(out);
   GreedyGpuTransparent.InspectGpuBuffers(out);
@@ -4533,6 +4536,17 @@ void UGeometryEngine::InspectTerrainGpuBuffers(TerrainGpuBufferCensus &out) cons
     greedy->InspectGpuBuffers(out);
   if (const auto *mdi = dynamic_cast<const UMdiVertexPoolStore *>(RenderBackends.Store.get()))
     mdi->InspectGpuBuffers(out);
+}
+
+void UGeometryEngine::InspectRenderImages(RenderImageCensus &out) const
+{
+  if (SectionLightOwner)
+    SectionLightOwner->InspectRenderImages(out);
+  OpaqueDepthCapture.InspectRenderImages(out);
+  WeatherPass.InspectRenderImages(out);
+  SkyGradientPass_.InspectRenderImages(out);
+  if (FluidSurfaceProvider)
+    FluidSurfaceProvider->Map().InspectRenderImages(out);
 }
 
 bool UGeometryEngine::InitEngine()
@@ -8665,50 +8679,6 @@ void UGeometryEngine::DrawSkyGradient()
 
 void UGeometryEngine::DrawSkyGradientSimple() { DrawSkyGradient(); }
 
-bool UGeometryEngine::InitOverlayBuffers()
-{
-  if (overlayVAO != 0)
-  {
-    return true;
-  }
-  const float quad[] = {
-      -1.0f, -1.0f, 0.0f, 0.0f, 1.0f,  -1.0f, 1.0f, 0.0f,
-      1.0f,  1.0f,  1.0f, 1.0f, -1.0f, 1.0f,  0.0f, 1.0f,
-  };
-  const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
-  GLuint ebo = 0;
-  glGenVertexArrays(1, &overlayVAO);
-  glGenBuffers(1, &overlayVBO);
-  glGenBuffers(1, &ebo);
-  glBindVertexArray(overlayVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, overlayVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                        (void *)(2 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  return true;
-}
-
-void UGeometryEngine::DestroyOverlayBuffers()
-{
-  if (overlayVBO)
-  {
-    glDeleteBuffers(1, &overlayVBO);
-    overlayVBO = 0;
-  }
-  if (overlayVAO)
-  {
-    glDeleteVertexArrays(1, &overlayVAO);
-    overlayVAO = 0;
-  }
-}
-
 void UGeometryEngine::RenderFluidOverlay(int width, int height)
 {
   (void)width;
@@ -8718,7 +8688,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   {
     return;
   }
-  if (!InitOverlayBuffers())
+  if (!OverlayQuad.Initialize())
   {
     return;
   }
@@ -8741,7 +8711,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
   overlayShader->SetFloat("uTintAlpha", OverlayTintAlpha);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texIt->second.GetTextureId());
-  glBindVertexArray(overlayVAO);
+  glBindVertexArray(OverlayQuad.VertexArray());
   glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
   glBindVertexArray(0);
   overlayShader->Unuse();
@@ -8749,7 +8719,7 @@ void UGeometryEngine::RenderFluidOverlay(int width, int height)
 
 void UGeometryEngine::RenderWeatherOverlay(int width, int height)
 {
-  if (!WorldInstance || width <= 0 || height <= 0 || !InitOverlayBuffers())
+  if (!WorldInstance || width <= 0 || height <= 0 || !OverlayQuad.Initialize())
   {
     return;
   }
@@ -8770,7 +8740,7 @@ void UGeometryEngine::RenderWeatherOverlay(int width, int height)
   WeatherRenderContext ctx;
   ctx.Width = width;
   ctx.Height = height;
-  ctx.OverlayVao = overlayVAO;
+  ctx.OverlayVao = OverlayQuad.VertexArray();
   ctx.ViewProj = view_proj;
   ctx.CameraPos = camera->GetRenderPosition();
   ctx.CameraRight = camera_right;

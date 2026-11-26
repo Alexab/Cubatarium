@@ -3,6 +3,7 @@
 #include "App/Application.h"
 #include "App/Platform/WindowsGpuMemoryReport.h"
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/RenderImageStorageReport.h"
 #include "Render/Engine/TerrainGpuBufferReport.h"
 #include "Gui/Core/GuiIconSource.h"
 #include "Gui/Cache/CreatureItemIconStorage.h"
@@ -508,11 +509,17 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"per_object_charge_observed", false}, {"whole_runtime_complete", false}};
   report["native_thread_stacks"] = DescribeNativeThreadStacks();
   TerrainGpuBufferCensus terrainBuffers;
+  RenderImageCensus renderImages;
   for (const auto *geometry : out.member_geometry)
+  {
     geometry->InspectTerrainGpuBuffers(terrainBuffers);
+    geometry->InspectRenderImages(renderImages);
+  }
   for (const auto *world : out.member_worlds)
     InspectWorldPackedBuffers(*world, terrainBuffers);
   report["terrain_gpu_buffers"] = DescribeTerrainGpuBuffers(terrainBuffers.Read());
+  application.InspectRenderImages(renderImages);
+  report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;

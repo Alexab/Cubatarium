@@ -49,6 +49,7 @@ public:
   bool Bind(unsigned atlas_unit, unsigned table_unit) const;
   std::array<uint32_t, 2> ShaderIncarnation() const;
   void CollectRetired();
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
 private:
   struct State;
