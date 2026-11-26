@@ -22,6 +22,14 @@ struct ApplicationOperationSourceProbe {
   }
   static void UpdateDeath(UApplication &app) { app.UpdateDeathOverlay(); }
   static void SetGameState(UApplication &app) { app.State = AppState::InGame; }
+  static UCraftingScreen &BuildCrafting(UApplication &app)
+  {
+    auto screen = std::make_unique<UCraftingScreen>(app.GameSession.get(), app.World.get(), nullptr);
+    screen->OnAttach(app.GetGui());
+    screen->Build(app.GetGui());
+    app.CraftingScreen = std::move(screen);
+    return *app.CraftingScreen;
+  }
   static bool IsInGame(const UApplication &app) { return app.State == AppState::InGame; }
   static void RetireDeath(UApplication &app) { app.DeathScreen.reset(); }
   static void DetachProgress(UApplication &app)

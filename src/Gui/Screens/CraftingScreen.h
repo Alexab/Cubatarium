@@ -6,7 +6,6 @@
 #include "Gui/Core/GuiTypes.h"
 
 #include <string>
-#include <vector>
 
 namespace cutum
 {
@@ -22,6 +21,12 @@ class UGuiSlot;
 class UGuiTextInput;
 class UGuiTabBar;
 struct GuiTheme;
+
+struct CraftingRowsStorage
+{
+  size_t rows{}, widgetBytes{}, childrenBytes{}, textBytes{}, callbackBytes{}, requested{};
+  bool supported{};
+};
 
 /// Shapeless recipe list + craft buttons (MVP crafting UI).
 class UCraftingScreen : public UGuiScreenBase
@@ -39,12 +44,19 @@ public:
 
   void SetVisible(bool visible);
   void Toggle();
-  void SetWorld(UWorld *world) { World = world; }
+  void SetWorld(UWorld *world);
+  void SetPointerPressed(bool pressed) { PointerPressed = pressed; }
 
   void OnViewportChanged(int width, int height) override;
+  CraftingRowsStorage InspectRowsStorage() const noexcept;
 
 private:
+  friend struct CraftingStorageProbe;
+  class RecipeRow;
+  struct RecipeAction;
+  void RefreshList();
   void RebuildList();
+  void StartRecipe(const RecipeDefinition &recipe);
   void Relayout();
   void RefreshRecipeIcons();
 
@@ -59,7 +71,7 @@ private:
   UGuiTabBar *Categories{nullptr};
   int Category{0}, Batch{1};
   UGuiButton *BatchButton{nullptr};
-  std::string PendingRecipe;
+  const RecipeDefinition *PendingRecipe{nullptr};
   float CraftRemaining{0};
   uint64_t CraftOwner{0};
   UGuiLabel *Title{nullptr};
@@ -67,9 +79,9 @@ private:
   UGuiScrollView *Scroll{nullptr};
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
+  bool RowsDirty{true};
+  bool PointerPressed{false};
   std::string StatusText;
-  std::vector<UGuiSlot *> RecipeIconSlots;
-  std::vector<std::string> RecipeOutputIds;
 };
 
 } // namespace cutum

@@ -209,11 +209,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       }
       if (app.CraftingOpen)
       {
-        app.CraftingOpen = false;
-        if (app.CraftingScreen)
-        {
-          app.CraftingScreen->SetVisible(false);
-        }
+        app.CloseCraftingScreen();
         app.GuiContext->ClearInputState();
         app.SyncCursorVisibility();
         return true;

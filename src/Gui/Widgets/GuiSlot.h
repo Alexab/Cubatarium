@@ -63,6 +63,7 @@ private:
   friend class UInGameHudScreen;
   friend class UPlayerWindowScreen;
   friend class UCreativePaletteScreen;
+  friend class UCraftingScreen;
   int SlotSizePx() const;
   int DragThresholdPx() const;
 

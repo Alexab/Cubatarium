@@ -30,6 +30,12 @@ public:
   }
   void SetLabel(const std::string &label) { Label = label; }
   const std::string &GetLabel() const { return Label; }
+  void ClearPressState()
+  {
+    PressedInside = false;
+    Dragged = false;
+    State = GuiButtonState::Normal;
+  }
 
   bool CanFocus() const override;
   bool Activate() override;
@@ -42,6 +48,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UCraftingScreen;
   friend class UWorldProgressScreen;
   friend class UMainMenuScreen;
   friend class UDeathScreen;

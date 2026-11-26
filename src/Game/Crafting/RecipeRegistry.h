@@ -22,8 +22,15 @@ public:
   bool TryCraft(UCreatureInventory &inv, const RecipeDefinition &recipe,
                 bool stationAvailable = false,
                 std::string *reason = nullptr) const;
+  bool TryCraftBatch(UCreatureInventory &inv, const RecipeDefinition &recipe,
+                     size_t count, bool stationAvailable, std::string *reason = nullptr) const;
+  bool CanCraftBatch(const UCreatureInventory &inv, const RecipeDefinition &recipe,
+                     size_t count, bool stationAvailable, std::string *reason = nullptr) const;
 
 private:
+  bool EvaluateBatch(const UCreatureInventory &inv, UCreatureInventory *publish,
+                     const RecipeDefinition &recipe, size_t count, bool stationAvailable,
+                     std::string *reason) const;
   std::vector<RecipeDefinition> Recipes;
 };
 

@@ -204,11 +204,11 @@ void UGuiScrollView::LayoutContent(int spacing, int Padding)
 
   const auto &kids = ContentPanel.GetChildren();
   ScrollContentHeight = UGuiLayout::StackVerticalMeasure(spacing, Padding, kids);
+  ClampScroll();
 
   ContentPanel.SetBounds({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight});
   UGuiLayout::StackVertical({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight}, spacing,
                             Padding, kids);
-  ClampScroll();
 }
 
 void UGuiScrollView::DrawScrollbar(UGuiRenderer &renderer)

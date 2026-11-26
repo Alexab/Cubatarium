@@ -79,6 +79,7 @@ public:
 
 protected:
   friend class UCharacterSheetScreen;
+  friend class UCraftingScreen;
   friend class UCreativePaletteScreen;
   GuiRect Bounds{0, 0, 100, 32};
   bool Visible{true};

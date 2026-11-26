@@ -15,6 +15,7 @@ class UItemDefinitionStorage;
 class UCreatureInventory
 {
 public:
+  UCreatureInventory() = default;
   static constexpr size_t kRowCount = 4;
   static constexpr size_t kSlotsPerRow = 10;
   static constexpr size_t kSlotCount = kRowCount * kSlotsPerRow;
@@ -117,6 +118,16 @@ public:
   bool RepairActive(const UItemDefinitionStorage &items, std::string &reason);
 
 private:
+  friend class URecipeRegistry;
+  struct CraftingTrial {};
+  UCreatureInventory(CraftingTrial, const UCreatureInventory &source)
+      : Hotbars(source.Creative ? std::vector<HotbarBar>{} : source.Hotbars),
+        CreativeHotbars(source.Creative ? source.CreativeHotbars : std::vector<HotbarBar>{}),
+        Items(source.Items), NextInstanceId(source.NextInstanceId),
+        ActiveBarIndex(source.ActiveBarIndex), ActiveSlotIndex(source.ActiveSlotIndex),
+        Creative(source.Creative)
+  {
+  }
   std::vector<InventoryEntryRef> &RecoveryForMode()
   {
     return Creative ? CreativeRecovery : Recovery;

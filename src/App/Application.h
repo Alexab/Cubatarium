@@ -256,6 +256,7 @@ private:
   void RefreshCreatureCatalog();
   void ShowInGameHud();
   void BuildDeathOverlay();
+  void CloseCraftingScreen();
   void UpdateDeathOverlay();
   void SetDeathOverlayVisible(bool visible);
   void RespawnPlayerFromDeathScreen();
