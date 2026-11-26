@@ -1,6 +1,7 @@
 #ifndef FLUID_COLUMN_SUMMARY_H
 #define FLUID_COLUMN_SUMMARY_H
 
+#include "Core/Memory/NativeThreadStack.h"
 #include "World/Chunks/Chunk.h"
 
 #include <atomic>
@@ -232,6 +233,7 @@ inline uint64_t FluidSummaryStaleDiscardedN()
 
 inline void FluidSummaryWorkerLoop()
 {
+  const NativeThreadStackOwner nativeStack(NativeThreadKind::FluidSummary);
   FluidSummaryQueues &qs = FluidSummaryQueuesState();
   for (;;)
   {

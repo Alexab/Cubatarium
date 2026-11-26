@@ -26,6 +26,7 @@
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "Core/Memory/WindowsProcessMemory.h"
+#include "Core/Memory/NativeThreadStack.h"
 #include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Core/Creature.h"
@@ -84,6 +85,34 @@ struct CatalogLauncherRootsView
   const std::shared_ptr<UCore> *core{};
   const std::shared_ptr<UApplication> *application{};
 };
+inline nlohmann::json DescribeNativeThreadStacks()
+{
+  const auto stacks = InspectNativeThreadStacks();
+  auto owners = nlohmann::json::object();
+  size_t sampled = 0, reserved = 0, committed = 0;
+  for (size_t i = 0; i < stacks.rows.size(); ++i)
+  {
+    const auto &row = stacks.rows[i];
+    sampled += row.sampled;
+    reserved += row.reserved;
+    committed += row.committed;
+    owners[NativeThreadNames[i]] = {
+        {"entered", row.entered}, {"retired", row.retired}, {"borrowed", row.borrowed},
+        {"active", row.active}, {"peak_active", row.peakActive}, {"sampled", row.sampled},
+        {"reserved_bytes", row.reserved}, {"peak_reserved_bytes", row.peakReserved},
+        {"committed_bytes", row.committed}, {"guard_bytes", row.guard}};
+  }
+  return {
+      {"schema", "native-thread-stacks.v1"},
+      {"status", stacks.processThreadsObserved && stacks.registered && sampled == stacks.registered ? "PASS" : "UNSUPPORTED"},
+      {"process_threads_observed", stacks.processThreadsObserved}, {"process_threads", stacks.processThreads},
+      {"registered_threads", stacks.registered}, {"matched_threads", stacks.matched},
+      {"unregistered_process_threads", stacks.processThreads - stacks.matched},
+      {"sampled_stacks", sampled}, {"reserved_bytes", reserved}, {"committed_bytes", committed},
+      {"owners", std::move(owners)}, {"scope_inline_bytes", sizeof(NativeThreadStackOwner)},
+      {"row_counters_inline_bytes", sizeof(stacks.rows)}, {"whole_runtime_complete", false}};
+}
+
 inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &application,
     CatalogLauncherRootsView launcher,const char *entrypoint,const char *phase)
 {
@@ -433,6 +462,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"nonpaged_pool_quota_bytes", memory.nonpagedPoolQuota},
       {"peak_nonpaged_pool_quota_bytes", memory.peakNonpagedPoolQuota},
       {"per_object_charge_observed", false}, {"whole_runtime_complete", false}};
+  report["native_thread_stacks"] = DescribeNativeThreadStacks();
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {

@@ -7,6 +7,7 @@
 #include "App/Settings/AppState.h"
 #include "Blocks/Input/BlockInputController.h"
 #include "Core/FrameStageWatchdog.h"
+#include "Core/Memory/NativeThreadStack.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -484,6 +485,7 @@ private:
 
   void WorkerLoop()
   {
+    const NativeThreadStackOwner nativeStack(NativeThreadKind::FrameCapture);
     for (;;)
     {
       Frame frame;

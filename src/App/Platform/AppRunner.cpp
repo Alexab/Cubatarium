@@ -3356,8 +3356,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           }
         }
         const glm::ivec2 report_resolution = window.GetFramebufferSize();
+        report << "{\n";
+        if (native_thread_stack_detail::Enabled())
+          report << "  \"native_thread_stacks_after_loop\": " << DescribeNativeThreadStacks().dump() << ",\n";
         report
-            << "{\n"
             << "  \"exit_code\": " << exit_code << ",\n"
             << "  \"loading_seen\": " << (loading_seen ? "true" : "false")
             << ",\n"

@@ -2,6 +2,7 @@
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "Test/AsyncIoStorageFixture.h"
 #include "Test/IoCodecAllocationFixture.h"
+#include "Test/NativeThreadStackFixture.h"
 #include "Test/WindowsIoResourceFixture.h"
 #include <algorithm>
 #include <array>
@@ -167,6 +168,7 @@ int main(int argc, char **argv)
     const auto stdio = std::filesystem::path(folder) / "stdio.bin";
     result["crt_file_tables"] = CheckCrtFileTables(stdio);
     result["windows_io_resources"] = cutum::windows_io_resource_fixture::Run(stdio);
+    result["native_thread_stacks"] = cutum::native_thread_stack_fixture::Run();
     result["ordinary_codec"] = codec;
     result["ordinary_disk_index"] = disk;
     result["ordinary_failed_parse"] = malformed;

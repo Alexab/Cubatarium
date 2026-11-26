@@ -10,6 +10,7 @@
 // clang-format on
 
 #include "App/Core.h"
+#include "Core/Memory/NativeThreadStack.h"
 
 #include <algorithm>
 #include <atomic>
@@ -88,6 +89,7 @@ bool CaptureThreadStack(HANDLE thread, Sample &sample)
 /// and meshing workers.
 void SamplerLoopAllThreads(int interval_ms, int delay_ms)
 {
+  const NativeThreadStackOwner nativeStack(NativeThreadKind::Profiler);
   const auto t0 = std::chrono::steady_clock::now();
   const DWORD self_tid = GetCurrentThreadId();
   std::vector<std::pair<DWORD, HANDLE>> threads;
@@ -161,6 +163,7 @@ void SamplerLoopAllThreads(int interval_ms, int delay_ms)
 
 void SamplerLoop(int interval_ms, int delay_ms)
 {
+  const NativeThreadStackOwner nativeStack(NativeThreadKind::Profiler);
   const auto t0 = std::chrono::steady_clock::now();
   while (!gStop.load(std::memory_order_relaxed))
   {
@@ -414,6 +417,7 @@ void StartSampleProfilerIfRequested()
       std::thread(
           [seconds]()
           {
+            const NativeThreadStackOwner nativeStack(NativeThreadKind::ProfilerTimer);
             Sleep(static_cast<DWORD>(seconds) * 1000u);
             FinishSampleProfiler();
           })

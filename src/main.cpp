@@ -17,10 +17,12 @@
 #include "ResourcePacks/ResourcePackSmoke.h"
 
 #include "App/Platform/SampleProfiler.h"
+#include "Core/Memory/NativeThreadStack.h"
 #include <cstdlib>
 #include <cstring>
 int main(int argc, char *argv[])
 {
+  const cutum::NativeThreadStackOwner nativeStack(cutum::NativeThreadKind::Main);
 #ifdef _WIN32
   cutum::CubatariumInstallWindowsDiagnostics();
   cutum::StartSampleProfilerIfRequested();

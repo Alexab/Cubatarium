@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Memory/NativeThreadStack.h"
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -144,6 +145,7 @@ private:
 
   void Run()
   {
+    const NativeThreadStackOwner nativeStack(NativeThreadKind::FrameWatchdog);
     int64_t last_reported_stage_start_ns = 0;
     while (!Stop_.load(std::memory_order_acquire))
     {

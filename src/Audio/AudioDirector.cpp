@@ -2,6 +2,7 @@
 
 #include "App/Platform/Log.h"
 #include "Audio/AudioApi.h"
+#include "Core/Memory/NativeThreadStack.h"
 #include "ThirdParty/miniaudio.h"
 
 #include <algorithm>
@@ -543,6 +544,7 @@ float UAudioDirector::SampleJitter() { return Jitter(Random); }
 
 void UAudioDirector::Run()
 {
+  const NativeThreadStackOwner nativeStack(NativeThreadKind::Audio);
   CubatariumSetWorkerJobKind("AudioDirector");
   const std::chrono::steady_clock::time_point start =
       std::chrono::steady_clock::now();

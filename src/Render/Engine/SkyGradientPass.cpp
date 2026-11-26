@@ -1,5 +1,6 @@
 #include "Render/Engine/SkyGradientPass.h"
 
+#include "Core/Memory/NativeThreadStack.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/UnderwaterFogPass.h"
 #include "Render/GlIncludes.h"
@@ -133,6 +134,7 @@ bool USkyGradientPass::UpdateWeatherFieldTexture(const UWorld &world,
           std::launch::async,
           [request, center, resolution, world_size = kWorldSize]()
           {
+            const NativeThreadStackOwner nativeStack(NativeThreadKind::SkyField);
             std::vector<uint8_t> pixels;
             UWorld::ComputeWeatherCoverageField(request, center, world_size,
                                                 resolution, pixels);
