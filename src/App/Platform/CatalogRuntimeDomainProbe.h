@@ -194,6 +194,18 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"preview_bytes", worldgen_palette.previewBytes}, {"content_grid_bytes", worldgen_palette.grid.contentBytes},
       {"picker_grid_bytes", worldgen_palette.grid.pickerBytes}, {"requested", worldgen_palette.totalBytes},
       {"preview_texture_present", worldgen_palette.previewTexturePresent}, {"whole_runtime_complete", false}};
+  const auto preview = application.InspectContentPreviewStorage();
+  const auto previewOwners = out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Preview)];
+  const bool previewJoined = preview.supported && previewOwners == size_t(preview.present);
+  report["content_preview_storage"] = {
+      {"schema", "content-preview-owner.v1"}, {"status", previewJoined ? "PASS" : "UNSUPPORTED"},
+      {"present", preview.present}, {"bindings_match", preview.bindingsMatch}, {"owners", previewOwners},
+      {"renderer_bytes", preview.rendererBytes}, {"vertex_buffer_bytes", preview.vertexBytes},
+      {"index_buffer_bytes", preview.indexBytes}, {"vertex_array_present", bool(preview.vertexArray)},
+      {"framebuffer_present", bool(preview.framebuffer)}, {"target_size", preview.targetSize},
+      {"color_texels", preview.colorTexels}, {"depth_samples", preview.depthSamples},
+      {"shader_present", preview.shaderPresent}, {"creature_source_present", preview.creatureSourcePresent},
+      {"item_source_present", preview.itemSourcePresent}, {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

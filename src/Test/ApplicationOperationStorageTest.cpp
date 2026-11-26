@@ -17,6 +17,7 @@
 #include "Test/CraftingStorageFixture.h"
 #include "Test/AnvilStorageFixture.h"
 #include "Test/WorldGenPaletteStorageFixture.h"
+#include "Test/SharedContentPreviewStorageFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include <fstream>
@@ -489,6 +490,7 @@ int main(int argc,char **argv){
     report["worldgen_palette_storage"]=worldgen_palette_storage_fixture::Run();
     report["worldgen_palette_owner"]=worldgen_palette_storage_fixture::RunOwnerCensus();
     report["worldgen_palette_compact"]=worldgen_palette_storage_fixture::RunCompactLayout();
+    report["content_preview_owner"]=shared_content_preview_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

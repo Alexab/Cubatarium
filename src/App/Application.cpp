@@ -724,6 +724,20 @@ WorldGenPaletteStorage UApplication::InspectWorldGenPaletteStorage() const noexc
   return out;
 }
 
+ContentPreviewRendererStorage UApplication::InspectContentPreviewStorage() const noexcept
+{
+  if (ContentPreviewRenderer && Core)
+    return ContentPreviewRenderer->InspectOwnedStorage(Core->GetObjectLibrary().get(),
+        Core->GetTextureCubeStorage().get(), BlockDefinitions.get(), ShaderManager.get(),
+        CreaturePreviewRenderer.get());
+
+  ContentPreviewRendererStorage out;
+  out.present = bool(ContentPreviewRenderer);
+  out.bindingsMatch = !out.present;
+  out.supported = out.bindingsMatch;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);

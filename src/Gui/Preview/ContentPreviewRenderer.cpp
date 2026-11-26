@@ -24,6 +24,33 @@ namespace
 
 constexpr float kDefaultOrbitDistance = 3.5f;
 constexpr float kFovDeg = 35.0f;
+constexpr int kMinTargetSize = 64;
+constexpr int kMaxTargetSize = 512;
+constexpr std::size_t kCubeVertexBytes = 24 * 5 * sizeof(float);
+constexpr std::size_t kCubeIndexBytes = 36 * sizeof(unsigned int);
+
+void AllocatePreviewColor(int size)
+{
+  GLint unpack = 0;
+  glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack);
+  if (unpack)
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
+  if (unpack)
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(unpack));
+}
+
+void BeginPreviewDraw(int size)
+{
+  glViewport(0, 0, size, size);
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  glDisable(GL_CULL_FACE);
+  const GLfloat background[]{0.12f, 0.12f, 0.14f, 1.0f};
+  glClearBufferfv(GL_COLOR, 0, background);
+  glClear(GL_DEPTH_BUFFER_BIT);
+}
 
 } // namespace
 
@@ -48,17 +75,23 @@ bool UContentPreviewRenderer::Initialize()
   {
     return false;
   }
-  Shader = ShaderManager->CreateShader(
+  auto shader = ShaderManager->CreateShader(
       "gui_prefab_icon", "shaders/vshader.glsl", "shaders/fshader.glsl");
-  if (!Shader || !Shader->IsValid())
+  if (!shader || !shader->IsValid() || !InitCubeMesh())
   {
     return false;
   }
-  return InitCubeMesh();
+  Shader = std::move(shader);
+  return true;
 }
 
 void UContentPreviewRenderer::Shutdown()
 {
+  if (Fbo != 0)
+  {
+    glDeleteFramebuffers(1, &Fbo);
+    Fbo = 0;
+  }
   if (DepthRbo != 0)
   {
     glDeleteRenderbuffers(1, &DepthRbo);
@@ -69,12 +102,12 @@ void UContentPreviewRenderer::Shutdown()
     glDeleteTextures(1, &ColorTex);
     ColorTex = 0;
   }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
   FboSize = 0;
+  if (CubeVao != 0)
+  {
+    glDeleteVertexArrays(1, &CubeVao);
+    CubeVao = 0;
+  }
   if (CubeEbo != 0)
   {
     glDeleteBuffers(1, &CubeEbo);
@@ -85,12 +118,46 @@ void UContentPreviewRenderer::Shutdown()
     glDeleteBuffers(1, &CubeVbo);
     CubeVbo = 0;
   }
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
   Shader.reset();
+}
+
+ContentPreviewRendererStorage UContentPreviewRenderer::InspectOwnedStorage(
+    const UObjectLibrary *objects, const UTextureCubeStorage *textures,
+    const UBlockDefinitionStorage *blocks, const UShaderManager *shaders,
+    const UCreaturePreviewRenderer *creatures) const noexcept
+{
+  ContentPreviewRendererStorage out;
+  out.present = true;
+  if (!objects || !shaders || Objects.get() != objects || Textures.get() != textures ||
+      BlockDefs.get() != blocks || ShaderManager.get() != shaders || Creatures.get() != creatures)
+    return out;
+
+  const bool mesh = CubeVao && CubeVbo && CubeEbo && CubeVbo != CubeEbo;
+  const bool target = Fbo && ColorTex && DepthRbo &&
+                      FboSize >= kMinTargetSize && FboSize <= kMaxTargetSize;
+  if ((!mesh && (CubeVao || CubeVbo || CubeEbo || Shader)) ||
+      (mesh && (!Shader || !Shader->IsValid())) ||
+      (!target && (Fbo || ColorTex || DepthRbo || FboSize)))
+    return out;
+
+  out.rendererBytes = sizeof(*this);
+  out.vertexBytes = mesh ? kCubeVertexBytes : 0;
+  out.indexBytes = mesh ? kCubeIndexBytes : 0;
+  out.targetSize = FboSize;
+  out.colorTexels = static_cast<std::size_t>(FboSize) * FboSize;
+  out.depthSamples = out.colorTexels;
+  out.vertexArray = CubeVao;
+  out.vertexBuffer = CubeVbo;
+  out.indexBuffer = CubeEbo;
+  out.framebuffer = Fbo;
+  out.colorTexture = ColorTex;
+  out.depthBuffer = DepthRbo;
+  out.shaderPresent = bool(Shader);
+  out.creatureSourcePresent = bool(Creatures);
+  out.itemSourcePresent = bool(ItemPreview);
+  out.bindingsMatch = true;
+  out.supported = true;
+  return out;
 }
 
 bool UContentPreviewRenderer::SupportsKind(ContentKind kind) const
@@ -102,13 +169,12 @@ bool UContentPreviewRenderer::SupportsKind(ContentKind kind) const
 
 bool UContentPreviewRenderer::EnsureFboSize(int size)
 {
-  const int clamped = std::max(64, std::min(size, 512));
+  const int clamped = std::clamp(size, kMinTargetSize, kMaxTargetSize);
   if (Fbo != 0 && FboSize == clamped)
   {
     return true;
   }
 
-  UGlStateScope state(static_cast<GlStateMask>(GlStateBit::ViewportFb));
   GLuint nextFbo = 0, nextColor = 0, nextDepth = 0;
   glGenFramebuffers(1, &nextFbo);
   glGenTextures(1, &nextColor);
@@ -118,8 +184,7 @@ bool UContentPreviewRenderer::EnsureFboSize(int size)
   {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, nextColor);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, nullptr);
+    AllocatePreviewColor(clamped);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindFramebuffer(GL_FRAMEBUFFER, nextFbo);
@@ -177,23 +242,50 @@ bool UContentPreviewRenderer::InitCubeMesh()
       0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
       12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
   };
+  static_assert(sizeof(vertices) == kCubeVertexBytes);
+  static_assert(sizeof(indices) == kCubeIndexBytes);
 
-  glGenVertexArrays(1, &CubeVao);
-  glGenBuffers(1, &CubeVbo);
-  glGenBuffers(1, &CubeEbo);
-  glBindVertexArray(CubeVao);
-  glBindBuffer(GL_ARRAY_BUFFER, CubeVbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CubeEbo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  return true;
+  GLuint nextVao = 0, nextVbo = 0, nextEbo = 0;
+  glGenVertexArrays(1, &nextVao);
+  glGenBuffers(1, &nextVbo);
+  glGenBuffers(1, &nextEbo);
+  bool complete = false;
+  if (nextVao && nextVbo && nextEbo)
+  {
+    GLint callerVao = 0, callerArray = 0;
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &callerVao);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &callerArray);
+    glBindVertexArray(nextVao);
+    glBindBuffer(GL_ARRAY_BUFFER, nextVbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nextEbo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    GLint vertexBytes = 0, indexBytes = 0;
+    glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &vertexBytes);
+    glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexBytes);
+    complete = vertexBytes == GLint(sizeof(vertices)) && indexBytes == GLint(sizeof(indices));
+    if (complete)
+    {
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
+      glEnableVertexAttribArray(0);
+      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                            reinterpret_cast<void *>(3 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+    }
+    glBindVertexArray(GLuint(callerVao));
+    glBindBuffer(GL_ARRAY_BUFFER, GLuint(callerArray));
+  }
+  if (complete)
+  {
+    CubeVao = nextVao;
+    CubeVbo = nextVbo;
+    CubeEbo = nextEbo;
+    return true;
+  }
+  glDeleteVertexArrays(1, &nextVao);
+  glDeleteBuffers(1, &nextVbo);
+  glDeleteBuffers(1, &nextEbo);
+  return false;
 }
 
 GLuint UContentPreviewRenderer::GetBlockTexture(BlockId blockId) const
@@ -321,8 +413,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     return 0;
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture.Get());
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(clamped);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -330,13 +421,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
   if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
 
-  glViewport(0, 0, clamped, clamped);
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-  glDisable(GL_CULL_FACE);
-  const GLfloat background[]{0.12f, 0.12f, 0.14f, 1.0f};
-  glClearBufferfv(GL_COLOR, 0, background);
-  glClear(GL_DEPTH_BUFFER_BIT);
+  BeginPreviewDraw(clamped);
 
   if (kind == ContentKind::Object)
   {
@@ -430,19 +515,16 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
 {
   const WorldObjectDefinition *object =
       Objects ? Objects->Get(objectName) : nullptr;
-  if (!object || object->voxels.empty() || !Shader || !EnsureFboSize(size))
+  if (!object || object->voxels.empty() || !Shader)
   {
     return 0;
   }
 
-  UGlStateScope glState(kGlMaskIconFbo);
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
+  if (!EnsureFboSize(size))
+    return 0;
   glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glViewport(0, 0, FboSize, FboSize);
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-  glDisable(GL_CULL_FACE);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  BeginPreviewDraw(FboSize);
 
   const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
 
@@ -486,7 +568,7 @@ GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
                                             int size, float yawDeg,
                                             float pitchDeg)
 {
-  if (!BlockDefs || blockName.empty() || !Shader || !EnsureFboSize(size))
+  if (!BlockDefs || blockName.empty() || !Shader)
   {
     return 0;
   }
@@ -501,14 +583,11 @@ GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
     return 0;
   }
 
-  UGlStateScope glState(kGlMaskIconFbo);
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
+  if (!EnsureFboSize(size))
+    return 0;
   glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glViewport(0, 0, FboSize, FboSize);
-  glEnable(GL_DEPTH_TEST);
-  glDepthMask(GL_TRUE);
-  glDisable(GL_CULL_FACE);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  BeginPreviewDraw(FboSize);
 
   const glm::mat4 projection =
       glm::perspective(glm::radians(kFovDeg), 1.0f, 0.1f, 50.0f);

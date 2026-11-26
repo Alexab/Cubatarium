@@ -56,6 +56,7 @@ class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
 class UContentPreviewRenderer;
+struct ContentPreviewRendererStorage;
 class UCreaturePreviewRenderer;
 class UFpViewmodelRenderer;
 enum class FpSwingKind : uint8_t;
@@ -183,6 +184,7 @@ public:
   PlayerWindowStorage InspectPlayerWindowStorage() const noexcept;
   PaletteGridStorage InspectPaletteGridStorage() const noexcept;
   WorldGenPaletteStorage InspectWorldGenPaletteStorage() const noexcept;
+  ContentPreviewRendererStorage InspectContentPreviewStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

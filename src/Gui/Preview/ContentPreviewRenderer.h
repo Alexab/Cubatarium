@@ -3,6 +3,7 @@
 
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "World/Math/BlockTypes.h"
+#include <cstddef>
 #include <glm/mat4x4.hpp>
 #include <memory>
 #include <string>
@@ -19,6 +20,14 @@ class UTextureCubeStorage;
 class UCreaturePreviewRenderer;
 class UItemPreviewRenderer;
 
+struct ContentPreviewRendererStorage
+{
+  std::size_t rendererBytes{}, vertexBytes{}, indexBytes{}, colorTexels{}, depthSamples{};
+  int targetSize{};
+  GLuint vertexArray{}, vertexBuffer{}, indexBuffer{}, framebuffer{}, colorTexture{}, depthBuffer{};
+  bool present{}, bindingsMatch{}, supported{}, shaderPresent{}, creatureSourcePresent{}, itemSourcePresent{};
+};
+
 class UContentPreviewRenderer
 {
 public:
@@ -31,14 +40,21 @@ public:
                           std::shared_ptr<UItemPreviewRenderer> itemPreview =
                               nullptr);
   ~UContentPreviewRenderer();
+  UContentPreviewRenderer(const UContentPreviewRenderer &) = delete;
+  UContentPreviewRenderer &operator=(const UContentPreviewRenderer &) = delete;
 
   bool Initialize();
   void Shutdown();
+  ContentPreviewRendererStorage InspectOwnedStorage(
+      const UObjectLibrary *objects, const UTextureCubeStorage *textures,
+      const UBlockDefinitionStorage *blocks, const UShaderManager *shaders,
+      const UCreaturePreviewRenderer *creatures) const noexcept;
 
   bool SupportsKind(ContentKind kind) const;
+  // Block and object outputs borrow the current target until resize or shutdown.
   GLuint Render(ContentKind kind, const std::string &id, int size,
                 float yawDeg, float pitchDeg);
-  /// Stable texture for dock preview (not shared with icon-warmup FBO).
+  /// A successful call transfers the output texture to its caller.
   GLuint RenderUnique(ContentKind kind, const std::string &id, int size,
                       float yawDeg, float pitchDeg, float animTimeSec = 0.f,
                       bool animateWalk = false);
