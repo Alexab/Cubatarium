@@ -1058,7 +1058,7 @@ void UCreativePaletteScreen::AppendGridSlotsChunk()
           SelectedEntryId = entry.Id;
           SyncPreviewDock();
           const size_t bar =
-              Hosted ? Session->GetCharacterStatsSnapshot().activeRow : 0;
+              Hosted ? Session->GetActiveHotbarRow() : 0;
           const size_t slot = Session->GetSelectedSlot(bar);
           if (Session->AssignToHotbar(entry, bar, slot))
           {

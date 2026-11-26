@@ -7,6 +7,7 @@
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
+#include "Gui/Screens/PlayerWindowScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Render/Engine/ShaderManager.h"
 #include <nlohmann/json.hpp>
@@ -78,6 +79,15 @@ inline nlohmann::json DeathScreenStorageJson(const DeathScreenStorage &s)
           {"children_bytes", s.children_bytes}, {"text_bytes", s.text_bytes},
           {"callback_present", s.callback_present}, {"callback_supported", s.callback_supported},
           {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
+}
+
+inline nlohmann::json PlayerWindowStorageJson(const PlayerWindowStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"present", s.present}, {"section", s.section}, {"screen_bytes", s.screen_bytes},
+          {"widgets", s.widgets}, {"widget_bytes", s.widget_bytes}, {"children_bytes", s.children_bytes},
+          {"tab_bytes", s.tab_bytes}, {"text_bytes", s.text_bytes}, {"callback_bytes", s.callback_bytes},
+          {"callbacks", s.callbacks}, {"requested", s.requested}};
 }
 
 namespace gui_context_fixture

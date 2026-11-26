@@ -25,7 +25,6 @@
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/PlayerWindowScreen.h"
-#include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
@@ -181,6 +180,7 @@ public:
   InGameHudStorage InspectHudStorage() const noexcept;
   ConsoleStorage InspectConsoleStorage() const noexcept;
   DeathScreenStorage InspectDeathScreenStorage() const noexcept;
+  PlayerWindowStorage InspectPlayerWindowStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;
@@ -303,7 +303,6 @@ private:
   bool PaletteOpen{false};
   bool WorldGenOpen{false};
   bool CharacterSheetOpen{false};
-  bool SurvivalInventoryOpen{false};
   bool CraftingOpen{false};
   bool AnvilOpen{false};
   bool DeathScreenOpen{false};
@@ -320,7 +319,6 @@ private:
     Hud,
     WorldGen,
     CharacterSheet,
-    SurvivalInventory,
     Crafting,
     Anvil,
     Death
@@ -357,7 +355,6 @@ private:
   std::unique_ptr<UInGameHudScreen> HudScreen;
   std::unique_ptr<UConsoleScreen> ConsoleScreen;
   std::unique_ptr<UCreativePaletteScreen> PaletteScreen;
-  std::unique_ptr<USurvivalInventoryScreen> SurvivalInventoryScreen;
   std::unique_ptr<UCraftingScreen> CraftingScreen;
   std::unique_ptr<UAnvilScreen> AnvilScreen;
   std::unique_ptr<UDeathScreen> DeathScreen;

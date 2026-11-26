@@ -17,6 +17,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace cutum
@@ -58,6 +59,9 @@ public:
 
   size_t GetBarCount() const override;
   std::array<HotbarSlotView, 10> GetBarSlots(size_t barIndex) const override;
+  size_t GetActiveHotbarRow() const;
+  // Use immediately on the UI thread. The creature or catalog owns the text.
+  std::string_view GetControlledDisplayName() const;
   size_t GetSelectedSlot(size_t barIndex) const override;
   void SelectSlot(size_t barIndex, size_t slotIndex) override;
   bool AssignSlot(size_t barIndex, size_t slotIndex,

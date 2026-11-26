@@ -76,7 +76,6 @@
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Screens/SettingsScreen.h"
-#include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Gui/Screens/WorldResourcePacksScreen.h"
 #include "Gui/Widgets/GuiPopupMenu.h"
@@ -686,6 +685,18 @@ DeathScreenStorage UApplication::InspectDeathScreenStorage() const noexcept
   return out;
 }
 
+PlayerWindowStorage UApplication::InspectPlayerWindowStorage() const noexcept
+{
+  if (PlayerWindowScreen && GuiContext)
+    return PlayerWindowScreen->InspectOwnedStorage(*GuiContext, GameSession.get(),
+        CharacterSheetScreen.get(), PaletteScreen.get(), IconSource.get());
+  PlayerWindowStorage out;
+  out.present = PlayerWindowScreen || CharacterSheetScreen || PaletteScreen;
+  out.bindings_match = !out.present;
+  out.supported = out.bindings_match;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
@@ -1231,17 +1242,11 @@ void UApplication::ShowInGameHud()
   OverlayPopup = std::move(popup);
   ConsoleScreen = std::move(console);
 
-  PaletteScreen = std::make_unique<UCreativePaletteScreen>(
+  auto palette = std::make_unique<UCreativePaletteScreen>(
       &GameSession->GetContentCatalog(), GameSession.get(), icons, preview);
-  PaletteScreen->OnAttach(*GuiContext);
-  PaletteScreen->Build(*GuiContext);
-  PaletteScreen->SetVisible(false);
-
-  SurvivalInventoryScreen = std::make_unique<USurvivalInventoryScreen>(
-      &GameSession->GetContentCatalog(), GameSession.get(), icons);
-  SurvivalInventoryScreen->OnAttach(*GuiContext);
-  SurvivalInventoryScreen->Build(*GuiContext);
-  SurvivalInventoryScreen->SetVisible(false);
+  palette->OnAttach(*GuiContext);
+  palette->Build(*GuiContext);
+  palette->SetVisible(false);
 
   CraftingScreen =
       std::make_unique<UCraftingScreen>(GameSession.get(), World.get(), icons);
@@ -1256,17 +1261,27 @@ void UApplication::ShowInGameHud()
 
   BuildDeathOverlay();
 
-  CharacterSheetScreen = std::make_unique<UCharacterSheetScreen>(
+  auto character = std::make_unique<UCharacterSheetScreen>(
       GameSession.get(), CreaturePreviewRenderer.get(), icons);
-  CharacterSheetScreen->OnAttach(*GuiContext);
-  CharacterSheetScreen->Build(*GuiContext);
-  CharacterSheetScreen->SetVisible(false);
-  PlayerWindowScreen = std::make_unique<UPlayerWindowScreen>(
-      GameSession.get(), CharacterSheetScreen.get(), PaletteScreen.get(),
-      icons);
-  PlayerWindowScreen->OnAttach(*GuiContext);
-  PlayerWindowScreen->Build(*GuiContext);
-  CharacterSheetScreen->SetVisible(false);
+  character->OnAttach(*GuiContext);
+  character->Build(*GuiContext);
+  character->SetVisible(false);
+  auto playerWindow = std::make_unique<UPlayerWindowScreen>(
+      GameSession.get(), character.get(), palette.get(), icons);
+  playerWindow->OnAttach(*GuiContext);
+  playerWindow->Build(*GuiContext);
+  character->SetVisible(false);
+  for (auto &capture : OverlayCaptures)
+  {
+    if (capture == OverlayPointerCapture::CharacterSheet || capture == OverlayPointerCapture::Palette)
+    {
+      capture = OverlayPointerCapture::None;
+      OverlayPressedWidget = nullptr;
+    }
+  }
+  PlayerWindowScreen = std::move(playerWindow);
+  CharacterSheetScreen = std::move(character);
+  PaletteScreen = std::move(palette);
 
   WorldGenScreen = std::make_unique<UWorldGenPaletteScreen>(
       World.get(), &GameSession->GetContentCatalog(), icons, preview);
@@ -1369,7 +1384,7 @@ bool UApplication::UsesUiPointer() const
 {
   return State == AppState::MainMenu || State == AppState::Loading ||
          FreeCursor || ItemLabOpen || ConsoleOpen || PaletteOpen ||
-         WorldGenOpen || CharacterSheetOpen || SurvivalInventoryOpen ||
+         WorldGenOpen || CharacterSheetOpen ||
          CraftingOpen || AnvilOpen || DeathScreenOpen;
 }
 
@@ -1377,7 +1392,7 @@ bool UApplication::BlocksGameMouseLook() const
 {
   return State == AppState::InGame &&
          (FreeCursor || ItemLabOpen || ConsoleOpen || PaletteOpen ||
-          WorldGenOpen || CharacterSheetOpen || SurvivalInventoryOpen ||
+          WorldGenOpen || CharacterSheetOpen ||
           CraftingOpen || AnvilOpen || DeathScreenOpen);
 }
 
@@ -1604,7 +1619,6 @@ void UApplication::EnterInGameInputState()
   PaletteOpen = false;
   WorldGenOpen = false;
   CharacterSheetOpen = false;
-  SurvivalInventoryOpen = false;
   CraftingOpen = false;
   AnvilOpen = false;
   FreeCursor = false;
@@ -1615,10 +1629,6 @@ void UApplication::EnterInGameInputState()
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);
-  }
-  if (SurvivalInventoryScreen)
-  {
-    SurvivalInventoryScreen->SetVisible(false);
   }
   if (CraftingScreen)
   {
@@ -1685,22 +1695,19 @@ void UApplication::OpenPlayerWindow(int section)
   GameSession->ClearPendingAssignment();
   const bool catalog =
       section == 4 && World->GetGameMode() == WorldGameMode::Creative;
+  if (PlayerWindowScreen)
+    PlayerWindowScreen->SelectSection(catalog ? 4 : std::clamp(section, 0, 3));
   PaletteOpen = catalog;
   CharacterSheetOpen = !catalog;
   WorldGenOpen = false;
   CraftingOpen = false;
   AnvilOpen = false;
-  SurvivalInventoryOpen = false;
   if (WorldGenScreen)
     WorldGenScreen->SetVisible(false);
   if (CraftingScreen)
     CraftingScreen->SetVisible(false);
   if (AnvilScreen)
     AnvilScreen->SetVisible(false);
-  if (SurvivalInventoryScreen)
-    SurvivalInventoryScreen->SetVisible(false);
-  if (PlayerWindowScreen)
-    PlayerWindowScreen->SelectSection(catalog ? 4 : std::clamp(section, 0, 3));
   SyncCursorVisibility();
 }
 UGuiWidget *UApplication::GetPlayerWindowRoot()
@@ -1772,12 +1779,6 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
       if (PaletteOpen && PaletteScreen)
       {
         routeUp(GetPlayerWindowRoot());
-      }
-      break;
-    case OverlayPointerCapture::SurvivalInventory:
-      if (SurvivalInventoryOpen && SurvivalInventoryScreen)
-      {
-        routeUp(SurvivalInventoryScreen->GetRoot());
       }
       break;
     case OverlayPointerCapture::Crafting:
@@ -1909,16 +1910,6 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
       if (UGuiWidget *hit = routeRootDown(GetPlayerWindowRoot()))
       {
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::Palette;
-        OverlayPressedWidget = hit;
-        return true;
-      }
-    }
-    if (SurvivalInventoryOpen && SurvivalInventoryScreen)
-    {
-      if (UGuiWidget *hit = routeRootDown(SurvivalInventoryScreen->GetRoot()))
-      {
-        OverlayCaptures[pointerIndex] =
-            OverlayPointerCapture::SurvivalInventory;
         OverlayPressedWidget = hit;
         return true;
       }
@@ -2179,17 +2170,12 @@ void UApplication::OpenCraftingScreen()
   CraftingScreen->SetWorld(World.get());
   CraftingOpen = true;
   AnvilOpen = false;
-  SurvivalInventoryOpen = false;
   PaletteOpen = false;
   WorldGenOpen = false;
   CharacterSheetOpen = false;
   if (AnvilScreen)
   {
     AnvilScreen->SetVisible(false);
-  }
-  if (SurvivalInventoryScreen)
-  {
-    SurvivalInventoryScreen->SetVisible(false);
   }
   if (PaletteScreen)
   {
@@ -2216,17 +2202,12 @@ void UApplication::OpenAnvilScreen()
   AnvilScreen->SetWorld(World.get());
   AnvilOpen = true;
   CraftingOpen = false;
-  SurvivalInventoryOpen = false;
   PaletteOpen = false;
   WorldGenOpen = false;
   CharacterSheetOpen = false;
   if (CraftingScreen)
   {
     CraftingScreen->SetVisible(false);
-  }
-  if (SurvivalInventoryScreen)
-  {
-    SurvivalInventoryScreen->SetVisible(false);
   }
   if (PaletteScreen)
   {
@@ -3244,6 +3225,14 @@ void UApplication::UpdateNativeItemsQa(double dt)
       itemLabQaDone = true;
       RunItemLabQa(path);
     }
+  static bool playerWindowQaDone = false;
+  if (!playerWindowQaDone && PlayerWindowScreen && World && World->GetControlledCreature())
+    if (const char *path = std::getenv("CUBA_PLAYER_WINDOW_QA"); path && *path)
+    {
+      playerWindowQaDone = true;
+      RunPlayerWindowQa(path);
+      EnterInGameInputState();
+    }
   static bool itemsQaDone = false;
   if (!itemsQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEMS_INVENTORY_QA"))
@@ -3616,10 +3605,6 @@ void UApplication::Update(double dt)
     if (PaletteScreen)
     {
       PaletteScreen->Update(dt);
-    }
-    if (SurvivalInventoryOpen && SurvivalInventoryScreen)
-    {
-      SurvivalInventoryScreen->Update(dt);
     }
     if (CraftingOpen && CraftingScreen)
     {
@@ -4065,13 +4050,6 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
       PaletteScreen->RenderPreview();
     GuiContext->RenderOverlay(*root, width, height, false);
   }
-  if (SurvivalInventoryOpen && SurvivalInventoryScreen &&
-      SurvivalInventoryScreen->GetRoot())
-  {
-    notifyViewport(SurvivalInventoryScreen.get());
-    GuiContext->RenderOverlay(*SurvivalInventoryScreen->GetRoot(), width,
-                              height, false);
-  }
   if (CraftingOpen && CraftingScreen && CraftingScreen->GetRoot())
   {
     notifyViewport(CraftingScreen.get());
@@ -4094,8 +4072,7 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
     GuiContext->RenderOverlay(*WorldGenScreen->GetRoot(), width, height, false);
   }
 #if defined(__ANDROID__)
-  if (HudScreen && (PaletteOpen || WorldGenOpen || SurvivalInventoryOpen ||
-                    CraftingOpen || AnvilOpen))
+  if (HudScreen && (PaletteOpen || WorldGenOpen || CraftingOpen || AnvilOpen))
   {
     HudScreen->RenderTouchControlsOverlay(*GuiContext, width, height);
   }
@@ -4136,7 +4113,7 @@ bool UApplication::WantsCaptureKeyboard() const
     return true;
   }
   return ItemLabOpen || ConsoleOpen || PaletteOpen || WorldGenOpen ||
-         CharacterSheetOpen || SurvivalInventoryOpen || CraftingOpen ||
+         CharacterSheetOpen || CraftingOpen ||
          AnvilOpen || DeathScreenOpen || GuiContext->WantsCaptureKeyboard();
 }
 
@@ -4144,7 +4121,7 @@ bool UApplication::AllowsWorldMousePlacement() const
 {
   return State == AppState::InGame && !ItemLabOpen && !ConsoleOpen &&
          !PaletteOpen && !WorldGenOpen && !CharacterSheetOpen &&
-         !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
+         !CraftingOpen && !AnvilOpen &&
          !DeathScreenOpen && !DeathSpectating &&
          !(World && World->IsHardcoreDead());
 }

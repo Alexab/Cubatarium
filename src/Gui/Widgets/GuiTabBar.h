@@ -18,6 +18,7 @@ public:
 
   void SetTabs(std::vector<std::string> labels);
   void SetTabEnabled(std::vector<bool> enabled);
+  void SetTabEnabled(size_t index, bool enabled);
   int GetActiveTab() const { return ActiveTab; }
   void SetActiveTab(int tab);
   void SetOnTabChanged(std::function<void(int)> handler);
@@ -28,6 +29,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UPlayerWindowScreen;
   const GuiTheme *Theme;
   std::vector<std::string> Labels;
   std::vector<bool> Enabled;

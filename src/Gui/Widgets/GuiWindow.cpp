@@ -10,6 +10,13 @@ UGuiWindow::UGuiWindow(const GuiTheme *theme, std::string title)
 {
 }
 
+void UGuiWindow::SetTitle(std::string_view prefix, std::string_view suffix)
+{
+  Title.reserve(prefix.size() + suffix.size());
+  Title.assign(prefix);
+  Title.append(suffix);
+}
+
 GuiRect UGuiWindow::GetClientArea() const
 {
   if (!ChromeVisible)

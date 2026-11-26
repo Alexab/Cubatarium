@@ -600,7 +600,6 @@ set(SOURCES
     src/Gui/Screens/PlayerWindowScreen.cpp
     src/Gui/Screens/CharacterSheetScreen.cpp
     src/Gui/Screens/CreativePaletteScreen.cpp
-    src/Gui/Screens/SurvivalInventoryScreen.cpp
     src/Gui/Screens/DeathScreen.cpp
     src/Gui/Screens/CraftingScreen.cpp
     src/Gui/Screens/AnvilScreen.cpp
@@ -811,7 +810,6 @@ set(HEADERS
     src/Gui/Screens/ConsoleScreen.h
     src/Gui/Screens/WorldGenPaletteScreen.h
     src/Gui/Screens/CreativePaletteScreen.h
-    src/Gui/Screens/SurvivalInventoryScreen.h
     src/Gui/Screens/DeathScreen.h
     src/Gui/Screens/CraftingScreen.h
     src/Gui/Screens/AnvilScreen.h

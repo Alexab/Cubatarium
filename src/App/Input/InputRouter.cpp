@@ -207,17 +207,6 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         app.SyncCursorVisibility();
         return true;
       }
-      if (app.SurvivalInventoryOpen)
-      {
-        app.SurvivalInventoryOpen = false;
-        if (app.SurvivalInventoryScreen)
-        {
-          app.SurvivalInventoryScreen->SetVisible(false);
-        }
-        app.GuiContext->ClearInputState();
-        app.SyncCursorVisibility();
-        return true;
-      }
       if (app.CraftingOpen)
       {
         app.CraftingOpen = false;
@@ -447,7 +436,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
             from.slot = source % 10;
             SlotAddress to;
             to.surface = SlotSurface::Hotbar;
-            to.bar = app.GameSession->GetCharacterStatsSnapshot().activeRow;
+            to.bar = app.GameSession->GetActiveHotbarRow();
             to.slot = static_cast<size_t>(hotbarSlot);
             app.GameSession->BeginDragFromSlot(from, entry);
             app.GameSession->DropOnSlot(to);
@@ -711,13 +700,6 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
           return true;
         }
         break;
-      case UApplication::OverlayPointerCapture::SurvivalInventory:
-        if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen &&
-            routeCapturedMove(app.SurvivalInventoryScreen->GetRoot()))
-        {
-          return true;
-        }
-        break;
       case UApplication::OverlayPointerCapture::Crafting:
         if (app.CraftingOpen && app.CraftingScreen &&
             routeCapturedMove(app.CraftingScreen->GetRoot()))
@@ -768,10 +750,6 @@ bool UInputRouter::RouteMouseMove(UApplication &app, int x, int y,
     if (app.CharacterSheetOpen && app.CharacterSheetScreen)
     {
       handled |= routeMove(app.GetPlayerWindowRoot());
-    }
-    if (app.SurvivalInventoryOpen && app.SurvivalInventoryScreen)
-    {
-      handled |= routeMove(app.SurvivalInventoryScreen->GetRoot());
     }
     if (app.CraftingOpen && app.CraftingScreen)
     {

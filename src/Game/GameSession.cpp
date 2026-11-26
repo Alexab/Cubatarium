@@ -20,7 +20,6 @@
 #include "Gui/Screens/CharacterSheetScreen.h"
 #include "Gui/Screens/CraftingScreen.h"
 #include "Gui/Screens/CreativePaletteScreen.h"
-#include "Gui/Screens/SurvivalInventoryScreen.h"
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Render/Camera/Camera.h"
@@ -77,6 +76,13 @@ const UCreatureInventory *GetControlledInventory(const UWorld *world)
     return &creature->GetInventory();
   }
   return nullptr;
+}
+
+const std::string &ControlledDisplayName(const UWorld &world, const UCreature &creature)
+{
+  if (const auto *definition = world.GetCreatureDefinition(creature.GetTypeId()))
+    return definition->displayName;
+  return creature.GetTypeId();
 }
 
 } // namespace
@@ -234,6 +240,20 @@ std::array<HotbarSlotView, 10> UGameSession::GetBarSlots(size_t barIndex) const
     }
   }
   return slots;
+}
+
+size_t UGameSession::GetActiveHotbarRow() const
+{
+  const auto *inventory = GetControlledInventory(static_cast<const UWorld *>(World.get()));
+  return inventory ? inventory->GetActiveBarIndex() : 0;
+}
+
+std::string_view UGameSession::GetControlledDisplayName() const
+{
+  if (World)
+    if (const auto *creature = World->GetControlledCreature())
+      return ControlledDisplayName(*World, *creature);
+  return {};
 }
 
 size_t UGameSession::GetSelectedSlot(size_t barIndex) const
@@ -1216,15 +1236,7 @@ CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
     }
   }
 
-  if (const CreatureDefinition *def =
-          World->GetCreatureDefinition(creature->GetTypeId()))
-  {
-    snap.displayName = def->displayName;
-  }
-  else
-  {
-    snap.displayName = creature->GetTypeId();
-  }
+  snap.displayName = ControlledDisplayName(*World, *creature);
   return snap;
 }
 

@@ -38,6 +38,12 @@ void UGuiTabBar::SetActiveTab(int tab)
   }
 }
 
+void UGuiTabBar::SetTabEnabled(size_t index, bool enabled)
+{
+  if (index < Enabled.size())
+    Enabled[index] = enabled;
+}
+
 void UGuiTabBar::SetOnTabChanged(std::function<void(int)> handler)
 {
   OnTabChanged = std::move(handler);

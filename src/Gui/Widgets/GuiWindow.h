@@ -3,6 +3,7 @@
 
 #include "Gui/Widgets/GuiPanel.h"
 #include <string>
+#include <string_view>
 
 namespace cutum
 {
@@ -18,6 +19,8 @@ public:
   void Draw(UGuiRenderer &renderer) override;
 
 private:
+  friend class UPlayerWindowScreen;
+  void SetTitle(std::string_view prefix, std::string_view suffix);
   std::string Title;
   bool ChromeVisible{true};
 };

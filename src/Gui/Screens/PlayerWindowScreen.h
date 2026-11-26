@@ -13,6 +13,14 @@ class UGuiWindow;
 class UGuiTabBar;
 class UGuiSlot;
 class UPlayerSectionHost;
+struct PlayerWindowStorage
+{
+  size_t screen_bytes{}, widgets{}, widget_bytes{}, children_bytes{};
+  size_t tab_bytes{}, text_bytes{}, callback_bytes{}, callbacks{}, requested{};
+  int section{};
+  bool present{}, bindings_match{}, supported{};
+};
+
 class UPlayerWindowScreen : public UGuiScreenBase
 {
 public:
@@ -29,8 +37,16 @@ public:
   unsigned GetHotbarIconTexture(size_t index) const;
   const PlayerWindowLayout &GetLayout() const { return Layout; }
   int GetSection() const { return Section; }
+  PlayerWindowStorage InspectOwnedStorage(const UGuiContext &context,
+                                         const UGameSession *session,
+                                         const UCharacterSheetScreen *character,
+                                         const UCreativePaletteScreen *catalog,
+                                         const IUGuiIconSource *icons) const noexcept;
 
 private:
+  struct TabAction;
+  struct SlotClickAction;
+  struct SlotDragAction;
   void Relayout();
   UGameSession *Session;
   UCharacterSheetScreen *Character;

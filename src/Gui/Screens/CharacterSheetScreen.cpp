@@ -235,7 +235,7 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
               }
               SlotAddress address;
               address.surface = SlotSurface::Hotbar;
-              address.bar = session->GetCharacterStatsSnapshot().activeRow;
+              address.bar = session->GetActiveHotbarRow();
               address.slot = session->GetSelectedSlot(address.bar);
               const InventoryEntryRef entry =
                   session->GetHotbarEntryRef(address.bar, address.slot);
@@ -254,7 +254,7 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
               }
               SlotAddress address;
               address.surface = SlotSurface::Hotbar;
-              address.bar = session->GetCharacterStatsSnapshot().activeRow;
+              address.bar = session->GetActiveHotbarRow();
               address.slot = session->GetSelectedSlot(address.bar);
               const InventoryEntryRef entry =
                   session->GetHotbarEntryRef(address.bar, address.slot);

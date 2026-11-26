@@ -1,0 +1,241 @@
+{
+  "schema": "s4-e12-w27-player-window.v1",
+  "status": "SCOPED_PLAYER_WINDOW_PASS_E12_OPEN",
+  "baseline_commit": "1e8762347a525f80f90c0e49a932ce32b657d0af",
+  "prior_certificate": "S4_02_E12_W26_DEATH_SCREEN_CERTIFICATE_2026_11_26.json",
+  "summary": "W27 accounts the actual shared player window shell, fourteen owned widgets, title and tab backing, and twenty-one known actions. The host borrows the existing character and catalog pages. The application stages both pages and their host before publishing the replacement. Refused chrome rebuilds preserve the previous widget tree and bindings. Stable empty footer update, section routing, hit testing and inspection allocate nothing in the measured path. The footer and hosted input obtain the active row directly. The title uses the existing display-name source and grows its own backing without staging character stats. The obsolete standalone survival screen could never be opened by the application and no longer allocates a hidden tree on world entry. The dedicated native player-window fixture confirms both modes, layouts, slot actions and preserved page state under stationary observation. The earlier combined inventory fixture changed the player position in setup and its observation verdict remains recorded separately. All 46 Release groups pass. E12 and the full S0–S6 acceptance remain open.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W27. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. Continue within the actual CharacterSheet and CreativePalette pages with owned and staged grid rows, slot actions and progressive icon refresh. Verify allocation refusal, retry, and preserved page state through tab switching. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "build_attempts": 27,
+    "cold": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callbacks": 21,
+      "children_bytes": 104,
+      "present": true,
+      "requested": 5116,
+      "screen_bytes": 312,
+      "section": 0,
+      "status": "PASS",
+      "tab_bytes": 164,
+      "text_bytes": 0,
+      "widget_bytes": 4536,
+      "widgets": 14
+    },
+    "opaque_action_rejected": true,
+    "quiet_allocate0": true,
+    "rebuild_refusal_prefixes": 18,
+    "retired": true,
+    "status": "PASS",
+    "updated": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callbacks": 21,
+      "children_bytes": 104,
+      "present": true,
+      "requested": 5148,
+      "screen_bytes": 312,
+      "section": 0,
+      "status": "PASS",
+      "tab_bytes": 164,
+      "text_bytes": 32,
+      "widget_bytes": 4536,
+      "widgets": 14
+    }
+  },
+  "native": {
+    "initial_menu": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callbacks": 0,
+      "children_bytes": 0,
+      "present": false,
+      "requested": 0,
+      "screen_bytes": 0,
+      "section": 0,
+      "status": "PASS",
+      "tab_bytes": 0,
+      "text_bytes": 0,
+      "widget_bytes": 0,
+      "widgets": 0
+    },
+    "in_game": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callbacks": 21,
+      "children_bytes": 104,
+      "present": true,
+      "requested": 5116,
+      "screen_bytes": 312,
+      "section": 0,
+      "status": "PASS",
+      "tab_bytes": 164,
+      "text_bytes": 0,
+      "widget_bytes": 4536,
+      "widgets": 14
+    },
+    "before_save_ui_probe": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callbacks": 21,
+      "children_bytes": 104,
+      "present": true,
+      "requested": 5116,
+      "screen_bytes": 312,
+      "section": 0,
+      "status": "PASS",
+      "tab_bytes": 164,
+      "text_bytes": 0,
+      "widget_bytes": 4536,
+      "widgets": 14
+    }
+  },
+  "native_aggregate": "UNTESTED",
+  "native_input": {
+    "schema": "player-window-native-input.v1",
+    "smoke_exit": 2,
+    "smoke_status": "UNTESTED",
+    "world_source_sha256": "a5c7c5bd3920702f6bc2b298ece80406b3056ab0ee90031b743961eee241043b",
+    "world_source_preserved": true,
+    "layout_cases": 72,
+    "checks": 7,
+    "passed": true,
+    "config_bytes_restored": true,
+    "report_sha256": "74f2dbf816365fe8b8a432999bafed1ade43755fb0feeb6d27e9d388e22226d0"
+  },
+  "native_input_checks": [
+    {
+      "name": "shared footer transfers worn instances into the active inventory row",
+      "passed": true
+    },
+    {
+      "name": "shared footer selects within the active inventory row",
+      "passed": true
+    },
+    {
+      "name": "nonzero catalog scroll survives backpack roundtrip",
+      "passed": true
+    },
+    {
+      "name": "catalog selection and preview rotation use the shared input tree",
+      "passed": true
+    },
+    {
+      "name": "backpack search and section state survive catalog roundtrip",
+      "passed": true
+    },
+    {
+      "name": "catalog category selection and scroll survive backpack roundtrip",
+      "passed": true
+    },
+    {
+      "name": "unapplied appearance draft survives catalog roundtrip",
+      "passed": true
+    }
+  ],
+  "combined_fixture_diagnostic": {
+    "player_window": "PASS",
+    "smoke": "FAIL",
+    "observation": {
+      "status": "FAIL",
+      "reason": "missing_stationary_no_relocation_completion"
+    },
+    "relocations": 1,
+    "report_sha256": "28d91f71b7203288849f2c6bb80355e2628001839d42972c6dd96fa22820f825"
+  },
+  "source_sha256": "b9b9c924c7b42a0ae025f7882f0a67b74a20dd9e4d6efdb5d6cb71c972595c24",
+  "source_sha256_raw": {
+    "CMakeLists.txt": "48ebe3758e39739a52dafefa48a414ba551043c0ca299abde4eb1cf26ee2147e",
+    "src/App/Application.cpp": "003de34dccb8340ec7a247f78ea0a2ef6a09cdb772706e9ddd2f4b91e8dfba8b",
+    "src/App/Application.h": "ce5cbc0ae872c8c5213c76f5e1e19a7fc8147354808877b1538c8eb52c3efc97",
+    "src/App/Input/InputRouter.cpp": "f63cbfdaec9cd295df66ab6c9ed62b67f44c688a9b809ef255a624d1f2229859",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "7c694611383e0e7e719352369374c1dd6f0b713e0bbcf05e82a905d4d0b7b357",
+    "src/App/Platform/SaveErrorUiProbe.h": "0014a01814740ddd9563bdb01ccd01f892d938e35345341acb3199eb63247621",
+    "src/Game/GameSession.cpp": "eaf13a7a5f45c1acb8d0730d88fedb0de8ca8f919620352de8142e04cdbfd23c",
+    "src/Game/GameSession.h": "b27716b1dc5aa619469d73f71ec2cf4ed66a90a221d64e5457ac9d4a10a14986",
+    "src/Gui/Screens/CharacterSheetScreen.cpp": "dacf1a484478fdbd3b24e0a090daa9f588f798f5fbc37f3e2d1cda1bf44efb52",
+    "src/Gui/Screens/CreativePaletteScreen.cpp": "715765a974319bb63a5a7bf74e67b607c009f4652f724c36fb7914f323dc7d40",
+    "src/Gui/Screens/PlayerWindowScreen.cpp": "34a00682dd62d222623cca8b9f43dad45fd7425ecd27e5aa15266215c3da51e1",
+    "src/Gui/Screens/PlayerWindowScreen.h": "a33b8ab6401bfb3c084d8866a7f777f3717d6e37dd0a387de786c4ea82909a21",
+    "src/Gui/Widgets/GuiPanel.h": "108d7d5df096728323cf88626d1456fef5745b2ec5f71d6fd5a559615e2879d9",
+    "src/Gui/Widgets/GuiSlot.h": "b5c453e94bc358c0947fa3d863e2b1c20ddea0af78b48ac2c1e12861d462927b",
+    "src/Gui/Widgets/GuiTabBar.cpp": "7b740c10a87f38088b6ba279f9b3b5a657acef916d823fb563d9d26cdf5e79d1",
+    "src/Gui/Widgets/GuiTabBar.h": "9e9884fc5f589629776b05959a131c596038a0b6bb229c547443b0728e2d0a35",
+    "src/Gui/Widgets/GuiWindow.cpp": "e79413d7b319153917d3e124a01b23cc4812aabab297c064c1354f752c60840e",
+    "src/Gui/Widgets/GuiWindow.h": "fb88bc5ff1c34bdbf89de3395a9a8af042549dcf7440ac3b4977f4ef0c3e8c42",
+    "src/Test/ApplicationOperationStorageTest.cpp": "a5e8e6b8b5da8ec74852204eea742b4a6766295848c26d2b26024a105ff96726",
+    "src/Test/GuiContextStorageFixture.h": "be86e07a09341e6574c08f1dfe646a34f65d774d023e31d03400eb67ae35ba48",
+    "src/Test/PlayerWindowStorageFixture.h": "5c3e86f477ee6b4de5e6131c08a3506720b53e68dee54741a497f9337d563259"
+  },
+  "removed_sources": [
+    "src/Gui/Screens/SurvivalInventoryScreen.cpp",
+    "src/Gui/Screens/SurvivalInventoryScreen.h"
+  ],
+  "desktop_exe_sha256": "e2858f00dcceb45287229f92186aab9742c2e155913d3f293756b91018ae33fa",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "config_bytes_restored": true,
+  "whole_runtime_complete": false,
+  "completed_packages": "23/42",
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-player-window-final-focused.json": "288710ca975d7ca53e4d159ce25cc1bfbaedada62b59323b8ab8ee3ba5b031da",
+    "build/desktop-msvc/s4-player-window-final-application-ops.json": "e2b8cdb388dbe4fd7407476db6c5c634539888da9d948abf77a47b7c78fb3082",
+    "build/desktop-msvc/s4-player-window-final-regressions.json": "fdcf6c4c7e14f4bbb71715bfd2882cdec2522c76aa004badc008454ecf2b57b6",
+    "build/desktop-msvc/s4-player-window-final-provenance.json": "ea3c2b387fdd41499b2f5f388686548bd7fd60562bace27b7906cba766089c7c",
+    "build/desktop-msvc/s4-player-window-final-native/smoke-verdict.json": "33c4ff2b64d2a462655a1695a31f4fa87ef42dbff7dc2dbc52ca063d4d33db34",
+    "build/desktop-msvc/s4-player-window-final-native/owner-domain/flight-menu.json": "71dd1c87852bf1812c1108f24b7f4e4cdba30ef6f23c1aa61a86d8891bfcdcf1",
+    "build/desktop-msvc/s4-player-window-final-native/owner-domain/flight-in-game.json": "8b26bc07512c10ef25d3f65bc3ff28261a9d558b53f6a5743dea2969f4b6f406",
+    "build/desktop-msvc/s4-player-window-final-native/terrain-save-probe/save-error-ui/report.json": "f85579cb5fcd55efa83de6a39888255dfe10b90cd546ed3ae5a2614dd0bdb196",
+    "build/desktop-msvc/s4-player-window-final-input-native/input-verdict.json": "88f46d0b598ba678b76d1ea9090a09371a4aed2ef20c21ed1e042d8b28354f93",
+    "build/desktop-msvc/s4-player-window-final-input-native/inventory.json.player-window.json": "74f2dbf816365fe8b8a432999bafed1ade43755fb0feeb6d27e9d388e22226d0",
+    "build/desktop-msvc/s4-player-window-final-input-native/smoke-verdict.json": "a09c5645bb5697be557338ba7e8f1ec9d6ff35e661c6f4745b705b1476fb2841"
+  }
+}
