@@ -179,6 +179,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   report["main_menu_storage"]=MainMenuStorageJson(application.InspectMainMenuStorage());
   report["hud_storage"]=InGameHudStorageJson(application.InspectHudStorage());
   report["console_storage"]=ConsoleStorageJson(application.InspectConsoleStorage());
+  report["death_screen_storage"]=DeathScreenStorageJson(application.InspectDeathScreenStorage());
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

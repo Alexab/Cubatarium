@@ -4,6 +4,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -67,6 +68,16 @@ inline nlohmann::json ConsoleStorageJson(const ConsoleStorage &s)
           {"popup_bytes", s.popup_bytes}, {"popup_entries", s.popup_entries}, {"popup_open", s.popup_open},
           {"popup_slots", s.popup_slots}, {"popup_text", s.popup_text}, {"callback_bytes", s.callback_bytes},
           {"requested", s.requested}};
+}
+
+inline nlohmann::json DeathScreenStorageJson(const DeathScreenStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"present", s.present}, {"visible", s.visible}, {"hardcore", s.hardcore},
+          {"screen_bytes", s.screen_bytes}, {"widgets", s.widgets}, {"widget_bytes", s.widget_bytes},
+          {"children_bytes", s.children_bytes}, {"text_bytes", s.text_bytes},
+          {"callback_present", s.callback_present}, {"callback_supported", s.callback_supported},
+          {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
 }
 
 namespace gui_context_fixture

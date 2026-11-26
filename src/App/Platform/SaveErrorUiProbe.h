@@ -34,6 +34,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
   Json report = {{"schema", "save-error-ui-native.v1"}, {"status", "FAIL"}};
   report["hud_storage_live"] = InGameHudStorageJson(application.InspectHudStorage());
   report["console_storage_live"] = ConsoleStorageJson(application.InspectConsoleStorage());
+  report["death_screen_storage_live"] = DeathScreenStorageJson(application.InspectDeathScreenStorage());
   auto require = [](bool value, const char *message)
   {
     if (!value)

@@ -83,6 +83,7 @@ class UApplication : public IUGuiMenuHost
   friend struct ApplicationScheduleShowMenuAction;
   friend struct ApplicationShutdownCompleteAction;
   friend struct ApplicationOperationSourceProbe;
+  friend class UDeathScreen;
   friend class UScreenNavigator;
   friend class UInputRouter;
 public:
@@ -179,6 +180,7 @@ public:
   MainMenuStorage InspectMainMenuStorage() const noexcept;
   InGameHudStorage InspectHudStorage() const noexcept;
   ConsoleStorage InspectConsoleStorage() const noexcept;
+  DeathScreenStorage InspectDeathScreenStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;
@@ -252,6 +254,12 @@ private:
   void RefreshBlockCatalog();
   void RefreshCreatureCatalog();
   void ShowInGameHud();
+  void BuildDeathOverlay();
+  void UpdateDeathOverlay();
+  void SetDeathOverlayVisible(bool visible);
+  void RespawnPlayerFromDeathScreen();
+  void SpectateFromDeathScreen();
+  void ScheduleReturnFromDeathScreen();
   void SyncCursorVisibility();
   void SyncGameplayLookCapture();
   /// After projection change: visible cursor for iso, refresh aim ray.
@@ -299,7 +307,7 @@ private:
   bool CraftingOpen{false};
   bool AnvilOpen{false};
   bool DeathScreenOpen{false};
-  bool HardcoreSpectating{false};
+  bool DeathSpectating{false};
   bool FreeCursor{false};
   /// Подавить следующий glfw char после открытия консоли (символ
   /// клавиши-тоггла).

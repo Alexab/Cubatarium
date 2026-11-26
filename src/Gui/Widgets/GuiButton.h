@@ -44,6 +44,7 @@ public:
 private:
   friend class UWorldProgressScreen;
   friend class UMainMenuScreen;
+  friend class UDeathScreen;
   glm::vec4 StateColor() const;
 
   const GuiTheme *Theme;

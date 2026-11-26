@@ -9,6 +9,7 @@
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
 #include "Gui/Widgets/GuiButton.h"
+#include "Gui/Widgets/GuiLabel.h"
 #include <fstream>
 #include <iostream>
 namespace {
@@ -249,6 +250,179 @@ nlohmann::json CheckWorldProgressRequests(cutum::UApplication &app)
           {"scheduled_actions", true}, {"retired", true}};
 }
 }
+static nlohmann::json CheckDeathScreenRequests(cutum::UApplication &app)
+{
+  using namespace cutum;
+  using Probe = ApplicationOperationSourceProbe;
+  using gui_context_fixture::Require;
+  using Json = nlohmann::json;
+
+  size_t buildAttempts{}, rebuildAttempts{}, rebuildPeak{};
+  DeathScreenStorage cold, expanded, rebuilt;
+  const std::string cause(2048, 'r');
+  UGuiContext foreignContext;
+  {
+    observation::Scope epoch;
+    auto &screen = Probe::BuildDeath(app);
+    buildAttempts = observation::State.attempts;
+    cold = app.InspectDeathScreenStorage();
+    Require(cold.supported && cold.present && !cold.visible && cold.widgets == 6 &&
+                !cold.callback_bytes && cold.requested == observation::State.live,
+            "death overlay initial ownership equality");
+    Require(!screen.InspectOwnedStorage(foreignContext, app).supported,
+            "death overlay rejects foreign GUI context");
+    screen.SetHardcore(true);
+    screen.SetCause(cause);
+    expanded = app.InspectDeathScreenStorage();
+    Require(expanded.supported && expanded.hardcore && expanded.text_bytes > 2048 &&
+                expanded.requested == observation::State.live,
+            "death overlay long caption ownership equality");
+
+    const auto before = observation::State.attempts;
+    observation::State.fail_after = before;
+    const auto passive = app.InspectDeathScreenStorage();
+    Require(passive.supported && observation::State.attempts == before,
+            "death overlay census allocates nothing");
+    observation::State.fail_after = SIZE_MAX;
+
+    screen.Build(app.GetGui());
+    rebuildAttempts = observation::State.attempts - before;
+    rebuildPeak = observation::State.peak;
+    rebuilt = app.InspectDeathScreenStorage();
+    Require(rebuilt.supported && rebuilt.requested == observation::State.live &&
+                rebuildPeak >= expanded.requested + rebuilt.requested - rebuilt.screen_bytes,
+            "death overlay rebuild measures old and new tree overlap");
+
+    size_t unknownCalls{};
+    auto *respawn = static_cast<UGuiButton *>(screen.GetRoot()->GetChildren()[2].get());
+    respawn->SetOnClick([&unknownCalls, data = std::array<char, 1024>{}] {
+      unknownCalls += 1 + data[0];
+    });
+    const auto opaque = app.InspectDeathScreenStorage();
+    Require(!opaque.supported && opaque.bindings_match && opaque.callback_present[0] &&
+                !opaque.callback_supported[0] && !unknownCalls,
+            "death overlay rejects opaque callback without executing it");
+    Probe::RetireDeath(app);
+    Require(!observation::State.live && !observation::State.blocks,
+            "death overlay destruction retires widget, text and callback allocations");
+  }
+
+  for (size_t prefix = 0; prefix < buildAttempts; ++prefix)
+  {
+    observation::Scope epoch(prefix);
+    bool refused = false;
+    try { Probe::BuildDeath(app); }
+    catch (const std::bad_alloc &) { refused = true; }
+    observation::State.fail_after = SIZE_MAX;
+    Require(refused && !app.InspectDeathScreenStorage().present && !observation::State.live,
+            "refused death overlay never publishes a partial tree");
+    Probe::BuildDeath(app);
+    const auto retry = app.InspectDeathScreenStorage();
+    Require(retry.supported && retry.requested == observation::State.live,
+            "death overlay retries the same build after allocation refusal");
+    Probe::RetireDeath(app);
+    Require(!observation::State.live && !observation::State.blocks,
+            "death overlay creation retry retires all requests");
+  }
+  for (size_t prefix = 0; prefix < rebuildAttempts; ++prefix)
+  {
+    observation::Scope epoch;
+    auto &screen = Probe::BuildDeath(app);
+    screen.SetHardcore(true);
+    screen.SetCause(cause);
+    const auto *oldRoot = screen.GetRoot();
+    const auto oldBytes = observation::State.live;
+    observation::State.fail_after = observation::State.attempts + prefix;
+    bool refused = false;
+    try { screen.Build(app.GetGui()); }
+    catch (const std::bad_alloc &) { refused = true; }
+    observation::State.fail_after = SIZE_MAX;
+    const auto intact = app.InspectDeathScreenStorage();
+    Require(refused && intact.supported && screen.GetRoot() == oldRoot &&
+                intact.requested == oldBytes && oldBytes == observation::State.live &&
+                static_cast<const UGuiLabel &>(*oldRoot->GetChildren()[1]).GetText() == cause,
+            "refused death overlay rebuild keeps old tree, aliases and cause");
+    screen.Build(app.GetGui());
+    const auto retry = app.InspectDeathScreenStorage();
+    Require(retry.supported && retry.requested == observation::State.live,
+            "death overlay rebuild retry owns the replacement tree");
+    Probe::RetireDeath(app);
+    Require(!observation::State.live && !observation::State.blocks,
+            "death overlay rebuild retry retires all requests");
+  }
+
+  return Json{{"status", "PASS"}, {"cold", DeathScreenStorageJson(cold)},
+              {"expanded", DeathScreenStorageJson(expanded)}, {"rebuilt", DeathScreenStorageJson(rebuilt)},
+              {"build_refusal_prefixes", buildAttempts}, {"rebuild_refusal_prefixes", rebuildAttempts},
+              {"rebuild_peak", rebuildPeak}, {"passive_allocate0", true},
+              {"opaque_callback_rejected", true}, {"retired", true}};
+}
+
+static void CheckDeathScreenActions()
+{
+  using namespace cutum;
+  using Probe = ApplicationOperationSourceProbe;
+  using gui_context_fixture::Require;
+  auto world = std::make_shared<UWorld>(nullptr, nullptr);
+  UApplication app(nullptr, world, nullptr, nullptr, nullptr, nullptr, nullptr);
+  Require(app.GetGui().Initialize(std::make_shared<UShaderManager>(), {}),
+          "death overlay action fixture initializes the menu renderer");
+  Probe::SetGameState(app);
+  world->SetDifficulty(WorldDifficulty::Normal);
+  auto &initial = Probe::BuildDeath(app);
+  world->SetPlayerDead(true);
+  Probe::UpdateDeath(app);
+  initial.OnViewportChanged(1024, 768);
+  Require(initial.GetRoot()->GetBounds().X == 332 && initial.BlocksGameInput(),
+          "death overlay is centered on viewport change and blocks game input");
+  const auto oldRespawn = initial.GetRoot()->GetChildren()[2]->GetBounds();
+  Require(app.RouteMouseButton(0, true, oldRespawn.X + 10, oldRespawn.Y + 10),
+          "death overlay captures respawn press");
+  auto &screen = Probe::BuildDeath(app);
+  app.RouteMouseButton(0, false, oldRespawn.X + 10, oldRespawn.Y + 10);
+  Require(world->IsPlayerDead(), "replacement drops old death overlay pointer capture");
+
+  const auto click = [&](size_t index) {
+    const auto bounds = screen.GetRoot()->GetChildren()[index]->GetBounds();
+    Require(app.RouteMouseButton(0, true, bounds.X + 10, bounds.Y + 10) &&
+                app.RouteMouseButton(0, false, bounds.X + 10, bounds.Y + 10),
+            "death overlay dispatches through real application input routing");
+  };
+  Probe::UpdateDeath(app);
+  click(2);
+  Require(!world->IsPlayerDead() && !screen.BlocksGameInput(),
+          "normal mode respawn clears the overlay and death state");
+
+  world->SetPlayerDead(true);
+  Probe::UpdateDeath(app);
+  click(3);
+  Probe::UpdateDeath(app);
+  Require(world->IsPlayerDead() && !screen.BlocksGameInput() &&
+              !app.AllowsWorldMousePlacement(),
+          "spectator overlay stays closed while the character remains dead");
+
+  world->SetPlayerDead(false);
+  Probe::UpdateDeath(app);
+  world->SetDifficulty(WorldDifficulty::Hardcore);
+  world->SetHardcoreDead(true);
+  Probe::UpdateDeath(app);
+  Require(screen.BlocksGameInput() && !screen.GetRoot()->GetChildren()[2]->IsVisible() &&
+              screen.GetRoot()->GetChildren()[4]->IsVisible(),
+          "hardcore overlay offers menu and hides respawn");
+  click(4);
+  AllocatorSourcePhase phase(NewRootStorageEpoch(), 1);
+  const auto queued = app.InspectOperationStorage(phase, true).actions[0];
+  Require(Probe::IsInGame(app) && queued.Supported() &&
+              queued.kind == ApplicationActionKind::ReturnMenu,
+          "death overlay defers menu transition until after the input dispatch");
+  phase.Close();
+  Probe::ExecutePending(app);
+  const auto inMenu = app.InspectDeathScreenStorage();
+  Require(!Probe::IsInGame(app) && inMenu.present && inMenu.supported && !inMenu.visible &&
+              app.InspectMainMenuStorage().present,
+          "executed death menu action hides retained overlay and opens main menu");
+}
+
 int main(int argc,char **argv){
   using namespace cutum;using Json=nlohmann::json;const auto require=[](bool b,const char *s){if(!b)throw std::runtime_error(s);};
   try{
@@ -292,6 +466,9 @@ int main(int argc,char **argv){
     report["main_menu_storage"]=CheckMainMenuRequests(application);
     report["hud_storage"]=CheckInGameHudRequests();
     report["console_storage"]=CheckConsoleRequests(argc>1?argv[1]:"application-operation-storage.json");
+    report["death_screen_storage"]=CheckDeathScreenRequests(application);
+    CheckDeathScreenActions();
+    report["death_screen_storage"]["action_lifecycle"]=true;
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

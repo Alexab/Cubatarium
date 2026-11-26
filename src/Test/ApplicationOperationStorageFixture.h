@@ -15,6 +15,15 @@ struct ApplicationOperationSourceProbe {
   static void Clear(UApplication &app){app.PendingMenuAction={};app.WorldOpOnComplete={};app.WorldOpRunner.reset();}
   static void ShowProgress(UApplication &app) { app.ShowWorldProgressScreen(); }
   static const UWorldProgressScreen *Progress(const UApplication &app) { return app.ProgressScreen; }
+  static UDeathScreen &BuildDeath(UApplication &app)
+  {
+    app.BuildDeathOverlay();
+    return *app.DeathScreen;
+  }
+  static void UpdateDeath(UApplication &app) { app.UpdateDeathOverlay(); }
+  static void SetGameState(UApplication &app) { app.State = AppState::InGame; }
+  static bool IsInGame(const UApplication &app) { return app.State == AppState::InGame; }
+  static void RetireDeath(UApplication &app) { app.DeathScreen.reset(); }
   static void DetachProgress(UApplication &app)
   {
     app.ProgressScreen = nullptr;

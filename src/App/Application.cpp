@@ -670,6 +670,22 @@ ConsoleStorage UApplication::InspectConsoleStorage() const noexcept
   return result;
 }
 
+DeathScreenStorage UApplication::InspectDeathScreenStorage() const noexcept
+{
+  if (DeathScreen && GuiContext)
+  {
+    auto out = DeathScreen->InspectOwnedStorage(*GuiContext, *this);
+    out.bindings_match &= out.visible == DeathScreenOpen;
+    out.supported &= out.bindings_match;
+    return out;
+  }
+  DeathScreenStorage out;
+  out.present = bool(DeathScreen);
+  out.bindings_match = !out.present && !DeathScreenOpen;
+  out.supported = out.bindings_match;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
@@ -693,7 +709,8 @@ void UApplication::ReturnToMainMenu()
 {
   ItemLabOpen = false;
   ItemLabScreen = nullptr;
-  HardcoreSpectating = false;
+  DeathSpectating = false;
+  SetDeathOverlayVisible(false);
   ScreenNav.ReturnToMainMenu();
 }
 
@@ -1237,64 +1254,7 @@ void UApplication::ShowInGameHud()
   AnvilScreen->Build(*GuiContext);
   AnvilScreen->SetVisible(false);
 
-  DeathScreen = std::make_unique<UDeathScreen>();
-  DeathScreen->OnAttach(*GuiContext);
-  DeathScreen->Build(*GuiContext);
-  DeathScreen->SetOnRespawn(
-      [this]()
-      {
-        if (!World || !ModePolicy::AllowsPlayerRespawn(World->GetDifficulty()))
-        {
-          return;
-        }
-        World->SetPlayerDead(false);
-        if (UCreature *player = World->GetPlayerCreature())
-        {
-          CreatureVitals &v = player->GetVitals();
-          v.FillFull();
-          v.fatalWounds = 0;
-          const glm::vec3 spawn = World->GetSpawnPoint();
-          player->SetBodyOrigin(
-              glm::vec3(spawn.x, spawn.y - player->GetEyeOffset().y, spawn.z));
-          player->GetLocomotion().SetMode(CreatureMovementMode::Walking);
-        }
-        if (auto camera = World->GetCurrentUserCamera())
-        {
-          camera->SetFreeMove(false);
-        }
-        DeathScreenOpen = false;
-        if (DeathScreen)
-        {
-          DeathScreen->SetVisible(false);
-        }
-        SyncCursorVisibility();
-      });
-  DeathScreen->SetOnSpectate(
-      [this]()
-      {
-        if (!World)
-        {
-          return;
-        }
-        HardcoreSpectating = World->IsHardcoreDead();
-        if (UCreature *player = World->GetPlayerCreature())
-        {
-          player->GetLocomotion().SetMode(CreatureMovementMode::Flying);
-        }
-        if (auto camera = World->GetCurrentUserCamera())
-        {
-          camera->SetFreeMove(true);
-        }
-        DeathScreenOpen = false;
-        if (DeathScreen)
-        {
-          DeathScreen->SetVisible(false);
-        }
-        SyncCursorVisibility();
-      });
-  DeathScreen->SetOnReturnToMenu(
-      [this]() { SaveIfNeededAndProceed(ApplicationReturnMenuAction{this}); });
-  DeathScreen->SetVisible(false);
+  BuildDeathOverlay();
 
   CharacterSheetScreen = std::make_unique<UCharacterSheetScreen>(
       GameSession.get(), CreaturePreviewRenderer.get(), icons);
@@ -1315,6 +1275,94 @@ void UApplication::ShowInGameHud()
   WorldGenScreen->SetVisible(false);
 
   GuiContext->SetScreen(nullptr);
+}
+
+void UApplication::BuildDeathOverlay()
+{
+  auto screen = std::make_unique<UDeathScreen>(*this);
+  screen->OnAttach(*GuiContext);
+  screen->Build(*GuiContext);
+  for (auto &capture : OverlayCaptures)
+  {
+    if (capture == OverlayPointerCapture::Death)
+    {
+      capture = OverlayPointerCapture::None;
+      OverlayPressedWidget = nullptr;
+    }
+  }
+  DeathScreen = std::move(screen);
+  DeathScreenOpen = false;
+  DeathSpectating = false;
+}
+
+void UApplication::SetDeathOverlayVisible(bool visible)
+{
+  if (DeathScreen)
+    DeathScreen->SetVisible(visible);
+  DeathScreenOpen = visible && bool(DeathScreen);
+}
+
+void UApplication::UpdateDeathOverlay()
+{
+  if (!World || !World->IsPlayerDead())
+  {
+    DeathSpectating = false;
+    if (DeathScreenOpen)
+    {
+      SetDeathOverlayVisible(false);
+      SyncCursorVisibility();
+    }
+    return;
+  }
+  if (!DeathScreen || DeathScreenOpen || DeathSpectating)
+    return;
+
+  DeathScreen->SetHardcore(World->IsHardcoreDead());
+  DeathScreen->SetCause({});
+  SetDeathOverlayVisible(true);
+  SyncCursorVisibility();
+}
+
+void UApplication::RespawnPlayerFromDeathScreen()
+{
+  if (!World || !ModePolicy::AllowsPlayerRespawn(World->GetDifficulty()))
+    return;
+
+  World->SetPlayerDead(false);
+  if (UCreature *player = World->GetPlayerCreature())
+  {
+    CreatureVitals &v = player->GetVitals();
+    v.FillFull();
+    v.fatalWounds = 0;
+    const glm::vec3 spawn = World->GetSpawnPoint();
+    player->SetBodyOrigin(
+        glm::vec3(spawn.x, spawn.y - player->GetEyeOffset().y, spawn.z));
+    player->GetLocomotion().SetMode(CreatureMovementMode::Walking);
+  }
+  if (auto camera = World->GetCurrentUserCamera())
+    camera->SetFreeMove(false);
+  DeathSpectating = false;
+  SetDeathOverlayVisible(false);
+  SyncCursorVisibility();
+}
+
+void UApplication::SpectateFromDeathScreen()
+{
+  if (!World)
+    return;
+
+  if (UCreature *player = World->GetPlayerCreature())
+    player->GetLocomotion().SetMode(CreatureMovementMode::Flying);
+  if (auto camera = World->GetCurrentUserCamera())
+    camera->SetFreeMove(true);
+  DeathSpectating = true;
+  SetDeathOverlayVisible(false);
+  SyncCursorVisibility();
+}
+
+void UApplication::ScheduleReturnFromDeathScreen()
+{
+  SaveIfNeededAndProceed(ApplicationReturnMenuAction{this});
 }
 
 bool UApplication::UsesUiPointer() const
@@ -1559,8 +1607,6 @@ void UApplication::EnterInGameInputState()
   SurvivalInventoryOpen = false;
   CraftingOpen = false;
   AnvilOpen = false;
-  DeathScreenOpen = false;
-  HardcoreSpectating = false;
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -1582,10 +1628,7 @@ void UApplication::EnterInGameInputState()
   {
     AnvilScreen->SetVisible(false);
   }
-  if (DeathScreen)
-  {
-    DeathScreen->SetVisible(false);
-  }
+  SetDeathOverlayVisible(false);
   if (CharacterSheetScreen)
   {
     CharacterSheetScreen->SetVisible(false);
@@ -3586,14 +3629,7 @@ void UApplication::Update(double dt)
     {
       AnvilScreen->Update(dt);
     }
-    if (World && World->IsPlayerDead() && !DeathScreenOpen && DeathScreen)
-    {
-      DeathScreenOpen = true;
-      DeathScreen->SetHardcore(World->IsHardcoreDead());
-      DeathScreen->SetCause("Fatal wounds");
-      DeathScreen->SetVisible(true);
-      SyncCursorVisibility();
-    }
+    UpdateDeathOverlay();
     if (DeathScreenOpen && DeathScreen)
     {
       DeathScreen->Update(dt);
@@ -4109,7 +4145,7 @@ bool UApplication::AllowsWorldMousePlacement() const
   return State == AppState::InGame && !ItemLabOpen && !ConsoleOpen &&
          !PaletteOpen && !WorldGenOpen && !CharacterSheetOpen &&
          !SurvivalInventoryOpen && !CraftingOpen && !AnvilOpen &&
-         !DeathScreenOpen && !HardcoreSpectating &&
+         !DeathScreenOpen && !DeathSpectating &&
          !(World && World->IsHardcoreDead());
 }
 

@@ -1,0 +1,257 @@
+{
+  "schema": "s4-e12-w26-death-screen.v1",
+  "status": "SCOPED_DEATH_SCREEN_PASS_E12_OPEN",
+  "baseline_commit": "5805e3469772d546b98a9cc129ce8762f5f96cb4",
+  "prior_certificate": "S4_02_E12_W25_CONSOLE_CERTIFICATE_2026_11_26.json",
+  "summary": "W26 accounts the six desktop death-overlay widgets, child slots, retained title/cause and the three application actions. Button handlers hold a borrowed owner with no external callback allocation. Creation and rebuild publish only complete trees. Every observed allocation refusal preserves the previous ownership and retries; the independent observer measures old/new overlap and retirement. The real input routes validate normal respawn, persistent spectator mode, deferred hardcore return to menu and retired pointer capture on replacement. Viewport changes recenter the panel. The application reports the hidden overlay at startup and before the isolated save UI probe. All 46 Release groups pass with exact config restoration. The full native matrix and E12 memory composition remain open.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W26. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. Continue with remaining actual in-game overlay widget ownership and callbacks, starting with the survival inventory grid and shared player window. Measure owned and staged grid rows and slot actions, verify allocation refusal preserves the prior grid, and cover the icon-ready refresh and tab switch. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "action_lifecycle": true,
+    "build_refusal_prefixes": 8,
+    "cold": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        true,
+        true,
+        true
+      ],
+      "callback_supported": [
+        true,
+        true,
+        true
+      ],
+      "children_bytes": 40,
+      "hardcore": false,
+      "present": true,
+      "requested": 1016,
+      "screen_bytes": 136,
+      "status": "PASS",
+      "text_bytes": 0,
+      "visible": false,
+      "widget_bytes": 840,
+      "widgets": 6
+    },
+    "expanded": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        true,
+        true,
+        true
+      ],
+      "callback_supported": [
+        true,
+        true,
+        true
+      ],
+      "children_bytes": 40,
+      "hardcore": true,
+      "present": true,
+      "requested": 3112,
+      "screen_bytes": 136,
+      "status": "PASS",
+      "text_bytes": 2096,
+      "visible": false,
+      "widget_bytes": 840,
+      "widgets": 6
+    },
+    "opaque_callback_rejected": true,
+    "passive_allocate0": true,
+    "rebuild_peak": 7600,
+    "rebuild_refusal_prefixes": 10,
+    "rebuilt": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        true,
+        true,
+        true
+      ],
+      "callback_supported": [
+        true,
+        true,
+        true
+      ],
+      "children_bytes": 40,
+      "hardcore": true,
+      "present": true,
+      "requested": 3112,
+      "screen_bytes": 136,
+      "status": "PASS",
+      "text_bytes": 2096,
+      "visible": false,
+      "widget_bytes": 840,
+      "widgets": 6
+    },
+    "retired": true,
+    "status": "PASS"
+  },
+  "native": {
+    "initial_menu": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        false,
+        false,
+        false
+      ],
+      "callback_supported": [
+        false,
+        false,
+        false
+      ],
+      "children_bytes": 0,
+      "hardcore": false,
+      "present": false,
+      "requested": 0,
+      "screen_bytes": 0,
+      "status": "PASS",
+      "text_bytes": 0,
+      "visible": false,
+      "widget_bytes": 0,
+      "widgets": 0
+    },
+    "in_game": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        true,
+        true,
+        true
+      ],
+      "callback_supported": [
+        true,
+        true,
+        true
+      ],
+      "children_bytes": 40,
+      "hardcore": false,
+      "present": true,
+      "requested": 1016,
+      "screen_bytes": 136,
+      "status": "PASS",
+      "text_bytes": 0,
+      "visible": false,
+      "widget_bytes": 840,
+      "widgets": 6
+    },
+    "before_save_ui_probe": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "callback_present": [
+        true,
+        true,
+        true
+      ],
+      "callback_supported": [
+        true,
+        true,
+        true
+      ],
+      "children_bytes": 40,
+      "hardcore": false,
+      "present": true,
+      "requested": 1016,
+      "screen_bytes": 136,
+      "status": "PASS",
+      "text_bytes": 0,
+      "visible": false,
+      "widget_bytes": 840,
+      "widgets": 6
+    }
+  },
+  "native_aggregate": "UNTESTED",
+  "native_components": {
+    "runtime": "PASS",
+    "startup": "PASS",
+    "observation": "PASS",
+    "route": "UNTESTED",
+    "inspection": "UNTESTED",
+    "visual": "UNTESTED",
+    "fixture_opaque_depth": "UNTESTED",
+    "build_provenance": "PASS",
+    "performance": "UNTESTED",
+    "terrain_save_failure": "UNTESTED",
+    "save_error_ui": "UNTESTED"
+  },
+  "source_sha256": "61ede6159232b0fabe93897cc0aba5d0ab213438597c1b52d6f1d124290d7873",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "65ec99d93631eccd85949a40bf4fc97ff941ed78c87b9f244023df9b63efbfba",
+    "src/App/Application.h": "bc13597afa09cbb8561dc0a3877a93e2a069d54e3812bf27160ed4b90773a38c",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "b84705680f47596f5cfb6a4a13bd2c27d7e43fd3b1c6879c7b208c83b92a322c",
+    "src/App/Platform/SaveErrorUiProbe.h": "83b8cd79edea781e00d7b5c40377953d0cad4303f9bde26b45938b1ed3625b05",
+    "src/Gui/Screens/DeathScreen.cpp": "28b1e73f59edf8c42b2bd3364693313d1ab6cc258135052ef2e0d059984d6899",
+    "src/Gui/Screens/DeathScreen.h": "cdaf57d127ba03e4d225f1f7aea164e71981cad11a02a1b303fe44089fd8f836",
+    "src/Gui/Widgets/GuiButton.h": "0721b3996aecd1cf07d4530154cb93e363040320662b74f60d1645615804b954",
+    "src/Gui/Widgets/GuiLabel.h": "6bfe6d2b4d253308967332f760ef1ba11f9d4b14e0f4cd34eb34d41f2333696b",
+    "src/Gui/Widgets/GuiPanel.h": "b974d1832bce82fd20976549a8a4a0b811b5fcfb1bf63d6adf456ea8aa44c574",
+    "src/Test/ApplicationOperationStorageFixture.h": "a202043ce329f3d8775462dbb7635387ce95c8b922ad5036e801985bd27ffb14",
+    "src/Test/ApplicationOperationStorageTest.cpp": "96a5d657eb82a0acdd0a014772dbf252e2a85426c4b03154b12ddd33e3c60c13",
+    "src/Test/GuiContextStorageFixture.h": "aa071123c771fe482828d57e032c0a31ca0180947a244f9fd77ceaa0ad7fa2ff"
+  },
+  "desktop_exe_sha256": "a7ffd3d5592f85ddbb4f2a441c740bbb133a5b6a6118c08f43d16c2742df2e87",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "config_bytes_restored": true,
+  "whole_runtime_complete": false,
+  "completed_packages": "23/42",
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-death-overlay-focused-final.json": "e072c8da018f57256ba36535a67a681a2f17f98a5b14689f6fa159a7d0ec37d7",
+    "build/desktop-msvc/s4-death-overlay-regressions.json": "5d5d0b323fb5aa0ad32738e8ed917ef7508378b47ce8e5ceb03cdef7d5702415",
+    "build/desktop-msvc/s4-death-overlay-provenance.json": "394c42086d940ed532b0c77b9a511659fad09225327dcc84b81fc3c4a9751d3c",
+    "build/desktop-msvc/s4-death-overlay-native/smoke-verdict.json": "a212de11f240bed1f1396698636ab0597e9582513f994d5e136fd5ef890f6b29",
+    "build/desktop-msvc/s4-death-overlay-native/owner-domain/flight-menu.json": "fd7d3ed4461daa0dc1523fc49f480f91bef7d636ff59846f9884dcc80d6ff790",
+    "build/desktop-msvc/s4-death-overlay-native/owner-domain/flight-in-game.json": "865a953909d298e39999ad520d34fea18552b483fd84675742d40806921000b8",
+    "build/desktop-msvc/s4-death-overlay-native/terrain-save-probe/save-error-ui/report.json": "b194153ea6e238aa7c99612ecb4b3d499c6a99420759dda959baba03038dbb3e",
+    "build/desktop-msvc/s4-death-overlay-application-ops.json": "c7066a10b6bc37306a06d94a4261da903dc2434838d08c711dba3996a255d510"
+  }
+}

@@ -1,68 +1,131 @@
 #include "Gui/Screens/DeathScreen.h"
+#include "App/Application.h"
+#include "Core/Memory/CallbackStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include "Gui/Widgets/GuiPanel.h"
+#include <type_traits>
+#include <typeinfo>
 
 namespace cutum
 {
 
+template<void (UApplication::*Action)()>
+struct UDeathScreen::ButtonAction
+{
+  UApplication *owner;
+  void operator()() const { (owner->*Action)(); }
+};
+
+UDeathScreen::UDeathScreen(UApplication &application) : Application(application) {}
+
 void UDeathScreen::Build(UGuiContext &ctx)
 {
-  Theme = &ctx.GetTheme();
-  auto panel = std::make_unique<UGuiPanel>(Theme);
+  const auto *theme = &ctx.GetTheme();
+  auto panel = std::make_unique<UGuiPanel>(theme);
   panel->SetDrawBackground(true);
   panel->SetZOrder(50);
-  Panel = panel.get();
+  panel->SetVisible(Visible);
+  panel->ReserveChildren(5);
 
-  auto title = std::make_unique<UGuiLabel>(Theme, "You Died");
-  Title = title.get();
-  Panel->AddChild(std::move(title));
-
-  auto cause = std::make_unique<UGuiLabel>(Theme, "");
+  auto title = std::make_unique<UGuiLabel>(theme, Hardcore ? "Hardcore World Lost" : "You Died");
+  auto cause = std::make_unique<UGuiLabel>(theme, CauseLabel ? CauseLabel->GetText() : std::string{});
   cause->SetUseSecondaryColor(true);
-  CauseLabel = cause.get();
-  Panel->AddChild(std::move(cause));
+  auto respawn = std::make_unique<UGuiButton>(theme, "Respawn");
+  respawn->SetVisible(!Hardcore);
+  respawn->SetOnClick(ButtonAction<&UApplication::RespawnPlayerFromDeathScreen>{&Application});
+  auto spectate = std::make_unique<UGuiButton>(theme, "Spectate");
+  spectate->SetOnClick(ButtonAction<&UApplication::SpectateFromDeathScreen>{&Application});
+  auto returnToMenu = std::make_unique<UGuiButton>(theme, "Return to Menu");
+  returnToMenu->SetVisible(Hardcore);
+  returnToMenu->SetOnClick(ButtonAction<&UApplication::ScheduleReturnFromDeathScreen>{&Application});
 
-  auto respawn = std::make_unique<UGuiButton>(Theme, "Respawn");
-  RespawnBtn = respawn.get();
-  RespawnBtn->SetOnClick(
-      [this]()
-      {
-        if (OnRespawn)
-        {
-          OnRespawn();
-        }
-      });
-  Panel->AddChild(std::move(respawn));
-
-  auto spectate = std::make_unique<UGuiButton>(Theme, "Spectate");
-  SpectateBtn = spectate.get();
-  SpectateBtn->SetOnClick(
-      [this]()
-      {
-        if (OnSpectate)
-        {
-          OnSpectate();
-        }
-      });
-  Panel->AddChild(std::move(spectate));
-
-  auto returnToMenu = std::make_unique<UGuiButton>(Theme, "Return to Menu");
-  ReturnToMenuBtn = returnToMenu.get();
-  ReturnToMenuBtn->SetOnClick(
-      [this]()
-      {
-        if (OnReturnToMenu)
-        {
-          OnReturnToMenu();
-        }
-      });
-  Panel->AddChild(std::move(returnToMenu));
-
+  auto *nextTitle = static_cast<UGuiLabel *>(panel->AddChild(std::move(title)));
+  auto *nextCause = static_cast<UGuiLabel *>(panel->AddChild(std::move(cause)));
+  auto *nextRespawn = static_cast<UGuiButton *>(panel->AddChild(std::move(respawn)));
+  auto *nextSpectate = static_cast<UGuiButton *>(panel->AddChild(std::move(spectate)));
+  auto *nextMenu = static_cast<UGuiButton *>(panel->AddChild(std::move(returnToMenu)));
+  Panel = panel.get();
   Root = std::move(panel);
-  SetVisible(false);
+  Title = nextTitle;
+  CauseLabel = nextCause;
+  RespawnBtn = nextRespawn;
+  SpectateBtn = nextSpectate;
+  ReturnToMenuBtn = nextMenu;
+  Relayout();
+}
+
+DeathScreenStorage UDeathScreen::InspectOwnedStorage(const UGuiContext &context,
+                                                     const UApplication &application) const noexcept
+{
+  DeathScreenStorage out;
+  out.present = true;
+  out.visible = Visible;
+  out.hardcore = Hardcore;
+  if (typeid(*this) != typeid(UDeathScreen) || &Application != &application ||
+      Context != &context || !Root || Root.get() != Panel ||
+      typeid(*Root) != typeid(UGuiPanel) || Panel->Theme != &context.GetTheme())
+    return out;
+
+  const auto &children = Panel->GetChildren();
+  if (children.size() != 5)
+    return out;
+  const auto *theme = &context.GetTheme();
+  const auto matches = [theme](const auto &child, const auto *alias) {
+    using Widget = std::remove_cv_t<std::remove_pointer_t<decltype(alias)>>;
+    return child && child.get() == alias && typeid(*child) == typeid(Widget) &&
+           child->GetChildren().empty() && alias->Theme == theme;
+  };
+  out.bindings_match = Visible == Panel->IsVisible() &&
+      matches(children[0], Title) && matches(children[1], CauseLabel) &&
+      matches(children[2], RespawnBtn) && matches(children[3], SpectateBtn) &&
+      matches(children[4], ReturnToMenuBtn) &&
+      RespawnBtn->IsVisible() == !Hardcore && SpectateBtn->IsVisible() &&
+      ReturnToMenuBtn->IsVisible() == Hardcore;
+  if (!out.bindings_match)
+    return out;
+
+  out.screen_bytes = sizeof(*this);
+  out.widgets = 1 + children.size();
+  out.widget_bytes = sizeof(UGuiPanel) + 2 * sizeof(UGuiLabel) + 3 * sizeof(UGuiButton);
+  StlSourceStorage slots, text, total;
+  slots.Buffer(children.capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  for (const auto &child : children)
+    slots.Buffer(child->GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  for (const auto *label : {Title, CauseLabel})
+    text.Text(label->GetText());
+  for (const auto *button : {RespawnBtn, SpectateBtn, ReturnToMenuBtn})
+    text.Text(button->GetLabel());
+
+  const bool profile = StlSourceStorage::SupportedProfile();
+  const auto respawn = InspectKnownOwnerCallback<ButtonAction<&UApplication::RespawnPlayerFromDeathScreen>>(
+      RespawnBtn->OnClick, &application, profile);
+  const auto spectate = InspectKnownOwnerCallback<ButtonAction<&UApplication::SpectateFromDeathScreen>>(
+      SpectateBtn->OnClick, &application, profile);
+  const auto menu = InspectKnownOwnerCallback<ButtonAction<&UApplication::ScheduleReturnFromDeathScreen>>(
+      ReturnToMenuBtn->OnClick, &application, profile);
+  out.callback_present = {respawn.present, spectate.present, menu.present};
+  out.callback_supported = {respawn.supported && respawn.present, spectate.supported && spectate.present,
+                            menu.supported && menu.present};
+  out.callback_bytes = respawn.requests + spectate.requests + menu.requests;
+  out.children_bytes = slots.bytes.requested;
+  out.text_bytes = text.bytes.requested;
+  for (const auto amount : {out.screen_bytes, out.widget_bytes, out.children_bytes,
+                            out.text_bytes, out.callback_bytes})
+    total.Add(amount);
+  out.requested = total.bytes.requested;
+  out.supported = slots.bytes.supported && text.bytes.supported && total.bytes.supported &&
+                  out.callback_supported[0] && out.callback_supported[1] && out.callback_supported[2];
+  return out;
+}
+
+void UDeathScreen::OnViewportChanged(int width, int height)
+{
+  UGuiScreenBase::OnViewportChanged(width, height);
+  Relayout();
 }
 
 void UDeathScreen::SetVisible(bool visible)
@@ -72,18 +135,14 @@ void UDeathScreen::SetVisible(bool visible)
   {
     Root->SetVisible(visible);
   }
-  if (visible)
-  {
-    if (Title)
-    {
-      Title->SetText(Hardcore ? "Hardcore World Lost" : "You Died");
-    }
-    Relayout();
-  }
 }
 
 void UDeathScreen::SetHardcore(bool hardcore)
 {
+  if (Hardcore == hardcore)
+    return;
+  if (Title)
+    Title->SetText(hardcore ? "Hardcore World Lost" : "You Died");
   Hardcore = hardcore;
   if (RespawnBtn)
   {
@@ -93,10 +152,6 @@ void UDeathScreen::SetHardcore(bool hardcore)
   {
     ReturnToMenuBtn->SetVisible(hardcore);
   }
-  if (Title)
-  {
-    Title->SetText(hardcore ? "Hardcore World Lost" : "You Died");
-  }
   Relayout();
 }
 
@@ -104,28 +159,14 @@ void UDeathScreen::SetCause(const std::string &cause)
 {
   if (CauseLabel)
   {
-    CauseLabel->SetText(cause.empty() ? "Fatal wounds" : cause);
+    const std::string fallback = "Fatal wounds";
+    CauseLabel->SetText(cause.empty() ? fallback : cause);
   }
-}
-
-void UDeathScreen::SetOnRespawn(std::function<void()> handler)
-{
-  OnRespawn = std::move(handler);
-}
-
-void UDeathScreen::SetOnSpectate(std::function<void()> handler)
-{
-  OnSpectate = std::move(handler);
-}
-
-void UDeathScreen::SetOnReturnToMenu(std::function<void()> handler)
-{
-  OnReturnToMenu = std::move(handler);
 }
 
 void UDeathScreen::Relayout()
 {
-  if (!Panel || !Theme)
+  if (!Panel)
   {
     return;
   }
