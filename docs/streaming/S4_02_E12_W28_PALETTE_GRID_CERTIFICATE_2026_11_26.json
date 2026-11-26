@@ -1,0 +1,292 @@
+{
+  "schema": "s4-e12-w28-palette-grid.v1",
+  "status": "SCOPED_PALETTE_GRID_PASS_E12_OPEN",
+  "baseline_commit": "092c3e2c93f844318a67a641890a299027ee047c",
+  "prior_certificate": "S4_02_E12_W27_PLAYER_WINDOW_CERTIFICATE_2026_11_26.json",
+  "summary": "W28 accounts the actual catalog grid rows, scroll children, slot text and two typed actions per published slot. The displayed grid remains available through allocation refusal in a replacement or an append. Full and partial batches retry with the same row identities. A live press keeps its widget and published category until release or explicit input reset, and callback captures carry only the screen and row index. Published labels retire their staging copies. Icon cache checks target the visible rows and at most 64 additional positions per frame. The icon FIFO rolls back deduplication if insertion fails and removes its front without shifting the tail. Active render and cache retirement have separate ownership. The character backpack folds case and underscores during search without copying each item ID, and its layout reads mode without building a stats snapshot. All 46 Release groups pass. The native window and catalog fixture confirms bounded publications and icon readiness under stationary observation. E12 and full S0–S6 acceptance remain open.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W28. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. Continue with the remaining CharacterSheet and CreativePalette page shells, dynamic label and root publication lifetimes, full character snapshot sources, and preview/icon cache and render completion ownership. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "append_refusals": 4,
+    "append_requests": 514,
+    "complete": {
+      "callback_bytes": 0,
+      "callbacks": 1240,
+      "child_bytes": 4999,
+      "complete": true,
+      "current": true,
+      "kind": 0,
+      "requested": 429822,
+      "row_bytes": 102423,
+      "row_text_bytes": 29760,
+      "rows": 620,
+      "status": "PASS",
+      "widget_bytes": 272800,
+      "widget_text_bytes": 19840,
+      "widgets": 620
+    },
+    "first": {
+      "callback_bytes": 0,
+      "callbacks": 512,
+      "child_bytes": 2048,
+      "complete": false,
+      "current": true,
+      "kind": 0,
+      "requested": 266711,
+      "row_bytes": 102423,
+      "row_text_bytes": 41408,
+      "rows": 620,
+      "status": "PASS",
+      "widget_bytes": 112640,
+      "widget_text_bytes": 8192,
+      "widgets": 256
+    },
+    "peak": 727907,
+    "published_drag_identity": true,
+    "queue_refusals": 5,
+    "rebuild_refusals": 4,
+    "rebuild_requests": 3631,
+    "retired": true,
+    "second": {
+      "callback_bytes": 0,
+      "callbacks": 1024,
+      "child_bytes": 4135,
+      "complete": false,
+      "current": true,
+      "kind": 0,
+      "requested": 381438,
+      "row_bytes": 102423,
+      "row_text_bytes": 33216,
+      "rows": 620,
+      "status": "PASS",
+      "widget_bytes": 225280,
+      "widget_text_bytes": 16384,
+      "widgets": 512
+    },
+    "status": "PASS",
+    "steady_icon_cache_checks": 152
+  },
+  "native_startup": {
+    "initial_menu": {
+      "callback_bytes": 0,
+      "callbacks": 0,
+      "child_bytes": 0,
+      "complete": false,
+      "current": false,
+      "kind": 0,
+      "requested": 0,
+      "row_bytes": 0,
+      "row_text_bytes": 0,
+      "rows": 0,
+      "status": "PASS",
+      "widget_bytes": 0,
+      "widget_text_bytes": 0,
+      "widgets": 0
+    },
+    "in_game": {
+      "callback_bytes": 0,
+      "callbacks": 0,
+      "child_bytes": 0,
+      "complete": false,
+      "current": false,
+      "kind": 0,
+      "requested": 0,
+      "row_bytes": 0,
+      "row_text_bytes": 0,
+      "rows": 0,
+      "status": "PASS",
+      "widget_bytes": 0,
+      "widget_text_bytes": 0,
+      "widgets": 0
+    },
+    "before_save_ui_probe": {
+      "callback_bytes": 0,
+      "callbacks": 0,
+      "child_bytes": 0,
+      "complete": false,
+      "current": false,
+      "kind": 0,
+      "requested": 0,
+      "row_bytes": 0,
+      "row_text_bytes": 0,
+      "rows": 0,
+      "status": "PASS",
+      "widget_bytes": 0,
+      "widget_text_bytes": 0,
+      "widgets": 0
+    }
+  },
+  "native_aggregate": "UNTESTED",
+  "native_input": {
+    "schema": "palette-grid-native-input.v1",
+    "smoke_exit": 2,
+    "smoke_status": "UNTESTED",
+    "world_source_sha256": "a5c7c5bd3920702f6bc2b298ece80406b3056ab0ee90031b743961eee241043b",
+    "world_source_preserved": true,
+    "layout_cases": 72,
+    "checks": 10,
+    "passed": true,
+    "config_bytes_restored": true,
+    "report_sha256": "ee12f4229fe3b56639c38aed5c54daa1636af21397f823fc3f0cf37e13a8d6df"
+  },
+  "native_input_checks": [
+    {
+      "name": "shared footer transfers worn instances into the active inventory row",
+      "passed": true
+    },
+    {
+      "name": "shared footer selects within the active inventory row",
+      "passed": true
+    },
+    {
+      "name": "nonzero catalog scroll survives backpack roundtrip",
+      "passed": true
+    },
+    {
+      "name": "catalog selection and preview rotation use the shared input tree",
+      "passed": true
+    },
+    {
+      "name": "backpack search and section state survive catalog roundtrip",
+      "passed": true
+    },
+    {
+      "name": "catalog category selection and scroll survive backpack roundtrip",
+      "passed": true
+    },
+    {
+      "name": "unapplied appearance draft survives catalog roundtrip",
+      "passed": true
+    },
+    {
+      "name": "catalog publishes complete bounded batches with shared rows",
+      "passed": true
+    },
+    {
+      "name": "visible catalog icons progress while background work remains queued",
+      "passed": true
+    },
+    {
+      "name": "resetting gameplay input retires the held catalog slot before publishing another tab",
+      "passed": true
+    }
+  ],
+  "native_active_grid": {
+    "after_icons": 8,
+    "before_icons": 4,
+    "complete": {
+      "callback_bytes": 0,
+      "callbacks": 3256,
+      "complete": true,
+      "requested": 1171118,
+      "rows": 1628,
+      "supported": true,
+      "widgets": 1628
+    },
+    "first": {
+      "callback_bytes": 0,
+      "callbacks": 512,
+      "complete": false,
+      "requested": 556423,
+      "rows": 1628,
+      "supported": true,
+      "widgets": 256
+    },
+    "next": {
+      "callback_bytes": 0,
+      "callbacks": 1024,
+      "complete": false,
+      "requested": 671150,
+      "rows": 1628,
+      "supported": true,
+      "widgets": 512
+    },
+    "pending_icons": 1534
+  },
+  "source_sha256": "9872b88c2fad1f29edad21e2360bfc8ec841f7733eedbc8bb35a7fcb5db6ee20",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "c965c9455e99116f756ab171cb586d92b4700a44019f1261845d6e8d4582a455",
+    "src/App/Application.h": "e36e823d1a7fd0930d3488efe325a08cce2bd7b093286a7c0586c0acf64d8cee",
+    "src/App/Input/InputRouter.cpp": "fed0d48819037bca6d3c3f467c04a16db3a54d3b8adb6f621a73e0d2e9224def",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "9e0787aaabddea67649a50568313b6efa40491da7a7d8123b05a0158beb221aa",
+    "src/App/Platform/SaveErrorUiProbe.h": "041b156fef61297a666ab779033cd329aff63af999b167964bf9ed607521dd87",
+    "src/Gui/Cache/IconWarmupQueue.h": "b98560c514d124cdbc1bf037ad7c37bd6c05a84d1fc3b728730e24c31bbd8367",
+    "src/Gui/Screens/CharacterSheetScreen.cpp": "367adc1754392539dbb7df89fe6d32e462d79bb5cef67df59d4aa8c464c410eb",
+    "src/Gui/Screens/CreativePaletteScreen.cpp": "8aadc537f50135e7e4456fd2f9998f740065ed1be970928a1ae7a133ea4a3897",
+    "src/Gui/Screens/CreativePaletteScreen.h": "f900b4d8e094663bcd17b8ea4a5826251fb1f75d42b1d9d89d6155d0ad5f68e8",
+    "src/Gui/Widgets/GuiSlot.h": "b128179969a326fd737fae4a31b5f52346e856e4d9a7f95c41bb23955e90a32e",
+    "src/Gui/Widgets/GuiTabBar.cpp": "639b7e550d7a51182535e9be887ccc5b46588a549206720203e8dc19c490c6d3",
+    "src/Gui/Widgets/GuiTabBar.h": "eeb32ac9833e70af3484346419ea98cc9bd8e3465ee38f0ef5e943537a04099d",
+    "src/Gui/Widgets/GuiWidget.h": "88d8ba78a182fcc5ba57fd08c61138302d4e40e810c7d308658f0c11f7618424",
+    "src/Test/ApplicationOperationStorageTest.cpp": "4701364a2cdfafe0b54fa64f4f87eb99c3f82f6bd5ee1f2db3717ba4789df222",
+    "src/Test/GuiContextStorageFixture.h": "c0f6ba36a83532709ad18ac90b061c9d34ed26e9d84d0a50ed435ec787501448",
+    "src/Test/PaletteGridStorageFixture.h": "441cc4dce164b246e93e25866240a1c28c13408d55e23a2998f9a1056063eaee"
+  },
+  "desktop_exe_sha256": "daf0b794db1217e9154ab4c984a6a3ffea49ac9a2d39859b382e8ddde0ed18c9",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "config_bytes_restored": true,
+  "whole_runtime_complete": false,
+  "completed_packages": "23/42",
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-palette-grid-final-focused.json": "3c14576fcd6c5b32548e9389e8c6168d89fe7cde3829e7d8e42780af5b77c4d6",
+    "build/desktop-msvc/s4-palette-grid-final-application-ops.json": "c5fd49a84260d614ebc48e5407b67903605aba3fa9f0f3c7b5d6185690de5787",
+    "build/desktop-msvc/s4-palette-grid-final-regressions.json": "44b0d3d95796ea0c9e13abe8dd32141e2cf48aa286db78ebbd2c9c35460c07b6",
+    "build/desktop-msvc/s4-palette-grid-final-provenance.json": "080c83f8b529cadd3676146eef5a8d28663fd813bda1d592f0b21c7f53788a23",
+    "build/desktop-msvc/s4-palette-grid-final-native/smoke-verdict.json": "f719481fbfabdb80c72a36c3669115939a1451054068783bf44bad633e21ba11",
+    "build/desktop-msvc/s4-palette-grid-final-native/owner-domain/flight-menu.json": "a585f354a793ffe7e48ee17fc472670cc34c1f1e836bf1f8e760a089465dce6d",
+    "build/desktop-msvc/s4-palette-grid-final-native/owner-domain/flight-in-game.json": "87d228d14af41f93c799a0e13b282aa34c1615b6ab818b216696d284655cc722",
+    "build/desktop-msvc/s4-palette-grid-final-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-palette-grid-final-input-native/input-verdict.json": "82b221347ff2791a5866612eaf18e6d3f0271c3ce9e95d532f148948afbe93f7",
+    "build/desktop-msvc/s4-palette-grid-final-input-native/inventory.json.player-window.json": "ee12f4229fe3b56639c38aed5c54daa1636af21397f823fc3f0cf37e13a8d6df",
+    "build/desktop-msvc/s4-palette-grid-final-input-native/smoke-verdict.json": "7fecc5f3a2d9fb3f012c8ce28a2309e361a00beb9857049421bd2b9dc06abbf3",
+    "build/desktop-msvc/s4-palette-grid-final-input-native/flight_sim_report.json": "a06afa27376e6401b5d5c481f5779d0a3073e7c30d20077d22a1b5d134d0288b"
+  }
+}

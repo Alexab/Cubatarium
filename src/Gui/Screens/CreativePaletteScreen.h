@@ -8,6 +8,7 @@
 #include "Gui/Interfaces/IUInventoryViewModel.h"
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace cutum
@@ -26,6 +27,14 @@ class UGuiLabel;
 class UGuiButton;
 class UGuiRenderer;
 struct GuiTheme;
+
+struct PaletteGridStorage
+{
+  size_t rows{}, widgets{}, row_bytes{}, row_text_bytes{}, child_bytes{}, widget_bytes{};
+  size_t widget_text_bytes{}, callbacks{}, callback_bytes{}, requested{};
+  ContentKind kind{ContentKind::Block};
+  bool current{}, complete{}, supported{};
+};
 
 class UCreativePaletteScreen : public UGuiScreenBase
 {
@@ -58,10 +67,10 @@ public:
   /// Creative may show the full catalog. Survival is backpack-only.
   void SetCatalogAllowed(bool allowed);
   int GetActiveMainTab() const;
-  size_t GetGridEntryCount() const { return GridEntryIds.size(); }
+  size_t GetGridEntryCount() const;
   bool IsGridComplete() const
   {
-    return Built && GridBuiltCount == GridPendingViews.size();
+    return Built && GetGridEntryCount() == GridViews.size();
   }
   size_t GetGridIconCount() const;
   std::string GetSectionStateKey() const;
@@ -70,13 +79,28 @@ public:
   void SetPointerPosition(int x, int y);
   void SetPointerPressed(bool pressed);
   void RenderPreview();
+  PaletteGridStorage InspectGridStorage(const IUContentCatalog &catalog,
+                                        const UGameSession &session) const noexcept;
 
 private:
+  friend struct PaletteGridSourceProbe;
   void ApplyMainTab(int tab);
   void UpdateTooltip();
   void RebuildGrid();
   void AppendGridSlotsChunk();
-  void FinishGridBuild();
+  class GridSlot;
+  struct GridClickAction;
+  struct GridDragAction;
+  using GridWidgets = std::vector<std::unique_ptr<UGuiWidget>>;
+  const GridWidgets &GridChildren() const;
+  GridSlot &GridSlotAt(size_t index) const;
+  GridWidgets BuildGridChunk(const std::vector<InventoryEntryView> &views,
+                             size_t start, ContentKind kind);
+  void ReleaseMaterializedLabels(size_t start) noexcept;
+  void RegisterGridIcons();
+  std::pair<size_t, size_t> VisibleGridRange() const;
+  void ClickGridSlot(size_t index);
+  void DragGridSlot(size_t index);
   void RefreshGridIconTextures();
   size_t WarmVisibleGridIcons();
   void RelayoutPanel();
@@ -102,9 +126,6 @@ private:
   UContentPreviewRenderer *PreviewRenderer{nullptr};
   std::unique_ptr<UContentPreviewDock> PreviewDock;
   UGuiPanel *RootShell{nullptr};
-  std::vector<std::string> GridEntryIds;
-  std::vector<std::string> GridEntryLabels;
-  std::vector<std::string> GridSpawnHints;
   UGuiPanel *Panel{nullptr};
   UGuiTabBar *PlayerTabs{nullptr};
   UGuiTabBar *MainTabs{nullptr};
@@ -117,12 +138,13 @@ private:
   UGuiLabel *HotbarStripLabel{nullptr};
   UGuiPanel *HotbarStripDivider{nullptr};
   UGuiRenderer *Renderer{nullptr};
-  std::vector<UGuiSlot *> GridSlots;
-  /// UX tail: the grid materializes in chunks per frame - opening the
-  /// Blocks tab (1754 entries) used to construct every widget in one tick.
-  std::vector<InventoryEntryView> GridPendingViews;
-  size_t GridBuiltCount{0};
+  // The scroll content owns the published prefix of widgets for these rows.
+  std::vector<InventoryEntryView> GridViews;
+  ContentKind GridKind{ContentKind::Block};
+  bool GridPreviewPending{false};
+  size_t GridRegisteredIcons{0};
   size_t GridIconCursor{0};
+  size_t GridCacheCursor{0};
   std::vector<UGuiSlot *> HotbarStripSlots;
   int PointerX{-1};
   int PointerY{-1};
@@ -143,7 +165,6 @@ private:
   // Per-frame type-tab cache (see SyncTypeTabs): emptiness of the catalog
   // groups is only recomputed when the inventory signature changes.
   bool TypeTabsCacheValid{false};
-  bool TypeTabsUiDirty{false};
   size_t TypeTabSignature{0};
   ContentKind TypeTabKind{ContentKind::Block};
   InventoryMode TypeTabMode{InventoryMode::Creative};

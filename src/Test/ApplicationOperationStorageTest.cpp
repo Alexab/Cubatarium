@@ -9,6 +9,7 @@
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
 #include "Test/PlayerWindowStorageFixture.h"
+#include "Test/PaletteGridStorageFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include <fstream>
@@ -471,6 +472,7 @@ int main(int argc,char **argv){
     CheckDeathScreenActions();
     report["death_screen_storage"]["action_lifecycle"]=true;
     report["player_window_storage"]=CheckPlayerWindowRequests();
+    report["palette_grid_storage"]=CheckPaletteGridRequests();
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

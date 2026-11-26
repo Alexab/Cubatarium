@@ -30,6 +30,15 @@ void UGuiTabBar::SetTabEnabled(std::vector<bool> enabled)
   }
 }
 
+void UGuiTabBar::SetTabs(std::vector<std::string> labels, std::vector<bool> enabled)
+{
+  enabled.resize(labels.size(), true);
+  Labels.swap(labels);
+  Enabled.swap(enabled);
+  if (ActiveTab >= static_cast<int>(Labels.size()))
+    ActiveTab = Labels.empty() ? 0 : static_cast<int>(Labels.size()) - 1;
+}
+
 void UGuiTabBar::SetActiveTab(int tab)
 {
   if (tab >= 0 && tab < static_cast<int>(Labels.size()))

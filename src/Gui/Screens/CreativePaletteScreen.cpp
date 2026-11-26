@@ -1,5 +1,7 @@
 #include "Gui/Screens/CreativePaletteScreen.h"
 #include "Content/ContentTypeRegistry.h"
+#include "Core/Memory/CallbackStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
 #include "Game/ModePolicy.h"
@@ -25,9 +27,38 @@
 #include "ResourcePacks/BlockNameUtil.h"
 
 #include <algorithm>
+#include <new>
+#include <typeinfo>
 
 namespace cutum
 {
+
+namespace
+{
+constexpr size_t kGridChunkSize = 256;
+constexpr size_t kBackgroundIconChecks = 64;
+}
+
+class UCreativePaletteScreen::GridSlot final : public UGuiSlot
+{
+public:
+  using UGuiSlot::UGuiSlot;
+  std::string SpawnHint;
+};
+
+struct UCreativePaletteScreen::GridClickAction
+{
+  UCreativePaletteScreen *owner;
+  size_t index;
+  void operator()() const { owner->ClickGridSlot(index); }
+};
+
+struct UCreativePaletteScreen::GridDragAction
+{
+  UCreativePaletteScreen *owner;
+  size_t index;
+  void operator()() const { owner->DragGridSlot(index); }
+};
 
 UCreativePaletteScreen::UCreativePaletteScreen(
     IUContentCatalog *catalog, UGameSession *session, IUGuiIconSource *icons,
@@ -38,6 +69,22 @@ UCreativePaletteScreen::UCreativePaletteScreen(
 }
 
 UCreativePaletteScreen::~UCreativePaletteScreen() = default;
+
+const UCreativePaletteScreen::GridWidgets &UCreativePaletteScreen::GridChildren() const
+{
+  static const GridWidgets empty;
+  return Scroll ? Scroll->Content().GetChildren() : empty;
+}
+
+UCreativePaletteScreen::GridSlot &UCreativePaletteScreen::GridSlotAt(size_t index) const
+{
+  return static_cast<GridSlot &>(*GridChildren()[index]);
+}
+
+size_t UCreativePaletteScreen::GetGridEntryCount() const
+{
+  return GridChildren().size();
+}
 
 bool UCreativePaletteScreen::PickHotbarStrip(int x, int y,
                                              SlotAddress &out) const
@@ -64,25 +111,22 @@ bool UCreativePaletteScreen::PickHotbarStrip(int x, int y,
 
 bool UCreativePaletteScreen::PickGridSlot(int x, int y, SlotAddress &out) const
 {
-  if (!Visible)
+  if (!Visible || !Scroll || !Scroll->GetBounds().Contains(x, y))
   {
     return false;
   }
-  for (size_t i = 0; i < GridSlots.size(); ++i)
+  const auto [first, end] = VisibleGridRange();
+  for (size_t i = first; i < end; ++i)
   {
-    const UGuiSlot *slot = GridSlots[i];
-    if (!slot || !slot->IsVisible() || !slot->GetBounds().Contains(x, y))
+    const auto &slot = GridSlotAt(i);
+    if (!slot.IsVisible() || !slot.GetBounds().Contains(x, y))
     {
       continue;
     }
-    if (i >= GridEntryIds.size())
-    {
-      return false;
-    }
     out = SlotAddress{};
     out.surface = SlotSurface::PaletteGrid;
-    out.paletteKind = Kind;
-    out.entryId = GridEntryIds[i];
+    out.paletteKind = GridKind;
+    out.entryId = GridViews[i].ref.Id;
     out.bar = 0;
     out.slot = 0;
     return true;
@@ -191,11 +235,7 @@ void UCreativePaletteScreen::ApplyMainTab(int tab)
   {
     MainTabs->SetActiveTab(tab);
   }
-  if (Catalog)
-  {
-    const auto Types = Catalog->GetTypeIds(Kind);
-    ActiveTypeId = Types.empty() ? "misc" : Types.front();
-  }
+  ActiveTypeId.clear();
   SelectedEntryId.clear();
   if (PreviewDock)
   {
@@ -262,14 +302,8 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
   subTabs->SetOnTabChanged(
       [this](int tab)
       {
-        if (Catalog)
-        {
-          const auto Types = Catalog->GetTypeIds(Kind);
-          if (tab >= 0 && tab < static_cast<int>(Types.size()))
-          {
-            ActiveTypeId = Types[static_cast<size_t>(tab)];
-          }
-        }
+        if (tab >= 0 && static_cast<size_t>(tab) < TypeTabTypes.size())
+          ActiveTypeId = TypeTabTypes[static_cast<size_t>(tab)];
         SelectedEntryId.clear();
         if (PreviewDock)
         {
@@ -280,6 +314,7 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
 
   auto scroll = std::make_unique<UGuiScrollView>(Theme);
   Scroll = scroll.get();
+  scroll->SetAfterScrollLayout([this](UGuiScrollView &) { LayoutGridInScroll(); });
 
   auto tooltip = std::make_unique<UGuiLabel>(Theme, "");
   tooltip->SetVisible(false);
@@ -340,6 +375,10 @@ void UCreativePaletteScreen::Build(UGuiContext &ctx)
       Catalog ? Catalog->GetTypeIds(Kind) : std::vector<std::string>{};
   ActiveTypeId = initialTypes.empty() ? "misc" : initialTypes.front();
   Built = false;
+  GridViews.clear();
+  TypeTabsCacheValid = false;
+  GridPreviewPending = false;
+  GridRegisteredIcons = GridIconCursor = GridCacheCursor = 0;
   EnsureHotbarStrip();
 }
 
@@ -474,7 +513,6 @@ void UCreativePaletteScreen::RelayoutPanel()
     if (Built)
     {
       Scroll->LayoutContent();
-      LayoutGridInScroll();
     }
   }
   LayoutHotbarStrip();
@@ -649,88 +687,47 @@ void UCreativePaletteScreen::UpdateTooltip()
   std::string text;
   int tipX = PointerX;
   int tipY = PointerY;
-  auto labelAt = [this](size_t index) -> std::string
-  {
-    if (index < GridEntryLabels.size() && !GridEntryLabels[index].empty())
-    {
-      return GridEntryLabels[index];
-    }
-    if (index < GridEntryIds.size())
-    {
-      return HumanizeBlockName(GridEntryIds[index]);
-    }
-    return {};
-  };
-
   if (SubTabs && SubTabs->GetBounds().Contains(PointerX, PointerY) &&
       !TypeTabLabels.empty())
   {
     const auto bounds = SubTabs->GetBounds();
-    const int index =
-        std::min(int(TypeTabLabels.size()) - 1,
-                 (PointerX - bounds.X) /
-                     std::max(1, bounds.W / int(TypeTabLabels.size())));
+    const int index = std::min(int(TypeTabLabels.size()) - 1,
+        (PointerX - bounds.X) / std::max(1, bounds.W / int(TypeTabLabels.size())));
     text = TypeTabLabels[size_t(index)];
   }
-  else if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0 &&
-           static_cast<size_t>(HoldSlotIndex) < GridEntryIds.size())
+  else
   {
-    text = labelAt(static_cast<size_t>(HoldSlotIndex));
-    if (Kind == ContentKind::UCreature &&
-        static_cast<size_t>(HoldSlotIndex) < GridSpawnHints.size() &&
-        !GridSpawnHints[static_cast<size_t>(HoldSlotIndex)].empty())
+    size_t index = GetGridEntryCount();
+    if (HoldTimer >= kHoldTooltipSeconds && HoldSlotIndex >= 0)
+      index = static_cast<size_t>(HoldSlotIndex);
+    else if (Scroll && Scroll->GetBounds().Contains(PointerX, PointerY))
     {
-      text += "\n" + GridSpawnHints[static_cast<size_t>(HoldSlotIndex)];
+      const auto [first, end] = VisibleGridRange();
+      for (size_t i = first; i < end; ++i)
+        if (GridSlotAt(i).GetBounds().Contains(PointerX, PointerY))
+        {
+          index = i;
+          break;
+        }
     }
-    if (Kind == ContentKind::Item && Session)
+    if (index < GetGridEntryCount())
     {
-      const auto world = Session->GetWorld();
-      UItemDefinitionStorage *items =
-          world ? world->GetItemDefinitionStorage() : nullptr;
-      const ItemDefinition *def =
-          items ? items->Get(GridEntryIds[static_cast<size_t>(HoldSlotIndex)])
-                : nullptr;
-      text = BuildItemTooltipText(text, def);
-    }
-    if (PointerX < 0 || PointerY < 0)
-    {
-      UGuiSlot *slot = static_cast<size_t>(HoldSlotIndex) < GridSlots.size()
-                           ? GridSlots[static_cast<size_t>(HoldSlotIndex)]
-                           : nullptr;
-      if (slot)
+      const auto &id = GridViews[index].ref.Id;
+      const auto &slot = GridSlotAt(index);
+      text = slot.GetLabel().empty() ? HumanizeBlockName(id) : slot.GetLabel();
+      if (!slot.SpawnHint.empty())
+        text += "\n" + slot.SpawnHint;
+      if (GridKind == ContentKind::Item && Session)
       {
-        const GuiRect b = slot->GetBounds();
-        tipX = b.X + b.W / 2;
-        tipY = b.Y + b.H / 2;
+        const auto world = Session->GetWorld();
+        const auto *items = world ? world->GetItemDefinitionStorage() : nullptr;
+        text = BuildItemTooltipText(text, items ? items->Get(id) : nullptr);
       }
-    }
-  }
-  else if (PointerX >= 0 && PointerY >= 0 && Scroll)
-  {
-    for (size_t i = 0; i < GridSlots.size(); ++i)
-    {
-      UGuiSlot *slot = GridSlots[i];
-      if (slot && slot->IsVisible() &&
-          slot->GetBounds().Contains(PointerX, PointerY) &&
-          i < GridEntryIds.size())
+      if (tipX < 0 || tipY < 0)
       {
-        text = labelAt(i);
-        if (Kind == ContentKind::UCreature &&
-            static_cast<size_t>(i) < GridSpawnHints.size() &&
-            !GridSpawnHints[i].empty())
-        {
-          text += "\n" + GridSpawnHints[i];
-        }
-        if (Kind == ContentKind::Item && Session)
-        {
-          const auto world = Session->GetWorld();
-          UItemDefinitionStorage *items =
-              world ? world->GetItemDefinitionStorage() : nullptr;
-          const ItemDefinition *def =
-              items ? items->Get(GridEntryIds[i]) : nullptr;
-          text = BuildItemTooltipText(text, def);
-        }
-        break;
+        const auto bounds = slot.GetBounds();
+        tipX = bounds.X + bounds.W / 2;
+        tipY = bounds.Y + bounds.H / 2;
       }
     }
   }
@@ -766,80 +763,56 @@ void UCreativePaletteScreen::Update(double dt)
   RelayoutPanel();
   SyncHotbarStrip();
 
-  // UX tail: append the next grid chunk while the tab materializes.
-  if (Visible && Built && !GridPendingViews.empty() &&
-      GridBuiltCount < GridPendingViews.size())
+  try
   {
-    AppendGridSlotsChunk();
-    if (GridBuiltCount >= GridPendingViews.size())
+    SyncTypeTabs();
+    if (!Built && !PointerPressed)
+      RebuildGrid();
+    else if (Built && !IsGridComplete())
+      AppendGridSlotsChunk();
+
+    if (IsGridComplete() && GridPreviewPending)
     {
-      FinishGridBuild();
+      SyncPreviewDock();
+      GridPreviewPending = false;
     }
-    else
+    if (Icons && Built)
     {
-      LayoutGridInScroll();
+      RegisterGridIcons();
+      const size_t visibleWork = WarmVisibleGridIcons();
+      if (GridKind == ContentKind::Block)
+        Icons->WarmupBlockIcons(4 - visibleWork);
+      if (GridKind == ContentKind::Item)
+        Icons->WarmupItemIcons(8);
+      RefreshGridIconTextures();
     }
   }
-
-  // Publish ready textures every frame; a large background queue must not
-  // prevent visible slots from receiving icons that have already completed.
-  if (Visible && Icons && Built)
+  catch (const std::bad_alloc &)
   {
-    RefreshGridIconTextures();
-    const size_t visibleWork = WarmVisibleGridIcons();
-    if (Kind == ContentKind::Block)
-      Icons->WarmupBlockIcons(4 - visibleWork);
-    if (Kind == ContentKind::Item)
-      Icons->WarmupItemIcons(8);
-    RefreshGridIconTextures();
+    // The grid and its published prefix are still coherent. Resume next frame.
+    return;
   }
 
-  if (PointerPressed && PointerX >= 0 && PointerY >= 0)
+  if (PointerPressed)
   {
     int slotUnderPointer = -1;
-    for (size_t i = 0; i < GridSlots.size(); ++i)
+    if (Scroll && Scroll->GetBounds().Contains(PointerX, PointerY))
     {
-      UGuiSlot *slot = GridSlots[i];
-      if (slot && slot->IsVisible() &&
-          slot->GetBounds().Contains(PointerX, PointerY))
-      {
-        slotUnderPointer = static_cast<int>(i);
-        break;
-      }
+      const auto [first, end] = VisibleGridRange();
+      for (size_t i = first; i < end; ++i)
+        if (GridSlotAt(i).GetBounds().Contains(PointerX, PointerY))
+        {
+          slotUnderPointer = static_cast<int>(i);
+          break;
+        }
     }
-    if (slotUnderPointer >= 0)
-    {
-      if (slotUnderPointer != HoldSlotIndex)
-      {
-        HoldSlotIndex = slotUnderPointer;
-        HoldTimer = 0.0;
-      }
-      else
-      {
-        HoldTimer += dt;
-      }
-    }
-    else
-    {
-      HoldSlotIndex = -1;
+    if (slotUnderPointer < 0 || slotUnderPointer != HoldSlotIndex)
       HoldTimer = 0.0;
-    }
+    else
+      HoldTimer += dt;
+    HoldSlotIndex = slotUnderPointer;
   }
 
-  if (SubTabs)
-  {
-    const std::string previousType = ActiveTypeId;
-    SyncTypeTabs();
-    if (ActiveTypeId != previousType)
-    {
-      Built = false;
-    }
-  }
-
-  if (!Built)
-  {
-    RebuildGrid();
-  }
   if (PreviewDock)
   {
     PreviewDock->Update(dt);
@@ -858,11 +831,11 @@ void UCreativePaletteScreen::SyncTypeTabs()
   // GetEntries for every type on every frame rebuilt the whole catalog view
   // needlessly.
   const InventoryMode mode = CurrentListingMode();
-  const size_t signature = Session->GetInventorySignature();
+  const size_t signature = mode == InventoryMode::Owned ? Session->GetInventorySignature() : 0;
   if (!TypeTabsCacheValid || TypeTabSignature != signature ||
       TypeTabKind != Kind || TypeTabMode != mode)
   {
-    const auto types = Catalog->GetTypeIds(Kind);
+    auto types = Catalog->GetTypeIds(Kind);
     std::vector<std::string> labels;
     std::vector<bool> enabled;
     labels.reserve(types.size());
@@ -877,6 +850,9 @@ void UCreativePaletteScreen::SyncTypeTabs()
       labels.push_back("Misc");
       enabled.push_back(true);
     }
+    SubTabs->SetTabs(labels, enabled);
+    if (mode == InventoryMode::Owned && TypeTabsCacheValid && signature != TypeTabSignature)
+      Built = false;
     TypeTabTypes = std::move(types);
     TypeTabLabels = std::move(labels);
     TypeTabEnabled = std::move(enabled);
@@ -884,14 +860,6 @@ void UCreativePaletteScreen::SyncTypeTabs()
     TypeTabKind = Kind;
     TypeTabMode = mode;
     TypeTabsCacheValid = true;
-    TypeTabsUiDirty = true;
-  }
-
-  if (TypeTabsUiDirty)
-  {
-    SubTabs->SetTabs(TypeTabLabels);
-    SubTabs->SetTabEnabled(TypeTabEnabled);
-    TypeTabsUiDirty = false;
   }
 
   int previous = 0;
@@ -925,6 +893,8 @@ void UCreativePaletteScreen::SyncTypeTabs()
   if (active < 0)
   {
     active = 0;
+    if (!ActiveTypeId.empty())
+      Built = false;
     ActiveTypeId.clear();
   }
   SubTabs->SetActiveTab(active);
@@ -938,21 +908,19 @@ void UCreativePaletteScreen::SyncPreviewDock()
   }
   PreviewDock->SetOnChange(nullptr);
   if (SelectedEntryId.empty() || !PreviewRenderer ||
-      !PreviewRenderer->SupportsKind(Kind))
+      !PreviewRenderer->SupportsKind(GridKind))
   {
     PreviewDock->ClearSelection();
     return;
   }
-  std::string label = SelectedEntryId;
-  for (size_t i = 0; i < GridEntryIds.size(); ++i)
-  {
-    if (GridEntryIds[i] == SelectedEntryId && i < GridEntryLabels.size())
+  const std::string *label = &SelectedEntryId;
+  for (size_t i = 0; i < GetGridEntryCount(); ++i)
+    if (GridViews[i].ref.Id == SelectedEntryId)
     {
-      label = GridEntryLabels[i];
+      label = &GridSlotAt(i).GetLabel();
       break;
     }
-  }
-  PreviewDock->SetSelection(Kind, SelectedEntryId, label);
+  PreviewDock->SetSelection(GridKind, SelectedEntryId, *label);
 }
 
 void UCreativePaletteScreen::RenderPreview()
@@ -966,212 +934,269 @@ void UCreativePaletteScreen::RenderPreview()
 void UCreativePaletteScreen::RebuildGrid()
 {
   if (!Scroll || !Catalog || !Session || !Theme)
-  {
     return;
-  }
-  Scroll->Content().ClearChildren();
-  GridSlots.clear();
-  GridEntryIds.clear();
-  GridEntryLabels.clear();
-  GridSpawnHints.clear();
 
   const std::string groupId = ActiveTypeId.empty() ? "misc" : ActiveTypeId;
-  GridPendingViews = Session->GetEntries(Kind, groupId, CurrentListingMode());
-  GridBuiltCount = 0;
-  GridIconCursor = 0;
-  // Built means this catalog snapshot is current, even while its widgets are
-  // still being appended. Keeping it false restarts every large grid each tick.
+  auto views = Session->GetEntries(Kind, groupId, CurrentListingMode());
+  auto widgets = BuildGridChunk(views, 0, Kind);
+  GridViews.swap(views);
+  Scroll->Content().Children.swap(widgets);
+  GridKind = Kind;
   Built = true;
-
-  // UX tail: materialize the first chunk only; Update appends the rest per
-  // frame so the Blocks tab (1754 entries) does not construct every widget
-  // in one tick.
-  AppendGridSlotsChunk();
-  LayoutGridInScroll();
-  if (GridBuiltCount >= GridPendingViews.size())
-  {
-    FinishGridBuild();
-  }
+  GridPreviewPending = true;
+  GridRegisteredIcons = GridIconCursor = GridCacheCursor = 0;
+  HoldSlotIndex = -1;
+  HoldTimer = 0.0;
+  ReleaseMaterializedLabels(0);
+  Scroll->LayoutContent();
 }
 
 void UCreativePaletteScreen::AppendGridSlotsChunk()
 {
-  if (!Scroll || !Theme)
+  auto &content = Scroll->Content();
+  const auto start = GetGridEntryCount();
+  auto widgets = BuildGridChunk(GridViews, start, GridKind);
+  const auto target = start + widgets.size();
+  const auto capacity = GridChildren().capacity();
+  if (target > capacity)
+    content.ReserveChildren(std::max(target, std::min(GridViews.size(), capacity + capacity / 2)));
+  for (auto &widget : widgets)
+    content.AddChild(std::move(widget));
+  ReleaseMaterializedLabels(start);
+  Scroll->LayoutContent();
+}
+
+UCreativePaletteScreen::GridWidgets UCreativePaletteScreen::BuildGridChunk(
+    const std::vector<InventoryEntryView> &views, size_t start, ContentKind kind)
+{
+  const auto count = std::min(kGridChunkSize, views.size() - start);
+  GridWidgets widgets;
+  widgets.reserve(count);
+  for (size_t i = start; i < start + count; ++i)
   {
-    return;
-  }
-  constexpr size_t kSlotsPerFrame = 256;
-  const int slotSize = Theme->HotbarSlotSize;
-  const size_t target =
-      std::min(GridPendingViews.size(), GridBuiltCount + kSlotsPerFrame);
-  for (; GridBuiltCount < target; ++GridBuiltCount)
-  {
-    const InventoryEntryView &view = GridPendingViews[GridBuiltCount];
-    auto slot = std::make_unique<UGuiSlot>(Theme);
-    slot->SetBounds({0, 0, slotSize, slotSize});
-    const std::string entryId = view.ref.Id;
+    const auto &view = views[i];
+    const auto &entry = view.ref;
+    auto slot = std::make_unique<GridSlot>(Theme);
     slot->SetLabel(view.label);
-    slot->SetSelected(entryId == SelectedEntryId);
-    if (Icons)
+    slot->SetSelected(entry.Id == SelectedEntryId);
+    if (!entry.IsCatalogReference() && entry.count > 0)
+      slot->SetCornerHint(std::to_string(entry.count));
+    slot->SetWearProgress(entry.wear);
+    slot->SetBroken(entry.broken);
+    slot->SetOnClick(GridClickAction{this, i});
+    slot->SetOnBeginDrag(GridDragAction{this, i});
+    if (kind == ContentKind::UCreature && !Session->CanSpawnCreatureByView(entry.Id))
     {
-      GLuint tex = 0;
-      if (Kind == ContentKind::Block)
-      {
-        // UX U4: never render icons in the build pass - placeholders +
-        // per-frame drain with a warmup queue.
-        tex = Icons->GetBlockIconTextureIfCached(entryId);
-        if (tex == 0)
-        {
-          Icons->QueueBlockIcon(entryId);
-        }
-      }
-      else if (Kind == ContentKind::Object)
-      {
-        tex = Icons->GetObjectIconTextureIfCached(entryId);
-      }
-      else if (Kind == ContentKind::Item)
-      {
-        tex = Icons->GetItemIconTexture(entryId);
-      }
-      slot->SetIconTexture(tex);
+      slot->SetDimmed(true);
+      slot->SpawnHint = Session->GetCreatureSpawnBlockedHint(entry.Id);
     }
-    if (!view.ref.IsCatalogReference() && view.ref.count > 0)
-    {
-      slot->SetCornerHint(std::to_string(view.ref.count));
-    }
-    slot->SetWearProgress(view.ref.wear);
-    slot->SetBroken(view.ref.broken);
-    InventoryEntryRef entry = view.ref;
+    widgets.emplace_back(std::move(slot));
+  }
+  return widgets;
+}
 
-    SlotAddress address;
-    address.surface = SlotSurface::PaletteGrid;
-    address.paletteKind = Kind;
-    address.entryId = entryId;
+void UCreativePaletteScreen::ReleaseMaterializedLabels(size_t start) noexcept
+{
+  for (size_t i = start; i < GetGridEntryCount(); ++i)
+    std::string{}.swap(GridViews[i].label);
+}
 
-    slot->SetOnClick(
-        [this, entry]()
-        {
-          if (!Session)
-          {
-            return;
-          }
-          SelectedEntryId = entry.Id;
-          SyncPreviewDock();
-          const size_t bar =
-              Hosted ? Session->GetActiveHotbarRow() : 0;
-          const size_t slot = Session->GetSelectedSlot(bar);
-          if (Session->AssignToHotbar(entry, bar, slot))
-          {
-            Session->ClearPendingAssignment();
-            Session->SelectSlot(bar, slot);
-          }
-          else
-          {
-            Session->BeginPendingAssignment(entry);
-          }
-          Built = false;
-        });
-    slot->SetOnBeginDrag(
-        [this, address, entry]()
-        {
-          if (Session)
-          {
-            Session->BeginDragFromSlot(address, entry);
-          }
-        });
-    std::string spawnHint;
-    if (Kind == ContentKind::UCreature && Session)
+void UCreativePaletteScreen::ClickGridSlot(size_t index)
+{
+  const auto &entry = GridViews[index].ref;
+  SelectedEntryId = entry.Id;
+  SyncPreviewDock();
+  const size_t bar = Hosted ? Session->GetActiveHotbarRow() : 0;
+  const size_t selected = Session->GetSelectedSlot(bar);
+  if (Session->AssignToHotbar(entry, bar, selected))
+  {
+    Session->ClearPendingAssignment();
+    Session->SelectSlot(bar, selected);
+  }
+  else
+  {
+    Session->BeginPendingAssignment(entry);
+  }
+  for (size_t i = 0; i < GetGridEntryCount(); ++i)
+    GridSlotAt(i).SetSelected(GridViews[i].ref.Id == SelectedEntryId);
+  if (CurrentListingMode() == InventoryMode::Owned)
+    Built = false;
+}
+
+void UCreativePaletteScreen::DragGridSlot(size_t index)
+{
+  const auto &entry = GridViews[index].ref;
+  SlotAddress address;
+  address.surface = SlotSurface::PaletteGrid;
+  address.paletteKind = GridKind;
+  address.entryId = entry.Id;
+  Session->BeginDragFromSlot(address, entry);
+}
+
+void UCreativePaletteScreen::RegisterGridIcons()
+{
+  const auto end = std::min(GetGridEntryCount(), GridRegisteredIcons + kGridChunkSize);
+  for (; GridRegisteredIcons < end; ++GridRegisteredIcons)
+  {
+    auto &slot = GridSlotAt(GridRegisteredIcons);
+    const auto &id = GridViews[GridRegisteredIcons].ref.Id;
+    GLuint texture = 0;
+    if (GridKind == ContentKind::Block)
     {
-      const bool canSpawn = Session->CanSpawnCreatureByView(entryId);
-      slot->SetDimmed(!canSpawn);
-      if (!canSpawn)
-      {
-        spawnHint = Session->GetCreatureSpawnBlockedHint(entryId);
-      }
+      texture = Icons->GetBlockIconTextureIfCached(id);
+      if (!texture)
+        Icons->QueueBlockIcon(id);
     }
-    UGuiSlot *ptr =
-        static_cast<UGuiSlot *>(Scroll->Content().AddChild(std::move(slot)));
-    GridSlots.push_back(ptr);
-    GridEntryIds.push_back(entryId);
-    GridEntryLabels.push_back(view.label);
-    GridSpawnHints.push_back(std::move(spawnHint));
+    else if (GridKind == ContentKind::Item)
+      texture = Icons->GetItemIconTexture(id);
+    else if (GridKind == ContentKind::Object)
+      texture = Icons->GetObjectIconTextureIfCached(id);
+    if (texture)
+      slot.SetIconTexture(texture);
   }
 }
 
-void UCreativePaletteScreen::FinishGridBuild()
+std::pair<size_t, size_t> UCreativePaletteScreen::VisibleGridRange() const
 {
-  Scroll->SetAfterScrollLayout([this](UGuiScrollView &)
-                               { LayoutGridInScroll(); });
-  Scroll->LayoutContent();
-  LayoutGridInScroll();
-  SyncPreviewDock();
-  Built = true;
+  if (!Scroll || !Theme || GetGridEntryCount() == 0)
+    return {};
+  const auto viewport = Scroll->GetBounds();
+  if (viewport.H <= 0)
+    return {};
+  const auto content = Scroll->Content().GetBounds();
+  const int stride = std::max(1, Theme->HotbarSlotSize + Theme->HotbarSlotGap);
+  const size_t columns = SlotGridColumnCount(content.W, Theme->HotbarSlotSize, Theme->HotbarSlotGap, 0);
+  const int top = std::max(0, viewport.Y - content.Y);
+  const auto first = std::min(GetGridEntryCount(), size_t(top / stride) * columns);
+  const auto end = std::min(GetGridEntryCount(), size_t((top + viewport.H - 1) / stride + 1) * columns);
+  return {first, end};
 }
 
 void UCreativePaletteScreen::RefreshGridIconTextures()
 {
-  if (!Icons)
-  {
+  const auto count = GetGridEntryCount();
+  if (!count || (GridKind != ContentKind::Block && GridKind != ContentKind::Item && GridKind != ContentKind::Object))
     return;
-  }
-  for (size_t i = 0; i < GridSlots.size() && i < GridEntryIds.size(); ++i)
+  const auto refresh = [this](size_t i) {
+    auto &slot = GridSlotAt(i);
+    if (slot.GetIconTexture())
+      return;
+    const auto &id = GridViews[i].ref.Id;
+    const auto texture = GridKind == ContentKind::Block ? Icons->GetBlockIconTextureIfCached(id)
+                       : GridKind == ContentKind::Item ? Icons->GetItemIconTexture(id)
+                                                       : Icons->GetObjectIconTextureIfCached(id);
+    if (texture)
+      slot.SetIconTexture(texture);
+  };
+  const auto [first, end] = VisibleGridRange();
+  for (size_t i = first; i < end; ++i)
+    refresh(i);
+  for (size_t n = 0; n < std::min(count, kBackgroundIconChecks); ++n)
   {
-    if (!GridSlots[i] || GridSlots[i]->GetIconTexture() != 0)
-    {
-      continue;
-    }
-    GLuint tex = 0;
-    if (Kind == ContentKind::Block)
-    {
-      tex = Icons->GetBlockIconTextureIfCached(GridEntryIds[i]);
-    }
-    else if (Kind == ContentKind::Item)
-    {
-      // Queue is drained; cache hits only (GetItemIconTexture queues misses).
-      tex = Icons->GetItemIconTexture(GridEntryIds[i]);
-    }
-    else if (Kind == ContentKind::Object)
-      tex = Icons->GetObjectIconTextureIfCached(GridEntryIds[i]);
-    if (tex != 0)
-    {
-      GridSlots[i]->SetIconTexture(tex);
-    }
+    const auto i = GridCacheCursor % count;
+    if (i < first || i >= end)
+      refresh(i);
+    GridCacheCursor = (i + 1) % count;
   }
 }
 
 size_t UCreativePaletteScreen::GetGridIconCount() const
 {
-  return std::count_if(GridSlots.begin(), GridSlots.end(),
-                       [](const UGuiSlot *slot)
-                       { return slot && slot->GetIconTexture() != 0; });
+  return std::count_if(GridChildren().begin(), GridChildren().end(), [](const auto &widget) {
+    return static_cast<const GridSlot &>(*widget).GetIconTexture() != 0;
+  });
+}
+
+PaletteGridStorage UCreativePaletteScreen::InspectGridStorage(
+    const IUContentCatalog &catalog, const UGameSession &session) const noexcept
+{
+  PaletteGridStorage out;
+  if (&catalog != Catalog || &session != Session || !Context || Theme != &Context->GetTheme() ||
+      !Root || !Panel || !Scroll ||
+      std::none_of(Root->GetChildren().begin(), Root->GetChildren().end(),
+                   [this](const auto &widget) { return widget.get() == Panel; }) ||
+      std::none_of(Panel->GetChildren().begin(), Panel->GetChildren().end(),
+                   [this](const auto &widget) { return widget.get() == Scroll; }))
+    return out;
+
+  out.rows = GridViews.size();
+  out.widgets = GetGridEntryCount();
+  out.kind = GridKind;
+  out.current = Built;
+  out.complete = IsGridComplete();
+  if (out.widgets > out.rows || GridRegisteredIcons > out.widgets)
+    return out;
+  StlSourceStorage rows, rowText, children, widgets, widgetText, callbacks, total;
+  rows.Buffer(GridViews.capacity(), sizeof(InventoryEntryView));
+  children.Buffer(GridChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  for (const auto &row : GridViews)
+  {
+    rowText.Text(row.ref.Id);
+    rowText.Text(row.ref.contentsId);
+    rowText.Text(row.label);
+  }
+  const bool profile = StlSourceStorage::SupportedProfile();
+  bool known = profile;
+  for (size_t i = 0; i < out.widgets; ++i)
+  {
+    const auto &widget = GridChildren()[i];
+    if (!widget || typeid(*widget) != typeid(GridSlot) || !widget->GetChildren().empty())
+      return out;
+    const auto &slot = GridSlotAt(i);
+    if (slot.Theme != Theme || !GridViews[i].label.empty())
+      return out;
+    widgets.Add(sizeof(GridSlot));
+    children.Buffer(slot.GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+    widgetText.Text(slot.Label);
+    widgetText.Text(slot.CornerHint);
+    widgetText.Text(slot.CountHint);
+    widgetText.Text(slot.SpawnHint);
+    const auto click = InspectKnownOwnerCallback<GridClickAction>(slot.OnClick, this, profile);
+    const auto drag = InspectKnownOwnerCallback<GridDragAction>(slot.OnBeginDrag, this, profile);
+    known &= click.supported && click.present && slot.OnClick.target<GridClickAction>()->index == i &&
+             drag.supported && drag.present && slot.OnBeginDrag.target<GridDragAction>()->index == i &&
+             !slot.OnActivate;
+    out.callbacks += size_t(click.present) + size_t(drag.present) + size_t(bool(slot.OnActivate));
+    callbacks.Add(click.requests);
+    callbacks.Add(drag.requests);
+  }
+  out.row_bytes = rows.bytes.requested;
+  out.row_text_bytes = rowText.bytes.requested;
+  out.child_bytes = children.bytes.requested;
+  out.widget_bytes = widgets.bytes.requested;
+  out.widget_text_bytes = widgetText.bytes.requested;
+  out.callback_bytes = callbacks.bytes.requested;
+  out.supported = known;
+  for (const auto &part : {rows.bytes, rowText.bytes, children.bytes, widgets.bytes, widgetText.bytes, callbacks.bytes})
+  {
+    total.Add(part.requested);
+    out.supported &= part.supported;
+  }
+  out.requested = total.bytes.requested;
+  out.supported &= total.bytes.supported;
+  return out;
 }
 
 size_t UCreativePaletteScreen::WarmVisibleGridIcons()
 {
-  if (!Icons || !Scroll || GridSlots.empty() || Kind == ContentKind::Item)
+  if (GridKind == ContentKind::Item)
     return 0;
-  const auto viewport = Scroll->GetBounds();
+  const auto [first, end] = VisibleGridRange();
+  const auto count = end - first;
   size_t work = 0;
-  for (size_t scanned = 0; scanned < GridSlots.size() && work < 4; ++scanned)
+  for (size_t scanned = 0; scanned < count && work < 4; ++scanned)
   {
-    const size_t i = GridIconCursor++ % GridSlots.size();
-    auto *slot = GridSlots[i];
-    if (!slot || slot->GetIconTexture())
-      continue;
-    const auto bounds = slot->GetBounds();
-    if (bounds.X >= viewport.X + viewport.W ||
-        bounds.X + bounds.W <= viewport.X ||
-        bounds.Y >= viewport.Y + viewport.H ||
-        bounds.Y + bounds.H <= viewport.Y)
+    const size_t i = first + GridIconCursor++ % count;
+    auto &slot = GridSlotAt(i);
+    if (slot.GetIconTexture() || !slot.GetBounds().Intersects(Scroll->GetBounds()))
       continue;
     ++work;
-    const auto &id = GridEntryIds[i];
-    const auto texture =
-        Kind == ContentKind::Block       ? Icons->GetBlockIconTexture(id)
-        : Kind == ContentKind::Object    ? Icons->GetObjectIconTexture(id)
-        : Kind == ContentKind::UCreature ? Icons->GetCreatureIconTexture(id)
-                                         : Icons->GetSkinIconTexture(id);
-    slot->SetIconTexture(texture);
+    const auto &id = GridViews[i].ref.Id;
+    const auto texture = GridKind == ContentKind::Block ? Icons->GetBlockIconTexture(id)
+                       : GridKind == ContentKind::Object ? Icons->GetObjectIconTexture(id)
+                       : GridKind == ContentKind::UCreature ? Icons->GetCreatureIconTexture(id)
+                                                           : Icons->GetSkinIconTexture(id);
+    slot.SetIconTexture(texture);
   }
   return work;
 }
@@ -1192,15 +1217,11 @@ void UCreativePaletteScreen::LayoutGridInScroll()
 
   int x = contentRect.X;
   int y = contentTop;
-  for (size_t i = 0; i < GridSlots.size(); ++i)
+  for (size_t i = 0; i < GetGridEntryCount(); ++i)
   {
-    UGuiSlot *slot = GridSlots[i];
-    if (!slot)
-    {
-      continue;
-    }
-    slot->SetBounds({x, y, slotSize, slotSize});
-    slot->SetDrawClip(Scroll->GetBounds());
+    auto &slot = GridSlotAt(i);
+    slot.SetBounds({x, y, slotSize, slotSize});
+    slot.SetDrawClip(Scroll->GetBounds());
     if ((i + 1) % static_cast<size_t>(cols) == 0)
     {
       x = contentRect.X;
@@ -1212,9 +1233,7 @@ void UCreativePaletteScreen::LayoutGridInScroll()
     }
   }
 
-  const int rows = GridSlots.empty()
-                       ? 0
-                       : static_cast<int>((GridSlots.size() + cols - 1) / cols);
+  const int rows = static_cast<int>((GetGridEntryCount() + cols - 1) / cols);
   const int contentHeight =
       std::max(viewportH, rows * (slotSize + gap) - (rows > 0 ? gap : 0) + 8);
   Scroll->Content().SetBounds(

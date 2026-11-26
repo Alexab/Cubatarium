@@ -555,7 +555,7 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
     event.Mods |= GLFW_MOD_CONTROL;
 #endif
 
-  if (app.PaletteOpen && app.PaletteScreen &&
+  if (app.PaletteScreen && (app.PaletteOpen || !pressed) &&
       event.Button == GuiMouseButton::Left)
   {
     app.PaletteScreen->SetPointerPressed(pressed);

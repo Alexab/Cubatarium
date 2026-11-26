@@ -695,8 +695,7 @@ void UCharacterSheetScreen::Relayout()
   DeleteButton->SetBounds(
       {dropBounds.X - Scaled(150), dropBounds.Y, Scaled(145), dropBounds.H});
   DeleteButton->SetVisible(bagVisible && Stats &&
-                           Stats->GetCharacterStatsSnapshot().gameMode ==
-                               WorldGameMode::Creative);
+                           Stats->GetWorldGameMode() == WorldGameMode::Creative);
   const int gridTop = top + line + pad * 2;
   const int slot =
       std::max(20, std::min((mainW - pad) / 10 - pad / 2,
@@ -830,8 +829,7 @@ void UCharacterSheetScreen::RefreshLabels()
     }
     TitleMeta->SetText(oss.str());
   }
-  Sections->SetTabEnabled(
-      {true, true, true, true, snap.gameMode == WorldGameMode::Creative});
+  Sections->SetTabEnabled(4, snap.gameMode == WorldGameMode::Creative);
   if (ModeLabel)
   {
     if (snap.gameMode == WorldGameMode::Creative)
@@ -940,10 +938,8 @@ void UCharacterSheetScreen::RefreshLabels()
         ToolSlots[i]->SetDimmed(false);
       }
     }
-    std::string query = Search ? Search->GetText() : "";
-    std::replace(query.begin(), query.end(), '_', ' ');
-    std::transform(query.begin(), query.end(), query.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
+    const std::string_view query = Search ? std::string_view(Search->GetText()) : std::string_view{};
+    const auto folded = [](unsigned char c) { return c == '_' ? ' ' : std::tolower(c); };
     for (size_t i = 0; i < BagSlots.size(); ++i)
     {
       const InventoryEntryRef empty;
@@ -954,7 +950,10 @@ void UCharacterSheetScreen::RefreshLabels()
                               : snap.slots[i];
       auto *slot = BagSlots[i];
       const auto tex = Icons->GetEntryIcon(entry);
-      slot->SetLabel(RecoveryMode ? entry.Id : "");
+      if (RecoveryMode)
+        slot->SetLabel(entry.Id);
+      else
+        slot->SetLabel("");
       slot->SetIconTexture(tex);
       slot->SetWearProgress(entry.wear);
       slot->SetBroken(entry.broken);
@@ -962,11 +961,9 @@ void UCharacterSheetScreen::RefreshLabels()
       slot->SetCountHint(entry.empty || entry.IsCatalogReference()
                              ? ""
                              : std::to_string(entry.count));
-      std::string text = entry.Id;
-      std::replace(text.begin(), text.end(), '_', ' ');
-      std::transform(text.begin(), text.end(), text.begin(),
-                     [](unsigned char c) { return std::tolower(c); });
-      slot->SetDimmed(!query.empty() && text.find(query) == std::string::npos);
+      slot->SetDimmed(!query.empty() &&
+          std::search(entry.Id.begin(), entry.Id.end(), query.begin(), query.end(),
+                      [&](unsigned char left, unsigned char right) { return folded(left) == folded(right); }) == entry.Id.end());
       slot->SetSelected(!RecoveryMode && i / 10 == snap.activeRow &&
                         i % 10 == snap.activeSlot);
       slot->SetVisible(true);
@@ -987,11 +984,11 @@ void UCharacterSheetScreen::RefreshLabels()
               "until restored."
             : "Click: move | Right: split/place 1 | Shift: quick | Ctrl: pin");
   }
+  EffectLabels.reserve(snap.effects.size() + 1);
   while (EffectLabels.size() < snap.effects.size() + 1)
   {
     auto label = std::make_unique<UGuiLabel>(&Context->GetTheme(), "");
-    EffectLabels.push_back(label.get());
-    StatsPanel->AddChild(std::move(label));
+    EffectLabels.push_back(static_cast<UGuiLabel *>(StatsPanel->AddChild(std::move(label))));
   }
   for (size_t i = 0; i < EffectLabels.size(); ++i)
   {

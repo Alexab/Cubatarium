@@ -78,6 +78,7 @@ public:
   virtual bool OnScroll(const GuiScrollEvent &event);
 
 protected:
+  friend class UCreativePaletteScreen;
   GuiRect Bounds{0, 0, 100, 32};
   bool Visible{true};
   bool Enabled{true};

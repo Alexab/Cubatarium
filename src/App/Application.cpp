@@ -697,6 +697,15 @@ PlayerWindowStorage UApplication::InspectPlayerWindowStorage() const noexcept
   return out;
 }
 
+PaletteGridStorage UApplication::InspectPaletteGridStorage() const noexcept
+{
+  if (PaletteScreen && GameSession)
+    return PaletteScreen->InspectGridStorage(GameSession->GetContentCatalog(), *GameSession);
+  PaletteGridStorage out;
+  out.supported = !PaletteScreen;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
@@ -1628,6 +1637,16 @@ void UApplication::EnterInGameInputState()
   }
   if (PaletteScreen)
   {
+    if (std::find(OverlayCaptures.begin(), OverlayCaptures.end(), OverlayPointerCapture::Palette) != OverlayCaptures.end())
+    {
+      if (auto *slot = dynamic_cast<UGuiSlot *>(OverlayPressedWidget))
+        slot->ClearPressState();
+      OverlayPressedWidget = nullptr;
+      std::replace(OverlayCaptures.begin(), OverlayCaptures.end(), OverlayPointerCapture::Palette,
+                   OverlayPointerCapture::None);
+      GameSession->CancelDrag();
+    }
+    PaletteScreen->SetPointerPressed(false);
     PaletteScreen->SetVisible(false);
   }
   if (CraftingScreen)
@@ -2602,6 +2621,55 @@ void UApplication::RunPlayerWindowQa(const std::string &path)
   click(CharacterSheetScreen->GetSearchBounds());
   InputRouter.RouteKey(*this, GLFW_KEY_A, GLFW_PRESS, GLFW_MOD_CONTROL);
   InputRouter.RouteKey(*this, GLFW_KEY_BACKSPACE, GLFW_PRESS, 0);
+  if (std::getenv("CUBA_PALETTE_GRID_QA"))
+  {
+    GameSession->SyncToWorldGameMode(WorldGameMode::Creative);
+    OpenPlayerWindow(4);
+    PaletteScreen->OpenWithMainTab(0);
+    IconSource->ClearBlockIconCache();
+    PaletteScreen->Update(0);
+    const auto first = InspectPaletteGridStorage();
+    const auto beforeIcons = PaletteScreen->GetGridIconCount();
+    PaletteScreen->Update(0);
+    const auto next = InspectPaletteGridStorage();
+    const auto afterIcons = PaletteScreen->GetGridIconCount();
+    const auto pending = IconSource->PendingBlockIcons();
+    for (int frame = 0; frame < 24 && !PaletteScreen->IsGridComplete(); ++frame)
+      PaletteScreen->Update(0);
+    const auto complete = InspectPaletteGridStorage();
+    auto row = [](const PaletteGridStorage &storage) {
+      return nlohmann::json{{"supported", storage.supported}, {"rows", storage.rows},
+                            {"widgets", storage.widgets}, {"complete", storage.complete},
+                            {"callbacks", storage.callbacks}, {"callback_bytes", storage.callback_bytes},
+                            {"requested", storage.requested}};
+    };
+    report["palette_grid"] = {{"first", row(first)}, {"next", row(next)}, {"complete", row(complete)},
+        {"before_icons", beforeIcons}, {"after_icons", afterIcons}, {"pending_icons", pending}};
+    check("catalog publishes complete bounded batches with shared rows",
+          first.supported && next.supported && complete.supported && first.widgets == 256 &&
+              first.rows > first.widgets && next.widgets > first.widgets &&
+              next.widgets <= first.widgets + 256 && complete.complete &&
+              complete.rows == complete.widgets && complete.callbacks == complete.widgets * 2 &&
+              !complete.callback_bytes);
+    check("visible catalog icons progress while background work remains queued",
+          afterIcons > beforeIcons && pending > 0);
+    const int gridX = PaletteScreen->GetViewportWidth() * 2 / 5;
+    const int gridY = PaletteScreen->GetViewportHeight() * 11 / 20;
+    SlotAddress held;
+    const bool picked = PaletteScreen->PickGridSlot(gridX, gridY, held);
+    const bool pressed = InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, true, gridX, gridY, 0);
+    const bool captured = HasAnyOverlayCapture();
+    EnterInGameInputState();
+    const bool released = !HasAnyOverlayCapture() && !OverlayPressedWidget;
+    OpenPlayerWindow(4);
+    PaletteScreen->OpenWithMainTab(4);
+    PaletteScreen->Update(0);
+    const auto afterReset = InspectPaletteGridStorage();
+    InputRouter.RouteMouseButton(*this, GLFW_MOUSE_BUTTON_LEFT, false, gridX, gridY, 0);
+    check("resetting gameplay input retires the held catalog slot before publishing another tab",
+          picked && pressed && captured && released && afterReset.supported &&
+              afterReset.current && afterReset.kind == ContentKind::Item);
+  }
   GameSession->CancelDrag();
   GameSession->SyncToWorldGameMode(originalMode);
   World->GetControlledCreature()->GetInventory() = originalInventory;

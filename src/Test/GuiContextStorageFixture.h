@@ -4,6 +4,7 @@
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Screens/ConsoleScreen.h"
+#include "Gui/Screens/CreativePaletteScreen.h"
 #include "Gui/Screens/DeathScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
@@ -88,6 +89,15 @@ inline nlohmann::json PlayerWindowStorageJson(const PlayerWindowStorage &s)
           {"widgets", s.widgets}, {"widget_bytes", s.widget_bytes}, {"children_bytes", s.children_bytes},
           {"tab_bytes", s.tab_bytes}, {"text_bytes", s.text_bytes}, {"callback_bytes", s.callback_bytes},
           {"callbacks", s.callbacks}, {"requested", s.requested}};
+}
+
+inline nlohmann::json PaletteGridStorageJson(const PaletteGridStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"kind", int(s.kind)},
+          {"current", s.current}, {"complete", s.complete}, {"rows", s.rows}, {"widgets", s.widgets},
+          {"row_bytes", s.row_bytes}, {"row_text_bytes", s.row_text_bytes}, {"child_bytes", s.child_bytes},
+          {"widget_bytes", s.widget_bytes}, {"widget_text_bytes", s.widget_text_bytes},
+          {"callbacks", s.callbacks}, {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
 }
 
 namespace gui_context_fixture

@@ -36,6 +36,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
   report["console_storage_live"] = ConsoleStorageJson(application.InspectConsoleStorage());
   report["death_screen_storage_live"] = DeathScreenStorageJson(application.InspectDeathScreenStorage());
   report["player_window_storage_live"] = PlayerWindowStorageJson(application.InspectPlayerWindowStorage());
+  report["palette_grid_storage_live"] = PaletteGridStorageJson(application.InspectPaletteGridStorage());
   auto require = [](bool value, const char *message)
   {
     if (!value)

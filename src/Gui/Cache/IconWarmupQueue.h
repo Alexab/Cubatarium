@@ -1,10 +1,10 @@
 #ifndef ICONWARMUPQUEUE_H
 #define ICONWARMUPQUEUE_H
 
+#include <deque>
 #include <optional>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
 namespace cutum
 {
@@ -18,11 +18,20 @@ public:
   /// Returns false when the id is already queued.
   bool Push(const std::string &id)
   {
-    if (id.empty() || !Queued.insert(id).second)
-    {
+    if (id.empty())
       return false;
+    const auto [entry, inserted] = Queued.insert(id);
+    if (!inserted)
+      return false;
+    try
+    {
+      Queue.push_back(id);
     }
-    Queue.push_back(id);
+    catch (...)
+    {
+      Queued.erase(entry);
+      throw;
+    }
     return true;
   }
 
@@ -33,7 +42,7 @@ public:
       return std::nullopt;
     }
     std::string id = std::move(Queue.front());
-    Queue.erase(Queue.begin());
+    Queue.pop_front();
     Queued.erase(id);
     return id;
   }
@@ -47,7 +56,7 @@ public:
   }
 
 private:
-  std::vector<std::string> Queue;
+  std::deque<std::string> Queue;
   std::unordered_set<std::string> Queued;
 };
 

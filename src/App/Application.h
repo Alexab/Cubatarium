@@ -181,6 +181,7 @@ public:
   ConsoleStorage InspectConsoleStorage() const noexcept;
   DeathScreenStorage InspectDeathScreenStorage() const noexcept;
   PlayerWindowStorage InspectPlayerWindowStorage() const noexcept;
+  PaletteGridStorage InspectPaletteGridStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;
