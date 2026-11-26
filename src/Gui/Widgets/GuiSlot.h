@@ -60,6 +60,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UInGameHudScreen;
   int SlotSizePx() const;
   int DragThresholdPx() const;
 

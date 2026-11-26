@@ -648,6 +648,17 @@ MainMenuStorage UApplication::InspectMainMenuStorage() const noexcept
   return result;
 }
 
+InGameHudStorage UApplication::InspectHudStorage() const noexcept
+{
+  if (HudScreen && GuiContext)
+    return HudScreen->InspectOwnedStorage(*GuiContext, GameSession.get(), IconSource.get());
+  InGameHudStorage result;
+  result.present = bool(HudScreen);
+  result.bindings_match = !HudScreen;
+  result.supported = !HudScreen;
+  return result;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);

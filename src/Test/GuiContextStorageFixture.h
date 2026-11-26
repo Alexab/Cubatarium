@@ -3,6 +3,7 @@
 #include "App/Platform/GlfwKeyCompat.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Render/Engine/ShaderManager.h"
@@ -41,6 +42,16 @@ inline nlohmann::json MainMenuStorageJson(const MainMenuStorage &s)
           {"children_bytes", s.children_bytes}, {"button_index_bytes", s.button_index_bytes},
           {"text_bytes", s.text_bytes}, {"callbacks", s.callbacks}, {"callback_bytes", s.callback_bytes},
           {"requested", s.requested}};
+}
+
+inline nlohmann::json InGameHudStorageJson(const InGameHudStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"present", s.present}, {"groups", s.groups}, {"widgets", s.widgets},
+          {"screen_bytes", s.screen_bytes}, {"widget_bytes", s.widget_bytes},
+          {"children_bytes", s.children_bytes}, {"slot_index_bytes", s.slot_index_bytes},
+          {"text_bytes", s.text_bytes}, {"slots", s.slots}, {"visible_slots", s.visible_slots},
+          {"callbacks", s.callbacks}, {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
 }
 
 namespace gui_context_fixture

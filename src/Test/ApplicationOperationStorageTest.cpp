@@ -6,6 +6,7 @@
 #include "Test/ApplicationOperationStorageFixture.h"
 #include "Test/GuiContextStorageFixture.h"
 #include "Test/MainMenuStorageFixture.h"
+#include "Test/InGameHudStorageFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include <fstream>
 #include <iostream>
@@ -288,6 +289,7 @@ int main(int argc,char **argv){
     report["gui_context_storage"]=CheckGuiContextRequests();
     report["world_progress_storage"]=CheckWorldProgressRequests(application);
     report["main_menu_storage"]=CheckMainMenuRequests(application);
+    report["hud_storage"]=CheckInGameHudRequests();
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

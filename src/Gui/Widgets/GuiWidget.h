@@ -2,6 +2,7 @@
 #define GUI_WIDGET_H
 
 #include "Gui/Core/GuiTypes.h"
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -66,6 +67,7 @@ public:
   virtual bool ConsumesScrollDragAt(int x, int y) const { return false; }
 
   UGuiWidget *AddChild(std::unique_ptr<UGuiWidget> child);
+  void ReserveChildren(std::size_t capacity) { Children.reserve(capacity); }
   void ClearChildren();
 
   virtual bool OnMouseDown(const GuiMouseEvent &event);

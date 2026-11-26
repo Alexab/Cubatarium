@@ -81,6 +81,7 @@ public:
   void ClearMetricsChangedListeners();
 
 private:
+  friend class UInGameHudScreen;
   void NotifyMetricsChanged();
   void UnbindScreenInput();
   void BindScreenInput();

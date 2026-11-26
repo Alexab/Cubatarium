@@ -4,6 +4,7 @@
 #include "Game/Inventory/SlotInteraction.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Interfaces/IUHotbarViewModel.h"
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,6 +24,14 @@ class UGuiLabel;
 class UGuiRenderer;
 struct GuiTheme;
 class UGuiContext;
+
+struct InGameHudStorage
+{
+  size_t screen_bytes{}, widgets{}, widget_bytes{}, children_bytes{}, slot_index_bytes{}, text_bytes{};
+  size_t slots{}, visible_slots{}, callbacks{}, callback_bytes{}, requested{};
+  std::array<bool, 4> groups{};
+  bool present{}, bindings_match{}, supported{};
+};
 
 class UInGameHudScreen : public UGuiScreenBase
 {
@@ -61,8 +70,12 @@ public:
   /// Обновить текстуры слотов; вызывать после отрисовки мира (FBO-иконки
   /// prefab).
   void SyncSlotIcons();
+  InGameHudStorage InspectOwnedStorage(const UGuiContext &context, const UGameSession *session,
+                                        const IUGuiIconSource *icons) const noexcept;
 
 private:
+  struct SelectSlotAction;
+  struct DragSlotAction;
   std::string GrabHintKey{"v"}, ThrowHintKey{"r"};
   void EnsureHotbarWidgets();
   void EnsureVitalWidgets();
@@ -77,6 +90,7 @@ private:
   void UpdateVitalBars();
   void UpdateModeBadge();
   void UpdateTooltips();
+  UGuiSlot &HotbarSlot(size_t bar, size_t index) const;
   std::string FormatHotbarTooltip(const HotbarSlotView &slot) const;
 
   UGameSession *Session{nullptr};

@@ -32,6 +32,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     throw std::runtime_error("Save UI probe refuses existing output");
   fs::create_directories(root);
   Json report = {{"schema", "save-error-ui-native.v1"}, {"status", "FAIL"}};
+  report["hud_storage_live"] = InGameHudStorageJson(application.InspectHudStorage());
   auto require = [](bool value, const char *message)
   {
     if (!value)
