@@ -27,6 +27,7 @@
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "Core/Memory/WindowsCrtLocaleStorage.h"
 #include "Core/Memory/WindowsCrtThreadStorage.h"
+#include "Core/Memory/WindowsExecutableTlsStorage.h"
 #include "Core/Memory/WindowsProcessMemory.h"
 #include "Core/Memory/NativeThreadStack.h"
 #include "Items/ItemSceneCursor.h"
@@ -106,6 +107,10 @@ inline nlohmann::json DescribeNativeThreadStacks()
   }
   const auto mainScopes = stacks.rows[static_cast<size_t>(NativeThreadKind::Main)].active;
   const auto crt = BoundWindowsCrtThreadStorage(stacks.registered, mainScopes);
+  const auto tls = ObserveWindowsExecutableTls(stacks, crt);
+  const auto tlsStatus = tls.status == ExecutableTlsStatus::Observed ? "PASS" :
+      tls.status == ExecutableTlsStatus::CohortChanged ? "COHORT_CHANGED" :
+      tls.status == ExecutableTlsStatus::Unobserved ? "UNOBSERVED" : "UNSUPPORTED";
   const auto locale = ObserveWindowsCrtLocale();
   return {
       {"schema", "native-thread-stacks.v1"},
@@ -124,6 +129,12 @@ inline nlohmann::json DescribeNativeThreadStacks()
           {"time_scratch_requested_upper", crt.timeScratchUpper}, {"main_vcrt_static_bytes", crt.mainVcrtStaticBytes},
           {"exe_tls_raw_per_thread", crt.tlsRawPerThread}, {"exe_tls_zero_fill_per_thread", crt.tlsZeroFillPerThread},
           {"exe_tls_template_payload", crt.tlsTemplatePayload}, {"whole_runtime_complete", false}}},
+      {"windows_executable_tls_heap", {
+          {"schema", "windows-executable-tls-heap.v1"}, {"status", tlsStatus},
+          {"registered_threads", stacks.registered}, {"sampled_threads", tls.threads},
+          {"block_data_bytes_including_template", tls.dataBytes}, {"heap_entry_overhead_bytes", tls.overheadBytes},
+          {"template_payload_bytes", tls.templateBytes}, {"above_template_data_bytes", tls.dataBytes - tls.templateBytes},
+          {"largest_block_data_bytes", tls.largestBlockBytes}, {"whole_runtime_complete", false}}},
       {"crt_locale_storage", {
           {"schema", "windows-crt-locale-storage.v1"},
           {"status", locale.sampled ? "PASS" : locale.supported ? "UNOBSERVED" : "UNSUPPORTED"},

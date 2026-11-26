@@ -1,0 +1,201 @@
+{
+  "schema": "s4-e12-w57-windows-executable-tls.v1",
+  "status": "SCOPED_EXECUTABLE_TLS_HEAP_PASS_E12_OPEN",
+  "baseline_commit": "cac7ae703b7242a881ff66e1f11e435be2fd7ef4",
+  "prior_certificate": "S4_02_E12_W56_WINDOWS_CRT_LOCALE_CERTIFICATE_2026_11_26.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "windows_loader_profile": {
+    "current_build": "19045",
+    "update_build_revision": 6456,
+    "display_version": "22H2",
+    "loader_files": [
+      {
+        "name": "ntdll.dll",
+        "file_version": "10.0.19041.4842",
+        "sha256": "36b1a62e4bf6bf7d68458fff6e8a33b39f6527ec6a46e55ecdd12cde83894c8d"
+      },
+      {
+        "name": "KernelBase.dll",
+        "file_version": "10.0.19041.5915",
+        "sha256": "b4ad8c8e3632104f4d2132ecb8979b8df279f0046dc42e79bed5acb744751871"
+      }
+    ]
+  },
+  "summary": "W57 joins each continuously registered native thread to a distinct busy block backing the linked executable's TLS. Own-image anchors are copied under the registry lock, the default heap is walked without that lock, and a registry change invalidates the whole observation. The data extent already includes the PE TLS template. The report separates its excess data, per-entry heap overhead and the process thread count outside this cohort. The Release fixture cross-checks four block lengths with HeapSize, including the unregistered peer and a 64-byte-aligned TLS cell. It verifies retirement after join, rejects two anchors in one block and rejects reused cohort counts. All 46 Release regression groups and the scoped native startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W57. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Live default-heap blocks backing the linked executable's static TLS for registered threads on this Windows profile",
+  "composition_rule": "Charge block data and entry overhead once. The PE TLS width and engine inline TLS already live inside the data extent. Process private bytes remain an independent aggregate observation.",
+  "remaining_measurements": [
+    "Other loaded image TLS and loader vectors",
+    "Unregistered and transitional threads, fibers and retirement outside the fixture",
+    "Shared heap segments and allocator fragmentation, process-exit and GPU or driver storage",
+    "Full process and performance matrix"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#the-tls-section",
+    "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapwalk",
+    "https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-process_heap_entry"
+  ],
+  "fixture": {
+    "block_data_bytes_main_workers_foreign": [
+      31480,
+      31480,
+      31480,
+      31480
+    ],
+    "duplicate_block_rejected": true,
+    "heap_entry_overhead_bytes_main_workers_foreign": [
+      8,
+      8,
+      8,
+      8
+    ],
+    "largest_registered_block_data_bytes": 31480,
+    "main_block_data_bytes_after_join": 31480,
+    "observed_threads": 4,
+    "registered_block_data_bytes": 94440,
+    "registered_heap_entry_overhead_bytes": 24,
+    "registered_template_payload_bytes": 94248,
+    "registered_threads": 3,
+    "stale_same_count_cohort_rejected": true,
+    "status": "PASS",
+    "template_raw_per_thread": 31416,
+    "template_zero_fill_per_thread": 0,
+    "worker_blocks_after_join": 0
+  },
+  "fixture_pe_tls": {
+    "raw_per_thread": 31416,
+    "zero_fill_per_thread": 0,
+    "template_alignment": 64,
+    "exe_sha256": "7fefff80c55dd1a916907496af3b8389faf64bac6cf5bcd42e6e13a33c90daf4"
+  },
+  "desktop_pe_tls": {
+    "raw_per_thread": 34728,
+    "zero_fill_per_thread": 0,
+    "template_alignment": 16,
+    "exe_sha256": "74d7dc8465779188ff4393afb65ff2a6bc3e5292c9f200d0b13c572571ca085f"
+  },
+  "native": {
+    "menu": {
+      "above_template_data_bytes": 176,
+      "block_data_bytes_including_template": 382184,
+      "heap_entry_overhead_bytes": 88,
+      "largest_block_data_bytes": 34744,
+      "registered_threads": 11,
+      "sampled_threads": 11,
+      "schema": "windows-executable-tls-heap.v1",
+      "status": "PASS",
+      "template_payload_bytes": 382008,
+      "whole_runtime_complete": false,
+      "process_threads": 20,
+      "unregistered_process_threads": 9
+    },
+    "in-game": {
+      "above_template_data_bytes": 368,
+      "block_data_bytes_including_template": 799112,
+      "heap_entry_overhead_bytes": 184,
+      "largest_block_data_bytes": 34744,
+      "registered_threads": 23,
+      "sampled_threads": 23,
+      "schema": "windows-executable-tls-heap.v1",
+      "status": "PASS",
+      "template_payload_bytes": 798744,
+      "whole_runtime_complete": false,
+      "process_threads": 32,
+      "unregistered_process_threads": 9
+    },
+    "after-loop": {
+      "above_template_data_bytes": 352,
+      "block_data_bytes_including_template": 764368,
+      "heap_entry_overhead_bytes": 176,
+      "largest_block_data_bytes": 34744,
+      "registered_threads": 22,
+      "sampled_threads": 22,
+      "schema": "windows-executable-tls-heap.v1",
+      "status": "PASS",
+      "template_payload_bytes": 764016,
+      "whole_runtime_complete": false,
+      "process_threads": 33,
+      "unregistered_process_threads": 11
+    }
+  },
+  "native_startup_aggregate": "UNTESTED",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "441591bc809d3c20d749da950f4a2183a2d302da4d7e0d53ef385a852a083a86",
+  "source_sha256_raw": {
+    "src/Core/Memory/NativeThreadStack.h": "a1d5ebca9c35b3055853db9483d353ae83995a52aaae3cccabdb2977681e77e7",
+    "src/Core/Memory/WindowsExecutableTlsStorage.h": "d96daeb0837a2ebcf8662aaa70e1f15ba29d53ec376adc54279c4881cbbda194",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "8995f3913e91e35a92c436dda9d5f042f193e0f9f5835436e80d086f569c7453",
+    "src/Test/WindowsExecutableTlsFixture.h": "8bf0e4e923f0826b4a965b123935f15fe9e0add11ff168810b7b2196bb8a306a",
+    "src/Test/AsyncIoStorageTest.cpp": "db108eda8a0daec2c1a9835adf1fe8eb873cae14dc538a711c04cacd9688098c"
+  },
+  "desktop_exe_sha256": "74d7dc8465779188ff4393afb65ff2a6bc3e5292c9f200d0b13c572571ca085f",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-loader-tls-provenance.json": "74d3c50621686efd3db58463b465fa78736075edd8c816be3fdf3a254af38ffb",
+    "build/desktop-msvc/s4-loader-tls-frozen-source.json": "96e2cc8397b36ec2c9965c1b57cc0fcf6607eaaf12f202857252513db5711bf1",
+    "build/desktop-msvc/s4-loader-tls-host.json": "89981211022249487c18ec3433d1751b3f47d8b45ce9f605d1550b95a58ffa6c",
+    "build/desktop-msvc/s4-loader-tls-regressions.json": "526344fec942890f078e7b3a7808dc569d9fec89663e786465910048f2863c0a",
+    "build/desktop-msvc/s4-loader-tls-io-owners.json": "6d0e3852eb8bf4311f2db54c66cfa0e1b5030985e38c907f743b76a196bcc068",
+    "build/desktop-msvc/s4-loader-tls-native/smoke-verdict.json": "67b8ffd8fea5c6ba1fc2a2f0b24548e0b830625767c935837488789cf7da3ab4",
+    "build/desktop-msvc/s4-loader-tls-native/flight_sim_report.json": "ab6cc4fa8f534a2881316b09bf9f169ade899d967560e8ab1ae13b11654fca4b",
+    "build/desktop-msvc/s4-loader-tls-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-loader-tls-native/owner-domain/flight-menu.json": "c442fe4d0f0ec9e8fa66a2b2c7fb3ce135f3a4c177c497da99bde7933abb3934",
+    "build/desktop-msvc/s4-loader-tls-native/owner-domain/flight-in-game.json": "6171dd5da731c68286d6309d6ba52edd7334a1f675c40418c58e80039eab8c90"
+  }
+}

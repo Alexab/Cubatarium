@@ -83,8 +83,14 @@ using NativeThreadStackRows = std::array<NativeThreadStackRow, NativeThreadNames
 struct NativeThreadStacks
 {
   NativeThreadStackRows rows;
-  std::size_t registered{}, matched{}, processThreads{};
+  std::size_t registered{}, matched{}, processThreads{}, registryRevision{};
   bool processThreadsObserved{};
+};
+
+struct NativeThreadTlsBlock
+{
+  std::uintptr_t anchor{}, base{};
+  std::size_t dataBytes{}, overheadBytes{};
 };
 
 class NativeThreadStackOwner;
@@ -94,12 +100,28 @@ namespace native_thread_stack_detail
 inline SRWLOCK Lock = SRWLOCK_INIT;
 inline NativeThreadStackOwner *Head{};
 inline NativeThreadStackRows Rows{};
+inline std::size_t Revision{};
 
 struct RegistryLock
 {
   RegistryLock() noexcept { AcquireSRWLockExclusive(&Lock); }
   ~RegistryLock() { ReleaseSRWLockExclusive(&Lock); }
 };
+
+inline std::uintptr_t CallingExecutableTlsAnchor() noexcept
+{
+  static thread_local unsigned char marker{};
+  return reinterpret_cast<std::uintptr_t>(&marker);
+}
+
+inline bool CopyTlsAnchors(std::size_t revision, NativeThreadTlsBlock *blocks,
+                           std::size_t count) noexcept;
+
+inline bool RevisionMatches(std::size_t revision) noexcept
+{
+  const RegistryLock lock;
+  return revision == Revision;
+}
 #endif
 
 inline bool Enabled() noexcept
@@ -141,9 +163,11 @@ public:
       }
     const auto stack = ReadNativeStack(this);
     Reservation = stack.observed ? stack.reserved : 0;
+    TlsAnchor = CallingExecutableTlsAnchor();
     Thread = id;
     Next = Head;
     Head = this;
+    ++Revision;
     ++row.entered;
     row.peakActive = std::max(row.peakActive, ++row.active);
     row.reserved += Reservation;
@@ -168,6 +192,7 @@ public:
     while (*position != this)
       position = &(*position)->Next;
     *position = Next;
+    ++Revision;
     auto &row = Rows[Kind];
     --row.active;
     ++row.retired;
@@ -178,11 +203,32 @@ public:
 private:
 #ifdef _WIN32
   friend NativeThreadStacks InspectNativeThreadStacks() noexcept;
+  friend bool native_thread_stack_detail::CopyTlsAnchors(std::size_t, NativeThreadTlsBlock *,
+                                                         std::size_t) noexcept;
   DWORD Thread{};
   std::size_t Kind{}, Reservation{};
+  std::uintptr_t TlsAnchor{};
   NativeThreadStackOwner *Next{};
 #endif
 };
+
+#ifdef _WIN32
+inline bool native_thread_stack_detail::CopyTlsAnchors(std::size_t revision, NativeThreadTlsBlock *blocks,
+                                                      std::size_t count) noexcept
+{
+  const RegistryLock lock;
+  if (revision != Revision)
+    return false;
+  std::size_t copied = 0;
+  for (const auto *owner = Head; owner; owner = owner->Next)
+  {
+    if (copied == count)
+      return false;
+    blocks[copied++].anchor = owner->TlsAnchor;
+  }
+  return copied == count;
+}
+#endif
 
 inline NativeThreadStacks InspectNativeThreadStacks() noexcept
 {
@@ -191,6 +237,7 @@ inline NativeThreadStacks InspectNativeThreadStacks() noexcept
   using namespace native_thread_stack_detail;
   const RegistryLock lock;
   result.rows = Rows;
+  result.registryRevision = Revision;
   for (const auto *owner = Head; owner; owner = owner->Next)
   {
     ++result.registered;

@@ -5,6 +5,7 @@
 #include "Test/NativeThreadStackFixture.h"
 #include "Test/WindowsCrtThreadFixture.h"
 #include "Test/WindowsCrtLocaleFixture.h"
+#include "Test/WindowsExecutableTlsFixture.h"
 #include "Test/WindowsIoResourceFixture.h"
 #include <algorithm>
 #include <array>
@@ -173,6 +174,7 @@ int main(int argc, char **argv)
     result["native_thread_stacks"] = cutum::native_thread_stack_fixture::Run();
     result["windows_crt_threads"] = cutum::windows_crt_thread_fixture::Run();
     result["windows_crt_locale"] = cutum::windows_crt_locale_fixture::Run();
+    result["windows_executable_tls"] = cutum::windows_executable_tls_fixture::Run();
     result["ordinary_codec"] = codec;
     result["ordinary_disk_index"] = disk;
     result["ordinary_failed_parse"] = malformed;
