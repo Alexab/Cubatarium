@@ -1,6 +1,7 @@
 #include "Items/ItemRenderAsset.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Memory/VisualLoaderSource.h"
+#include "Items/ItemSceneCursor.h"
 
 #include <algorithm>
 #include <array>
@@ -492,17 +493,12 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
   resources.reset();
   asset->Low = glm::vec3(std::numeric_limits<float>::max());
   asset->High = -asset->Low;
-  std::vector<bool> visited(g.at("nodes").size(), false);
-  const auto visit = [&](const auto &self, size_t index, const glm::mat4 &parent,
-                         int parentIndex) -> void
+  const auto append = [&](const Json &node, int parentIndex)
   {
-    Require(index < visited.size() && !visited[index],
-            "cyclic or shared scene node");
-    visited[index] = true;
-    const auto &node = g.at("nodes").at(index);
     Require(!node.contains("skin"), "skinned item nodes are unsupported");
     const glm::mat4 local = LocalMatrix(node);
-    const glm::mat4 matrix = parent * local;
+    const glm::mat4 matrix = (parentIndex < 0 ? glm::mat4(1) :
+        asset->Nodes[size_t(parentIndex)].Transform) * local;
     const size_t nodeIndex = asset->Nodes.size();
     asset->Nodes.push_back(
         {node.value("name", ""), matrix, local, parentIndex});
@@ -588,13 +584,13 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
           primitive.Indices.push_back(unsigned(value));
         asset->Primitives.push_back(std::move(primitive));
       }
-    if (const auto children = node.find("children"); children != node.end())
-      for (const auto &child : *children)
-        self(self, child.template get<size_t>(), matrix, int(nodeIndex));
   };
-  for (const auto &index :
-       g.at("scenes").at(g.value("scene", size_t(0))).at("nodes"))
-    visit(visit, index.get<size_t>(), glm::mat4(1), -1);
+  {
+    const auto &roots = g.at("scenes").at(g.value("scene", size_t(0))).at("nodes");
+    ItemSceneCursor scene(g.at("nodes"), roots);
+    while (auto step = scene.Next())
+      append(*step->Node, step->Parent);
+  }
   Require(!asset->Primitives.empty(), "scene contains no geometry");
   if (!asset->Grip.SupportGripNode.empty())
   {

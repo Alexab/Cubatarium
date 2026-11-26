@@ -23,6 +23,7 @@
 #include "Core/Memory/EngineThreadStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Memory/VisualLoaderSource.h"
+#include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -386,6 +387,21 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"owned_array_bytes_per_stream", VisualModelInputFile::BufferBytes},
       {"inline_file_owner_bytes", sizeof(VisualModelInputFile)},
       {"additional_counters_inline_bytes", sizeof(fileBuffers)}, {"whole_runtime_complete", false}};
+  const auto itemScenes = GetItemSceneTraversals();
+  const auto &scene = itemScenes.largest;
+  report["item_scene_traversal"] = {
+      {"schema", "item-scene-traversal.v1"},
+      {"status", StlSourceStorage::SupportedProfile() && !itemScenes.unsupported ?
+          "PASS" : "UNSUPPORTED"}, {"started", itemScenes.started},
+      {"completed", itemScenes.completed}, {"unsupported", itemScenes.unsupported},
+      {"largest", {{"nodes", scene.nodes}, {"visited", scene.visited},
+                   {"max_depth", scene.maxDepth}, {"frame_capacity", scene.frameCapacity},
+                   {"visited_requested", scene.visitedRequested},
+                   {"frame_growth_requested", scene.frameGrowthRequested},
+                   {"peak_requested", scene.peakRequested}}},
+      {"inline_cursor_bytes", sizeof(ItemSceneCursor)},
+      {"counters_inline_bytes", sizeof(itemScenes) + sizeof(std::mutex)},
+      {"whole_runtime_complete", false}};
   const auto skeletonBuilds = GetSkeletonMeshBuildSnapshot();
   const auto &skeleton = skeletonBuilds.largest;
   report["skeleton_mesh_construction"] = {

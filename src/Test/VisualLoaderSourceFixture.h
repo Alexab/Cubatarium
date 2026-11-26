@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Memory/VisualLoaderSource.h"
+#include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
@@ -8,6 +9,66 @@
 
 namespace cutum::shared_visual_source_fixture
 {
+
+inline Json CheckItemSceneTraversal()
+{
+  constexpr size_t depth = 4096;
+  auto nodes = Json::array();
+  for (size_t i = 0; i < depth + 2; ++i)
+  {
+    Json node{{"id", i}};
+    if (i == 0)
+      node["children"] = {1, depth};
+    else if (i + 1 < depth)
+      node["children"] = {i + 1};
+    nodes.push_back(std::move(node));
+  }
+  const auto roots = Json::array({0, depth + 1});
+  ItemSceneTraversalStorage sample;
+  size_t attempts = 0;
+  {
+    observation::Scope observed;
+    {
+      ItemSceneCursor cursor(nodes, roots);
+      size_t index = 0;
+      while (const auto step = cursor.Next())
+      {
+        const int expectedParent = index == 0 || index == depth + 1 ?
+            -1 : index == depth ? 0 : static_cast<int>(index - 1);
+        Require(step->Node->at("id").get<size_t>() == index && step->Parent == expectedParent,
+                "iterative traversal keeps sibling order and emitted parent indices");
+        ++index;
+      }
+      sample = cursor.InspectStorage();
+      const auto requests = observation::Snapshot();
+      attempts = requests.attempts;
+      Require(index == nodes.size() && sample.visited == index && sample.maxDepth == depth &&
+                  sample.supported && sample.peakRequested == requests.peak &&
+                  sample.peakRequested == sample.visitedRequested + sample.frameGrowthRequested,
+              "the recorded bitmap and frame growth peak match real allocation requests");
+    }
+    Require(!observation::Snapshot().live && !observation::Snapshot().blocks,
+            "retire traversal backing at the end of the scene");
+  }
+  for (size_t i = 0; i < attempts; ++i)
+  {
+    observation::Scope refused(i);
+    bool failed = false;
+    try
+    {
+      ItemSceneCursor cursor(nodes, roots);
+      while (cursor.Next()) {}
+    }
+    catch (const std::bad_alloc &) { failed = true; }
+    Require(failed && !observation::Snapshot().live && !observation::Snapshot().blocks,
+            "every allocation refusal retires its admitted scene frames and bitmap");
+  }
+  return {{"status", "PASS"}, {"nodes", sample.nodes}, {"visited", sample.visited},
+          {"max_depth", sample.maxDepth}, {"frame_capacity", sample.frameCapacity},
+          {"visited_requested", sample.visitedRequested}, {"frame_growth_requested", sample.frameGrowthRequested},
+          {"peak_requested", sample.peakRequested}, {"refusal_prefixes", attempts},
+          {"inline_cursor_bytes", sizeof(ItemSceneCursor)}};
+}
 
 inline Json CheckVisualFileBuffers(const std::filesystem::path &report)
 {

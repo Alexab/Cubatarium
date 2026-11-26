@@ -691,6 +691,49 @@ int main()
     bad = g;
     bad["accessors"][3]["count"] = 2;
     rejected(bad);
+
+    constexpr size_t depth = 4096;
+    const auto modelPath = folder / "model.gltf";
+    auto deep = versioned;
+    auto &deepNodes = deep["nodes"];
+    deepNodes = Json::array({g["nodes"][0]});
+    deepNodes[0]["children"] = {1, depth};
+    for (size_t i = 1; i + 1 < depth; ++i)
+      deepNodes.push_back({{"name", "link"}, {"translation", {.25f, 0, 0}},
+                           {"children", {i + 1}}});
+    deepNodes.push_back(g["nodes"][1]);
+    deepNodes.push_back({{"name", "sibling"}, {"mesh", 0}});
+    deepNodes.push_back({{"name", "second-root"}, {"mesh", 0}});
+    deep["scenes"][0]["nodes"] = {0, depth + 1};
+
+    auto sharedChild = deep;
+    sharedChild["nodes"][depth]["children"] = {depth - 1};
+    write(sharedChild);
+    bool rejectedSharedChild = false;
+    try { cutum::FindItemSurfaceAsset(modelPath, 100); }
+    catch (const std::exception &ex)
+    {
+      rejectedSharedChild = std::string(ex.what()).find("cyclic or shared scene node") != std::string::npos;
+    }
+    Expect(rejectedSharedChild, "a second parent does not publish the deep scene");
+    write(deep);
+    const auto deepAsset = cutum::FindItemSurfaceAsset(modelPath, 100);
+    Expect(deepAsset && deepAsset->Nodes.size() == depth + 2 &&
+               deepAsset->Nodes[depth - 1].Parent == int(depth - 2) &&
+               deepAsset->Nodes[depth].Parent == 0 && deepAsset->Nodes[depth + 1].Parent == -1 &&
+               deepAsset->Nodes[depth - 1].Name == "blade" &&
+               deepAsset->Nodes[depth].Name == "sibling" &&
+               deepAsset->Nodes[depth + 1].Name == "second-root",
+           "retry publishes the full scene in authored preorder");
+    Expect(deepAsset->Primitives.size() == 3 &&
+               deepAsset->Primitives[0].Node == depth - 1 &&
+               deepAsset->Primitives[1].Node == depth &&
+               deepAsset->Primitives[2].Node == depth + 1 &&
+               glm::vec3(deepAsset->Nodes[depth - 1].Transform[3]) ==
+                   glm::vec3(2.f + .25f * float(depth - 2), 3.f, 4.f) &&
+               deepAsset->StaticWearSections.at("blade").Primitives == std::vector<size_t>{0},
+           "deep transforms, draw ordering and wear selection preserve ownership");
+    cutum::ClearItemSurfaceAssets();
     std::cout << "ItemRenderAsset: hierarchy, bounds, materials, stride and "
                  "rejection cases pass\n";
     return 0;
