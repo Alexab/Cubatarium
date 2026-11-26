@@ -13,6 +13,7 @@ namespace cutum
 {
 
 class UCreature;
+class VisualAssetCensus;
 struct CreatureDefinition;
 
 class IUCreatureVisual
@@ -64,6 +65,7 @@ public:
 
   virtual bool SupportsCarryArms() const { return false; }
   virtual bool HasWorldCarryArms() const { return false; }
+  virtual void InspectVisualAssets(VisualAssetCensus &) const {}
 
 protected:
   ResolvedCreatureAppearance Appearance{};

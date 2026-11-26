@@ -41,6 +41,7 @@ public:
       std::shared_ptr<UShaderManager> shaders);
   ~UItemLabSceneRenderer();
   void Invalidate();
+  void InspectVisualAssets(VisualAssetCensus &census) const;
   size_t DrawCount() const { return LastDrawCount; }
   bool SourceMatches() const { return LastSourceMatches; }
   bool BowSupportContact() const { return LastBowSupportContact; }

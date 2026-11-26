@@ -9,6 +9,7 @@
 namespace cutum
 {
 class UShaderManager;
+enum class VisualAssetOwner;
 class UShaderProgram;
 
 struct ItemSurfaceDrawAudit
@@ -64,6 +65,7 @@ public:
   bool Initialize(UShaderManager &manager);
   void Clear();
   ItemSurfaceRendererStorage InspectOwnedStorage() const noexcept;
+  void InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const;
   /// Number of nonempty primitive draw calls actually issued.
   size_t Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
               const std::filesystem::path &path,

@@ -21,6 +21,7 @@ namespace cutum
 {
 
 class UItemDefinitionStorage;
+class VisualAssetCensus;
 class UShaderManager;
 struct ItemDrawRequest;
 struct PreviewRendererStorage;
@@ -36,6 +37,7 @@ public:
   ~UItemPreviewRenderer();
   static std::shared_ptr<UItemPreviewRenderer> Create(std::shared_ptr<UItemDefinitionStorage> items,
       std::shared_ptr<UShaderManager> shaders);
+  void InspectVisualAssets(VisualAssetCensus &census) const;
   PreviewRendererStorage InspectOwnedStorage(const UItemDefinitionStorage *items,
       const UShaderManager *shaders) const noexcept;
 

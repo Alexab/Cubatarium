@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureVisualBoneSkeleton.h"
+#include "Core/Memory/VisualAssetCensus.h"
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Creatures/Core/Creature.h"
@@ -29,6 +30,12 @@
 
 namespace cutum
 {
+
+void UCreatureVisualBoneSkeleton::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  census.Add(MeshAsset, VisualAssetOwner::World);
+}
+
 
 UCreatureVisualBoneSkeleton::~UCreatureVisualBoneSkeleton() = default;
 

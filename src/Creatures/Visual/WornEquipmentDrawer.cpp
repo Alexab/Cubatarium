@@ -16,6 +16,7 @@
 #include "Items/ItemInspectionSource.h"
 #include "Items/ItemPresentationMath.h"
 #include "Items/ItemVisualDefaults.h"
+#include "Items/LegacyVisualAssetCache.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 
@@ -456,38 +457,29 @@ void DrawMeshImmediateOrQueue(CreatureDrawQueue *queue, UShaderProgram *shader,
   }
 }
 
+LegacyVisualAssetCache<CreatureGltfMeshAsset> &EquipmentGltfAssets()
+{
+  static LegacyVisualAssetCache<CreatureGltfMeshAsset> cache;
+  return cache;
+}
+
+LegacyVisualAssetCache<const LegacyItemPartsMesh> &EquipmentPartsAssets()
+{
+  static LegacyVisualAssetCache<const LegacyItemPartsMesh> cache;
+  return cache;
+}
+
 std::shared_ptr<CreatureGltfMeshAsset> LoadItemGltf(const std::string &itemId,
                                                     bool worn = false)
 {
-  static std::mutex mu;
-  static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
-      cache;
-  static uint64_t cacheRevision = 0;
-  std::lock_guard<std::mutex> lock(mu);
-  SyncItemModelCache(cache, cacheRevision);
-  const std::string key = itemId + (worn ? "|worn" : "|held");
-  const auto it = cache.find(key);
-  if (it != cache.end())
+  return EquipmentGltfAssets().Get(itemId + (worn ? "|worn" : "|held"), [&]()
   {
-    return it->second;
-  }
-  const std::string rel = ResolveGltfRel(itemId, worn);
-  if (rel.empty())
-  {
-    return nullptr;
-  }
-  IUPlatformPaths *paths = IUPlatformPaths::TryGet();
-  if (!paths)
-  {
-    return nullptr;
-  }
-  const auto abs = (paths->AssetRoot() / rel).string();
-  auto asset = CreatureGltfLoader::LoadFromFile(abs);
-  if (asset)
-  {
-    cache[key] = asset;
-  }
-  return asset;
+    const std::string rel = ResolveGltfRel(itemId, worn);
+    IUPlatformPaths *paths = IUPlatformPaths::TryGet();
+    if (rel.empty() || !paths)
+      return std::shared_ptr<CreatureGltfMeshAsset>{};
+    return CreatureGltfLoader::LoadFromFile((paths->AssetRoot() / rel).string());
+  });
 }
 
 GLuint SolidColorTex(const std::string &itemId)
@@ -847,53 +839,39 @@ void SubmitItemOnBones(CreatureDrawQueue *queue, UShaderProgram *shader,
   }
 }
 
-struct PartsMeshesFit
+std::shared_ptr<const LegacyItemPartsMesh> CachedPartsMeshes(const std::string &itemId)
 {
-  std::vector<BoneSkeletonCubeMeshCpu> meshes;
-  glm::mat4 fit{1.f};
-};
-
-std::shared_ptr<const PartsMeshesFit> CachedPartsMeshes(const std::string &itemId)
-{
-  static std::mutex mu;
-  static std::unordered_map<std::string, std::shared_ptr<const PartsMeshesFit>> cache;
-  static uint64_t cacheRevision = 0;
-  std::lock_guard<std::mutex> lock(mu);
-  // Parts follow the item's model_path: a resource-pack apply reloads the
-  // definitions, so the cache must not keep the old pack's meshes.
-  SyncItemModelCache(cache, cacheRevision);
-  if (const auto it = cache.find(itemId); it != cache.end())
-    return it->second;
-
-  auto slot = std::make_shared<PartsMeshesFit>();
-  slot->meshes = LoadPartsMeshes(itemId);
-  if (slot->meshes.empty())
+  return EquipmentPartsAssets().Get(itemId, [&]()
   {
-    slot->meshes.push_back(BuildBoxMesh(glm::vec3(0.f, 0.18f, 0.f),
-                                        glm::vec3(0.07f, 0.38f, 0.07f)));
-  }
-  glm::vec3 minV(1e9f), maxV(-1e9f);
-  for (const auto &mesh : slot->meshes)
-  {
-    for (size_t i = 0; i + 4 < mesh.interleavedPosUv.size(); i += 5)
+    auto slot = std::make_shared<LegacyItemPartsMesh>();
+    slot->meshes = LoadPartsMeshes(itemId);
+    if (slot->meshes.empty())
     {
-      const glm::vec3 p(mesh.interleavedPosUv[i], mesh.interleavedPosUv[i + 1],
-                        mesh.interleavedPosUv[i + 2]);
-      minV = glm::min(minV, p);
-      maxV = glm::max(maxV, p);
+      slot->meshes.push_back(BuildBoxMesh(glm::vec3(0.f, 0.18f, 0.f),
+                                          glm::vec3(0.07f, 0.38f, 0.07f)));
     }
-  }
-  if (minV.x <= maxV.x)
-  {
-    const glm::vec3 center = (minV + maxV) * 0.5f;
-    const glm::vec3 ext = maxV - minV;
-    const float maxExtent =
-        std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
-    const float scale = 0.7f / maxExtent;
-    slot->fit = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
-                glm::translate(glm::mat4(1.f), -center);
-  }
-  return cache.try_emplace(itemId, std::move(slot)).first->second;
+    glm::vec3 minV(1e9f), maxV(-1e9f);
+    for (const auto &mesh : slot->meshes)
+    {
+      for (size_t i = 0; i + 4 < mesh.interleavedPosUv.size(); i += 5)
+      {
+        const glm::vec3 p(mesh.interleavedPosUv[i], mesh.interleavedPosUv[i + 1],
+                          mesh.interleavedPosUv[i + 2]);
+        minV = glm::min(minV, p);
+        maxV = glm::max(maxV, p);
+      }
+    }
+    if (minV.x <= maxV.x)
+    {
+      const glm::vec3 center = (minV + maxV) * 0.5f;
+      const glm::vec3 ext = maxV - minV;
+      const float maxExtent = std::max(1e-5f, std::max(ext.x, std::max(ext.y, ext.z)));
+      const float scale = 0.7f / maxExtent;
+      slot->fit = glm::scale(glm::mat4(1.f), glm::vec3(scale)) *
+                  glm::translate(glm::mat4(1.f), -center);
+    }
+    return slot;
+  });
 }
 
 struct WieldGripLocal
@@ -1084,6 +1062,12 @@ void ResolveWieldParams(const UItemDefinitionStorage *items,
 }
 
 } // namespace
+
+void WornEquipmentDrawer::InspectVisualAssets(VisualAssetCensus &census)
+{
+  EquipmentGltfAssets().Inspect(census, VisualAssetOwner::Equipment);
+  EquipmentPartsAssets().Inspect(census, VisualAssetOwner::Equipment);
+}
 
 void WornEquipmentDrawer::SubmitLoose(CreatureDrawQueue &queue,
                                       const std::string &id,

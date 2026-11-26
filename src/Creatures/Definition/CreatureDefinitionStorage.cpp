@@ -1,5 +1,6 @@
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Core/Json/JsonVec.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Sort/CatalogSortUtil.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Locomotion/LocomotionTypes.h"
@@ -38,6 +39,13 @@ CreatureAnimationClipDef ReadClipDef(const nlohmann::json &clipJson)
 }
 
 } // namespace
+
+void UCreatureDefinitionStorage::InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const
+{
+  const std::shared_lock lock(DefinitionsMutex);
+  for (const auto &entry : Definitions)
+    census.Add(entry.second.visual.RigidParts, owner);
+}
 
 void UCreatureDefinitionStorage::Load(const std::string &folder)
 {

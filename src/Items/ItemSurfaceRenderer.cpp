@@ -1,4 +1,5 @@
 #include "Items/ItemSurfaceRenderer.h"
+#include "Core/Memory/VisualAssetCensus.h"
 
 #include "Items/ItemGltfTextureCache.h"
 #include "Core/Memory/StlSourceStorage.h"
@@ -40,6 +41,12 @@ void ItemSurfaceRenderer::Clear()
   Geometry.clear();
   BatchProfile.reset();
   BatchMaterial.reset();
+}
+
+void ItemSurfaceRenderer::InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const
+{
+  for (const auto &entry : Geometry)
+    census.Add(entry.second.Asset, owner);
 }
 
 ItemSurfaceRendererStorage ItemSurfaceRenderer::InspectOwnedStorage() const noexcept

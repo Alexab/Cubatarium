@@ -1,4 +1,5 @@
 #include "Render/Engine/CreatureDrawPass.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/StallTimer.h"
@@ -46,6 +47,14 @@
 
 namespace cutum
 {
+
+void UCreatureDrawPass::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  census.AddQueue(Queue);
+  if (ItemRenderer)
+    ItemRenderer->InspectVisualAssets(census, VisualAssetOwner::World);
+}
+
 
 namespace
 {

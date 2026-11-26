@@ -79,6 +79,15 @@ void UContentPreviewRenderer::Shutdown()
   Shader.reset();
 }
 
+void UContentPreviewRenderer::InspectVisualAssets(VisualAssetCensus &census,
+    const UCreaturePreviewRenderer *alreadyInspected) const
+{
+  if (Creatures && Creatures.get() != alreadyInspected)
+    Creatures->InspectVisualAssets(census);
+  if (ItemPreview)
+    ItemPreview->InspectVisualAssets(census);
+}
+
 ContentPreviewRendererStorage UContentPreviewRenderer::InspectOwnedStorage(
     const UObjectLibrary *objects, const UTextureCubeStorage *textures,
     const UBlockDefinitionStorage *blocks, const UShaderManager *shaders,

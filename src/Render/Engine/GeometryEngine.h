@@ -189,6 +189,10 @@ public:
   {
     return CreatureDraw_.GetStats();
   }
+  void InspectVisualAssets(VisualAssetCensus &census) const
+  {
+    CreatureDraw_.InspectVisualAssets(census);
+  }
   CreatureDrawQueue &GetCreatureDrawQueue()
   {
     return CreatureDraw_.GetDrawQueue();

@@ -19,6 +19,7 @@ class UObjectLibrary;
 class UShaderManager;
 class UTextureCubeStorage;
 class UCreaturePreviewRenderer;
+class VisualAssetCensus;
 class UItemPreviewRenderer;
 
 struct ContentPreviewRendererStorage
@@ -46,6 +47,8 @@ public:
 
   bool Initialize();
   void Shutdown();
+  void InspectVisualAssets(VisualAssetCensus &census,
+      const UCreaturePreviewRenderer *alreadyInspected) const;
   ContentPreviewRendererStorage InspectOwnedStorage(
       const UObjectLibrary *objects, const UTextureCubeStorage *textures,
       const UBlockDefinitionStorage *blocks, const UShaderManager *shaders,

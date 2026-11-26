@@ -1,5 +1,5 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
-#include "Core/Memory/VisualAssetStorage.h"
+#include "Core/Memory/VisualAssetCensus.h"
 
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
@@ -32,35 +32,42 @@ void CreatureBoneSkeletonCache::Clear()
   revision.fetch_add(1,std::memory_order_release);
 }
 
-VisualAssetStorage CreatureBoneSkeletonCache::InspectOwnedStorage() const
+void MeasureVisualPayload(const CreatureBoneSkeletonMeshAsset &asset, StlSourceStorage &out) noexcept
+{
+  const auto &geometry = asset.geometry;
+  out.Text(geometry.identifier);
+  out.Buffer(geometry.bones.capacity(), sizeof(BoneSkeletonBoneDef));
+  for (const auto &bone : geometry.bones)
+  {
+    out.Text(bone.name);
+    out.Text(bone.parent);
+    out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeDef));
+  }
+  out.Hash(geometry.boneIndexByName);
+  for (const auto &bone : geometry.boneIndexByName)
+    out.Text(bone.first);
+  out.Buffer(asset.boneMeshes.capacity(), sizeof(BoneSkeletonBoneMeshCpu));
+  for (const auto &bone : asset.boneMeshes)
+  {
+    out.Text(bone.boneName);
+    out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeMeshCpu));
+    for (const auto &cube : bone.cubes)
+    {
+      out.Buffer(cube.interleavedPosUv.capacity(), sizeof(float));
+      out.Buffer(cube.indices.capacity(), sizeof(unsigned));
+    }
+  }
+}
+
+VisualAssetStorage CreatureBoneSkeletonCache::InspectOwnedStorage(VisualAssetCensus *census) const
 {
   std::lock_guard<std::mutex> lock(mutex);
   return InspectWeakVisualAssets<CreatureBoneSkeletonMeshAsset>(sizeof(*this), creaturesRoot, cache, failedKeys,
-      [](const CreatureBoneSkeletonMeshAsset &asset, StlSourceStorage &out)
+      [census](const auto &owner, StlSourceStorage &payload)
       {
-        const auto &geometry = asset.geometry;
-        out.Text(geometry.identifier);
-        out.Buffer(geometry.bones.capacity(), sizeof(BoneSkeletonBoneDef));
-        for (const auto &bone : geometry.bones)
-        {
-          out.Text(bone.name);
-          out.Text(bone.parent);
-          out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeDef));
-        }
-        out.Hash(geometry.boneIndexByName);
-        for (const auto &bone : geometry.boneIndexByName)
-          out.Text(bone.first);
-        out.Buffer(asset.boneMeshes.capacity(), sizeof(BoneSkeletonBoneMeshCpu));
-        for (const auto &bone : asset.boneMeshes)
-        {
-          out.Text(bone.boneName);
-          out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeMeshCpu));
-          for (const auto &cube : bone.cubes)
-          {
-            out.Buffer(cube.interleavedPosUv.capacity(), sizeof(float));
-            out.Buffer(cube.indices.capacity(), sizeof(unsigned));
-          }
-        }
+        if (census)
+          census->Add(owner, VisualAssetOwner::Cache);
+        MeasureVisualPayload(*owner, payload);
       });
 }
 

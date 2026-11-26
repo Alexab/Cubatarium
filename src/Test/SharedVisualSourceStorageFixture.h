@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Memory/VisualAssetStorage.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
@@ -17,6 +18,137 @@ using gui_context_fixture::Require;
 using shared_content_preview_fixture::RefuseIndexUpload;
 using shared_content_preview_fixture::ReadCallerState;
 using Json = nlohmann::json;
+
+inline Json CheckRetainedVisualOwners()
+{
+  const auto index = [](VisualAssetKind kind) { return static_cast<size_t>(kind); };
+  const auto role = [](VisualAssetOwner owner) { return static_cast<size_t>(owner); };
+  size_t assetsBytes = 0, queueBytes = 0, observerBytes = 0;
+  {
+    observation::Scope observed;
+    CreatureDrawQueue queue;
+    auto gltf = std::make_shared<CreatureGltfMeshAsset>();
+    auto &primitive = gltf->primitives.emplace_back();
+    primitive.mesh.interleavedPosUv.resize(24);
+    auto bones = std::make_shared<CreatureBoneSkeletonMeshAsset>();
+    auto &cube = bones->boneMeshes.emplace_back().cubes.emplace_back();
+    cube.indices.resize(36);
+    auto item = std::make_shared<ItemRenderAsset>();
+    item->Primitives.emplace_back().Vertices.resize(96);
+    auto request = std::make_shared<ItemDrawRequest>();
+    request->Asset = item;
+    request->Path = "models/items/retained_fixture_geometry.gltf";
+    request->State.HiddenNodes.emplace("retained_fixture_hidden_node");
+    auto palette = std::make_shared<std::vector<glm::mat4>>(3);
+    auto legacy = std::make_shared<LegacyItemPartsMesh>();
+    legacy->meshes.emplace_back().indices.resize(12);
+    const auto push = [&](CreatureDrawRequest draw) { queue.Push(std::move(draw)); };
+    CreatureDrawRequest mesh;
+    mesh.SkeletalMesh = {gltf, &primitive.mesh};
+    push(std::move(mesh));
+    mesh.SkinnedPrimitive = {gltf, &primitive};
+    mesh.BoneMatrices = palette;
+    push(std::move(mesh));
+    mesh.SkeletalMesh = {bones, &cube};
+    push(std::move(mesh));
+    mesh.SkeletalMesh = {legacy, &legacy->meshes.front()};
+    push(std::move(mesh));
+    mesh.ItemSurface = request;
+    push(std::move(mesh));
+    const auto live = observation::Snapshot().live;
+    {
+      VisualAssetCensus census;
+      census.AddQueue(queue);
+      census.Add(gltf, VisualAssetOwner::World);
+      census.Add(item, VisualAssetOwner::Preview);
+      census.Add(palette, VisualAssetOwner::World);
+      const auto snapshot = census.Result();
+      Require(snapshot.supported && !snapshot.unmeasuredReferences,
+              "known owned and aliasing draws compose to one source snapshot");
+      for (const auto &row : snapshot.rows)
+        assetsBytes += row.detachedControlBytes + row.detachedPayloadBytes;
+      queueBytes = snapshot.queueBytes;
+      observerBytes = snapshot.observerBytes;
+      Require(assetsBytes + queueBytes == live &&
+                  observation::Snapshot().live == live + observerBytes,
+              "retained asset, queue and observer requests match independent live allocation");
+      const auto &gltfRow = snapshot.rows[index(VisualAssetKind::Gltf)];
+      Require(gltfRow.detached == 1 && gltfRow.references[role(VisualAssetOwner::Queue)] == 2 &&
+                  gltfRow.references[role(VisualAssetOwner::World)] == 1 &&
+                  snapshot.rows[index(VisualAssetKind::Item)].detached == 1 &&
+                  snapshot.rows[index(VisualAssetKind::Palette)].detached == 1,
+              "aliases across requests and receivers are counted as one coallocation");
+      census.Add(gltf, VisualAssetOwner::Cache);
+      const auto resident = census.Result().rows[index(VisualAssetKind::Gltf)];
+      Require(resident.cached == 1 && resident.shared == 1 && resident.detached == 0 &&
+                  !resident.detachedControlBytes && !resident.detachedPayloadBytes,
+              "cache accounting is joined without charging the same asset again");
+    }
+    Require(observation::Snapshot().live == live, "closing the observer retires its own table");
+    queue.Clear();
+    request.reset();
+    gltf.reset();
+    bones.reset();
+    item.reset();
+    palette.reset();
+    legacy.reset();
+    Require(observation::Snapshot().live == queueBytes,
+            "clearing the receivers retires all detached allocations except retained queue backing");
+  }
+  Require(!observation::Snapshot().live && !observation::Snapshot().blocks,
+          "the queue retires its backing on scope exit");
+  {
+    VisualAssetCensus census;
+    const std::shared_ptr<ItemRenderAsset> external(new ItemRenderAsset);
+    census.Add(external, VisualAssetOwner::Preview);
+    const auto snapshot = census.Result();
+    Require(!snapshot.supported && snapshot.unmeasuredReferences == 1 &&
+                !snapshot.rows[index(VisualAssetKind::Item)].detached,
+            "an external control is reported without assigning a default-factory bound");
+  }
+  {
+    creature_item_icon_fixture::PlatformFixture platform;
+    const auto path = IUPlatformPaths::Current().AssetRoot() / "models/items/bucket/model.gltf";
+    auto &cache = CreatureGltfCache::Instance();
+    cache.Clear();
+    auto old = cache.LoadFromPath(path);
+    Require(old && !old->primitives.empty(), "load the real glTF cache predecessor");
+    std::weak_ptr<CreatureGltfMeshAsset> predecessor = old;
+    CreatureDrawQueue queue;
+    CreatureDrawRequest draw;
+    draw.SkeletalMesh = {old, &old->primitives.front().mesh};
+    queue.Push(std::move(draw));
+    VisualAssetStorage resident;
+    {
+      VisualAssetCensus census;
+      resident = cache.InspectOwnedStorage(&census);
+      census.AddQueue(queue);
+      const auto counts = census.Result().rows[index(VisualAssetKind::Gltf)];
+      Require(resident.live == 1 && counts.cached == 1 && counts.shared == 1 && !counts.detached,
+              "live cache publication overlaps the real queued predecessor");
+    }
+    old.reset();
+    cache.Clear();
+    auto current = cache.LoadFromPath(path);
+    Require(current && predecessor.lock() != current, "reload publishes a different allocation");
+    {
+      VisualAssetCensus census;
+      const auto loaded = cache.InspectOwnedStorage(&census);
+      census.AddQueue(queue);
+      const auto counts = census.Result().rows[index(VisualAssetKind::Gltf)];
+      Require(loaded.live == 1 && counts.cached == 1 && !counts.shared && counts.detached == 1 &&
+                  counts.detachedControlBytes == resident.controlBytes &&
+                  counts.detachedPayloadBytes == resident.payloadBytes,
+              "the real predecessor moves from shared to detached while the new cache stays live");
+    }
+    queue.Clear();
+    Require(predecessor.expired(), "clearing the final real draw releases the earlier cache payload");
+    cache.Clear();
+  }
+  return {{"status", "PASS"}, {"asset_bytes", assetsBytes}, {"queue_bytes", queueBytes},
+          {"observer_bytes", observerBytes}, {"external_factory_reported", true},
+          {"real_cache_reload_composed", true}};
+}
 
 inline Json CheckRigidModels(const std::filesystem::path &report)
 {

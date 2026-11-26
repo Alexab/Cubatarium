@@ -21,6 +21,7 @@ public:
                   const CreatureLocomotionFacts &facts,
                   const CreaturePoseParams &pose,
                   const CreatureDefinition &animDef, float dt) override;
+  void InspectVisualAssets(VisualAssetCensus &census) const override;
   void SubmitDraw(const CreatureDrawContext &ctx, const glm::mat4 &viewProj) override;
   bool GetConservativeWorldBounds(const UCreature &,const CreatureDefinition &,
       glm::vec3 &,glm::vec3 &) override;

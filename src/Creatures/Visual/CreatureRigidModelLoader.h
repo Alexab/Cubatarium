@@ -10,6 +10,7 @@ namespace cutum
 {
 
 struct VisualAssetStorage;
+class VisualAssetCensus;
 
 class CreatureRigidModelCache
 {
@@ -23,7 +24,7 @@ public:
   /// Drops cached rigid models (called when pack overlays reload species).
   void Clear();
 
-  VisualAssetStorage InspectOwnedStorage() const;
+  VisualAssetStorage InspectOwnedStorage(VisualAssetCensus *census = nullptr) const;
 
 private:
   CreatureRigidModelCache() = default;

@@ -38,7 +38,7 @@ inline void FinishVisualAssetStorage(VisualAssetStorage &out, const StlSourceSto
 // An expired weak key still retains that coallocation, including its dead shell.
 template<class Asset, class Table, class Negative, class Payload>
 VisualAssetStorage InspectWeakVisualAssets(size_t inlineBytes, const std::string &root,
-    const Table &entries, const Negative &failed, Payload measure) noexcept
+    const Table &entries, const Negative &failed, Payload measure)
 {
   VisualAssetStorage out;
   out.inlineBytes = inlineBytes;
@@ -56,7 +56,7 @@ VisualAssetStorage InspectWeakVisualAssets(size_t inlineBytes, const std::string
     if (const auto asset = weak.lock())
     {
       ++out.live;
-      measure(*asset, payload);
+      measure(asset, payload);
     }
     else
       ++out.expired;

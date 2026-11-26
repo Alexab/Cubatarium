@@ -1,4 +1,5 @@
 #include "Gui/Preview/ItemLabSceneRenderer.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "Creatures/Core/HumanAppearance.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Visual/CreatureAppearance.h"
@@ -144,6 +145,16 @@ UItemLabSceneRenderer::UItemLabSceneRenderer(
     throw std::runtime_error("Cannot initialize Item Lab scenes");
 }
 UItemLabSceneRenderer::~UItemLabSceneRenderer() = default;
+void UItemLabSceneRenderer::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  if (Creature)
+    Creature->InspectVisualAssets(census);
+  if (Fp)
+    Fp->InspectVisualAssets(census);
+  if (Surface)
+    Surface->InspectVisualAssets(census, VisualAssetOwner::Preview);
+}
+
 void UItemLabSceneRenderer::Invalidate()
 {
   Creature->Invalidate();

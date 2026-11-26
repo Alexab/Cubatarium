@@ -9,6 +9,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <nlohmann/json.hpp>
@@ -61,9 +62,16 @@ struct CreatureQaFootAsset
   std::shared_ptr<const CreatureGltfMeshAsset> owner;
   std::vector<CreatureQaFootSpec> feet;
 };
+inline auto &CreatureQaFootAssets()
+{
+  static std::optional<std::unordered_map<const CreatureGltfMeshAsset *, CreatureQaFootAsset>> assets;
+  return assets;
+}
+
 inline const CreatureQaFootAsset &CreatureQaFootGeometry(std::shared_ptr<const CreatureGltfMeshAsset> asset)
 {
-  static std::unordered_map<const CreatureGltfMeshAsset *,CreatureQaFootAsset> cache;
+  auto &stored = CreatureQaFootAssets();
+  auto &cache = stored ? *stored : stored.emplace();
   const auto found=cache.find(asset.get());if(found!=cache.end())return found->second;
   if(cache.size()>=8)throw std::runtime_error("QA foot probe model limit");
   CreatureQaFootAsset result;result.owner=asset;

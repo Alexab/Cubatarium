@@ -1,4 +1,5 @@
 #include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Core/Memory/VisualAssetCensus.h"
 
 #include "App/Settings/RenderSettings.h"
 #include "Core/Memory/StlSourceStorage.h"
@@ -112,6 +113,16 @@ std::shared_ptr<UCreaturePreviewRenderer> UCreaturePreviewRenderer::Create(
       std::move(species), std::move(skins), std::move(textures), std::move(shaderManager));
   renderer->FactoryOwner = true;
   return renderer;
+}
+
+void UCreaturePreviewRenderer::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  if (Species)
+    Species->InspectVisualAssets(census, VisualAssetOwner::Preview);
+  for (const auto &entry : GltfBoundsCache)
+    census.Add(entry.second.asset, VisualAssetOwner::Preview);
+  if (ItemRenderer)
+    ItemRenderer->InspectVisualAssets(census, VisualAssetOwner::Preview);
 }
 
 PreviewRendererStorage UCreaturePreviewRenderer::InspectOwnedStorage(

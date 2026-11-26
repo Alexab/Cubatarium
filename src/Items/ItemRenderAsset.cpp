@@ -1,5 +1,5 @@
 #include "Items/ItemRenderAsset.h"
-#include "Core/Memory/VisualAssetStorage.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 
 #include <algorithm>
@@ -26,8 +26,9 @@ uint64_t AssetsRevision = 0;
 std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>> Assets;
 std::unordered_map<std::string, std::string> AssetAliases;
 ItemAssetLookupStats AssetLookupStats;
+} // namespace
 
-void MeasureItemAsset(const ItemRenderAsset &asset, StlSourceStorage &out) noexcept
+void MeasureVisualPayload(const ItemRenderAsset &asset, StlSourceStorage &out) noexcept
 {
   out.Buffer(asset.Primitives.capacity(), sizeof(ItemRenderPrimitive));
   for (const auto &primitive : asset.Primitives)
@@ -63,6 +64,8 @@ void MeasureItemAsset(const ItemRenderAsset &asset, StlSourceStorage &out) noexc
   }
 }
 
+namespace
+{
 void Require(bool condition, const char *reason)
 {
   if (!condition)
@@ -684,7 +687,7 @@ void ClearItemSurfaceAssets()
   AssetAliases.clear();
 }
 
-VisualAssetStorage InspectItemSurfaceAssetStorage()
+VisualAssetStorage InspectItemSurfaceAssetStorage(VisualAssetCensus *census)
 {
   std::lock_guard<std::mutex> lock(AssetMutex);
   VisualAssetStorage out;
@@ -699,8 +702,10 @@ VisualAssetStorage InspectItemSurfaceAssetStorage()
     if (asset)
     {
       ++out.live;
+      if (census)
+        census->Add(asset, VisualAssetOwner::Cache);
       AddVisualAssetControl<ItemRenderAsset>(control);
-      MeasureItemAsset(*asset, payload);
+      MeasureVisualPayload(*asset, payload);
     }
     else
       ++out.negative;

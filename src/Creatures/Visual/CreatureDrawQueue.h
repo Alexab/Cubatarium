@@ -58,6 +58,7 @@ public:
   void Flush(ICreatureDrawSink &sink);
 
   size_t Size() const { return Requests.size(); }
+  const std::vector<CreatureDrawRequest> &InspectRequests() const { return Requests; }
   /// Query before Flush sorts the queue; `first` begins one actor's requests.
   bool RangeIntersectsClip(size_t first)const
   {

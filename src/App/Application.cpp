@@ -760,6 +760,18 @@ InventoryIconStorage UApplication::InspectInventoryIconStorage() const noexcept
   return out;
 }
 
+void UApplication::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  if (CreaturePreviewRenderer)
+    CreaturePreviewRenderer->InspectVisualAssets(census);
+  if (ContentPreviewRenderer)
+    ContentPreviewRenderer->InspectVisualAssets(census, CreaturePreviewRenderer.get());
+  if (FpViewmodelRenderer)
+    FpViewmodelRenderer->InspectVisualAssets(census);
+  if (ItemLabScreen)
+    ItemLabScreen->InspectVisualAssets(census);
+}
+
 CreatureItemIconStorage UApplication::InspectCreatureItemIconStorage() const noexcept
 {
   return UGuiIconSource::InspectCreatureItemIconStorage(IconSource.get(), ContentPreviewRenderer.get(),

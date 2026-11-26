@@ -14,6 +14,7 @@ namespace cutum
 class UItemDefinitionStorage;
 class UShaderManager;
 class UItemPreviewRenderer;
+class VisualAssetCensus;
 class UItemLabSceneRenderer;
 class UGuiListView;
 class UGuiTextInput;
@@ -32,6 +33,7 @@ public:
   void Update(double dt) override;
   void OnViewportChanged(int width, int height) override;
   bool BlocksGameInput() const override { return true; }
+  void InspectVisualAssets(VisualAssetCensus &census) const;
   bool WantsClose() const { return CloseRequested; }
   void SelectItem(const std::string &id);
   void SetMode(int mode);

@@ -11,6 +11,9 @@
 namespace cutum
 {
 
+class VisualAssetCensus;
+enum class VisualAssetOwner;
+
 class UCreatureDefinitionStorage
 {
 public:
@@ -20,6 +23,7 @@ public:
   bool LoadFile(const std::string &path);
   const CreatureDefinition *Get(const std::string &Id) const;
   size_t Count() const;
+  void InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const;
 
   std::vector<std::string> ListAllIds() const;
   std::vector<std::string> ListSpawnable() const;

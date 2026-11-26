@@ -59,6 +59,7 @@ struct ObjectIconStorage;
 struct InventoryIconStorage;
 struct CreatureItemIconStorage;
 class UContentPreviewRenderer;
+class VisualAssetCensus;
 struct ContentPreviewRendererStorage;
 class UCreaturePreviewRenderer;
 class UFpViewmodelRenderer;
@@ -191,6 +192,7 @@ public:
   ObjectIconStorage InspectObjectIconStorage() const noexcept;
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
   CreatureItemIconStorage InspectCreatureItemIconStorage() const noexcept;
+  void InspectVisualAssets(VisualAssetCensus &census) const;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

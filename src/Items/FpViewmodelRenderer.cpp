@@ -21,6 +21,7 @@
 #include "Items/ItemPresentationMath.h"
 #include "Items/ItemSurfaceRenderer.h"
 #include "Items/ItemVisualDefaults.h"
+#include "Items/LegacyVisualAssetCache.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
@@ -47,6 +48,12 @@ namespace cutum
 
 namespace
 {
+
+LegacyVisualAssetCache<CreatureGltfMeshAsset> &ViewmodelGltfAssets()
+{
+  static LegacyVisualAssetCache<CreatureGltfMeshAsset> cache;
+  return cache;
+}
 constexpr float kFovDeg = 72.0f;
 constexpr float kNear = 0.05f;
 constexpr float kFar = 10.0f;
@@ -214,6 +221,18 @@ UFpViewmodelRenderer::UFpViewmodelRenderer(
       CreatureTextures(std::move(creatureTextures)),
       ShaderManager(std::move(shaderManager))
 {
+}
+
+void UFpViewmodelRenderer::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  census.Add(ArmSource, VisualAssetOwner::Viewmodel);
+  if (SurfaceRenderer)
+    SurfaceRenderer->InspectVisualAssets(census, VisualAssetOwner::Viewmodel);
+}
+
+void UFpViewmodelRenderer::InspectLegacyVisualAssets(VisualAssetCensus &census)
+{
+  ViewmodelGltfAssets().Inspect(census, VisualAssetOwner::Viewmodel);
 }
 
 UFpViewmodelRenderer::~UFpViewmodelRenderer() { Shutdown(); }
@@ -1087,30 +1106,12 @@ bool UFpViewmodelRenderer::TryDrawGltfHeld(const InventoryEntryRef &entry,
                  : FindItemSurfaceAsset(
                        absGltf, UItemDefinitionStorage::ContentRevision());
 
-  static std::mutex cacheMu;
-  static std::unordered_map<std::string, std::shared_ptr<CreatureGltfMeshAsset>>
-      cache;
-  static uint64_t cacheRevision = 0;
   std::shared_ptr<CreatureGltfMeshAsset> asset;
   if (!surface)
-  {
-    std::lock_guard<std::mutex> lock(cacheMu);
-    SyncItemModelCache(cache, cacheRevision);
-    const auto it = cache.find(itemId);
-    if (it != cache.end())
+    asset = ViewmodelGltfAssets().Get(itemId, [&]()
     {
-      asset = it->second;
-    }
-    else
-    {
-      const auto abs = absGltf.string();
-      asset = CreatureGltfLoader::LoadFromFile(abs);
-      if (asset)
-      {
-        cache[itemId] = asset;
-      }
-    }
-  }
+      return CreatureGltfLoader::LoadFromFile(absGltf.string());
+    });
   if (!surface && (!asset || asset->primitives.empty()))
   {
     return false;

@@ -17,6 +17,7 @@ typedef unsigned int GLuint;
 
 namespace cutum
 {
+class VisualAssetCensus;
 
 class UItemDefinitionStorage;
 class UBlockDefinitionStorage;
@@ -108,6 +109,8 @@ public:
   ~UFpViewmodelRenderer();
 
   bool Initialize();
+  void InspectVisualAssets(VisualAssetCensus &census) const;
+  static void InspectLegacyVisualAssets(VisualAssetCensus &census);
   void Shutdown();
 
   void Update(float dt, float cameraYawDeg, float cameraPitchDeg,

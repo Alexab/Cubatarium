@@ -1,6 +1,6 @@
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Core/Json/JsonVec.h"
-#include "Core/Memory/VisualAssetStorage.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 
 #include <filesystem>
@@ -85,7 +85,19 @@ void CreatureRigidModelCache::Clear()
   }
 }
 
-VisualAssetStorage CreatureRigidModelCache::InspectOwnedStorage() const
+void MeasureVisualPayload(const CreatureRigidModelParts &parts, StlSourceStorage &out) noexcept
+{
+  out.Buffer(parts.capacity(), sizeof(CreatureVisualPartDef));
+  for (const auto &part : parts)
+  {
+    out.Text(part.Id);
+    out.Text(part.textureStem);
+    out.Text(part.LimbKind);
+    out.Text(part.LimbAxis);
+  }
+}
+
+VisualAssetStorage CreatureRigidModelCache::InspectOwnedStorage(VisualAssetCensus *census) const
 {
   const std::lock_guard lock(CacheMutex);
   VisualAssetStorage result;
@@ -99,15 +111,10 @@ VisualAssetStorage CreatureRigidModelCache::InspectOwnedStorage() const
     for (const auto &[key, parts] : *Cache)
     {
       table.Text(key);
+      if (census)
+        census->Add(parts, VisualAssetOwner::Cache);
       AddVisualAssetControl<CreatureRigidModelParts>(control);
-      payload.Buffer(parts->capacity(), sizeof(CreatureVisualPartDef));
-      for (const auto &part : *parts)
-      {
-        payload.Text(part.Id);
-        payload.Text(part.textureStem);
-        payload.Text(part.LimbKind);
-        payload.Text(part.LimbAxis);
-      }
+      MeasureVisualPayload(*parts, payload);
     }
   }
   FinishVisualAssetStorage(result, table, control, payload);

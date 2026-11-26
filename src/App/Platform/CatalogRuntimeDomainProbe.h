@@ -21,7 +21,10 @@
 #include "WorldGen/Core/PipelineAllocatorThreadView.h"
 #include "WorldGen/Core/RuntimeNameStorage.h"
 #include "Core/Memory/EngineThreadStorage.h"
-#include "Core/Memory/VisualAssetStorage.h"
+#include "Core/Memory/VisualAssetCensus.h"
+#include "Creatures/Core/Creature.h"
+#include "Creatures/Definition/CreatureDefinitionStorage.h"
+#include "Creatures/Diagnostics/CreatureQaFootProbe.h"
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
@@ -294,10 +297,55 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
             {"control_bytes", asset.controlBytes}, {"payload_bytes", asset.payloadBytes},
             {"live", asset.live}, {"expired", asset.expired}, {"negative", asset.negative}, {"aliases", asset.aliases}};
   };
-  const auto gltf = CreatureGltfCache::Instance().InspectOwnedStorage();
-  const auto bones = CreatureBoneSkeletonCache::Instance().InspectOwnedStorage();
-  const auto rigid = CreatureRigidModelCache::Instance().InspectOwnedStorage();
-  const auto items = InspectItemSurfaceAssetStorage();
+  VisualAssetCensusResult retainedVisuals;
+  VisualAssetStorage gltf, bones, rigid, items;
+  {
+    VisualAssetCensus visual;
+    gltf = CreatureGltfCache::Instance().InspectOwnedStorage(&visual);
+    bones = CreatureBoneSkeletonCache::Instance().InspectOwnedStorage(&visual);
+    rigid = CreatureRigidModelCache::Instance().InspectOwnedStorage(&visual);
+    items = InspectItemSurfaceAssetStorage(&visual);
+    for (const auto *world : out.member_worlds)
+    {
+      if (const auto &defs = world->GetCreatureDefinitionStorage())
+        defs->InspectVisualAssets(visual, VisualAssetOwner::World);
+      world->ForEachCreature([&](const UCreature &creature)
+      {
+        if (const auto *representation = creature.GetVisual())
+          representation->InspectVisualAssets(visual);
+      });
+    }
+    for (const auto *renderer : out.member_geometry)
+      renderer->InspectVisualAssets(visual);
+    application.InspectVisualAssets(visual);
+    WornEquipmentDrawer::InspectVisualAssets(visual);
+    UFpViewmodelRenderer::InspectLegacyVisualAssets(visual);
+    if (const auto &diagnostic = CreatureQaFootAssets())
+      for (const auto &entry : *diagnostic)
+        visual.Add(entry.second.owner, VisualAssetOwner::Diagnostic);
+    retainedVisuals = visual.Result();
+  }
+  Json retainedRows = Json::object();
+  constexpr std::array kinds{"rigid", "gltf", "bones", "items", "legacy_parts", "palette", "item_draw"};
+  constexpr std::array rolesForAssets{"cache", "world", "preview", "queue", "viewmodel", "equipment", "diagnostic"};
+  for (size_t kind = 0; kind < retainedVisuals.rows.size(); ++kind)
+  {
+    const auto &row = retainedVisuals.rows[kind];
+    Json references = Json::object();
+    for (size_t role = 0; role < row.references.size(); ++role)
+      references[rolesForAssets[role]] = row.references[role];
+    retainedRows[kinds[kind]] = {{"cached", row.cached}, {"detached", row.detached},
+        {"shared", row.shared}, {"references", std::move(references)},
+        {"detached_control_bytes", row.detachedControlBytes},
+        {"detached_payload_bytes", row.detachedPayloadBytes}};
+  }
+  report["retained_visual_asset_storage"] = {
+      {"schema", "retained-visual-asset-storage.v1"},
+      {"status", retainedVisuals.supported ? "PASS" : "UNSUPPORTED"}, {"assets", std::move(retainedRows)},
+      {"queue_bytes", retainedVisuals.queueBytes}, {"legacy_table_bytes", retainedVisuals.legacyTableBytes},
+      {"legacy_inline_bytes", retainedVisuals.legacyInlineBytes}, {"nonowning_meshes", retainedVisuals.nonowningMeshes},
+      {"observer_bytes", retainedVisuals.observerBytes}, {"observer_inline_bytes", sizeof(VisualAssetCensus)},
+      {"unmeasured_references", retainedVisuals.unmeasuredReferences}, {"whole_runtime_complete", false}};
   const auto creatureGpu = CreatureMeshGpuCache::Instance().InspectOwnedStorage();
   report["shared_visual_source_storage"] = {
       {"schema", "shared-visual-source-storage.v1"},

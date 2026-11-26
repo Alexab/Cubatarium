@@ -14,6 +14,7 @@
 namespace cutum
 {
 struct VisualAssetStorage;
+class VisualAssetCensus;
 
 class CreatureGltfCache
 {
@@ -24,7 +25,7 @@ public:
   std::string GetCreaturesRoot() const { std::lock_guard<std::mutex> lock(mutex);return creaturesRoot; }
   uint64_t GetRevision() const { return revision.load(std::memory_order_acquire); }
   void Clear();
-  VisualAssetStorage InspectOwnedStorage() const;
+  VisualAssetStorage InspectOwnedStorage(VisualAssetCensus *census = nullptr) const;
 
 /// Absolute-path load for non-species assets (item icons, viewmodels):
 /// same weak-ref cache keyed by the path (UX R2).

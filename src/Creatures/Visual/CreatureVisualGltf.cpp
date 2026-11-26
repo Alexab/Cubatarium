@@ -1,4 +1,5 @@
 #include "Creatures/Visual/CreatureVisualGltf.h"
+#include "Core/Memory/VisualAssetCensus.h"
 
 #include "App/Settings/RenderSettings.h"
 #include "Creatures/Core/Creature.h"
@@ -23,6 +24,13 @@
 
 namespace cutum
 {
+
+void UCreatureVisualGltf::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  census.Add(MeshAsset, VisualAssetOwner::World);
+  census.Add(BoneMatrices, VisualAssetOwner::World);
+}
+
 
 std::unique_ptr<IUCreatureVisual> CreateCreatureVisualGltf()
 {

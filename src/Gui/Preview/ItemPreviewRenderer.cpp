@@ -1,4 +1,5 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Json/JsonVec.h"
 #include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Preview/PreviewRendererStorage.h"
@@ -80,6 +81,15 @@ std::shared_ptr<UItemPreviewRenderer> UItemPreviewRenderer::Create(
   auto renderer = std::make_shared<UItemPreviewRenderer>(std::move(items), std::move(shaders));
   renderer->FactoryOwner = true;
   return renderer;
+}
+
+void UItemPreviewRenderer::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  census.Add(InspectionAsset, VisualAssetOwner::Preview);
+  for (const auto &entry : InspectionAssets)
+    census.Add(entry.second, VisualAssetOwner::Preview);
+  if (SurfaceRenderer)
+    SurfaceRenderer->InspectVisualAssets(census, VisualAssetOwner::Preview);
 }
 
 PreviewRendererStorage UItemPreviewRenderer::InspectOwnedStorage(const UItemDefinitionStorage *items,

@@ -60,6 +60,14 @@ UItemLabScreen::UItemLabScreen(std::shared_ptr<UItemDefinitionStorage> items,
   if (!Preview->Initialize())
     throw std::runtime_error("Cannot initialize Item Lab renderer");
 }
+void UItemLabScreen::InspectVisualAssets(VisualAssetCensus &census) const
+{
+  if (Preview)
+    Preview->InspectVisualAssets(census);
+  if (ScenesRenderer)
+    ScenesRenderer->InspectVisualAssets(census);
+}
+
 UItemLabScreen::~UItemLabScreen()
 {
   for (auto &texture : Textures)

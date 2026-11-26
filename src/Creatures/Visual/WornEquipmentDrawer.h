@@ -16,6 +16,7 @@ class CreatureDrawQueue;
 class UCreature;
 class UItemDefinitionStorage;
 class UShaderProgram;
+class VisualAssetCensus;
 struct InventoryEntryRef;
 
 /// Lookup bone model-space matrix by name (already without bodyMat).
@@ -37,6 +38,7 @@ class WornEquipmentDrawer
 public:
   /// When true, skip TP wield on possessed creatures (FP viewmodel owns it).
   static void SetHidePossessedWield(bool hide);
+  static void InspectVisualAssets(VisualAssetCensus &census);
   static void SubmitLoose(CreatureDrawQueue &queue, const std::string &id,
                           const glm::mat4 &viewProj, const glm::mat4 &model,
                           glm::vec3 size, unsigned int blockTexture = 0,
