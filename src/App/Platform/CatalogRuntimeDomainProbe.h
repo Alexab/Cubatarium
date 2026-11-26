@@ -522,6 +522,9 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   for (const auto *world : out.member_worlds)
     InspectWorldPackedBuffers(*world, terrainBuffers);
   report["terrain_gpu_buffers"] = DescribeTerrainGpuBuffers(terrainBuffers.Read());
+  TerrainGpuBufferCensus guiBuffers;
+  application.InspectGuiGpuBuffers(guiBuffers);
+  report["gui_gpu_buffers"] = DescribeGuiGpuBuffers(guiBuffers.Read());
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());

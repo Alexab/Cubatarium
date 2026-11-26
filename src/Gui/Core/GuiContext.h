@@ -46,6 +46,7 @@ public:
   // Inspect on the UI thread. The caller accounts for the owning context
   // allocation, the active screen subtree and shared rendering resources.
   GuiContextStorage InspectOwnedStorage() const noexcept;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   void Update(double dt);
   void NotifyViewport(int WindowWidth, int WindowHeight, int insetLeft = 0,

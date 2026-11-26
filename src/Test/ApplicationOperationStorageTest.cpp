@@ -5,6 +5,7 @@
 #include "Test/OrdinaryNewObservation.h"
 #include "Test/ApplicationOperationStorageFixture.h"
 #include "Test/GuiContextStorageFixture.h"
+#include "Test/GuiGpuStorageFixture.h"
 #include "Test/MainMenuStorageFixture.h"
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
@@ -445,6 +446,7 @@ int main(int argc,char **argv){
   try{
     const auto statusCatalog=shared_visual_source_fixture::CheckStatusCatalog(argc>1?argv[1]:"application-operation-storage.json");
     RootSourceGlContext gl;UWorld world(nullptr,nullptr);UCore core(nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);UApplication application(nullptr,nullptr,nullptr,nullptr,nullptr,nullptr,nullptr);
+    auto guiGpuStorage = gui_gpu_storage_fixture::Run();
     UNewWorldScreen create(&application);ULoadWorldScreen load(&application);auto report=RunApplicationOperationStorageProbe(application,core,world);Json observations=Json::array();size_t prefixes{},checks{};
     CheckOriginalCaptureTypes(&create,ApplicationOperationFixtureRequest(2));
     for(int variant=0;variant<3;++variant){const auto input=ApplicationOperationFixtureRequest(variant);
@@ -480,6 +482,7 @@ int main(int argc,char **argv){
     ApplicationOperationSourceProbe::Clear(application);phase.Close();require(!application.InspectOperationStorage(phase,true).supported,"actual closed application source phase");
     report["ordinary_cases"]=observations;report["ordinary_equality_checks"]=checks;report["refusal_prefixes"]=prefixes;report["query_allocate0"]=true;report["move_before_invoke_successor"]=true;report["selected_final_live"]=observation::State.live;
     report["gui_context_storage"]=CheckGuiContextRequests();
+    report["gui_gpu_storage"]=std::move(guiGpuStorage);
     report["world_progress_storage"]=CheckWorldProgressRequests(application);
     report["main_menu_storage"]=CheckMainMenuRequests(application);
     report["hud_storage"]=CheckInGameHudRequests();

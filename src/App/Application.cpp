@@ -763,6 +763,8 @@ InventoryIconStorage UApplication::InspectInventoryIconStorage() const noexcept
 
 void UApplication::InspectRenderImages(RenderImageCensus &out) const
 {
+  if (TextRenderer)
+    TextRenderer->InspectRenderImages(out);
   if (ContentPreviewRenderer)
     ContentPreviewRenderer->InspectRenderImages(out);
   if (ItemLabScreen)
@@ -770,6 +772,13 @@ void UApplication::InspectRenderImages(RenderImageCensus &out) const
   if (IconSource)
     IconSource->InspectRenderImages(out);
   ItemGltfTextureCache::InspectRenderImages(out);
+}
+
+void UApplication::InspectGuiGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  GuiContext->InspectGpuBuffers(out);
+  if (TextRenderer)
+    TextRenderer->InspectGpuBuffers(out);
 }
 
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const

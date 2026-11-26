@@ -138,6 +138,12 @@ GuiContextStorage UGuiContext::InspectOwnedStorage() const noexcept
   return out;
 }
 
+void UGuiContext::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (Renderer)
+    Renderer->InspectGpuBuffers(out);
+}
+
 void UGuiContext::Update(double dt)
 {
   if (ActiveScreen)

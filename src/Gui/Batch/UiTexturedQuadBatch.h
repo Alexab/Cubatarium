@@ -28,6 +28,7 @@ public:
   void End();
 
 private:
+  friend class UGuiRenderer;
   void GuiRectToShaderCoords(const GuiRect &rect, float &x0, float &y0,
                              float &x1, float &y1) const;
 

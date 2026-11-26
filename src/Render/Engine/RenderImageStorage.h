@@ -17,14 +17,14 @@ enum class RenderImageRole
   LightAtlas, LightMetadata, OpaqueDepth, WeatherDepth, FluidSurfaces, CloudField,
   ContentColor, ContentDepth, ItemPreviewColor, ItemPreviewDepth, ItemLabColor,
   BlockAtlas, CreatureTexture, ModelTexture, ItemAlbedo, ObjectIcon, BlockIcon,
-  CreatureIcon, SkinIcon, ItemIcon, IconTargetColor, IconTargetDepth, Count
+  CreatureIcon, SkinIcon, ItemIcon, IconTargetColor, IconTargetDepth, TextGlyph, Count
 };
 
 inline constexpr std::array RenderImageRoles{
     "light_atlas", "light_metadata", "opaque_depth", "weather_depth", "fluid_surfaces", "cloud_field",
     "content_color", "content_depth", "item_preview_color", "item_preview_depth", "item_lab_color",
     "block_atlas", "creature_texture", "model_texture", "item_albedo", "object_icon", "block_icon",
-    "creature_icon", "skin_icon", "item_icon", "icon_target_color", "icon_target_depth"};
+    "creature_icon", "skin_icon", "item_icon", "icon_target_color", "icon_target_depth", "text_glyph"};
 static_assert(RenderImageRoles.size() == static_cast<std::size_t>(RenderImageRole::Count));
 static_assert(RenderImageRoles.size() <= std::numeric_limits<std::uint32_t>::digits);
 

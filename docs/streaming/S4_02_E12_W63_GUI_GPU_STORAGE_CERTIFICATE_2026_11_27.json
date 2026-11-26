@@ -1,0 +1,459 @@
+{
+  "schema": "s4-e12-w63-gui-gpu-storage.v1",
+  "status": "SCOPED_GUI_GPU_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "1283a0b283e8c1e41a1565ab3a7b7ef73ad25361",
+  "prior_certificate": "S4_02_E12_W62_ATLAS_ROLLBACK_CERTIFICATE_2026_11_27.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W63 observes the actual GUI colored, textured and text vertex stores. The application and GUI references to the shared text renderer count one VBO. The existing terrain report keeps its previous roles and totals. The image census measures level-zero glyph textures at the application root. A real GL fixture observes colored buffer allocation, growth and smaller replacement through draw calls. GUI shutdown retires both quad stores while shared text survives. Font publication prepares a candidate and preserves the active text after invalid input and controlled ordinary allocation refusals. A failed replacement is recorded in the log while the previous text remains usable. Successful replacement retires the predecessor buffer, program and glyph textures, and releases FreeType state after the upload. Final text shutdown, binding restoration, scoped Flat and Full startup and all 46 Release regression groups pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W63. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. Next, join UItemPreviewRenderer mesh scratch, UItemLabOverlayRenderer buffers and shared preview cube stores. Compare actual resize and shutdown with the existing preview image and readback ownership evidence. Then cover short-lived framebuffer and upload candidates and the remaining driver-owned retention. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Current logical GL buffer sizes and glyph image levels for the actual desktop GUI and shared text renderer",
+  "composition_rule": "Observe GL_BUFFER_SIZE per unique buffer name in the selected scopes. Count each glyph level once. Sizing and retirement describe logical stores. Driver backing of in-flight buffer stores, shader programs, FreeType transient setup and whole-process composition remain open.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix"
+  ],
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetBufferParameter.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glDeleteBuffers.xml"
+  ],
+  "gui_gpu_fixture": {
+    "after_gui_shutdown": {
+      "failed_queries": 0,
+      "logical_bytes": 96,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 1,
+      "roles": {
+        "gui_colored": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "gui_textured": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "text_vertices": {
+          "logical_bytes": 96,
+          "objects": 1
+        }
+      },
+      "schema": "gui-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 1,
+      "whole_runtime_complete": false
+    },
+    "allocation_refusal_prefixes": [
+      0,
+      32
+    ],
+    "bindings_restored": true,
+    "failed_font_preserved": true,
+    "grown": {
+      "failed_queries": 0,
+      "logical_bytes": 14592,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "gui_colored": {
+          "logical_bytes": 14400,
+          "objects": 1
+        },
+        "gui_textured": {
+          "logical_bytes": 96,
+          "objects": 1
+        },
+        "text_vertices": {
+          "logical_bytes": 96,
+          "objects": 1
+        }
+      },
+      "schema": "gui-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 3,
+      "whole_runtime_complete": false
+    },
+    "gui_restart": true,
+    "initial": {
+      "failed_queries": 0,
+      "logical_bytes": 12480,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "gui_colored": {
+          "logical_bytes": 12288,
+          "objects": 1
+        },
+        "gui_textured": {
+          "logical_bytes": 96,
+          "objects": 1
+        },
+        "text_vertices": {
+          "logical_bytes": 96,
+          "objects": 1
+        }
+      },
+      "schema": "gui-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 3,
+      "whole_runtime_complete": false
+    },
+    "new_glyph_bytes": 36872,
+    "new_glyphs": 123,
+    "old_glyph_bytes": 10320,
+    "old_glyphs": 123,
+    "retired": {
+      "failed_queries": 0,
+      "logical_bytes": 0,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 0,
+      "roles": {
+        "gui_colored": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "gui_textured": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "text_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "gui-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 0,
+      "whole_runtime_complete": false
+    },
+    "retired_old_glyphs": 123,
+    "small": {
+      "failed_queries": 0,
+      "logical_bytes": 240,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "gui_colored": {
+          "logical_bytes": 48,
+          "objects": 1
+        },
+        "gui_textured": {
+          "logical_bytes": 96,
+          "objects": 1
+        },
+        "text_vertices": {
+          "logical_bytes": 96,
+          "objects": 1
+        }
+      },
+      "schema": "gui-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 3,
+      "whole_runtime_complete": false
+    },
+    "status": "PASS"
+  },
+  "native": {
+    "flat": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 653,
+      "snapshots": {
+        "menu": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 12480,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 12288,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        },
+        "in-game": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 240,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 48,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        },
+        "after-loop": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 240,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 48,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        }
+      }
+    },
+    "full": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 654,
+      "snapshots": {
+        "menu": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 12480,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 12288,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        },
+        "in-game": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 240,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 48,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        },
+        "after-loop": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 240,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4,
+            "roles": {
+              "gui_colored": {
+                "logical_bytes": 48,
+                "objects": 1
+              },
+              "gui_textured": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "text_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              }
+            },
+            "schema": "gui-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "glyphs": 123,
+          "glyph_bytes": 10320
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "terrain_control": "PASS",
+  "source_sha256": "bfe658eda0e79099cd659205bc7b6573bf27c307640fbc0d8d6bdb0953a007fc",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "1ae763b765c9d3de2970210ab80c8939738487256900c998f952222388396613",
+    "src/App/Application.h": "abfdcdb59a67b7a7aea514c4f16a64bd67da5264b1bc8f9550ee9b228a18c1f7",
+    "src/App/Platform/AppRunner.cpp": "e2b21a4ef5b382e22eacc3534412312187553cdae28fca080c6f93aef515ebd3",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "4086a11410d8188a6e64ca24f225730538b6c4429747f18c4d6e1226b7826096",
+    "src/Gui/Batch/UiQuadBatch.h": "d7f5ba7b2a86b5ad3b936408399c5b34e9d498a167783ca29f49ab53122b7feb",
+    "src/Gui/Batch/UiTexturedQuadBatch.h": "a3ff3af002172318f02c4b18b97b642eef2e43e4e037d3fef493e740ed8ba92b",
+    "src/Gui/Core/GuiContext.cpp": "1ef56b1760260633e2dc3a1fbe3dc0bfcd26fb9af6c9eee7b89ab31bdf763ada",
+    "src/Gui/Core/GuiContext.h": "305b5dd63218e4bd414738c6215c5cbf4901a2b93f94531e409b97b6dc9f1658",
+    "src/Gui/Core/GuiRenderer.cpp": "106e156bc7f9d521883bcbbb02dc53315752795aa6c6ac23b7a171af6e0b8b6f",
+    "src/Gui/Core/GuiRenderer.h": "27c323849dcc6842ae10c015ae06d12e06a09dfdb4bc815d4a64559810d771d5",
+    "src/Render/Engine/RenderImageStorage.h": "516288d748fc7472b59ca07c87b21476eb55f0be5ec0177cc5478138e434a73d",
+    "src/Render/Engine/TerrainGpuBufferReport.h": "da959b19d3eb3998df8521bfe047e292578d035e04c0986f3c867be25ea4bddc",
+    "src/Render/Engine/TerrainGpuBuffers.h": "bdd6bbed6c7e8116ba49ab38333e3f8001612dcfd4db26bfa79248191034d0d3",
+    "src/Render/Engine/TextRenderer.cpp": "25d59fc41ced38c1870a15601727222c5bc25ebbf62b2be1c76f2deb2331bcdd",
+    "src/Render/Engine/TextRenderer.h": "bd4e6c6207d95d4f9037ac992541c96b3ff72531fa3e4796f867f40bc5a97590",
+    "src/Test/ApplicationOperationStorageTest.cpp": "87a535d21cf181284db1f96dc76d46f14976084d537109f0808791001e27e7fe",
+    "src/Test/GuiGpuStorageFixture.h": "1506465b346e8a809dd9dfd9b7c98d239c145f8c47468447056017b3d7570d99"
+  },
+  "bundled_font_sha256": "56a45233d29f11b4dfb86d248e921939d115778f87325e7ae8cc108383d6664d",
+  "desktop_exe_sha256": "838782536ea99e86682dc8c647033b0ea9057c4e2c11e56e673c46abaa5cf980",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-gui-gpu-provenance.json": "d28e0dc4d6e9a7c41de37b8412c415e29a4d90739731fd503ba5305267e757f8",
+    "build/desktop-msvc/s4-gui-gpu-frozen-source.json": "629b02919c354e7517ec5af365acefc229b0590eb6423ec6e69d40756e16c5f0",
+    "build/desktop-msvc/s4-gui-gpu-regressions.json": "eabcacfc1e3279e492b9e1a65ecf208c1e43810973eb6fa78e153267255c7f55",
+    "build/desktop-msvc/s4-gui-gpu-focused-final.json": "35a008c492bddca753330d5bca9ca0532d2486fe988ad18acd3c57a3a16fc72c",
+    "build/desktop-msvc/s4-gui-gpu-application-ops.json": "5fb5d57fbe64362c21d346853d7d91475e03d8db45dccd844ac140befa159108",
+    "build/desktop-msvc/s4-gui-gpu-terrain-fixture.json": "0d6600f369e00e1eaf72f98bfeb5cecebab8065641c13143437930dba9c37b60",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/terrain-save-probe/report.json": "bade63fc2643961350eae597077b7c60347b0693381d2105aa335c676841965e",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/owner-domain/flight-menu.json": "db47aaf7f44a82605e4a5d46d520e09a158db0785d5cef608093ca622c64af26",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/owner-domain/flight-in-game.json": "953c698644b0fb531eb2246bb8611aaeccd3a4b11c5207b72cd1a0e6812d33bf",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/smoke-verdict.json": "f033916ad57f7439c935bdc92882ff053042d859ec312c962559ba61b0d8d386",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/flight_sim_report.json": "c584fa98b5d2bc48c3121fefb0faa5a7f236d36c516f5c27a07b3d1a8b3d0329",
+    "build/desktop-msvc/s4-gui-gpu-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-gui-gpu-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-gui-gpu-full-native/owner-domain/flight-menu.json": "349bab11f2ed37309996fd2eee4e9406b20d344b5ca8cdb245a7f2ecb60acd18",
+    "build/desktop-msvc/s4-gui-gpu-full-native/owner-domain/flight-in-game.json": "6c77420141a234f23749c3e9c959b0931a0f674153ea352387728f2823e7c138",
+    "build/desktop-msvc/s4-gui-gpu-full-native/smoke-verdict.json": "9976e9fa2af1cd81e4628a694432c1af435e90d97e0615e90ae45bbfe70d19f3",
+    "build/desktop-msvc/s4-gui-gpu-full-native/flight_sim_report.json": "f0e6f87189a8e8509fb5f09760c6009aaca7a14c17a661d3d522e160a089b988",
+    "build/desktop-msvc/s4-gui-gpu-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

@@ -24,6 +24,7 @@ public:
   bool Initialize(std::shared_ptr<UShaderManager> shaderManager,
                   std::shared_ptr<UTextRenderer> textRenderer);
   void Shutdown();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   void BeginFrame(int window_width, int window_height);
   void EndFrame();

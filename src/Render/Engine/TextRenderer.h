@@ -27,11 +27,15 @@ class UTextRenderer
 public:
   UTextRenderer();
   ~UTextRenderer();
+  UTextRenderer(const UTextRenderer &) = delete;
+  UTextRenderer &operator=(const UTextRenderer &) = delete;
 
   // Initialize text rendering system
   bool Initialize(int fontSize = 16);
   bool Initialize(const std::string &fontPath, int fontSize);
   void Shutdown();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
   // Render text
   void RenderText(const std::string &text, float x, float y, float scale,
@@ -64,6 +68,7 @@ private:
   GLint textSamplerLocation;
 
   bool CreateShader();
+  bool InitializeResources(const std::string &fontPath, int fontSize);
   bool LoadCharacters(const std::string &fontPath, int fontSize);
   bool InitializeFreeType();
   void CleanupFreeType();

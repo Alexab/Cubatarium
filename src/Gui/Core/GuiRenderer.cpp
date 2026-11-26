@@ -1,5 +1,6 @@
 #include "Gui/Core/GuiRenderer.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/Engine/TextRenderer.h"
 
 #include "Render/GlIncludes.h"
@@ -46,6 +47,14 @@ void UGuiRenderer::Shutdown()
   QuadBatch.Shutdown();
   TextRenderer.reset();
   ClipStack.clear();
+}
+
+void UGuiRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::GuiColored, QuadBatch.Vbo);
+  out.Add(TerrainGpuBufferRole::GuiTextured, TexturedQuadBatch.Vbo);
+  if (TextRenderer)
+    TextRenderer->InspectGpuBuffers(out);
 }
 
 void UGuiRenderer::BeginFrame(int window_width, int window_height)

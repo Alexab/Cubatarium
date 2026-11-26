@@ -3,10 +3,14 @@
 #include "App/Platform/GameAssets.h"
 #include "App/Platform/IUPlatformPaths.h"
 #include "App/Platform/Log.h"
+#include "Render/Engine/RenderImageStorage.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Textures/GlTextureOwner.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <utility>
 
 namespace cutum
 {
@@ -79,7 +83,10 @@ bool UTextRenderer::Initialize(int fontSize)
   std::string fontPath = FindAvailableFont();
   if (fontPath.empty())
   {
-    CubatariumLogError("Text", "No available fonts found");
+    if (TextShader)
+      CubatariumLogInfo("Text", "No replacement font found");
+    else
+      CubatariumLogError("Text", "No available fonts found");
     return false;
   }
 
@@ -89,39 +96,69 @@ bool UTextRenderer::Initialize(int fontSize)
 
 bool UTextRenderer::Initialize(const std::string &fontPath, int fontSize)
 {
+  UTextRenderer pending;
+  if (!pending.InitializeResources(fontPath, fontSize))
+  {
+    if (!TextShader)
+      CubatariumLogError("Text", "Failed to initialize font: " + fontPath);
+    return false;
+  }
+
+  std::swap(TextShader, pending.TextShader);
+  std::swap(VAO, pending.VAO);
+  std::swap(VBO, pending.VBO);
+  characters.swap(pending.characters);
+  std::swap(textColorLocation, pending.textColorLocation);
+  std::swap(projectionLocation, pending.projectionLocation);
+  std::swap(textSamplerLocation, pending.textSamplerLocation);
+
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  return true;
+}
+
+bool UTextRenderer::InitializeResources(const std::string &fontPath, int fontSize)
+{
   if (!InitializeFreeType())
   {
-    CubatariumLogError("Text", "Failed to initialize FreeType");
+    CubatariumLogInfo("Text", "Failed to initialize FreeType");
     return false;
   }
 
   if (!CreateShader())
   {
-    CubatariumLogError("Text", "Failed to create text shader");
+    CubatariumLogInfo("Text", "Failed to create text shader");
     return false;
   }
 
-  // Configure OpenGL for text rendering
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
   // Create VAO and VBO for character rendering
+  GLint priorVao{}, priorBuffer{};
+  glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &priorVao);
+  glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &priorBuffer);
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
+  if (!VAO || !VBO)
+    return false;
   glBindVertexArray(VAO);
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+  constexpr GLint vertexBytes = sizeof(float) * 6 * 4;
+  glBufferData(GL_ARRAY_BUFFER, vertexBytes, nullptr, GL_DYNAMIC_DRAW);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
+  GLint allocated{};
+  glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &allocated);
+  glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(priorBuffer));
+  glBindVertexArray(static_cast<GLuint>(priorVao));
+  if (allocated != vertexBytes)
+    return false;
 
   // Load characters using FreeType
   if (!LoadCharacters(fontPath, fontSize))
   {
-    CubatariumLogError("Text", "Failed to load characters from: " + fontPath);
+    CubatariumLogInfo("Text", "Failed to load characters from: " + fontPath);
     return false;
   }
+  CleanupFreeType();
 
   std::cout << "TextRenderer initialized successfully with font: " << fontPath
             << std::endl;
@@ -176,6 +213,10 @@ void UTextRenderer::Shutdown()
   }
   if (TextShader)
   {
+    GLint current{};
+    glGetIntegerv(GL_CURRENT_PROGRAM, &current);
+    if (static_cast<GLuint>(current) == TextShader)
+      glUseProgram(0);
     glDeleteProgram(TextShader);
     TextShader = 0;
   }
@@ -192,6 +233,17 @@ void UTextRenderer::Shutdown()
 
   // Cleanup FreeType
   CleanupFreeType();
+}
+
+void UTextRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::TextVertices, VBO);
+}
+
+void UTextRenderer::InspectRenderImages(RenderImageCensus &out) const
+{
+  for (const auto &[code, character] : characters)
+    out.Add(RenderImageRole::TextGlyph, GL_TEXTURE_2D, character.textureID);
 }
 
 bool UTextRenderer::CreateShader()
@@ -250,22 +302,33 @@ void main()
 )";
 #endif
 
-  GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  struct PendingShader
+  {
+    GLuint name;
+    ~PendingShader() { if (name) glDeleteShader(name); }
+  };
+  const PendingShader vertex{glCreateShader(GL_VERTEX_SHADER)};
+  const GLuint vertexShader = vertex.name;
+  if (!vertexShader)
+    return false;
   glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
   glCompileShader(vertexShader);
 
   // Vertex shader compilation check
-  GLint success;
-  GLchar infoLog[512];
+  GLint success{};
+  GLchar infoLog[512]{};
   glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
   if (!success)
   {
     glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    CubatariumLogError("Text", std::string("Vertex shader: ") + infoLog);
+    CubatariumLogInfo("Text", std::string("Vertex shader: ") + infoLog);
     return false;
   }
 
-  GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  const PendingShader fragment{glCreateShader(GL_FRAGMENT_SHADER)};
+  const GLuint fragmentShader = fragment.name;
+  if (!fragmentShader)
+    return false;
   glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
   glCompileShader(fragmentShader);
 
@@ -274,11 +337,13 @@ void main()
   if (!success)
   {
     glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    CubatariumLogError("Text", std::string("Fragment shader: ") + infoLog);
+    CubatariumLogInfo("Text", std::string("Fragment shader: ") + infoLog);
     return false;
   }
 
   TextShader = glCreateProgram();
+  if (!TextShader)
+    return false;
   glAttachShader(TextShader, vertexShader);
   glAttachShader(TextShader, fragmentShader);
   glLinkProgram(TextShader);
@@ -288,19 +353,19 @@ void main()
   if (!success)
   {
     glGetProgramInfoLog(TextShader, 512, NULL, infoLog);
-    CubatariumLogError("Text", std::string("Program link: ") + infoLog);
+    CubatariumLogInfo("Text", std::string("Program link: ") + infoLog);
     return false;
   }
 
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  glDetachShader(TextShader, vertexShader);
+  glDetachShader(TextShader, fragmentShader);
 
   // Cache uniform locations
   textColorLocation = glGetUniformLocation(TextShader, "textColor");
   projectionLocation = glGetUniformLocation(TextShader, "projection");
   textSamplerLocation = glGetUniformLocation(TextShader, "text");
 
-  return TextShader != 0;
+  return textColorLocation >= 0 && projectionLocation >= 0 && textSamplerLocation >= 0;
 }
 
 bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
@@ -319,11 +384,16 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
     return false;
   }
 
-  // Set font size
-  FT_Set_Pixel_Sizes(face, 0, fontSize);
+  if (fontSize <= 0 || FT_Set_Pixel_Sizes(face, 0, fontSize))
+    return false;
 
-  // Disable byte alignment
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  const UGlPixelUnpackScope unpack;
+  struct TextureBinding
+  {
+    GLint previous{};
+    TextureBinding() { glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous); }
+    ~TextureBinding() { glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previous)); }
+  } binding;
 
   int texturedGlyphs = 0;
   bool loggedGlError = false;
@@ -334,30 +404,34 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
     // Load character glyph
     if (FT_Load_Char(face, c, FT_LOAD_RENDER))
     {
-      CubatariumLogError("Text",
-                         std::string("Failed to load glyph: ") +
-                             std::to_string(static_cast<unsigned int>(c)));
+      CubatariumLogInfo("Text", std::string("Failed to load glyph: ") +
+                                   std::to_string(static_cast<unsigned int>(c)));
       continue;
     }
 
     const auto bitmapWidth = static_cast<int>(face->glyph->bitmap.width);
     const auto bitmapRows = static_cast<int>(face->glyph->bitmap.rows);
 
-    GLuint texture = 0;
+    auto &character = characters.try_emplace(static_cast<GLchar>(c)).first->second;
+    character = {0, glm::ivec2(bitmapWidth, bitmapRows),
+                 glm::ivec2(face->glyph->bitmap_left, face->glyph->bitmap_top),
+                 static_cast<GLuint>(face->glyph->advance.x)};
     if (bitmapWidth > 0 && bitmapRows > 0)
     {
-      glGenTextures(1, &texture);
-      glBindTexture(GL_TEXTURE_2D, texture);
+      glGenTextures(1, &character.textureID);
+      if (!character.textureID)
+        continue;
+      glBindTexture(GL_TEXTURE_2D, character.textureID);
 
       if (!UploadGlyphBitmap(bitmapWidth, bitmapRows, face->glyph->bitmap.buffer))
       {
         if (!loggedGlError)
         {
-          CubatariumLogError("Text", "glTexImage2D failed for glyph upload");
+          CubatariumLogInfo("Text", "glTexImage2D failed for glyph upload");
           loggedGlError = true;
         }
-        glDeleteTextures(1, &texture);
-        texture = 0;
+        glDeleteTextures(1, &character.textureID);
+        character.textureID = 0;
       }
       else
       {
@@ -365,18 +439,7 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
         ++texturedGlyphs;
       }
     }
-
-    Character character = {texture,
-                           glm::ivec2(bitmapWidth, bitmapRows),
-                           glm::ivec2(face->glyph->bitmap_left,
-                                      face->glyph->bitmap_top),
-                           static_cast<GLuint>(face->glyph->advance.x)};
-
-    characters.insert(std::pair<char, Character>(c, character));
   }
-
-  // Restore byte alignment
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
   CubatariumLogInfo("Text",
                     "Loaded " + std::to_string(characters.size()) +
@@ -385,7 +448,7 @@ bool UTextRenderer::LoadCharacters(const std::string &fontPath, int fontSize)
 
   if (texturedGlyphs == 0)
   {
-    CubatariumLogError("Text", "No textured glyphs loaded from font");
+    CubatariumLogInfo("Text", "No textured glyphs loaded from font");
     return false;
   }
 
