@@ -1,9 +1,12 @@
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include "Creatures/Visual/Gltf/GltfConservativeRenderRadius.h"
+#include "Core/Memory/VisualLoaderSource.h"
 
 #include "Creatures/Visual/CreatureMeshGpuHash.h"
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -17,78 +20,27 @@ namespace cutum
 namespace
 {
 
-std::vector<uint8_t> ReadFileBytes(const std::string &path)
-{
-  std::ifstream in(path, std::ios::binary);
-  if (!in)
-  {
-    return {};
-  }
-  return std::vector<uint8_t>((std::istreambuf_iterator<char>(in)),
-                              std::istreambuf_iterator<char>());
-}
-
 std::vector<std::vector<uint8_t>> LoadGltfBuffers(
-    const nlohmann::json &gltf, const std::filesystem::path &baseDir)
+    const nlohmann::json &gltf, const std::filesystem::path &baseDir,
+    VisualLoaderSource &source)
 {
-  std::vector<std::vector<uint8_t>> bins;
   if (!gltf.contains("buffers") || !gltf["buffers"].is_array())
-  {
-    return bins;
-  }
-  bins.resize(gltf["buffers"].size());
+    return {};
+
+  std::vector<std::vector<uint8_t>> bins(gltf["buffers"].size());
+  source.BinaryTable(bins);
   for (size_t i = 0; i < bins.size(); ++i)
   {
     const std::string uri = gltf["buffers"][i].value("uri", "");
     if (uri.empty() || uri.rfind("data:", 0) == 0)
-    {
       continue;
-    }
-    bins[i] = ReadFileBytes((baseDir / uri).string());
+    if (auto bytes = ReadVisualModelBuffer(baseDir / uri, source))
+      bins[i] = std::move(*bytes);
   }
   return bins;
 }
 
-const uint8_t *AccessorPtr(const nlohmann::json &gltf,
-                           const std::vector<std::vector<uint8_t>> &bins,
-                           int accessorIndex, size_t &byteStride,
-                           int &componentType, std::string &type, size_t &count)
-{
-  byteStride = 0;
-  componentType = 0;
-  type.clear();
-  count = 0;
-  if (accessorIndex < 0 ||
-      accessorIndex >= static_cast<int>(gltf["accessors"].size()))
-  {
-    return nullptr;
-  }
-  const auto &acc = gltf["accessors"][accessorIndex];
-  componentType = acc.value("componentType", 0);
-  type = acc.value("type", "");
-  count = acc.value("count", 0);
-  const int bvIndex = acc.value("bufferView", -1);
-  if (bvIndex < 0 || bvIndex >= static_cast<int>(gltf["bufferViews"].size()))
-  {
-    return nullptr;
-  }
-  const auto &bv = gltf["bufferViews"][bvIndex];
-  const int bufferIndex = bv.value("buffer", 0);
-  if (bufferIndex < 0 || bufferIndex >= static_cast<int>(bins.size()))
-  {
-    return nullptr;
-  }
-  const std::vector<uint8_t> &bin = bins[static_cast<size_t>(bufferIndex)];
-  const size_t offset = bv.value("byteOffset", 0) + acc.value("byteOffset", 0);
-  byteStride = bv.value("byteStride", 0);
-  if (offset >= bin.size())
-  {
-    return nullptr;
-  }
-  return bin.data() + offset;
-}
-
-size_t ComponentSize(int componentType)
+size_t ComponentSize(size_t componentType)
 {
   switch (componentType)
   {
@@ -130,38 +82,83 @@ size_t TypeComponents(const std::string &type)
   return 0;
 }
 
+struct AccessorSpan
+{
+  const uint8_t *data{};
+  size_t stride{}, count{}, components{}, componentType{};
+};
+
+std::optional<size_t> ReadExtent(const nlohmann::json &object, const char *key,
+                                 size_t fallback = 0)
+{
+  const auto value = object.find(key);
+  if (value == object.end())
+    return fallback;
+  if (!value->is_number_integer() ||
+      (!value->is_number_unsigned() && value->get<int64_t>() < 0))
+    return {};
+  const auto size = value->get<uint64_t>();
+  if (size > (std::numeric_limits<size_t>::max)())
+    return {};
+  return static_cast<size_t>(size);
+}
+
+AccessorSpan GetAccessorSpan(const nlohmann::json &gltf,
+                             const std::vector<std::vector<uint8_t>> &bins,
+                             int accessorIndex)
+{
+  const auto accessors = gltf.find("accessors");
+  const auto views = gltf.find("bufferViews");
+  if (accessors == gltf.end() || !accessors->is_array() ||
+      views == gltf.end() || !views->is_array() || accessorIndex < 0 ||
+      static_cast<size_t>(accessorIndex) >= accessors->size())
+    return {};
+
+  const auto &accessor = (*accessors)[accessorIndex];
+  const auto viewIndex = ReadExtent(accessor, "bufferView", views->size());
+  if (!viewIndex || *viewIndex >= views->size())
+    return {};
+  const auto &view = (*views)[*viewIndex];
+  const auto bufferIndex = ReadExtent(view, "buffer");
+  if (!bufferIndex || *bufferIndex >= bins.size())
+    return {};
+
+  const auto &bin = bins[*bufferIndex];
+  const auto viewOffset = ReadExtent(view, "byteOffset");
+  if (!viewOffset || *viewOffset > bin.size())
+    return {};
+  // Older model packs also use views without byteLength.
+  const auto length = ReadExtent(view, "byteLength", bin.size() - *viewOffset);
+  const auto offset = ReadExtent(accessor, "byteOffset");
+  const auto count = ReadExtent(accessor, "count");
+  const auto components = TypeComponents(accessor.value("type", ""));
+  const auto componentType = ReadExtent(accessor, "componentType");
+  const auto rawStride = ReadExtent(view, "byteStride");
+  if (!length || !offset || !count || !componentType || !rawStride)
+    return {};
+  const auto rowBytes = components * ComponentSize(*componentType);
+  const auto stride = *rawStride ? *rawStride : rowBytes;
+  // Check by subtraction and division before forming addresses or capacities.
+  if (!rowBytes || !*count || stride < rowBytes || *length > bin.size() - *viewOffset ||
+      *offset > *length || rowBytes > *length - *offset ||
+      *count - 1 > (*length - *offset - rowBytes) / stride)
+    return {};
+
+  return {bin.data() + *viewOffset + *offset, stride, *count, components, *componentType};
+}
+
 std::vector<float> ReadFloatAccessor(const nlohmann::json &gltf,
                                      const std::vector<std::vector<uint8_t>> &bins,
                                      int accessorIndex)
 {
-  size_t stride = 0;
-  int componentType = 0;
-  std::string type;
-  size_t count = 0;
-  const uint8_t *ptr =
-      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
-  if (!ptr || componentType != 5126)
-  {
+  const auto span = GetAccessorSpan(gltf, bins, accessorIndex);
+  if (!span.data || span.componentType != 5126)
     return {};
-  }
-  const size_t comps = TypeComponents(type);
-  if (comps == 0)
-  {
-    return {};
-  }
-  std::vector<float> out;
-  out.reserve(count * comps);
-  for (size_t i = 0; i < count; ++i)
-  {
-    const uint8_t *row =
-        ptr + (stride ? stride * i : i * comps * sizeof(float));
-    for (size_t c = 0; c < comps; ++c)
-    {
-      float v;
-      std::memcpy(&v, row + c * sizeof(float), sizeof(float));
-      out.push_back(v);
-    }
-  }
+
+  std::vector<float> out(span.count * span.components);
+  for (size_t i = 0; i < span.count; ++i)
+    std::memcpy(out.data() + i * span.components, span.data + i * span.stride,
+                span.components * sizeof(float));
   return out;
 }
 
@@ -169,39 +166,45 @@ std::vector<unsigned int>
 ReadIndexAccessor(const nlohmann::json &gltf, const std::vector<std::vector<uint8_t>> &bins,
                   int accessorIndex)
 {
-  size_t stride = 0;
-  int componentType = 0;
-  std::string type;
-  size_t count = 0;
-  const uint8_t *ptr =
-      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
-  if (!ptr || type != "SCALAR")
-  {
+  const auto span = GetAccessorSpan(gltf, bins, accessorIndex);
+  if (!span.data || span.components != 1)
     return {};
-  }
+
   std::vector<unsigned int> out;
-  out.reserve(count);
-  const size_t cs = ComponentSize(componentType);
-  for (size_t i = 0; i < count; ++i)
+  out.reserve(span.count);
+  for (size_t i = 0; i < span.count; ++i)
   {
-    const uint8_t *row = ptr + (stride ? stride * i : i * cs);
-    if (componentType == 5123)
+    const uint8_t *row = span.data + i * span.stride;
+    switch (span.componentType)
     {
-      uint16_t v;
-      std::memcpy(&v, row, sizeof(v));
-      out.push_back(v);
+    case 5121:
+      out.push_back(*row);
+      break;
+    case 5123:
+    {
+      uint16_t value;
+      std::memcpy(&value, row, sizeof(value));
+      out.push_back(value);
+      break;
     }
-    else if (componentType == 5125)
+    case 5125:
     {
-      uint32_t v;
-      std::memcpy(&v, row, sizeof(v));
-      out.push_back(v);
+      uint32_t value;
+      std::memcpy(&value, row, sizeof(value));
+      out.push_back(value);
+      break;
     }
-    else if (componentType == 5126)
+    case 5126:
     {
-      float v;
-      std::memcpy(&v, row, sizeof(v));
-      out.push_back(static_cast<unsigned int>(v));
+      // Legacy packs use floating-point indices.
+      float value;
+      std::memcpy(&value, row, sizeof(value));
+      if (!std::isfinite(value) || value < 0.f ||
+          double(value) > (std::numeric_limits<unsigned int>::max)())
+        return {};
+      out.push_back(static_cast<unsigned int>(value));
+      break;
+    }
     }
   }
   return out;
@@ -245,39 +248,23 @@ std::vector<uint8_t> ReadU8Accessor(const nlohmann::json &gltf,
                                     const std::vector<std::vector<uint8_t>> &bins,
                                     int accessorIndex)
 {
-  size_t stride = 0;
-  int componentType = 0;
-  std::string type;
-  size_t count = 0;
-  const uint8_t *ptr =
-      AccessorPtr(gltf, bins, accessorIndex, stride, componentType, type, count);
-  if (!ptr || componentType != 5121)
-  {
+  const auto span = GetAccessorSpan(gltf, bins, accessorIndex);
+  if (!span.data || span.componentType != 5121)
     return {};
-  }
-  const size_t comps = TypeComponents(type);
-  if (comps == 0)
-  {
-    return {};
-  }
-  std::vector<uint8_t> out;
-  out.reserve(count * comps);
-  for (size_t i = 0; i < count; ++i)
-  {
-    const uint8_t *row = ptr + (stride ? stride * i : i * comps);
-    for (size_t c = 0; c < comps; ++c)
-    {
-      out.push_back(row[c]);
-    }
-  }
+
+  std::vector<uint8_t> out(span.count * span.components);
+  for (size_t i = 0; i < span.count; ++i)
+    std::memcpy(out.data() + i * span.components, span.data + i * span.stride,
+                span.components);
   return out;
 }
 
 std::vector<glm::mat4> ReadMat4Accessor(const nlohmann::json &gltf,
                                         const std::vector<std::vector<uint8_t>> &bins,
-                                        int accessorIndex)
+                                        int accessorIndex, VisualLoaderSource &source)
 {
   const std::vector<float> floats = ReadFloatAccessor(gltf, bins, accessorIndex);
+  source.Scratch(floats);
   std::vector<glm::mat4> mats;
   for (size_t i = 0; i + 15 < floats.size(); i += 16)
   {
@@ -343,7 +330,7 @@ void ParseNodes(const nlohmann::json &gltf, CreatureGltfMeshAsset &asset)
 
 void ParseSkin(const nlohmann::json &gltf,
                const std::vector<std::vector<uint8_t>> &bins,
-               CreatureGltfMeshAsset &asset)
+               CreatureGltfMeshAsset &asset, VisualLoaderSource &source)
 {
   if (!gltf.contains("skins") || gltf["skins"].empty())
   {
@@ -358,7 +345,7 @@ void ParseSkin(const nlohmann::json &gltf,
     }
   }
   const int ibmAcc = skinJson.value("inverseBindMatrices", -1);
-  asset.skin.inverseBindMatrices = ReadMat4Accessor(gltf, bins, ibmAcc);
+  asset.skin.inverseBindMatrices = ReadMat4Accessor(gltf, bins, ibmAcc, source);
   asset.hasSkin = !asset.skin.jointNodes.empty();
 }
 
@@ -366,7 +353,7 @@ GltfAnimationChannelCpu
 ReadAnimationChannel(const nlohmann::json &gltf,
                      const std::vector<std::vector<uint8_t>> &bins,
                      const nlohmann::json &channelJson,
-                     const nlohmann::json &samplerJson)
+                     const nlohmann::json &samplerJson, VisualLoaderSource &source)
 {
   GltfAnimationChannelCpu ch;
   if (channelJson.contains("target") && channelJson["target"].is_object())
@@ -379,6 +366,7 @@ ReadAnimationChannel(const nlohmann::json &gltf,
   const int outputAcc = samplerJson.value("output", -1);
   ch.keyTimes = ReadFloatAccessor(gltf, bins, inputAcc);
   const std::vector<float> outFloats = ReadFloatAccessor(gltf, bins, outputAcc);
+  source.Scratch(outFloats);
   if (ch.path == "translation" || ch.path == "scale")
   {
     for (size_t i = 0; i + 2 < outFloats.size(); i += 3)
@@ -402,16 +390,19 @@ ReadAnimationChannel(const nlohmann::json &gltf,
 std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
 {
-  std::ifstream in(gltfPath);
+  VisualLoaderSource source(VisualLoaderKind::Gltf);
+  const std::filesystem::path modelPath(gltfPath);
+  source.Path(modelPath);
+  std::ifstream in(modelPath);
   if (!in)
   {
     std::cerr << "CreatureGltfLoader: cannot open " << gltfPath << std::endl;
     return nullptr;
   }
-  nlohmann::json gltf;
+  CatalogJsonDocument gltf;
   try
   {
-    in >> gltf;
+    gltf = source.ReadDocument(in, CatalogJsonKind::Definitions, false);
   }
   catch (const std::exception &ex)
   {
@@ -420,13 +411,11 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
     return nullptr;
   }
 
-  const std::filesystem::path baseDir =
-      std::filesystem::path(gltfPath).parent_path();
-  const std::vector<std::vector<uint8_t>> bins = LoadGltfBuffers(gltf, baseDir);
+  auto bins = LoadGltfBuffers(gltf, modelPath.parent_path(), source);
 
   auto asset = std::make_shared<CreatureGltfMeshAsset>();
   ParseNodes(gltf, *asset);
-  ParseSkin(gltf, bins, *asset);
+  ParseSkin(gltf, bins, *asset, source);
   if (gltf.contains("nodes") && gltf["nodes"].is_array() && !gltf["nodes"].empty())
   {
     asset->rootNodeIndex = 0;
@@ -453,8 +442,12 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
             ReadFloatAccessor(gltf, bins, posAcc);
         const std::vector<float> uvs = ReadFloatAccessor(gltf, bins, uvAcc);
         const int idxAcc = primJson.value("indices", -1);
+        source.Scratch(positions, uvs);
         BuildInterleavedMesh(prim.mesh, positions, uvs);
         prim.mesh.indices = ReadIndexAccessor(gltf, bins, idxAcc);
+        if (std::any_of(prim.mesh.indices.begin(), prim.mesh.indices.end(),
+                        [&](unsigned index) { return index >= positions.size() / 3; }))
+          continue;
         prim.jointIndices = ReadU8Accessor(gltf, bins, jointsAcc);
         prim.jointWeights = ReadFloatAccessor(gltf, bins, weightsAcc);
         prim.skinned = !prim.jointIndices.empty() && !prim.jointWeights.empty() &&
@@ -487,7 +480,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
               samplerIndex < static_cast<int>(samplers.size()))
           {
             anim.channels.push_back(ReadAnimationChannel(
-                gltf, bins, chJson, samplers[samplerIndex]));
+                gltf, bins, chJson, samplers[samplerIndex], source));
           }
         }
       }
@@ -499,6 +492,8 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
     }
   }
 
+  gltf = CatalogJsonDocument{};
+  decltype(bins){}.swap(bins);
   asset->loaded = !asset->primitives.empty();
   if (!asset->loaded)
   {
@@ -521,6 +516,7 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
   }
 
   asset->conservativeRenderRadius=ComputeGltfConservativeRenderRadius(*asset);
+  source.Success();
   return asset;
 }
 

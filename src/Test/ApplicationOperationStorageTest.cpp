@@ -22,6 +22,7 @@
 #include "Test/InventoryIconServiceStorageFixture.h"
 #include "Test/CreatureItemIconStorageFixture.h"
 #include "Test/SharedVisualSourceStorageFixture.h"
+#include "Test/VisualLoaderSourceFixture.h"
 #include "Test/SharedTextureSourceStorageFixture.h"
 #include "Test/InventoryIconCodecFixture.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -506,6 +507,7 @@ int main(int argc,char **argv){
     report["shared_visual_sources"]=shared_visual_source_fixture::CheckVisualSources();
     report["rigid_model_source"]=shared_visual_source_fixture::CheckRigidModels(argc>1?argv[1]:"application-operation-storage.json");
     report["retained_visual_assets"]=shared_visual_source_fixture::CheckRetainedVisualOwners();
+    report["visual_loader_construction"]=shared_visual_source_fixture::CheckVisualLoaderConstruction(argc>1?argv[1]:"application-operation-storage.json");
     report["shared_texture_sources"]=shared_texture_source_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}

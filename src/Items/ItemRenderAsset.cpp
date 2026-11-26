@@ -1,6 +1,6 @@
 #include "Items/ItemRenderAsset.h"
 #include "Core/Memory/VisualAssetCensus.h"
-#include "WorldGen/Core/CatalogJsonSource.h"
+#include "Core/Memory/VisualLoaderSource.h"
 
 #include <algorithm>
 #include <cmath>
@@ -338,7 +338,7 @@ namespace
 {
 std::shared_ptr<ItemRenderAsset>
 DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument data,
-                      bool legacyPreviewNormals)
+                      bool legacyPreviewNormals, VisualLoaderSource &source)
 {
   Reader reader;
   reader.Data = std::move(data);
@@ -347,14 +347,15 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
   Require(!g.contains("skins") && !g.contains("animations") &&
               g.value("extensionsRequired", Json::array()).empty(),
           "skins, animation clips and required extensions are unsupported");
-  for (const auto &b : g.at("buffers"))
+  const auto &buffers = g.at("buffers");
+  reader.Buffers.reserve(buffers.size());
+  source.BinaryTable(reader.Buffers);
+  for (const auto &b : buffers)
   {
-    std::ifstream bin(Resource(path.parent_path(), b.at("uri")),
-                      std::ios::binary);
-    reader.Buffers.emplace_back(std::istreambuf_iterator<char>(bin),
-                                std::istreambuf_iterator<char>());
-    Require(reader.Buffers.back().size() == b.at("byteLength").get<size_t>(),
-            "buffer length mismatch");
+    auto bytes = ReadVisualModelBuffer(Resource(path.parent_path(), b.at("uri")), source,
+                                       b.at("byteLength").get<size_t>());
+    Require(bytes.has_value(), "could not read declared buffer length");
+    reader.Buffers.push_back(std::move(*bytes));
   }
   auto asset = std::make_shared<ItemRenderAsset>();
   const auto presentation =
@@ -510,8 +511,10 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
             const auto unit = glm::normalize(n);
             normals.insert(normals.end(), {unit.x, unit.y, unit.z});
           }
+          source.Scratch(positions, indices, sums, normals);
         }
         const auto uv = reader.Read(attrs.at("TEXCOORD_0"), "VEC2");
+        source.Scratch(positions, indices, normals, uv);
         Require(normals.size() == positions.size() &&
                     uv.size() / 2 == positions.size() / 3,
                 "vertex attribute counts differ");
@@ -572,6 +575,8 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
   ReadWearSections(
       g.value("extras", Json::object()).value("wear_sections", Json::array()),
       *asset);
+  reader.Data = CatalogJsonDocument{};
+  decltype(reader.Buffers){}.swap(reader.Buffers);
   const auto visible =
       ItemVisualBounds(*asset, EvaluateItemVisualState(*asset, {}));
   asset->Low = visible.first;
@@ -593,6 +598,7 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
         cached.Primitives.push_back(i);
     asset->StaticWearSections.emplace(section.Node, std::move(cached));
   }
+  source.Success();
   return asset;
 }
 } // namespace
@@ -601,10 +607,12 @@ std::shared_ptr<ItemRenderAsset>
 LoadItemRenderAsset(const std::filesystem::path &path,
                     bool legacyPreviewNormals)
 {
+  VisualLoaderSource source(VisualLoaderKind::Item);
+  source.Path(path);
   std::ifstream in(path);
   Require(bool(in), "cannot open model");
-  auto data = ParseAndCloseCatalogFileJson(in, CatalogJsonKind::ItemSurface);
-  return DecodeItemRenderAsset(path, std::move(data), legacyPreviewNormals);
+  auto data = source.ReadDocument(in, CatalogJsonKind::ItemSurface);
+  return DecodeItemRenderAsset(path, std::move(data), legacyPreviewNormals, source);
 }
 
 std::shared_ptr<const ItemRenderAsset>
@@ -632,13 +640,15 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     AssetAliases.emplace(spelling, key);
     return found->second;
   }
+  VisualLoaderSource source(VisualLoaderKind::Item);
+  source.Path(path);
   std::ifstream in(path);
   if (!in)
     return nullptr;
-  auto data = ParseAndCloseCatalogFileJson(in, CatalogJsonKind::ItemSurface);
+  auto data = source.ReadDocument(in, CatalogJsonKind::ItemSurface);
   std::shared_ptr<const ItemRenderAsset> asset;
   if (data.value("extras", Json::object()).value("design_version", 0) == 3)
-    asset = DecodeItemRenderAsset(path, std::move(data), false);
+    asset = DecodeItemRenderAsset(path, std::move(data), false, source);
   const auto inserted = Assets.emplace(key, std::move(asset)).first;
   try
   {

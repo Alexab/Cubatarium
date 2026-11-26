@@ -221,7 +221,8 @@ public:
     return bytes;
   }
 };
-inline CatalogJsonDocument ParseCatalogSourceDocument(std::istream &in,CatalogJsonKind kind)
+inline CatalogJsonDocument ParseCatalogSourceDocument(std::istream &in,CatalogJsonKind kind,
+                                                      bool rejectTrailing=true)
 {
   CatalogJsonSourceShape shape;shape.kind=kind;
   detail::CatalogJsonRecord record(shape);
@@ -230,12 +231,12 @@ inline CatalogJsonDocument ParseCatalogSourceDocument(std::istream &in,CatalogJs
 #if JSON_DIAGNOSTIC_POSITIONS
   // Preserve library lexer position metadata; this source model is unsupported
   // in that configuration, rather than silently losing positions.
-  parser.parse(true,root);
+  parser.parse(rejectTrailing,root);
   shape.success=true;
   return CatalogJsonDocument{std::move(root),{}};
 #else
   detail::CatalogJsonSax sax(root,shape);
-  try {parser.sax_parse(&sax,true);} catch(...) {sax.RetireRoot();throw;}
+  try {parser.sax_parse(&sax,rejectTrailing);} catch(...) {sax.RetireRoot();throw;}
   shape.success=true;
   return CatalogJsonDocument{std::move(root),sax.TakeRetirementPath()};
 #endif
@@ -246,12 +247,13 @@ inline nlohmann::json ParseCatalogSourceJson(std::istream &in,CatalogJsonKind ki
 // Release its FILE/OS handle and read buffer before application candidate
 // construction,including exceptional exits. Match filebuf destruction's
 // non-throwing close policy; preserve the original parser exception/result.
-inline CatalogJsonDocument ParseAndCloseCatalogFileJson(std::ifstream &file,CatalogJsonKind kind)
+inline CatalogJsonDocument ParseAndCloseCatalogFileJson(std::ifstream &file,CatalogJsonKind kind,
+                                                        bool rejectTrailing=true)
 {
   struct CloseFile {
     std::ifstream &File;
     ~CloseFile() noexcept {try {File.close();} catch(...) {}}
   } close{file};
-  return ParseCatalogSourceDocument(file,kind);
+  return ParseCatalogSourceDocument(file,kind,rejectTrailing);
 }
 } // namespace cutum

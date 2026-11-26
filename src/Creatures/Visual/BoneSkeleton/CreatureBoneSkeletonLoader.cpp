@@ -1,4 +1,5 @@
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.h"
+#include "Core/Memory/VisualLoaderSource.h"
 
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include <cmath>
@@ -178,16 +179,18 @@ std::optional<CreatureBoneSkeletonGeometry>
 CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
                                        const std::string &expectedId)
 {
+  VisualLoaderSource source(VisualLoaderKind::Skeleton);
   try
   {
-    std::ifstream file(path);
+    const std::filesystem::path modelPath(path);
+    source.Path(modelPath);
+    std::ifstream file(modelPath);
     if (!file.is_open())
     {
       std::cerr << "CreatureBoneSkeletonLoader: cannot open " << path << std::endl;
       return std::nullopt;
     }
-    nlohmann::json root;
-    file >> root;
+    auto root = source.ReadDocument(file, CatalogJsonKind::Definitions, false);
 
     CreatureBoneSkeletonGeometry geometry;
 
@@ -251,6 +254,7 @@ CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
           FinalizeBoneIndices(parsed);
           if (!parsed.bones.empty())
           {
+            source.Success();
             return parsed;
           }
         }
@@ -272,6 +276,7 @@ CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
       if (ParseGeometryObject(value, parsed))
       {
         parsed.identifier = key;
+        source.Success();
         return parsed;
       }
     }

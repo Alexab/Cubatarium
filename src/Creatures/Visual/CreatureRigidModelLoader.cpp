@@ -1,7 +1,7 @@
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Core/Json/JsonVec.h"
 #include "Core/Memory/VisualAssetCensus.h"
-#include "WorldGen/Core/CatalogJsonSource.h"
+#include "Core/Memory/VisualLoaderSource.h"
 
 #include <filesystem>
 #include <fstream>
@@ -15,7 +15,10 @@ namespace
 
 std::shared_ptr<const CreatureRigidModelParts> ReadParts(const std::string &path)
 {
-  std::ifstream file(path);
+  VisualLoaderSource load(VisualLoaderKind::Rigid);
+  const std::filesystem::path modelPath(path);
+  load.Path(modelPath);
+  std::ifstream file(modelPath);
   if (!file)
   {
     std::cerr << "CreatureRigidModelCache: cannot open " << path << std::endl;
@@ -25,7 +28,7 @@ std::shared_ptr<const CreatureRigidModelParts> ReadParts(const std::string &path
   CatalogJsonDocument data;
   try
   {
-    data = ParseAndCloseCatalogFileJson(file, CatalogJsonKind::Definitions);
+    data = load.ReadDocument(file, CatalogJsonKind::Definitions);
   }
   catch (const nlohmann::json::exception &ex)
   {
@@ -64,6 +67,7 @@ std::shared_ptr<const CreatureRigidModelParts> ReadParts(const std::string &path
     part.LimbKind = partJson.value("limb", "");
     part.LimbAxis = partJson.value("limb_axis", "x");
   }
+  load.Success();
   return parts;
 }
 

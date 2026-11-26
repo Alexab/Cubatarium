@@ -22,6 +22,7 @@
 #include "WorldGen/Core/RuntimeNameStorage.h"
 #include "Core/Memory/EngineThreadStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
+#include "Core/Memory/VisualLoaderSource.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Diagnostics/CreatureQaFootProbe.h"
@@ -346,6 +347,28 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"legacy_inline_bytes", retainedVisuals.legacyInlineBytes}, {"nonowning_meshes", retainedVisuals.nonowningMeshes},
       {"observer_bytes", retainedVisuals.observerBytes}, {"observer_inline_bytes", sizeof(VisualAssetCensus)},
       {"unmeasured_references", retainedVisuals.unmeasuredReferences}, {"whole_runtime_complete", false}};
+  const auto visualFiles = GetVisualLoaderSources();
+  constexpr std::array loaderNames{"gltf", "skeleton", "rigid", "item"};
+  Json loaderRows = Json::object();
+  bool visualFilesSupported = StlSourceStorage::SupportedProfile();
+  for (size_t i = 0; i < visualFiles.size(); ++i)
+  {
+    const auto &row = visualFiles[i];
+    visualFilesSupported &= !row.unclosedDocuments && !row.unsupportedSamples;
+    loaderRows[loaderNames[i]] = {
+        {"attempts", row.attempts}, {"completed", row.completed},
+        {"active", row.active}, {"peak_active", row.peakActive},
+        {"documents", row.documents}, {"unclosed_documents", row.unclosedDocuments},
+        {"unsupported_samples", row.unsupportedSamples}, {"binary_reads", row.binaryReads},
+        {"json_bytes_max", row.jsonBytesMax}, {"json_heap_upper_max", row.jsonHeapUpperMax},
+        {"binary_bytes_max", row.binaryBytesMax}, {"binary_backing_max", row.binaryBackingMax},
+        {"scratch_backing_max", row.scratchBackingMax}, {"path_units_max", row.pathUnitsMax}};
+  }
+  report["visual_loader_sources"] = {
+      {"schema", "visual-loader-sources.v1"},
+      {"status", visualFilesSupported ? "PASS" : "UNSUPPORTED"},
+      {"loaders", std::move(loaderRows)}, {"counters_inline_bytes", sizeof(visualFiles) + sizeof(std::mutex)},
+      {"whole_runtime_complete", false}};
   const auto creatureGpu = CreatureMeshGpuCache::Instance().InspectOwnedStorage();
   report["shared_visual_source_storage"] = {
       {"schema", "shared-visual-source-storage.v1"},
