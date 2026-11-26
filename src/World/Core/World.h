@@ -1680,6 +1680,7 @@ private:
 
   friend class UWorldCooperativeSession;
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend struct StreamingSchedulerReinitProbe;
   friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
   friend class UWorldStreaming;
   friend class UWorldPersistence;

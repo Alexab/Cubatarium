@@ -426,16 +426,20 @@ bool UChunkLoadScheduler::WaitForWorkersIdle(
     const std::chrono::milliseconds timeout)
 {
   const auto deadline = std::chrono::steady_clock::now() + timeout;
+  const auto idle=[&] {
+    const auto pool=Pool.GetSnapshot();
+    return !pool.pending && !pool.active && Queue.empty();
+  };
   while (std::chrono::steady_clock::now() < deadline)
   {
     (void)Completed.DrainAll();
-    if (Pool.GetActiveJobCount() == 0 && Queue.empty())
+    if (idle())
     {
       return true;
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
-  return Pool.GetActiveJobCount() == 0 && Queue.empty();
+  return idle();
 }
 
 void UChunkLoadScheduler::ShutdownForProcessExit(

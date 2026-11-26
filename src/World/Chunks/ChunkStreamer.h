@@ -170,6 +170,7 @@ public:
   void SetMaxTerrainHeight(int height) { MaxHeight = height; }
   void SetMinTerrainHeight(int height) { MinHeight = height; }
   void SetEnabled(bool enabled) { Enabled = enabled; }
+  bool IsEnabled() const { return Enabled; }
   void SetMaxLoadOpsPerFrame(int value) { MaxLoadOpsPerFrame = value; }
   void SetMaxKeepPrefetchOpsPerFrame(int value)
   {

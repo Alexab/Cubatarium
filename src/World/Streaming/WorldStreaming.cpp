@@ -32,6 +32,7 @@
 #include "World/Streaming/AntiFlickerPolicy.h"
 #include "World/Streaming/ChunkEmergeCoordinator.h"
 #include "World/Streaming/ChunkRenderDemand.h"
+#include "World/Streaming/ChunkGenerationRetirement.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnJobGraph.h"
 #include "World/Streaming/ColumnRecordCoordinator.h"
@@ -123,40 +124,22 @@ void UWorldStreaming::RecordGpuAllocationTelemetry(UWorld &world)
 
 bool UWorldStreaming::PrepareChunkScheduler(UWorld &world)
 {
+  if(!TryRetireChunkGeneration(ChunkScheduler,ChunkPopulator,ChunkSchedulerReplacementPending))
+    return false;
   if (!world.BlockRegistry)
   {
-    // Destroy scheduler first so workers cannot touch a freed populator.
-    ChunkScheduler.reset();
-    ChunkPopulator.reset();
+    ChunkSchedulerReplacementPending=false;
     return false;
   }
-  // Cancel old pool before replacing the populator it references. Never join
-  // forever: in-flight populate/seal can outlive a short idle wait and used to
-  // hang SaveMetadata ("Saving world...") via EnsureStreamingActiveAfter…
-  if (ChunkScheduler)
-  {
-    ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0),
-                                     "scheduler_reinitialized");
-    if (ChunkScheduler->WaitForWorkersIdle(std::chrono::milliseconds(500)))
-    {
-      ChunkScheduler.reset();
-      ChunkPopulator.reset();
-    }
-    else
-    {
-      CubatariumLogInfo(
-          "Streaming",
-          "InitChunkScheduler: workers busy after cancel — abandon old pool");
-      ChunkScheduler->ShutdownForProcessExit(std::chrono::milliseconds(0));
-      (void)ChunkScheduler.release();
-      (void)ChunkPopulator.release();
-    }
-  }
-  ChunkPopulator = std::make_unique<UPipelineChunkPopulator>(
-      *world.BlockRegistry, world.ObjectLibrary, world.WorldgenOwnerPackId);
-  ChunkScheduler =
-      std::make_unique<UChunkLoadScheduler>(*ChunkPopulator, ChunkGenTokens);
-
+  ChunkSchedulerReplacementPending=true;
+  try {
+    auto populator=std::make_unique<UPipelineChunkPopulator>(
+        *world.BlockRegistry,world.ObjectLibrary,world.WorldgenOwnerPackId);
+    auto scheduler=std::make_unique<UChunkLoadScheduler>(*populator,ChunkGenTokens);
+    ChunkPopulator=std::move(populator);
+    ChunkScheduler=std::move(scheduler);
+  } catch(const std::bad_alloc &) { return false; }
+  ChunkSchedulerReplacementPending=false;
   return true;
 }
 
@@ -299,7 +282,17 @@ UWorldStreaming::UWorldStreaming()
 {
 }
 
-UWorldStreaming::~UWorldStreaming() = default;
+UWorldStreaming::~UWorldStreaming()
+{
+  // Join normal workers before populator, token registry or callback targets
+  // start destruction. Only the explicit process-exit path may detach.
+  if(ChunkScheduler){
+    try { ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0),"streaming_destroyed"); }
+    catch(...) {} // diagnostic allocation cannot skip the join below
+  }
+  ChunkScheduler.reset();
+  ChunkPopulator.reset();
+}
 
 void UWorldStreaming::EnsureStreamer(UBlockWorld &blockWorld,
                                      UBlockRegistry &registry, uint32_t seed,
@@ -385,10 +378,10 @@ void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
   world.WarmupVisibleListAtCamera();
 }
 
-void UWorldStreaming::InitChunkScheduler(UWorld &world)
+bool UWorldStreaming::InitChunkScheduler(UWorld &world)
 {
   if (!PrepareChunkScheduler(world))
-    return;
+    return false;
   ChunkScheduler->SetMarkDirtyFn(
       [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
@@ -754,6 +747,7 @@ void UWorldStreaming::InitChunkScheduler(UWorld &world)
         }
       });
   world.Persistence->EnsureChunkIoInitialized();
+  return true;
 }
 
 namespace
@@ -3455,6 +3449,7 @@ void UWorldStreaming::PublishFluidSealMutations(
 void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   CUBA_ZONE("TickAsyncChunkSystems");
+  RetryChunkSchedulerReplacement(world);
   const auto main_t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_main_ms = [&]()
   {
@@ -5534,6 +5529,7 @@ void UWorldStreaming::QuiesceBackgroundWork(
 
 void UWorldStreaming::CancelChunkGeneration(const char *reason)
 {
+  ChunkSchedulerReplacementPending=false;
   if (!ChunkScheduler)
   {
     return;
@@ -5572,6 +5568,7 @@ void UWorldStreaming::AbandonWorkersForProcessExit(
 void UWorldStreaming::PauseChunkGeneration(
     const std::chrono::milliseconds worker_wait)
 {
+  ChunkSchedulerReplacementPending=false;
   if (!ChunkScheduler)
   {
     return;
@@ -5585,7 +5582,7 @@ void UWorldStreaming::PauseChunkGeneration(
 
 void UWorldStreaming::ResumeStreamerAfterQuiesce()
 {
-  if (Streamer && StreamingEnabled)
+  if (Streamer && StreamingEnabled && !ChunkSchedulerReplacementPending)
   {
     Streamer->SetEnabled(true);
   }
@@ -5786,11 +5783,14 @@ void UWorldStreaming::TickMeshEmerge(UWorld &world)
 
 void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
 {
-  if (!Streamer || !world.BlockRegistry)
+  if (!Streamer)
   {
     return;
   }
-  InitChunkScheduler(world);
+  if(!InitChunkScheduler(world)){
+    Streamer->SetEnabled(false);
+    return;
+  }
   const ProceduralSettings &procedural = world.GetProceduralSettings();
 
   Streamer->SetRenderDistance(world.RenderDistanceChunks);
@@ -6303,6 +6303,11 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
       });
 }
 
+void UWorldStreaming::RetryChunkSchedulerReplacement(UWorld &world)
+{
+  if(ChunkSchedulerReplacementPending)InitStreamerCallbacks(world);
+}
+
 void UWorldStreaming::RefreshStreamerSettings(
     const ProceduralSettings &settings, int maxLoadOpsPerFrame,
     int maxUnloadOpsPerFrame)
@@ -6328,6 +6333,7 @@ void UWorldStreaming::UpdateStreaming(
     glm::vec2 &lastMovementDirXz)
 {
   CUBA_ZONE("UpdateStreaming");
+  RetryChunkSchedulerReplacement(world);
   world.PhysicsTelemetryData.UpdateStreamingPreCoreMs = 0.0;
   world.PhysicsTelemetryData.UpdateStreamingPostCoreMs = 0.0;
   world.PhysicsTelemetryData.UpdateStreamingPostCoreTelemetryMs = 0.0;

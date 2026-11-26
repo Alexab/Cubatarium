@@ -118,6 +118,8 @@ public:
 private:
   friend class AllocatorOwnerCensus;
   friend struct AllocatorReturnedControlsProbe;
+  friend struct GenerationProducerRetirementProbe;
+  friend struct StreamingSchedulerReinitProbe;
   friend struct CatalogWorkerRetirementProbe;
   friend void RunTerrainSaveFailureProbe(UCore &core);
   struct SettingsBudgetState

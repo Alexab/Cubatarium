@@ -19,11 +19,12 @@
 #include "Test/AllocatorOwnerGraphFixture.h"
 #include "Test/AllocatorWorkerThreadFixture.h"
 #include "Test/AllocatorReturnedControlsFixture.h"
+#include "Test/GenerationProducerRetirementFixture.h"
 
 // Ordinary-new refusal is thread-local. Concurrent worker setup is never
 // charged to a single-thread observer or rejected by another thread's test.
-namespace allocation_probe {thread_local bool refuse{};thread_local size_t attempts{};}
-void *operator new(size_t n){if(allocation_probe::refuse){++allocation_probe::attempts;throw std::bad_alloc{};}if(auto *p=std::malloc(std::max(n,size_t{1})))return p;throw std::bad_alloc{};}
+namespace allocation_probe {thread_local bool refuse{};thread_local size_t attempts{},admitted_before_refusal{};}
+void *operator new(size_t n){if(allocation_probe::refuse && ++allocation_probe::attempts>allocation_probe::admitted_before_refusal)throw std::bad_alloc{};if(auto *p=std::malloc(std::max(n,size_t{1})))return p;throw std::bad_alloc{};}
 void *operator new[](size_t n){return ::operator new(n);}
 void operator delete(void *p)noexcept{std::free(p);}
 void operator delete[](void *p)noexcept{std::free(p);}
@@ -328,6 +329,21 @@ Json RuntimeDomain()
 }
 int main(int argc,char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--producer-retirement"){
+    try {
+      auto result=RunGenerationProducerRetirementProbe();size_t failures=0;bool complete=false;
+      for(size_t prefix=0;prefix<16;++prefix){
+        allocation_probe::attempts=0;allocation_probe::admitted_before_refusal=prefix;allocation_probe::refuse=true;
+        try { UJobThreadPool candidate(4,"ConstructorRetry");allocation_probe::refuse=false;complete=true; }
+        catch(const std::bad_alloc &){allocation_probe::refuse=false;++failures;}
+        if(complete)break;
+      }
+      allocation_probe::admitted_before_refusal=0;
+      if(!complete || failures<5)throw std::runtime_error("partial pool construction refusal coverage");
+      result["constructor_refusal_prefixes"]=failures;result["constructor_exact_retry"]=complete;
+      std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<std::endl;return out?0:1;
+    }catch(const std::exception &e){allocation_probe::refuse=false;allocation_probe::admitted_before_refusal=0;std::cerr<<e.what()<<std::endl;return 1;}
+  }
   if(argc==3 && std::string(argv[1])=="--returned-controls"){
     try {
       const auto result=RunAllocatorReturnedControlsProbe();

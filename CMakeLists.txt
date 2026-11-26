@@ -604,6 +604,7 @@ set(SOURCES
     src/Gui/Screens/WorldGenPaletteScreen.cpp
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
+    src/App/Platform/StreamingSchedulerReinitProbe.cpp
     src/App/Diagnostics/DiagnosticFlightController.cpp
     src/App/Platform/DesktopPlatformPaths.cpp
     src/App/Platform/GameDataRoot.cpp
@@ -3250,6 +3251,9 @@ set_tests_properties(allocator_worker_threads_test PROPERTIES LABELS "integratio
 add_test(NAME allocator_returned_controls_test COMMAND $<TARGET_FILE:catalog_worker_retirement_test>
     --returned-controls ${CMAKE_CURRENT_BINARY_DIR}/allocator-returned-controls.json)
 set_tests_properties(allocator_returned_controls_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+add_test(NAME generation_producer_retirement_test COMMAND $<TARGET_FILE:catalog_worker_retirement_test>
+    --producer-retirement ${CMAKE_CURRENT_BINARY_DIR}/generation-producer-retirement.json)
+set_tests_properties(generation_producer_retirement_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 endif()
 add_test(NAME scheduler_control_refusal_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --control-refusal

@@ -46,9 +46,19 @@ UJobThreadPool::UJobThreadPool(std::size_t threadCount,
     threadCount = ComputeWorkerThreadCount(JobPoolKind::ChunkGeneration);
   }
   Workers.reserve(threadCount);
-  for (std::size_t i = 0; i < threadCount; ++i)
-  {
-    Workers.emplace_back([this] { WorkerLoop(); });
+  try {
+    for (std::size_t i = 0; i < threadCount; ++i)
+      Workers.emplace_back([this] { WorkerLoop(); });
+  } catch(...) {
+    // A partially constructed pool has no destructor. Retire already-started
+    // workers before vector<thread> unwinds or referenced members disappear.
+    {
+      std::lock_guard<std::mutex> lock(QueueMutex);
+      Stop=true;
+    }
+    QueueCv.notify_all();
+    for(auto &worker:Workers)if(worker.joinable())worker.join();
+    throw;
   }
 }
 

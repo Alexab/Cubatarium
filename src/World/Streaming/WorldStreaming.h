@@ -97,6 +97,7 @@ public:
   {
     return ChunkScheduler.get();
   }
+  bool IsChunkSchedulerReplacementPending() const { return ChunkSchedulerReplacementPending; }
 
   void EnsureCollisionChunks(const glm::ivec3 &feetBlock,
                              const glm::vec3 &forward);
@@ -120,6 +121,7 @@ public:
 
 private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend struct StreamingSchedulerReinitProbe;
   struct RecordRetirementResult { size_t visited{0}; size_t retired{0}; };
   RecordRetirementResult RetireUnownedColumnRecords(
       UWorld &world, UColumnFlowExecutor &flow, glm::ivec3 center,
@@ -128,7 +130,8 @@ private:
   RequiredLightScan RequiredLightInputs;
   void RecordGpuAllocationTelemetry(UWorld &world);
   bool PrepareChunkScheduler(UWorld &world);
-  void InitChunkScheduler(UWorld &world);
+  bool InitChunkScheduler(UWorld &world);
+  void RetryChunkSchedulerReplacement(UWorld &world);
   void PublishFluidSealMutations(UWorld &world,
                                  std::vector<glm::ivec3> changed_chunks,
                                  bool near_column);
@@ -138,9 +141,11 @@ private:
 
   std::unique_ptr<UChunkStreamer> Streamer;
   std::unique_ptr<UChunkEmergeCoordinator> EmergeCoordinator;
+  // Tokens outlive the scheduler and every cancellation callback it owns.
+  UChunkGenerationRegistry ChunkGenTokens;
   std::unique_ptr<UPipelineChunkPopulator> ChunkPopulator;
   std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
-  UChunkGenerationRegistry ChunkGenTokens;
+  bool ChunkSchedulerReplacementPending{false};
   bool StreamingEnabled{true};
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};
