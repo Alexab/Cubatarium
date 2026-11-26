@@ -36,6 +36,7 @@ public:
   void ReleaseFocusWithoutNotify();
 
 private:
+  friend class UGuiContext;
   void SetKeyboardFocus(UGuiWidget *widget, bool reveal);
   void CollectFocusOrder();
   void FocusNext(bool reverse);

@@ -172,6 +172,7 @@ public:
   AppState GetState() const { return State; }
   bool HasWorldSession() const { return WorldSessionActive; }
   UGuiContext &GetGui() { return *GuiContext; }
+  const UGuiContext &GetGui() const { return *GuiContext; }
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

@@ -1,4 +1,5 @@
 #include "Gui/Core/GuiContext.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Core/GuiInputRouter.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
@@ -6,6 +7,7 @@
 #include "Gui/Widgets/GuiWidget.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Engine/TextRenderer.h"
+#include <type_traits>
 
 namespace cutum
 {
@@ -17,47 +19,61 @@ UGuiContext::~UGuiContext() { Shutdown(); }
 bool UGuiContext::Initialize(std::shared_ptr<UShaderManager> shaderManager,
                              std::shared_ptr<UTextRenderer> textRenderer)
 {
+  auto renderer = std::make_unique<UGuiRenderer>();
+  auto router = std::make_unique<UGuiInputRouter>();
+  if (!renderer->Initialize(std::move(shaderManager), std::move(textRenderer)))
+    return false;
+
+  UnbindScreenInput();
+  if (InputRouter)
+    InputRouter->SetRenderer(nullptr);
   Theme = DefaultGuiTheme();
   BaseTheme = Theme;
   UiScale = 1.f;
   Metrics = MakeGuiMetrics(UiScale, Theme);
-  Renderer = std::make_unique<UGuiRenderer>();
-  InputRouter = std::make_unique<UGuiInputRouter>();
+  Renderer = std::move(renderer);
+  InputRouter = std::move(router);
   InputRouter->SetRenderer(Renderer.get());
-  return Renderer->Initialize(std::move(shaderManager),
-                              std::move(textRenderer));
+  BindScreenInput();
+  return true;
 }
 
 void UGuiContext::Shutdown()
 {
+  UnbindScreenInput();
   if (InputRouter)
-  {
-    InputRouter->ClearInteractionState();
-    InputRouter->SetActiveScreen(nullptr);
-  }
+    InputRouter->SetRenderer(nullptr);
   if (ActiveScreen)
   {
     ActiveScreen->OnDetach();
     ActiveScreen.reset();
   }
-  if (Renderer)
-  {
-    Renderer->Shutdown();
-    Renderer.reset();
-  }
+  Renderer.reset();
+}
+
+void UGuiContext::UnbindScreenInput()
+{
   if (InputRouter)
   {
-    InputRouter->ReleaseFocusWithoutNotify();
+    InputRouter->ClearInteractionState();
     InputRouter->SetRoot(nullptr);
+    InputRouter->SetActiveScreen(nullptr);
+  }
+}
+
+void UGuiContext::BindScreenInput()
+{
+  if (InputRouter && ActiveScreen)
+  {
+    InputRouter->SetRoot(ActiveScreen->GetRoot());
+    InputRouter->SetActiveScreen(ActiveScreen.get());
   }
 }
 
 void UGuiContext::SetScreen(std::unique_ptr<UGuiScreenBase> screen)
 {
-  if (InputRouter)
-  {
-    InputRouter->ClearInteractionState();
-  }
+  // The old widget tree can disappear before the next Build returns.
+  UnbindScreenInput();
   if (ActiveScreen)
   {
     ActiveScreen->OnDetach();
@@ -65,16 +81,61 @@ void UGuiContext::SetScreen(std::unique_ptr<UGuiScreenBase> screen)
   ActiveScreen = std::move(screen);
   if (ActiveScreen)
   {
-    ActiveScreen->OnAttach(*this);
-    ActiveScreen->Build(*this);
-    InputRouter->SetRoot(ActiveScreen->GetRoot());
-    InputRouter->SetActiveScreen(ActiveScreen.get());
+    try
+    {
+      ActiveScreen->OnAttach(*this);
+      ActiveScreen->Build(*this);
+    }
+    catch (...)
+    {
+      auto failed = std::move(ActiveScreen);
+      failed->OnDetach();
+      throw;
+    }
+  }
+  BindScreenInput();
+}
+
+GuiContextStorage UGuiContext::InspectOwnedStorage() const noexcept
+{
+  GuiContextStorage out;
+  out.context_bytes = sizeof(*this);
+  out.listeners = MetricsListeners.size();
+  out.listener_capacity = MetricsListeners.capacity();
+  StlSourceStorage storage;
+  const auto request = [&storage](const auto &values) {
+    const auto before = storage.bytes.requested;
+    using Element = typename std::decay_t<decltype(values)>::value_type;
+    storage.Buffer(values.capacity(), sizeof(Element));
+    return storage.bytes.requested - before;
+  };
+  out.listener_bytes = request(MetricsListeners);
+  const auto *root = ActiveScreen ? ActiveScreen->GetRoot() : nullptr;
+  out.screen_attached = ActiveScreen && ActiveScreen->GetContext() == this;
+  out.bindings_match = !ActiveScreen || out.screen_attached;
+  if (InputRouter)
+  {
+    out.router_bytes = sizeof(UGuiInputRouter);
+    out.focus_entries = InputRouter->FocusOrder.size();
+    out.focus_bytes = request(InputRouter->FocusOrder);
+    out.root_bound = root && InputRouter->Root == root;
+    out.renderer_bound = Renderer && InputRouter->Renderer == Renderer.get();
+    out.has_focus = InputRouter->KeyboardFocus != nullptr;
+    out.bindings_match &= InputRouter->Root == root &&
+                          InputRouter->Screen == ActiveScreen.get() &&
+                          InputRouter->Renderer == Renderer.get();
   }
   else
+    out.bindings_match &= !Renderer && !ActiveScreen;
+  if (Renderer)
   {
-    InputRouter->SetRoot(nullptr);
-    InputRouter->SetActiveScreen(nullptr);
+    out.renderer_bytes = sizeof(UGuiRenderer);
+    out.clip_bytes = request(Renderer->ClipStack);
+    out.vertex_bytes = request(Renderer->QuadBatch.Vertices);
   }
+  // External type-erased listeners can own arbitrary backing.
+  out.supported = storage.bytes.supported && out.bindings_match && MetricsListeners.empty();
+  return out;
 }
 
 void UGuiContext::Update(double dt)

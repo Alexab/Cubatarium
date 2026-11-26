@@ -4,6 +4,7 @@
 #include "Test/RootSourceGlContext.h"
 #include "Test/OrdinaryNewObservation.h"
 #include "Test/ApplicationOperationStorageFixture.h"
+#include "Test/GuiContextStorageFixture.h"
 #include <fstream>
 #include <iostream>
 namespace {
@@ -16,6 +17,123 @@ void CheckOriginalCaptureTypes(cutum::UNewWorldScreen *owner,const cutum::WorldR
   static_assert(sizeof(create)==sizeof(cutum::CreateWorldMenuAction));static_assert(sizeof(load)==sizeof(cutum::LoadWorldMenuAction));
   static_assert(std::is_nothrow_move_constructible_v<decltype(create)> ==std::is_nothrow_move_constructible_v<cutum::CreateWorldMenuAction>);
   static_assert(std::is_nothrow_move_constructible_v<decltype(load)> ==std::is_nothrow_move_constructible_v<cutum::LoadWorldMenuAction>);
+}
+
+nlohmann::json CheckGuiContextRequests()
+{
+  using namespace cutum;
+  using gui_context_fixture::Require;
+  auto lifecycle = gui_context_fixture::RunLifecycle();
+  size_t prefixes = 0;
+  {
+    UGuiContext cold;
+    observation::Scope observed;
+    Require(!cold.Initialize({}, {}), "renderer initialization rejects absent shader manager");
+    prefixes = observation::State.attempts;
+    Require(prefixes && !observation::State.live && !cold.InspectOwnedStorage().renderer_bytes,
+            "failed renderer initialization retires ordinary allocations");
+  }
+  for (size_t n = 0; n < prefixes; ++n)
+  {
+    UGuiContext cold;
+    observation::Scope observed(n);
+    bool refused = false;
+    try { cold.Initialize({}, {}); }
+    catch (const std::bad_alloc &) { refused = true; }
+    Require(refused && !observation::State.live && cold.InspectOwnedStorage().supported &&
+                !cold.InspectOwnedStorage().router_bytes,
+            "each GUI initialization allocation refusal leaves a cold context");
+  }
+
+  auto shaders = std::make_shared<UShaderManager>();
+  auto context = std::make_unique<UGuiContext>();
+  Require(context->Initialize(shaders, {}), "GUI ordinary observation initializes");
+  gui_context_fixture::AttachProgressScreen(*context);
+  auto &renderer = context->GetRenderer();
+  const GuiRect rect{0, 0, 16, 16};
+  const glm::vec4 color{1.f};
+  renderer.BeginFrame(320, 240);
+  renderer.DrawFilledRect(rect, color);
+  renderer.EndFrame();
+
+  GuiContextStorage grown, cleared, stopped;
+  size_t notifications = 0, observed_requests = 0;
+  const auto listener = [&](const GuiMetrics &metrics) {
+    if (metrics.Scale == 1.25f)
+      ++notifications;
+  };
+  {
+    observation::Scope observed;
+    for (size_t n = 0; n < 128; ++n)
+      context->AddMetricsChangedListener(listener);
+    auto full = context->InspectOwnedStorage();
+    while (full.listeners < full.listener_capacity)
+    {
+      context->AddMetricsChangedListener(listener);
+      full = context->InspectOwnedStorage();
+    }
+    Require(!full.supported && full.listeners >= 128 && full.listener_bytes == observation::State.live,
+            "actual metric listener slots match independent ordinary requests");
+    const auto attempts = observation::State.attempts;
+    observation::State.fail_after = attempts;
+    bool refused = false;
+    try { context->AddMetricsChangedListener(listener); }
+    catch (const std::bad_alloc &) { refused = true; }
+    const auto refused_snapshot = context->InspectOwnedStorage();
+    Require(refused && refused_snapshot.listeners == full.listeners &&
+                refused_snapshot.listener_bytes == full.listener_bytes &&
+                observation::State.attempts == attempts + 1 && observation::State.live == full.listener_bytes,
+            "listener growth refusal keeps all previously registered listeners and slots");
+    observation::State.fail_after = SIZE_MAX;
+    context->AddMetricsChangedListener(listener);
+    const std::array<size_t, 16> capture{};
+    context->AddMetricsChangedListener([capture, &notifications](const GuiMetrics &) {
+      notifications += capture[0];
+    });
+    const auto opaque = context->InspectOwnedStorage();
+    Require(!opaque.supported && observation::State.live > opaque.listener_bytes,
+            "an opaque listener can hold memory outside measured slots");
+    context->ApplyUiScale(1.25f);
+    Require(notifications == full.listeners + 1, "all registered inline listeners receive metrics after retry");
+    context->ClearMetricsChangedListeners();
+    cleared = context->InspectOwnedStorage();
+    Require(cleared.supported && !cleared.listeners && cleared.listener_bytes == opaque.listener_bytes &&
+                cleared.listener_bytes == observation::State.live,
+            "clearing metrics callbacks retires their allocations and retains the slot vector");
+
+    Require(context->RouteKey({GLFW_KEY_TAB}), "GUI observation creates actual focus order");
+    renderer.BeginFrame(320, 240);
+    for (size_t n = 0; n < 250; ++n)
+    {
+      renderer.PushClipRect(rect);
+      renderer.DrawFilledRect(rect, color);
+    }
+    const auto before_query = observation::State.attempts;
+    observation::State.fail_after = before_query;
+    grown = context->InspectOwnedStorage();
+    observed_requests = observation::State.live;
+    Require(grown.supported && grown.focus_entries == 2 && grown.focus_bytes &&
+                grown.vertex_bytes > 4096 && grown.clip_bytes >= 250 * sizeof(GuiRect) &&
+                grown.listener_bytes + grown.focus_bytes + grown.vertex_bytes + grown.clip_bytes == observed_requests &&
+                observation::State.attempts == before_query,
+            "passive GUI backing query is allocation-free and matches the independent live requests");
+    observation::State.fail_after = SIZE_MAX;
+    renderer.EndFrame();
+    context->Shutdown();
+    stopped = context->InspectOwnedStorage();
+    Require(stopped.supported && !stopped.vertex_bytes && !stopped.clip_bytes &&
+                observation::State.live == stopped.listener_bytes + stopped.focus_bytes,
+            "GUI shutdown retires renderer staging and clears focus slots");
+    context.reset();
+    Require(!observation::State.live && !observation::State.blocks,
+            "GUI context destruction retires all observed backing");
+  }
+  return {{"status", "PASS"}, {"lifecycle", std::move(lifecycle)},
+          {"ordinary_before_shutdown", GuiContextStorageJson(grown)},
+          {"ordinary_after_shutdown", GuiContextStorageJson(stopped)},
+          {"cleared_listener_bytes", cleared.listener_bytes}, {"observed_requests", observed_requests},
+          {"notifications", notifications}, {"initialization_refusal_prefixes", prefixes},
+          {"listener_growth_refusal", true}, {"opaque_listener_rejected", true}, {"retired", true}};
 }
 }
 int main(int argc,char **argv){
@@ -56,6 +174,7 @@ int main(int argc,char **argv){
       require(source.supported && static_cast<size_t>(source.actions[0].kind)==kind && application.InspectStoredActionCallbacks(true).rows[33].supported,"actual active application member source");}
     ApplicationOperationSourceProbe::Clear(application);phase.Close();require(!application.InspectOperationStorage(phase,true).supported,"actual closed application source phase");
     report["ordinary_cases"]=observations;report["ordinary_equality_checks"]=checks;report["refusal_prefixes"]=prefixes;report["query_allocate0"]=true;report["move_before_invoke_successor"]=true;report["selected_final_live"]=observation::State.live;
+    report["gui_context_storage"]=CheckGuiContextRequests();
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

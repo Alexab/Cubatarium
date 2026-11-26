@@ -19,6 +19,15 @@ class IUGuiClipboard;
 class UShaderManager;
 class UTextRenderer;
 
+struct GuiContextStorage
+{
+  size_t context_bytes{}, renderer_bytes{}, router_bytes{};
+  size_t listeners{}, listener_capacity{}, listener_bytes{}, focus_entries{}, focus_bytes{};
+  size_t clip_bytes{}, vertex_bytes{};
+  bool screen_attached{}, root_bound{}, renderer_bound{}, has_focus{};
+  bool bindings_match{}, supported{};
+};
+
 class UGuiContext
 {
 public:
@@ -33,6 +42,10 @@ public:
 
   void SetScreen(std::unique_ptr<UGuiScreenBase> screen);
   UGuiScreenBase *GetScreen() { return ActiveScreen.get(); }
+  const UGuiScreenBase *GetScreen() const { return ActiveScreen.get(); }
+  // Inspect on the UI thread. The caller accounts for the owning context
+  // allocation, the active screen subtree and shared rendering resources.
+  GuiContextStorage InspectOwnedStorage() const noexcept;
 
   void Update(double dt);
   void NotifyViewport(int WindowWidth, int WindowHeight, int insetLeft = 0,
@@ -69,6 +82,8 @@ public:
 
 private:
   void NotifyMetricsChanged();
+  void UnbindScreenInput();
+  void BindScreenInput();
 
   GuiTheme BaseTheme;
   float UiScale{1.f};

@@ -32,6 +32,7 @@ public:
   bool IsReady() const { return Initialized; }
 
 private:
+  friend class UGuiContext;
   void AddQuad(float x0, float y0, float x1, float y1, const glm::vec4 &color);
   /// GuiRect — top-left origin; shader expects bottom-left pixel Y.
   void GuiRectToShaderCoords(const GuiRect &rect, float &x0, float &y0,

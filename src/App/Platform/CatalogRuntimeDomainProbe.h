@@ -20,6 +20,7 @@
 #include "WorldGen/Core/PipelineAllocatorThreadView.h"
 #include "WorldGen/Core/RuntimeNameStorage.h"
 #include "Core/Memory/EngineThreadStorage.h"
+#include "Test/GuiContextStorageFixture.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -174,6 +175,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"runner_present",operations.runner.present},{"runner_supported",operations.runner.supported},{"runner_active",operations.runner.active},{"runner_requests",operations.runner.requests},
     {"wrappers_already_in_member_storage",operations.Wrappers()},{"additional",operations.Additional()},{"total",operations.Total()},{"whole_runtime_complete",false},
     {"scope","Six known application actions and actual owned operation runner/request;function backing overlaps member_callback_storage. Captured backing and runner are additional. UI shells,outer widget callbacks,I/O/external job scopes and process remain separate."}};
+  report["gui_context_storage"]=GuiContextStorageJson(application.GetGui().InspectOwnedStorage());
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

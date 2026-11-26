@@ -1,4 +1,5 @@
 #pragma once
+#include "Test/GuiContextStorageFixture.h"
 #include "App/Application.h"
 #include "App/Core.h"
 #include "Blocks/BlockDefinitionStorage.h"
@@ -269,6 +270,8 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
             "fatal save menu captures mouse input");
     capture("disk-full-menu-1280.png", 1280, 720);
     capture("disk-full-menu-640.png", 640, 480);
+    report["gui_context_storage"] = GuiContextStorageJson(application.GuiContext->InspectOwnedStorage());
+    report["gui_context_lifecycle"] = gui_context_fixture::RunLifecycle();
     report["fatal_save_menu"] = "PASS";
     report["fatal_save_scope"] =
         "Direct application fatal-save handler; no disk-full injection or "

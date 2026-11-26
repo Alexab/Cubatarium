@@ -51,6 +51,7 @@ public:
   float GetTextScale() const { return TextScale; }
 
 private:
+  friend class UGuiContext;
   void ApplyClipStack();
 
   std::shared_ptr<UTextRenderer> TextRenderer;
