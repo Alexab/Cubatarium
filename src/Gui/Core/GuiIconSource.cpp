@@ -133,6 +133,35 @@ size_t UGuiIconSource::PendingBlockIcons() const
   return ObjectCache ? ObjectCache->PendingBlockWarmupCount() : 0;
 }
 
+ObjectIconStorage UGuiIconSource::InspectObjectIconStorage(const UObjectLibrary *objects,
+    const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
+    const UShaderManager *shaders) const noexcept
+{
+  ObjectIconStorage out;
+  if (Textures.get() != textures)
+  {
+    out.present = bool(ObjectCache);
+    return out;
+  }
+  if (ObjectCache)
+    out = ObjectCache->InspectOwnedStorage(objects, textures, blocks, shaders);
+  else
+  {
+    out.atlasFallback = bool(Textures);
+    out.supported = out.bindingsMatch = true;
+  }
+  if (out.supported)
+  {
+    StlSourceStorage total;
+    out.sourceBytes = sizeof(*this);
+    total.Add(out.cpuBytes);
+    total.Add(out.sourceBytes);
+    out.cpuBytes = total.bytes.requested;
+    out.supported = total.bytes.supported;
+  }
+  return out;
+}
+
 void UGuiIconSource::WarmupObjectIcons(size_t maxPerFrame)
 {
   if (ObjectCache)

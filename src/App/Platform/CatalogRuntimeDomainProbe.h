@@ -206,6 +206,21 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"color_texels", preview.colorTexels}, {"depth_samples", preview.depthSamples},
       {"shader_present", preview.shaderPresent}, {"creature_source_present", preview.creatureSourcePresent},
       {"item_source_present", preview.itemSourcePresent}, {"whole_runtime_complete", false}};
+  const auto icons = application.InspectObjectIconStorage();
+  const auto iconOwners = out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::ObjectIcon)];
+  const bool iconsJoined = icons.supported && iconOwners == size_t(icons.present);
+  report["object_icon_storage"] = {
+      {"schema", "object-icon-cache-owner.v1"}, {"status", iconsJoined ? "PASS" : "UNSUPPORTED"},
+      {"present", icons.present}, {"owners", iconOwners}, {"bindings_match", icons.bindingsMatch},
+      {"source_bytes", icons.sourceBytes}, {"cache_bytes", icons.cacheBytes}, {"cpu_bytes", icons.cpuBytes},
+      {"object_table_bytes", icons.objectTableBytes}, {"block_table_bytes", icons.blockTableBytes},
+      {"object_queue_bytes", icons.objectQueueBytes}, {"block_queue_bytes", icons.blockQueueBytes},
+      {"object_icons", icons.objectIcons}, {"block_icons", icons.blockIcons},
+      {"pending_objects", icons.pendingObjects}, {"pending_blocks", icons.pendingBlocks},
+      {"vertex_buffer_bytes", icons.vertexBytes}, {"index_buffer_bytes", icons.indexBytes},
+      {"target_texels", icons.targetTexels}, {"depth_samples", icons.depthSamples}, {"cached_texels", icons.cachedTexels},
+      {"atlas_fallback", icons.atlasFallback}, {"shader_present", icons.shaderPresent},
+      {"icon_service_present", icons.servicePresent}, {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

@@ -43,6 +43,9 @@ public:
   void QueueBlockIcon(const std::string &blockName);
   void WarmupBlockIcons(size_t maxPerFrame);
   size_t PendingBlockIcons() const;
+  ObjectIconStorage InspectObjectIconStorage(const UObjectLibrary *objects,
+      const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
+      const UShaderManager *shaders) const noexcept;
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
   {out.TextureCubes(Textures);out.ObjectIcon(ObjectCache.get());}
 

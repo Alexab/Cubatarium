@@ -2,6 +2,7 @@
 #define CONTENT_PREVIEW_RENDERER_H
 
 #include "Gui/Interfaces/IUContentCatalog.h"
+#include "Gui/Preview/PreviewRenderResources.h"
 #include "World/Math/BlockTypes.h"
 #include <cstddef>
 #include <glm/mat4x4.hpp>
@@ -64,7 +65,6 @@ public:
   {out.Library(Objects);out.TextureCubes(Textures);out.BlockStorage(BlockDefs,"content-preview");}
 private:
   bool EnsureFboSize(int size);
-  bool InitCubeMesh();
   GLuint GetBlockTexture(BlockId blockId) const;
   GLuint RenderObject(const std::string &objectName, int size, float yawDeg,
                       float pitchDeg);
@@ -80,12 +80,8 @@ private:
   std::shared_ptr<UItemPreviewRenderer> ItemPreview;
   std::shared_ptr<class UShaderProgram> Shader;
 
-  GLuint CubeVao{0};
-  GLuint CubeVbo{0};
-  GLuint CubeEbo{0};
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
+  PreviewCubeMesh Cube;
+  PreviewRenderTarget Target;
   int FboSize{0};
 };
 

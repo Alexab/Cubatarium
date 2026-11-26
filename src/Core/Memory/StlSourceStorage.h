@@ -81,6 +81,24 @@ public:
 #endif
   }
 
+  template<class T> void List(const std::list<T> &list) noexcept
+  {
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+    using Node = std::_List_node<T, void *>;
+    static_assert(sizeof(Node) < 4096);
+    Add(sizeof(Node));
+    if (list.size() > SIZE_MAX / sizeof(Node))
+    {
+      bytes.overflow = true;
+      bytes.supported = false;
+    }
+    else
+      Add(list.size() * sizeof(Node));
+#else
+    (void)list;
+#endif
+  }
+
   // The codec owns a tree, with no shared DOM subtrees. Use bounded recursion
   // and no diagnostic heap allocations. If depth exceeds the bound, report
   // unsupported instead of returning a purported total for a prefix.

@@ -1,4 +1,5 @@
 #include "Gui/Cache/ObjectIconCache.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Preview/ObjectPreviewLayout.h"
 
@@ -20,6 +21,19 @@
 namespace cutum
 {
 
+namespace
+{
+void BeginIconDraw(int size)
+{
+  glViewport(0, 0, size, size);
+  glEnable(GL_DEPTH_TEST);
+  glDepthMask(GL_TRUE);
+  const GLfloat clear[]{0.12f, 0.12f, 0.14f, 1.0f};
+  glClearBufferfv(GL_COLOR, 0, clear);
+  glClear(GL_DEPTH_BUFFER_BIT);
+}
+} // namespace
+
 UObjectIconCache::UObjectIconCache(
     std::shared_ptr<UObjectLibrary> objects,
     std::shared_ptr<UTextureCubeStorage> textures,
@@ -37,48 +51,25 @@ UObjectIconCache::~UObjectIconCache() { Shutdown(); }
 bool UObjectIconCache::Initialize()
 {
   if (!ShaderManager || !Objects)
-  {
     return false;
-  }
-  Shader = ShaderManager->CreateShader(
+
+  UGuiIconWarmupQueue warmup;
+  for (const auto &name : Objects->ListNames())
+    warmup.Push(name);
+  PreviewRenderTarget target;
+  PreviewCubeMesh cube;
+  if (!target.Initialize(kIconSize) || !cube.Initialize())
+    return false;
+  auto shader = ShaderManager->CreateShader(
       "gui_prefab_icon", "shaders/vshader.glsl", "shaders/fshader.glsl");
-  if (!Shader || !Shader->IsValid())
-  {
+  if (!shader || !shader->IsValid())
     return false;
-  }
-  if (!InitCubeMesh())
-  {
-    return false;
-  }
 
-  glGenFramebuffers(1, &Fbo);
-  glGenTextures(1, &ColorTex);
-  glBindTexture(GL_TEXTURE_2D, ColorTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-
-  glGenRenderbuffers(1, &DepthRbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, kIconSize,
-                        kIconSize);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, DepthRbo);
-
-  const bool complete =
-      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  Warmup.Clear();
-  for (const std::string &name : Objects->ListNames())
-  {
-    Warmup.Push(name);
-  }
-  return complete;
+  Warmup.Swap(warmup);
+  Target.Swap(target);
+  Cube.Swap(cube);
+  Shader = std::move(shader);
+  return true;
 }
 
 void UObjectIconCache::Shutdown()
@@ -87,190 +78,74 @@ void UObjectIconCache::Shutdown()
   BlockCache.clear();
   Warmup.Clear();
   BlockWarmup.Clear();
-
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-  if (CubeEbo != 0)
-  {
-    glDeleteBuffers(1, &CubeEbo);
-    CubeEbo = 0;
-  }
-  if (CubeVbo != 0)
-  {
-    glDeleteBuffers(1, &CubeVbo);
-    CubeVbo = 0;
-  }
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
+  Target.Reset();
+  Cube.Reset();
   Shader.reset();
 }
 
-bool UObjectIconCache::InitCubeMesh()
+ObjectIconStorage UObjectIconCache::InspectOwnedStorage(const UObjectLibrary *objects,
+    const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
+    const UShaderManager *shaders) const noexcept
 {
-  if (CubeVao != 0)
-  {
-    return true;
-  }
-  const float cubeShift = 1.0f / 6.0f;
-  const float vertices[] = {
-      -0.5f,
-      -0.5f,
-      0.5f,
-      0.0f,
-      1.0f,
-      0.5f,
-      -0.5f,
-      0.5f,
-      cubeShift,
-      1.0f,
-      -0.5f,
-      0.5f,
-      0.5f,
-      0.0f,
-      0.0f,
-      0.5f,
-      0.5f,
-      0.5f,
-      cubeShift,
-      0.0f,
-      0.5f,
-      -0.5f,
-      0.5f,
-      cubeShift,
-      1.0f,
-      0.5f,
-      -0.5f,
-      -0.5f,
-      cubeShift * 2.0f,
-      1.0f,
-      0.5f,
-      0.5f,
-      0.5f,
-      cubeShift,
-      0.0f,
-      0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 2.0f,
-      0.0f,
-      0.5f,
-      -0.5f,
-      -0.5f,
-      cubeShift * 2.0f,
-      1.0f,
-      -0.5f,
-      -0.5f,
-      -0.5f,
-      cubeShift * 3.0f,
-      1.0f,
-      0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 2.0f,
-      0.0f,
-      -0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 3.0f,
-      0.0f,
-      -0.5f,
-      -0.5f,
-      -0.5f,
-      cubeShift * 3.0f,
-      1.0f,
-      -0.5f,
-      -0.5f,
-      0.5f,
-      cubeShift * 4.0f,
-      1.0f,
-      -0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 3.0f,
-      0.0f,
-      -0.5f,
-      0.5f,
-      0.5f,
-      cubeShift * 4.0f,
-      0.0f,
-      -0.5f,
-      0.5f,
-      0.5f,
-      cubeShift * 4.0f,
-      0.0f,
-      0.5f,
-      0.5f,
-      0.5f,
-      cubeShift * 5.0f,
-      0.0f,
-      -0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 4.0f,
-      1.0f,
-      0.5f,
-      0.5f,
-      -0.5f,
-      cubeShift * 5.0f,
-      1.0f,
-      -0.5f,
-      -0.5f,
-      -0.5f,
-      cubeShift * 5.0f,
-      0.0f,
-      0.5f,
-      -0.5f,
-      -0.5f,
-      1.0f,
-      0.0f,
-      -0.5f,
-      -0.5f,
-      0.5f,
-      cubeShift * 5.0f,
-      1.0f,
-      0.5f,
-      -0.5f,
-      0.5f,
-      1.0f,
-      1.0f,
-  };
-  const unsigned int indices[] = {
-      0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
-      12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
-  };
+  ObjectIconStorage out;
+  out.present = true;
+  if (!objects || !shaders || Objects.get() != objects || Textures.get() != textures ||
+      BlockDefs.get() != blocks || ShaderManager.get() != shaders)
+    return out;
+  const bool mesh = Cube.Vao && Cube.Vbo && Cube.Ebo && Cube.Vbo != Cube.Ebo;
+  const bool target = Target.Framebuffer && Target.Color && Target.Depth;
+  if ((!mesh && (Cube.Vao || Cube.Vbo || Cube.Ebo)) ||
+      (!target && (Target.Framebuffer || Target.Color || Target.Depth)) ||
+      mesh != target || (target && (!Shader || !Shader->IsValid())) || (!target && Shader))
+    return out;
 
-  glGenVertexArrays(1, &CubeVao);
-  glGenBuffers(1, &CubeVbo);
-  glGenBuffers(1, &CubeEbo);
-  glBindVertexArray(CubeVao);
-  glBindBuffer(GL_ARRAY_BUFFER, CubeVbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CubeEbo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
-  return true;
+  StlSourceStorage objectTable, blockTable, total;
+  objectTable.Hash(Cache);
+  bool iconsKnown = true;
+  for (const auto &entry : Cache)
+  {
+    objectTable.Text(entry.first);
+    iconsKnown &= entry.second.Get() && entry.second.Get() != Target.Color;
+  }
+  blockTable.Hash(BlockCache);
+  for (const auto &entry : BlockCache)
+    iconsKnown &= entry.second.Get() && entry.second.Get() != Target.Color;
+  const auto objectsPending = Warmup.InspectOwnedStorage();
+  const auto blocksPending = BlockWarmup.InspectOwnedStorage();
+  out.cacheBytes = sizeof(*this);
+  out.objectTableBytes = objectTable.bytes.requested;
+  out.blockTableBytes = blockTable.bytes.requested;
+  out.objectQueueBytes = objectsPending.requested;
+  out.blockQueueBytes = blocksPending.requested;
+  for (const auto bytes : {out.cacheBytes, out.objectTableBytes, out.blockTableBytes,
+                          out.objectQueueBytes, out.blockQueueBytes})
+    total.Add(bytes);
+  out.cpuBytes = total.bytes.requested;
+  out.objectIcons = Cache.size();
+  out.blockIcons = BlockCache.size();
+  out.pendingObjects = Warmup.Size();
+  out.pendingBlocks = BlockWarmup.Size();
+  out.vertexBytes = mesh ? PreviewCubeMesh::kCubeVertexBytes : 0;
+  out.indexBytes = mesh ? PreviewCubeMesh::kCubeIndexBytes : 0;
+  constexpr size_t iconTexels = kIconSize * kIconSize;
+  out.targetTexels = target ? iconTexels : 0;
+  out.depthSamples = out.targetTexels;
+  if (out.objectIcons <= SIZE_MAX / iconTexels && out.blockIcons <= SIZE_MAX / iconTexels - out.objectIcons)
+    out.cachedTexels = (out.objectIcons + out.blockIcons) * iconTexels;
+  else
+    iconsKnown = false;
+  out.vertexArray = Cube.Vao;
+  out.vertexBuffer = Cube.Vbo;
+  out.indexBuffer = Cube.Ebo;
+  out.framebuffer = Target.Framebuffer;
+  out.colorTexture = Target.Color;
+  out.depthBuffer = Target.Depth;
+  out.shaderPresent = bool(Shader);
+  out.servicePresent = bool(IconService);
+  out.bindingsMatch = true;
+  out.supported = total.bytes.supported && objectTable.bytes.supported && blockTable.bytes.supported &&
+                  objectsPending.supported && blocksPending.supported && iconsKnown;
+  return out;
 }
 
 GLuint UObjectIconCache::GetBlockTexture(BlockId blockId) const
@@ -357,7 +232,7 @@ GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
     return it->second.Get();
   }
 
-  const std::string fingerprint = BuildBlockFingerprint(blockName);
+  const std::string fingerprint = IconService ? BuildBlockFingerprint(blockName) : std::string{};
   if (IconService && !fingerprint.empty())
   {
     GLuint cachedTex = 0;
@@ -381,28 +256,26 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
 {
   const WorldObjectDefinition *object =
       Objects ? Objects->Get(objectName) : nullptr;
-  if (!object || object->voxels.empty() || !Shader || Fbo == 0)
+  if (!object || object->voxels.empty() || !Shader || Target.Framebuffer == 0)
   {
     return 0;
   }
 
-  UGlStateScope glState(kGlMaskIconFbo);
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
   GLuint iconTex = 0;
   glGenTextures(1, &iconTex);
   UGlTextureOwner texture(iconTex);
   if (!iconTex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(kIconSize);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlIconColorAttachment attachment(Fbo, iconTex, ColorTex);
-  glViewport(0, 0, kIconSize, kIconSize);
-  glEnable(GL_DEPTH_TEST);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  UGlIconColorAttachment attachment(Target.Framebuffer, iconTex, Target.Color);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    return 0;
+  BeginIconDraw(kIconSize);
 
   const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
 
@@ -414,7 +287,7 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
 
   for (const ObjectVoxel &voxel : object->voxels)
   {
@@ -445,28 +318,26 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
 GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
 {
   const GLuint tex = GetBlockTexture(blockId);
-  if (tex == 0 || !Shader || Fbo == 0)
+  if (tex == 0 || !Shader || Target.Framebuffer == 0)
   {
     return 0;
   }
 
-  UGlStateScope glState(kGlMaskIconFbo);
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
   GLuint iconTex = 0;
   glGenTextures(1, &iconTex);
   UGlTextureOwner texture(iconTex);
   if (!iconTex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(kIconSize);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlIconColorAttachment attachment(Fbo, iconTex, ColorTex);
-  glViewport(0, 0, kIconSize, kIconSize);
-  glEnable(GL_DEPTH_TEST);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  UGlIconColorAttachment attachment(Target.Framebuffer, iconTex, Target.Color);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    return 0;
+  BeginIconDraw(kIconSize);
 
   glm::mat4 projection =
       glm::perspective(glm::radians(35.0f), 1.0f, 0.1f, 50.0f);
@@ -475,7 +346,7 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
@@ -507,7 +378,7 @@ GLuint UObjectIconCache::GetIcon(const std::string &objectName)
   {
     return cached;
   }
-  const std::string fingerprint = BuildObjectFingerprint(objectName);
+  const std::string fingerprint = IconService ? BuildObjectFingerprint(objectName) : std::string{};
   if (IconService && !fingerprint.empty())
   {
     GLuint cachedTex = 0;

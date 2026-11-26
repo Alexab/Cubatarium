@@ -2,6 +2,7 @@
 #define OBJECT_ICON_CACHE_H
 
 #include "Gui/Cache/IconWarmupQueue.h"
+#include "Gui/Preview/PreviewRenderResources.h"
 #include "Render/Textures/GlTextureOwner.h"
 #include "World/Math/BlockTypes.h"
 #include <memory>
@@ -21,6 +22,16 @@ class UShaderManager;
 class UTextureCubeStorage;
 class UInventoryIconService;
 
+struct ObjectIconStorage
+{
+  size_t sourceBytes{}, cacheBytes{}, cpuBytes{};
+  size_t objectTableBytes{}, blockTableBytes{}, objectQueueBytes{}, blockQueueBytes{};
+  size_t objectIcons{}, blockIcons{}, pendingObjects{}, pendingBlocks{};
+  size_t vertexBytes{}, indexBytes{}, targetTexels{}, depthSamples{}, cachedTexels{};
+  GLuint vertexArray{}, vertexBuffer{}, indexBuffer{}, framebuffer{}, colorTexture{}, depthBuffer{};
+  bool present{}, bindingsMatch{}, supported{}, atlasFallback{}, shaderPresent{}, servicePresent{};
+};
+
 class UObjectIconCache
 {
 public:
@@ -30,6 +41,8 @@ public:
                    std::shared_ptr<UShaderManager> shaderManager,
                    std::shared_ptr<UInventoryIconService> iconService = nullptr);
   ~UObjectIconCache();
+  UObjectIconCache(const UObjectIconCache &) = delete;
+  UObjectIconCache &operator=(const UObjectIconCache &) = delete;
 
   bool Initialize();
   void Shutdown();
@@ -46,6 +59,9 @@ public:
   size_t PendingBlockWarmupCount() const { return BlockWarmup.Size(); }
 
   void ClearBlockIconCache();
+  ObjectIconStorage InspectOwnedStorage(const UObjectLibrary *objects,
+      const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
+      const UShaderManager *shaders) const noexcept;
 
 public:
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
@@ -56,7 +72,6 @@ private:
   GLuint RenderObjectIcon(const std::string &objectName);
   GLuint RenderBlockIcon(BlockId blockId);
   GLuint GetBlockTexture(BlockId blockId) const;
-  bool InitCubeMesh();
 
   std::shared_ptr<UObjectLibrary> Objects;
   std::shared_ptr<UTextureCubeStorage> Textures;
@@ -70,12 +85,8 @@ private:
   UGuiIconWarmupQueue BlockWarmup;
   UGuiIconWarmupQueue Warmup;
 
-  GLuint CubeVao{0};
-  GLuint CubeVbo{0};
-  GLuint CubeEbo{0};
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
+  PreviewCubeMesh Cube;
+  PreviewRenderTarget Target;
   static constexpr int kIconSize = 64;
 };
 

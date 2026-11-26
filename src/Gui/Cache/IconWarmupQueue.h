@@ -1,8 +1,10 @@
 #ifndef ICONWARMUPQUEUE_H
 #define ICONWARMUPQUEUE_H
 
-#include <deque>
+#include "Core/Memory/StlSourceStorage.h"
+#include <list>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 namespace cutum
@@ -14,21 +16,23 @@ namespace cutum
 class UGuiIconWarmupQueue
 {
 public:
+  UGuiIconWarmupQueue() = default;
+  UGuiIconWarmupQueue(const UGuiIconWarmupQueue &) = delete;
+  UGuiIconWarmupQueue &operator=(const UGuiIconWarmupQueue &) = delete;
+
   /// Returns false when the id is already queued.
   bool Push(const std::string &id)
   {
-    if (id.empty())
+    if (id.empty() || Queued.find(id) != Queued.end())
       return false;
-    const auto [entry, inserted] = Queued.insert(id);
-    if (!inserted)
-      return false;
+    const auto &name = Queue.emplace_back(id);
     try
     {
-      Queue.push_back(id);
+      Queued.emplace(name);
     }
     catch (...)
     {
-      Queued.erase(entry);
+      Queue.pop_back();
       throw;
     }
     return true;
@@ -48,6 +52,20 @@ public:
 
   bool Empty() const { return Queue.empty(); }
   size_t Size() const { return Queue.size(); }
+  NameStorageEnvelope InspectOwnedStorage() const noexcept
+  {
+    StlSourceStorage storage;
+    storage.List(Queue);
+    storage.Hash(Queued);
+    storage.bytes.supported &= Queue.size() == Queued.size();
+    for (const auto &name : Queue)
+    {
+      const auto view = Queued.find(name);
+      storage.bytes.supported &= view != Queued.end() && view->data() == name.data();
+      storage.Text(name);
+    }
+    return storage.bytes;
+  }
   void Swap(UGuiIconWarmupQueue &other) noexcept
   {
     Queue.swap(other.Queue);
@@ -55,13 +73,13 @@ public:
   }
   void Clear()
   {
-    Queue.clear();
     Queued.clear();
+    Queue.clear();
   }
 
 private:
-  std::deque<std::string> Queue;
-  std::unordered_set<std::string> Queued;
+  std::list<std::string> Queue;
+  std::unordered_set<std::string_view> Queued;
 };
 
 } // namespace cutum

@@ -26,20 +26,6 @@ constexpr float kDefaultOrbitDistance = 3.5f;
 constexpr float kFovDeg = 35.0f;
 constexpr int kMinTargetSize = 64;
 constexpr int kMaxTargetSize = 512;
-constexpr std::size_t kCubeVertexBytes = 24 * 5 * sizeof(float);
-constexpr std::size_t kCubeIndexBytes = 36 * sizeof(unsigned int);
-
-void AllocatePreviewColor(int size)
-{
-  GLint unpack = 0;
-  glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack);
-  if (unpack)
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  if (unpack)
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(unpack));
-}
 
 void BeginPreviewDraw(int size)
 {
@@ -77,7 +63,7 @@ bool UContentPreviewRenderer::Initialize()
   }
   auto shader = ShaderManager->CreateShader(
       "gui_prefab_icon", "shaders/vshader.glsl", "shaders/fshader.glsl");
-  if (!shader || !shader->IsValid() || !InitCubeMesh())
+  if (!shader || !shader->IsValid() || !Cube.Initialize())
   {
     return false;
   }
@@ -87,37 +73,9 @@ bool UContentPreviewRenderer::Initialize()
 
 void UContentPreviewRenderer::Shutdown()
 {
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
+  Target.Reset();
   FboSize = 0;
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
-  if (CubeEbo != 0)
-  {
-    glDeleteBuffers(1, &CubeEbo);
-    CubeEbo = 0;
-  }
-  if (CubeVbo != 0)
-  {
-    glDeleteBuffers(1, &CubeVbo);
-    CubeVbo = 0;
-  }
+  Cube.Reset();
   Shader.reset();
 }
 
@@ -132,26 +90,26 @@ ContentPreviewRendererStorage UContentPreviewRenderer::InspectOwnedStorage(
       BlockDefs.get() != blocks || ShaderManager.get() != shaders || Creatures.get() != creatures)
     return out;
 
-  const bool mesh = CubeVao && CubeVbo && CubeEbo && CubeVbo != CubeEbo;
-  const bool target = Fbo && ColorTex && DepthRbo &&
+  const bool mesh = Cube.Vao && Cube.Vbo && Cube.Ebo && Cube.Vbo != Cube.Ebo;
+  const bool target = Target.Framebuffer && Target.Color && Target.Depth &&
                       FboSize >= kMinTargetSize && FboSize <= kMaxTargetSize;
-  if ((!mesh && (CubeVao || CubeVbo || CubeEbo || Shader)) ||
+  if ((!mesh && (Cube.Vao || Cube.Vbo || Cube.Ebo || Shader)) ||
       (mesh && (!Shader || !Shader->IsValid())) ||
-      (!target && (Fbo || ColorTex || DepthRbo || FboSize)))
+      (!target && (Target.Framebuffer || Target.Color || Target.Depth || FboSize)))
     return out;
 
   out.rendererBytes = sizeof(*this);
-  out.vertexBytes = mesh ? kCubeVertexBytes : 0;
-  out.indexBytes = mesh ? kCubeIndexBytes : 0;
+  out.vertexBytes = mesh ? PreviewCubeMesh::kCubeVertexBytes : 0;
+  out.indexBytes = mesh ? PreviewCubeMesh::kCubeIndexBytes : 0;
   out.targetSize = FboSize;
   out.colorTexels = static_cast<std::size_t>(FboSize) * FboSize;
   out.depthSamples = out.colorTexels;
-  out.vertexArray = CubeVao;
-  out.vertexBuffer = CubeVbo;
-  out.indexBuffer = CubeEbo;
-  out.framebuffer = Fbo;
-  out.colorTexture = ColorTex;
-  out.depthBuffer = DepthRbo;
+  out.vertexArray = Cube.Vao;
+  out.vertexBuffer = Cube.Vbo;
+  out.indexBuffer = Cube.Ebo;
+  out.framebuffer = Target.Framebuffer;
+  out.colorTexture = Target.Color;
+  out.depthBuffer = Target.Depth;
   out.shaderPresent = bool(Shader);
   out.creatureSourcePresent = bool(Creatures);
   out.itemSourcePresent = bool(ItemPreview);
@@ -170,122 +128,12 @@ bool UContentPreviewRenderer::SupportsKind(ContentKind kind) const
 bool UContentPreviewRenderer::EnsureFboSize(int size)
 {
   const int clamped = std::clamp(size, kMinTargetSize, kMaxTargetSize);
-  if (Fbo != 0 && FboSize == clamped)
-  {
+  if (Target.Framebuffer && FboSize == clamped)
     return true;
-  }
-
-  GLuint nextFbo = 0, nextColor = 0, nextDepth = 0;
-  glGenFramebuffers(1, &nextFbo);
-  glGenTextures(1, &nextColor);
-  glGenRenderbuffers(1, &nextDepth);
-  bool complete = false;
-  if (nextFbo && nextColor && nextDepth)
-  {
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, nextColor);
-    AllocatePreviewColor(clamped);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindFramebuffer(GL_FRAMEBUFFER, nextFbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                           nextColor, 0);
-#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-    glDrawBuffer(GL_COLOR_ATTACHMENT0);
-    glReadBuffer(GL_COLOR_ATTACHMENT0);
-#endif
-    GLint previousRenderbuffer = 0;
-    glGetIntegerv(GL_RENDERBUFFER_BINDING, &previousRenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, nextDepth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped, clamped);
-    glBindRenderbuffer(GL_RENDERBUFFER, GLuint(previousRenderbuffer));
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                              GL_RENDERBUFFER, nextDepth);
-    complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  }
-  if (complete)
-  {
-    std::swap(Fbo, nextFbo);
-    std::swap(ColorTex, nextColor);
-    std::swap(DepthRbo, nextDepth);
-    FboSize = clamped;
-  }
-  glDeleteFramebuffers(1, &nextFbo);
-  glDeleteTextures(1, &nextColor);
-  glDeleteRenderbuffers(1, &nextDepth);
-  return complete;
-}
-
-bool UContentPreviewRenderer::InitCubeMesh()
-{
-  if (CubeVao != 0)
-  {
-    return true;
-  }
-  const float cubeShift = 1.0f / 6.0f;
-  const float vertices[] = {
-      -0.5f, -0.5f, 0.5f,  0.0f, 1.0f,  0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,
-      -0.5f, 0.5f,  0.5f,  0.0f, 0.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f,
-      0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f, 0.5f,  -0.5f, -0.5f, cubeShift * 2.0f,
-      1.0f,  0.5f,  0.5f,  0.5f,  cubeShift, 0.0f, 0.5f,  0.5f,  -0.5f, cubeShift * 2.0f,
-      0.0f,  0.5f,  -0.5f, -0.5f, cubeShift * 2.0f, 1.0f, -0.5f, -0.5f, -0.5f,
-      cubeShift * 3.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 2.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 3.0f, 0.0f, -0.5f, -0.5f, -0.5f, cubeShift * 3.0f, 1.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 4.0f, 1.0f, -0.5f, 0.5f, -0.5f, cubeShift * 3.0f,
-      0.0f,  -0.5f, 0.5f,  0.5f,  cubeShift * 4.0f, 0.0f, -0.5f, 0.5f,  0.5f,
-      cubeShift * 4.0f, 0.0f, 0.5f, 0.5f, 0.5f, cubeShift * 5.0f, 0.0f, -0.5f, 0.5f,
-      -0.5f, cubeShift * 4.0f, 1.0f, 0.5f, 0.5f, -0.5f, cubeShift * 5.0f, 1.0f,
-      -0.5f, -0.5f, -0.5f, cubeShift * 5.0f, 0.0f, 0.5f, -0.5f, -0.5f, 1.0f, 0.0f,
-      -0.5f, -0.5f, 0.5f,  cubeShift * 5.0f, 1.0f, 0.5f, -0.5f, 0.5f, 1.0f, 1.0f,
-  };
-  const unsigned int indices[] = {
-      0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
-      12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
-  };
-  static_assert(sizeof(vertices) == kCubeVertexBytes);
-  static_assert(sizeof(indices) == kCubeIndexBytes);
-
-  GLuint nextVao = 0, nextVbo = 0, nextEbo = 0;
-  glGenVertexArrays(1, &nextVao);
-  glGenBuffers(1, &nextVbo);
-  glGenBuffers(1, &nextEbo);
-  bool complete = false;
-  if (nextVao && nextVbo && nextEbo)
-  {
-    GLint callerVao = 0, callerArray = 0;
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &callerVao);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &callerArray);
-    glBindVertexArray(nextVao);
-    glBindBuffer(GL_ARRAY_BUFFER, nextVbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, nextEbo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-    GLint vertexBytes = 0, indexBytes = 0;
-    glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &vertexBytes);
-    glGetBufferParameteriv(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexBytes);
-    complete = vertexBytes == GLint(sizeof(vertices)) && indexBytes == GLint(sizeof(indices));
-    if (complete)
-    {
-      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-      glEnableVertexAttribArray(0);
-      glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                            reinterpret_cast<void *>(3 * sizeof(float)));
-      glEnableVertexAttribArray(1);
-    }
-    glBindVertexArray(GLuint(callerVao));
-    glBindBuffer(GL_ARRAY_BUFFER, GLuint(callerArray));
-  }
-  if (complete)
-  {
-    CubeVao = nextVao;
-    CubeVbo = nextVbo;
-    CubeEbo = nextEbo;
-    return true;
-  }
-  glDeleteVertexArrays(1, &nextVao);
-  glDeleteBuffers(1, &nextVbo);
-  glDeleteBuffers(1, &nextEbo);
-  return false;
+  if (!Target.Initialize(clamped))
+    return false;
+  FboSize = clamped;
+  return true;
 }
 
 GLuint UContentPreviewRenderer::GetBlockTexture(BlockId blockId) const
@@ -417,7 +265,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlIconColorAttachment attachment(Fbo, texture.Get(), ColorTex);
+  UGlIconColorAttachment attachment(Target.Framebuffer, texture.Get(), Target.Color);
   if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
 
@@ -441,7 +289,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     Shader->SetInt("texture0", 0);
     Shader->SetInt("uAnimFrame", 0);
     Shader->SetInt("uAnimFrameCount", 1);
-    glBindVertexArray(CubeVao);
+    glBindVertexArray(Cube.Vao);
 
     for (const ObjectVoxel &voxel : object->voxels)
     {
@@ -491,7 +339,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     Shader->SetInt("texture0", 0);
     Shader->SetInt("uAnimFrame", 0);
     Shader->SetInt("uAnimFrameCount", 1);
-    glBindVertexArray(CubeVao);
+    glBindVertexArray(Cube.Vao);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, blockTex);
@@ -523,7 +371,7 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
   UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
   if (!EnsureFboSize(size))
     return 0;
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, Target.Framebuffer);
   BeginPreviewDraw(FboSize);
 
   const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
@@ -537,7 +385,7 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
   Shader->SetInt("texture0", 0);
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
 
   for (const ObjectVoxel &voxel : object->voxels)
   {
@@ -561,7 +409,7 @@ GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,
 
   glBindVertexArray(0);
   Shader->Unuse();
-  return ColorTex;
+  return Target.Color;
 }
 
 GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
@@ -586,7 +434,7 @@ GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
   UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
   if (!EnsureFboSize(size))
     return 0;
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, Target.Framebuffer);
   BeginPreviewDraw(FboSize);
 
   const glm::mat4 projection =
@@ -598,7 +446,7 @@ GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
   Shader->SetInt("texture0", 0);
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
 
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, tex);
@@ -611,7 +459,7 @@ GLuint UContentPreviewRenderer::RenderBlock(const std::string &blockName,
 
   glBindVertexArray(0);
   Shader->Unuse();
-  return ColorTex;
+  return Target.Color;
 }
 
 } // namespace cutum

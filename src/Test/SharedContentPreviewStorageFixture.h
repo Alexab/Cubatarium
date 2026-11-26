@@ -102,10 +102,11 @@ inline GLuint Attachment(GLenum point)
 
 struct RefuseFramebuffer
 {
-  RefuseFramebuffer()
+  explicit RefuseFramebuffer(bool refuse = true)
   {
     Original = __glewCheckFramebufferStatus;
     Observed = {};
+    Refuse = refuse;
     __glewCheckFramebufferStatus = Check;
   }
   ~RefuseFramebuffer() { __glewCheckFramebufferStatus = Original; }
@@ -113,11 +114,12 @@ struct RefuseFramebuffer
 
 private:
   inline static PFNGLCHECKFRAMEBUFFERSTATUSPROC Original{};
-  static GLenum GLAPIENTRY Check(GLenum)
+  inline static bool Refuse{};
+  static GLenum GLAPIENTRY Check(GLenum target)
   {
     Observed = {GLuint(Binding(GL_DRAW_FRAMEBUFFER_BINDING)), Attachment(GL_COLOR_ATTACHMENT0),
                 Attachment(GL_DEPTH_ATTACHMENT)};
-    return GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT;
+    return Refuse ? GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : Original(target);
   }
 };
 

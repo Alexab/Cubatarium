@@ -55,6 +55,7 @@ class UGuiWidget;
 class UGameSession;
 class UBlockDefinitionStorage;
 class UGuiIconSource;
+struct ObjectIconStorage;
 class UContentPreviewRenderer;
 struct ContentPreviewRendererStorage;
 class UCreaturePreviewRenderer;
@@ -185,6 +186,7 @@ public:
   PaletteGridStorage InspectPaletteGridStorage() const noexcept;
   WorldGenPaletteStorage InspectWorldGenPaletteStorage() const noexcept;
   ContentPreviewRendererStorage InspectContentPreviewStorage() const noexcept;
+  ObjectIconStorage InspectObjectIconStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

@@ -738,6 +738,18 @@ ContentPreviewRendererStorage UApplication::InspectContentPreviewStorage() const
   return out;
 }
 
+ObjectIconStorage UApplication::InspectObjectIconStorage() const noexcept
+{
+  if (IconSource && Core)
+    return IconSource->InspectObjectIconStorage(Core->GetObjectLibrary().get(),
+        Core->GetTextureCubeStorage().get(), BlockDefinitions.get(), ShaderManager.get());
+
+  ObjectIconStorage out;
+  out.bindingsMatch = !IconSource;
+  out.supported = out.bindingsMatch;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
