@@ -42,6 +42,7 @@ public:
   ColumnSampleContext Build(int world_x, int world_z) const;
   size_t GetRetainedSeedTextCapacityBytes() const;
   size_t GetRetainedSettingsTextCapacityBytes() const;
+  size_t GetRetainedSettingsAlignmentSlack() const noexcept;
 
 private:
   const UOverworldHeightSampler *HeightSampler;

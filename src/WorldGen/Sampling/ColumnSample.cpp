@@ -1,6 +1,7 @@
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/SettingsTextBudget.h"
+#include "WorldGen/Core/PipelineRetainedStorage.h"
 
 #include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/OverworldHeightSampler.h"
@@ -60,6 +61,13 @@ size_t UColumnSampleBuilder::GetRetainedSeedTextCapacityBytes() const
 
 size_t UColumnSampleBuilder::GetRetainedSettingsTextCapacityBytes() const
 { return RuntimeSettingsTextCapacityBytes(Settings); }
+
+size_t UColumnSampleBuilder::GetRetainedSettingsAlignmentSlack() const noexcept
+{
+  size_t result=0;for(const auto *text:{&Settings.SeedText,&Settings.WorldGenPackId,&Settings.WorldGenPresetId})
+    result+=PipelineStlAlignmentSlack(ExternalStringCapacityBytes(*text));
+  return result;
+}
 
 ColumnSampleContext UColumnSampleBuilder::Build(int world_x, int world_z) const
 {

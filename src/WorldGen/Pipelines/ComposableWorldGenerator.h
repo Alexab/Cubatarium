@@ -56,6 +56,8 @@ public:
 
   void GenerateColumn(int worldX, int worldZ) override;
   int SurfaceYAt(int worldX, int worldZ) const override;
+  PipelineStorageSnapshot InspectRetainedStorage(bool ordinary_heap_factory_known) const noexcept override;
+  static PipelineStorageLayout GetRetainedStorageLayout() noexcept;
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
   int LakeCenterSurfaceYAt(int world_x, int world_z) const;
@@ -96,6 +98,9 @@ public:
   }
 
 private:
+  struct DirectCoarseCallback {const UComposableWorldGenerator *owner;int operator()(int x,int z)const;};
+  struct SampleCoarseCallback {const UComposableWorldGenerator *owner;int operator()(int x,int z)const;};
+  struct CachedCoarseCallback {UCoarseHeightCache *cache;CoarseHeightCallback direct;int operator()(int x,int z)const;};
   int SampleSurfaceY(int worldX, int worldZ) const;
   int SampleCoarseSurfaceY(int worldX, int worldZ) const;
   int ComputeCoarseSurfaceY(int worldX, int worldZ) const;

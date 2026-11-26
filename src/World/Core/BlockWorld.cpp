@@ -5,11 +5,68 @@
 #include "World/Math/FluidCellState.h"
 #include "World/Physics/FluidKindPresetUtil.h"
 #include "World/Physics/FluidPermeabilityUtil.h"
+#include "WorldGen/Core/RuntimeSettingsText.h"
 #include <algorithm>
 #include <unordered_set>
 
 namespace cutum
 {
+namespace {
+template<class Table> size_t EmptyPipelineTableRequest() noexcept {
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  using Node=std::_List_node<typename Table::value_type,void*>;
+  return sizeof(Node)+8*2*sizeof(typename Table::iterator);
+#else
+  return 0;
+#endif
+}
+}
+
+std::array<size_t,4> UBlockWorld::GetPipelineScratchStorageLayout() noexcept
+{
+  std::array<size_t,4> out{};
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  // Default xhash constructs one sentinel and8 buckets. This STL's deque
+  // always derives _Container_base12,so its proxy exists even in Release;
+  // empty deque map/blocks and vector backing are otherwise absent.
+  out[0]=EmptyPipelineTableRequest<decltype(UChunkManager::Chunks)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::LightFields)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::LoadedAirSlices)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::DecodedTerrainSlices)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::UnresolvedTerrainColumnReads)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::ResidentColumnChunkCounts)>()+
+    EmptyPipelineTableRequest<decltype(UChunkManager::ResidentColumnTerrainCounts)>()+sizeof(std::_Container_proxy);
+  out[1]=EmptyPipelineTableRequest<decltype(LightInputValidationMemo::entries)>();
+  out[2]=2*sizeof(std::_Ref_count_obj2<uint64_t>)+sizeof(std::_Ref_count_obj2<const int>);
+  out[3]=sizeof(std::_Ref_count_obj2<UConcurrentAllocationCountingResource>);
+#endif
+  return out;
+}
+
+PipelineScratchStorage UBlockWorld::InspectPipelineScratchStorage(bool default_factory_profile) const noexcept
+{
+  PipelineScratchStorage out;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  out.supported=default_factory_profile && !CaptureBuffer && !KnownOpenSkyAbsentQuery && !KnownAirColumnFloorQuery &&
+    !KnownAirEvidenceVersionQuery && !KnownAirInternalSliceQuery && !LightInputMemo.initialized && !LightInputMemo.catalog &&
+    LightInputMemo.entries.empty() && !ExternalStringCapacityBytes(LightInputMemo.folder) &&
+    Chunks.Chunks.empty() && Chunks.LightFields.empty() && Chunks.LoadedAirSlices.empty() && Chunks.DecodedTerrainSlices.empty() &&
+    Chunks.UnresolvedTerrainColumnReads.empty() && Chunks.AbsentLightFieldScan.empty() &&
+    Chunks.ResidentColumnChunkCounts.empty() && Chunks.ResidentColumnTerrainCounts.empty() && Chunks.FreeList.empty() &&
+    !Chunks.BeforeChunkAllocation && Chunks.InputRevision && Chunks.GeometryInputRevision && LightCalculationOwner;
+  out.metadata=Chunks.GetMetadataAllocationSnapshot().live_bytes;
+  out.memo=sizeof(std::_List_node<typename decltype(LightInputMemo.entries)::value_type,void*>)+
+    LightInputMemo.entries.bucket_count()*2*sizeof(typename decltype(LightInputMemo.entries)::iterator);
+  const std::array<std::weak_ptr<const void>,3> clocks={Chunks.InputRevision,Chunks.GeometryInputRevision,LightCalculationOwner};
+  const std::array<size_t,3> widths={sizeof(std::_Ref_count_obj2<uint64_t>),sizeof(std::_Ref_count_obj2<uint64_t>),sizeof(std::_Ref_count_obj2<const int>)};
+  for(size_t i=0;i<clocks.size();++i){bool seen=false;
+    for(size_t j=0;j<i;++j)if(!clocks[i].owner_before(clocks[j]) && !clocks[j].owner_before(clocks[i]))seen=true;
+    if(!seen)out.controls+=widths[i];
+  }
+  out.allocator=reinterpret_cast<uintptr_t>(Chunks.GetMetadataAllocationResource().get());
+#endif
+  return out;
+}
 
 int UBlockWorld::RecordLightCalculation(
     const RelightComputeResult &result,

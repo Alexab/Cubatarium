@@ -614,6 +614,13 @@ set(SOURCES
     src/App/Platform/WorkerJobKind.cpp
 )
 
+# AppRunner includes the opt-in native diagnostics. Its Release object may
+# exceed the standard COFF section count as those typed checks grow.
+if(CUBATARIUM_MSVC_DESKTOP)
+  set_property(SOURCE src/App/Platform/AppRunner.cpp APPEND PROPERTY
+      COMPILE_OPTIONS "$<$<CONFIG:Release>:/bigobj>")
+endif()
+
 set(HEADERS
     src/Render/Camera/Camera.h
     src/Render/Camera/CameraLens.h
@@ -3189,6 +3196,17 @@ cubatarium_add_test(NAME fluid_worldgen_chunk_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog)
 if(WIN32)
   target_link_libraries(fluid_worldgen_chunk_test dbghelp)
+endif()
+
+if(CUBATARIUM_MSVC_DESKTOP)
+cubatarium_add_test(NAME pipeline_retained_storage_test
+    SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES} src/Test/PipelineRetainedStorageTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
+    WIN32_LIBRARIES dbghelp)
+add_test(NAME pipeline_retained_storage_test COMMAND $<TARGET_FILE:pipeline_retained_storage_test>
+    ${CMAKE_CURRENT_BINARY_DIR}/pipeline-retained-storage.json)
+set_tests_properties(pipeline_retained_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 endif()
 
 cubatarium_add_test(NAME worldgen_populate_parity_probe

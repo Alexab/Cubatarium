@@ -109,6 +109,7 @@ public:
 
   void SetCoarseHeightCallback(CoarseHeightCallback callback);
   bool HasCoarseHeightCallback() const { return static_cast<bool>(CoarseHeightFn); }
+  const CoarseHeightCallback &GetCoarseHeightCallbackForStorage() const { return CoarseHeightFn; }
   int CoarseYAt(int x, int z, int fallback_y) const;
 
   BiomeId At(int x, int z, int surfaceY, int SeaLevel, int MaxHeight) const;

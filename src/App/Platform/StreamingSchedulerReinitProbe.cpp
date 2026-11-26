@@ -2,6 +2,7 @@
 #include "World/Core/World.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "Test/GenerationProducerRetirementFixture.h"
+#include "Test/PipelineRetainedStorageFixture.h"
 
 namespace cutum {
 struct StreamingSchedulerReinitProbe {
@@ -75,6 +76,7 @@ struct StreamingSchedulerReinitProbe {
       report["streaming_scheduler_reinit"]={{"schema","streaming-scheduler-reinit-native.v1"},{"status","PASS"},{"cycles",cycles},
         {"normal_destruction_joins",true},{"max_visible_pairs",1},{"scope","Actual isolated UWorld session-resume path and production tick retry hook with gated generation. No process-exit/all-pools/whole-process/S6 verdict."}};
     }
+    report["pipeline_retained_storage"]=RunPipelineRetainedStorageProbe();
     return report;
   }
 };

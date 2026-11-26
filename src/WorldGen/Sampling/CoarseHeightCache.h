@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <array>
 #include <functional>
 #include <vector>
 
@@ -28,6 +29,7 @@ public:
   void Put(int x, int z, int value);
   const CoarseHeightCacheStats &GetStats() const { return Stats; }
   size_t GetStorageBytes() const {return Values.capacity()*sizeof(int)+Valid.capacity()*sizeof(uint8_t);}
+  std::array<size_t,2> GetStorageCapacities() const {return {Values.capacity()*sizeof(int),Valid.capacity()*sizeof(uint8_t)};}
 
 private:
   int OriginX{0};

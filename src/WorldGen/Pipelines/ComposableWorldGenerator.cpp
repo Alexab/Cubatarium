@@ -1,5 +1,7 @@
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Core/BlockWorld.h"
+#include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/WorldGenPack.h"
 #include "WorldGen/Core/WorldGenStageMask.h"
 #include "WorldGen/Features/CaveCarver.h"
@@ -12,9 +14,76 @@
 #include "WorldGen/Stages/WorldGenStages.h"
 #include <algorithm>
 #include <limits>
+#include <typeinfo>
 
 namespace cutum
 {
+int UComposableWorldGenerator::DirectCoarseCallback::operator()(int x,int z)const{return owner->ComputeCoarseSurfaceY(x,z);}
+int UComposableWorldGenerator::SampleCoarseCallback::operator()(int x,int z)const{return owner->SampleCoarseSurfaceY(x,z);}
+int UComposableWorldGenerator::CachedCoarseCallback::operator()(int x,int z)const{return cache->GetOrCompute(x,z,direct);}
+
+PipelineStorageLayout UComposableWorldGenerator::GetRetainedStorageLayout() noexcept
+{
+  PipelineStorageLayout out;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  const auto function=[](auto callback){using F=std::_Func_impl_no_alloc<decltype(callback),int,int,int>;return std::_Is_large<F>?sizeof(F):size_t{0};};
+  const auto world=UBlockWorld::GetPipelineScratchStorageLayout();
+  out.widths={sizeof(UComposableWorldGenerator),sizeof(UProceduralClimateBiomeSource),sizeof(ImageMapBiomeSource),
+    function(DirectCoarseCallback{nullptr}),function(SampleCoarseCallback{nullptr}),function(CachedCoarseCallback{nullptr,{}}),
+    sizeof(SpawnResolveCandidateEntry),sizeof(LakeCenterSurfaceYCache),world[0],world[1],world[2],world[3]};
+  out.inline_children={sizeof(Ctx),sizeof(HeightSampler),sizeof(DensitySampler),sizeof(AquiferSampler),sizeof(BiomeSampler),
+    sizeof(SampleBuilder),sizeof(ChunkCoarseCache),sizeof(LakeCenterSurfaceYCache),sizeof(DirectCoarseHeightFn)};
+  out.stl_large_threshold=std::_Big_allocation_threshold;out.stl_large_slack=std::_Non_user_size;
+  out.spawn_raw_upper=2500*3*sizeof(int)+PipelineStlAlignmentSlack(2500*3*sizeof(int));out.supported=true;
+#endif
+  return out;
+}
+
+PipelineStorageSnapshot UComposableWorldGenerator::InspectRetainedStorage(bool ordinary_heap_factory_known) const noexcept
+{
+  PipelineStorageSnapshot out;out.layout=GetRetainedStorageLayout();out.initialized=true;
+  out.pipeline=reinterpret_cast<uintptr_t>(this);out.supported=ordinary_heap_factory_known && out.layout.supported && typeid(*this)==typeid(UComposableWorldGenerator);
+  const auto set=[&](PipelineStorageCell cell,size_t value){out.requests[static_cast<size_t>(cell)]=value;};
+  set(PipelineStorageCell::Object,out.layout.widths[0]);
+  if(BiomeSource){out.biome_source=reinterpret_cast<uintptr_t>(BiomeSource.get());
+    if(dynamic_cast<const UProceduralClimateBiomeSource*>(BiomeSource.get()))set(PipelineStorageCell::BiomeSource,out.layout.widths[1]);
+    else if(dynamic_cast<const ImageMapBiomeSource*>(BiomeSource.get()))set(PipelineStorageCell::BiomeSource,out.layout.widths[2]);
+    else out.supported=false;
+  }
+  const size_t text=AddTextCapacityBytes(RuntimeSettingsTextCapacityBytes(Ctx.Settings),ExternalStringCapacityBytes(Ctx.WorldgenOwnerPackId));
+  set(PipelineStorageCell::ContextText,text);set(PipelineStorageCell::SampleText,GetRetainedSampleSettingsTextCapacityBytes());
+  set(PipelineStorageCell::SpawnCandidates,SpawnResolveCandidates.capacity()*sizeof(SpawnResolveCandidateEntry));
+  size_t callbacks=0;
+  const auto direct=[&](const CoarseHeightCallback &fn){if(!fn)return true;const auto *p=fn.target<DirectCoarseCallback>();
+    if(!p || p->owner!=this)return false;callbacks=AddTextCapacityBytes(callbacks,out.layout.widths[3]);return true;};
+  if(!direct(DirectCoarseHeightFn))out.supported=false;
+  if(Ctx.CoarseSurfaceYAt){const auto *p=Ctx.CoarseSurfaceYAt.target<SampleCoarseCallback>();
+    if(!p || p->owner!=this)out.supported=false;else callbacks=AddTextCapacityBytes(callbacks,out.layout.widths[4]);}
+  if(Ctx.OnColumnMeshDirty)out.supported=false;
+  if(BiomeSampler){const auto &fn=BiomeSampler->GetCoarseHeightCallbackForStorage();
+    if(const auto *p=fn.target<CachedCoarseCallback>()){
+      if(!ChunkCoarseCache || p->cache!=&*ChunkCoarseCache || !direct(p->direct))out.supported=false;
+      callbacks=AddTextCapacityBytes(callbacks,out.layout.widths[5]);
+    }else if(!direct(fn))out.supported=false;
+  }
+  set(PipelineStorageCell::Callbacks,callbacks);
+  set(PipelineStorageCell::DensityCache,DensitySampler?DensitySampler->GetSamplingCacheStorageBytes():0);
+  set(PipelineStorageCell::CoarseCache,GetCoarseMemoStorageBytes());
+  size_t slack=PipelineStlAlignmentSlack(SpawnResolveCandidates.capacity()*sizeof(SpawnResolveCandidateEntry));
+  for(const auto *text:{&Ctx.Settings.SeedText,&Ctx.Settings.WorldGenPackId,&Ctx.Settings.WorldGenPresetId,&Ctx.WorldgenOwnerPackId})
+    slack+=PipelineStlAlignmentSlack(ExternalStringCapacityBytes(*text));
+  if(SampleBuilder)slack+=SampleBuilder->GetRetainedSettingsAlignmentSlack();
+  if(DensitySampler)slack+=PipelineStlAlignmentSlack(DensitySampler->GetSamplingCacheStorageBytes());
+  if(ChunkCoarseCache){
+    // Each vector uses the same4096-entry domain;both buffers exceed the
+    // threshold at maximum pad. Exact capacities are reported by the cache.
+    const auto capacities=ChunkCoarseCache->GetStorageCapacities();
+    slack+=PipelineStlAlignmentSlack(capacities[0])+PipelineStlAlignmentSlack(capacities[1]);
+  }
+  set(PipelineStorageCell::StlAlignment,slack);
+  out.idle=!ChunkCoarseCache && (!DensitySampler || !DensitySampler->GetSamplingCacheStorageBytes()) && !LakeMemoEntryCount;
+  out.overflow=text==SIZE_MAX || callbacks==SIZE_MAX;out.supported=out.supported && !out.overflow;return out;
+}
 
 // Pipeline: climate sample -> height -> biomes -> surface fill -> ravines ->
 // caves -> fluids -> ores -> vegetation -> ground_cover -> decoration ->
@@ -79,8 +148,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(
     }
     if (HeightSampler || DensitySampler)
     {
-      DirectCoarseHeightFn = [this](int hx, int hz)
-      { return ComputeCoarseSurfaceY(hx, hz); };
+      DirectCoarseHeightFn = DirectCoarseCallback{this};
     }
     if (DirectCoarseHeightFn)
     {
@@ -93,8 +161,7 @@ UComposableWorldGenerator::UComposableWorldGenerator(
                           BiomeSampler.has_value() ? &*BiomeSampler : nullptr,
                           Ctx.Settings, BiomeSource.get());
   }
-  Ctx.CoarseSurfaceYAt = [this](int world_x, int world_z)
-  { return SampleCoarseSurfaceY(world_x, world_z); };
+  Ctx.CoarseSurfaceYAt = SampleCoarseCallback{this};
 }
 
 void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
@@ -118,9 +185,7 @@ void UComposableWorldGenerator::BeginChunkCoarseCache(int base_x, int base_z,
   if (BiomeSampler)
   {
     CoarseHeightCallback direct = DirectCoarseHeightFn;
-    BiomeSampler->SetCoarseHeightCallback(
-        [cache, direct](int hx, int hz)
-        { return cache->GetOrCompute(hx, hz, direct); });
+    BiomeSampler->SetCoarseHeightCallback(CachedCoarseCallback{cache,std::move(direct)});
   }
 }
 

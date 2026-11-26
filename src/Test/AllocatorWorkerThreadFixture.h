@@ -23,10 +23,11 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
   struct Bridge {
     std::mutex mutex;std::condition_variable cv;
     std::vector<AllocatorSourcePacket> active,idle,post_task;
+    std::vector<PipelineStoragePacket> storage;
     std::vector<bool> passive_ok,passive_fresh,idle_clean,observer_restored;
     AllocatorSourcePhase *active_phase{},*idle_phase{};
     size_t active_ready{},idle_ready{},post_ready{};bool release_active{},release_idle{},release_post{},disabled{};int mode{};
-    explicit Bridge(size_t n):active(n),idle(n),post_task(n),passive_ok(n),passive_fresh(n),idle_clean(n),observer_restored(n){
+    explicit Bridge(size_t n):active(n),idle(n),post_task(n),storage(n),passive_ok(n),passive_fresh(n),idle_clean(n),observer_restored(n){
       for(auto &p:active)p.nodes.reserve(128);for(auto &p:idle)p.nodes.reserve(128);
       for(auto &p:post_task)p.nodes.reserve(128);
     }
@@ -138,22 +139,51 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
     AllocatorSourcePhase post_phase(1003+100*mode,workers+1);AllocatorOwnerCensus post_main(128);post_main.Scheduler(scheduler);
     AllocatorSourcePacket post_packet(128);post_main.ExportInto(post_packet,post_phase,0,true);
     bridge.post_ready=0;bridge.release_post=false;
+    AllocatorSourcePhase storage_phase(7001+mode,workers);
     for(size_t i=0;i<workers;++i)AllocatorOwnerCensus::EnqueueSchedulerWorkerView(scheduler,[&,i]{
       AllocatorOwnerCensus census(128);const bool source_clear=!ActiveBufferBudget.budget && !ActiveBufferBudget.job &&
         !ActiveBufferBudgetJobSource.origin && !ActiveBufferBudgetJobSource.scheduler_settings_slot &&
         ActiveBufferBudgetJobSource.profile==BufferJobSourceProfile::Unknown && !detail::ActivePopulationAllocatorObserver;
       PipelineAllocatorThreadView state;bool clean=source_clear;
       if(refusal.set)refusal.set(true);
-      try{if(clean){state=InspectPipelineCallingThreadAllocators(census);census.ExportInto(bridge.post_task[i],post_phase,i+1,state.initialized && !state.resident_fields);}}
+      try{if(clean){state=InspectPipelineCallingThreadAllocators(census);census.ExportInto(bridge.post_task[i],post_phase,i+1,state.initialized && !state.resident_fields);
+        ExportPipelineStorage(bridge.storage[i],storage_phase,i);}}
       catch(...){clean=false;}
       if(refusal.set)refusal.set(false);clean=clean && (!refusal.attempts || !refusal.attempts());
-      if(!clean)bridge.post_task[i].supported=false;
+      if(!clean){bridge.post_task[i].supported=false;bridge.storage[i].supported=false;}
       std::unique_lock lock(bridge.mutex);++bridge.post_ready;bridge.cv.notify_all();
       if(!bridge.cv.wait_for(lock,std::chrono::seconds(10),[&]{return bridge.release_post;}))std::abort();
     });
     {std::unique_lock lock(bridge.mutex);require(bridge.cv.wait_for(lock,std::chrono::seconds(10),[&]{return bridge.post_ready==workers;}),"allocator post-task barrier deadline");}
     std::vector<const AllocatorSourcePacket*> post_packets{&post_packet};for(const auto &p:bridge.post_task)post_packets.push_back(&p);
-    const auto post=JoinAllocatorSourcePackets(post_phase,post_packets,true);post_phase.Close();
+    const auto post=JoinAllocatorSourcePackets(post_phase,post_packets,true);
+    std::vector<const PipelineStoragePacket*> storage_packets;bool allocator_coverage=true;
+    for(size_t i=0;i<workers;++i){storage_packets.push_back(&bridge.storage[i]);const auto &s=bridge.storage[i].source;
+      bool found=false;for(const auto &node:bridge.post_task[i].nodes)if(node.kind==0 && node.object==s.metadata_allocator && node.bytes==s.layout.widths[11])found=true;
+      allocator_coverage=allocator_coverage && found && bridge.storage[i].thread==bridge.post_task[i].thread && s.initialized && s.idle;
+    }
+    const auto retained=JoinPipelineStorage(storage_phase,storage_packets,true,true,allocator_coverage);
+    auto absent=storage_packets;absent.pop_back();const bool missing_storage=!JoinPipelineStorage(storage_phase,absent,true,true,true).supported;
+    auto repeated=storage_packets;for(int alias=0;alias<64;++alias)repeated.push_back(storage_packets[0]);
+    const auto aliased_storage=JoinPipelineStorage(storage_phase,repeated,true,true,true);
+    auto corrupted=bridge.storage.back();corrupted.source.layout.widths[0]+=1;auto bad_storage=storage_packets;bad_storage.back()=&corrupted;
+    bool storage_controls=missing_storage && !JoinPipelineStorage(storage_phase,bad_storage,true,true,true).supported &&
+      !JoinPipelineStorage(storage_phase,storage_packets,false,true,true).supported &&
+      !JoinPipelineStorage(storage_phase,storage_packets,true,false,true).supported &&
+      !JoinPipelineStorage(storage_phase,storage_packets,true,true,false).supported && aliased_storage.supported &&
+      aliased_storage.additional_requests==retained.additional_requests;
+    corrupted=bridge.storage.back();corrupted.epoch+=1;
+    storage_controls=storage_controls && !JoinPipelineStorage(storage_phase,bad_storage,true,true,true).supported;
+    if(workers>1){corrupted=bridge.storage.back();corrupted.thread=bridge.storage.front().thread;
+      storage_controls=storage_controls && !JoinPipelineStorage(storage_phase,bad_storage,true,true,true).supported;}
+    std::array<size_t,PipelineStorageCells> retained_rows{};
+    for(const auto &packet:bridge.storage)for(size_t i=0;i<PipelineStorageCells;++i)retained_rows[i]+=packet.source.requests[i];
+    const auto &storage_layout=bridge.storage[0].source.layout;
+    require(retained.supported && storage_controls && retained.participants==workers && !retained.covered_requests &&
+      retained.additional_requests==workers*(storage_layout.widths[0]+storage_layout.widths[8]+storage_layout.widths[9]+storage_layout.widths[10]),
+      "complete idle pipeline/world source requests include whole object and exclude already counted allocator roots");
+    storage_phase.Close();const bool storage_closed=!JoinPipelineStorage(storage_phase,storage_packets,true,true,true).supported;
+    post_phase.Close();
     {std::lock_guard lock(bridge.mutex);bridge.release_post=true;bridge.cv.notify_all();}
     require(AllocatorOwnerCensus::WaitSchedulerIdle(scheduler,std::chrono::seconds(10)),"allocator post-task probes idle");
     require(post.supported && post.blocks[0]==1+workers && post.blocks[1]==0 && post.blocks[4]==0 && post.blocks[9]==0 &&
@@ -178,6 +208,8 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
       {"idle_covered_requests",after.covered_requests},{"idle_decoder_request_base",idle_malloc},{"participant_count",joined.participants},
       {"post_task_blocks",post.blocks},{"post_task_additional",post.additional_requests},{"post_task_covered_requests",post.covered_requests},
       {"post_task_sources_clear",post.supported},
+      {"pipeline_storage_requests",retained_rows},{"pipeline_storage_additional",retained.additional_requests},
+      {"pipeline_storage_controls",storage_controls && storage_closed},{"pipeline_allocator_coverage",allocator_coverage},
       {"global_work_slots_active",global_active_slots},{"global_work_slots_after",global_after_slots},
       {"exclusive_work_slot_domain",exclusive_work_slot_domain},
       {"all_idle_scopes_restored",idle_clean},{"passive_query_ok",passive},{"outcomes_correct",outcomes},{"debt0",debt0},
@@ -187,6 +219,7 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
   return {{"schema","allocator-worker-threads.v1"},{"status","PASS"},{"workers",workers},{"cases",cases},
     {"fresh_no_world_initialization_queries",fresh_queries},{"ordinary_refusal_available",refusal.set!=nullptr},
     {"source_widths",AllocatorOwnerCensus::RequestWidths()},{"pipeline_holder_inline",GetPipelineRuntimeInlineLayout().whole},
+    {"pipeline_storage_layout",bridge.storage.front().source.layout.widths},
     {"budget_source_inline",sizeof(ActiveBufferBudgetJobSource)},{"observer_inline",PopulationAllocatorObserverInlineBytes()},
     {"scope","Real pipeline full-pool owner-thread snapshots;only plain identity packets cross the barrier. One open source phase required. Opaque control requests and decoder request base recorded separately;no whole process/CRT/GPU/full S6 verdict."}};
 }

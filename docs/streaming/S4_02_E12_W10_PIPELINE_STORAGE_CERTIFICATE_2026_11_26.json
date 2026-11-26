@@ -1,0 +1,2469 @@
+{
+  "schema": "s4-e12-w10-pipeline-storage.v1",
+  "status": "SCOPED_PIPELINE_STORAGE_PASS_E12_OPEN",
+  "pipeline_unit": {
+    "cases": [
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 0,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 1,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 2,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 3,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          81920,
+          20480,
+          0,
+          0,
+          0,
+          156
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 4,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          0,
+          20480,
+          0,
+          0,
+          0,
+          117
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 5,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 0,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 1,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 2,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 3,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          81920,
+          20480,
+          0,
+          0,
+          0,
+          156
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 4,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          0,
+          20480,
+          0,
+          0,
+          0,
+          117
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 5,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      }
+    ],
+    "empty_world_requests": [
+      1240,
+      192,
+      72
+    ],
+    "fresh_query_no_world": true,
+    "history_callback_world_overflow_controls": true,
+    "inline_children": [
+      648,
+      116,
+      336,
+      68,
+      168,
+      424,
+      96,
+      4096,
+      64
+    ],
+    "layout": [
+      6128,
+      16,
+      16,
+      0,
+      0,
+      80,
+      8,
+      4096,
+      1240,
+      192,
+      72,
+      264
+    ],
+    "max_retained_requests": 31382,
+    "ordinary_queries_allocate0": true,
+    "ordinary_requests": [
+      {
+        "active": 16983,
+        "construction_attempts": 5,
+        "descriptor": 0,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 5,
+        "descriptor": 1,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 8,
+        "descriptor": 2,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 8,
+        "descriptor": 3,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 119596,
+        "construction_attempts": 9,
+        "descriptor": 4,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 119596,
+        "query_allocations": 0,
+        "retained": 16999,
+        "spawn": 31382
+      },
+      {
+        "active": 37637,
+        "construction_attempts": 9,
+        "descriptor": 5,
+        "final_live": 0,
+        "image_mode": 0,
+        "peak": 61421,
+        "query_allocations": 0,
+        "retained": 16999,
+        "spawn": 31382
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 5,
+        "descriptor": 0,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 5,
+        "descriptor": 1,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 8,
+        "descriptor": 2,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 16983,
+        "construction_attempts": 8,
+        "descriptor": 3,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 61405,
+        "query_allocations": 0,
+        "retained": 16983,
+        "spawn": 31366
+      },
+      {
+        "active": 119596,
+        "construction_attempts": 9,
+        "descriptor": 4,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 119596,
+        "query_allocations": 0,
+        "retained": 16999,
+        "spawn": 31382
+      },
+      {
+        "active": 37637,
+        "construction_attempts": 9,
+        "descriptor": 5,
+        "final_live": 0,
+        "image_mode": 1,
+        "peak": 61421,
+        "query_allocations": 0,
+        "retained": 16999,
+        "spawn": 31382
+      }
+    ],
+    "persistent_refusal_prefixes": 110,
+    "schema": "pipeline-retained-storage.v1",
+    "scope": "Known factory pipeline storage and default empty scratch world;capacity-aware requests,whole parent overlap and explicit construction history. Other worlds/callback histories/platform/process remain outside this source profile.",
+    "spawn_raw_upper": 30039,
+    "status": "PASS",
+    "unmodeled_request_control": true,
+    "world_ordinary_requests": 3272
+  },
+  "pipeline_native": {
+    "cases": [
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 0,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 1,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 2,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 3,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          81920,
+          20480,
+          0,
+          0,
+          0,
+          156
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 4,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          0,
+          20480,
+          0,
+          0,
+          0,
+          117
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 5,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 0,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 0,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 1,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 2,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "cold": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 3,
+        "idle": [
+          6128,
+          0,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          0,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269122
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          81920,
+          20480,
+          0,
+          0,
+          0,
+          156
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 4,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      },
+      {
+        "active": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          80,
+          0,
+          20480,
+          0,
+          0,
+          0,
+          117
+        ],
+        "cold": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "descriptor": 5,
+        "idle": [
+          6128,
+          16,
+          10816,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          39
+        ],
+        "image_mode": 1,
+        "spawn": [
+          6128,
+          16,
+          10816,
+          0,
+          14344,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          78
+        ],
+        "transition_upper": 269138
+      }
+    ],
+    "empty_world_requests": [
+      1240,
+      192,
+      72
+    ],
+    "fresh_query_no_world": true,
+    "history_callback_world_overflow_controls": true,
+    "inline_children": [
+      648,
+      116,
+      336,
+      68,
+      168,
+      424,
+      96,
+      4096,
+      64
+    ],
+    "layout": [
+      6128,
+      16,
+      16,
+      0,
+      0,
+      80,
+      8,
+      4096,
+      1240,
+      192,
+      72,
+      264
+    ],
+    "max_retained_requests": 31382,
+    "schema": "pipeline-retained-storage.v1",
+    "scope": "Known factory pipeline storage and default empty scratch world;capacity-aware requests,whole parent overlap and explicit construction history. Other worlds/callback histories/platform/process remain outside this source profile.",
+    "spawn_raw_upper": 30039,
+    "status": "PASS"
+  },
+  "pipeline_request_cells": [
+    "object",
+    "biome_source",
+    "context_text",
+    "sample_text",
+    "spawn_candidates",
+    "callbacks",
+    "density_cache",
+    "coarse_cache",
+    "world_metadata",
+    "world_memo",
+    "world_controls",
+    "stl_alignment"
+  ],
+  "generation_unit": {
+    "busy_retries": 512,
+    "cohort_debt0": true,
+    "constructor_exact_retry": true,
+    "constructor_refusal_prefixes": 7,
+    "cycles": [
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0301,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 0,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0375,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 1,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0099,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 2,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0094,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 3,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0133,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 4,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0114,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 5,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0087,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 6,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0083,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 7,
+        "pair_destroyed": 1
+      }
+    ],
+    "exact_successor_committed": true,
+    "max_visible_pairs": 1,
+    "scheduler_before_populator": true,
+    "schema": "generation-producer-retirement.v1",
+    "scope": "Actual production retirement helper and generation jobs. Caller retains same source graph until pool idle including closure retirement;not all runtime pools/process-exit/CRT/GPU/process acceptance.",
+    "status": "PASS",
+    "worst_busy_poll_ms": 0.0375
+  },
+  "native_generation_retirement": {
+    "busy_retries": 512,
+    "cohort_debt0": true,
+    "cycles": [
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0233,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 0,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0196,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 1,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0209,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 2,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0205,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 3,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0306,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 4,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0159,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 5,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0163,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 6,
+        "pair_destroyed": 1
+      },
+      {
+        "all_payloads_retired": true,
+        "busy_poll_ms": 0.0162,
+        "busy_retries": 64,
+        "cancellation_callback_valid": true,
+        "cycle": 7,
+        "pair_destroyed": 1
+      }
+    ],
+    "exact_successor_committed": true,
+    "max_visible_pairs": 1,
+    "scheduler_before_populator": true,
+    "schema": "generation-producer-retirement.v1",
+    "scope": "Actual production retirement helper and generation jobs. Caller retains same source graph until pool idle including closure retirement;not all runtime pools/process-exit/CRT/GPU/process acceptance.",
+    "status": "PASS",
+    "worst_busy_poll_ms": 0.0306
+  },
+  "native_streaming_reinit": {
+    "cycles": [
+      {
+        "absent_registry": false,
+        "busy_poll_ms": 0.0175,
+        "busy_retries": 64,
+        "cycle": 0,
+        "old_payloads_retired": true,
+        "pause_resume": false,
+        "successor_callbacks": true,
+        "visible_pairs_upper": 1
+      },
+      {
+        "absent_registry": false,
+        "busy_poll_ms": 0.0184,
+        "busy_retries": 64,
+        "cycle": 1,
+        "old_payloads_retired": true,
+        "pause_resume": true,
+        "successor_callbacks": true,
+        "visible_pairs_upper": 1
+      },
+      {
+        "absent_registry": true,
+        "busy_poll_ms": 0.0356,
+        "busy_retries": 64,
+        "cycle": 2,
+        "old_payloads_retired": true,
+        "pause_resume": false,
+        "successor_callbacks": true,
+        "visible_pairs_upper": 1
+      }
+    ],
+    "max_visible_pairs": 1,
+    "normal_destruction_joins": true,
+    "schema": "streaming-scheduler-reinit-native.v1",
+    "scope": "Actual isolated UWorld session-resume path and production tick retry hook with gated generation. No process-exit/all-pools/whole-process/S6 verdict.",
+    "status": "PASS"
+  },
+  "summary": "E12 W10 known-factory retained pipeline and default empty TLS scratch-world source profile PASS. Compiled whole generator6128 includes lake memo4096 and all context/sampler/optional/function shells once;procedural/image strategy16 is separate heap storage. Actual settings/owner/sampling string capacities,spawn vector capacity,known callback request shapes and density/coarse backing are observed without allocation or invocation. Three existing callback capture shapes are named with unchanged captures/ownership/output;compiled ordinary callback requests0/0/80. Exact dynamic type plus explicit ordinary-heap factory origin required;unknown origin/derived type/callback/nonempty foreign world rejects. Default empty scratch metadata1240 includes7 xhash tables1224 and the Release deque proxy16;memento table192 plus three default clock/identity coallocations72 are additional. Resource264 already belongs to W07 allocator census and is not charged twice;W03 TLS holder1968/world1504/key/owner shells stay separate overlaps. Large contiguous STL buffers add39 requested bytes at4096 threshold,now a separate alignment row;E06 density81920/coarse20480 payload coverage remains unchanged. Conservative construction/refresh/spawn upper takes explicit before-capacity/new-text history,temporary raw spawn30039 bytes,old/new empty table reset overlap and STL slacks;unknown history/coverage and overflow reject. All6 actual descriptor factories x procedural/image modes=12 cases:typed pipeline/caches/spawn retained requests equal observed ordinary-new requests through destruction. 110 persistent constructor refusal prefixes across pipelines and default scratch world unwind to0 and same-input retries succeed;fresh and populated queries allocate0 under refusal,unmodeled73-byte control rejects. Fresh source query constructs no world. Actual generation pool own-thread post-task packets are joined in one open coherent phase with complete participants and each metadata allocator bound to its actual W07 resource node. Normal/token cancellation/budget unwind+retry cohorts each add30528 retained pipeline/world bytes for4 workers;W07 post-task1440 joins to31968 selected requests. Missing participant,profile,epoch/domain/coverage/allocator roots,closed phase and64 aliases controls preserve fail-closed source semantics;diagnostic vectors/JSON are separate temporary storage. All34 Release groups PASS,including prior33,ordinary observation/refusal,new pure model and actual worker-source binding,full decor/STBI/noise/logger/catalog/queue controls and2 publication GL readbacks. Fresh frozen desktop/native pure pipeline report and worker layouts/requests match unit;runtime/startup/owner/direct save/UI/provenance plus8 texture GL readbacks PASS;config bytes restored. Native aggregate remains UNTESTED and whole_runtime_complete=false. Source profile is not all pipeline/world/callback/external owner/OS-thread/CRT/GPU/process or original S6 acceptance.",
+  "remaining": "Continue existing S4.02 LIMIT.Q09 E12 after W01..W10 without audit restart or reopening C01..C06/E11. W10 accepts known private TLS pipeline/empty scratch-world retained requests and explicit construction-history upper,including source-derived Release deque proxy and large STL alignment overhead. Next finite source card:Environment flag/name vector/string backing and merge-name TLS string histories,using actual capacity-aware owner-thread views and explicit cold/growth/retirement histories. Then bind remaining render/world/window TLS,main/world pipeline and nonallocator callback owners,other external/detached/process-exit histories,and complete all actual E11 world/pool/input domains in coherent phases. All live initialized/idle cache threads and OS threads require complete source counts. Unknown arbitrary factory/alias/deleter/allocation histories remain UNSUPPORTED. W03 holder1968 includes world1504/key332/owner104/build8/pipeline pointer8 once;job source24/observer8 separate. W07 allocator roots264,W10 pipeline6128/metadata1240/memo192/controls72,W01 weak shells,E11 reader160,W02 noise/raw logger TLS and STBI32 prefixes must each be charged once. Remaining STL/upstream alignment/slack for other source domains stays explicit;W10 local slack row does not establish a universal CRT envelope. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "after_weak_guard_control_requests": 40,
+    "caller_aliases_and_foreign_counter_controls": true,
+    "escaped_additional": 336,
+    "escaped_covered": 88,
+    "expired_packet_history_supported": true,
+    "final_additional": 0,
+    "inspector_extends_no_source_lifetime": true,
+    "missing_caller_rejected": true,
+    "missing_late_reassigned_history_rejected": true,
+    "quota_and_result_credit0": true,
+    "remaining_additional": 336,
+    "remaining_covered": 0,
+    "scheduler_and_caller_additional": 384,
+    "schema": "allocator-returned-controls.v1",
+    "scope": "Actual drained generation completion,buffer/job/result guard after scheduler destruction,and caller-owned weak coallocation histories. Stable weak slots and known factory origin required;no detached-producer/runtime/process verdict.",
+    "status": "PASS",
+    "weak_additional": 336,
+    "weak_covered": 88,
+    "weak_only": [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+    ]
+  },
+  "native_returned": {
+    "after_weak_guard_control_requests": 40,
+    "caller_aliases_and_foreign_counter_controls": true,
+    "escaped_additional": 336,
+    "escaped_covered": 88,
+    "expired_packet_history_supported": true,
+    "final_additional": 0,
+    "inspector_extends_no_source_lifetime": true,
+    "missing_caller_rejected": true,
+    "missing_late_reassigned_history_rejected": true,
+    "quota_and_result_credit0": true,
+    "remaining_additional": 336,
+    "remaining_covered": 0,
+    "scheduler_and_caller_additional": 384,
+    "schema": "allocator-returned-controls.v1",
+    "scope": "Actual drained generation completion,buffer/job/result guard after scheduler destruction,and caller-owned weak coallocation histories. Stable weak slots and known factory origin required;no detached-producer/runtime/process verdict.",
+    "status": "PASS",
+    "weak_additional": 336,
+    "weak_covered": 88,
+    "weak_only": [
+      0,
+      0,
+      1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      1
+    ]
+  },
+  "unit_runs": [
+    {
+      "name": "pipeline-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\pipeline_retained_storage_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-pipeline-storage.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.018634499981999397,
+      "exe_sha256": "feabb36384f016cf53ffbb335e56e85f996b56e2554c995a04bbb7d04f4b89a0",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-pipeline-storage.log"
+    },
+    {
+      "name": "producer-retirement",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--producer-retirement",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-producer-retirement.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0296424999833107,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-producer-retirement.log"
+    },
+    {
+      "name": "normal-shutdown",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\normal_shutdown_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.05937090003862977,
+      "exe_sha256": "f754066909589669519aa5875b300f708831913099274eeb2905cefc7748e4c0",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-normal-shutdown.log"
+    },
+    {
+      "name": "returned-controls",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--returned-controls",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-returned-controls.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.012641699984669685,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-returned-controls.log"
+    },
+    {
+      "name": "worker-threads",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--allocator-workers",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-worker-threads.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.02035570004954934,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-worker-threads.log"
+    },
+    {
+      "name": "owner-census",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\allocator_owner_source_test.exe",
+        "--census",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-owner-census.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01162180001847446,
+      "exe_sha256": "ff258b82e0ea9f9588ad121d24f0e981d89156aa6c68173e13829fda654d2018",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-owner-census.log"
+    },
+    {
+      "name": "owner-graph",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--allocator-graph",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-owner-graph.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013046500040218234,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-owner-graph.log"
+    },
+    {
+      "name": "allocator-owner",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\allocator_owner_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-allocator-owner.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01184829999692738,
+      "exe_sha256": "ff258b82e0ea9f9588ad121d24f0e981d89156aa6c68173e13829fda654d2018",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-allocator-owner.log"
+    },
+    {
+      "name": "control-refusal",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--control-refusal",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-control-refusal.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01302940002642572,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-control-refusal.log"
+    },
+    {
+      "name": "job-admission",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\job_admission_lifetime_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.012467799941077828,
+      "exe_sha256": "31fc54fd06d39bb7abc63ef96eb897e72a0b6017854b281c5886209b246f18b8",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-job-admission.log"
+    },
+    {
+      "name": "field-ownership",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\section_light_field_ownership_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.012244400102645159,
+      "exe_sha256": "f2660be4c2e9ea36220312c358aef5ee8c01cb2b744682140388273ae9df8010",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-field-ownership.log"
+    },
+    {
+      "name": "stbi-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-stbi-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.31518519995734096,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-stbi-source.log"
+    },
+    {
+      "name": "stbi-conversion-range",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-stbi-conversion-range.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.012149599846452475,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-stbi-conversion-range.log"
+    },
+    {
+      "name": "glog-resources",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--resources",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-glog-resources.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.022728599840775132,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-glog-resources.log"
+    },
+    {
+      "name": "runtime-inline",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\runtime_inline_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-runtime-inline.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013089700136333704,
+      "exe_sha256": "df7088999d2b3e4caded6e0ed50de0139f48291a5033b9901dcb761119da4852",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-runtime-inline.log"
+    },
+    {
+      "name": "noise-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_storage_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-noise-storage.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.059012999990954995,
+      "exe_sha256": "30b9a1e681370c90c0a65972f7ba4aff560bc00b9803df996b00e11c8fc0abdf",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-noise-storage.log"
+    },
+    {
+      "name": "noise-legacy",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_permutation_cache_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.019979699980467558,
+      "exe_sha256": "e353496aaef48c911157894dff64dba29796364fb2972c93f02d8c79b664cc1a",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-noise-legacy.log"
+    },
+    {
+      "name": "glog-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--source-profile",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-glog-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01961670001037419,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-glog-source.log"
+    },
+    {
+      "name": "weak-shell",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--pipeline-weak-shells",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-weak-shell.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0360147999599576,
+      "exe_sha256": "473cf70818957a2547baa6fab963b57850c4d117a9117ad8614d43f229a35bfb",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-weak-shell.log"
+    },
+    {
+      "name": "actual-tls",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "seconds": 0.16568630002439022,
+      "exe_sha256": "190409512cee19961dc215b366ca0d3c773d3b785ac549cf90d842ae7731c8ae",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-actual-tls.log"
+    },
+    {
+      "name": "logger",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-logger.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.02244490012526512,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-logger.log"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-pack.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.9960241001099348,
+      "exe_sha256": "473cf70818957a2547baa6fab963b57850c4d117a9117ad8614d43f229a35bfb",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-pack.log"
+    },
+    {
+      "name": "settings",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-settings.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.24242900009267032,
+      "exe_sha256": "473cf70818957a2547baa6fab963b57850c4d117a9117ad8614d43f229a35bfb",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-settings.log"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-prefab.json"
+      ],
+      "returncode": 0,
+      "seconds": 2.010088700102642,
+      "exe_sha256": "2fe1c5b42995986848bbed188b3a4d113fcce93adb42717bce47dc4cfedbd921",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-prefab.log"
+    },
+    {
+      "name": "cpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-cpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0768244001083076,
+      "exe_sha256": "473cf70818957a2547baa6fab963b57850c4d117a9117ad8614d43f229a35bfb",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-cpu-texture.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013892600079998374,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-runtime-domain.log"
+    },
+    {
+      "name": "worker",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-worker.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.08310149982571602,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-worker.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.011967899976298213,
+      "exe_sha256": "f1d1f6c57116768a0f5e16abbc73cdc168d971468f17849009c2249dd3ab1e84",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-cooperative.log"
+    },
+    {
+      "name": "mesh-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-mesh-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0850804999936372,
+      "exe_sha256": "b4c227a09cec3e222ffb627f2b0ebff624184a796343ea89d8157460a97e5677",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-mesh-queues.log"
+    },
+    {
+      "name": "relight-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-relight-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01810520002618432,
+      "exe_sha256": "646f43862f40318a910ded14c2bee5fabfe43989d57c53b6492c7ec1357e7093",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-relight-queues.log"
+    },
+    {
+      "name": "relight-lifecycle",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.015414699912071228,
+      "exe_sha256": "646f43862f40318a910ded14c2bee5fabfe43989d57c53b6492c7ec1357e7093",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-relight-lifecycle.log"
+    },
+    {
+      "name": "publication-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-publication-cpu.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.07675489992834628,
+      "exe_sha256": "b4c227a09cec3e222ffb627f2b0ebff624184a796343ea89d8157460a97e5677",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-publication-cpu.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-pipeline-storage2-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.26910259993746877,
+      "exe_sha256": "b4c227a09cec3e222ffb627f2b0ebff624184a796343ea89d8157460a97e5677",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-publication-gl.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 4.097082199994475,
+      "exe_sha256": "b4c227a09cec3e222ffb627f2b0ebff624184a796343ea89d8157460a97e5677",
+      "log": "build\\desktop-msvc\\s4-pipeline-storage2-regression-decor-full.log"
+    }
+  ],
+  "source_sha256_raw": {
+    "src/WorldGen/Core/PipelineRetainedStorage.h": "1e64dfdcef7870b5efeaea90436748b5ad8051e6b6f2aaf2b26a480399ebc24f",
+    "src/WorldGen/Core/IUWorldGenPipeline.h": "2721b4bb445ec820af54b9de3dc1cb1db56fd99d7285df478ac45d823ffacd72",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "21bf9f2fb0582804bfea59c0b7e54a7fdd30d5defcb68c04e33b7f28ca163660",
+    "src/WorldGen/Pipelines/ComposableWorldGenerator.h": "08439e635b33c6f724662dcb94c19bb434a0803739e23ee5ee16f8067ca7693e",
+    "src/WorldGen/Pipelines/ComposableWorldGenerator.cpp": "6d6d7de94c8b7179946565b81ec1b8357a267bc9a5c7c226866b9acf1d110f26",
+    "src/WorldGen/Sampling/BiomeSampler.h": "e0fbcde69fa1836ceb1f50cf8ed0d916478fd84f6df20747e4d5730a4ce4a023",
+    "src/WorldGen/Sampling/ColumnSample.h": "7bc0537a95f819e535a5c3569d2dab4d4daf207a1e09117061107ca6935abdc2",
+    "src/WorldGen/Sampling/ColumnSample.cpp": "51a56fe86775fa3e1341ef4b4489ae0a72b201125a80a9b33042dfb8c51da716",
+    "src/WorldGen/Sampling/CoarseHeightCache.h": "7bcb52b0d83294013cc44c12272c96c5908787415b144e87f6bd9193ec005c4a",
+    "src/World/Core/BlockWorld.h": "0ae232c2f9e9b722a30c82a8451796f9682d9a6932ab96d6723e5f42b24b27a2",
+    "src/World/Core/BlockWorld.cpp": "6c5a2b775ec196ce40e35d1dec0cf10ccfd419c616c236a71db96b431f30886a",
+    "src/Test/PipelineRetainedStorageFixture.h": "43afcaa6b18c483e25fe6139391156b410cbeb906c837ca55b4711718364fb00",
+    "src/Test/PipelineRetainedStorageTest.cpp": "91022ca0c0d694a935d004280194f9ece017c5738915c764738528be3fd64568",
+    "src/Test/AllocatorWorkerThreadFixture.h": "ec75ef5262824493860e961cac0ab669429fe61448757d0437806cb4580a290b",
+    "src/App/Platform/StreamingSchedulerReinitProbe.cpp": "145b991bd664385521d55ff85bf920abf5069cc9aa88fae398c5ef8cb037cd42",
+    "src/App/Platform/StreamingSchedulerReinitProbe.h": "c9f56235f6c99d5600bf9978e2fa67b83a5dbc0c81fc81587bc9685130273b0f",
+    "src/World/Core/World.h": "289dbba8880b393b5dd8d0ecb8d05988483f3ef8d6f4cdf0e9fbdae3bd54295b",
+    "src/Core/Jobs/JobThreadPool.cpp": "7feb21765d80a82f295d97562be78ed1caf15d9be3d37b06ea5a7cd314749f79",
+    "src/World/Streaming/WorldStreaming.cpp": "2d98b14d880a911f0dfb9fe860d5f4efa9b9bf006a36db3ed3b7f05798e74669",
+    "src/World/Streaming/WorldStreaming.h": "2644042e9d0983dec1c6601bf1e1285c8eba779dec0560e094793332652dc4f5",
+    "src/World/Streaming/ChunkGenerationRetirement.h": "481a6a46f6d83ebfe65f4eea520067abb6fa17250403b97a92d5219425e08503",
+    "src/World/Chunks/ChunkStreamer.h": "b5cfc83aa9fbe0c627d7358a2faf6346efe86fdd3635bc1c4747234ecd5989b5",
+    "src/World/Chunks/ChunkLoadScheduler.cpp": "0d6f07afd8b018fc8cc9174f176f80e1ab978b6cb9da6cf580677f8758097c33",
+    "src/Test/GenerationProducerRetirementFixture.h": "3cb63839213552f822ea750aa4cd3eb5220e65334a27dd2eacf3c4e5601335dd",
+    "CMakeLists.txt": "94d5409a7440ea34edeba5d5fb1421dfaa68f967247655ab1845fbdc2f8b4a94",
+    "src/World/Chunks/ChunkLoadScheduler.h": "be066eb5baca76f992311948a733cc6c6ac746dea4aa7f29e7f269b4bfc46fa6",
+    "src/WorldGen/Core/AllocatorOwnerCensus.h": "b19a300a23400f159c1de05d09c01773b3004f50c1673ee0cf8d4256c5ff11a6",
+    "src/Test/AllocatorReturnedControlsFixture.h": "fb2b3099fefe1ac466c3d7d2f906905b0ac9a7131b794e140321de67158aea44",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "fad4825f9a7992095e64cdea7103e814a0a4c11af29551f98fa88a3dfaf01b77",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "33642a406697fdb69973d5daae446fc28919f6c02d9945df1fed901aa5608d3d"
+  },
+  "frozen_source_sha256": "eb6ad508111a27a03b6fb9ce6b8d3433ca69a2851105dc7fe85c585c7c3d19f7",
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\type_vec3.hpp": "d9be575fe520dcbb068188144e0bba0a4197aefe142b42f8fc8496c328875649",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\setup.hpp": "78c7278cc214b6ce75c5648f5afc65dd36488bf65abfd6aac8171b0439e98a10",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\vec3.hpp": "d97ddb71ad02da39a4ac96670d4fe792264a8ec2e19477f60d7c245ae1a301b4",
+    "C:/Projects/Cubatarium/build/desktop-msvc/_deps/cubatarium_glog-build/Release/glog.lib": "9cfd622423f45874057b8b5c7460c7ee75ec5abbcf8fdca96d93259f6dc26a1a",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\base\\commandlineflags.h": "258d5b9aaa581a8fce458610e043388e4a4a79467989f4887dee7fcba5f0cc9d",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\flags.cc": "60a30c5b166f4729b6244fdb1b6484f2377707fcbe324d5dfe5199efb97f51a0",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\deque": "e96db63cde99e307dcbb8eb6a849033dfa60e1be51b6d7330af928996bf7d735"
+  },
+  "glog_identity_receipt": "build/desktop-msvc/s4-glog-resources-source-identity.json",
+  "provenance": "build/desktop-msvc/s4-pipeline-storage2-provenance.json",
+  "desktop_exe_sha256": "42e2b313814c0c8946c295e2c62b08caf987f1c8ce07bacbe15d229a6fd0aeb1",
+  "native": {
+    "artifact": "build/desktop-msvc/s4-pipeline-storage2-native",
+    "runtime": "PASS",
+    "startup": "PASS",
+    "catalog_owner_domain": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "provenance": "PASS",
+    "texture_GL_readbacks": 8,
+    "publication_GL_readbacks": 2,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  },
+  "acceptance_boundary": [
+    "Known production coallocation profile,immutable stable weak source slots and complete caller source domain;capture while payload is live. No raw address reuse after the final weak free. No owning inspector mirror.",
+    "Result is a cached source snapshot. Clear/rebuild after mutations;packets require one open stable epoch. Diagnostic vector allocations excluded from selected source totals.",
+    "Busy live reinit and normal teardown accepted for the tested source graph. Other detached/process-exit,world/pipeline/cache/platform/CRT/GPU/process sources remain OPEN;normal callback-installation allocation failures are outside constructor refusal coverage.",
+    "Native aggregate UNTESTED does not replace original S0..S6/S6.05/S6.06 acceptance or known ecology mismatch."
+  ],
+  "initial_diagnostics": {
+    "pipeline_alignment_gap": "build/desktop-msvc/s4-pipeline-storage-focused-pipeline-storage.log",
+    "empty_world_16_byte_gap": "build/desktop-msvc/s4-pipeline-storage-world-diagnostic.log",
+    "initial_compile": "build/desktop-msvc/s4-pipeline-storage-focused-build.log",
+    "desktop_C1128": "build/desktop-msvc/s4-pipeline-storage-desktop-build.log"
+  },
+  "diagnostic_sha256": {
+    "build/desktop-msvc/s4-pipeline-storage-focused-pipeline-storage.log": "ac7f217d1fcb21d657a31e5842301c99bfe1dbd228b06c810dce05cfa7750acf",
+    "build/desktop-msvc/s4-pipeline-storage-world-diagnostic.log": "013259ab8524a2189dd7c9305ebd94221c003e4d7be04e9edae8e3df97c059ce",
+    "build/desktop-msvc/s4-pipeline-storage-focused-build.log": "05a17e728fccc502f68eeeb32cca37e1540ea87953893630d41bcc5c085263db",
+    "build/desktop-msvc/s4-pipeline-storage-desktop-build.log": "faad78c40cf0a7a9f834a8a83b358d73bc4a3e256168761a65e4a7ff8b36dca9"
+  }
+}

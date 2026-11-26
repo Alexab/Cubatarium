@@ -9,6 +9,7 @@
 #include "World/Math/BlockTypes.h"
 #include "World/Math/FluidCellState.h"
 #include "World/Math/WorldVerticalProfile.h"
+#include "WorldGen/Core/PipelineRetainedStorage.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <optional>
@@ -26,6 +27,9 @@ struct BlockDefinitionCatalog;
 class UBlockWorld
 {
 public:
+  // Known default scratch-world factory;does not cover arbitrary live worlds.
+  static std::array<size_t,4> GetPipelineScratchStorageLayout() noexcept;
+  PipelineScratchStorage InspectPipelineScratchStorage(bool default_factory_profile) const noexcept;
   /// Runtime snapshot of the current world's vertical coordinate profile.
   void SetVerticalProfile(WorldVerticalProfile profile)
   {

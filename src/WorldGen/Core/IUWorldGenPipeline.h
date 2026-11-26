@@ -1,6 +1,7 @@
 #pragma once
 
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Core/PipelineRetainedStorage.h"
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
@@ -17,6 +18,7 @@ public:
 
   virtual void GenerateColumn(int worldX, int worldZ) = 0;
   virtual int SurfaceYAt(int worldX, int worldZ) const = 0;
+  virtual PipelineStorageSnapshot InspectRetainedStorage(bool ordinary_heap_factory_known) const noexcept {return {};}
 
   virtual glm::vec3 DefaultSpawnPosition(int worldX, int worldZ,
                                          float eyeHeight = 1.62f) const;

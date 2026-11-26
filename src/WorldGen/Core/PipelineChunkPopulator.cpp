@@ -548,6 +548,22 @@ PipelineAllocatorThreadView InspectPipelineCallingThreadAllocators(AllocatorOwne
   return view;
 }
 
+PipelineStorageSnapshot InspectCallingThreadPipelineStorage() noexcept
+{
+  auto &holder=GetThreadLocalPipelineHolder();PipelineStorageSnapshot out;
+  out.layout=UComposableWorldGenerator::GetRetainedStorageLayout();out.supported=out.layout.supported;
+  if(!holder)return out;
+  if(holder->pipeline)out=holder->pipeline->InspectRetainedStorage(true);
+  out.initialized=true;out.world=reinterpret_cast<uintptr_t>(&holder->world);
+  const auto world=holder->world.InspectPipelineScratchStorage(true);
+  out.metadata_allocator=world.allocator;out.supported=out.supported && world.supported;
+  out.idle=out.idle && !ActiveBufferBudget.job && !ActiveScopedSharedResource && !detail::ActivePopulationAllocatorObserver;
+  out.requests[static_cast<size_t>(PipelineStorageCell::WorldMetadata)]=world.metadata;
+  out.requests[static_cast<size_t>(PipelineStorageCell::WorldMemo)]=world.memo;
+  out.requests[static_cast<size_t>(PipelineStorageCell::WorldControls)]=world.controls;
+  return out;
+}
+
 ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot(bool default_owner_profile)
 {
   auto &tls=GetThreadLocalPipeline();
