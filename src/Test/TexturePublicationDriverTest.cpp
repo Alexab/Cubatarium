@@ -220,7 +220,7 @@ inline int Baseline(const char *path)
 inline bool Golden(const UTextureCubeStorage &storage,const std::vector<MergedCubeDesc> &old,
     const std::vector<MergedCubeDesc> &rows,int route)
 {
-  if(storage.GetTextures().size()!=size_t(route==1 || route==4?4:2))return false;
+  if(storage.GetTextures().size()!=rows.size()+(route==1 || route==4?old.size():0))return false;
   const auto check=[&](const MergedCubeDesc &d,int width,int stage){const auto found=storage.GetTextures().find(d.Id);if(found==storage.GetTextures().end())return false;const auto &cube=found->second;
     if(cube.GetName()!=d.Name || cube.GetNumTextureFrames()!=1 || cube.GetTextureNames()!=std::vector<std::string>(d.Stems.begin(),d.Stems.end()) || storage.GetTypeIdByName(d.Name)!=d.Id || !glIsTexture(cube.GetTexture()))return false;
     glBindTexture(GL_TEXTURE_2D,cube.GetTexture());GLint w=0,h=0;glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&w);glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_HEIGHT,&h);if(w!=width*6 || h!=2)return false;
@@ -237,6 +237,131 @@ inline TexturePublicationSourceDomain SourceDomain(const UTextureCubeStorage &st
   else for(const auto &row:rows)AddTexturePublicationRow(d,row.Name,std::vector<std::string>(row.Stems.begin(),row.Stems.end()),maximum);
   if(callback_heap){d.callback_calls=directory?d.legacy_files:rows.size();d.callback_heap_per_call=callback_heap;}return d;
 }
+
+struct LateAtlasUpdate
+{
+  GLuint First{}, Second{}, PackBuffer{};
+  bool RejectTransfer{}, SawFirstWrite{}, Injected{}, PackRestoredBeforeUpdates{};
+
+  void ConfigurePack(bool hostile) const noexcept
+  {
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, hostile ? PackBuffer : 0);
+    for (size_t i = 0; i < PackParameters.size(); ++i)
+      glPixelStorei(PackParameters[i], hostile ? HostilePackValues[i] : (i == 0 ? 1 : 0));
+  }
+
+  bool PackStateRestored() const noexcept
+  {
+    GLint buffer{};
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &buffer);
+    std::array<GLint, PackParameters.size()> actual{};
+    for (size_t i = 0; i < PackParameters.size(); ++i)
+      glGetIntegerv(PackParameters[i], &actual[i]);
+    return static_cast<GLuint>(buffer) == PackBuffer && actual == HostilePackValues;
+  }
+
+  void Mutating(GLuint name) noexcept
+  {
+    if (name == First)
+      PackRestoredBeforeUpdates = PackStateRestored();
+    if (name != Second || Injected)
+      return;
+    ConfigurePack(false);
+    std::array<unsigned char, 96> first{};
+    glBindTexture(GL_TEXTURE_2D, First);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, first.data());
+    SawFirstWrite = glGetError() == GL_NO_ERROR && first[0] == 93;
+    ConfigurePack(true);
+    glBindTexture(GL_TEXTURE_2D, Second);
+    // The first mode makes the real transfer fail. The second leaves a GL
+    // error pending while the transfer can still change the second texture.
+    if (RejectTransfer)
+      glBindTexture(GL_TEXTURE_2D, 0);
+    else
+      glBindTexture(0, 0);
+    Injected = true;
+  }
+
+  static constexpr std::array<GLenum, 6> PackParameters{
+      GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, GL_PACK_SKIP_ROWS, GL_PACK_SKIP_PIXELS,
+      GL_PACK_IMAGE_HEIGHT, GL_PACK_SKIP_IMAGES};
+  static constexpr std::array<GLint, PackParameters.size()> HostilePackValues{8, 37, 2, 1, 23, 1};
+};
+
+inline LateAtlasUpdate *ObserveLateUpdate{};
+
+inline int LateInPlace(const char *path)
+{
+  Json cases = Json::array();
+  bool passed = true;
+  for (const bool rejectTransfer : {true, false})
+  {
+    auto bases = std::make_shared<UTextureBaseStorage>();
+    UTextureCubeStorage storage(bases);
+    const auto old = Author(*bases, 2, 2, 2, 3, 10, "old_");
+    const auto next = Author(*bases, 3, 2, 2, 93, 10, "next_");
+    storage.PatchDescriptors(old);
+    const auto before = Snapshot(storage);
+    LateAtlasUpdate late{storage.GetTextures().at(10).GetTexture(),
+                         storage.GetTextures().at(11).GetTexture(), 0, rejectTransfer};
+    const auto bound = BoundTexturePublicationSource(SourceDomain(storage, next, 96));
+    glGenBuffers(1, &late.PackBuffer);
+    late.ConfigurePack(true);
+    glBufferData(GL_PIXEL_PACK_BUFFER, 4, nullptr, GL_STATIC_DRAW);
+
+    ResetObservation();
+    ObserveLateUpdate = &late;
+    bool rejected = false;
+    {
+      observation::Scope scope;
+      try { storage.PatchDescriptors(next); }
+      catch (const std::runtime_error &) { rejected = true; }
+    }
+    ObserveLateUpdate = nullptr;
+    const auto counts = observation::State;
+    const bool packRestored = late.PackRestoredBeforeUpdates && late.PackStateRestored();
+    late.ConfigurePack(false);
+
+    const auto after = Snapshot(storage);
+    const bool predecessorExact = after == before;
+    const bool candidateRetired = CreatedCount == 1 && !glIsTexture(Created[0]);
+    const bool bounded = bound.supported && !bound.overflow && bound.rollback_pixel_upper == 288 &&
+        counts.peak <= bound.ordinary_new_upper && !counts.live && !counts.blocks;
+    const bool cleanError = glGetError() == GL_NO_ERROR;
+    ResetObservation();
+    late.ConfigurePack(true);
+    storage.PatchDescriptors(next);
+    const bool retryPackRestored = late.PackStateRestored();
+    late.ConfigurePack(false);
+    glDeleteBuffers(1, &late.PackBuffer);
+    const bool retry = retryPackRestored && CreatedCount == 1 && storage.GetTextures().at(10).GetTexture() == late.First &&
+        storage.GetTextures().at(11).GetTexture() == late.Second && Golden(storage, old, next, 2);
+    const auto newest = storage.GetTextures().at(12).GetTexture();
+    storage.Clear();
+    const bool cleared = !glIsTexture(late.First) && !glIsTexture(late.Second) && !glIsTexture(newest);
+    passed &= rejected && late.Injected && late.SawFirstWrite && packRestored && predecessorExact &&
+        candidateRetired && bounded && cleanError && retry && cleared;
+    cases.push_back({{"reject_transfer", rejectTransfer}, {"rejected", rejected},
+        {"first_write_visible_before_failure", late.SawFirstWrite}, {"pack_restored", packRestored},
+        {"predecessor_exact", predecessorExact}, {"first_red_after_failure", after["textures"]["10"]["rgba"][0]},
+        {"second_red_after_failure", after["textures"]["11"]["rgba"][0]},
+        {"staged_candidate_retired", candidateRetired}, {"ordinary_peak", counts.peak},
+        {"ordinary_upper", bound.ordinary_new_upper}, {"rollback_pixel_upper", bound.rollback_pixel_upper},
+        {"bounded_and_retired", bounded},
+        {"error_drained", cleanError}, {"exact_retry_with_same_names", retry}, {"cleared", cleared}});
+  }
+  const Json report{{"schema", "block-atlas-late-in-place.v1"}, {"status", passed ? "PASS" : "FAIL"},
+                    {"cases", cases}};
+  if (path)
+  {
+    std::ofstream file(path);
+    file << report.dump(2) << '\n';
+    if (!file)
+      return 1;
+  }
+  return passed ? 0 : 1;
+}
+
 inline bool PngGolden(const UTextureCubeStorage &storage,const std::vector<MergedCubeDesc> &rows)
 {
   for(const auto &d:rows){const auto it=storage.GetTextures().find(d.Id);if(it==storage.GetTextures().end() || it->second.GetName()!=d.Name || it->second.GetNumTextureFrames()!=1 || storage.GetTypeIdByName(d.Name)!=d.Id)return false;
@@ -391,12 +516,14 @@ inline int Accepted(const char *path)
 namespace cutum
 {
 void ObserveTextureCreated(unsigned int name)noexcept{texture_publication_fixture::Record(name);}
-void ObserveTextureMutation(unsigned int)noexcept
+void ObserveTextureMutation(unsigned int name)noexcept
 {
   using namespace texture_publication_fixture;
   Mutation();
   if (RefuseSecondUpload && CreatedCount == 2)
     glBindTexture(0, 0);
+  if (auto *observer = ObserveLateUpdate)
+    observer->Mutating(name);
 }
 void ObserveTextureUploaded(unsigned int name)noexcept
 {
@@ -414,6 +541,8 @@ int main(int argc,char **argv)
       result=texture_publication_fixture::Baseline(argc>2?argv[2]:nullptr);
     else if(argc>1 && std::string(argv[1])=="--gpu-peak")
       result=texture_publication_fixture::GpuPeak(argc>2?argv[2]:nullptr);
+    else if(argc>1 && std::string(argv[1])=="--late-in-place")
+      result=texture_publication_fixture::LateInPlace(argc>2?argv[2]:nullptr);
     else
       result=texture_publication_fixture::Accepted(argc>1?argv[1]:nullptr);
   }catch(const std::exception &e){std::cerr<<e.what()<<std::endl;}

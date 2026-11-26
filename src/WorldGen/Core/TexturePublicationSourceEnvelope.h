@@ -40,12 +40,13 @@ inline void AddTexturePublicationLegacyFile(TexturePublicationSourceDomain &d,si
 }
 struct TexturePublicationSourceEnvelope
 {
-  size_t ordinary_new_upper{},new_decoder_peak_upper{},combined_additional_upper{};
+  size_t ordinary_new_upper{},new_decoder_peak_upper{},combined_additional_upper{},rollback_pixel_upper{};
   bool supported{},overflow{};
 };
 // New preparation only:existing target/base/definition/catalog/returned roots
-// belong to entry. Shadow metadata copies borrow GL names;one scratch holds the
-// largest atlas,not all row atlases. Callback requested-data cost is an explicit
+// belong to entry. Shadow metadata copies borrow GL names. One scratch holds the
+// largest atlas, and a contiguous buffer holds the previous reusable images.
+// Callback requested-data cost is an explicit
 // supplied profile,including any retained callback results. Driver/CRT/GPU and
 // arbitrary window/OS callback memory require their separate E12 terms.
 inline TexturePublicationSourceEnvelope BoundTexturePublicationSource(const TexturePublicationSourceDomain &d)
@@ -60,6 +61,10 @@ inline TexturePublicationSourceEnvelope BoundTexturePublicationSource(const Text
   auto upper=add(add(add(65536,layout.stage_bytes),mul(d.prior_metadata_heap,8)),mul(d.rows,node));
   upper=add(add(upper,mul(d.strings,4*sizeof(std::string)+128)),mul(d.text_bytes,32));
   upper=add(add(upper,d.maximum_atlas_bytes),d.maximum_atlas_bytes>=4096?39:0);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  out.rollback_pixel_upper=mul(d.rows,d.maximum_atlas_bytes);
+  upper=add(add(upper,out.rollback_pixel_upper),out.rollback_pixel_upper>=4096?39:0);
+#endif
   upper=add(add(upper,decoded.ordinary_new_upper),mul(d.callback_calls,d.callback_heap_per_call));
   if(d.legacy_files){const auto scan=BoundCatalogFilesystemSource({d.max_path_units,0,0,false});out.supported=out.supported && scan.supported;out.overflow=out.overflow || scan.overflow;
     upper=add(add(upper,scan.combined_heap_upper),mul(d.legacy_file_sum,8));}

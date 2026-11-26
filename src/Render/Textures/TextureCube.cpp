@@ -15,6 +15,7 @@
 #include "Render/Textures/GlTextureOwner.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ThirdParty/stb_image.h"
+#include <array>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -31,6 +32,54 @@ namespace cutum
 {
 
 namespace fs = std::filesystem;
+
+namespace
+{
+
+bool RgbaByteCount(int width, int height, size_t &bytes)
+{
+  if (width <= 0 || height <= 0 ||
+      static_cast<size_t>(width) > std::numeric_limits<size_t>::max() / 4 / static_cast<size_t>(height))
+  {
+    return false;
+  }
+  bytes = static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
+  return true;
+}
+
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+class AtlasPixelPackScope
+{
+public:
+  AtlasPixelPackScope()
+  {
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &Buffer);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    for (size_t i = 0; i < Parameters.size(); ++i)
+    {
+      glGetIntegerv(Parameters[i], &Values[i]);
+      glPixelStorei(Parameters[i], i == 0 ? 1 : 0);
+    }
+  }
+  AtlasPixelPackScope(const AtlasPixelPackScope &) = delete;
+  AtlasPixelPackScope &operator=(const AtlasPixelPackScope &) = delete;
+  ~AtlasPixelPackScope()
+  {
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(Buffer));
+    for (size_t i = 0; i < Parameters.size(); ++i)
+      glPixelStorei(Parameters[i], Values[i]);
+  }
+
+private:
+  static constexpr std::array<GLenum, 6> Parameters{
+      GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, GL_PACK_SKIP_ROWS, GL_PACK_SKIP_PIXELS,
+      GL_PACK_IMAGE_HEIGHT, GL_PACK_SKIP_IMAGES};
+  std::array<GLint, Parameters.size()> Values{};
+  GLint Buffer{};
+};
+#endif
+
+} // namespace
 
 UTextureCube::UTextureCube()
     : TypeId(0), NumTextureFrames(0), TextureId(0), Texture(0)
@@ -101,7 +150,8 @@ struct UTextureCubeStorage::TexturePublication
     UTextureCube *Target{};
     int Width{},Height{},Frames{},StripFrames{};
     GLuint NewName{},ReuseName{};
-    bool AllowReuse{};
+    size_t PreviousPixelsOffset{};
+    bool AllowReuse{}, UpdateAttempted{};
     ~Pending(){if(NewName)glDeleteTextures(1,&NewName);}
   };
   UTextureCubeStorage &Storage;
@@ -164,37 +214,95 @@ struct UTextureCubeStorage::TexturePublication
     if(!ok || Scratch.Width!=row.Width || Scratch.Height!=row.Height || Scratch.Frames!=row.Frames)
       throw std::logic_error("Texture sources changed during publication");
   }
+  static bool WriteReusedAtlas(const Pending &row, const unsigned char *pixels, bool observe) noexcept
+  {
+    glBindTexture(GL_TEXTURE_2D, row.ReuseName);
+    if (observe)
+      ObserveTextureMutation(row.ReuseName);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, row.Width, row.Height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    if (glGetError() == GL_NO_ERROR)
+      return true;
+    while (glGetError() != GL_NO_ERROR) {}
+    return false;
+  }
   void Publish()
   {
     if(Rows.empty() && !Replace && !HasRemovals)return;
-    size_t maximum=0;
+    size_t maximum=0, previousBytes=0;
     if(!Rows.empty()){
       if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("Pending GL error before texture publication");
       GLint limit=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&limit);
       for(auto &entry:Rows){auto &row=entry.second;
         if(row.Width>limit || row.Height>limit)throw std::runtime_error("Texture atlas exceeds backend dimensions");
-        const auto bytes=static_cast<size_t>(row.Width)*static_cast<size_t>(row.Height)*4;
+        size_t bytes{};
+        if (!RgbaByteCount(row.Width, row.Height, bytes))
+          throw std::length_error("Invalid RGBA extent for a texture atlas");
         maximum=std::max(maximum,bytes);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
         const auto current=Storage.Textures.find(entry.first);
         if(!Replace && row.AllowReuse && current!=Storage.Textures.end() && current->second.GetTexture()){
           const auto name=current->second.GetTexture();glBindTexture(GL_TEXTURE_2D,name);
           GLint w=0,h=0;glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_WIDTH,&w);glGetTexLevelParameteriv(GL_TEXTURE_2D,0,GL_TEXTURE_HEIGHT,&h);glBindTexture(GL_TEXTURE_2D,0);
-          if(w==row.Width && h==row.Height)row.ReuseName=name;
+          if (w == row.Width && h == row.Height)
+          {
+            if (bytes > std::numeric_limits<size_t>::max() - previousBytes)
+              throw std::length_error("Texture atlas rollback extent exceeds addressable size");
+            row.ReuseName = name;
+            row.PreviousPixelsOffset = previousBytes;
+            previousBytes += bytes;
+          }
         }
 #endif
       }
-      // All source owners/map nodes/metadata exist. One maximum-size scratch
-      // allocation serves every row;subsequent assigns cannot grow its backing.
+      if (glGetError() != GL_NO_ERROR)
+        throw std::runtime_error("GL texture publication preflight failed");
+
+      // One upload scratch serves every row. Capture all reusable images before
+      // any upload so rollback needs no allocation or decoding.
       Scratch.Rgba.resize(maximum);
+      std::vector<unsigned char> previousPixels(previousBytes);
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+      if (!previousPixels.empty())
+      {
+        const AtlasPixelPackScope pack;
+        for (const auto &[id, row] : Rows)
+        {
+          if (!row.ReuseName)
+            continue;
+          glBindTexture(GL_TEXTURE_2D, row.ReuseName);
+          glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, previousPixels.data() + row.PreviousPixelsOffset);
+          glBindTexture(GL_TEXTURE_2D, 0);
+          if (glGetError() != GL_NO_ERROR)
+            throw std::runtime_error("GL texture rollback readback failed");
+        }
+      }
+#endif
       const UGlPixelUnpackScope unpack;
       for(auto &entry:Rows){auto &row=entry.second;if(!row.ReuseName){Fill(row);row.NewName=Storage.UploadCubeAtlas(Scratch);row.Target->SetTexture(row.NewName);}}
-      // New resources are ready before the first in-place update. No callbacks,
-      // metadata construction,decoder allocations or growing vectors follow.
-      for(auto &entry:Rows){auto &row=entry.second;if(row.ReuseName){Fill(row);glBindTexture(GL_TEXTURE_2D,row.ReuseName);ObserveTextureMutation(row.ReuseName);
-        glTexSubImage2D(GL_TEXTURE_2D,0,0,0,row.Width,row.Height,GL_RGBA,GL_UNSIGNED_BYTE,Scratch.Rgba.data());glBindTexture(GL_TEXTURE_2D,0);
-        if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("GL texture update failed");row.Target->SetTexture(row.ReuseName);
-      }}
+      try
+      {
+        for (auto &[id, row] : Rows)
+        {
+          if (!row.ReuseName)
+            continue;
+          Fill(row);
+          row.UpdateAttempted = true;
+          if (!WriteReusedAtlas(row, Scratch.Rgba.data(), true))
+            throw std::runtime_error("GL texture update failed");
+          row.Target->SetTexture(row.ReuseName);
+        }
+      }
+      catch (...)
+      {
+        bool restored = true;
+        for (const auto &[id, row] : Rows)
+          if (row.UpdateAttempted)
+            restored &= WriteReusedAtlas(row, previousPixels.data() + row.PreviousPixelsOffset, false);
+        if (!restored)
+          throw std::runtime_error("GL texture update and rollback failed");
+        throw;
+      }
     }
     static_assert(noexcept(Storage.Textures.swap(NextTextures)));
     static_assert(noexcept(Storage.TexturesNames.swap(NextNames)));
@@ -260,22 +368,6 @@ void UTextureCubeStorage::Clear()
   Textures.clear();
   TexturesNames.clear();
 }
-
-namespace
-{
-
-bool RgbaByteCount(int width, int height, size_t &bytes)
-{
-  if (width <= 0 || height <= 0 ||
-      static_cast<size_t>(width) > std::numeric_limits<size_t>::max() / 4 / static_cast<size_t>(height))
-  {
-    return false;
-  }
-  bytes = static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
-  return true;
-}
-
-} // namespace
 
 UTextureCubeStorage::LoadedStem UTextureCubeStorage::LoadStemRgba(
     const UTextureBase &base,AtlasDecodeBatch *batch)
