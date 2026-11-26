@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
@@ -9,6 +10,108 @@
 
 namespace cutum::shared_visual_source_fixture
 {
+
+inline Json CheckVisualFilesystemSource(const std::filesystem::path &report)
+{
+  if (!StlSourceStorage::SupportedProfile())
+    return {{"status", "UNSUPPORTED"}};
+#if defined(_WIN32) && defined(_MSC_VER)
+  auto folder = std::filesystem::absolute(report);
+  folder += L".visual-paths";
+  Require(std::filesystem::create_directory(folder), "create isolated filesystem path input");
+  const auto shortFile = folder / L"short";
+  const auto longFile = folder / (std::wstring(110, L'n') + L".png");
+  std::ofstream(shortFile).put('a');
+  std::ofstream(longFile).put('b');
+  auto longFolder = std::filesystem::path(L"\\\\?\\" + folder.native());
+  for (int i = 0; i < 4; ++i)
+  {
+    longFolder /= std::wstring(72, static_cast<wchar_t>(L'a' + i));
+    Require(std::filesystem::create_directory(longFolder), "create extended-length directory path");
+  }
+  Require(longFolder.native().size() > 260, "exercise the native path query resize");
+  const auto missing = longFolder / L"missing" / L"another" / L"unavailable";
+  const auto unicode = folder / L"\u00e9" / L".." / L"\u03b1";
+  std::wstring manyTokens;
+  for (int i = 0; i < 440; ++i)
+    manyTokens += L"a/./b/../";
+  const std::filesystem::path lexical(manyTokens);
+  const auto relativeInput = folder / L"resource" / std::wstring(200, L'z');
+  const auto relativeBase = folder / L"other" / L"nested";
+  Json cases = Json::array();
+  const auto check = [&](const char *name, VisualFilesystemOp operation, const auto &input,
+                         size_t baseUnits, auto run, const auto &expected) {
+    const auto bound = BoundVisualFilesystemSource(operation, input.native().size(), baseUnits);
+    Require(bound.supported && !bound.overflow, "recognize the pinned filesystem request domain");
+    observation::Counts recorded;
+    {
+      observation::Scope observe;
+      {
+        const auto actual = run();
+        recorded = observation::Snapshot();
+        Require(actual == expected, "observed visual path operation preserves the standard-library result");
+      }
+      const auto retired = observation::Snapshot();
+      Require(!retired.live && !retired.blocks && recorded.peak && recorded.peak <= bound.requested,
+              "filesystem requests fit the operation bound and retire after use");
+    }
+    for (size_t i = 0; i < recorded.attempts; ++i)
+    {
+      observation::Scope refuse(i);
+      bool failed = false;
+      try { (void)run(); }
+      catch (const std::bad_alloc &) { failed = true; }
+      const auto retired = observation::Snapshot();
+      Require(failed && retired.refusals && !retired.live && !retired.blocks,
+              "filesystem allocation refusal releases the admitted request prefix");
+    }
+    cases.push_back({{"name", name}, {"input_units", input.native().size()}, {"base_units", baseUnits},
+        {"ordinary_peak", recorded.peak}, {"ordinary_upper", bound.requested},
+        {"refusal_prefixes", recorded.attempts}, {"matches_std", true}, {"retired", true}});
+  };
+  check("absolute_long", VisualFilesystemOp::Absolute, longFolder, 0,
+        [&] { return VisualAbsolute(longFolder); }, std::filesystem::absolute(longFolder));
+  check("canonical_long", VisualFilesystemOp::WeakCanonical, longFolder, 0,
+        [&] { return VisualWeakCanonical(longFolder); }, std::filesystem::weakly_canonical(longFolder));
+  check("canonical_missing_suffix", VisualFilesystemOp::WeakCanonical, missing, 0,
+        [&] { return VisualWeakCanonical(missing); }, std::filesystem::weakly_canonical(missing));
+  check("lexical_many_tokens", VisualFilesystemOp::LexicalNormal, lexical, 0,
+        [&] { return VisualLexicalNormal(lexical); }, lexical.lexically_normal());
+  check("lexical_unicode", VisualFilesystemOp::LexicalNormal, unicode, 0,
+        [&] { return VisualLexicalNormal(unicode); }, unicode.lexically_normal());
+  check("lexical_relative", VisualFilesystemOp::LexicalRelative, relativeInput, relativeBase.native().size(),
+        [&] { return VisualLexicalRelative(relativeInput, relativeBase); }, relativeInput.lexically_relative(relativeBase));
+  check("generic_string", VisualFilesystemOp::GenericString, longFile, 0,
+        [&] { return VisualGenericString(longFile); }, longFile.generic_string());
+  check("native_string", VisualFilesystemOp::NativeString, longFile, 0,
+        [&] { return VisualNativeString(longFile); }, longFile.string());
+  const auto handles = [] {
+    DWORD count{};
+    Require(GetProcessHandleCount(GetCurrentProcess(), &count) != 0, "observe directory search handle retirement");
+    return count;
+  };
+  const auto prior = handles();
+  check("flat_directory", VisualFilesystemOp::FlatScan, folder, 0, [&] {
+    size_t files = 0;
+    VisualFilesystemSource source(VisualFilesystemOp::FlatScan, folder.native().size());
+    for (const auto &entry : std::filesystem::directory_iterator(folder))
+    {
+      source.Output(entry.path().native());
+      files += entry.is_regular_file();
+    }
+    source.Finish();
+    return files;
+  }, size_t{2});
+  const auto overflow = BoundVisualFilesystemSource(VisualFilesystemOp::WeakCanonical, SIZE_MAX);
+  Require(overflow.overflow && !overflow.supported && handles() == prior,
+          "filesystem arithmetic refuses overflow and directory cases retire search handles");
+  return {{"status", "PASS"}, {"cases", std::move(cases)},
+          {"handles_restored", true}, {"overflow_rejected", true}};
+#else
+  (void)report;
+  return {{"status", "UNSUPPORTED"}};
+#endif
+}
 
 inline Json CheckItemSceneTraversal()
 {

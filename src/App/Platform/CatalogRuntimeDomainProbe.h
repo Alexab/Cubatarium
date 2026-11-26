@@ -22,6 +22,7 @@
 #include "WorldGen/Core/RuntimeNameStorage.h"
 #include "Core/Memory/EngineThreadStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
+#include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "Items/ItemSceneCursor.h"
@@ -373,6 +374,25 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"schema", "visual-loader-sources.v1"},
       {"status", visualFilesSupported ? "PASS" : "UNSUPPORTED"},
       {"loaders", std::move(loaderRows)}, {"counters_inline_bytes", sizeof(visualFiles) + sizeof(std::mutex)},
+      {"whole_runtime_complete", false}};
+  const auto visualFilesystem = GetVisualFilesystemSources();
+  Json filesystemRows = Json::object();
+  bool visualFilesystemSupported = StlSourceStorage::SupportedProfile();
+  for (size_t i = 0; i < visualFilesystem.size(); ++i)
+  {
+    const auto &row = visualFilesystem[i];
+    visualFilesystemSupported &= !row.unsupported;
+    filesystemRows[VisualFilesystemNames[i]] = {
+        {"calls", row.calls}, {"finished", row.finished}, {"failed", row.failed},
+        {"active", row.active}, {"peak_active", row.peakActive}, {"unsupported", row.unsupported},
+        {"input_units_max", row.inputUnitsMax}, {"output_units_max", row.outputUnitsMax},
+        {"output_backing_max", row.outputBackingMax}, {"ordinary_upper_max", row.internalUpperMax}};
+  }
+  report["visual_filesystem_sources"] = {
+      {"schema", "visual-filesystem-sources.v1"},
+      {"status", visualFilesystemSupported ? "PASS" : "UNSUPPORTED"},
+      {"operations", std::move(filesystemRows)}, {"probe_inline_bytes", sizeof(VisualFilesystemSource)},
+      {"counters_inline_bytes", sizeof(visualFilesystem) + sizeof(std::mutex)},
       {"whole_runtime_complete", false}};
   const auto fileBuffers = GetVisualFileBuffers();
   report["visual_file_buffers"] = {

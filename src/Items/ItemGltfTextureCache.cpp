@@ -1,6 +1,7 @@
 #include "Items/ItemGltfTextureCache.h"
 
 #include "Core/Memory/StlSourceStorage.h"
+#include "Core/Memory/VisualFilesystemSource.h"
 #include "Render/Textures/VisualTextureUpload.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <atomic>
@@ -54,8 +55,10 @@ bool ItemGltfTextureCache::IndexImageDirectory(const std::filesystem::path &dir,
 {
   if (!std::filesystem::is_directory(dir))
     return true;
+  VisualFilesystemSource scan(VisualFilesystemOp::FlatScan, dir.native().size());
   for (const auto &entry : std::filesystem::directory_iterator(dir))
   {
+    scan.Output(entry.path().native());
     if (!entry.is_regular_file())
       continue;
     const auto ext = entry.path().extension();
@@ -74,6 +77,7 @@ bool ItemGltfTextureCache::IndexImageDirectory(const std::filesystem::path &dir,
       out.Aliases.emplace(std::move(stem), slot);
     }
   }
+  scan.Finish();
   return true;
 }
 
@@ -227,7 +231,7 @@ void ItemGltfTextureCache::ModelTextures::RetireUnreferencedImages()
 GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs, const std::string &textureStem)
 {
   std::lock_guard<std::mutex> lock(Mu);
-  auto key = modelGltfAbs.lexically_normal().generic_string();
+  auto key = VisualGenericString(VisualLexicalNormal(modelGltfAbs));
   auto model = ByModel.find(key);
   if (model == ByModel.end())
   {
@@ -248,14 +252,14 @@ GLuint ItemGltfTextureCache::Get(const std::filesystem::path &modelGltfAbs, cons
 GLuint ItemGltfTextureCache::GetLinearAlbedo(const std::filesystem::path &imageAbs)
 {
   std::lock_guard<std::mutex> lock(Mu);
-  auto spelling = imageAbs.generic_string();
+  auto spelling = VisualGenericString(imageAbs);
   if (const auto alias = LinearAliases.find(spelling); alias != LinearAliases.end())
   {
     ++LookupCounters.FastHits;
     return alias->second->Name.Get();
   }
   ++LookupCounters.CanonicalResolutions;
-  auto key = std::filesystem::weakly_canonical(imageAbs).generic_string();
+  auto key = VisualGenericString(VisualWeakCanonical(imageAbs));
   if (const auto found = LinearAlbedo.find(key); found != LinearAlbedo.end())
   {
     LinearAliases.emplace(std::move(spelling), &found->second);

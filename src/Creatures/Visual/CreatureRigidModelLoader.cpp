@@ -1,6 +1,7 @@
 #include "Creatures/Visual/CreatureRigidModelLoader.h"
 #include "Core/Json/JsonVec.h"
 #include "Core/Memory/VisualAssetCensus.h"
+#include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 
 #include <filesystem>
@@ -127,7 +128,7 @@ std::shared_ptr<const CreatureRigidModelParts> CreatureRigidModelCache::LoadPart
 {
   const std::string path = speciesDir + "/" + relativePath;
   const std::string cacheKey =
-      std::filesystem::absolute(path).lexically_normal().generic_string();
+      VisualGenericString(VisualLexicalNormal(VisualAbsolute(path)));
   for (;;)
   {
     uint64_t revision;

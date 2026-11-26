@@ -510,6 +510,7 @@ int main(int argc,char **argv){
     report["visual_loader_construction"]=shared_visual_source_fixture::CheckVisualLoaderConstruction(argc>1?argv[1]:"application-operation-storage.json");
     report["skeleton_mesh_construction"]=shared_visual_source_fixture::CheckSkeletonMeshConstruction();
     report["visual_file_buffers"]=shared_visual_source_fixture::CheckVisualFileBuffers(argc>1?argv[1]:"application-operation-storage.json");
+    report["visual_filesystem_sources"]=shared_visual_source_fixture::CheckVisualFilesystemSource(argc>1?argv[1]:"application-operation-storage.json");
     report["item_scene_traversal"]=shared_visual_source_fixture::CheckItemSceneTraversal();
     report["shared_texture_sources"]=shared_texture_source_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;

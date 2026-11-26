@@ -1,5 +1,6 @@
 #include "Items/ItemRenderAsset.h"
 #include "Core/Memory/VisualAssetCensus.h"
+#include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Items/ItemSceneCursor.h"
 
@@ -84,12 +85,12 @@ public:
             "only relative external resources are supported");
     if (!CanonicalFolder)
     {
-      CanonicalFolder = std::filesystem::weakly_canonical(Folder);
+      CanonicalFolder = VisualWeakCanonical(Folder);
       Source.ResourceRootResolved();
     }
     const auto joined = Folder / uri;
-    auto path = std::filesystem::weakly_canonical(joined);
-    const auto relative = path.lexically_relative(*CanonicalFolder);
+    auto path = VisualWeakCanonical(joined);
+    const auto relative = VisualLexicalRelative(path, *CanonicalFolder);
     Source.ResourcePath(uri, Folder, *CanonicalFolder, joined, path, relative);
     Require(!relative.empty() && *relative.begin() != ".." &&
                 !relative.is_absolute(),
@@ -653,7 +654,7 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     AssetAliases.clear();
     AssetsRevision = revision;
   }
-  const auto spelling = path.generic_string();
+  const auto spelling = VisualGenericString(path);
   if (const auto alias = AssetAliases.find(spelling);
       alias != AssetAliases.end())
   {
@@ -661,7 +662,7 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     return Assets.at(alias->second);
   }
   ++AssetLookupStats.CanonicalResolutions;
-  const auto key = std::filesystem::weakly_canonical(path).generic_string();
+  const auto key = VisualGenericString(VisualWeakCanonical(path));
   const auto found = Assets.find(key);
   if (found != Assets.end())
   {

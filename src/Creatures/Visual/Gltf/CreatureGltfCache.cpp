@@ -1,5 +1,6 @@
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
 #include "Core/Memory/VisualAssetCensus.h"
+#include "Core/Memory/VisualFilesystemSource.h"
 
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include <filesystem>
@@ -80,7 +81,7 @@ VisualAssetStorage CreatureGltfCache::InspectOwnedStorage(VisualAssetCensus *cen
 std::shared_ptr<CreatureGltfMeshAsset>
 CreatureGltfCache::LoadFromPath(const std::filesystem::path &path)
 {
-  return Load({},std::filesystem::absolute(path).string());
+  return Load({},VisualNativeString(VisualAbsolute(path)));
 }
 
 std::shared_ptr<CreatureGltfMeshAsset>
@@ -95,9 +96,9 @@ CreatureGltfCache::Load(const std::string &speciesId,
     uint64_t generation=0;
     {
       std::lock_guard<std::mutex> lock(mutex);
-      path=((sourceDirectory.empty()?std::filesystem::path(creaturesRoot)/speciesId:
-                                      std::filesystem::path(sourceDirectory))/modelFile).lexically_normal();
-      key=path.generic_string();
+      path=VisualLexicalNormal((sourceDirectory.empty()?std::filesystem::path(creaturesRoot)/speciesId:
+                                      std::filesystem::path(sourceDirectory))/modelFile);
+      key=VisualGenericString(path);
       generation=revision.load(std::memory_order_relaxed);
       if (failedKeys.count(key)) return nullptr;
       if (const auto it=entries.find(key);it!=entries.end())
@@ -106,7 +107,7 @@ CreatureGltfCache::Load(const std::string &speciesId,
         entries.erase(it);
       }
     }
-    auto asset=CreatureGltfLoader::LoadFromFile(path.string());
+    auto asset=CreatureGltfLoader::LoadFromFile(VisualNativeString(path));
     std::lock_guard<std::mutex> lock(mutex);
     // Clear/root replacement while I/O ran must not republish old content.
     if (generation!=revision.load(std::memory_order_relaxed)) continue;
