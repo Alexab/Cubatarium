@@ -70,6 +70,19 @@ std::atomic<bool> PrefixFail{};
 void Prefix(std::ostream &out,const google::LogMessage &,void *){if(PrefixFail.exchange(false))throw std::bad_alloc{};out.write("test_prefix",11);}
 void Emit(bool error){if(error)CubatariumLogError("lifecycle",Message);else CubatariumLogInfo("lifecycle",Message);}
 Json Snapshot(const Counts &c){return {{"attempts",c.attempts.load()},{"refusals",c.refusals.load()},{"live",c.live.load()},{"blocks",c.blocks.load()},{"peak",c.peak.load()},{"max_request",c.maximum.load()}};}
+Json DirectoryBaseline()
+{
+  FLAGS_log_dir=std::string(8192,'d');const auto expected=FLAGS_log_dir+"/";
+  google::InitGoogleLogging("directory_resource_probe");
+  auto &c=Records[Used++];c.fail_after=1;Active=&c;bool threw=false;
+  try{(void)google::GetLoggingDirectories();}catch(const std::bad_alloc &){threw=true;}
+  c.fail_after=SIZE_MAX;const auto &retry=google::GetLoggingDirectories();
+  const bool recovered=retry.size()==1 && retry[0]==expected;
+  const auto retained=c.live.load();google::ShutdownGoogleLogging();Active=nullptr;
+  const bool reproduced=threw && !recovered && c.live==0 && c.blocks==0;
+  auto out=Snapshot(c);out["schema"]="glog-directory-recovery.v1";out["threw"]=threw;out["retry_recovered"]=recovered;
+  out["retained_after_retry"]=retained;out["status"]=reproduced?"REPRODUCED":"NOT_REPRODUCED";return out;
+}
 Json Run(bool error,bool heap,size_t failure,int callback=0,bool retry=true)
 {
   Require(Used<Records.size(),"record limit");auto &c=Records[Used++];c.fail_after=failure;
@@ -141,8 +154,17 @@ Json SourceProfile()
   return report;
 }
 }
+#include "Test/GlogResourceFixture.h"
 int main(int argc,char **argv)
 {
+  if(argc==3 && std::string(argv[1])=="--resources"){
+    const auto result=glog_resource_fixture::Run();std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<'\n';
+    return out&&result["status"]=="PASS"?0:1;
+  }
+  if(argc==3 && std::string(argv[1])=="--directories-baseline"){
+    const auto result=DirectoryBaseline();std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<'\n';
+    return out&&result["status"]=="REPRODUCED"?0:1;
+  }
   const bool source_profile=argc>1 && std::string(argv[1])=="--source-profile";
   const bool baseline=argc>1 && std::string(argv[1])=="--baseline";
   const auto output=std::filesystem::path(argc>((baseline||source_profile)?2:1)?argv[(baseline||source_profile)?2:1]:"log-allocation-lifecycle.json");

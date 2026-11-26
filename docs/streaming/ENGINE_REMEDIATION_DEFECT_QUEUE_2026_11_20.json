@@ -779,6 +779,20 @@
       "observed": "Initial terrain data publication has a separate lifetime from local fluid mutation receipts. Generic mesh dirty deliberately does not invalidate cached fluid maps; generation/commit cache refresh coverage is not proven by seal/edit tests. Do not infer correctness from later remesh or eventual GPU scan.",
       "next_action": "During S4.01/S4.02 data arrival/reload ownership checks, warm a map before terrain arrival, publish actual generated/loaded fluid data and verify cache generation/invalidation before readiness; include negative-height columns. Local edit and seal receipts are already covered by S2.05; preserve initial snapshot publication coverage here.",
       "scope_rule": "Required full-goal follow-up, not waived by S2.05 completion. No native rerun without the specific arrival hypothesis/card."
+    },
+    {
+      "id": "glog-directory-cache-published-before-population",
+      "stage": "S4.02",
+      "owner": "E12",
+      "status": "RESOLVED_SERIAL_DIRECTORY_CONSTRUCTION_RETRY",
+      "observed": "Old actual Release library publishes24-byte directory vector before filling it;refusal prefix1 leaves cached empty list and exact retry returns empty.",
+      "resolution": "Local candidate vector is published after complete population. All3 cold allocation refusal prefixes clean and same-initialization retry restore exact directory output.",
+      "evidence": [
+        "S4_02_E12_W04_GLOG_RESOURCES_CERTIFICATE_2026_11_26.json",
+        "build/desktop-msvc/s4-glog-resources-before.json",
+        "build/desktop-msvc/s4-glog-resources-glog-resources.json"
+      ],
+      "next_action": "Continue existing S4.02 LIMIT.Q09 E12 after W01..W04;no audit restart/reopening accepted C01..C06/E11. Next finite ownership card:escaped/scoped UConcurrentAllocationCountingResource,UStbiAllocationLedger,budget/job/control coallocations and allocator-held owners across active/returned/weak-only lifetimes;deduplicate blocks already included in E10/E11 candidate or field requests,then bind existing world/thread/work/input source counts. Environment flag/name and merge-name backing histories,remaining render/world/window TLS and dynamic pipeline/cache shells remain separate. Logger cold CubatariumInitLogging flag/rollback and historical main30344 remainder remain unproved;W04 fixes only directory cache publication and accepts selected retained C++ roots. VLOG/site/symbolizer/signal/utility roots,active cleaner scans, stdio/CRT/locale/exception/stack/TLS loader/OS/driver/GPU/process terms still require source/explicit platform envelopes. W03 parent1960 includes332/104/8 children once;E11 caller reader160,W02 raw message/noise TLS,W01 expired weak shells and STBI32 prefixes must each be charged once. Unknown external histories remain UNSUPPORTED;source profiles impose no global asset/process quota. Whole-process matched workloads,RSS/high-water/frame/performance/memory and original full native matrix remain required under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance."
     }
   ]
 }

@@ -949,6 +949,9 @@ if(MSVC AND CMAKE_GENERATOR MATCHES "^Visual Studio")
     target_compile_definitions(CubatariumCompileConfig INTERFACE
         $<$<CONFIG:Debug>:CUBATARIUM_DEBUG>
     )
+    if(CUBATARIUM_MSVC_DESKTOP)
+        target_compile_definitions(CubatariumCompileConfig INTERFACE CUBATARIUM_GLOG_RESOURCE_SOURCE=1)
+    endif()
     if(WIN32)
         target_compile_definitions(CubatariumCompileConfig INTERFACE WIN32 GLEW_STATIC)
     endif()
@@ -2121,6 +2124,9 @@ if(CUBATARIUM_MSVC_DESKTOP)
   add_test(NAME log_runtime_source_test COMMAND $<TARGET_FILE:log_allocation_lifecycle_test>
       --source-profile ${CMAKE_CURRENT_BINARY_DIR}/log-runtime-source.json)
   set_tests_properties(log_runtime_source_test PROPERTIES LABELS "integration;memory;logging" TIMEOUT 120)
+  add_test(NAME glog_resource_source_test COMMAND $<TARGET_FILE:log_allocation_lifecycle_test>
+      --resources ${CMAKE_CURRENT_BINARY_DIR}/glog-resource-source.json)
+  set_tests_properties(glog_resource_source_test PROPERTIES LABELS "integration;memory;logging" TIMEOUT 120)
 endif()
 add_test(NAME async_relight_lifecycle_test
     COMMAND $<TARGET_FILE:async_relight_lifecycle_test>)
@@ -3389,6 +3395,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CUBATARIUM_GENERATED_DIR}
 )
 
+if(CUBATARIUM_MSVC_DESKTOP)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE CUBATARIUM_GLOG_RESOURCE_SOURCE=1)
+endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenGL::GL
     glfw

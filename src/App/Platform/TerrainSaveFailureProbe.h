@@ -41,6 +41,7 @@
 #include "WorldGen/Core/CatalogFilesystemSourceEnvelope.h"
 #include "WorldGen/Core/CatalogCandidateSourceEnvelope.h"
 #include "WorldGen/Core/RuntimeCoreInlineLayout.h"
+#include "Core/Memory/GlogResourceSource.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -143,6 +144,12 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         {"feature_and_diagnostic_shared_blocks",feature_candidate.shared_blocks_bytes},
         {"refs_shared_block",refs_candidate.shared_blocks_bytes},
         {"scope","Compiled coallocation terms included in per-input candidate bound;not native construction peak or process cap. Input DOM/prior pubs/platform terms separate."}};
+    GlogResourceCensus glog_resources{};bool glog_resources_ok=false;
+#if defined(CUBATARIUM_GLOG_RESOURCE_SOURCE)
+    glog_resources_ok=CubatariumGlogResourceSource(glog_resources.data(),glog_resources.size());
+#endif
+    report["glog_resource_source"]={{"schema","glog-resource-native.v1"},{"query_ok",glog_resources_ok},{"fields",glog_resources},
+        {"scope","Quiescent selected retained C++ resources only;custom/stdio/CRT/VLOG/symbolizer/signal/utility/process terms separate."}};
     const auto runtime_inline=GetRuntimeCoreInlineLayout();const auto pipeline_inline=GetPipelineRuntimeInlineLayout();
     report["runtime_inline_source"]={{"schema","runtime-inline-native.v1"},{"widths",runtime_inline.widths},
         {"present",runtime_inline.present},{"supported",runtime_inline.supported},{"pipeline_whole",pipeline_inline.whole},
