@@ -6,6 +6,7 @@
 #include "Gui/Widgets/GuiLabel.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image_write.h"
+#include "Test/ApplicationOperationStorageFixture.h"
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/TerrainSliceLoad.h"
@@ -87,6 +88,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
             }};
   try
   {
+    report["application_operation_model"]=RunApplicationOperationStorageProbe(application,core,*application.GetWorldRootForStorage());
     auto world = std::make_shared<UWorld>(nullptr, nullptr);
     world->ProceduralTemplate.MinHeight = -64;
     world->ProceduralTemplate.MaxHeight = -17;
@@ -142,6 +144,11 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     request.shutdownCloseApplication = true;
     request.saveConfigAfter = false;
     application.BeginWorldOperation(request, [&]() { close_callback = true; });
+    {
+      AllocatorSourcePhase phase(NewRootStorageEpoch(),1);const auto source=application.InspectOperationStorage(phase,true);
+      report["unknown_completion_source"]=ApplicationOperationSourceJson(source);
+      require(!source.supported && source.runner.supported && !source.actions[1].Supported(),"unknown external completion rejects while actual runner source remains supported");phase.Close();
+    }
     report["loading_close_intercepted"] =
         application.TryBeginShutdownFromWindowClose();
     report["loading_close_requested_quit"] = application.QuitRequested;
@@ -232,6 +239,11 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     application.GuiContext->RouteMouseUp(click);
     require(bool(application.PendingMenuAction),
             "retry click schedules action before screen destruction");
+    {
+      AllocatorSourcePhase phase(NewRootStorageEpoch(),1);const auto source=application.InspectOperationStorage(phase,true);
+      report["pending_retry_source"]=ApplicationOperationSourceJson(source);
+      require(source.supported && source.actions[0].kind==ApplicationActionKind::RetrySave,"actual mouse-scheduled retry source");phase.Close();
+    }
     application.Update(0.0);
     finish();
     UBlockWorld cold;

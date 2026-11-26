@@ -23,7 +23,9 @@ class UGuiTabBar;
 
 class UNewWorldScreen : public UGuiScreenBase
 {
+  friend struct CreateWorldMenuAction;
 public:
+  bool HasActionHostForStorage(const IUGuiMenuHost *host) const noexcept {return Host==host;}
   explicit UNewWorldScreen(IUGuiMenuHost *host);
   ~UNewWorldScreen();
 

@@ -168,6 +168,12 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   report["root_storage"]={{"schema","root-storage-runtime.v1"},{"status",roots.supported?"PASS":"UNSUPPORTED"},{"objects",root_layout.objects},{"coallocated",root_layout.coallocated},
     {"epoch_static_inline",root_layout.epoch_static_inline},{"blocks",roots.blocks},{"expected_blocks",root_expected},{"expired",roots.expired},{"requested",roots.requested},{"rows",root_rows},
     {"whole_runtime_complete",false},{"scope","Borrowed live default-factory World/Core/Application/Geometry/SectionBindings roots and supplied weak guards in one phase. Whole reserved shells count once;embedded children overlap. Other heap children,window/CRT/stacks/GPU/process remain separate."}};
+  const auto operations=application.InspectOperationStorage(root_phase,true);
+  Json operation_actions=Json::array();for(const auto &a:operations.actions)operation_actions.push_back({{"kind",static_cast<size_t>(a.kind)},{"supported",a.Supported()},{"present",a.callback.present},{"implementation",a.callback.requests},{"captured",a.captured},{"total",a.Total()}});
+  report["application_operations"]={{"schema","application-operation-runtime.v1"},{"status",operations.supported?"PASS":"UNSUPPORTED"},{"actions",operation_actions},
+    {"runner_present",operations.runner.present},{"runner_supported",operations.runner.supported},{"runner_active",operations.runner.active},{"runner_requests",operations.runner.requests},
+    {"wrappers_already_in_member_storage",operations.Wrappers()},{"additional",operations.Additional()},{"total",operations.Total()},{"whole_runtime_complete",false},
+    {"scope","Six known application actions and actual owned operation runner/request;function backing overlaps member_callback_storage. Captured backing and runner are additional. UI shells,outer widget callbacks,I/O/external job scopes and process remain separate."}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

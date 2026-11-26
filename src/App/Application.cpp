@@ -1,3 +1,4 @@
+#include "App/StoredApplicationActions.h"
 #include "World/Core/WorldOwnedCallbacks.h"
 #include "App/Application.h"
 #include "App/Platform/IUPlatformPaths.h"
@@ -398,24 +399,7 @@ void UApplication::BeginShutdownOperation(const bool saveSession,
   request.shutdownCloseApplication = closeAfter;
   request.saveConfigAfter = false;
   BeginWorldOperation(std::move(request),
-                      [this]()
-                      {
-                        if (GameSession)
-                        {
-                          GameSession->SaveCommandHistory();
-                        }
-                        if (Core)
-                        {
-                          // World terrain already saved by ShutdownSave.
-                          // SaveSystem→SaveWorld would re-enter snapshot/
-                          // InitChunkScheduler and can hang on worker join.
-                          Core->SaveConfigFile();
-                        }
-                        if (ShutdownCloseAfter)
-                        {
-                          RequestQuit();
-                        }
-                      });
+                      ApplicationShutdownCompleteAction{this});
 }
 
 bool UApplication::TryBeginShutdownFromWindowClose()
@@ -526,16 +510,10 @@ void UApplication::ShowFatalSaveFailure(const std::string &message)
     ProgressScreen->SetFailureActions(
         [this]()
         {
-          ScheduleDeferredMenuAction([this]()
-          {
-            WorldRunnerRequest retry;
-            retry.op = WorldRunnerOp::Save;
-            retry.saveConfigAfter = false;
-            BeginWorldOperation(std::move(retry));
-          });
+          ScheduleDeferredMenuAction(ApplicationRetrySaveAction{this});
         },
         [this]()
-        { ScheduleDeferredMenuAction([this]() { ShowMainMenu(); }); });
+        { ScheduleDeferredMenuAction(ApplicationShowMenuAction{this}); });
     ProgressScreen->ApplySnapshot(ProgressSink.Get());
   }
   SyncCursorVisibility();
@@ -557,16 +535,10 @@ void UApplication::OnWorldOperationFinished()
           [this]()
           {
             ScheduleDeferredMenuAction(
-                [this]()
-                {
-                  WorldRunnerRequest retry;
-                  retry.op = WorldRunnerOp::Save;
-                  retry.saveConfigAfter = false;
-                  BeginWorldOperation(std::move(retry));
-                });
+                ApplicationRetrySaveAction{this});
           },
           [this]()
-          { ScheduleDeferredMenuAction([this]() { ShowMainMenu(); }); });
+          { ScheduleDeferredMenuAction(ApplicationShowMenuAction{this}); });
       ProgressScreen->ApplySnapshot(ProgressSink.Get());
     }
     else
@@ -790,6 +762,16 @@ void UApplication::EnterGameAfterWorldChange()
 void UApplication::ScheduleDeferredMenuAction(std::function<void()> Action)
 {
   PendingMenuAction = std::move(Action);
+}
+
+void UApplication::RunPendingMenuAction()
+{
+  if (PendingMenuAction)
+  {
+    auto Action = std::move(PendingMenuAction);
+    PendingMenuAction = nullptr;
+    Action();
+  }
 }
 
 void UApplication::SaveIfNeededAndProceed(std::function<void()> proceed)
@@ -1276,7 +1258,7 @@ void UApplication::ShowInGameHud()
         SyncCursorVisibility();
       });
   DeathScreen->SetOnReturnToMenu(
-      [this]() { SaveIfNeededAndProceed([this]() { ReturnToMainMenu(); }); });
+      [this]() { SaveIfNeededAndProceed(ApplicationReturnMenuAction{this}); });
   DeathScreen->SetVisible(false);
 
   CharacterSheetScreen = std::make_unique<UCharacterSheetScreen>(
@@ -3345,12 +3327,7 @@ void UApplication::Update(double dt)
     BeginShutdownOperation(PendingShutdownSave, true);
     return;
   }
-  if (PendingMenuAction)
-  {
-    auto Action = std::move(PendingMenuAction);
-    PendingMenuAction = nullptr;
-    Action();
-  }
+  RunPendingMenuAction();
 
   if (State == AppState::Loading)
   {
@@ -4195,9 +4172,6 @@ void ApplicationCreatureCatalogCallback::operator()()const {
   if(owner->PaletteScreen)owner->PaletteScreen->InvalidateGrid();
 }
 
-MemberCallbackStorageSnapshot UApplication::InspectStoredActionCallbacks(bool known)const noexcept {
-  MemberCallbackStorageSnapshot out;SetEmptyMemberCallback(out,MemberCallbackCell::PendingAction,&PendingMenuAction,known);
-  SetEmptyMemberCallback(out,MemberCallbackCell::OperationComplete,&WorldOpOnComplete,known);return out;
-}
+
 
 } // namespace cutum

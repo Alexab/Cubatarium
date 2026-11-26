@@ -9,6 +9,7 @@
 #include "App/Settings/AppState.h"
 #include "App/Settings/UiSettings.h"
 #include "App/WorldOperationRunner.h"
+#include "App/ApplicationOperationStorage.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Game/GameSession.h"
 #include "Game/Inventory/SlotInteraction.h"
@@ -76,10 +77,14 @@ class UApplication : public IUGuiMenuHost
 {
   friend struct ApplicationBlockCatalogCallback;
   friend struct ApplicationCreatureCatalogCallback;
+  friend struct ApplicationShowMenuAction;
+  friend struct ApplicationShutdownCompleteAction;
+  friend struct ApplicationOperationSourceProbe;
   friend class UScreenNavigator;
   friend class UInputRouter;
 public:
   MemberCallbackStorageSnapshot InspectStoredActionCallbacks(bool known) const noexcept;
+  ApplicationOperationStorage InspectOperationStorage(const AllocatorSourcePhase &phase,bool known) const noexcept;
 
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
     out.BlockStorage(BlockDefinitions,"application");out.Core(Core.get());out.World(World.get());out.Geometry(Geometry.get());
@@ -235,6 +240,7 @@ private:
   void ShowMainMenu();
   void SaveActiveWorldIfNeeded();
   void ScheduleDeferredMenuAction(std::function<void()> Action);
+  void RunPendingMenuAction();
   void EnterGameAfterWorldChange();
   void RefreshBlockCatalog();
   void RefreshCreatureCatalog();

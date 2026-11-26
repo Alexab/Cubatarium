@@ -1,3 +1,4 @@
+#include "App/StoredApplicationActions.h"
 #include "App/Input/InputRouter.h"
 
 #include "App/Application.h"
@@ -153,7 +154,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
   {
     if (action == GLFW_PRESS && key == GLFW_KEY_ESCAPE)
     {
-      app.SaveIfNeededAndProceed([&app]() { app.ReturnToMainMenu(); });
+      app.SaveIfNeededAndProceed(ApplicationReturnMenuAction{&app});
       return true;
     }
     const bool spectatorCameraKey =
@@ -464,7 +465,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
   {
     if (app.ProgressScreen)
     {
-      app.ScheduleDeferredMenuAction([&app]() { app.ShowMainMenu(); });
+      app.ScheduleDeferredMenuAction(ApplicationShowMenuAction{&app});
       return true;
     }
     if (app.MainMenuScreen && app.MainMenuScreen->IsQuitConfirmationVisible())

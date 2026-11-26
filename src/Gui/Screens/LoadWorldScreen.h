@@ -15,7 +15,9 @@ class UGuiPanel;
 
 class ULoadWorldScreen : public UGuiScreenBase
 {
+  friend struct LoadWorldMenuAction;
 public:
+  bool HasActionHostForStorage(const IUGuiMenuHost *host) const noexcept {return Host==host;}
   explicit ULoadWorldScreen(IUGuiMenuHost *host);
 
   void Build(UGuiContext &ctx) override;

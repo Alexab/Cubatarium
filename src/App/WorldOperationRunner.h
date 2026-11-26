@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Progress/IUProgressSink.h"
+#include "App/ApplicationOperationStorage.h"
 #include "Game/WorldDifficulty.h"
 #include "Game/WorldGameMode.h"
 #include "ResourcePacks/ResourcePackResolver.h"
@@ -47,6 +48,7 @@ class UWorldOperationRunner
 {
 public:
   UWorldOperationRunner(UCore &core, UWorld &world);
+  WorldOperationStorage InspectOwnedStorage(const UCore *core,const UWorld *world,bool history_known) const noexcept;
 
   void Start(WorldRunnerRequest request);
   bool IsActive() const { return Active; }
@@ -84,6 +86,7 @@ public:
   bool IsEnterGameAbortDrainMode() const { return EnterGameAbortDrainMode; }
 
 private:
+  friend struct ApplicationOperationSourceProbe;
   bool SaveFailure{false};
   const char *CurrentStageName() const;
   void UpdateEnterGameWarmupPeaks(const EnterLitSample &lit_sample,

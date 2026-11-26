@@ -1,3 +1,4 @@
+#include "App/StoredApplicationActions.h"
 #include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiContext.h"
@@ -50,6 +51,11 @@ UNewWorldScreen::UNewWorldScreen(IUGuiMenuHost *host) : Host(host) {}
 
 UNewWorldScreen::~UNewWorldScreen() = default;
 
+void CreateWorldMenuAction::operator()()const
+{
+  owner->Host->CreateNewWorldWithSettings(settings,packs,view,gameMode,difficulty);
+}
+
 void UNewWorldScreen::OnCreate()
 {
   if (!Host || !WorldForm)
@@ -89,11 +95,7 @@ void UNewWorldScreen::OnCreate()
   {
     packs.WorldgenOwner = packs.Primary.front();
   }
-  auto create = [this, settings, packs, view, gameMode, difficulty]()
-  {
-    Host->CreateNewWorldWithSettings(settings, packs, view, gameMode,
-                                     difficulty);
-  };
+  auto create = CreateWorldMenuAction{this,settings,packs,view,gameMode,difficulty};
   Host->SaveIfNeededAndProceed(create);
 }
 

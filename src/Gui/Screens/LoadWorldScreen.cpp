@@ -1,3 +1,4 @@
+#include "App/StoredApplicationActions.h"
 #include "Gui/Screens/LoadWorldScreen.h"
 
 #include "Gui/Core/GuiContext.h"
@@ -69,6 +70,8 @@ ULoadWorldScreen::ULoadWorldScreen(IUGuiMenuHost *host)
 {
 }
 
+void LoadWorldMenuAction::operator()()const {owner->Host->LoadSelectedWorld(worldName);}
+
 void ULoadWorldScreen::OnLoad()
 
 {
@@ -97,8 +100,7 @@ void ULoadWorldScreen::OnLoad()
 
   const std::string worldName = names[static_cast<size_t>(idx)];
 
-  Host->SaveIfNeededAndProceed([this, worldName]()
-                               { Host->LoadSelectedWorld(worldName); });
+  Host->SaveIfNeededAndProceed(LoadWorldMenuAction{this,worldName});
 }
 
 void ULoadWorldScreen::Build(UGuiContext &ctx)
