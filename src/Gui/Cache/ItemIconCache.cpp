@@ -104,6 +104,42 @@ UItemIconCache::UItemIconCache(
 {
 }
 
+ItemIconCacheStorage UItemIconCache::InspectOwnedStorage() const noexcept
+{
+  ItemIconCacheStorage out;
+  out.present = true;
+  out.cacheBytes = sizeof(*this);
+  out.icons = InspectIconTextureTable(Cache, kIconSize * kIconSize);
+  const auto queue = Warmup.InspectOwnedStorage();
+  out.queueBytes = queue.requested;
+  out.pending = Warmup.Size();
+  StlSourceStorage fingerprints, state, total;
+  fingerprints.Hash(Fingerprints);
+  for (const auto &[id, fingerprint] : Fingerprints)
+  {
+    fingerprints.Text(id);
+    fingerprints.Text(fingerprint);
+  }
+  state.Hash(StateRequests);
+  for (const auto &[key, request] : StateRequests)
+  {
+    state.Text(key);
+    state.Text(request.Id);
+    state.Text(request.Variant);
+    state.bytes.supported &= Warmup.Contains(key);
+  }
+  out.fingerprintBytes = fingerprints.bytes.requested;
+  out.stateBytes = state.bytes.requested;
+  out.fingerprints = Fingerprints.size();
+  out.stateRequests = StateRequests.size();
+  for (size_t bytes : {out.cacheBytes, out.icons.cpuBytes, out.queueBytes, out.fingerprintBytes, out.stateBytes})
+    total.Add(bytes);
+  out.cpuBytes = total.bytes.requested;
+  out.supported = out.icons.supported && !out.icons.borrowed && queue.supported &&
+                  fingerprints.bytes.supported && state.bytes.supported && total.bytes.supported;
+  return out;
+}
+
 GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
                                       const ItemVisualInputs &inputs)
 {
@@ -129,12 +165,19 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
   if (!outTex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, outTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kSize, kSize, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, pixels.data());
+  {
+    UGlPixelUnpackScope unpack;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kSize, kSize, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, pixels.data());
+  }
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  GLint width = 0;
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+  if (width != kSize)
+    return 0;
   return texture.Release();
 }
 
@@ -232,6 +275,12 @@ void UItemIconCache::CompleteWarmupIcon(const std::string &itemId)
       const auto renderStart = std::chrono::steady_clock::now();
       UGlTextureOwner rendered(RenderItemIcon(definitionId,
           state == StateRequests.end() ? ItemVisualInputs{} : state->second.Inputs));
+      if (!rendered.Get())
+      {
+        if (state != StateRequests.end())
+          StateRequests.erase(state);
+        return;
+      }
       const auto renderEnd = std::chrono::steady_clock::now();
       const auto texture = Cache.try_emplace(itemId, std::move(rendered)).first->second.Get();
       auto fingerprintEnd = renderEnd;

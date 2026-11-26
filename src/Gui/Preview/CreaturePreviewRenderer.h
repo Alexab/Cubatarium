@@ -5,6 +5,7 @@
 
 #include "Creatures/Locomotion/LocomotionTypes.h"
 #include "Creatures/Visual/WornEquipmentDrawer.h"
+#include "Gui/Preview/PreviewRenderResources.h"
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -31,6 +32,7 @@ struct ItemDrawRequest;
 struct ItemVisualInputs;
 class CreatureDrawQueue;
 struct CreatureGltfMeshAsset;
+struct PreviewRendererStorage;
 
 class UCreaturePreviewRenderer
 {
@@ -40,6 +42,14 @@ public:
                            std::shared_ptr<UCreatureTextureStorage> textures,
                            std::shared_ptr<UShaderManager> shaderManager);
   ~UCreaturePreviewRenderer();
+  static std::shared_ptr<UCreaturePreviewRenderer> Create(
+      std::shared_ptr<UCreatureDefinitionStorage> species,
+      std::shared_ptr<USkinDefinitionStorage> skins,
+      std::shared_ptr<UCreatureTextureStorage> textures,
+      std::shared_ptr<UShaderManager> shaderManager);
+  PreviewRendererStorage InspectOwnedStorage(const UCreatureDefinitionStorage *species,
+      const USkinDefinitionStorage *skins, const UCreatureTextureStorage *textures,
+      const UShaderManager *shaders) const noexcept;
 
   bool Initialize();
   void Shutdown();
@@ -178,22 +188,10 @@ private:
   std::function<void(const ItemDrawRequest &)> ItemSurfaceObserver;
   std::function<void(const IUCreatureVisual &)> SkeletonPoseObserver;
 
-  GLuint CubeVao{0};
-  GLuint CubeVbo{0};
-  GLuint CubeEbo{0};
-  GLuint HeadCubeVao{0};
-  GLuint HeadCubeVbo{0};
-  GLuint HeadCubeEbo{0};
-  GLuint BodyCubeVao{0};
-  GLuint BodyCubeVbo{0};
-  GLuint BodyCubeEbo{0};
-  GLuint RigidHeadCubeVao{0};
-  GLuint RigidHeadCubeVbo{0};
-  GLuint RigidHeadCubeEbo{0};
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
+  PreviewCubeMesh Cube, HeadCube, BodyCube, RigidHeadCube;
+  PreviewRenderTarget Target;
   int FboSize{0};
+  bool FactoryOwner{false};
 };
 
 } // namespace cutum

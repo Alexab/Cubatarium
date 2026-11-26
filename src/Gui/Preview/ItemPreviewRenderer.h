@@ -1,7 +1,10 @@
 #ifndef ITEM_PREVIEW_RENDERER_H
 #define ITEM_PREVIEW_RENDERER_H
 
+#include "Gui/Preview/PreviewRenderResources.h"
 #include "Items/ItemVisualInputs.h"
+#include "Render/Textures/GlTextureOwner.h"
+#include <array>
 #include <filesystem>
 #include <functional>
 #include <memory>
@@ -20,6 +23,7 @@ namespace cutum
 class UItemDefinitionStorage;
 class UShaderManager;
 struct ItemDrawRequest;
+struct PreviewRendererStorage;
 
 /// Lightweight 3D preview renderer for item tools / armor props.
 /// Supports (in order): static glTF via CreatureGltfLoader, parts[] JSON cubes,
@@ -30,6 +34,10 @@ public:
   UItemPreviewRenderer(std::shared_ptr<UItemDefinitionStorage> items,
                        std::shared_ptr<UShaderManager> shaderManager);
   ~UItemPreviewRenderer();
+  static std::shared_ptr<UItemPreviewRenderer> Create(std::shared_ptr<UItemDefinitionStorage> items,
+      std::shared_ptr<UShaderManager> shaders);
+  PreviewRendererStorage InspectOwnedStorage(const UItemDefinitionStorage *items,
+      const UShaderManager *shaders) const noexcept;
 
   bool Initialize();
   void Shutdown();
@@ -111,19 +119,17 @@ private:
   std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>>
       InspectionAssets;
 
-  GLuint CubeVao{0};
-  GLuint CubeVbo{0};
-  GLuint CubeEbo{0};
+  PreviewCubeMesh Cube;
   GLuint ScratchMeshVao{0};
   GLuint ScratchMeshVbo{0};
   GLuint ScratchMeshEbo{0};
+  size_t ScratchVertexBytes{}, ScratchIndexBytes{};
 
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
+  PreviewRenderTarget Target;
   int FboSize{0};
 
-  std::unordered_map<std::string, GLuint> ColorTexCache;
+  std::array<UGlTextureOwner, 6> ColorTextures;
+  bool FactoryOwner{false};
 };
 
 } // namespace cutum

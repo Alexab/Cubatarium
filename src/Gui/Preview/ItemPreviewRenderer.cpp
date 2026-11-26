@@ -1,5 +1,7 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Core/Json/JsonVec.h"
+#include "Core/Memory/StlSourceStorage.h"
+#include "Gui/Preview/PreviewRendererStorage.h"
 #include "Items/ItemDrawRequest.h"
 
 #include "Items/ItemGltfTextureCache.h"
@@ -24,6 +26,7 @@
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -38,41 +41,26 @@ constexpr float kFovDeg = 35.0f;
 
 std::unordered_set<std::string> gItemModelMissingLogged;
 
-struct Rgb
-{
-  unsigned char r{158};
-  unsigned char g{107};
-  unsigned char b{56};
+enum class FallbackColor { Wood, Leather, Iron, Stone, Gold, Diamond, Count };
+constexpr unsigned char kFallbackPixels[][4] = {
+    {158, 107, 56, 255}, {120, 78, 48, 255}, {185, 190, 200, 255},
+    {140, 140, 132, 255}, {225, 170, 60, 255}, {120, 210, 255, 255},
 };
+static_assert(std::size(kFallbackPixels) == static_cast<size_t>(FallbackColor::Count));
 
-Rgb ToolRgb(const std::string &id)
+FallbackColor ColorForItem(const std::string &id)
 {
-  // Rough palette to make rotation silhouettes readable even without textures.
   if (id.find("leather") != std::string::npos)
-  {
-    return Rgb{120, 78, 48};
-  }
+    return FallbackColor::Leather;
   if (id.find("iron") != std::string::npos)
-  {
-    return Rgb{185, 190, 200};
-  }
+    return FallbackColor::Iron;
   if (id.find("stone") != std::string::npos)
-  {
-    return Rgb{140, 140, 132};
-  }
+    return FallbackColor::Stone;
   if (id.find("gold") != std::string::npos)
-  {
-    return Rgb{225, 170, 60};
-  }
+    return FallbackColor::Gold;
   if (id.find("diamond") != std::string::npos)
-  {
-    return Rgb{120, 210, 255};
-  }
-  if (id.find("wood") != std::string::npos)
-  {
-    return Rgb{158, 107, 56};
-  }
-  return Rgb{158, 107, 56};
+    return FallbackColor::Diamond;
+  return FallbackColor::Wood;
 }
 
 } // namespace
@@ -85,6 +73,55 @@ UItemPreviewRenderer::UItemPreviewRenderer(
 }
 
 UItemPreviewRenderer::~UItemPreviewRenderer() { Shutdown(); }
+
+std::shared_ptr<UItemPreviewRenderer> UItemPreviewRenderer::Create(
+    std::shared_ptr<UItemDefinitionStorage> items, std::shared_ptr<UShaderManager> shaders)
+{
+  auto renderer = std::make_shared<UItemPreviewRenderer>(std::move(items), std::move(shaders));
+  renderer->FactoryOwner = true;
+  return renderer;
+}
+
+PreviewRendererStorage UItemPreviewRenderer::InspectOwnedStorage(const UItemDefinitionStorage *items,
+    const UShaderManager *shaders) const noexcept
+{
+  PreviewRendererStorage out;
+  out.present = true;
+  out.factoryOwner = FactoryOwner;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  if (FactoryOwner)
+    out.requestBytes = sizeof(std::_Ref_count_obj2<UItemPreviewRenderer>);
+#endif
+  StlSourceStorage tables, total;
+  tables.Hash(InspectionAssets);
+  tables.Text(InspectionPath.native());
+  out.assetReferences = bool(InspectionAsset);
+  for (const auto &[key, asset] : InspectionAssets)
+  {
+    tables.Text(key);
+    out.assetReferences += bool(asset);
+  }
+  if (SurfaceRenderer)
+    out.surface = SurfaceRenderer->InspectOwnedStorage();
+  for (const auto &texture : ColorTextures)
+    out.fallbackColorTexels += texture.IsOwned();
+  out.tableBytes = tables.bytes.requested;
+  total.Add(out.requestBytes);
+  total.Add(out.tableBytes);
+  total.Add(out.surface.cpuBytes);
+  out.cpuBytes = total.bytes.requested;
+  const bool target = InspectPreviewTarget(out, Target, FboSize);
+  const bool mesh = InspectPreviewCube(out, Cube);
+  out.resolveFramebuffer = IconResolveFbo;
+  out.scratchVertexBytes = ScratchVertexBytes;
+  out.scratchIndexBytes = ScratchIndexBytes;
+  const bool scratch = ScratchMeshVao ? ScratchMeshVbo && ScratchMeshEbo && ScratchMeshVbo != ScratchMeshEbo :
+      !ScratchMeshVbo && !ScratchMeshEbo && !ScratchVertexBytes && !ScratchIndexBytes;
+  out.supported = items == Items.get() && shaders == ShaderManager.get() && FactoryOwner && target && mesh &&
+      scratch && (!SurfaceRenderer || out.surface.supported) && !InspectionDrawObserver &&
+      tables.bytes.supported && total.bytes.supported;
+  return out;
+}
 
 bool UItemPreviewRenderer::Initialize()
 {
@@ -120,6 +157,17 @@ void UItemPreviewRenderer::Shutdown()
 {
   Invalidate();
   SurfaceRenderer.reset();
+  Cube.Reset();
+  Shader.reset();
+  IconResolveShader.reset();
+}
+
+void UItemPreviewRenderer::Invalidate()
+{
+  InspectionAssets.clear();
+  if (SurfaceRenderer)
+    SurfaceRenderer->Clear();
+  ReleaseFramebuffer();
 
   if (ScratchMeshEbo != 0)
   {
@@ -136,46 +184,15 @@ void UItemPreviewRenderer::Shutdown()
     glDeleteVertexArrays(1, &ScratchMeshVao);
     ScratchMeshVao = 0;
   }
-  if (CubeEbo != 0)
-  {
-    glDeleteBuffers(1, &CubeEbo);
-    CubeEbo = 0;
-  }
-  if (CubeVbo != 0)
-  {
-    glDeleteBuffers(1, &CubeVbo);
-    CubeVbo = 0;
-  }
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
+  ScratchVertexBytes = ScratchIndexBytes = 0;
 
-  Shader.reset();
-  IconResolveShader.reset();
-}
-
-void UItemPreviewRenderer::Invalidate()
-{
-  InspectionAssets.clear();
-  if (SurfaceRenderer)
-    SurfaceRenderer->Clear();
-  ReleaseFramebuffer();
-
-  for (auto &kv : ColorTexCache)
-  {
-    if (kv.second != 0)
-    {
-      glDeleteTextures(1, &kv.second);
-    }
-  }
-  ColorTexCache.clear();
+  for (auto &texture : ColorTextures)
+    texture.Reset();
 }
 
 bool UItemPreviewRenderer::InitCubeMesh()
 {
-  if (CubeVao != 0)
+  if (Cube.Vao != 0)
   {
     return true;
   }
@@ -310,25 +327,7 @@ bool UItemPreviewRenderer::InitCubeMesh()
       12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
   };
 
-  glGenVertexArrays(1, &CubeVao);
-  glGenBuffers(1, &CubeVbo);
-  glGenBuffers(1, &CubeEbo);
-
-  glBindVertexArray(CubeVao);
-  glBindBuffer(GL_ARRAY_BUFFER, CubeVbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, CubeEbo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
-               GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-
-  glBindVertexArray(0);
-  return true;
+  return Cube.Initialize(vertices, indices);
 }
 
 void UItemPreviewRenderer::ReleaseFramebuffer()
@@ -338,58 +337,19 @@ void UItemPreviewRenderer::ReleaseFramebuffer()
     glDeleteFramebuffers(1, &IconResolveFbo);
     IconResolveFbo = 0;
   }
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
+  Target.Reset();
   FboSize = 0;
 }
 
 bool UItemPreviewRenderer::EnsureFboSize(int size)
 {
-  const int clamped = std::max(32, std::min(size, 512));
-  if (Fbo != 0 && FboSize == clamped)
-  {
+  const int clamped = std::clamp(size, 32, 512);
+  if (Target.Framebuffer && FboSize == clamped)
     return true;
-  }
-
-  ReleaseFramebuffer();
-
-  glGenFramebuffers(1, &Fbo);
-  glGenTextures(1, &ColorTex);
-  glBindTexture(GL_TEXTURE_2D, ColorTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-
-  glGenRenderbuffers(1, &DepthRbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                        clamped);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, DepthRbo);
-
-  const bool complete =
-      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  FboSize = complete ? clamped : 0;
-  return complete;
+  if (!Target.Initialize(clamped))
+    return false;
+  FboSize = clamped;
+  return true;
 }
 
 glm::mat4 UItemPreviewRenderer::OrbitView(float yawDeg, float pitchDeg,
@@ -579,8 +539,11 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
     profile.InspectionMode = InspectionMode;
     profile.Ambient = InspectionAmbient;
     profile.CameraPosition = glm::vec3(glm::inverse(view)[3]);
+    bool geometryReady = false;
     SurfaceRenderer->Draw(surface, absPath, projection * view, model, state,
-                          profile);
+                          profile, &geometryReady);
+    if (!geometryReady)
+      return false;
     if (InspectionDrawObserver)
       InspectionDrawObserver({surface,
                               absPath,
@@ -638,6 +601,14 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
     glGenVertexArrays(1, &ScratchMeshVao);
     glGenBuffers(1, &ScratchMeshVbo);
     glGenBuffers(1, &ScratchMeshEbo);
+    if (!ScratchMeshVao || !ScratchMeshVbo || !ScratchMeshEbo)
+    {
+      glDeleteVertexArrays(1, &ScratchMeshVao);
+      glDeleteBuffers(1, &ScratchMeshVbo);
+      glDeleteBuffers(1, &ScratchMeshEbo);
+      ScratchMeshVao = ScratchMeshVbo = ScratchMeshEbo = 0;
+      return false;
+    }
   }
 
   const GLuint fallbackTex = GetOrCreateColorTexture(itemId);
@@ -651,30 +622,37 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
   for (const GltfPrimitiveCpu &prim : asset->primitives)
   {
     const auto &mesh = prim.mesh;
-    if (mesh.interleavedPosUv.empty() || mesh.indices.empty())
+    constexpr auto maxBytes = static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max());
+    if (mesh.interleavedPosUv.empty() || mesh.indices.empty() ||
+        mesh.interleavedPosUv.size() > maxBytes / sizeof(float) ||
+        mesh.indices.size() > maxBytes / sizeof(unsigned) ||
+        mesh.indices.size() > static_cast<size_t>(std::numeric_limits<GLsizei>::max()))
     {
       continue;
     }
     GLuint tex =
         ItemGltfTextureCache::Instance().Get(absPath, prim.textureStem);
     if (tex == 0)
-    {
       tex = fallbackTex;
-    }
+    if (tex == 0)
+      continue;
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
     Shader->SetMat4("mvp_matrix", mvp);
     glBindVertexArray(ScratchMeshVao);
     glBindBuffer(GL_ARRAY_BUFFER, ScratchMeshVbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.interleavedPosUv.size() * sizeof(float)),
-        mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
+    const auto vertexRequest = GLsizeiptr(mesh.interleavedPosUv.size() * sizeof(float));
+    const auto indexRequest = GLsizeiptr(mesh.indices.size() * sizeof(unsigned));
+    glBufferData(GL_ARRAY_BUFFER, vertexRequest, mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ScratchMeshEbo);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        static_cast<GLsizeiptr>(mesh.indices.size() * sizeof(unsigned)),
-        mesh.indices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexRequest, mesh.indices.data(), GL_STREAM_DRAW);
+    GLint64 vertexBytes = 0, indexBytes = 0;
+    glGetBufferParameteri64v(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &vertexBytes);
+    glGetBufferParameteri64v(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexBytes);
+    ScratchVertexBytes = size_t(vertexBytes);
+    ScratchIndexBytes = size_t(indexBytes);
+    if (vertexBytes != vertexRequest || indexBytes != indexRequest)
+      continue;
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
@@ -736,33 +714,34 @@ UItemPreviewRenderer::FallbackParts(const std::string &itemId) const
 
 GLuint UItemPreviewRenderer::GetOrCreateColorTexture(const std::string &itemId)
 {
-  const auto it = ColorTexCache.find(itemId);
-  if (it != ColorTexCache.end())
-  {
-    return it->second;
-  }
+  static_assert(std::tuple_size_v<decltype(ColorTextures)> == std::size(kFallbackPixels));
+  const auto color = static_cast<size_t>(ColorForItem(itemId));
+  auto &cached = ColorTextures[color];
+  if (cached.Get())
+    return cached.Get();
 
-  const Rgb rgb = ToolRgb(itemId);
-  const unsigned char rgba[4] = {rgb.r, rgb.g, rgb.b, 255};
-
-  GLuint tex{0};
+  GLuint tex = 0;
   glGenTextures(1, &tex);
   UGlTextureOwner candidate(tex);
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-               rgba);
+  {
+    UGlPixelUnpackScope unpack;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 kFallbackPixels[color]);
+  }
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  GLint width = 0;
+  glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
   glBindTexture(GL_TEXTURE_2D, 0);
-
-  const auto [entry, inserted] = ColorTexCache.try_emplace(itemId, tex);
-  if (inserted)
-    candidate.Release();
-  return entry->second;
+  if (width != 1)
+    return 0;
+  cached = std::move(candidate);
+  return cached.Get();
 }
 
 GLuint
@@ -799,12 +778,13 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(clamped);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlIconColorAttachment attachment(Fbo, tex, ColorTex);
+  UGlIconColorAttachment attachment(Target.Framebuffer, tex, Target.Color);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    return 0;
 
   glViewport(0, 0, clamped, clamped);
   glEnable(GL_DEPTH_TEST);
@@ -863,16 +843,18 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
   const float scale =
       1.2f / maxExtent * (definition ? definition->Visual.IconScale : 1.f);
 
+  const GLuint colorTex = GetOrCreateColorTexture(itemId);
+  if (!colorTex)
+    return 0;
   Shader->Use();
   Shader->SetInt("texture0", 0);
   Shader->SetInt("uAnimFrame", 0);
   Shader->SetInt("uAnimFrameCount", 1);
 
-  const GLuint colorTex = GetOrCreateColorTexture(itemId);
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, colorTex);
 
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
   for (const Part &p : parts)
   {
     const glm::vec3 c = (glm::vec3{p.ox, p.oy, p.oz} - center) * scale;
@@ -931,8 +913,7 @@ GLuint UItemPreviewRenderer::ResolveIconTexture(GLuint source, int size)
   if (!result)
     return 0;
   glBindTexture(GL_TEXTURE_2D, result);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, size, size, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(size, GL_RGBA8);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -953,7 +934,7 @@ GLuint UItemPreviewRenderer::ResolveIconTexture(GLuint source, int size)
   IconResolveShader->Use();
   IconResolveShader->SetInt("uSamples", 0);
   glBindTexture(GL_TEXTURE_2D, source);
-  glBindVertexArray(CubeVao);
+  glBindVertexArray(Cube.Vao);
   glDrawArrays(GL_TRIANGLES, 0, 3);
   return textureResult.Release();
 }

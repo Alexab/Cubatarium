@@ -2,6 +2,7 @@
 #define ITEM_ICON_CACHE_H
 
 #include "Game/Inventory/InventoryTypes.h"
+#include "Gui/Cache/IconCacheStorage.h"
 #include "Gui/Cache/IconWarmupQueue.h"
 #include "Gui/Cache/InventoryIconService.h"
 #include "Items/ItemDefinitionStorage.h"
@@ -38,6 +39,7 @@ public:
   /// within both an icon-count cap and a four-millisecond work budget.
   void WarmupNext(size_t count);
   size_t PendingWarmupCount() const { return Warmup.Size(); }
+  ItemIconCacheStorage InspectOwnedStorage() const noexcept;
 
 private:
   friend class UGuiIconSource;

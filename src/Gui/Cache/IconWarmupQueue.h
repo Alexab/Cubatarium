@@ -52,6 +52,7 @@ public:
 
   bool Empty() const { return Queue.empty(); }
   size_t Size() const { return Queue.size(); }
+  bool Contains(std::string_view name) const { return Queued.find(name) != Queued.end(); }
   NameStorageEnvelope InspectOwnedStorage() const noexcept
   {
     StlSourceStorage storage;

@@ -64,6 +64,7 @@ public:
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
   {out.Library(Objects);out.TextureCubes(Textures);out.BlockStorage(BlockDefs,"content-preview");}
 private:
+  friend class UGuiIconSource;
   bool EnsureFboSize(int size);
   GLuint GetBlockTexture(BlockId blockId) const;
   GLuint RenderObject(const std::string &objectName, int size, float yawDeg,

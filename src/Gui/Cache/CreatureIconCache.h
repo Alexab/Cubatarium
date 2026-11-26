@@ -1,6 +1,7 @@
 #ifndef CREATURE_ICON_CACHE_H
 #define CREATURE_ICON_CACHE_H
 
+#include "Gui/Cache/IconCacheStorage.h"
 #include "Gui/Cache/IconWarmupQueue.h"
 #include "Render/Textures/GlTextureOwner.h"
 #include <memory>
@@ -33,6 +34,7 @@ public:
   void WarmupNext(size_t count);
   /// Shared warmup-list rebuild (Initialize / Invalidate used to duplicate it).
   void RebuildWarmupList();
+  CreatureIconCacheStorage InspectOwnedStorage() const noexcept;
 
 private:
   friend class UGuiIconSource;

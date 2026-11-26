@@ -3,6 +3,7 @@
 #include "App/Application.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Gui/Core/GuiIconSource.h"
+#include "Gui/Cache/CreatureItemIconStorage.h"
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Preview/ItemLabSceneRenderer.h"
@@ -230,6 +231,45 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"readback_state_bytes", diskIcons.readbackStateBytes}, {"path_bytes", diskIcons.pathBytes},
       {"manifest_bytes", diskIcons.manifestBytes}, {"job_bytes", diskIcons.jobBytes}, {"cpu_bytes", diskIcons.cpuBytes},
       {"entries", diskIcons.entries}, {"jobs", diskIcons.jobs}, {"pack_buffer_bytes", diskIcons.packBufferBytes},
+      {"whole_runtime_complete", false}};
+  const auto entityIcons = application.InspectCreatureItemIconStorage();
+  const auto iconTable = [](const IconTextureTableStorage &table) -> nlohmann::json
+  {
+    return {{"cpu_bytes", table.cpuBytes}, {"owned", table.owned}, {"borrowed", table.borrowed},
+            {"owned_texels", table.ownedTexels}};
+  };
+  const auto iconPreview = [](const PreviewRendererStorage &preview, size_t aliases) -> nlohmann::json
+  {
+    const auto &surface = preview.surface;
+    return {{"present", preview.present}, {"supported", preview.supported},
+            {"aliases", aliases}, {"factory_owner", preview.factoryOwner},
+            {"cpu_bytes", preview.cpuBytes}, {"request_bytes", preview.requestBytes},
+            {"table_bytes", preview.tableBytes}, {"asset_references", preview.assetReferences},
+            {"meshes", preview.meshes}, {"vertex_buffer_bytes", preview.vertexBytes},
+            {"index_buffer_bytes", preview.indexBytes}, {"scratch_vertex_bytes", preview.scratchVertexBytes},
+            {"scratch_index_bytes", preview.scratchIndexBytes}, {"target_texels", preview.targetTexels},
+            {"depth_samples", preview.depthSamples}, {"fallback_color_texels", preview.fallbackColorTexels},
+            {"resolve_framebuffer", bool(preview.resolveFramebuffer)}, {"surface_assets", surface.assets},
+            {"surface_cpu_bytes", surface.cpuBytes}, {"surface_table_bytes", surface.tableBytes},
+            {"surface_offset_bytes", surface.offsetBytes}, {"surface_vertex_bytes", surface.vertexBytes},
+            {"surface_index_bytes", surface.indexBytes}};
+  };
+  const auto &creatureIcons = entityIcons.creature;
+  const auto &itemIcons = entityIcons.item;
+  report["creature_item_icon_storage"] = {
+      {"schema", "creature-item-icon-storage.v1"}, {"status", entityIcons.supported ? "PASS" : "UNSUPPORTED"},
+      {"bindings_match", entityIcons.bindingsMatch}, {"cpu_bytes", entityIcons.cpuBytes},
+      {"creature", {{"present", creatureIcons.present}, {"cpu_bytes", creatureIcons.cpuBytes},
+          {"cache_bytes", creatureIcons.cacheBytes}, {"queue_bytes", creatureIcons.queueBytes},
+          {"pending", creatureIcons.pending}, {"species", iconTable(creatureIcons.species)},
+          {"skins", iconTable(creatureIcons.skins)}}},
+      {"item", {{"present", itemIcons.present}, {"cpu_bytes", itemIcons.cpuBytes},
+          {"cache_bytes", itemIcons.cacheBytes}, {"queue_bytes", itemIcons.queueBytes},
+          {"fingerprint_bytes", itemIcons.fingerprintBytes}, {"state_bytes", itemIcons.stateBytes},
+          {"fingerprints", itemIcons.fingerprints}, {"state_requests", itemIcons.stateRequests},
+          {"pending", itemIcons.pending}, {"icons", iconTable(itemIcons.icons)}}},
+      {"creature_preview", iconPreview(entityIcons.creaturePreview, entityIcons.creaturePreviewAliases)},
+      {"item_preview", iconPreview(entityIcons.itemPreview, entityIcons.itemPreviewAliases)},
       {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied

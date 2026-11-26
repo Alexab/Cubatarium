@@ -57,6 +57,7 @@ class UBlockDefinitionStorage;
 class UGuiIconSource;
 struct ObjectIconStorage;
 struct InventoryIconStorage;
+struct CreatureItemIconStorage;
 class UContentPreviewRenderer;
 struct ContentPreviewRendererStorage;
 class UCreaturePreviewRenderer;
@@ -189,6 +190,7 @@ public:
   ContentPreviewRendererStorage InspectContentPreviewStorage() const noexcept;
   ObjectIconStorage InspectObjectIconStorage() const noexcept;
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
+  CreatureItemIconStorage InspectCreatureItemIconStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

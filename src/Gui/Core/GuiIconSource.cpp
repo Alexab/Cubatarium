@@ -1,9 +1,20 @@
 #include "Gui/Core/GuiIconSource.h"
+#include "Gui/Cache/CreatureItemIconStorage.h"
+#include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Gui/Preview/CreaturePreviewRenderer.h"
+#include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Render/Textures/TextureCube.h"
 #include <array>
 
 namespace cutum
 {
+namespace
+{
+template<class T> bool SameOwner(const std::shared_ptr<T> &left, const std::shared_ptr<T> &right) noexcept
+{
+  return left.get() == right.get() && !left.owner_before(right) && !right.owner_before(left);
+}
+} // namespace
 
 UGuiIconSource::UGuiIconSource(
     std::shared_ptr<UTextureCubeStorage> textures,
@@ -178,7 +189,7 @@ InventoryIconStorage UGuiIconSource::InspectInventoryIconStorage() const noexcep
       continue;
     if (!owner)
       owner = route;
-    consistent &= owner->get() == route->get() && !owner->owner_before(*route) && !route->owner_before(*owner);
+    consistent &= SameOwner(*owner, *route);
     aliases += bool(*route);
   }
   InventoryIconStorage out;
@@ -194,6 +205,47 @@ InventoryIconStorage UGuiIconSource::InspectInventoryIconStorage() const noexcep
     return out;
   }
   out.bindingsMatch = out.supported = true;
+  return out;
+}
+
+CreatureItemIconStorage UGuiIconSource::InspectCreatureItemIconStorage(const UGuiIconSource *source,
+    const UContentPreviewRenderer *content, const std::shared_ptr<UCreaturePreviewRenderer> &creaturePreview,
+    const UCreatureDefinitionStorage *species, const USkinDefinitionStorage *skins,
+    const UCreatureTextureStorage *textures, const UItemDefinitionStorage *items,
+    const UShaderManager *shaders) noexcept
+{
+  const auto *creature = source ? source->CreatureCache.get() : nullptr;
+  const auto *item = source ? source->ItemCache.get() : nullptr;
+  const std::shared_ptr<UItemPreviewRenderer> empty;
+  const auto &itemPreview = item ? item->ItemPreview : content ? content->ItemPreview : empty;
+
+  CreatureItemIconStorage out;
+  out.bindingsMatch = (!creature || SameOwner(creature->Preview, creaturePreview)) &&
+      (!item || item->Items.get() == items) &&
+      (!content || (SameOwner(content->Creatures, creaturePreview) && SameOwner(content->ItemPreview, itemPreview)));
+  if (!out.bindingsMatch)
+    return out;
+  if (creature)
+    out.creature = creature->InspectOwnedStorage();
+  if (item)
+    out.item = item->InspectOwnedStorage();
+  if (creaturePreview)
+  {
+    out.creaturePreview = creaturePreview->InspectOwnedStorage(species, skins, textures, shaders);
+    out.creaturePreviewAliases = 1 + size_t(creature != nullptr) + size_t(content != nullptr);
+  }
+  if (itemPreview)
+  {
+    out.itemPreview = itemPreview->InspectOwnedStorage(items, shaders);
+    out.itemPreviewAliases = size_t(item != nullptr) + size_t(content != nullptr);
+  }
+  StlSourceStorage total;
+  for (size_t bytes : {out.creature.cpuBytes, out.item.cpuBytes, out.creaturePreview.cpuBytes, out.itemPreview.cpuBytes})
+    total.Add(bytes);
+  out.cpuBytes = total.bytes.requested;
+  out.supported = total.bytes.supported && (!creature || out.creature.supported) &&
+      (!item || out.item.supported) && (!creaturePreview || out.creaturePreview.supported) &&
+      (!itemPreview || out.itemPreview.supported);
   return out;
 }
 

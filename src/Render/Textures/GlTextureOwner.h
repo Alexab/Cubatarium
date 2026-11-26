@@ -1,10 +1,40 @@
 #pragma once
 
 #include "Render/GlIncludes.h"
+#include <array>
 #include <utility>
 
 namespace cutum
 {
+class UGlPixelUnpackScope
+{
+public:
+  UGlPixelUnpackScope()
+  {
+    glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &Buffer);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    for (size_t i = 0; i < Parameters.size(); ++i)
+    {
+      glGetIntegerv(Parameters[i], &Values[i]);
+      glPixelStorei(Parameters[i], i == 0 ? 1 : 0);
+    }
+  }
+  UGlPixelUnpackScope(const UGlPixelUnpackScope &) = delete;
+  UGlPixelUnpackScope &operator=(const UGlPixelUnpackScope &) = delete;
+  ~UGlPixelUnpackScope()
+  {
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(Buffer));
+    for (size_t i = 0; i < Parameters.size(); ++i)
+      glPixelStorei(Parameters[i], Values[i]);
+  }
+
+private:
+  static constexpr std::array<GLenum, 4> Parameters{
+      GL_UNPACK_ALIGNMENT, GL_UNPACK_ROW_LENGTH, GL_UNPACK_SKIP_ROWS, GL_UNPACK_SKIP_PIXELS};
+  std::array<GLint, Parameters.size()> Values{};
+  GLint Buffer{};
+};
+
 // Release and destruction must run on the owning GL context.
 class UGlTextureOwner
 {
@@ -33,6 +63,7 @@ public:
   ~UGlTextureOwner() { Reset(); }
 
   GLuint Get() const noexcept { return Name; }
+  bool IsOwned() const noexcept { return Name && Owned; }
   GLuint Release() noexcept { return std::exchange(Name, 0); }
   void Reset() noexcept
   {

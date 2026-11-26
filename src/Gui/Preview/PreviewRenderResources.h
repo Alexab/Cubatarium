@@ -7,13 +7,13 @@
 namespace cutum
 {
 
-inline void AllocatePreviewColor(int size)
+inline void AllocatePreviewColor(int size, GLint format = GL_RGBA)
 {
   GLint unpack = 0;
   glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack);
   if (unpack)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA,
+  glTexImage2D(GL_TEXTURE_2D, 0, format, size, size, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   if (unpack)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(unpack));
@@ -90,8 +90,6 @@ struct PreviewCubeMesh
 
   bool Initialize()
   {
-    if (Vao)
-      return true;
     const float cubeShift = 1.0f / 6.0f;
     const float vertices[] = {
         -0.5f, -0.5f, 0.5f,  0.0f, 1.0f,  0.5f,  -0.5f, 0.5f,  cubeShift, 1.0f,
@@ -112,8 +110,13 @@ struct PreviewCubeMesh
         0,  1,  2,  2,  1,  3,  4,  5,  6,  6,  5,  7,  8,  9,  10, 10, 9,  11,
         12, 13, 14, 14, 13, 15, 16, 17, 18, 18, 17, 19, 20, 21, 22, 22, 21, 23,
     };
-    static_assert(sizeof(vertices) == kCubeVertexBytes);
-    static_assert(sizeof(indices) == kCubeIndexBytes);
+    return Initialize(vertices, indices);
+  }
+
+  bool Initialize(const float (&vertices)[24 * 5], const unsigned int (&indices)[36])
+  {
+    if (Vao)
+      return true;
 
     PreviewCubeMesh next;
     glGenVertexArrays(1, &next.Vao);

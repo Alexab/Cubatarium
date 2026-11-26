@@ -50,6 +50,7 @@
 #include "Game/GameSession.h"
 #include "Game/ModePolicy.h"
 #include "Gui/Cache/CreatureIconCache.h"
+#include "Gui/Cache/CreatureItemIconStorage.h"
 #include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Cache/ItemIconCache.h"
 #include "Gui/Cache/ObjectIconCache.h"
@@ -299,7 +300,7 @@ void UApplication::Startup(const std::string &configPath)
     std::shared_ptr<UCreaturePreviewRenderer> creaturePreview;
     if (World)
     {
-      creaturePreview = std::make_shared<UCreaturePreviewRenderer>(
+      creaturePreview = UCreaturePreviewRenderer::Create(
           World->GetCreatureDefinitionStorage(),
           World->GetSkinDefinitionStorage(), Core->GetCreatureTextureStorage(),
           ShaderManager);
@@ -313,7 +314,7 @@ void UApplication::Startup(const std::string &configPath)
     std::shared_ptr<UItemPreviewRenderer> itemPreview;
     if (Core && ShaderManager)
     {
-      itemPreview = std::make_shared<UItemPreviewRenderer>(
+      itemPreview = UItemPreviewRenderer::Create(
           Core->GetItemDefinitionStorage(), ShaderManager);
       if (!itemPreview->Initialize())
       {
@@ -757,6 +758,15 @@ InventoryIconStorage UApplication::InspectInventoryIconStorage() const noexcept
   InventoryIconStorage out;
   out.bindingsMatch = out.supported = true;
   return out;
+}
+
+CreatureItemIconStorage UApplication::InspectCreatureItemIconStorage() const noexcept
+{
+  return UGuiIconSource::InspectCreatureItemIconStorage(IconSource.get(), ContentPreviewRenderer.get(),
+      CreaturePreviewRenderer, World ? World->GetCreatureDefinitionStorage().get() : nullptr,
+      World ? World->GetSkinDefinitionStorage().get() : nullptr,
+      Core ? Core->GetCreatureTextureStorage().get() : nullptr,
+      Core ? Core->GetItemDefinitionStorage().get() : nullptr, ShaderManager.get());
 }
 
 void UApplication::SetHotbarCountSetting(int count)

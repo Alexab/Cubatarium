@@ -11,6 +11,11 @@ namespace cutum
 {
 
 class UTextureCubeStorage;
+class UContentPreviewRenderer;
+class UCreatureDefinitionStorage;
+class USkinDefinitionStorage;
+class UCreatureTextureStorage;
+struct CreatureItemIconStorage;
 
 class UGuiIconSource : public IUGuiIconSource
 {
@@ -47,6 +52,11 @@ public:
       const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
       const UShaderManager *shaders) const noexcept;
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
+  static CreatureItemIconStorage InspectCreatureItemIconStorage(const UGuiIconSource *source,
+      const UContentPreviewRenderer *content, const std::shared_ptr<UCreaturePreviewRenderer> &creaturePreview,
+      const UCreatureDefinitionStorage *species, const USkinDefinitionStorage *skins,
+      const UCreatureTextureStorage *textures, const UItemDefinitionStorage *items,
+      const UShaderManager *shaders) noexcept;
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
   {out.TextureCubes(Textures);out.ObjectIcon(ObjectCache.get());}
 

@@ -99,6 +99,24 @@ void UCreatureIconCache::Shutdown()
   Warmup.Clear();
 }
 
+CreatureIconCacheStorage UCreatureIconCache::InspectOwnedStorage() const noexcept
+{
+  CreatureIconCacheStorage out;
+  out.present = true;
+  out.cacheBytes = sizeof(*this);
+  out.species = InspectIconTextureTable(SpeciesCache, kIconSize * kIconSize);
+  out.skins = InspectIconTextureTable(SkinCache, kIconSize * kIconSize);
+  const auto queue = Warmup.InspectOwnedStorage();
+  out.queueBytes = queue.requested;
+  out.pending = Warmup.Size();
+  StlSourceStorage total;
+  for (size_t bytes : {out.cacheBytes, out.species.cpuBytes, out.skins.cpuBytes, out.queueBytes})
+    total.Add(bytes);
+  out.cpuBytes = total.bytes.requested;
+  out.supported = out.species.supported && out.skins.supported && queue.supported && total.bytes.supported;
+  return out;
+}
+
 GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
 {
   const auto it = SpeciesCache.find(speciesId);
@@ -146,6 +164,8 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     }
     texture = UGlTextureOwner(Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b, color.a));
   }
+  if (!texture.Get())
+    return 0;
   const auto tex = SpeciesCache.try_emplace(speciesId, std::move(texture)).first->second.Get();
   if (rendered && IconService && !fingerprint.empty())
   {
@@ -219,6 +239,8 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
     }
   }
   UGlTextureOwner texture(Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b, color.a));
+  if (!texture.Get())
+    return 0;
   return SkinCache.try_emplace(skinId, std::move(texture)).first->second.Get();
 }
 

@@ -48,6 +48,12 @@ struct ItemPresentationProfile
   int InspectionMode{0};
 };
 
+struct ItemSurfaceRendererStorage
+{
+  size_t cpuBytes{}, tableBytes{}, offsetBytes{}, assets{}, vertexBytes{}, indexBytes{};
+  bool present{}, shaderPresent{}, supported{};
+};
+
 /// A shared rendering implementation for item presentations; no creature VAOs
 /// or shaders participate. Owned GL objects are released before context
 /// teardown.
@@ -57,12 +63,13 @@ public:
   ~ItemSurfaceRenderer();
   bool Initialize(UShaderManager &manager);
   void Clear();
+  ItemSurfaceRendererStorage InspectOwnedStorage() const noexcept;
   /// Number of nonempty primitive draw calls actually issued.
   size_t Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
               const std::filesystem::path &path,
               const glm::mat4 &viewProjection, const glm::mat4 &model,
               const ItemVisualState &state = {},
-              const ItemPresentationProfile &profile = {});
+              const ItemPresentationProfile &profile = {}, bool *geometryReady = nullptr);
 
 private:
   friend class UItemSurfaceBatchScope;
@@ -77,6 +84,11 @@ private:
   std::optional<MaterialUniforms> BatchMaterial;
   struct Buffer
   {
+    Buffer() = default;
+    Buffer(const Buffer &) = delete;
+    Buffer &operator=(const Buffer &) = delete;
+    Buffer(Buffer &&other) noexcept;
+    ~Buffer();
     unsigned Vao{0}, Vbo{0}, Ebo{0};
   };
   struct Uploaded
@@ -84,6 +96,7 @@ private:
     std::shared_ptr<const ItemRenderAsset> Asset;
     Buffer GeometryBuffer;
     std::vector<size_t> IndexByteOffsets;
+    size_t VertexBytes{}, IndexBytes{};
   };
   std::unordered_map<const ItemRenderAsset *, Uploaded> Geometry;
   std::shared_ptr<UShaderProgram> Shader;

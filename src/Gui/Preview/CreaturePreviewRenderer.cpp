@@ -1,6 +1,7 @@
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 
 #include "App/Settings/RenderSettings.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureCatalogTypes.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
@@ -30,6 +31,7 @@
 #include "Gui/Preview/CreatureGltfPreviewBounds.h"
 #include "Gui/Preview/CreaturePreviewBoundsSink.h"
 #include "Gui/Preview/CreaturePreviewLayout.h"
+#include "Gui/Preview/PreviewRendererStorage.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemDrawRequest.h"
 #include "Items/ItemSurfaceRenderer.h"
@@ -61,7 +63,7 @@ constexpr float kFovDeg = 35.0f;
 std::unordered_set<std::string> gPreviewSkeletalMissingLogged;
 std::unordered_set<std::string> gPreviewGltfMissingLogged;
 
-void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
+bool UploadIconCubeMesh(PreviewCubeMesh &mesh,
                         const float *texCoords)
 {
   float vertices[24 * 5];
@@ -73,21 +75,7 @@ void UploadIconCubeMesh(GLuint &vao, GLuint &vbo, GLuint &ebo,
     vertices[v * 5 + 3] = texCoords[v * 2 + 0];
     vertices[v * 5 + 4] = texCoords[v * 2 + 1];
   }
-  glGenVertexArrays(1, &vao);
-  glGenBuffers(1, &vbo);
-  glGenBuffers(1, &ebo);
-  glBindVertexArray(vao);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kCreaturePartIndices),
-               kCreaturePartIndices, GL_STATIC_DRAW);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
-  glEnableVertexAttribArray(0);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        reinterpret_cast<void *>(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
+  return mesh.Initialize(vertices, kCreaturePartIndices);
 }
 
 void UploadPreviewSkinnedBones(class UShaderProgram &shader,
@@ -116,9 +104,59 @@ UCreaturePreviewRenderer::UCreaturePreviewRenderer(
 
 UCreaturePreviewRenderer::~UCreaturePreviewRenderer() { Shutdown(); }
 
+std::shared_ptr<UCreaturePreviewRenderer> UCreaturePreviewRenderer::Create(
+    std::shared_ptr<UCreatureDefinitionStorage> species, std::shared_ptr<USkinDefinitionStorage> skins,
+    std::shared_ptr<UCreatureTextureStorage> textures, std::shared_ptr<UShaderManager> shaderManager)
+{
+  auto renderer = std::make_shared<UCreaturePreviewRenderer>(
+      std::move(species), std::move(skins), std::move(textures), std::move(shaderManager));
+  renderer->FactoryOwner = true;
+  return renderer;
+}
+
+PreviewRendererStorage UCreaturePreviewRenderer::InspectOwnedStorage(
+    const UCreatureDefinitionStorage *species, const USkinDefinitionStorage *skins,
+    const UCreatureTextureStorage *textures, const UShaderManager *shaders) const noexcept
+{
+  PreviewRendererStorage out;
+  out.present = true;
+  out.factoryOwner = FactoryOwner;
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  if (FactoryOwner)
+    out.requestBytes = sizeof(std::_Ref_count_obj2<UCreaturePreviewRenderer>);
+#endif
+  StlSourceStorage tables, total;
+  tables.Hash(GltfBoundsCache);
+  for (const auto &[key, bounds] : GltfBoundsCache)
+  {
+    tables.Text(key);
+    out.assetReferences += bool(bounds.asset);
+  }
+  tables.Hash(ProceduralBoundsCache);
+  for (const auto &bounds : ProceduralBoundsCache)
+    tables.Text(bounds.first);
+  if (ItemRenderer)
+    out.surface = ItemRenderer->InspectOwnedStorage();
+  out.tableBytes = tables.bytes.requested;
+  total.Add(out.requestBytes);
+  total.Add(out.tableBytes);
+  total.Add(out.surface.cpuBytes);
+  out.cpuBytes = total.bytes.requested;
+  const bool target = InspectPreviewTarget(out, Target, FboSize);
+  bool meshes = true;
+  for (const auto *mesh : {&Cube, &HeadCube, &BodyCube, &RigidHeadCube})
+    meshes &= InspectPreviewCube(out, *mesh);
+  out.supported = species == Species.get() && skins == Skins.get() && textures == Textures.get() &&
+      shaders == ShaderManager.get() && FactoryOwner && target && meshes &&
+      (out.meshes == 0 || out.meshes == 4) && (!ItemRenderer || out.surface.supported) &&
+      !AttachmentObserver && !AttachmentBoundsObserver && !QaSubmissionObserver && !ItemSurfaceObserver &&
+      !SkeletonPoseObserver && tables.bytes.supported && total.bytes.supported;
+  return out;
+}
+
 bool UCreaturePreviewRenderer::InitCubeMesh()
 {
-  if (CubeVao != 0)
+  if (Cube.Vao != 0)
   {
     return true;
   }
@@ -130,13 +168,15 @@ bool UCreaturePreviewRenderer::InitCubeMesh()
   BuildCreatureHeadTexCoords(headUv);
   BuildCreatureBodyTexCoords(bodyUv);
   BuildCreatureRigidHeadTexCoords(rigidHeadUv);
-  UploadIconCubeMesh(CubeVao, CubeVbo, CubeEbo, boxUv);
-  UploadIconCubeMesh(HeadCubeVao, HeadCubeVbo, HeadCubeEbo, headUv);
-  UploadIconCubeMesh(BodyCubeVao, BodyCubeVbo, BodyCubeEbo, bodyUv);
-  UploadIconCubeMesh(RigidHeadCubeVao, RigidHeadCubeVbo, RigidHeadCubeEbo,
-                     rigidHeadUv);
-  return CubeVao != 0 && HeadCubeVao != 0 && BodyCubeVao != 0 &&
-         RigidHeadCubeVao != 0;
+  PreviewCubeMesh cube, head, body, rigidHead;
+  if (!UploadIconCubeMesh(cube, boxUv) || !UploadIconCubeMesh(head, headUv) ||
+      !UploadIconCubeMesh(body, bodyUv) || !UploadIconCubeMesh(rigidHead, rigidHeadUv))
+    return false;
+  Cube.Swap(cube);
+  HeadCube.Swap(head);
+  BodyCube.Swap(body);
+  RigidHeadCube.Swap(rigidHead);
+  return true;
 }
 
 bool UCreaturePreviewRenderer::Initialize()
@@ -171,21 +211,7 @@ void UCreaturePreviewRenderer::Invalidate()
     ItemRenderer->Clear();
   GltfBoundsCache.clear();
   ProceduralBoundsCache.clear();
-  if (DepthRbo != 0)
-  {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
+  Target.Reset();
   FboSize = 0;
 }
 
@@ -194,101 +220,22 @@ void UCreaturePreviewRenderer::Shutdown()
   Invalidate();
   ItemRenderer.reset();
   Shader.reset();
-  if (BodyCubeEbo != 0)
-  {
-    glDeleteBuffers(1, &BodyCubeEbo);
-    BodyCubeEbo = 0;
-  }
-  if (BodyCubeVbo != 0)
-  {
-    glDeleteBuffers(1, &BodyCubeVbo);
-    BodyCubeVbo = 0;
-  }
-  if (BodyCubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &BodyCubeVao);
-    BodyCubeVao = 0;
-  }
-  if (RigidHeadCubeEbo != 0)
-  {
-    glDeleteBuffers(1, &RigidHeadCubeEbo);
-    RigidHeadCubeEbo = 0;
-  }
-  if (RigidHeadCubeVbo != 0)
-  {
-    glDeleteBuffers(1, &RigidHeadCubeVbo);
-    RigidHeadCubeVbo = 0;
-  }
-  if (RigidHeadCubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &RigidHeadCubeVao);
-    RigidHeadCubeVao = 0;
-  }
-  if (HeadCubeEbo != 0)
-  {
-    glDeleteBuffers(1, &HeadCubeEbo);
-    HeadCubeEbo = 0;
-  }
-  if (HeadCubeVbo != 0)
-  {
-    glDeleteBuffers(1, &HeadCubeVbo);
-    HeadCubeVbo = 0;
-  }
-  if (HeadCubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &HeadCubeVao);
-    HeadCubeVao = 0;
-  }
-  if (CubeEbo != 0)
-  {
-    glDeleteBuffers(1, &CubeEbo);
-    CubeEbo = 0;
-  }
-  if (CubeVbo != 0)
-  {
-    glDeleteBuffers(1, &CubeVbo);
-    CubeVbo = 0;
-  }
-  if (CubeVao != 0)
-  {
-    glDeleteVertexArrays(1, &CubeVao);
-    CubeVao = 0;
-  }
+  SkinnedShader.reset();
+  Cube.Reset();
+  HeadCube.Reset();
+  BodyCube.Reset();
+  RigidHeadCube.Reset();
 }
 
 bool UCreaturePreviewRenderer::EnsureFboSize(int size)
 {
-  const int clamped = std::max(64, std::min(size, 512));
-  if (Fbo != 0 && FboSize == clamped)
-  {
+  const int clamped = std::clamp(size, 64, 512);
+  if (Target.Framebuffer && FboSize == clamped)
     return true;
-  }
-
-  Invalidate();
-
-  glGenFramebuffers(1, &Fbo);
-  glGenTextures(1, &ColorTex);
-  glBindTexture(GL_TEXTURE_2D, ColorTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-
-  glGenRenderbuffers(1, &DepthRbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                        clamped);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, DepthRbo);
-
-  const bool complete =
-      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  FboSize = complete ? clamped : 0;
-  return complete;
+  if (!Target.Initialize(clamped))
+    return false;
+  FboSize = clamped;
+  return true;
 }
 
 glm::mat4 UCreaturePreviewRenderer::OrbitView(float yawDeg, float pitchDeg,
@@ -351,12 +298,13 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(clamped);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  UGlIconColorAttachment attachment(Fbo, tex, ColorTex, DepthRbo, clamped, FboSize);
+  UGlIconColorAttachment attachment(Target.Framebuffer, tex, Target.Color, Target.Depth, clamped, FboSize);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    return 0;
   glViewport(0, 0, clamped, clamped);
   glClearColor(r, g, b, a);
   glClear(GL_COLOR_BUFFER_BIT);
@@ -841,8 +789,8 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
     glClearColor(bg.r, bg.g, bg.b, TransparentBackground ? 0.f : 1.f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     UPreviewCreatureDrawSink drawSink(
-        Shader.get(), SkinnedShader.get(), CubeVao, HeadCubeVao, BodyCubeVao,
-        RigidHeadCubeVao, *ItemRenderer, ctx.CameraPosition,
+        Shader.get(), SkinnedShader.get(), Cube.Vao, HeadCube.Vao, BodyCube.Vao,
+        RigidHeadCube.Vao, *ItemRenderer, ctx.CameraPosition,
         ItemSurfaceObserver, ItemInspectionMode, ItemInspectionAmbient);
 
     // Armor / wielded overlays keep their own submission, aligned with the
@@ -924,24 +872,24 @@ bool UCreaturePreviewRenderer::DrawSpeciesParts(
     }
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
-    GLuint partVao = CubeVao;
+    GLuint partVao = Cube.Vao;
     if (ParseCreatureTextureLayout(appearance.textureLayout) ==
         CreatureTextureLayout::PlayerSkinAtlas)
     {
       if (part.partId == "head")
       {
-        partVao = HeadCubeVao;
+        partVao = HeadCube.Vao;
       }
       else if (part.partId == "torso")
       {
-        partVao = BodyCubeVao;
+        partVao = BodyCube.Vao;
       }
     }
     else if (UsesRigidFaceTexture(part.baseTextureAssetKey.empty()
                                       ? part.textureAssetKey
                                       : part.baseTextureAssetKey))
     {
-      partVao = RigidHeadCubeVao;
+      partVao = RigidHeadCube.Vao;
     }
     glBindVertexArray(partVao);
     const glm::mat4 model = CreaturePreviewPartModel(fit, part);
@@ -963,8 +911,8 @@ GLuint UCreaturePreviewRenderer::Render(const std::string &speciesId,
     return 0;
   }
 
-  UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
+  glBindFramebuffer(GL_FRAMEBUFFER, Target.Framebuffer);
   glViewport(0, 0, FboSize, FboSize);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
@@ -974,7 +922,7 @@ GLuint UCreaturePreviewRenderer::Render(const std::string &speciesId,
   {
     return 0;
   }
-  return ColorTex;
+  return Target.Color;
 }
 
 GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
@@ -992,7 +940,7 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   const int clamped = std::max(64, std::min(size, 512));
 
   UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
-  if (Fbo == 0 && !EnsureFboSize(clamped))
+  if (Target.Framebuffer == 0 && !EnsureFboSize(clamped))
     return 0;
   GLuint tex = 0;
   glGenTextures(1, &tex);
@@ -1000,12 +948,13 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, nullptr);
+  AllocatePreviewColor(clamped);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlIconColorAttachment attachment(Fbo, tex, ColorTex, DepthRbo, clamped, FboSize);
+  UGlIconColorAttachment attachment(Target.Framebuffer, tex, Target.Color, Target.Depth, clamped, FboSize);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    return 0;
   glViewport(0, 0, clamped, clamped);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);

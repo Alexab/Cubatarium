@@ -1,13 +1,31 @@
 #include "Items/ItemSurfaceRenderer.h"
 
 #include "Items/ItemGltfTextureCache.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 namespace cutum
 {
+ItemSurfaceRenderer::Buffer::Buffer(Buffer &&other) noexcept
+    : Vao(std::exchange(other.Vao, 0)), Vbo(std::exchange(other.Vbo, 0)),
+      Ebo(std::exchange(other.Ebo, 0))
+{
+}
+
+ItemSurfaceRenderer::Buffer::~Buffer()
+{
+  if (Vao)
+    glDeleteVertexArrays(1, &Vao);
+  if (Vbo)
+    glDeleteBuffers(1, &Vbo);
+  if (Ebo)
+    glDeleteBuffers(1, &Ebo);
+}
+
 ItemSurfaceRenderer::~ItemSurfaceRenderer() { Clear(); }
 
 bool ItemSurfaceRenderer::Initialize(UShaderManager &manager)
@@ -19,16 +37,39 @@ bool ItemSurfaceRenderer::Initialize(UShaderManager &manager)
 
 void ItemSurfaceRenderer::Clear()
 {
-  for (auto &entry : Geometry)
-  {
-    auto &buffer = entry.second.GeometryBuffer;
-    glDeleteBuffers(1, &buffer.Vbo);
-    glDeleteBuffers(1, &buffer.Ebo);
-    glDeleteVertexArrays(1, &buffer.Vao);
-  }
   Geometry.clear();
   BatchProfile.reset();
   BatchMaterial.reset();
+}
+
+ItemSurfaceRendererStorage ItemSurfaceRenderer::InspectOwnedStorage() const noexcept
+{
+  ItemSurfaceRendererStorage out;
+  out.present = true;
+  out.shaderPresent = Shader && Shader->IsValid();
+  StlSourceStorage table, offsets, total, vertices, indices;
+  table.Hash(Geometry);
+  for (const auto &[key, upload] : Geometry)
+  {
+    table.bytes.supported &= key && key == upload.Asset.get() && upload.GeometryBuffer.Vao &&
+        upload.GeometryBuffer.Vbo && upload.GeometryBuffer.Ebo &&
+        upload.IndexByteOffsets.size() == upload.Asset->Primitives.size();
+    offsets.Buffer(upload.IndexByteOffsets.capacity(), sizeof(size_t));
+    vertices.Add(upload.VertexBytes);
+    indices.Add(upload.IndexBytes);
+  }
+  out.tableBytes = table.bytes.requested;
+  out.offsetBytes = offsets.bytes.requested;
+  total.Add(sizeof(*this));
+  total.Add(out.tableBytes);
+  total.Add(out.offsetBytes);
+  out.cpuBytes = total.bytes.requested;
+  out.assets = Geometry.size();
+  out.vertexBytes = vertices.bytes.requested;
+  out.indexBytes = indices.bytes.requested;
+  out.supported = table.bytes.supported && offsets.bytes.supported && total.bytes.supported &&
+                  vertices.bytes.supported && indices.bytes.supported && (Geometry.empty() || out.shaderPresent);
+  return out;
 }
 
 UItemSurfaceBatchScope::UItemSurfaceBatchScope(ItemSurfaceRenderer &renderer)
@@ -52,8 +93,10 @@ ItemSurfaceRenderer::Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
                           const std::filesystem::path &path,
                           const glm::mat4 &viewProjection,
                           const glm::mat4 &model, const ItemVisualState &state,
-                          const ItemPresentationProfile &profile)
+                          const ItemPresentationProfile &profile, bool *geometryReady)
 {
+  if (geometryReady)
+    *geometryReady = false;
   if (!asset || !Shader || !Shader->IsValid())
     return 0;
   auto found = Geometry.find(asset.get());
@@ -80,28 +123,54 @@ ItemSurfaceRenderer::Draw(const std::shared_ptr<const ItemRenderAsset> &asset,
                       primitive.Vertices.end());
     }
     auto &buffer = uploaded.GeometryBuffer;
+    constexpr auto maxBytes = static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max());
+    if (vertices.size() > maxBytes / sizeof(float) || indices.size() > maxBytes / sizeof(unsigned))
+      return 0;
+    uploaded.VertexBytes = vertices.size() * sizeof(float);
+    uploaded.IndexBytes = indices.size() * sizeof(unsigned);
     glGenVertexArrays(1, &buffer.Vao);
     glGenBuffers(1, &buffer.Vbo);
     glGenBuffers(1, &buffer.Ebo);
-    glBindVertexArray(buffer.Vao);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer.Vbo);
-    glBufferData(GL_ARRAY_BUFFER, GLsizeiptr(vertices.size() * sizeof(float)),
-                 vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.Ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 GLsizeiptr(indices.size() * sizeof(unsigned)), indices.data(),
-                 GL_STATIC_DRAW);
-    for (unsigned i = 0; i < 3; ++i)
+    if (!buffer.Vao || !buffer.Vbo || !buffer.Ebo)
+      return 0;
     {
-      const unsigned offsets[] = {0, 3, 5};
-      const int widths[] = {3, 2, 3};
-      glVertexAttribPointer(
-          i, widths[i], GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-          reinterpret_cast<void *>(size_t(offsets[i]) * sizeof(float)));
-      glEnableVertexAttribArray(i);
+      struct RestoreBindings
+      {
+        GLint Vao{}, Array{};
+        RestoreBindings()
+        {
+          glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &Vao);
+          glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &Array);
+        }
+        ~RestoreBindings()
+        {
+          glBindVertexArray(GLuint(Vao));
+          glBindBuffer(GL_ARRAY_BUFFER, GLuint(Array));
+        }
+      } restore;
+      glBindVertexArray(buffer.Vao);
+      glBindBuffer(GL_ARRAY_BUFFER, buffer.Vbo);
+      glBufferData(GL_ARRAY_BUFFER, GLsizeiptr(uploaded.VertexBytes), vertices.data(), GL_STATIC_DRAW);
+      glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.Ebo);
+      glBufferData(GL_ELEMENT_ARRAY_BUFFER, GLsizeiptr(uploaded.IndexBytes), indices.data(), GL_STATIC_DRAW);
+      GLint64 vertexBytes = 0, indexBytes = 0;
+      glGetBufferParameteri64v(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &vertexBytes);
+      glGetBufferParameteri64v(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexBytes);
+      if (vertexBytes != GLint64(uploaded.VertexBytes) || indexBytes != GLint64(uploaded.IndexBytes))
+        return 0;
+      constexpr unsigned offsets[] = {0, 3, 5};
+      constexpr int widths[] = {3, 2, 3};
+      for (unsigned i = 0; i < 3; ++i)
+      {
+        glVertexAttribPointer(i, widths[i], GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                              reinterpret_cast<void *>(size_t(offsets[i]) * sizeof(float)));
+        glEnableVertexAttribArray(i);
+      }
     }
     found = Geometry.emplace(asset.get(), std::move(uploaded)).first;
   }
+  if (geometryReady)
+    *geometryReady = true;
   Shader->Use();
   const auto *previous = BatchActive && BatchProfile ? &*BatchProfile : nullptr;
   if (!previous)
