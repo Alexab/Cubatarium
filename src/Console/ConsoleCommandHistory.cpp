@@ -1,10 +1,22 @@
 #include "Console/ConsoleCommandHistory.h"
 #include "Console/ConsoleInputSanitize.h"
 
+#include <algorithm>
+#include <array>
 #include <fstream>
 
 namespace cutum
 {
+namespace
+{
+void AppendHistoryEntry(std::vector<std::string> &entries, std::string line)
+{
+  if (entries.size() == entries.capacity())
+    entries.reserve(std::min(UConsoleCommandHistory::kMaxEntries,
+                             std::max(size_t{1}, entries.size() * 2)));
+  entries.push_back(std::move(line));
+}
+} // namespace
 
 void UConsoleCommandHistory::SetFilePath(std::filesystem::path path)
 {
@@ -13,33 +25,48 @@ void UConsoleCommandHistory::SetFilePath(std::filesystem::path path)
 
 bool UConsoleCommandHistory::Load()
 {
-  History.clear();
   if (FilePath.empty())
   {
+    History.clear();
     return false;
   }
   std::ifstream file(FilePath);
   if (!file.is_open())
   {
+    History.clear();
     return false;
   }
+  std::vector<std::string> entries;
   std::string line;
-  while (std::getline(file, line))
+  size_t oldest = 0;
+  const auto finish_line = [&]()
   {
-    if (!line.empty() && line.back() == '\r')
+    if (line.empty())
+      return;
+    if (entries.size() < kMaxEntries)
+      AppendHistoryEntry(entries, std::move(line));
+    else
     {
-      line.pop_back();
+      entries[oldest] = std::move(line);
+      oldest = (oldest + 1) % kMaxEntries;
     }
-    line = SanitizeConsoleLine(std::move(line));
-    if (!line.empty())
-    {
-      History.push_back(line);
-    }
-  }
-  while (History.size() > kMaxEntries)
+    line.clear();
+  };
+  std::array<char, 4096> buffer;
+  do
   {
-    History.erase(History.begin());
-  }
+    file.read(buffer.data(), buffer.size());
+    for (std::streamsize i = 0; i < file.gcount(); ++i)
+      if (buffer[static_cast<size_t>(i)] == '\n')
+        finish_line();
+      else
+        AppendSanitizedConsoleByte(line, static_cast<unsigned char>(buffer[static_cast<size_t>(i)]));
+  } while (file);
+  if (file.bad())
+    return false;
+  finish_line();
+  std::rotate(entries.begin(), entries.begin() + oldest, entries.end());
+  History = std::move(entries);
   return true;
 }
 
@@ -63,7 +90,7 @@ bool UConsoleCommandHistory::Save() const
 
 void UConsoleCommandHistory::Append(std::string line)
 {
-  line = SanitizeConsoleLine(std::move(line));
+  line = SanitizeConsoleLine(line);
   if (line.empty())
   {
     return;
@@ -72,11 +99,9 @@ void UConsoleCommandHistory::Append(std::string line)
   {
     return;
   }
-  History.push_back(line);
-  while (History.size() > kMaxEntries)
-  {
+  if (History.size() == kMaxEntries)
     History.erase(History.begin());
-  }
+  AppendHistoryEntry(History, std::move(line));
   Save();
 }
 

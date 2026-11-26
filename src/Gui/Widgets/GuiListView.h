@@ -18,6 +18,10 @@ public:
   UGuiListView(const GuiTheme *theme);
 
   void SetItems(std::vector<std::string> items);
+  // The UI owner keeps the vector object alive, including across its growth.
+  void BorrowItems(const std::vector<std::string> &items);
+  void BorrowItems(std::vector<std::string> &&) = delete;
+  void RefreshItems();
   void SetSelectedIndex(int index);
   int GetSelectedIndex() const { return SelectedIndex; }
   int GetRowHeight() const { return RowHeight; }
@@ -43,6 +47,11 @@ public:
   bool ScrollAtPoint(int x, int y, const GuiScrollEvent &event) override;
 
 private:
+  friend class UConsoleScreen;
+  const std::vector<std::string> &CurrentItems() const
+  {
+    return BorrowedItems ? *BorrowedItems : Items;
+  }
   int ContentHeight() const;
   int MaxScrollY() const;
   int MinHeight() const;
@@ -60,6 +69,7 @@ private:
 
   const GuiTheme *Theme;
   std::vector<std::string> Items;
+  const std::vector<std::string> *BorrowedItems{nullptr};
   int SelectedIndex{-1};
   int ScrollOffsetPx{0};
   int RowHeight{20};

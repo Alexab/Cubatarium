@@ -659,6 +659,17 @@ InGameHudStorage UApplication::InspectHudStorage() const noexcept
   return result;
 }
 
+ConsoleStorage UApplication::InspectConsoleStorage() const noexcept
+{
+  if (ConsoleScreen && GuiContext)
+    return ConsoleScreen->InspectOwnedStorage(*GuiContext, GameSession.get(), OverlayPopup.get());
+  ConsoleStorage result;
+  result.present = bool(ConsoleScreen) || bool(OverlayPopup);
+  result.bindings_match = !result.present;
+  result.supported = !result.present;
+  return result;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
@@ -1194,13 +1205,14 @@ void UApplication::ShowInGameHud()
   hud->Build(*GuiContext);
   HudScreen = std::move(hud);
 
-  OverlayPopup = std::make_unique<UGuiPopupMenu>(&GuiContext->GetTheme());
-
-  ConsoleScreen = std::make_unique<UConsoleScreen>(GameSession.get());
-  ConsoleScreen->OnAttach(*GuiContext);
-  ConsoleScreen->Build(*GuiContext);
-  ConsoleScreen->AttachPopup(OverlayPopup.get());
-  ConsoleScreen->SetVisible(false);
+  auto popup = std::make_unique<UGuiPopupMenu>(&GuiContext->GetTheme());
+  auto console = std::make_unique<UConsoleScreen>(GameSession.get());
+  console->OnAttach(*GuiContext);
+  console->Build(*GuiContext);
+  console->AttachPopup(popup.get());
+  console->SetVisible(false);
+  OverlayPopup = std::move(popup);
+  ConsoleScreen = std::move(console);
 
   PaletteScreen = std::make_unique<UCreativePaletteScreen>(
       &GameSession->GetContentCatalog(), GameSession.get(), icons, preview);

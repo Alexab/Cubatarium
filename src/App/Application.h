@@ -178,6 +178,7 @@ public:
   const UGuiContext &GetGui() const { return *GuiContext; }
   MainMenuStorage InspectMainMenuStorage() const noexcept;
   InGameHudStorage InspectHudStorage() const noexcept;
+  ConsoleStorage InspectConsoleStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

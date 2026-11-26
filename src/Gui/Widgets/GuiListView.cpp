@@ -96,9 +96,22 @@ bool UGuiListView::ConsumesScrollDragAt(int x, int y) const
 void UGuiListView::SetItems(std::vector<std::string> items)
 {
   Items = std::move(items);
-  if (SelectedIndex >= static_cast<int>(Items.size()))
+  BorrowedItems = nullptr;
+  RefreshItems();
+}
+
+void UGuiListView::BorrowItems(const std::vector<std::string> &items)
+{
+  std::vector<std::string>().swap(Items);
+  BorrowedItems = &items;
+  RefreshItems();
+}
+
+void UGuiListView::RefreshItems()
+{
+  if (SelectedIndex >= static_cast<int>(CurrentItems().size()))
   {
-    SelectedIndex = Items.empty() ? -1 : 0;
+    SelectedIndex = CurrentItems().empty() ? -1 : 0;
   }
   ClampScroll();
   ApplySelectionScrollPolicy();
@@ -118,12 +131,12 @@ void UGuiListView::SetOnSelectionChanged(std::function<void(int)> handler)
 
 bool UGuiListView::CanFocus() const
 {
-  return Enabled && Visible && !Items.empty();
+  return Enabled && Visible && !CurrentItems().empty();
 }
 
 void UGuiListView::RevealFocused()
 {
-  if (SelectedIndex < 0 && !Items.empty())
+  if (SelectedIndex < 0 && !CurrentItems().empty())
   {
     SelectedIndex = 0;
     ApplySelectionScrollPolicy();
@@ -132,7 +145,7 @@ void UGuiListView::RevealFocused()
 
 int UGuiListView::ContentHeight() const
 {
-  return static_cast<int>(Items.size()) * RowHeight;
+  return static_cast<int>(CurrentItems().size()) * RowHeight;
 }
 
 int UGuiListView::MaxScrollY() const
@@ -153,7 +166,7 @@ void UGuiListView::ScrollToEnd()
 
 void UGuiListView::EnsureSelectedVisible()
 {
-  if (SelectedIndex < 0 || Items.empty())
+  if (SelectedIndex < 0 || CurrentItems().empty())
   {
     return;
   }
@@ -166,11 +179,11 @@ void UGuiListView::EnsureSelectedVisible()
 
 void UGuiListView::ApplySelectionScrollPolicy()
 {
-  if (SelectedIndex < 0 || Items.empty())
+  if (SelectedIndex < 0 || CurrentItems().empty())
   {
     return;
   }
-  const int count = static_cast<int>(Items.size());
+  const int count = static_cast<int>(CurrentItems().size());
   const int visibleRows = std::max(1, Bounds.H / RowHeight);
   if (SelectedIndex >= count - visibleRows)
   {
@@ -248,15 +261,16 @@ void UGuiListView::Draw(UGuiRenderer &renderer)
   renderer.DrawFilledRect(Bounds, Theme->ButtonNormal);
   const GuiRect listArea = ListAreaRect();
   renderer.PushClipRect(listArea);
+  const auto &items = CurrentItems();
   int y = Bounds.Y - ScrollOffsetPx;
-  for (size_t i = 0; i < Items.size(); ++i)
+  for (size_t i = 0; i < items.size(); ++i)
   {
     GuiRect row{Bounds.X, y, listArea.W, RowHeight};
     if (static_cast<int>(i) == SelectedIndex)
     {
       renderer.DrawFilledRect(row, Theme->ButtonHover);
     }
-    renderer.DrawText(Items[i], row.X + Theme->Padding, row.Y + 2,
+    renderer.DrawText(items[i], row.X + Theme->Padding, row.Y + 2,
                       Theme->TextPrimary);
     y += RowHeight;
   }
@@ -303,7 +317,7 @@ bool UGuiListView::OnMouseDown(const GuiMouseEvent &event)
   const int localY = event.Y - Bounds.Y + ScrollOffsetPx;
   PendingSelectIndex = localY / RowHeight;
   if (PendingSelectIndex < 0 ||
-      PendingSelectIndex >= static_cast<int>(Items.size()))
+      PendingSelectIndex >= static_cast<int>(CurrentItems().size()))
   {
     PendingSelectIndex = -1;
   }
@@ -359,7 +373,7 @@ bool UGuiListView::OnMouseUp(const GuiMouseEvent &event)
 
 bool UGuiListView::SelectIndex(int index)
 {
-  if (index < 0 || index >= static_cast<int>(Items.size()))
+  if (index < 0 || index >= static_cast<int>(CurrentItems().size()))
   {
     return false;
   }
@@ -377,7 +391,7 @@ bool UGuiListView::SelectIndex(int index)
 
 bool UGuiListView::HandleKeyNavigation(const GuiKeyEvent &event)
 {
-  if (!AcceptKeyNavigation || !Visible || Items.empty())
+  if (!AcceptKeyNavigation || !Visible || CurrentItems().empty())
   {
     return false;
   }
@@ -387,7 +401,7 @@ bool UGuiListView::HandleKeyNavigation(const GuiKeyEvent &event)
     return false;
   }
 
-  const int count = static_cast<int>(Items.size());
+  const int count = static_cast<int>(CurrentItems().size());
   int index = SelectedIndex < 0 ? 0 : SelectedIndex;
   const int pageRows = std::max(1, Bounds.H / RowHeight);
 

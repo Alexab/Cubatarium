@@ -3,6 +3,7 @@
 #include "App/Platform/GlfwKeyCompat.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Screens/ConsoleScreen.h"
 #include "Gui/Screens/InGameHudScreen.h"
 #include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
@@ -52,6 +53,20 @@ inline nlohmann::json InGameHudStorageJson(const InGameHudStorage &s)
           {"children_bytes", s.children_bytes}, {"slot_index_bytes", s.slot_index_bytes},
           {"text_bytes", s.text_bytes}, {"slots", s.slots}, {"visible_slots", s.visible_slots},
           {"callbacks", s.callbacks}, {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
+}
+
+inline nlohmann::json ConsoleStorageJson(const ConsoleStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"present", s.present}, {"visible", s.visible}, {"borrowed_log", s.borrowed_log},
+          {"screen_bytes", s.screen_bytes}, {"widget_bytes", s.widget_bytes}, {"children_bytes", s.children_bytes},
+          {"input_text", s.input_text}, {"draft_text", s.draft_text},
+          {"log_rows", s.log_rows}, {"log_slots", s.log_slots}, {"log_text", s.log_text},
+          {"history_rows", s.history_rows}, {"history_slots", s.history_slots},
+          {"history_text", s.history_text}, {"history_path", s.history_path},
+          {"popup_bytes", s.popup_bytes}, {"popup_entries", s.popup_entries}, {"popup_open", s.popup_open},
+          {"popup_slots", s.popup_slots}, {"popup_text", s.popup_text}, {"callback_bytes", s.callback_bytes},
+          {"requested", s.requested}};
 }
 
 namespace gui_context_fixture

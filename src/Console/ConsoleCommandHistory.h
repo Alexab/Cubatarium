@@ -19,6 +19,7 @@ public:
 
   void Append(std::string line);
   const std::vector<std::string> &Entries() const { return History; }
+  const std::filesystem::path &GetFilePath() const noexcept { return FilePath; }
 
   size_t Size() const { return History.size(); }
   std::string GetFromEnd(size_t indexFromEnd) const;

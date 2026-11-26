@@ -30,6 +30,7 @@ protected:
   friend class UWorldProgressScreen;
   friend class UMainMenuScreen;
   friend class UInGameHudScreen;
+  friend class UConsoleScreen;
   const GuiTheme *Theme;
   bool DrawBackground{true};
   int StackSpacing{6};

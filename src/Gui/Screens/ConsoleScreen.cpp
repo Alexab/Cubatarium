@@ -1,4 +1,6 @@
 #include "Gui/Screens/ConsoleScreen.h"
+#include "Core/Memory/CallbackStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Game/GameSession.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -8,6 +10,7 @@
 #include "Gui/Widgets/GuiTextInput.h"
 
 #include "Gui/Core/GuiKeyCodes.h"
+#include <typeinfo>
 #ifdef __ANDROID__
 #include "android_soft_keyboard.h"
 #endif
@@ -16,6 +19,18 @@ namespace cutum
 {
 
 UConsoleScreen::UConsoleScreen(UGameSession *session) : Session(session) {}
+
+struct UConsoleScreen::EditedAction
+{
+  UConsoleScreen *owner;
+  void operator()() const { owner->OnInputEdited(); }
+};
+
+template<void (UGuiTextInput::*Edit)()> struct UConsoleScreen::PopupEditAction
+{
+  UConsoleScreen *owner;
+  void operator()() const { (owner->Input->*Edit)(); }
+};
 
 void UConsoleScreen::SetVisible(bool visible)
 {
@@ -79,21 +94,130 @@ void UConsoleScreen::Build(UGuiContext &ctx)
   ConsoleTheme.ButtonHover = {0.28f, 0.28f, 0.31f, 0.55f};
 
   auto panel = std::make_unique<UGuiPanel>(&ConsoleTheme);
-  panel->SetVisible(false);
+  panel->SetVisible(Visible);
 
   auto log = std::make_unique<UGuiListView>(&ConsoleTheme);
   log->SetAcceptKeyNavigation(false);
-  LogView = log.get();
+  if (Session)
+    log->BorrowItems(Session->GetChatLog());
+  auto *log_view = log.get();
 
   auto input = std::make_unique<UGuiTextInput>(&ConsoleTheme);
   input->SetClipboard(ctx.GetClipboard());
-  input->SetOnEdited([this]() { OnInputEdited(); });
-  Input = input.get();
+  input->SetFocused(Visible);
+  input->SetOnEdited(EditedAction{this});
+  auto *text_input = input.get();
 
   panel->AddChild(std::move(log));
   panel->AddChild(std::move(input));
   Root = std::move(panel);
+  LogView = log_view;
+  Input = text_input;
   Relayout();
+}
+
+ConsoleStorage UConsoleScreen::InspectOwnedStorage(const UGuiContext &context,
+                                                    const UGameSession *session,
+                                                    const UGuiPopupMenu *popup) const noexcept
+{
+  ConsoleStorage out;
+  out.present = true;
+  if (typeid(*this) != typeid(UConsoleScreen) || Context != &context ||
+      context.GetScreen() == this || !Session || Session != session || Popup != popup ||
+      !Root || typeid(*Root) != typeid(UGuiPanel))
+    return out;
+  const auto &panel = static_cast<const UGuiPanel &>(*Root);
+  const auto &children = panel.GetChildren();
+  if (children.size() != 2 || !children[0] || !children[1] ||
+      children[0].get() != LogView || children[1].get() != Input ||
+      typeid(*children[0]) != typeid(UGuiListView) || typeid(*children[1]) != typeid(UGuiTextInput) ||
+      !LogView->GetChildren().empty() || !Input->GetChildren().empty() ||
+      panel.Theme != &ConsoleTheme || LogView->Theme != &ConsoleTheme || Input->Theme != &ConsoleTheme ||
+      Input->Clipboard != context.GetClipboard() || panel.IsVisible() != Visible)
+    return out;
+  const auto &log = Session->GetChatLog();
+  const auto &history = Session->GetCommandHistory();
+  out.borrowed_log = LogView->BorrowedItems == &log && !LogView->Items.capacity();
+  out.bindings_match = out.borrowed_log;
+  if (!out.bindings_match)
+    return out;
+
+  StlSourceStorage child_slots, input_text, draft_text, log_slots, log_text, history_slots,
+      history_text, history_path, popup_slots, popup_text, callbacks, total;
+  for (const auto *widget : {Root.get(), children[0].get(), children[1].get()})
+    child_slots.Buffer(widget->GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  input_text.Text(Input->GetText());
+  draft_text.Text(DraftLine);
+  log_slots.Buffer(log.capacity(), sizeof(std::string));
+  for (const auto &line : log)
+    log_text.Text(line);
+  history_slots.Buffer(history.Entries().capacity(), sizeof(std::string));
+  for (const auto &line : history.Entries())
+    history_text.Text(line);
+  history_path.Text(history.GetFilePath().native());
+
+  const auto edited = InspectKnownOwnerCallback<EditedAction>(
+      Input->OnEdited, this, StlSourceStorage::SupportedProfile());
+  bool known = edited.supported && edited.present && !LogView->OnSelectionChanged &&
+               !LogView->AcceptKeyNavigation;
+  callbacks.Add(edited.requests);
+  if (Popup)
+  {
+    out.bindings_match = typeid(*Popup) == typeid(UGuiPopupMenu) &&
+        Popup->Theme == &context.GetTheme() && Popup->GetChildren().empty() &&
+        (Popup->Items.empty() || Popup->Items.size() == 4) &&
+        Popup->IsOpen() == Popup->IsVisible();
+    if (!out.bindings_match)
+      return out;
+    out.popup_bytes = sizeof(UGuiPopupMenu);
+    popup_slots.Buffer(Popup->Items.capacity(), sizeof(GuiPopupMenuItem));
+    popup_slots.Buffer(Popup->GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+    for (const auto &item : Popup->Items)
+      popup_text.Text(item.label);
+    if (!Popup->Items.empty())
+    {
+      const auto action = [&](auto sample, size_t index) {
+        const auto source = InspectKnownOwnerCallback<decltype(sample)>(
+            Popup->Items[index].Action, this, StlSourceStorage::SupportedProfile());
+        callbacks.Add(source.requests);
+        return source.supported && source.present;
+      };
+      known &= action(PopupEditAction<&UGuiTextInput::CopySelectionToClipboard>{nullptr}, 0);
+      known &= action(PopupEditAction<&UGuiTextInput::PasteFromClipboard>{nullptr}, 1);
+      known &= action(PopupEditAction<&UGuiTextInput::CutSelectionToClipboard>{nullptr}, 2);
+      known &= action(PopupEditAction<&UGuiTextInput::SelectAll>{nullptr}, 3);
+    }
+    out.popup_entries = Popup->Items.size();
+    out.popup_open = Popup->IsOpen();
+  }
+  out.visible = Visible;
+  out.screen_bytes = sizeof(*this);
+  out.widget_bytes = sizeof(UGuiPanel) + sizeof(UGuiListView) + sizeof(UGuiTextInput);
+  out.children_bytes = child_slots.bytes.requested;
+  out.input_text = input_text.bytes.requested;
+  out.draft_text = draft_text.bytes.requested;
+  out.log_rows = log.size();
+  out.log_slots = log_slots.bytes.requested;
+  out.log_text = log_text.bytes.requested;
+  out.history_rows = history.Size();
+  out.history_slots = history_slots.bytes.requested;
+  out.history_text = history_text.bytes.requested;
+  out.history_path = history_path.bytes.requested;
+  out.popup_slots = popup_slots.bytes.requested;
+  out.popup_text = popup_text.bytes.requested;
+  out.callback_bytes = callbacks.bytes.requested;
+  for (const auto *part : {&child_slots, &input_text, &draft_text, &log_slots, &log_text,
+                           &history_slots, &history_text, &history_path, &popup_slots,
+                           &popup_text, &callbacks})
+  {
+    total.Add(part->bytes.requested);
+    known &= part->bytes.supported;
+  }
+  for (const auto bytes : {out.screen_bytes, out.widget_bytes, out.popup_bytes})
+    total.Add(bytes);
+  out.requested = total.bytes.requested;
+  out.supported = known && total.bytes.supported;
+  return out;
 }
 
 void UConsoleScreen::OnViewportChanged(int width, int height)
@@ -158,7 +282,7 @@ void UConsoleScreen::Update(double /*dt*/)
   }
   if (Session && LogView)
   {
-    LogView->SetItems(Session->GetChatLog());
+    LogView->RefreshItems();
     if (KeyboardInsetBottom > 0)
     {
       LogView->ScrollToEnd();
@@ -188,9 +312,8 @@ bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
     const size_t next = static_cast<size_t>(HistoryBrowseFromEnd + 1);
     if (next < history.Size())
     {
+      Input->SetText(history.Entries()[history.Size() - 1 - next]);
       HistoryBrowseFromEnd = static_cast<int>(next);
-      Input->SetText(
-          history.GetFromEnd(static_cast<size_t>(HistoryBrowseFromEnd)));
       Input->ClearSelection();
     }
     return true;
@@ -199,15 +322,21 @@ bool UConsoleScreen::HandleHistoryNavigation(const GuiKeyEvent &event)
   {
     if (HistoryBrowseFromEnd > 0)
     {
-      --HistoryBrowseFromEnd;
-      Input->SetText(
-          history.GetFromEnd(static_cast<size_t>(HistoryBrowseFromEnd)));
+      const auto next = static_cast<size_t>(HistoryBrowseFromEnd - 1);
+      if (next < history.Size())
+        Input->SetText(history.Entries()[history.Size() - 1 - next]);
+      else
+        Input->SetText("");
+      HistoryBrowseFromEnd = static_cast<int>(next);
       Input->ClearSelection();
     }
     else if (HistoryBrowseFromEnd == 0)
     {
+      if (DraftValid)
+        Input->SetText(DraftLine);
+      else
+        Input->SetText("");
       HistoryBrowseFromEnd = -1;
-      Input->SetText(DraftValid ? DraftLine : "");
       Input->ClearSelection();
     }
     return true;
@@ -250,10 +379,10 @@ void UConsoleScreen::OpenContextMenu(int x, int y)
     return;
   }
   Popup->SetItems({
-      {"Copy", [this]() { Input->CopySelectionToClipboard(); }},
-      {"Paste", [this]() { Input->PasteFromClipboard(); }},
-      {"Cut", [this]() { Input->CutSelectionToClipboard(); }},
-      {"Select all", [this]() { Input->SelectAll(); }},
+      {"Copy", PopupEditAction<&UGuiTextInput::CopySelectionToClipboard>{this}},
+      {"Paste", PopupEditAction<&UGuiTextInput::PasteFromClipboard>{this}},
+      {"Cut", PopupEditAction<&UGuiTextInput::CutSelectionToClipboard>{this}},
+      {"Select all", PopupEditAction<&UGuiTextInput::SelectAll>{this}},
   });
   Popup->OpenAt(x, y, ViewportW, ViewportH);
 }

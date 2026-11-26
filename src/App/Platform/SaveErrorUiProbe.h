@@ -33,6 +33,7 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
   fs::create_directories(root);
   Json report = {{"schema", "save-error-ui-native.v1"}, {"status", "FAIL"}};
   report["hud_storage_live"] = InGameHudStorageJson(application.InspectHudStorage());
+  report["console_storage_live"] = ConsoleStorageJson(application.InspectConsoleStorage());
   auto require = [](bool value, const char *message)
   {
     if (!value)

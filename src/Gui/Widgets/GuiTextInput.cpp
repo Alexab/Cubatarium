@@ -67,8 +67,9 @@ void UGuiTextInput::NotifyEdited()
 
 void UGuiTextInput::SetText(const std::string &text)
 {
+  auto sanitized = SanitizeConsoleLine(text);
   ProgrammaticChange = true;
-  Buffer = SanitizeConsoleLine(text);
+  Buffer = std::move(sanitized);
   if (Buffer.size() > kMaxLength)
   {
     Buffer.resize(kMaxLength);

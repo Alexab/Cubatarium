@@ -17,6 +17,14 @@ class UGuiPopupMenu;
 class UGuiRenderer;
 class UGuiTextInput;
 
+struct ConsoleStorage
+{
+  size_t screen_bytes{}, widget_bytes{}, children_bytes{}, input_text{}, draft_text{};
+  size_t log_rows{}, log_slots{}, log_text{}, history_rows{}, history_slots{}, history_text{}, history_path{};
+  size_t popup_bytes{}, popup_entries{}, popup_slots{}, popup_text{}, callback_bytes{}, requested{};
+  bool present{}, visible{}, popup_open{}, borrowed_log{}, bindings_match{}, supported{};
+};
+
 class UConsoleScreen : public UGuiScreenBase
 {
 public:
@@ -39,8 +47,12 @@ public:
   bool RouteMouseButton(const GuiMouseEvent &event, UGuiRenderer &renderer);
   bool RouteMouseMove(const GuiMouseEvent &event, UGuiRenderer &renderer);
   bool IsPopupOpen() const;
+  ConsoleStorage InspectOwnedStorage(const UGuiContext &context, const UGameSession *session,
+                                       const UGuiPopupMenu *popup) const noexcept;
 
 private:
+  struct EditedAction;
+  template<void (UGuiTextInput::*Edit)()> struct PopupEditAction;
   void Relayout();
   void OnInputEdited();
   bool HandleHistoryNavigation(const GuiKeyEvent &event);

@@ -49,6 +49,7 @@ public:
   int GetPreferredHeight() const override;
 
 private:
+  friend class UConsoleScreen;
   size_t SelMin() const;
   size_t SelMax() const;
   void DeleteSelection();

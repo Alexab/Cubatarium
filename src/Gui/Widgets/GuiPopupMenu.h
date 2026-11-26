@@ -34,6 +34,7 @@ public:
   UGuiWidget *HitTest(int x, int y) override;
 
 private:
+  friend class UConsoleScreen;
   int ItemIndexAt(int x, int y) const;
   int ItemHeight() const;
   int MenuWidth(int viewportW) const;

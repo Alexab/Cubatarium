@@ -5,28 +5,25 @@
 namespace cutum
 {
 
-std::string SanitizeConsoleLine(std::string s)
+void AppendSanitizedConsoleByte(std::string &line, unsigned char byte)
+{
+  if (line.size() >= kConsoleMaxLineLength)
+    return;
+  if (byte >= 32 && byte < 127)
+    line.push_back(static_cast<char>(byte));
+  else if (byte == '\t' && !line.empty() && line.back() != ' ')
+    line.push_back(' ');
+}
+
+std::string SanitizeConsoleLine(std::string_view input)
 {
   std::string out;
-  out.reserve(s.size());
-  for (unsigned char c : s)
+  out.reserve(std::min(input.size(), kConsoleMaxLineLength));
+  for (unsigned char byte : input)
   {
-    if (c == '\r' || c == '\n' || c == '\t')
-    {
-      if (c == '\t' && !out.empty() && out.back() != ' ')
-      {
-        out.push_back(' ');
-      }
-      continue;
-    }
-    if (c >= 32 && c < 127)
-    {
-      out.push_back(static_cast<char>(c));
-    }
-  }
-  if (out.size() > kConsoleMaxLineLength)
-  {
-    out.resize(kConsoleMaxLineLength);
+    AppendSanitizedConsoleByte(out, byte);
+    if (out.size() == kConsoleMaxLineLength)
+      break;
   }
   return out;
 }
