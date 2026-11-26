@@ -15,6 +15,7 @@
 #include "World/IO/AsyncChunkIO.h"
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "WorldGen/Core/CatalogRuntimeDomain.h"
+#include "WorldGen/Core/CatalogConstructionComposition.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -23,10 +24,11 @@ namespace cutum
 {
 struct CatalogApplicationDomain final : CatalogRuntimeDomain
 {
+  using CatalogRuntimeDomain::Geometry;
   void Core(const UCore *v){if(Enter(Kind::Core,v))v->InspectCatalogDomain(*this);}
   void Application(const UApplication *v){if(Enter(Kind::Application,v))v->InspectCatalogDomain(*this);}
-  void World(const UWorld *v){if(Enter(Kind::World,v))v->InspectCatalogDomain(*this);}
-  void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v))v->InspectCatalogDomain(*this);}
+  void World(const UWorld *v){if(Enter(Kind::World,v)){v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);}}
+  void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v)){v->InspectCatalogDomain(*this);v->InspectCatalogRoots(*this);}}
   void GuiIcon(const UGuiIconSource *v){if(Enter(Kind::GuiIcon,v))v->InspectCatalogDomain(*this);}
   void ObjectIcon(const UObjectIconCache *v){if(Enter(Kind::ObjectIcon,v))v->InspectCatalogDomain(*this);}
   void Preview(const UContentPreviewRenderer *v){if(Enter(Kind::Preview,v))v->InspectCatalogDomain(*this);}
@@ -34,11 +36,11 @@ struct CatalogApplicationDomain final : CatalogRuntimeDomain
   void ItemLab(const UItemLabScreen *v){if(Enter(Kind::ItemLab,v))v->InspectCatalogDomain(*this);}
   void ItemLabScene(const UItemLabSceneRenderer *v){if(Enter(Kind::ItemLabScene,v))v->InspectCatalogDomain(*this);}
   void MeshService(const UWorldMeshService *v){if(Enter(Kind::MeshService,v))MeshCache(&v->GetCache());}
-  void MeshCache(const UChunkMeshCache *v){if(Enter(Kind::MeshCache,v))v->InspectJobPools(*this);}
+  void MeshCache(const UChunkMeshCache *v){if(Enter(Kind::MeshCache,v)){v->InspectJobPools(*this);v->InspectCatalogRoots(*this);v->InspectCompletedCatalogRoots(*this);}}
   void Streaming(const UWorldStreaming *v){if(Enter(Kind::Streaming,v))if(const auto *scheduler=v->GetChunkScheduler())scheduler->InspectJobPools(*this);}
   void Persistence(const UWorldPersistence *v){if(Enter(Kind::Persistence,v))v->InspectCatalogDomain(*this);}
   void Io(const UAsyncChunkIO *v){if(Enter(Kind::Io,v))v->InspectJobPools(*this);}
-  void Relight(const UAsyncRelightBuilder *v){if(v)v->InspectJobPools(*this);}
+  void Relight(const UAsyncRelightBuilder *v){if(v){v->InspectJobPools(*this);v->InspectCompletedCatalogRoots(*this);}}
   void Coop(const UWorldCooperativeSession *v){if(Enter(Kind::Coop,v))v->InspectCatalogDomain(*this);}
 };
 struct CatalogLauncherRootsView
@@ -60,6 +62,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
   const auto content=CaptureWorldGenContentSnapshot();out.Content(content);out.CallingThread();out.ActiveDirectory();
   const auto census=out.Catalogs();Json pools=Json::array(),roles=Json::array();
+  const auto retained=BoundRetainedCatalogRequests(census);
   bool active_roles_current=true;
   for(const auto &role:out.block_roles){
     const bool current=role.storage==core.GetBlockDefinitionStorage().get();
@@ -76,7 +79,11 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"launcher_distinct_from_core",launcher.blocks.get()!=core.GetBlockDefinitionStorage().get()},
     {"pool_count",out.pools.size()},{"pool_workers",out.workers},{"calling_and_pool_thread_upper",thread_upper},{"pools",pools},
     {"unknown_owners",out.unknown_owners},{"calling_thread_convenience_inline_bytes",census.calling_thread_inline_bytes},
-    {"scope","Current supplied Core/Application/launcher/UI/world resources and actual member pools;foreign TLS/queued captures/installed publications/other callers/OS threads/process bytes are separate domains."}};
+    {"retained_requested_upper",retained.requested_heap_upper},{"retained_upper_supported",retained.supported && !retained.overflow},
+    {"publication_catalog_handles",out.Counts.catalog_handles},{"publication_fields",out.Counts.Nodes(CatalogPublicationRootInspector::Node::Field)},
+    {"publication_mesh_results",out.Counts.Nodes(CatalogPublicationRootInspector::Node::Mesh)},
+    {"publication_bindings",out.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)},
+    {"scope","One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance."}};
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){

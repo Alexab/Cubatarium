@@ -72,7 +72,6 @@ public:
 private:
   struct SeenNode {Node kind;const void *address;};
   std::vector<SeenNode> Seen;
-  detail::CatalogStorageInspector Storage;
   void Add(size_t &count)
   {if(count==std::numeric_limits<size_t>::max())Counts.overflow=true;else ++count;}
   bool Enter(Node kind,const void *address)
@@ -80,5 +79,7 @@ private:
     for(const auto &node:Seen)if(node.kind==kind && node.address==address)return false;
     Seen.push_back({kind,address});Add(Counts.nodes[static_cast<size_t>(kind)]);return true;
   }
+protected:
+  detail::CatalogStorageInspector Storage;
 };
 } // namespace cutum

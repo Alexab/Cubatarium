@@ -544,6 +544,9 @@ public:
     if(AsyncBuilder)AsyncBuilder->InspectJobPools(out);
     if(CaptureWorker)CaptureWorker->InspectJobPools(out);
   }
+  template<class Inspector> void InspectCompletedCatalogRoots(Inspector &out) const {
+    if(AsyncBuilder)AsyncBuilder->InspectCompletedCatalogRoots(out);
+  }
   // Quiescent publication-thread diagnostic; worker callable/completion
   // queues and caller-owned copies are separate supplied roots.
   template<class Inspector> void InspectCatalogRoots(Inspector &out) const

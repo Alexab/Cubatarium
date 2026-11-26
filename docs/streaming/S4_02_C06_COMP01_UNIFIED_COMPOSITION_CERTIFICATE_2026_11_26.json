@@ -1,0 +1,580 @@
+{
+  "schema": "s4-catalog-unified-owner-composition-certificate.v1",
+  "status": "SCOPED_UNIFIED_SOURCE_RETAINED_PASS_COMP01_FINAL_PROFILE_BINDINGS_E12_OPEN",
+  "summary": "COMP01 unified retained graph scoped PASS. CatalogRuntimeDomain now shares the same weak-only storage identity set as publication inspection;resource/field/mesh/relight/certificate/binding/backend aliases deduplicate together. Added const actual World BlockWorld,mesh-cache and completed mesh/relight and GeometryEngine Greedy/Cross traversal to opt-in native application domain. Explicit caller text,active pack-directory and calling-thread roots deduplicate by source identity;first alias-control run found repeated active-directory charge,now corrected with pre-fix artifact retained. Checked cardinality/source helper rejects unknown thread/caller/source profiles,capacity0 as a finite queue bound,add/multiply/thread/byte overflow and missing source envelope. Two-world declared count example gives1238 conservative root units,including coop3W+main local;this is source arithmetic,not observed thread count or RSS budget. Real five-phase pack/merge/definitions/textures/fingerprint construction retains a third real catalog solely through directly populated returned mesh/relight types;complete3 catalogs vs omitted2,64 aliases deduplicate. Every measured entry/phase bounded;retained requested components72243<=82118,decoder12364 once;ordinary441 refusal/exact retries and final0 PASS. Actual solver/mesh/GL publication tests independently join storage+two old publication catalogs and retire payloads while weak collectors live. Eight Release groups PASS. Native merged domain observes current2 catalogs,981 field nodes and19 member pool workers in first-game;menu/game retained requested upper12474043/12575831. Fresh Release desktop/runtime/startup/direct save/UI/provenance and8 native+2 unit GL readbacks PASS;aggregate startup-only smoke UNTESTED.",
+  "remaining": "COMP01 remains OPEN only for final finite input/profile bindings,not another audit: (1)bind each existing G/T/RQ/R/P owner row to the checked source cardinalities using GT01 constructor/pool profiles and RQ01 actual positive completion capacities,coop3W tails,backend/save/caller counts,including primary/TLS pipeline source-input copies and registry-name histories;(2)join the unchanged C05 settings/WorldGenSets,managed DOM/retirement arena,prefab/library and CPU/GPU texture source/retained schedules with those counts under explicit live-version input maxima,with shared payload/decoder terms once;the new five-phase returned-resource fixture and generic1238-unit example alone do not prove this full binding;(3)issue final C06/E11 supplied-default-profile certificate after those bindings/controls pass,then continue E12. Unknown external world/thread/callback/escaped histories and capacity0 without another source count bound must stay UNSUPPORTED,not0. E12 weak/coallocated shells,allocator/upstream/CRT/glog/locale/exception/stack/TLS/numeric caches/OS/driver/GPU/process and original full native/performance/memory matrix OPEN. S4.02 then S4.03..06/S5/S6 still OPEN;23/42 and ecology S6.05 unchanged;full S0..S6 preserved.",
+  "unit": {
+    "directory": {
+      "biome_files": 2,
+      "decoder_upper": 219840,
+      "json_files": 12,
+      "legacy_publications_after_refusal": 0,
+      "ordinary_attempts": 441,
+      "ordinary_peak": 8120,
+      "ordinary_upper": 22608174,
+      "pass": true,
+      "refusal_and_exact_retry_cases": 441
+    },
+    "failed_cases": 0,
+    "graph_final_zero": true,
+    "negative_control": true,
+    "old_current_oracles": true,
+    "overflow_rejected": true,
+    "owner_composition": {
+      "alias64_cross_domain_deduplicated": true,
+      "controls": {
+        "add_multiply_thread_byte_overflow_rejected": true,
+        "completed_catalog_slots": 256,
+        "cooperative_content_slots": 100,
+        "count_weighted_retained_upper": 33531922042,
+        "missing_source_budget_rejected": true,
+        "pass": true,
+        "pin_slots": 252,
+        "publication_catalog_slots": 126,
+        "reader_slots": 441,
+        "root_slots_upper": 1238,
+        "save_catalog_slots": 10,
+        "scope": "Conservative source count profile for two supplied worlds,54 member+8 constructing pool workers,explicit artifact/caller counts;not observed live thread count or process budget",
+        "shared_work_slots": 32,
+        "supplied_root_source_upper": 27085559,
+        "thread_upper": 63,
+        "unknown_thread_caller_source_and_zero_capacity_rejected": true
+      },
+      "omitted_known_bytes": 28348,
+      "omitted_returned_catalogs": 2,
+      "pass": true,
+      "returned_types_scope": "Actual mesh/relight result owner types populated directly with real catalog publication;real solver/mesh/queue semantics remain covered by retained RQ01/publication certificates",
+      "union_catalogs": 3,
+      "union_known_bytes": 61604
+    },
+    "phases": [
+      {
+        "composed_upper": 22886221,
+        "entry_observed": 51371,
+        "entry_upper": 58207,
+        "name": "whole_pack_directory",
+        "new_decoder_peak": 28800,
+        "observed_component_envelope": 88291,
+        "ordinary_peak": 59447,
+        "owner_count_source_upper": 28355969612,
+        "pass": true,
+        "retained_decoder": 44
+      },
+      {
+        "composed_upper": 4134875,
+        "entry_observed": 70875,
+        "entry_upper": 80468,
+        "name": "merge_rebuild",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 73425,
+        "ordinary_peak": 61061,
+        "owner_count_source_upper": 33356551871,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 105276,
+        "entry_observed": 70875,
+        "entry_upper": 80468,
+        "name": "definition_publication",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 73291,
+        "ordinary_peak": 60927,
+        "owner_count_source_upper": 33383234576,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 183965,
+        "entry_observed": 72211,
+        "entry_upper": 82086,
+        "name": "texture_publication",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 74363,
+        "ordinary_peak": 61999,
+        "owner_count_source_upper": 33509437849,
+        "pass": true,
+        "retained_decoder": 12364
+      },
+      {
+        "composed_upper": 100330,
+        "entry_observed": 72211,
+        "entry_upper": 82086,
+        "name": "fingerprint",
+        "new_decoder_peak": 0,
+        "observed_component_envelope": 73075,
+        "ordinary_peak": 60711,
+        "owner_count_source_upper": 33531940286,
+        "pass": true,
+        "retained_decoder": 12364
+      }
+    ],
+    "retained": {
+      "alias64_deduplicated": true,
+      "decoder_requests_once": 12364,
+      "observed_components": 72243,
+      "owners": 15,
+      "upper": 82118
+    },
+    "schema": "catalog-construction-composition.v1",
+    "scope": "Real five-phase C05 pack/resource graph joined with escaped result catalog through one weak-only identity set;checked explicit source counts and supplied per-version history envelope. Catalog requested-data only;foreign thread/caller/root source domains must be supplied explicitly,other C05 schedules reused by unchanged construction composition mechanism. No process/CRT/stack/GPU/full matrix verdict.",
+    "status": "PASS"
+  },
+  "publication_roots": {
+    "cpu": {
+      "alias64_payload_deduplicated": true,
+      "backend_metadata_lease_roots": {
+        "greedy_and_cross_catalogs": 1,
+        "last_metadata_release_retires": true,
+        "scope": "Actual metadata types and CPU/GL binding leases;metadata populated directly,no GPU upload transaction acceptance",
+        "source_owner_removal_retains": true
+      },
+      "binding_nodes": 2,
+      "catalog_reference_visits": 19,
+      "certificate_nodes": 2,
+      "field_nodes": 4,
+      "final_catalogs": 1,
+      "invalid_owning_geometry_counted": true,
+      "last_cross_thread_payloads": 0,
+      "no_surface_proof_nodes": 2,
+      "observer_does_not_retain_payload": true,
+      "old_distinct_versions": 2,
+      "omitted_root_catalogs": 1,
+      "real_GL": false,
+      "real_GL_readbacks": 0,
+      "result_nodes": 2,
+      "schema": "catalog-publication-root-graph.v2",
+      "status": "PASS",
+      "unified_resource_publication": {
+        "alias64_deduplicated": true,
+        "catalogs": 3,
+        "known_bytes": 109272,
+        "storage_objects": 1,
+        "weak_observer_final_retirement": true
+      },
+      "union_catalogs": 3,
+      "union_known_catalog_bytes": 109248
+    },
+    "gl": {
+      "alias64_payload_deduplicated": true,
+      "backend_metadata_lease_roots": {
+        "greedy_and_cross_catalogs": 1,
+        "last_metadata_release_retires": true,
+        "scope": "Actual metadata types and CPU/GL binding leases;metadata populated directly,no GPU upload transaction acceptance",
+        "source_owner_removal_retains": true
+      },
+      "binding_nodes": 2,
+      "catalog_reference_visits": 19,
+      "certificate_nodes": 2,
+      "field_nodes": 4,
+      "final_catalogs": 1,
+      "invalid_owning_geometry_counted": true,
+      "last_cross_thread_payloads": 0,
+      "no_surface_proof_nodes": 2,
+      "observer_does_not_retain_payload": true,
+      "old_distinct_versions": 2,
+      "omitted_root_catalogs": 1,
+      "real_GL": true,
+      "real_GL_readbacks": 2,
+      "result_nodes": 2,
+      "schema": "catalog-publication-root-graph.v2",
+      "status": "PASS",
+      "unified_resource_publication": {
+        "alias64_deduplicated": true,
+        "catalogs": 3,
+        "known_bytes": 109272,
+        "storage_objects": 1,
+        "weak_observer_final_retirement": true
+      },
+      "union_catalogs": 3,
+      "union_known_catalog_bytes": 109248
+    }
+  },
+  "unit_runs": [
+    {
+      "name": "composition",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-unit.json"
+      ],
+      "returncode": 0,
+      "seconds": 1.0459668999537826,
+      "exe_sha256": "f514a28b461df8a1b3eecf7b0e5b484f552f77e82172e57a2f6b341b0126b2ee",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-composition.log"
+    },
+    {
+      "name": "publication-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-publication-cpu.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.18484169989824295,
+      "exe_sha256": "dd251cefbe39dd9b324cc1386533b2a0e4b3fd9679d593546db508ded205eff7",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-publication-cpu.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.31612959993071854,
+      "exe_sha256": "dd251cefbe39dd9b324cc1386533b2a0e4b3fd9679d593546db508ded205eff7",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-publication-gl.log"
+    },
+    {
+      "name": "mesh-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-mesh.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.07711090007796884,
+      "exe_sha256": "dd251cefbe39dd9b324cc1386533b2a0e4b3fd9679d593546db508ded205eff7",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-mesh-queues.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.14675590000115335,
+      "exe_sha256": "6f19c85fc8725ccb518a73496c4363400af293f19027090169fc57009ea69427",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-runtime-domain.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01174320001155138,
+      "exe_sha256": "6f19c85fc8725ccb518a73496c4363400af293f19027090169fc57009ea69427",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-cooperative.log"
+    },
+    {
+      "name": "worker-retirement",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-owner-composition-worker.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.15138670010492206,
+      "exe_sha256": "6f19c85fc8725ccb518a73496c4363400af293f19027090169fc57009ea69427",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-worker-retirement.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 4.0333440999966115,
+      "exe_sha256": "dd251cefbe39dd9b324cc1386533b2a0e4b3fd9679d593546db508ded205eff7",
+      "log": "build\\desktop-msvc\\s4-catalog-owner-composition-decor-full.log"
+    }
+  ],
+  "native_menu": {
+    "active_roles_current": true,
+    "applications": 1,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 10,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7493156,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "menu",
+    "pool_count": 2,
+    "pool_workers": 9,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 0,
+    "publication_fields": 0,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12474043,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "native_first_game": {
+    "active_roles_current": true,
+    "applications": 1,
+    "auxiliary_domain_supported": true,
+    "auxiliary_world_counted": true,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 20,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "diagnostic_pool_count_with_auxiliary": 6,
+    "diagnostic_pool_workers_with_auxiliary": 19,
+    "diagnostic_thread_upper_with_auxiliary": 20,
+    "diagnostic_worlds_with_auxiliary": 2,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7552364,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "in-game",
+    "pool_count": 6,
+    "pool_workers": 19,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "stream-generation",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-load",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-background",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "io-light-flags",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 652,
+    "publication_fields": 981,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12575831,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "unchanged_C05_model_reuse_candidates": [
+    {
+      "certificate": "S4_02_C05_TEXTURE_CONSTRUCTION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "982501cdd12da3fa611e592c1697e149ac1fcb911138f66722addc11ca54f67f",
+      "unchanged_models": {
+        "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+        "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_SETTINGS_FILE_COMPOSITION_CERTIFICATE_2026_11_25.json",
+      "certificate_sha256": "e132128e47deeb7464ef45355437f6b0c2d0545e970206857905d11614094bee",
+      "unchanged_models": {
+        "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
+        "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_PREFAB_COMPOSITION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "a1c479b55842d030d1ff9fce2034c5a380eb08d461400d423dc9264edce21592",
+      "unchanged_models": {
+        "src/WorldGen/Core/PrefabConstructionComposition.h": "34472a086adf3dd4165e3746d3e7576eb33437b3786f21ab8e887fbafe82775c"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_TEXTURE_PUBLICATION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "ffa0ca9068cb220520d59c34d975d7ce858a43839d6ec2800e3278f197fa018a",
+      "unchanged_models": {
+        "src/WorldGen/Core/TexturePublicationSourceEnvelope.h": "2d8ef22b386549a82f0c5d33ca1b60dd8f8c7f5846f4211a0172f639faaa4c7a"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    }
+  ],
+  "source_sha256_raw": {
+    "CMakeLists.txt": "c0c6cf3eaee00add058d6d8cda43dd7aa01d197ce350d6ed49c529c5823cb09c",
+    "src/WorldGen/Core/CatalogRuntimeDomain.h": "ae4b0790f2f20c6cf9edc64fa5cd4979d9ee8d9d5a95933dddb698b8b4523e75",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "374b507d5de7e9227a2ee38a2894d6443ea23a4cc84ee431987286c946fdc6b6",
+    "src/WorldGen/Core/CatalogOwnerComposition.h": "266497fdab12cf9611ed36396b3f2e36a27ea83bfcfd53be2545715d8804f18f",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+    "src/Render/Engine/GeometryEngine.h": "4b9558691c4feaafc092b114c2358de523ce4c5e9fcf4424e6c411c67b819da3",
+    "src/Render/Mesh/ChunkMeshCache.h": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a",
+    "src/Render/Mesh/AsyncMeshBuilder.h": "fa0fc04cfa1a7564305bf3602f33f69284c780161cb499f0df1728dd67e7f23b",
+    "src/World/Lighting/AsyncRelightBuilder.h": "ff7043b6542a75daea41be197ca5f9c21c8db839f9559929eb22b05ef2ae0f42",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "209e3aa4b272bf1749b85f0fb3282e87ad8543f8c92f59d2966d5032527b68c6",
+    "src/App/Platform/AppRunner.cpp": "9be66edf7483252c3bac913a7e2870dbf116cd433eb6773789ded9fcef629fae",
+    "src/Test/CatalogCompositionFixture.h": "97d906808a57bc9ca6aa827bb5860e1988882ae25609d4a22e0605c1bf8ae7af",
+    "src/Test/CatalogOwnerCompositionControls.h": "3ce48110d2f40400e4ecee6fcad66327b887aedcc87f8de8a7f8aea8f0f6677c",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "4277eb98c7dd80b045582939bcc9b325bc945b9d00d7b821e7b0f0688b64cb08",
+    "src/Test/DecorMeshIntegrationTest.cpp": "a3a989497d4c99a90c47a253bd9e36744cd9cb8b971fe03d5d926cf13cf2703c"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c"
+  },
+  "provenance": "build\\desktop-msvc\\s4-catalog-owner-composition-provenance.json",
+  "desktop_exe_sha256": "b250b3c780fd979531ed5c0bf20f5c74fac9c5d2c09e8205162370526487a5d9",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-catalog-owner-composition-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "actual_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  },
+  "limits": "No all-process or universal owner-completeness claim. All supplied objects stay stable during each synchronous visit;locked queue traversal is not an atomic snapshot of all queues. Caller-return types in the C05 graph are populated directly;real solver/mesh/GL/queue semantics are separate current publication/RQ01 evidence. Source-count example is a declared arithmetic profile,not measured two-world worker behavior. Its33.5GB conservative requested-data result is not a memory quota or performance budget. Foreign TLS is not inspected;each complete live-version source/input domain must be explicitly supplied. Weak diagnostic sets can retain coallocated control shells until destruction;E12. Optional instrumentation is env-gated and has no persistent strong catalog mirror. Full COMP01 binding and full S0..S6 acceptance remain required."
+}

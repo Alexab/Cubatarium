@@ -2914,6 +2914,7 @@ cubatarium_add_test(NAME worldgen_scatter_test
 
 cubatarium_add_test(NAME worldgen_scatter_block_resolve_test
     SOURCES
+        src/Core/Jobs/PipelineAdmission.cpp
         src/Blocks/BlockRegistry.cpp
         src/Blocks/BlockDefinition.cpp
         src/Blocks/BlockDefinitionStorage.cpp
@@ -2938,6 +2939,10 @@ cubatarium_add_test(NAME worldgen_scatter_block_resolve_test
         src/WorldGen/Features/ObjectFeatureConfig.cpp
         src/Test/WorldGenScatterBlockResolveTest.cpp
     LIBRARIES glm::glm nlohmann_json::nlohmann_json OpenGL::GL GLEW::GLEW)
+add_test(NAME catalog_owner_composition_test
+    COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --catalog-owner-composition
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-owner-composition.json)
+set_tests_properties(catalog_owner_composition_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 
 cubatarium_add_test(NAME fluid_tuning_defaults_test
     SOURCES

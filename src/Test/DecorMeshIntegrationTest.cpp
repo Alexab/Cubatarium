@@ -32,6 +32,7 @@
 #include "World/Lighting/FlatLightingPipeline.h"
 #include "World/Streaming/DependencyStampBuilder.h"
 #include "WorldGen/Core/CatalogPublicationRoots.h"
+#include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "Test/CatalogQueueOwnersCommon.h"
 #include <nlohmann/json.hpp>
 #include <thread>
@@ -8904,6 +8905,13 @@ static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
   Expect(!first.old.expired() && !second.old.expired(),"distinct old payloads remain after actual current publication replacement");
   const auto visit=[&](CatalogPublicationRootInspector &out,Epoch &epoch){epoch.world.InspectCatalogRoots(out);epoch.cache.InspectCatalogRoots(out);out.MeshResult(*epoch.returned);out.NoSurface(epoch.no_surface);};
   CatalogPublicationRootInspector observer;observer.BlockCatalog(current);visit(observer,first);visit(observer,second);
+  CatalogRuntimeDomain joined_resources;joined_resources.BlockStorage(definitions);joined_resources.BlockCatalog(current);
+  visit(joined_resources,first);visit(joined_resources,second);
+  const auto joined_bytes=joined_resources.Catalogs().known_storage_bytes;
+  for(int i=0;i<64;++i){joined_resources.BlockStorage(definitions);visit(joined_resources,second);visit(joined_resources,first);}
+  Expect(joined_resources.Supported() && joined_resources.Catalogs().Objects(CatalogObjectKind::Blocks)==3 &&
+      joined_resources.Catalogs().Objects(CatalogObjectKind::BlockStorage)==1 && joined_resources.Catalogs().known_storage_bytes==joined_bytes,
+      "one resource/publication identity set joins current storage with two real old field/mesh/returned catalogs and64 aliases");
   const auto union_census=observer.Catalogs();
   Expect(union_census.Objects(CatalogObjectKind::Blocks)==3 && union_census.text_bytes>=3*32769 && !union_census.overflow,"publication graph finds current plus two independent old catalog payloads and authored name capacities");
   Expect(observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Certificate)==2 && observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)==2 && observer.Counts.Nodes(CatalogPublicationRootInspector::Node::Mesh)==2,"real result/certificate/binding nodes counted once");
@@ -8949,6 +8957,7 @@ static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
 #if defined(SECTION_LIGHT_BINDING_DRIVER)
   report["backend_metadata_lease_roots"]={{"greedy_and_cross_catalogs",1},{"source_owner_removal_retains",true},{"last_metadata_release_retires",true},{"scope","Actual metadata types and CPU/GL binding leases;metadata populated directly,no GPU upload transaction acceptance"}};
 #endif
+  report["unified_resource_publication"]={{"catalogs",3},{"storage_objects",1},{"known_bytes",joined_bytes},{"alias64_deduplicated",true},{"weak_observer_final_retirement",true}};
   std::ofstream output(report_path);output<<report.dump(2)<<'\n';Expect(bool(output),"catalog root report writes");std::cout<<report.dump()<<'\n';
 }
 

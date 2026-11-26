@@ -1,6 +1,6 @@
 {
   "schema": "s4-catalog-root-owner-ledger.v1",
-  "status": "OPEN_C06_COMP01_GT01_RQ01_NAMED_DOMAIN_SCOPED_PASS",
+  "status": "OPEN_COMP01_FINAL_PROFILE_BINDINGS_UNIFIED_COUNT_SOURCE_GRAPH_SCOPED_PASS",
   "scope": "Continuation of C06,not a new audit or process-memory cap. Current R installed/cached/returned graph has scoped proof;all declaration candidates/value/capture roots below must be composed before C06 closes.",
   "current_certificate": "S4_02_C06_PUBLICATION_ROOTS_CERTIFICATE_2026_11_26.json",
   "rows": [
@@ -142,7 +142,8 @@
       "owner": "publisher and returned roots",
       "source": "src/WorldGen/Core/CatalogStorageCensus.h",
       "bound_or_obligation": "CatalogSnapshot/Compile/DOM/file/resource/texture returned objects and old/current/candidate overlap from accepted C05. Count all caller-owned results and aliases via supplied roots;arbitrary external caller histories are not bounded by active jobs and unknown domains cannot be certified as0.",
-      "status": "OPEN_COMP01_SUPPLIED_ROOT_CARDINALITIES"
+      "status": "PARTIAL_UNIFIED_RESOURCE_RETURNED_COMPOSITION_PASS_FINAL_INPUT_PROFILE_BINDINGS_OPEN",
+      "evidence": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json"
     }
   ],
   "declaration_candidates": [
@@ -268,13 +269,13 @@
     },
     {
       "source": "src/Render/Engine/GeometryEngine.h",
-      "line": 303,
+      "line": 307,
       "type": "UTextureBaseStorage",
       "candidate": "TextureBaseStorageInstance"
     },
     {
       "source": "src/Render/Engine/GeometryEngine.h",
-      "line": 304,
+      "line": 308,
       "type": "UTextureCubeStorage",
       "candidate": "TextureCubeStorageInstance"
     },
@@ -292,19 +293,19 @@
     },
     {
       "source": "src/Render/Mesh/ChunkMeshCache.h",
-      "line": 1395,
+      "line": 1398,
       "type": "SectionRenderLightBinding",
       "candidate": "GpuRenderLightBinding"
     },
     {
       "source": "src/Render/Mesh/ChunkMeshCache.h",
-      "line": 1421,
+      "line": 1424,
       "type": "SectionRenderLightBinding",
       "candidate": "RenderLightBinding"
     },
     {
       "source": "src/Render/Mesh/ChunkMeshCache.h",
-      "line": 1465,
+      "line": 1468,
       "type": "BlockDefinitionCatalog",
       "candidate": "inputCatalog"
     },
@@ -515,13 +516,13 @@
   ],
   "declaration_rule": "Header regex candidate list only;includes some parameters,does not cover aliases/value wrappers/cpp TLS or capture sites. It is NOT a proof that all owners are enumerated. Named rows include those additional sites.",
   "source_sha256": {
-    "CMakeLists.txt": "a423585fa3f4cd490e0a745428ab7d6b5d1104b35e3ea04a4b7fd67a36108778",
+    "CMakeLists.txt": "c0c6cf3eaee00add058d6d8cda43dd7aa01d197ce350d6ed49c529c5823cb09c",
     "src/App/Application.cpp": "f92982c7fe179a0e936ba945e4705c95c5e7a253612f2b8b491124b1ce01b4fc",
     "src/App/Application.h": "3d8dd2c708b9de5e705ce377bf5752d0bdcd4c9cea25bf8fbc6875d21abf8eec",
     "src/App/Core.cpp": "833fa0ee090430480ceca3fd8b7981b52541c051ee8f2e0b912e9eed2dd0a219",
     "src/App/Core.h": "086d2a91065eebb9e75655363fdcb52778f8991543a2f1c4de40873c100f0d73",
     "src/App/Platform/AppRunner.cpp": "9be66edf7483252c3bac913a7e2870dbf116cd433eb6773789ded9fcef629fae",
-    "src/App/Platform/CatalogRuntimeDomainProbe.h": "8b1ade3bf154c8eae287de9fea908a2de5f03f4de2523b74e5b5f50786d16d84",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "209e3aa4b272bf1749b85f0fb3282e87ad8543f8c92f59d2966d5032527b68c6",
     "src/App/Platform/TerrainSaveFailureProbe.h": "c0346f955bead091faf18ff11aed8f7b2136101cba681d2b42eb0449842c568b",
     "src/App/Utils.cpp": "a4dff5f3908325603356389ebe9e45ae0223b8561a77e7fbb602733381204f40",
     "src/Blocks/BlockDefinitionStorage.h": "5d2bb66f4debf7d7dd0e82b3bdb5a365939714ae01696a8f7c6c9db9ca0f4172",
@@ -538,12 +539,12 @@
     "src/Gui/Screens/ItemLabScreen.h": "a8861c9c9f6a44db2a7ccc9061e5ec71b35d7c0bd7e707c9bdc2f4b56c7628cf",
     "src/Items/FpViewmodelRenderer.h": "27684f0ac740dc4daa0305d9638f3778f55491c25867e27ab4978c8f8e9b77e5",
     "src/Render/Engine/CrossGpuBackend.h": "b362374740ff3e98d6e51c00cc96ca9fa47f3066686fd7b08779ecaf6d3e91d6",
-    "src/Render/Engine/GeometryEngine.h": "b237936f180c9568a2bbd7b38c603a9ffadc2b1f64bd37ca2f014011b877d702",
+    "src/Render/Engine/GeometryEngine.h": "4b9558691c4feaafc092b114c2358de523ce4c5e9fcf4424e6c411c67b819da3",
     "src/Render/Engine/GreedyGpuBackend.h": "24aee5379674bae4422f4cb94cddf5150b5844c12da1d6f23118210eda2ecf52",
     "src/Render/Lighting/SectionRenderLightBinding.h": "f7d42b7e580ea2a8ef17c903cf464bd2f42fdf3948174029201258351570894b",
     "src/Render/Mesh/AsyncMeshBuilder.cpp": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50",
     "src/Render/Mesh/AsyncMeshBuilder.h": "fa0fc04cfa1a7564305bf3602f33f69284c780161cb499f0df1728dd67e7f23b",
-    "src/Render/Mesh/ChunkMeshCache.h": "69c59cfc5b2c74296eb96546d1894cdceb916822477d7f5b5aeead27c8ae1629",
+    "src/Render/Mesh/ChunkMeshCache.h": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a",
     "src/Render/Mesh/ChunkMeshSnapshot.cpp": "bd8846e91d7a91faec3bdad861ce747425ac59823ac629fb80d54e6f08383774",
     "src/Render/Mesh/CrossInstanceBatch.h": "69152cb38f441947758b3541bbfb2a6973d2eca33570e14720bd9eca99e0b8d4",
     "src/Render/Mesh/GpuPackedMeshTypes.h": "09319d15969eda258957a46f5539ab4ae22a33a160352ade55946dfe2fc205cd",
@@ -552,12 +553,15 @@
     "src/Render/Mesh/MeshCaptureWorker.h": "868cb90f5355f0eeffa7bc7460d26d82eb976dd3592920edb34aeb35426be75e",
     "src/Render/Textures/TextureCube.h": "941189553621f7d05b1fa5b0019d6a94a2bf56f51883466664b4328b5787251b",
     "src/Test/AsyncRelightLifecycleTest.cpp": "163df9b70db44391acfe077251998b6f4e64d58e859ad60a816c0817ad76071b",
+    "src/Test/CatalogCompositionFixture.h": "97d906808a57bc9ca6aa827bb5860e1988882ae25609d4a22e0605c1bf8ae7af",
     "src/Test/CatalogCooperativeOwners.h": "e399ffd8c4de526c5f5f60d548fd64b6dbb4fbd8d79aab310297c89b9820b02f",
     "src/Test/CatalogMeshQueueOwners.h": "5b67b39f642a90c4613fbda527c0a981de59da5c74765385bc102bfdbaa0d4b2",
+    "src/Test/CatalogOwnerCompositionControls.h": "3ce48110d2f40400e4ecee6fcad66327b887aedcc87f8de8a7f8aea8f0f6677c",
     "src/Test/CatalogQueueOwnersCommon.h": "5f502c189a38a3fd7bf85577c263d59253830b1aea0a2605d8276c893d2ddbf4",
     "src/Test/CatalogRelightQueueOwners.h": "6a8c7528b8be03a09aed5b7563d5dc5a2e788412e2dc2bf20e1f8c9886577e2b",
     "src/Test/CatalogWorkerRetirementTest.cpp": "60d0e85f97149a05be86faaf9ace2523c3a32b296838bb22759b5f6f02cba86c",
-    "src/Test/DecorMeshIntegrationTest.cpp": "a347fe5e6947cd5d44f28dce0a469982fe546f6f96463beb0d6b06aa41ee0211",
+    "src/Test/DecorMeshIntegrationTest.cpp": "a3a989497d4c99a90c47a253bd9e36744cd9cb8b971fe03d5d926cf13cf2703c",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "4277eb98c7dd80b045582939bcc9b325bc945b9d00d7b821e7b0f0688b64cb08",
     "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
     "src/World/Chunks/ChunkLoadScheduler.h": "c06556200675b26c636b29ff8f0f50514f1710b41f3c103cfa04d29884a6c02f",
     "src/World/Core/BlockWorld.h": "37d1d21fed798f4a925c80b923e18e7376ab4dd36ef95c4112485778c1146c07",
@@ -576,12 +580,15 @@
     "src/World/Objects/ObjectLibrary.h": "cbc000871b0bc855ce641edd8c14637d64d660084c3b8fe30ed1db6fbf381cba",
     "src/World/Persistence/WorldPersistence.cpp": "dadb3a87e3847cc77eb32d7366e4501686ee64ce0c39a3a97cc8e6b90d26c564",
     "src/World/Persistence/WorldPersistence.h": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b",
-    "src/WorldGen/Core/CatalogPublicationRoots.h": "3ec445681e96775fef36c1236b13c7775573df9586369c02a4683661521644d5",
-    "src/WorldGen/Core/CatalogRuntimeDomain.h": "9ec6234ddfb2c9d98b658003f63ed218285e34d48f3c9b838f44a8cf67c9d7e4",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/CatalogOwnerComposition.h": "266497fdab12cf9611ed36396b3f2e36a27ea83bfcfd53be2545715d8804f18f",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "374b507d5de7e9227a2ee38a2894d6443ea23a4cc84ee431987286c946fdc6b6",
+    "src/WorldGen/Core/CatalogRuntimeDomain.h": "ae4b0790f2f20c6cf9edc64fa5cd4979d9ee8d9d5a95933dddb698b8b4523e75",
     "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
     "src/WorldGen/Core/CooperativePopulateDispatch.h": "3e7d40cc0f177a01007cc5d151032a72e4a6f2785d87403f145bb0c9af78e819",
     "src/WorldGen/Core/IUChunkPopulator.h": "9a969a1b5c9a6089acc54f106a9ffee891181f455a9819020e522cd73fdadbb5",
     "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
     "src/WorldGen/Core/WorldGenContentPin.cpp": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133",
     "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
     "src/WorldGen/Core/WorldGenPack.h": "90d5dfa131b90ddb9c9b37aa76c7a6316312793942918cea8254fd40d89bd457",
@@ -593,12 +600,13 @@
   "remaining_order": [
     {
       "id": "COMP01",
-      "result": "Checked root-cardinality/source composition with overflow/omitted-owner/alias controls and actual old/current/returned union. No process/CRT/GPU/full matrix acceptance inferred;then finish E12."
+      "result": "COMP01 remains OPEN only for final finite input/profile bindings,not another audit: (1)bind each existing G/T/RQ/R/P owner row to the checked source cardinalities using GT01 constructor/pool profiles and RQ01 actual positive completion capacities,coop3W tails,backend/save/caller counts,including primary/TLS pipeline source-input copies and registry-name histories;(2)join the unchanged C05 settings/WorldGenSets,managed DOM/retirement arena,prefab/library and CPU/GPU texture source/retained schedules with those counts under explicit live-version input maxima,with shared payload/decoder terms once;the new five-phase returned-resource fixture and generic1238-unit example alone do not prove this full binding;(3)issue final C06/E11 supplied-default-profile certificate after those bindings/controls pass,then continue E12. Unknown external world/thread/callback/escaped histories and capacity0 without another source count bound must stay UNSUPPORTED,not0. E12 weak/coallocated shells,allocator/upstream/CRT/glog/locale/exception/stack/TLS/numeric caches/OS/driver/GPU/process and original full native/performance/memory matrix OPEN. S4.02 then S4.03..06/S5/S6 still OPEN;23/42 and ecology S6.05 unchanged;full S0..S6 preserved."
     }
   ],
-  "remaining": "Next COMP01 within S4.02 LIMIT.Q09 E11/C06:checked composition of supplied source cardinalities with accepted C05 source/retained schedules,aliases,old/current/candidate/returned roots,omitted-owner and overflow controls. Include cooperative3W callable tail overlap<=12 plus one main scheduling request/local construction terms;do not substitute logical InFlight<=8 or global work8 for actual coop callable roots. Count actual completed capacities6W mesh/8W relight or supplied positive K,all escaped/drained results,actual backend batch/range cells,save receipts and constructor/component/world overlap. Queue capacity0 supplies no queue count bound;unknown caller/world/thread/callback or escaped history domains cannot be silently0. T02 conservative per-thread convenience readers and pin aliases remain explicit;cooperative fixture does not run full procedural pipeline. Then E12:weak/coallocated shells,upstream/control/CRT/glog refusal/locale/exception/stack/TLS/numeric cache/OS/driver/GPU/process and full native/performance/memory matrix OPEN. S4.02 then S4.03..06,S5,S6 remain OPEN;23/42 unchanged;known ecology mismatch S6.05 remains. Full S0..S6 preserved,no audit restart or reduced acceptance.",
+  "remaining": "COMP01 remains OPEN only for final finite input/profile bindings,not another audit: (1)bind each existing G/T/RQ/R/P owner row to the checked source cardinalities using GT01 constructor/pool profiles and RQ01 actual positive completion capacities,coop3W tails,backend/save/caller counts,including primary/TLS pipeline source-input copies and registry-name histories;(2)join the unchanged C05 settings/WorldGenSets,managed DOM/retirement arena,prefab/library and CPU/GPU texture source/retained schedules with those counts under explicit live-version input maxima,with shared payload/decoder terms once;the new five-phase returned-resource fixture and generic1238-unit example alone do not prove this full binding;(3)issue final C06/E11 supplied-default-profile certificate after those bindings/controls pass,then continue E12. Unknown external world/thread/callback/escaped histories and capacity0 without another source count bound must stay UNSUPPORTED,not0. E12 weak/coallocated shells,allocator/upstream/CRT/glog/locale/exception/stack/TLS/numeric caches/OS/driver/GPU/process and original full native/performance/memory matrix OPEN. S4.02 then S4.03..06/S5/S6 still OPEN;23/42 and ecology S6.05 unchanged;full S0..S6 preserved.",
   "runtime_domain_certificate": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
   "runtime_source_profiles": "S4_02_C06_GT01_SOURCE_PROFILES_2026_11_26.json",
   "queue_owner_certificate": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
-  "queue_source_profiles": "S4_02_C06_RQ01_SOURCE_COUNTS_2026_11_26.json"
+  "queue_source_profiles": "S4_02_C06_RQ01_SOURCE_COUNTS_2026_11_26.json",
+  "unified_composition_certificate": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json"
 }

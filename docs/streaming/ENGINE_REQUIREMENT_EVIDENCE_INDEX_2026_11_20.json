@@ -4,6 +4,13 @@
   "rule": "Existing evidence retained; missing provenance is not retroactively invented",
   "entries": [
     {
+      "id": "S4.02.LIMIT.Q09.E11.C06.COMP01",
+      "status": "SCOPED_UNIFIED_SOURCE_RETAINED_PASS_COMP01_FINAL_PROFILE_BINDINGS_E12_OPEN",
+      "receipt": "build/desktop-msvc/s4-catalog-owner-composition-acceptance.json",
+      "certificate": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json",
+      "scope": "COMP01 unified retained graph scoped PASS. CatalogRuntimeDomain now shares the same weak-only storage identity set as publication inspection;resource/field/mesh/relight/certificate/binding/backend aliases deduplicate together. Added const actual World BlockWorld,mesh-cache and completed mesh/relight and GeometryEngine Greedy/Cross traversal to opt-in native application domain. Explicit caller text,active pack-directory and calling-thread roots deduplicate by source identity;first alias-control run found repeated active-directory charge,now corrected with pre-fix artifact retained. Checked cardinality/source helper rejects unknown thread/caller/source profiles,capacity0 as a finite queue bound,add/multiply/thread/byte overflow and missing source envelope. Two-world declared count example gives1238 conservative root units,including coop3W+main local;this is source arithmetic,not observed thread count or RSS budget. Real five-phase pack/merge/definitions/textures/fingerprint construction retains a third real catalog solely through directly populated returned mesh/relight types;complete3 catalogs vs omitted2,64 aliases deduplicate. Every measured entry/phase bounded;retained requested components72243<=82118,decoder12364 once;ordinary441 refusal/exact retries and final0 PASS. Actual solver/mesh/GL publication tests independently join storage+two old publication catalogs and retire payloads while weak collectors live. Eight Release groups PASS. Native merged domain observes current2 catalogs,981 field nodes and19 member pool workers in first-game;menu/game retained requested upper12474043/12575831. Fresh Release desktop/runtime/startup/direct save/UI/provenance and8 native+2 unit GL readbacks PASS;aggregate startup-only smoke UNTESTED."
+    },
+    {
       "id": "S4.02.LIMIT.Q09.E11.C06.RQ01",
       "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
       "receipt": "build/desktop-msvc/s4-catalog-queue-owners-acceptance.json",

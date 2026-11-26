@@ -111,6 +111,10 @@ public:
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
     out.TextureBases(TextureBaseStorageInstance);out.TextureCubes(TextureCubeStorageInstance);out.World(WorldInstance.get());
   }
+  template<class Inspector> void InspectCatalogRoots(Inspector &out) const {
+    GreedyGpuOpaque.InspectCatalogRoots(out);GreedyGpuCutout.InspectCatalogRoots(out);
+    GreedyGpuTransparent.InspectCatalogRoots(out);CrossGpuPass.InspectCatalogRoots(out);
+  }
   UGeometryEngine(std::shared_ptr<UWorld> world,
                   std::shared_ptr<UTextureBaseStorage> texture_base_storage,
                   std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
