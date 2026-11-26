@@ -141,7 +141,7 @@ void UCharacterSheetScreen::BuildEquipmentPanel(PageWidgets &page, UGuiPanel &bo
     page.PreviewViewport->SetOnRotationChanged([this](float, float)
     {
       if (Stats)
-        try { RenderCharacterPreview(Stats->GetCharacterStatsSnapshot()); }
+        try { RenderCharacterPreview(Stats->GetCharacterLookSnapshot()); }
         catch (const std::bad_alloc &) { /* Retry on the next refresh. */ }
     });
     page.DollPanel->AddChild(std::move(preview));
@@ -396,7 +396,7 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
       {
         if (RecoveryMode)
         {
-          const auto size = Stats->GetCharacterStatsSnapshot().recovery.size();
+          const auto size = Stats->GetCharacterRecoveryCount();
           RecoveryOffset = RecoveryOffset + 40 < size ? RecoveryOffset + 40 : 0;
         }
         else if (auto *session = dynamic_cast<UGameSession *>(Stats))
@@ -818,7 +818,8 @@ void UCharacterSheetScreen::RefreshLabels() try
 {
   if (!Stats || !Root)
     return;
-  const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
+  const auto snap = Stats->GetCharacterPageSnapshot(
+      RecoveryOffset, RecoveryMode ? Widgets.BagSlots.size() : 0);
   auto draftBase = snap.humanAppearance.Key() + "|" + snap.skinId;
   if (!DraftInitialized || DraftOwnerId != snap.OwnerId ||
       DraftBase != draftBase)
@@ -952,8 +953,8 @@ void UCharacterSheetScreen::RefreshLabels() try
     {
       const InventoryEntryRef empty;
       const auto &entry = RecoveryMode
-                              ? (RecoveryOffset + i < snap.recovery.size()
-                                     ? snap.recovery[RecoveryOffset + i]
+                              ? (i < snap.recovery.size()
+                                     ? snap.recovery[i]
                                      : empty)
                               : snap.slots[i];
       auto *slot = Widgets.BagSlots[i];
@@ -982,8 +983,8 @@ void UCharacterSheetScreen::RefreshLabels() try
     Widgets.RecoveryButton->SetLabel(
         RecoveryMode
             ? "Back to bag"
-            : "Recover (" + std::to_string(snap.recovery.size()) + ")");
-    Widgets.RecoveryButton->SetEnabled(RecoveryMode || !snap.recovery.empty());
+            : "Recover (" + std::to_string(snap.recoveryCount) + ")");
+    Widgets.RecoveryButton->SetEnabled(RecoveryMode || snap.recoveryCount != 0);
     Widgets.SortButton->SetLabel(RecoveryMode ? "Next" : "Sort");
     Widgets.DropButton->SetEnabled(!RecoveryMode);
     Widgets.InventoryHint->SetText(
@@ -1003,7 +1004,7 @@ catch (const std::bad_alloc &)
   // The visible page can retry the refresh on the next update.
 }
 
-void UCharacterSheetScreen::RefreshStatusRows(const CharacterStatsSnapshot &snap)
+void UCharacterSheetScreen::RefreshStatusRows(const CharacterPageSnapshot &snap)
 {
   auto &children = Widgets.StatsPanel->Children;
   const size_t count = FixedStatusRows + 1 + snap.effects.size();
@@ -1019,7 +1020,7 @@ void UCharacterSheetScreen::RefreshStatusRows(const CharacterStatsSnapshot &snap
   };
   stage(FixedStatusRows,
         "Movement x" + std::to_string(snap.movementMultiplier) +
-            " | Fleshy damage: " + std::to_string(snap.protection.Get("fleshy")) + "%");
+            " | Fleshy damage: " + std::to_string(snap.fleshyProtection) + "%");
   for (size_t i = 0; i < snap.effects.size(); ++i)
   {
     const auto &effect = snap.effects[i];
@@ -1047,7 +1048,7 @@ void UCharacterSheetScreen::RefreshStatusRows(const CharacterStatsSnapshot &snap
   }
 }
 
-void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
+void UCharacterSheetScreen::RefreshTooltip(const CharacterPageSnapshot &snap)
 {
   if (Widgets.Tooltip)
   {
@@ -1069,8 +1070,8 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
     };
     if (PickBackpackSlot(PointerX, PointerY, index) || recoveryHover())
     {
-      hover = RecoveryMode ? (RecoveryOffset + index < snap.recovery.size()
-                                  ? snap.recovery[RecoveryOffset + index]
+      hover = RecoveryMode ? (index < snap.recovery.size()
+                                  ? snap.recovery[index]
                                   : InventoryEntryRef{})
                            : snap.slots[index];
       found = !hover.empty;
@@ -1265,9 +1266,9 @@ void UCharacterSheetScreen::RunInventoryQa(const std::string &path)
 
 void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
 {
-  if (!Stats || Stats->GetCharacterStatsSnapshot().typeId != "human")
+  if (!Stats || Stats->GetCharacterLookSnapshot().typeId != "human")
     throw std::runtime_error("Appearance UI QA requires controlled human");
-  const auto original = Stats->GetCharacterStatsSnapshot();
+  const auto original = Stats->GetCharacterLookSnapshot();
   SetVisible(true);
   if (Hosted)
     SetSection(3);
@@ -1281,12 +1282,12 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   const auto desired = DraftAppearance;
   const auto outfit = DraftSkin;
   const bool draftIsolated =
-      Stats->GetCharacterStatsSnapshot().humanAppearance.Key() ==
+      Stats->GetCharacterLookSnapshot().humanAppearance.Key() ==
           original.humanAppearance.Key() &&
-      Stats->GetCharacterStatsSnapshot().skinId == original.skinId;
+      Stats->GetCharacterLookSnapshot().skinId == original.skinId;
   const bool previewWorks = PreviewTexture != 0;
   Widgets.AppearanceButtons[4]->Activate();
-  auto applied = Stats->GetCharacterStatsSnapshot();
+  auto applied = Stats->GetCharacterLookSnapshot();
   const bool appliedOk = applied.humanAppearance.Key() == desired.Key() &&
                          applied.skinId == outfit;
   bool userSaved = false;
@@ -1313,9 +1314,9 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   Widgets.AppearanceButtons[2]->Activate();
   Widgets.AppearanceButtons[5]->Activate();
   const bool cancelled =
-      Stats->GetCharacterStatsSnapshot().humanAppearance.Key() ==
+      Stats->GetCharacterLookSnapshot().humanAppearance.Key() ==
           desired.Key() &&
-      Stats->GetCharacterStatsSnapshot().skinId == outfit;
+      Stats->GetCharacterLookSnapshot().skinId == outfit;
   nlohmann::json layouts = nlohmann::json::array();
   if (Hosted)
     SetSection(3);
@@ -1370,7 +1371,7 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
     throw std::runtime_error("Appearance UI QA failed");
 }
 
-void UCharacterSheetScreen::ResetAppearanceDraft(const CharacterStatsSnapshot &snap,
+void UCharacterSheetScreen::ResetAppearanceDraft(const CharacterLookSnapshot &snap,
                                                   std::string base)
 {
   auto appearance = snap.humanAppearance;
@@ -1409,7 +1410,7 @@ void UCharacterSheetScreen::RefreshAppearanceControls(bool human)
   Widgets.AppearanceButtons[5]->SetLabel("Cancel");
 }
 
-void UCharacterSheetScreen::RenderCharacterPreview(const CharacterStatsSnapshot &snap)
+void UCharacterSheetScreen::RenderCharacterPreview(const CharacterLookSnapshot &snap)
 {
   if (!Widgets.PreviewViewport)
   {

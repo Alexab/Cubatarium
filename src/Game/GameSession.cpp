@@ -31,6 +31,7 @@
 #include "WorldGen/Core/WorldGenContentReload.h"
 
 #include <algorithm>
+#include <climits>
 #include <functional>
 #include <iostream>
 #include <sstream>
@@ -1174,89 +1175,144 @@ bool UGameSession::ApplyHumanAppearance(const HumanAppearance &value,
   return true;
 }
 
+namespace
+{
+void ReadCharacterLook(const UWorld &world, const UCreature &creature,
+                       CharacterLookSnapshot &snap)
+{
+  snap.valid = true;
+  snap.OwnerId = creature.GetId();
+  snap.typeId = creature.GetTypeId();
+  snap.skinId = world.GetEffectiveAppearanceSkinId(creature);
+  snap.humanAppearance = creature.GetHumanAppearance();
+
+  const auto &inventory = creature.GetInventory();
+  for (size_t i = 0; i < snap.equippedArmor.size(); ++i)
+  {
+    const auto &entry = inventory.GetEquippedArmor(i);
+    auto &slot = snap.equippedArmor[i];
+    if (!entry.empty)
+      slot.itemId = entry.Id;
+    slot.wear = entry.wear;
+    slot.broken = entry.broken;
+  }
+
+  const auto readTool = [](const InventoryEntryRef &entry,
+                           CharacterLookSnapshot::EquippedSlotSnapshot &slot)
+  {
+    if (!entry.empty && !entry.Id.empty())
+    {
+      slot.itemId = entry.Id;
+      slot.wear = entry.wear;
+      slot.broken = entry.broken;
+      slot.isBlock = entry.kind == InventoryEntryKind::Block;
+    }
+  };
+  if (const auto *active = inventory.GetActiveEntryRef();
+      active && (active->kind == InventoryEntryKind::Item ||
+                 active->kind == InventoryEntryKind::Block))
+    readTool(*active, snap.equippedTools[0]);
+  readTool(inventory.GetEquippedOffhand(), snap.equippedTools[1]);
+}
+
+void ReadCharacterPage(const UWorld &world, const UCreature &creature,
+                       size_t recoveryStart, size_t recoveryLimit,
+                       CharacterPageSnapshot &snap)
+{
+  ReadCharacterLook(world, creature, snap);
+  snap.displayName = ControlledDisplayName(world, creature);
+  snap.vitals = creature.GetVitals();
+  snap.attributes = StatusEffectSystem::GetEffectiveAttributes(creature);
+  snap.effects = creature.GetStatusEffects();
+  snap.movementMultiplier = StatusEffectSystem::GetMoveSpeedMultiplier(creature);
+
+  const auto &inventory = creature.GetInventory();
+  snap.activeRow = inventory.GetActiveBarIndex();
+  snap.activeSlot = inventory.GetActiveSlotIndex();
+  for (size_t i = 0; i < snap.slots.size(); ++i)
+    snap.slots[i] = inventory.GetSlot(i);
+
+  const auto &recovery = inventory.GetRecovery();
+  snap.recoveryCount = recovery.size();
+  const auto start = std::min(recoveryStart, recovery.size());
+  const auto count = std::min(recoveryLimit, recovery.size() - start);
+  if (count)
+    snap.recovery.assign(recovery.begin() + start, recovery.begin() + start + count);
+}
+
+void ReadCarriedItems(const UItemDefinitionStorage &items, CharacterStatsSnapshot &snap)
+{
+  std::array<const InventoryEntryRef *, UCreatureInventory::kSlotCount> entries{};
+  size_t count = 0;
+  for (const auto &slot : snap.slots)
+    if (!slot.empty && slot.count && items.Get(slot.Id))
+      entries[count++] = &slot;
+  std::sort(entries.begin(), entries.begin() + count,
+            [](const auto *a, const auto *b) { return a->Id < b->Id; });
+  for (size_t i = 0; i < count; ++i)
+  {
+    const auto &entry = *entries[i];
+    if (snap.carriedItems.empty() || snap.carriedItems.back().id != entry.Id)
+      snap.carriedItems.push_back({entry.Id, 0});
+    auto &total = snap.carriedItems.back().count;
+    if (total >= 0)
+      total = entry.IsCatalogReference() ? -1 : static_cast<int>(
+          std::min<long long>(INT_MAX, static_cast<long long>(total) + entry.count));
+  }
+}
+} // namespace
+
+std::optional<CreatureVitals> UGameSession::GetControlledVitals() const
+{
+  if (World)
+    if (const auto *creature = static_cast<const UWorld &>(*World).GetControlledCreature())
+      return creature->GetVitals();
+  return std::nullopt;
+}
+
+size_t UGameSession::GetCharacterRecoveryCount() const
+{
+  const auto *inventory = GetControlledInventory(static_cast<const UWorld *>(World.get()));
+  return inventory ? inventory->GetRecovery().size() : 0;
+}
+
+CharacterLookSnapshot UGameSession::GetCharacterLookSnapshot() const
+{
+  CharacterLookSnapshot snap;
+  if (World)
+    if (const auto *creature = static_cast<const UWorld &>(*World).GetControlledCreature())
+      ReadCharacterLook(*World, *creature, snap);
+  return snap;
+}
+
+CharacterPageSnapshot UGameSession::GetCharacterPageSnapshot(size_t start, size_t count) const
+{
+  CharacterPageSnapshot snap;
+  snap.gameMode = GetWorldGameMode();
+  snap.difficulty = GetWorldDifficulty();
+  if (World)
+    if (const auto *creature = static_cast<const UWorld &>(*World).GetControlledCreature())
+    {
+      ReadCharacterPage(*World, *creature, start, std::min(count, snap.slots.size()), snap);
+      snap.fleshyProtection = creature->GetArmorRating("fleshy");
+    }
+  return snap;
+}
+
 CharacterStatsSnapshot UGameSession::GetCharacterStatsSnapshot() const
 {
   CharacterStatsSnapshot snap;
-  snap.gameMode = World ? World->GetGameMode() : ActiveWorldGameMode;
-  snap.difficulty = World ? World->GetDifficulty() : ActiveWorldDifficulty;
-  if (!World)
-  {
-    return snap;
-  }
-  const UCreature *creature = World->GetControlledCreature();
-  if (!creature)
-  {
-    return snap;
-  }
-  snap.valid = true;
-  snap.OwnerId = creature->GetId();
-  snap.typeId = creature->GetTypeId();
-  snap.skinId = creature->GetSkinId();
-  if (const auto resolved = World->GetResolvedAppearanceShared(*creature))
-    snap.skinId = resolved->effectiveSkinId;
-  snap.humanAppearance = creature->GetHumanAppearance();
-  snap.vitals = creature->GetVitals();
-  snap.attributes = StatusEffectSystem::GetEffectiveAttributes(*creature);
-
-  snap.effects = creature->GetStatusEffects();
-  snap.movementMultiplier =
-      StatusEffectSystem::GetMoveSpeedMultiplier(*creature);
-  snap.protection = creature->GetArmorGroups();
-  snap.activeRow = creature->GetInventory().GetActiveBarIndex();
-  snap.activeSlot = creature->GetInventory().GetActiveSlotIndex();
-  for (size_t i = 0; i < 40; ++i)
-    snap.slots[i] = creature->GetInventory().GetSlot(i);
-  snap.recovery = creature->GetInventory().GetRecovery();
-  // Equipped armor (0..5) + active tool items (2 slots).
-  const UCreatureInventory &inv = creature->GetInventory();
-  for (size_t i = 0; i < UCreatureInventory::kArmorSlotCount; ++i)
-  {
-    const InventoryEntryRef &e = inv.GetEquippedArmor(i);
-    snap.equippedArmor[i].itemId = e.empty ? std::string() : e.Id;
-    snap.equippedArmor[i].wear = e.wear;
-    snap.equippedArmor[i].broken = e.broken;
-  }
-  for (size_t i = 0; i < 2; ++i)
-  {
-    snap.equippedTools[i] = CharacterStatsSnapshot::EquippedSlotSnapshot{};
-  }
-  {
-    const InventoryEntryRef *active = inv.GetActiveEntryRef();
-    if (active && !active->empty && !active->Id.empty() &&
-        (active->kind == InventoryEntryKind::Item ||
-         active->kind == InventoryEntryKind::Block))
+  snap.gameMode = GetWorldGameMode();
+  snap.difficulty = GetWorldDifficulty();
+  if (World)
+    if (const auto *creature = static_cast<const UWorld &>(*World).GetControlledCreature())
     {
-      snap.equippedTools[0].itemId = active->Id;
-      snap.equippedTools[0].wear = active->wear;
-      snap.equippedTools[0].broken = active->broken;
-      snap.equippedTools[0].isBlock = active->kind == InventoryEntryKind::Block;
+      ReadCharacterPage(*World, *creature, 0, SIZE_MAX, snap);
+      snap.protection = creature->GetArmorGroups();
+      snap.fleshyProtection = snap.protection.Get("fleshy");
+      if (const auto *items = World->GetItemDefinitionStorage())
+        ReadCarriedItems(*items, snap);
     }
-    const InventoryEntryRef &oh = inv.GetEquippedOffhand();
-    if (!oh.empty && !oh.Id.empty())
-    {
-      snap.equippedTools[1].itemId = oh.Id;
-      snap.equippedTools[1].wear = oh.wear;
-      snap.equippedTools[1].broken = oh.broken;
-      snap.equippedTools[1].isBlock = oh.kind == InventoryEntryKind::Block;
-    }
-  }
-
-  if (UItemDefinitionStorage *itemDefs = World->GetItemDefinitionStorage())
-  {
-    for (const auto &kv : inv.GetStorage())
-    {
-      if (!itemDefs->Get(kv.first) || kv.second == 0)
-      {
-        continue;
-      }
-      CharacterStatsSnapshot::CarriedItem carried;
-      carried.id = kv.first;
-      carried.count = kv.second;
-      snap.carriedItems.push_back(std::move(carried));
-    }
-  }
-
-  snap.displayName = ControlledDisplayName(*World, *creature);
   return snap;
 }
 

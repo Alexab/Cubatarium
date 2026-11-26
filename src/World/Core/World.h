@@ -836,6 +836,7 @@ public:
   GetResolvedAppearance(const UCreature &creature) const;
   std::shared_ptr<const ResolvedCreatureAppearance>
   GetResolvedAppearanceShared(const UCreature &creature) const;
+  std::string GetEffectiveAppearanceSkinId(const UCreature &creature) const;
 
   void LoadCreatures(const std::string &file_name);
   void SaveCreatures(const std::string &file_name);

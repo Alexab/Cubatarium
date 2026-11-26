@@ -733,6 +733,33 @@ UWorldEnvironment::GetCreatureDefinition(const std::string &typeId) const
   return CreatureDefinitions->Get(typeId);
 }
 
+namespace
+{
+const std::string &RequestedCreatureSkin(const UCreature &creature, const UUser *user)
+{
+  if (user)
+  {
+    if (!user->GetSelectedSkinId().empty())
+      return user->GetSelectedSkinId();
+    return user->GetSelectedAppearanceTypeId();
+  }
+  return creature.GetSkinId();
+}
+}
+
+std::string UWorldEnvironment::GetEffectiveAppearanceSkinId(const UCreature &creature) const
+{
+  if (!CreatureDefinitions)
+    return creature.GetSkinId();
+  const auto user = creature.GetSkinId().empty() && creature.IsPlayerCharacter()
+                        ? Owner.GetCurrentUser() : nullptr;
+  const auto &skinId = RequestedCreatureSkin(creature, user.get());
+  if (CreatureDefinitions->Get(creature.GetTypeId()) &&
+      FindCreatureVisualSkin(SkinDefinitions.get(), creature.GetTypeId(), skinId))
+    return skinId;
+  return {};
+}
+
 ResolvedCreatureAppearance
 UWorldEnvironment::GetResolvedAppearance(const UCreature &creature) const
 {
@@ -763,23 +790,9 @@ UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
     AppearanceCacheDefsPtr = CreatureDefinitions.get();
     AppearanceCacheSkinsPtr = skins;
   }
-  std::string userSkinId;
-  const std::string *skinId = &creature.GetSkinId();
-  if (skinId->empty() && creature.IsPlayerCharacter())
-  {
-    if (auto user = Owner.GetCurrentUser())
-    {
-      if (!user->GetSelectedSkinId().empty())
-      {
-        userSkinId = user->GetSelectedSkinId();
-      }
-      else if (!user->GetSelectedAppearanceTypeId().empty())
-      {
-        userSkinId = user->GetSelectedAppearanceTypeId();
-      }
-      skinId = &userSkinId;
-    }
-  }
+  const auto user = creature.GetSkinId().empty() && creature.IsPlayerCharacter()
+                        ? Owner.GetCurrentUser() : nullptr;
+  const auto &skinId = RequestedCreatureSkin(creature, user.get());
   // Resolving rebuilds part lists with storage lookups; cache per
   // (species, effective skin) — this used to run per creature per frame
   // (audit V6). The key is built in a reused buffer and the hit is shared,
@@ -787,7 +800,7 @@ UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
   // (strings and part list) for every visible creature every frame.
   AppearanceKeyScratch.assign(creature.GetTypeId());
   AppearanceKeyScratch += '\x1f';
-  AppearanceKeyScratch += *skinId;
+  AppearanceKeyScratch += skinId;
   if (creature.GetTypeId() == "human")
     AppearanceKeyScratch += '\x1f' + creature.GetHumanAppearance().Key();
   if (const auto it = CreatureAppearanceCache.find(AppearanceKeyScratch);
@@ -799,7 +812,7 @@ UWorldEnvironment::GetResolvedAppearanceShared(const UCreature &creature) const
   const USkinDefinitionStorage &skinStorage = skins ? *skins : kNoSkins;
   auto resolved = std::make_shared<const ResolvedCreatureAppearance>(
       ResolveCreatureAppearance(*CreatureDefinitions, skinStorage,
-                                creature.GetTypeId(), *skinId,
+                                creature.GetTypeId(), skinId,
                                 creature.GetHumanAppearance()));
   CreatureAppearanceCache[AppearanceKeyScratch] = resolved;
   return resolved;

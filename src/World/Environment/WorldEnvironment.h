@@ -166,6 +166,7 @@ public:
   /// pointer changes when the species/skin or the storages change.
   std::shared_ptr<const ResolvedCreatureAppearance>
   GetResolvedAppearanceShared(const UCreature &creature) const;
+  std::string GetEffectiveAppearanceSkinId(const UCreature &creature) const;
 
   UCreatureActivityDirector &GetActivityDirector() { return ActivityDirector; }
   const UCreatureActivityDirector &GetActivityDirector() const

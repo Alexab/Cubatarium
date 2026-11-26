@@ -13,6 +13,7 @@
 #include "Test/PaletteGridStorageFixture.h"
 #include "Test/PaletteShellStorageFixture.h"
 #include "Test/IconLifecycleFixture.h"
+#include "Test/CharacterSnapshotStorageFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
 #include <fstream>
@@ -479,6 +480,7 @@ int main(int argc,char **argv){
     report["palette_grid_storage"]=CheckPaletteGridRequests();
     report["palette_shell_storage"]=palette_shell_fixture::Run();
     report["icon_lifecycle"]=icon_lifecycle_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
+    report["character_snapshot_storage"]=character_snapshot_fixture::Run();
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

@@ -27,7 +27,8 @@ class UGuiTextInput;
 class UGuiScrollView;
 class IUGuiIconSource;
 struct GuiTheme;
-struct CharacterStatsSnapshot;
+struct CharacterLookSnapshot;
+struct CharacterPageSnapshot;
 
 class UCharacterSheetScreen : public UGuiScreenBase
 {
@@ -108,9 +109,9 @@ private:
   void Relayout(PageWidgets &page, UGuiWidget &root, int width, int height);
   void BuildEquipmentPanel(PageWidgets &page, UGuiPanel &body, const GuiTheme &theme);
   void RefreshLabels();
-  void RefreshStatusRows(const CharacterStatsSnapshot &snap);
-  void RefreshTooltip(const CharacterStatsSnapshot &snap);
-  void RenderCharacterPreview(const CharacterStatsSnapshot &snap);
+  void RefreshStatusRows(const CharacterPageSnapshot &snap);
+  void RefreshTooltip(const CharacterPageSnapshot &snap);
+  void RenderCharacterPreview(const CharacterLookSnapshot &snap);
   static std::string FormatBar(const char *name, float cur, float max);
 
   IUCharacterStatsViewModel *Stats{nullptr};
@@ -126,7 +127,7 @@ private:
   HumanAppearance DraftAppearance;
   std::string DraftSkin;
   std::string LastCachedAppearance;
-  void ResetAppearanceDraft(const CharacterStatsSnapshot &snap, std::string base);
+  void ResetAppearanceDraft(const CharacterLookSnapshot &snap, std::string base);
   void RefreshAppearanceControls(bool human);
   GLuint PreviewTexture{0};
   float LastPreviewYaw{0.f};

@@ -859,8 +859,8 @@ void UInGameHudScreen::UpdateVitalBars()
     }
     return;
   }
-  const CharacterStatsSnapshot snap = Session->GetCharacterStatsSnapshot();
-  if (!snap.valid)
+  const auto vitals = Session->GetControlledVitals();
+  if (!vitals)
   {
     for (UGuiLabel *lab : labels)
     {
@@ -882,11 +882,11 @@ void UInGameHudScreen::UpdateVitalBars()
     lab->SetText(buf);
     lab->SetVisible(true);
   };
-  setBar(HealthLabel, "HP", snap.vitals.health, snap.vitals.maxHealth);
-  setBar(SatietyLabel, "Food", snap.vitals.satiety, snap.vitals.maxSatiety);
-  setBar(ThirstLabel, "Water", snap.vitals.thirst, snap.vitals.maxThirst);
-  setBar(FatigueLabel, "Fatigue", snap.vitals.fatigue, snap.vitals.maxFatigue);
-  setBar(BreathLabel, "Breath", snap.vitals.breath, snap.vitals.maxBreath);
+  setBar(HealthLabel, "HP", vitals->health, vitals->maxHealth);
+  setBar(SatietyLabel, "Food", vitals->satiety, vitals->maxSatiety);
+  setBar(ThirstLabel, "Water", vitals->thirst, vitals->maxThirst);
+  setBar(FatigueLabel, "Fatigue", vitals->fatigue, vitals->maxFatigue);
+  setBar(BreathLabel, "Breath", vitals->breath, vitals->maxBreath);
 }
 
 } // namespace cutum

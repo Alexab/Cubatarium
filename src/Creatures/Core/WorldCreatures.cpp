@@ -292,6 +292,11 @@ UWorld::GetResolvedAppearanceShared(const UCreature &creature) const
   return Environment.GetResolvedAppearanceShared(creature);
 }
 
+std::string UWorld::GetEffectiveAppearanceSkinId(const UCreature &creature) const
+{
+  return Environment.GetEffectiveAppearanceSkinId(creature);
+}
+
 bool UWorld::SpawnCreatureByView(const std::string &speciesId)
 {
   return Environment.SpawnCreatureByView(speciesId);

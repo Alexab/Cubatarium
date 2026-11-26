@@ -70,6 +70,14 @@ void ResolvePartsFromSpecies(const CreatureDefinition &def,
 
 } // namespace
 
+const SkinDefinition *FindCreatureVisualSkin(const USkinDefinitionStorage *skins,
+    const std::string &speciesId, const std::string &skinId)
+{
+  const auto *skin = skins && !skinId.empty() ? skins->Get(skinId) : nullptr;
+  return skin && (skin->creatureId.empty() || skin->creatureId == speciesId)
+             ? skin : nullptr;
+}
+
 ResolvedCreatureAppearance
 ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
                           const USkinDefinitionStorage &skins,
@@ -90,32 +98,24 @@ ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
                                  ? "body"
                                  : def->visual.defaultTextureKey;
 
-  const SkinDefinition *skin = nullptr;
-  if (!skinId.empty())
+  const auto *skin = FindCreatureVisualSkin(&skins, speciesId, skinId);
+  if (skin)
   {
-    skin = skins.Get(skinId);
-    if (skin && (skin->creatureId.empty() || skin->creatureId == speciesId))
+    result.effectiveSkinId = skinId;
+    result.wireframeColor = skin->wireframeTint;
+    const std::string prefix = "skin/" + skinId + "/";
+    for (const auto &mapped : skin->textureMap)
+      result.skinTextureOverrides[mapped.first] = prefix + mapped.second;
+    if (!skin->textureKey.empty())
     {
-      result.effectiveSkinId = skinId;
-      result.wireframeColor = skin->wireframeTint;
-      const std::string prefix = "skin/" + skinId + "/";
-      for (const auto &mapped : skin->textureMap)
-        result.skinTextureOverrides[mapped.first] = prefix + mapped.second;
-      if (!skin->textureKey.empty())
-      {
-        result.skinTextureOverrides.emplace(skin->textureKey, prefix + skin->textureKey);
-        result.skinTextureOverrides.emplace("", prefix + skin->textureKey);
-      }
-      // Bundled B skins have one whole-mesh diffuse atlas as well as the
-      // legacy rigid-part files. Explicit diffuse mappings take precedence.
-      // Do not spread this atlas over unrelated glTF/rigid materials.
-      if (ParseCreatureVisualBackend(def->visual.backend) == CreatureVisualBackend::BoneSkeleton)
-        result.skinTextureOverrides.emplace("diffuse", prefix + "diffuse");
+      result.skinTextureOverrides.emplace(skin->textureKey, prefix + skin->textureKey);
+      result.skinTextureOverrides.emplace("", prefix + skin->textureKey);
     }
-    else
-    {
-      skin = nullptr;
-    }
+    // Bundled B skins have one whole-mesh diffuse atlas as well as the
+    // legacy rigid-part files. Explicit diffuse mappings take precedence.
+    // Do not spread this atlas over unrelated glTF/rigid materials.
+    if (ParseCreatureVisualBackend(def->visual.backend) == CreatureVisualBackend::BoneSkeleton)
+      result.skinTextureOverrides.emplace("diffuse", prefix + "diffuse");
   }
 
   if (ParseCreatureVisualBackend(def->visual.backend) ==

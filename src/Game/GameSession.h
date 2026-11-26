@@ -117,6 +117,10 @@ public:
   WorldGameMode GetWorldGameMode() const override;
   WorldDifficulty GetWorldDifficulty() const override;
   CharacterStatsSnapshot GetCharacterStatsSnapshot() const override;
+  CharacterLookSnapshot GetCharacterLookSnapshot() const override;
+  CharacterPageSnapshot GetCharacterPageSnapshot(size_t start, size_t count) const override;
+  size_t GetCharacterRecoveryCount() const override;
+  std::optional<CreatureVitals> GetControlledVitals() const;
   bool ApplyHumanAppearance(const HumanAppearance &,
                             const std::string &) override;
 

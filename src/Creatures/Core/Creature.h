@@ -116,30 +116,8 @@ public:
   /// Total includes equipped armor contributions (pre-aggregated in
   /// CreatureInventory) plus offhand shield armor_groups. By value: the old
   /// const overload aggregated into a mutable cache member (audit 5.3).
-  ArmorGroups GetArmorGroups() const
-  {
-    ArmorGroups total = Armor;
-    const ArmorGroups &eq = Inventory.GetEquippedArmorGroups();
-    for (const auto &pair : eq.Ratings)
-    {
-      total.Ratings[pair.first] = total.Get(pair.first) * pair.second / 100;
-    }
-    const InventoryEntryRef &off = Inventory.GetEquippedOffhand();
-    if (CarryHandCount == 0 && BowCharge <= 0 && !off.empty && !off.broken &&
-        off.kind == InventoryEntryKind::Item)
-    {
-      // Offhand groups resolved lazily via optional storage pointer is not
-      // available here; Inventory exposes cached offhand groups when set.
-      const ArmorGroups &offGroups = Inventory.GetOffhandArmorGroups();
-      for (const auto &pair : offGroups.Ratings)
-      {
-        total.Ratings[pair.first] = total.Get(pair.first) *
-                                    (100 - std::clamp(pair.second, 0, 100)) /
-                                    100;
-      }
-    }
-    return total;
-  }
+  ArmorGroups GetArmorGroups() const;
+  int GetArmorRating(const std::string &group) const;
   void SetArmorGroups(const ArmorGroups &g) { Armor = g; }
   /// -1 = use strength formula for bare-hand fleshy damage.
   int GetBareHandFleshyOverride() const { return BareHandFleshyOverride; }
@@ -300,6 +278,7 @@ public:
   }
 
 protected:
+  const ArmorGroups *GetActiveOffhandArmor() const;
   HumanAppearance HumanLook;
   CreatureId Id;
   std::string TypeId;

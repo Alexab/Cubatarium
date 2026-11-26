@@ -57,6 +57,50 @@ std::optional<float> QueryFootprintGroundFeetY(const UWorld &world,
 
 } // namespace
 
+const ArmorGroups *UCreature::GetActiveOffhandArmor() const
+{
+  const auto &offhand = Inventory.GetEquippedOffhand();
+  return CarryHandCount == 0 && BowCharge <= 0 && !offhand.empty &&
+                 !offhand.broken && offhand.kind == InventoryEntryKind::Item
+             ? &Inventory.GetOffhandArmorGroups() : nullptr;
+}
+
+namespace
+{
+int ApplyEquippedArmorRating(int base, int equipment)
+{
+  return base * equipment / 100;
+}
+
+int ApplyOffhandArmorRating(int base, int equipment)
+{
+  return base * (100 - std::clamp(equipment, 0, 100)) / 100;
+}
+}
+
+ArmorGroups UCreature::GetArmorGroups() const
+{
+  ArmorGroups total = Armor;
+  for (const auto &rating : Inventory.GetEquippedArmorGroups().Ratings)
+    total.Ratings[rating.first] = ApplyEquippedArmorRating(total.Get(rating.first), rating.second);
+  if (const auto *offhand = GetActiveOffhandArmor())
+    for (const auto &rating : offhand->Ratings)
+      total.Ratings[rating.first] = ApplyOffhandArmorRating(total.Get(rating.first), rating.second);
+  return total;
+}
+
+int UCreature::GetArmorRating(const std::string &group) const
+{
+  int value = Armor.Get(group);
+  const auto &equipped = Inventory.GetEquippedArmorGroups().Ratings;
+  if (const auto it = equipped.find(group); it != equipped.end())
+    value = ApplyEquippedArmorRating(value, it->second);
+  if (const auto *offhand = GetActiveOffhandArmor())
+    if (const auto it = offhand->Ratings.find(group); it != offhand->Ratings.end())
+      value = ApplyOffhandArmorRating(value, it->second);
+  return value;
+}
+
 UCreature::UCreature(CreatureId Id, std::string typeId, glm::vec3 bodyOrigin,
                      glm::vec3 eyeOffset)
     : Id(Id), TypeId(std::move(typeId)), BodyOrigin(bodyOrigin),

@@ -10,6 +10,10 @@ namespace cutum
 
 class UCreatureDefinitionStorage;
 class USkinDefinitionStorage;
+struct SkinDefinition;
+
+const SkinDefinition *FindCreatureVisualSkin(const USkinDefinitionStorage *skins,
+    const std::string &speciesId, const std::string &skinId);
 
 ResolvedCreatureAppearance
 ResolveCreatureAppearance(const UCreatureDefinitionStorage &species,
