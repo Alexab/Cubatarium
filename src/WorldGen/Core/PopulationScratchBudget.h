@@ -6,6 +6,15 @@
 
 namespace cutum
 {
+class UPopulationScratchBudget;
+struct PopulationMetadataReserveCallback {
+  UPopulationScratchBudget *owner{};
+  void operator()(size_t bytes)const;
+};
+struct PopulationChunkReserveCallback {
+  UPopulationScratchBudget *owner{};
+  void operator()()const;
+};
 // One cleared scratch manager, owned by one Populate call. Keep conservative
 // payload credit until all scratch chunks/fields have actually been destroyed.
 class UPopulationScratchBudget
@@ -22,8 +31,8 @@ public:
         Fields->SetBeforeAllocationFn(BufferBudgetReserveCallback{Context});
         Fields->SetAfterDeallocationFn(BufferBudgetReleaseCallback{Context});
       }
-      Manager.SetBeforeChunkAllocationFn([this] {Reserve(sizeof(UChunk));});
-      Metadata->SetBeforeAllocationFn([this](size_t bytes) {Reserve(bytes);});
+      Manager.SetBeforeChunkAllocationFn(PopulationChunkReserveCallback{this});
+      Metadata->SetBeforeAllocationFn(PopulationMetadataReserveCallback{this});
     } catch(...) {
       Manager.SetBeforeChunkAllocationFn({}); Metadata->SetBeforeAllocationFn({}); throw;
     }
@@ -41,6 +50,9 @@ public:
   UPopulationScratchBudget &operator=(const UPopulationScratchBudget &)=delete;
   std::shared_ptr<UConcurrentAllocationCountingResource> GetFieldAllocationResource() const {return Fields;}
 private:
+  friend class AllocatorOwnerCensus;
+  friend struct PopulationMetadataReserveCallback;
+  friend struct PopulationChunkReserveCallback;
   UChunkManager &Manager;
   BufferBudgetContext Context;
   std::shared_ptr<UConcurrentAllocationCountingResource> Metadata;
@@ -52,4 +64,6 @@ private:
     Context.budget->Reserve(*Context.job,bytes); Credit+=bytes;
   }
 };
+inline void PopulationMetadataReserveCallback::operator()(size_t bytes)const {owner->Reserve(bytes);}
+inline void PopulationChunkReserveCallback::operator()()const {owner->Reserve(sizeof(UChunk));}
 } // namespace cutum

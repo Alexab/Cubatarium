@@ -16,6 +16,7 @@
 #include "World/Lighting/AsyncRelightBuilder.h"
 #include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "WorldGen/Core/CatalogConstructionComposition.h"
+#include "WorldGen/Core/AllocatorOwnerCensus.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -24,10 +25,11 @@ namespace cutum
 {
 struct CatalogApplicationDomain final : CatalogRuntimeDomain
 {
+  AllocatorOwnerCensus AllocationOwners;
   using CatalogRuntimeDomain::Geometry;
   void Core(const UCore *v){if(Enter(Kind::Core,v))v->InspectCatalogDomain(*this);}
   void Application(const UApplication *v){if(Enter(Kind::Application,v))v->InspectCatalogDomain(*this);}
-  void World(const UWorld *v){if(Enter(Kind::World,v)){v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);}}
+  void World(const UWorld *v){if(Enter(Kind::World,v)){AllocationOwners.Manager(v->GetBlockWorld().GetChunkManager(),nullptr,false,!ActiveScopedSharedResource);v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);}}
   void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v)){v->InspectCatalogDomain(*this);v->InspectCatalogRoots(*this);}}
   void GuiIcon(const UGuiIconSource *v){if(Enter(Kind::GuiIcon,v))v->InspectCatalogDomain(*this);}
   void ObjectIcon(const UObjectIconCache *v){if(Enter(Kind::ObjectIcon,v))v->InspectCatalogDomain(*this);}
@@ -37,7 +39,7 @@ struct CatalogApplicationDomain final : CatalogRuntimeDomain
   void ItemLabScene(const UItemLabSceneRenderer *v){if(Enter(Kind::ItemLabScene,v))v->InspectCatalogDomain(*this);}
   void MeshService(const UWorldMeshService *v){if(Enter(Kind::MeshService,v))MeshCache(&v->GetCache());}
   void MeshCache(const UChunkMeshCache *v){if(Enter(Kind::MeshCache,v)){v->InspectJobPools(*this);v->InspectCatalogRoots(*this);v->InspectCompletedCatalogRoots(*this);}}
-  void Streaming(const UWorldStreaming *v){if(Enter(Kind::Streaming,v))if(const auto *scheduler=v->GetChunkScheduler())scheduler->InspectJobPools(*this);}
+  void Streaming(const UWorldStreaming *v){if(Enter(Kind::Streaming,v))if(const auto *scheduler=v->GetChunkScheduler()){scheduler->InspectJobPools(*this);AllocationOwners.Scheduler(*scheduler);}}
   void Persistence(const UWorldPersistence *v){if(Enter(Kind::Persistence,v))v->InspectCatalogDomain(*this);}
   void Io(const UAsyncChunkIO *v){if(Enter(Kind::Io,v))v->InspectJobPools(*this);}
   void Relight(const UAsyncRelightBuilder *v){if(v){v->InspectJobPools(*this);v->InspectCompletedCatalogRoots(*this);}}
@@ -61,6 +63,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   out.World(launcher.world.get());out.Geometry(launcher.geometry.get());
   out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
   const auto content=CaptureWorldGenContentSnapshot();out.Content(content);out.CallingThread();out.ActiveDirectory();
+  out.AllocationOwners.CallingThread();const auto allocation_owners=out.AllocationOwners.Result(true);
   const auto census=out.Catalogs();Json pools=Json::array(),roles=Json::array();
   const auto retained=BoundRetainedCatalogRequests(census);
   bool active_roles_current=true;
@@ -84,6 +87,13 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"publication_mesh_results",out.Counts.Nodes(CatalogPublicationRootInspector::Node::Mesh)},
     {"publication_bindings",out.Counts.Nodes(CatalogPublicationRootInspector::Node::Binding)},
     {"scope","One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance."}};
+  report["allocator_owner_domain"]={{"schema","allocator-owner-selected-runtime.v1"},
+    {"status",allocation_owners.supported?"PASS":"UNSUPPORTED"},{"blocks",allocation_owners.blocks},
+    {"covered",allocation_owners.covered},{"weak_only",allocation_owners.weak_only},
+    {"additional_requests",allocation_owners.additional_requests},{"covered_requests",allocation_owners.covered_requests},
+    {"unknown",allocation_owners.unknown},{"aliases",allocation_owners.aliases},{"overflow",allocation_owners.overflow},
+    {"whole_runtime_complete",false},
+    {"scope","Actual supplied E11 worlds/managers/free-list/schedulers/completed-buffer and direct calling-thread allocator slots;ordinary main-world field source profile. Active worker/caller/TLS scratch/weak-only external source views and total process coverage remain separate. Inspector owns no strong/weak source mirrors."}};
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){

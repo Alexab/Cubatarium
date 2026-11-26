@@ -3213,6 +3213,9 @@ if(CUBATARIUM_MSVC_DESKTOP)
   add_test(NAME allocator_owner_source_test COMMAND $<TARGET_FILE:allocator_owner_source_test>
       ${CMAKE_CURRENT_BINARY_DIR}/allocator-owner-source.json)
   set_tests_properties(allocator_owner_source_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+  add_test(NAME allocator_owner_census_test COMMAND $<TARGET_FILE:allocator_owner_source_test>
+      --census ${CMAKE_CURRENT_BINARY_DIR}/allocator-owner-census.json)
+  set_tests_properties(allocator_owner_census_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
   cubatarium_add_test(NAME runtime_inline_source_test
       SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES} src/Test/RuntimeInlineSourceTest.cpp
       DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
@@ -3237,6 +3240,11 @@ add_test(NAME catalog_runtime_domain_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --runtime-domain
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-runtime-domain-unit.json)
 set_tests_properties(catalog_runtime_domain_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
+if(CUBATARIUM_MSVC_DESKTOP)
+add_test(NAME allocator_owner_graph_test COMMAND $<TARGET_FILE:catalog_worker_retirement_test>
+    --allocator-graph ${CMAKE_CURRENT_BINARY_DIR}/allocator-owner-graph.json)
+set_tests_properties(allocator_owner_graph_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+endif()
 add_test(NAME scheduler_control_refusal_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --control-refusal
         ${CMAKE_CURRENT_BINARY_DIR}/scheduler-control-refusal.json)

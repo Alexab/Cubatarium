@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>
+#include "Test/AllocatorOwnerCensusFixture.h"
 
 namespace {
 using namespace cutum;using Json=nlohmann::json;using Cell=AllocatorOwnerCell;
@@ -94,6 +95,10 @@ Decoder DecoderChain(){
 }
 }
 int main(int argc,char **argv){
+  if(argc==3 && std::string(argv[1])=="--census"){
+    const auto result=allocator_census_test::Run();std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<'\n';
+    return out&&result["status"]=="PASS"?0:1;
+  }
   const auto layout=GetAllocatorOwnerLayout();std::array<Row,AllocatorOwnerCellCount> rows;
   rows[Index(Cell::ConcurrentResource)]=Default<UConcurrentAllocationCountingResource>(layout.requests[Index(Cell::ConcurrentResource)]);
   rows[Index(Cell::StbiLedger)]=Default<UStbiAllocationLedger>(layout.requests[Index(Cell::StbiLedger)]);

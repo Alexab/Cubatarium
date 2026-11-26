@@ -83,6 +83,7 @@ public:
 
 private:
   friend class UBinaryChunkSerializer;
+  friend class AllocatorOwnerCensus;
   friend class UJsonChunkSerializer;
   struct FrameState
   {

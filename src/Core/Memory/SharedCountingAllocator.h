@@ -25,6 +25,7 @@ public:
     std::lock_guard<std::mutex> lock(Mutex); AfterDeallocation=std::move(fn);
   }
 private:
+  friend class AllocatorOwnerCensus;
   void *do_allocate(size_t bytes,size_t alignment) override {
     std::lock_guard<std::mutex> lock(Mutex);
     if(BeforeAllocation) BeforeAllocation(bytes);

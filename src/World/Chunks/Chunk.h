@@ -119,6 +119,7 @@ public:
   }
 
 private:
+  friend class AllocatorOwnerCensus;
   friend class UBlockWorld;
   friend class UChunkManager;
   /// Copies of voxel data do not acquire ownership of the source world's

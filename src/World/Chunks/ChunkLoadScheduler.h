@@ -116,6 +116,7 @@ public:
   int GetLastCommitsThisFrame() const { return LastCommitsThisFrame; }
 
 private:
+  friend class AllocatorOwnerCensus;
   friend struct CatalogWorkerRetirementProbe;
   friend void RunTerrainSaveFailureProbe(UCore &core);
   struct SettingsBudgetState
