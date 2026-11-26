@@ -42,6 +42,7 @@
 #include "WorldGen/Core/CatalogCandidateSourceEnvelope.h"
 #include "WorldGen/Core/RuntimeCoreInlineLayout.h"
 #include "Core/Memory/GlogResourceSource.h"
+#include "Core/Memory/AllocatorOwnerSource.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -150,6 +151,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
 #endif
     report["glog_resource_source"]={{"schema","glog-resource-native.v1"},{"query_ok",glog_resources_ok},{"fields",glog_resources},
         {"scope","Quiescent selected retained C++ resources only;custom/stdio/CRT/VLOG/symbolizer/signal/utility/process terms separate."}};
+    const auto allocator_owners=GetAllocatorOwnerLayout();
+    report["allocator_owner_source"]={{"schema","allocator-owner-native.v1"},{"supported",allocator_owners.supported},
+        {"requests",allocator_owners.requests},{"reserve_callback_requests",allocator_owners.reserve_callback_bytes},
+        {"release_callback_requests",allocator_owners.release_callback_bytes},
+        {"scope","Compiled shared object/control profiles only;complete identity-deduplicated owner domains and E10/E11 overlap required separately."}};
     const auto runtime_inline=GetRuntimeCoreInlineLayout();const auto pipeline_inline=GetPipelineRuntimeInlineLayout();
     report["runtime_inline_source"]={{"schema","runtime-inline-native.v1"},{"widths",runtime_inline.widths},
         {"present",runtime_inline.present},{"supported",runtime_inline.supported},{"pipeline_whole",pipeline_inline.whole},

@@ -1,0 +1,651 @@
+{
+  "schema": "s4-e12-w05-allocator-owners.v1",
+  "status": "SCOPED_ALLOCATOR_OWNER_PROFILES_AND_CONTROL_RETRY_PASS_E12_OPEN",
+  "summary": "E12 W05 typed allocator-owner source profiles and actual scheduler control refusal recovery PASS. Seven normal/counted shared object/control requests match observed ordinary-new bytes264,208,48,24,40,5040,5056. Population reserve/release callbacks use named32-byte BufferBudgetContext functors and actual MSVC inline storage0 extra requests. Two concurrent resources plus one budget add576 bytes to5096 bytes of already-counted job40/field5056 requests;actual chain peak5672 matches exactly. Last strong field leaves weak-only field block retaining field resource/callbacks/job/budget;last weak field retires these payloads,but weak-only job block still retains separate control allocator until final weak job release. All5 graph construction refusal prefixes clean to0 and fresh exact retry PASS. Escaped STBI output retains ledger after scope; nested realloc remains on original owner and64-byte payload+prefix request,then weak-only ledger control retires to0. Layout/composition query allocates0 under persistent refusal;unknown graph/profile/external history,overcoverage,missing row and overflow controls PASS. Actual old Release prefixes0..2 reproduce result count1,work count1 and lost queue node;old worker job-control refusal exits3221226505. Fixed guard construction releases pre-acquired counters;set node handle restores exact request/rank without allocating during persistent main-thread refusal. Worker bad_alloc follows existing retry completion. Post-submission/finished diagnostic allocation cannot discard task/result or turn success into failed admission. All4 actual control prefixes now retain exact settings identity/requestId/token/priority,have0 work/result debt and retry to one commit with0 tracked control bytes. Prior21 plus owner/control/job-admission/field/STBI formats/conversion form27 Release groups PASS. Frozen desktop and native seven-width/callback source parity,runtime/startup/owner/direct save/UI/provenance plus8 texture and2 unit publication GL readbacks PASS;config restored byte-for-byte;startup-only aggregate UNTESTED. No whole-process cap or global complete physical-owner census is inferred from these finite source graphs.",
+  "remaining": "Continue existing S4.02 LIMIT.Q09 E12 after W01..W05 without audit restart or reopening C01..C06/E11. Finish physical allocation-owner/source-count binding for live world/scheduler resources,reusable TLS scratch managers, escaped fields/buffers and weak-only job/allocator controls using existing world/thread/work/input graph;default STBI decoding uses inline process ledger,diagnostic ledgers need explicit complete escape/history domains. Count each264-byte resource208-byte ledger48-byte budget and default24/counted40-byte job block only once;field5040/5056 and tracked control requests already inside E10/E11/field sources are overlaps,not additive duplicates. W05 accepted profiles/callback storage and four scheduler refusal recoveries do not prove every ordinary-allocation/platform failure path. Environment flag/name and merge-name backing histories,remaining render/world/window TLS and dynamic pipeline/cache shells remain. Logger cold CubatariumInitLogging flag/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,active cleaner scans,stdio/CRT/locale/exception/stack/TLS loader/OS/driver/GPU/process still require source/explicit platform envelopes. W03 whole parent1960 includes332/104/8 children once;E11 caller reader160,W02 raw/noise TLS,W01 expired weak shells and STBI32 prefixes charged once. Unknown histories remain UNSUPPORTED,no global quota. Complete original whole-process matched workloads/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "chain": {
+      "additional": 576,
+      "already_counted": 5096,
+      "attempts": 5,
+      "callbacks_inline": true,
+      "exact": true,
+      "final0": true,
+      "job_weak_keeps_resource": true,
+      "peak": 5672,
+      "released": true,
+      "weak_graph": true
+    },
+    "decoder": {
+      "final0": true,
+      "ledger_weak_only": true,
+      "malloc_request": 64,
+      "nested_restored": true,
+      "original_owner": true,
+      "payload_escaped": true
+    },
+    "query_allocates0": true,
+    "refusal_cases": [
+      {
+        "attempts": 1,
+        "clean": true,
+        "prefix": 0,
+        "retry_exact": true
+      },
+      {
+        "attempts": 2,
+        "clean": true,
+        "prefix": 1,
+        "retry_exact": true
+      },
+      {
+        "attempts": 3,
+        "clean": true,
+        "prefix": 2,
+        "retry_exact": true
+      },
+      {
+        "attempts": 4,
+        "clean": true,
+        "prefix": 3,
+        "retry_exact": true
+      },
+      {
+        "attempts": 5,
+        "clean": true,
+        "prefix": 4,
+        "retry_exact": true
+      }
+    ],
+    "release_callback_requests": 0,
+    "requests": [
+      264,
+      208,
+      48,
+      24,
+      40,
+      5040,
+      5056
+    ],
+    "reserve_callback_requests": 0,
+    "rows": [
+      {
+        "attempts": 1,
+        "bytes": 264,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 208,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 48,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 24,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 40,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 5040,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      },
+      {
+        "attempts": 1,
+        "bytes": 5056,
+        "exact": true,
+        "final0": true,
+        "weak_retained": true
+      }
+    ],
+    "schema": "allocator-owner-source.v1",
+    "scope": "Compiled seven default/counted coallocation profiles and actual callback-held ownership. Explicit complete identity-deduplicated physical-block domain required,including expired controls. Job/field requests already counted in E10/E11 deducted once. No global owner count,CRT/upstream/stack/GPU/process or full S6 acceptance.",
+    "status": "PASS",
+    "unknown_profile_external_overcoverage_overflow_controls": true
+  },
+  "scheduler_control_refusal": {
+    "cases": [
+      {
+        "attempts": 1,
+        "baseline_reproduced": false,
+        "exact_retry_committed": true,
+        "prefix": 0,
+        "retained_after_tick": 0,
+        "retained_before_tick": 0,
+        "rollback_new_attempts": 0,
+        "same_request_queued": true,
+        "started": 0,
+        "threw": false,
+        "work_after_idle": 0
+      },
+      {
+        "attempts": 2,
+        "baseline_reproduced": false,
+        "exact_retry_committed": true,
+        "prefix": 1,
+        "retained_after_tick": 0,
+        "retained_before_tick": 0,
+        "rollback_new_attempts": 0,
+        "same_request_queued": true,
+        "started": 0,
+        "threw": false,
+        "work_after_idle": 0
+      },
+      {
+        "attempts": 3,
+        "baseline_reproduced": false,
+        "exact_retry_committed": true,
+        "prefix": 2,
+        "retained_after_tick": 0,
+        "retained_before_tick": 0,
+        "rollback_new_attempts": 0,
+        "same_request_queued": true,
+        "started": 0,
+        "threw": false,
+        "work_after_idle": 0
+      },
+      {
+        "attempts": 4,
+        "baseline_reproduced": false,
+        "exact_retry_committed": true,
+        "prefix": 3,
+        "retained_after_tick": 0,
+        "retained_before_tick": 1,
+        "rollback_new_attempts": 0,
+        "same_request_queued": true,
+        "started": 1,
+        "threw": false,
+        "work_after_idle": 0
+      }
+    ],
+    "schema": "scheduler-control-refusal.v1",
+    "status": "PASS"
+  },
+  "baseline": {
+    "cases": [
+      {
+        "attempts": 1,
+        "baseline_reproduced": true,
+        "exact_retry_committed": false,
+        "prefix": 0,
+        "retained_after_tick": 1,
+        "retained_before_tick": 1,
+        "same_request_queued": false,
+        "started": 0,
+        "threw": true,
+        "work_after_idle": 0
+      },
+      {
+        "attempts": 2,
+        "baseline_reproduced": true,
+        "exact_retry_committed": false,
+        "prefix": 1,
+        "retained_after_tick": 0,
+        "retained_before_tick": 0,
+        "same_request_queued": false,
+        "started": 0,
+        "threw": true,
+        "work_after_idle": 1
+      },
+      {
+        "attempts": 3,
+        "baseline_reproduced": true,
+        "exact_retry_committed": false,
+        "prefix": 2,
+        "retained_after_tick": 0,
+        "retained_before_tick": 0,
+        "same_request_queued": false,
+        "started": 0,
+        "threw": true,
+        "work_after_idle": 0
+      }
+    ],
+    "schema": "scheduler-control-refusal.v1",
+    "status": "REPRODUCED"
+  },
+  "old_worker_terminal": {
+    "schema": "control-refusal-old-worker-terminal.v1",
+    "status": "REPRODUCED_TERMINATION",
+    "exe": "build/desktop-msvc/s4-allocator-owners-before.exe",
+    "arguments": [
+      "--control-refusal-baseline",
+      "build/desktop-msvc/s4-allocator-owners-before.json"
+    ],
+    "returncode": 3221226505,
+    "evidence": "Earlier actual tool subprocess returned this code twice with empty stdout/stderr; prefixes0..2 are separately preserved as JSON using the same unchanged scheduler source. Fourth counted allocation is BufferBudgetJob in worker; there was no catch(std::bad_alloc) around it."
+  },
+  "baseline_identity": {
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-before.exe": "f657cbb12ae943c706b270c9e683c227d539b2504b8c4f23523ff53e1cf660a2",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-before-scheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-before-test.cpp": "e7e162e4c43615cc2224bbabb4f721a184e8de786a2740995da095708a08bc02",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-before-credits.exe": "83fc783a88d3ee2dd7b44359fcc15e6a220cd5d73d88d11e4f1ac804bb12a003",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-before-credits-test.cpp": "4c6839ad7adeb33683cd2edec23274ed5fab216e8daf2f46c67425140cdc7c85"
+  },
+  "native_layout": {
+    "release_callback_requests": 0,
+    "requests": [
+      264,
+      208,
+      48,
+      24,
+      40,
+      5040,
+      5056
+    ],
+    "reserve_callback_requests": 0,
+    "schema": "allocator-owner-native.v1",
+    "scope": "Compiled shared object/control profiles only;complete identity-deduplicated owner domains and E10/E11 overlap required separately.",
+    "supported": true
+  },
+  "native_unit_layout_parity": true,
+  "unit_runs": [
+    {
+      "name": "allocator-owner",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\allocator_owner_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-allocator-owner.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.012071899836882949,
+      "exe_sha256": "624c6870491cdbe721764ea4b2cbf58857e942b9e1e4a20e7d9a329a16577a7b",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-allocator-owner.log"
+    },
+    {
+      "name": "control-refusal",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--control-refusal",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-control-refusal.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013408300001174212,
+      "exe_sha256": "afd498eaead1c7f6e9e1494e737680c265973d1c0881af8f90db949773281363",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-control-refusal.log"
+    },
+    {
+      "name": "job-admission",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\job_admission_lifetime_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.08757079998031259,
+      "exe_sha256": "dff82397af00487ce1ed2f737b4bf3fbd13dfaa1282f0e7aac6e4cd35e2d8871",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-job-admission.log"
+    },
+    {
+      "name": "field-ownership",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\section_light_field_ownership_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.06404559989459813,
+      "exe_sha256": "fccd6b8db819893349149364ff8ed3dca69c5f66d41229230a7c6ba8fd9f87a4",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-field-ownership.log"
+    },
+    {
+      "name": "stbi-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-stbi-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.31888909987173975,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-stbi-source-explicit.log"
+    },
+    {
+      "name": "glog-resources",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--resources",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-glog-resources.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.022128599928691983,
+      "exe_sha256": "4211bc5952e902f2f34e41fa3ca87a887f72dfaaf10f56a307a4c05cde98287f",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-glog-resources.log"
+    },
+    {
+      "name": "runtime-inline",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\runtime_inline_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-runtime-inline.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0901729001197964,
+      "exe_sha256": "401627e73b3d7fd514f8c8cbf37acc5b0c4b38e65fa0c7087f2095aa051d9dee",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-runtime-inline.log"
+    },
+    {
+      "name": "noise-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_storage_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-noise-storage.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.05888490006327629,
+      "exe_sha256": "30b9a1e681370c90c0a65972f7ba4aff560bc00b9803df996b00e11c8fc0abdf",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-noise-storage.log"
+    },
+    {
+      "name": "noise-legacy",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_permutation_cache_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.016945899929851294,
+      "exe_sha256": "e353496aaef48c911157894dff64dba29796364fb2972c93f02d8c79b664cc1a",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-noise-legacy.log"
+    },
+    {
+      "name": "glog-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--source-profile",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-glog-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01779750012792647,
+      "exe_sha256": "4211bc5952e902f2f34e41fa3ca87a887f72dfaaf10f56a307a4c05cde98287f",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-glog-source.log"
+    },
+    {
+      "name": "weak-shell",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--pipeline-weak-shells",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-weak-shell.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.09952339995652437,
+      "exe_sha256": "021d2b36bdda6111d54d02d6c16410f8a3a6b7c95d4537ab8916d1e0856f2cdb",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-weak-shell.log"
+    },
+    {
+      "name": "actual-tls",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "seconds": 0.2356080999597907,
+      "exe_sha256": "1fd4a12960c09a88d45920c2e27499e58671ede746dc596b238126bf68308d0e",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-actual-tls.log"
+    },
+    {
+      "name": "logger",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-logger.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0227402001619339,
+      "exe_sha256": "4211bc5952e902f2f34e41fa3ca87a887f72dfaaf10f56a307a4c05cde98287f",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-logger.log"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-pack.json"
+      ],
+      "returncode": 0,
+      "seconds": 1.0352155999280512,
+      "exe_sha256": "021d2b36bdda6111d54d02d6c16410f8a3a6b7c95d4537ab8916d1e0856f2cdb",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-pack.log"
+    },
+    {
+      "name": "settings",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-settings.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.24194630002602935,
+      "exe_sha256": "021d2b36bdda6111d54d02d6c16410f8a3a6b7c95d4537ab8916d1e0856f2cdb",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-settings.log"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-prefab.json"
+      ],
+      "returncode": 0,
+      "seconds": 2.2300100000575185,
+      "exe_sha256": "aa3823007a129e55707913d53aa546a9a8a2370d2507bf386195feeb320709de",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-prefab.log"
+    },
+    {
+      "name": "cpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-cpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.08805519994348288,
+      "exe_sha256": "021d2b36bdda6111d54d02d6c16410f8a3a6b7c95d4537ab8916d1e0856f2cdb",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-cpu-texture.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.014041199814528227,
+      "exe_sha256": "afd498eaead1c7f6e9e1494e737680c265973d1c0881af8f90db949773281363",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-runtime-domain.log"
+    },
+    {
+      "name": "worker",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-worker.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.10572250001132488,
+      "exe_sha256": "afd498eaead1c7f6e9e1494e737680c265973d1c0881af8f90db949773281363",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-worker.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.012093199882656336,
+      "exe_sha256": "afd498eaead1c7f6e9e1494e737680c265973d1c0881af8f90db949773281363",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-cooperative.log"
+    },
+    {
+      "name": "mesh-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-mesh-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.16636200016364455,
+      "exe_sha256": "caad8877adbc82285fb2da49df83f21dc4d67b0298356c41c8b86e607b9eb22a",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-mesh-queues.log"
+    },
+    {
+      "name": "relight-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-relight-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.07376280007883906,
+      "exe_sha256": "8b77f94018cb7eff7aa52a56c092dba8e71bcaae982d465e408ba3e0a2125ec2",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-relight-queues.log"
+    },
+    {
+      "name": "relight-lifecycle",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.015136100118979812,
+      "exe_sha256": "8b77f94018cb7eff7aa52a56c092dba8e71bcaae982d465e408ba3e0a2125ec2",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-relight-lifecycle.log"
+    },
+    {
+      "name": "publication-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-publication-cpu.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.08282539993524551,
+      "exe_sha256": "caad8877adbc82285fb2da49df83f21dc4d67b0298356c41c8b86e607b9eb22a",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-publication-cpu.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.3133598999120295,
+      "exe_sha256": "caad8877adbc82285fb2da49df83f21dc4d67b0298356c41c8b86e607b9eb22a",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-publication-gl.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 4.003091600025073,
+      "exe_sha256": "caad8877adbc82285fb2da49df83f21dc4d67b0298356c41c8b86e607b9eb22a",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-decor-full.log"
+    },
+    {
+      "name": "stbi-conversion-range",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-owners-stbi-conversion-range.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.010555899934843183,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-allocator-owners-regression-stbi-conversion-range-explicit.log"
+    }
+  ],
+  "source_sha256_raw": {
+    "CMakeLists.txt": "66e3b3b074166ddc8ef3095ab3dfdfc27855e97b9f1907ed6a465da34fdc5d80",
+    "src/Core/Memory/AllocatorOwnerSource.h": "42bac1f450bef7891e7669faf250a5db546d99f7bf9e08cd08d1b84c6c428e24",
+    "src/Core/Memory/BufferAllocationBudget.h": "45c157c6acfa13b520a27e6cf7684283612e3ccfcbf01449dbbb65bd0f622832",
+    "src/WorldGen/Core/PopulationScratchBudget.h": "45d2e4c01ebcd686838fe0612d5d5cc4ade8ffe81df3f83b670599da9a9cdcc0",
+    "src/World/Chunks/ChunkLoadScheduler.cpp": "9231d103d9178d5153a9b45b55d373c479904014c644cb6e48750f0dc96e74b8",
+    "src/Test/AllocatorOwnerSourceTest.cpp": "e68b448a963ccfaa2ba15e0b6d7db8fd2ee70c9a7fd863e5c6b82373ecccd859",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "5a12dded6cef0d192cd4f4fe82f5a081f8c71cdc1ae7213bba99452300be955e",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "e6e52fba0dab711a89f0722e7513a281c395d1363a693d4a93c97d04aeb1eb89"
+  },
+  "frozen_source_sha256": "0d4685bc523eecc147f728b806c878ff73a04481c9d909ab5ba2686fbef33cbd",
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\type_vec3.hpp": "d9be575fe520dcbb068188144e0bba0a4197aefe142b42f8fc8496c328875649",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\setup.hpp": "78c7278cc214b6ce75c5648f5afc65dd36488bf65abfd6aac8171b0439e98a10",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\vec3.hpp": "d97ddb71ad02da39a4ac96670d4fe792264a8ec2e19477f60d7c245ae1a301b4",
+    "C:/Projects/Cubatarium/build/desktop-msvc/_deps/cubatarium_glog-build/Release/glog.lib": "9cfd622423f45874057b8b5c7460c7ee75ec5abbcf8fdca96d93259f6dc26a1a",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\base\\commandlineflags.h": "258d5b9aaa581a8fce458610e043388e4a4a79467989f4887dee7fcba5f0cc9d",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\flags.cc": "60a30c5b166f4729b6244fdb1b6484f2377707fcbe324d5dfe5199efb97f51a0"
+  },
+  "glog_identity_receipt": "build/desktop-msvc/s4-glog-resources-source-identity.json",
+  "provenance": "build/desktop-msvc/s4-allocator-owners-provenance.json",
+  "desktop_exe_sha256": "fb0f8343ffc44c0775bec343261ff54cafb776191f9b5b43bf24cc0636e37268",
+  "native": {
+    "artifact": "build/desktop-msvc/s4-allocator-owners-native",
+    "runtime": "PASS",
+    "startup": "PASS",
+    "owner": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "provenance": "PASS",
+    "texture_GL_readbacks": 8,
+    "publication_GL_readbacks": 2,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  },
+  "acceptance_boundary": [
+    "Seven typed default MSVC coallocation profiles,not arbitrary custom allocator types or a complete runtime owner inventory.",
+    "Scope/TLS handles,process ledger and STBI prefix32 are existing W03/E11 terms;counted job/field blocks must be deducted if E10/E11 already includes their requested bytes.",
+    "Weak-only allocated controls retain their allocator resources even after payload expiration. Callback graphs/custom histories require a complete supplied domain.",
+    "Four actual scheduler control-allocation positions and serial exact retries;not every ordinary allocation,completion installation,diagnostic/platform/backend failure path.",
+    "Native verifies actual compiled layout/callback profile and startup/direct probes;full movement/outer/cave/wet/independent pixel/performance/process matrix remains OPEN."
+  ]
+}

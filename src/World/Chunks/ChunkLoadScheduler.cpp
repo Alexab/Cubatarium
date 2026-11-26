@@ -464,14 +464,18 @@ bool UChunkLoadScheduler::ScheduleWorker(
     if (retained >= kMaxRetainedGenerationResults) return false;
   } while (!RetainedResults->compare_exchange_weak(retained,retained+1,
       std::memory_order_relaxed));
-  auto result_slot = std::allocate_shared<ResultSlotGuard>(USharedCountingAllocator<ResultSlotGuard>{ControlMemory});
+  std::shared_ptr<ResultSlotGuard> result_slot;
+  try { result_slot = std::allocate_shared<ResultSlotGuard>(USharedCountingAllocator<ResultSlotGuard>{ControlMemory}); }
+  catch(...) { RetainedResults->fetch_sub(1,std::memory_order_relaxed); throw; }
   result_slot->count = RetainedResults;
   if (!UPipelineAdmission::Get().TryAcquireWorkSlot()) return false;
   struct WorkSlotGuard
   {
     ~WorkSlotGuard() { UPipelineAdmission::Get().ReleaseWorkSlot(); }
   };
-  auto work_slot = std::allocate_shared<WorkSlotGuard>(USharedCountingAllocator<WorkSlotGuard>{ControlMemory});
+  std::shared_ptr<WorkSlotGuard> work_slot;
+  try { work_slot = std::allocate_shared<WorkSlotGuard>(USharedCountingAllocator<WorkSlotGuard>{ControlMemory}); }
+  catch(...) { UPipelineAdmission::Get().ReleaseWorkSlot(); throw; }
   struct WorkerInput
   {
     // This member order, unlike lambda capture order, guarantees that settings
@@ -546,17 +550,25 @@ bool UChunkLoadScheduler::ScheduleWorker(
           pending.result.token=populateRequest.token;
           pending.bufferRetry=std::move(retry_request);
           BufferSerialMode.store(true,std::memory_order_relaxed);
+        } catch(const std::bad_alloc &) {
+          // Keep the same immutable input for a later ordinary Tick. The
+          // completed ring is preallocated for every retained-result lease.
+          pending.result.coord=populateRequest.chunkCoord;
+          pending.result.token=populateRequest.token;
+          pending.bufferRetry=std::move(retry_request);
+          BufferSerialMode.store(true,std::memory_order_relaxed);
         }
         pending.generationFinishedAt = std::chrono::steady_clock::now();
         pending.generationMs = std::chrono::duration<double, std::milli>(
                                    pending.generationFinishedAt -
                                    generation_started)
                                    .count();
-        LogProceduralRequest(
+        try { LogProceduralRequest(
             "worker_finished", pending.result.coord, pending.requestId,
             pending.demandId,
             "discarded=" + std::to_string(pending.result.discarded ? 1 : 0) +
                 " generation_ms=" + std::to_string(pending.generationMs));
+        } catch(const std::bad_alloc &) {} // diagnostics cannot discard the retry/result
         Completed.Push(std::move(pending));
       };
   // Keep the full callable and its shared control block in tracked storage.
@@ -565,9 +577,12 @@ bool UChunkLoadScheduler::ScheduleWorker(
       USharedCountingAllocator<decltype(worker)>{ControlMemory},std::move(worker));
   if (!Pool.TryEnqueue([task=std::move(task)] {(*task)();})) return false;
   States[request.coord].state = ChunkLoadState::Generating;
-  LogProceduralRequest(
+  // The task is already enqueued. Diagnostic allocation cannot roll back
+  // ownership or turn successful submission into a second queued request.
+  try { LogProceduralRequest(
       "worker_submitted", request.coord, request.requestId,
       request.demandId, "priority=" + std::to_string(request.priority));
+  } catch(const std::bad_alloc &) {}
   return true;
 }
 
@@ -797,8 +812,10 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxStarts)
   {
-    const PendingRequest next = *Queue.begin();
-    Queue.erase(Queue.begin());
+    // Retain the existing node so a refused construction can restore rank and
+    // ownership without allocating while memory is still unavailable.
+    auto next_node = Queue.extract(Queue.begin());
+    const PendingRequest &next = next_node.value();
     const auto stateIt = States.find(next.coord);
     const auto queuedIt = QueuedRequests.find(next.coord);
     if (stateIt == States.end() ||
@@ -814,12 +831,17 @@ int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
     {
       continue;
     }
-    if (!ScheduleWorker(next, maxStarts))
-    {
-      // Keep the exact immutable request and its rank. A future normal Tick
-      // retries admission; do not spin on the same refused head this frame.
-      Queue.insert(next);
+    try {
+      if (!ScheduleWorker(next, maxStarts)) {
+        Queue.insert(std::move(next_node));
+        break;
+      }
+    } catch(const std::bad_alloc &) {
+      Queue.insert(std::move(next_node));
       break;
+    } catch(...) {
+      Queue.insert(std::move(next_node));
+      throw;
     }
     QueuedRequests.erase(queuedIt);
     ++generationStarts;

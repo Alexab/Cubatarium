@@ -64,6 +64,16 @@ struct BufferBudgetContext
   std::shared_ptr<UBufferAllocationBudget> budget;
   std::shared_ptr<BufferBudgetJob> job;
 };
+// Named forms of the population resource callbacks keep their concrete
+// storage and retained budget/job ownership available to the source model.
+struct BufferBudgetReserveCallback {
+  BufferBudgetContext context;
+  void operator()(size_t bytes)const {context.budget->Reserve(*context.job,bytes);}
+};
+struct BufferBudgetReleaseCallback {
+  BufferBudgetContext context;
+  void operator()(size_t bytes)const {context.budget->Release(*context.job,bytes);}
+};
 inline thread_local BufferBudgetContext ActiveBufferBudget;
 class UBufferBudgetScope
 {

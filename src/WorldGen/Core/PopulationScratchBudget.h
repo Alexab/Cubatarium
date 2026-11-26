@@ -19,8 +19,8 @@ public:
       throw std::logic_error("Population scratch budget requires a cleared manager");
     try {
       if(Context.budget) {
-        Fields->SetBeforeAllocationFn([context=Context](size_t bytes) {context.budget->Reserve(*context.job,bytes);});
-        Fields->SetAfterDeallocationFn([context=Context](size_t bytes) {context.budget->Release(*context.job,bytes);});
+        Fields->SetBeforeAllocationFn(BufferBudgetReserveCallback{Context});
+        Fields->SetAfterDeallocationFn(BufferBudgetReleaseCallback{Context});
       }
       Manager.SetBeforeChunkAllocationFn([this] {Reserve(sizeof(UChunk));});
       Metadata->SetBeforeAllocationFn([this](size_t bytes) {Reserve(bytes);});

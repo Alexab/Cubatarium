@@ -37,6 +37,59 @@ struct CatalogWorkerRetirementProbe
 {
   static bool Wait(UChunkLoadScheduler &scheduler)
   {return scheduler.Pool.WaitIdleFor(std::chrono::seconds(10));}
+  static nlohmann::json ControlRefusal(bool baseline) {
+    using Json=nlohmann::json;
+    struct EmptyPopulator final: IUChunkPopulator {
+      std::atomic<size_t> calls{};
+      ChunkPopulateResult Populate(const ChunkPopulateRequest &r)override {
+        ++calls;ChunkPopulateResult value;value.coord=r.chunkCoord;value.token=r.token;return value;
+      }
+    };
+    Json rows=Json::array();bool pass=true;
+    // The fourth old-code refusal escapes the worker and terminates the
+    // baseline process. Preserve that subprocess separately from these rows.
+    for(size_t prefix=0;prefix<(baseline?3:4);++prefix){
+      EmptyPopulator populator;UChunkGenerationRegistry tokens;UChunkLoadScheduler scheduler(populator,tokens);
+      ProceduralSettings settings;settings.MaxHeight=16;const glm::ivec3 coord{17,0,int(prefix)};
+      if(!scheduler.RequestLoad(coord,3,settings))std::abort();
+      const auto original=*scheduler.Queue.begin();size_t attempts{};const auto main_thread=std::this_thread::get_id();
+      scheduler.ControlMemory->SetBeforeAllocationFn([&](size_t){if(attempts++>=prefix){
+        if(!baseline && std::this_thread::get_id()==main_thread)allocation_probe::refuse=true;
+        throw std::bad_alloc{};
+      }});
+      bool threw=false;int started{};
+      allocation_probe::attempts=0;
+      try{started=scheduler.StartQueuedGenerationWorkers(1);}catch(const std::bad_alloc &){threw=true;}
+      const auto rollback_attempts=allocation_probe::attempts;allocation_probe::refuse=false;
+      if(!Wait(scheduler))std::abort();
+      scheduler.ControlMemory->SetBeforeAllocationFn({});
+      const auto retained_before_tick=scheduler.GetRetainedGenerationResultCount();
+      UBlockWorld world;scheduler.Tick(world,1,0);
+      const auto work=UPipelineAdmission::Get().WorkSlotsInUse();
+      const auto retained=scheduler.GetRetainedGenerationResultCount();
+      const bool exact=scheduler.Queue.size()==1 && scheduler.QueuedRequests.size()==1 &&
+        scheduler.Queue.begin()->settings==original.settings && scheduler.Queue.begin()->requestId==original.requestId &&
+        scheduler.Queue.begin()->token.sequence==original.token.sequence && scheduler.Queue.begin()->priority==original.priority;
+      bool retry=false;
+      if(!baseline && exact && !retained && !work){
+        retry=scheduler.StartQueuedGenerationWorkers(1)==1 && Wait(scheduler);
+        scheduler.Tick(world,1,0);
+        retry=retry && scheduler.IsCommitted(coord) && scheduler.GetRetainedGenerationResultCount()==0 &&
+          UPipelineAdmission::Get().WorkSlotsInUse()==0 && scheduler.GetControlAllocationSnapshot().live_bytes==0 && populator.calls==1;
+      }
+      const bool clean=!threw && !retained && !work && exact && retry && !rollback_attempts;
+      const bool reproduced=prefix==0 ? threw && retained==1 : prefix==1 ? threw && work==1 :
+        prefix==2 ? threw && !exact : !threw && !exact && populator.calls==0;
+      pass=pass && (baseline?reproduced:clean);
+      rows.push_back({{"prefix",prefix},{"attempts",attempts},{"started",started},{"threw",threw},
+        {"retained_before_tick",retained_before_tick},{"retained_after_tick",retained},{"work_after_idle",work},
+        {"same_request_queued",exact},{"exact_retry_committed",retry},{"rollback_new_attempts",rollback_attempts},{"baseline_reproduced",reproduced}});
+      // Baseline-only repair of the measured counters after worker retirement.
+      if(baseline){scheduler.RetainedResults->store(0);while(UPipelineAdmission::Get().WorkSlotsInUse())UPipelineAdmission::Get().ReleaseWorkSlot();}
+      scheduler.CancelAllPending(std::chrono::seconds(10));
+    }
+    return {{"schema","scheduler-control-refusal.v1"},{"status",pass?(baseline?"REPRODUCED":"PASS"):"FAIL"},{"cases",rows}};
+  }
 };
 }
 
@@ -272,6 +325,11 @@ Json RuntimeDomain()
 }
 int main(int argc,char **argv)
 {
+  if(argc==3 && (std::string(argv[1])=="--control-refusal" || std::string(argv[1])=="--control-refusal-baseline")){
+    const auto result=CatalogWorkerRetirementProbe::ControlRefusal(std::string(argv[1])=="--control-refusal-baseline");
+    std::ofstream out(argv[2]);out<<result.dump(2)<<'\n';std::cout<<result.dump()<<std::endl;
+    return out && result["status"]!="FAIL"?0:1;
+  }
   if(argc==3 && std::string(argv[1])=="--cooperative-owners"){
     const auto result=TestCatalogCooperativeOwners();catalog_queue_test::WriteReport(argv[2],result);return 0;
   }

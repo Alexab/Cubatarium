@@ -3207,6 +3207,12 @@ cubatarium_add_test(NAME worldgen_sets_source_envelope_test
     WIN32_LIBRARIES dbghelp)
 
 if(CUBATARIUM_MSVC_DESKTOP)
+  cubatarium_add_test(NAME allocator_owner_source_test
+      SOURCES src/Test/AllocatorOwnerSourceTest.cpp
+      LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+  add_test(NAME allocator_owner_source_test COMMAND $<TARGET_FILE:allocator_owner_source_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/allocator-owner-source.json)
+  set_tests_properties(allocator_owner_source_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
   cubatarium_add_test(NAME runtime_inline_source_test
       SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES} src/Test/RuntimeInlineSourceTest.cpp
       DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
@@ -3231,6 +3237,10 @@ add_test(NAME catalog_runtime_domain_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --runtime-domain
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-runtime-domain-unit.json)
 set_tests_properties(catalog_runtime_domain_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
+add_test(NAME scheduler_control_refusal_test
+    COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --control-refusal
+        ${CMAKE_CURRENT_BINARY_DIR}/scheduler-control-refusal.json)
+set_tests_properties(scheduler_control_refusal_test PROPERTIES LABELS "integration;memory;streaming" TIMEOUT 120)
 add_test(NAME catalog_cooperative_owners_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --cooperative-owners
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-cooperative-owners.json)
