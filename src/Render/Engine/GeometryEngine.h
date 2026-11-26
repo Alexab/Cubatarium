@@ -1,3 +1,5 @@
+#include "Core/Memory/MemberCallbackStorage.h"
+#include "Core/Memory/RootStorageSource.h"
 #ifndef GEOMETRYENGINE_H
 #define GEOMETRYENGINE_H
 
@@ -115,6 +117,10 @@ public:
     GreedyGpuOpaque.InspectCatalogRoots(out);GreedyGpuCutout.InspectCatalogRoots(out);
     GreedyGpuTransparent.InspectCatalogRoots(out);CrossGpuPass.InspectCatalogRoots(out);
   }
+  MemberCallbackStorageSnapshot InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known) const noexcept;
+  const UWorld *GetWorldForStorage() const noexcept {return WorldInstance.get();}
+  const std::shared_ptr<UWorld> &GetWorldRootForStorage() const noexcept {return WorldInstance;}
+  const std::shared_ptr<SectionRenderLightBindings> &GetSectionLightRootForStorage() const noexcept {return SectionLightOwner;}
   UGeometryEngine(std::shared_ptr<UWorld> world,
                   std::shared_ptr<UTextureBaseStorage> texture_base_storage,
                   std::shared_ptr<UTextureCubeStorage> texture_cube_storage,
@@ -203,6 +209,9 @@ public:
                                float shellAlpha) override;
 
 private:
+  auto MakeStoredPackedSwitchCallback();
+  friend struct CallbackRootSourceProbe;
+
   bool DiagnosticPixelProbePending_{false};
   // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
   bool InitCubeBuffers();

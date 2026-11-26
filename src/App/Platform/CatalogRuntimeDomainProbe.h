@@ -31,11 +31,13 @@ struct CatalogApplicationDomain final : CatalogRuntimeDomain
   AllocatorOwnerCensus AllocationOwners;
   const UCore *owner_core{};const UApplication *owner_application{};
   std::vector<WorldOwnedStorageSnapshot> world_owned;
+  std::vector<const UWorld*> member_worlds;
+  std::vector<const UGeometryEngine*> member_geometry;
   using CatalogRuntimeDomain::Geometry;
   void Core(const UCore *v){if(Enter(Kind::Core,v))v->InspectCatalogDomain(*this);}
   void Application(const UApplication *v){if(Enter(Kind::Application,v))v->InspectCatalogDomain(*this);}
-  void World(const UWorld *v){if(Enter(Kind::World,v)){AllocationOwners.Manager(v->GetBlockWorld().GetChunkManager(),nullptr,false,!ActiveScopedSharedResource);v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);world_owned.push_back(v->InspectOwnedGeneratorsAndCallbacks(owner_core,owner_application,true));}}
-  void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v)){v->InspectCatalogDomain(*this);v->InspectCatalogRoots(*this);}}
+  void World(const UWorld *v){if(Enter(Kind::World,v)){member_worlds.push_back(v);AllocationOwners.Manager(v->GetBlockWorld().GetChunkManager(),nullptr,false,!ActiveScopedSharedResource);v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);world_owned.push_back(v->InspectOwnedGeneratorsAndCallbacks(owner_core,owner_application,true));}}
+  void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v)){member_geometry.push_back(v);v->InspectCatalogDomain(*this);v->InspectCatalogRoots(*this);}}
   void GuiIcon(const UGuiIconSource *v){if(Enter(Kind::GuiIcon,v))v->InspectCatalogDomain(*this);}
   void ObjectIcon(const UObjectIconCache *v){if(Enter(Kind::ObjectIcon,v))v->InspectCatalogDomain(*this);}
   void Preview(const UContentPreviewRenderer *v){if(Enter(Kind::Preview,v))v->InspectCatalogDomain(*this);}
@@ -58,6 +60,8 @@ struct CatalogLauncherRootsView
   const std::shared_ptr<UObjectLibrary> &objects;
   const std::shared_ptr<UWorld> &world;
   const std::shared_ptr<UGeometryEngine> &geometry;
+  const std::shared_ptr<UCore> *core{};
+  const std::shared_ptr<UApplication> *application{};
 };
 inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &application,
     CatalogLauncherRootsView launcher,const char *entrypoint,const char *phase)
@@ -129,6 +133,42 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"lighting_layout",owned_layout.lighting},{"parent_inline",{owned_layout.world_inline,owned_layout.block_world_inline,owned_layout.function_inline}},
     {"parent_shells_counted_here",false},{"whole_runtime_complete",false},
     {"scope","Unique supplied E11 worlds;selected private generator/lighting/callback requests. Parent shell/coallocation and external borrowed resources remain separately supplied terms."}};
+  AllocatorSourcePhase root_phase(NewRootStorageEpoch(),1);
+  std::vector<MemberCallbackStorageSnapshot> members;Json member_rows=Json::array();
+  for(const auto *world:out.member_worlds){
+    auto source=world->InspectStoredMemberCallbacks(nullptr,&application,root_phase,true);
+    for(const auto *geometry:out.member_geometry)if(geometry->GetWorldForStorage()==world){
+      source=world->InspectStoredMemberCallbacks(geometry,&application,root_phase,true);if(source.Supported(MemberCallbackAll))break;
+    }
+    std::array<size_t,MemberCallbackCells> requests{},captures{};std::array<bool,MemberCallbackCells> present{},supported{};Json unknown=Json::array();
+    for(size_t i=0;i<MemberCallbackCells;++i){requests[i]=source.rows[i].requests;captures[i]=source.rows[i].capture_inline;present[i]=source.rows[i].present;supported[i]=source.rows[i].supported;if(source.unknown_types[i])unknown.push_back({{"slot",i},{"type",source.unknown_types[i]}});}
+    member_rows.push_back({{"supported",source.Supported(MemberCallbackAll)},{"provided",source.provided},{"requests",requests},{"captures",captures},{"present",present},{"slot_supported",supported},{"unknown_types",unknown}});
+    members.push_back(source);
+  }
+  std::vector<const MemberCallbackStorageSnapshot*> member_views;for(const auto &source:members)member_views.push_back(&source);
+  const auto member_join=JoinMemberCallbackStorage(member_views,out.member_worlds.size(),true,true);
+  report["member_callback_storage"]={{"schema","member-callback-runtime.v1"},{"status",member_join.supported?"PASS":"UNSUPPORTED"},
+    {"slots_per_world",MemberCallbackCells},{"worlds",member_join.worlds},{"requested",member_join.requested},{"unique_cells",member_join.cells},{"aliases",member_join.aliases},{"rows",member_rows},
+    {"whole_runtime_complete",false},{"scope","35 supplied member slots per world;shared application cells deduplicated. Active external application/I/O/UI callable histories remain separate and unknown types reject."}};
+  std::vector<RootStorageSnapshot> root_sources;
+  const auto capture=[&](const auto &handle){root_sources.push_back(CaptureSharedRootStorage(handle,root_phase,true));};
+  capture(launcher.world);capture(launcher.geometry);capture(core.GetWorldRootForStorage());capture(core.GetGeometryRootForStorage());
+  capture(application.GetWorldRootForStorage());capture(application.GetGeometryRootForStorage());
+  bool root_handles_known=launcher.core && launcher.application;
+  if(launcher.core){root_handles_known=root_handles_known && launcher.core->get()==&core;capture(*launcher.core);}
+  if(launcher.application){root_handles_known=root_handles_known && launcher.application->get()==&application;capture(*launcher.application);}
+  std::vector<const void*> section_objects;
+  for(const auto *geometry:out.member_geometry){capture(geometry->GetWorldRootForStorage());capture(geometry->GetSectionLightRootForStorage());
+    const auto *p=geometry->GetSectionLightRootForStorage().get();if(p && std::find(section_objects.begin(),section_objects.end(),p)==section_objects.end())section_objects.push_back(p);}
+  for(const auto &source:members)if(source.held_root.present)root_sources.push_back(source.held_root);
+  std::vector<const RootStorageSnapshot*> root_views;Json root_rows=Json::array();for(const auto &source:root_sources){root_views.push_back(&source);
+    root_rows.push_back({{"kind",static_cast<size_t>(source.kind)},{"supported",source.supported},{"present",source.present},{"requested",source.requested},{"inline_bytes",source.inline_bytes},{"expired_weak",source.expired_weak}});}
+  std::array<size_t,RootStorageClasses> root_expected{out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)],out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Core)],out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Application)],out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::Geometry)],section_objects.size()};
+  const auto roots=JoinRootStorage(root_phase,root_views,root_expected,root_handles_known,true);const auto root_layout=GetRootStorageLayout();
+  report["root_storage"]={{"schema","root-storage-runtime.v1"},{"status",roots.supported?"PASS":"UNSUPPORTED"},{"objects",root_layout.objects},{"coallocated",root_layout.coallocated},
+    {"epoch_static_inline",root_layout.epoch_static_inline},{"blocks",roots.blocks},{"expected_blocks",root_expected},{"expired",roots.expired},{"requested",roots.requested},{"rows",root_rows},
+    {"whole_runtime_complete",false},{"scope","Borrowed live default-factory World/Core/Application/Geometry/SectionBindings roots and supplied weak guards in one phase. Whole reserved shells count once;embedded children overlap. Other heap children,window/CRT/stacks/GPU/process remain separate."}};
+  root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){

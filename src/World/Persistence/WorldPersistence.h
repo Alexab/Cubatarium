@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef WORLDPERSISTENCE_H
 #define WORLDPERSISTENCE_H
 
@@ -94,6 +95,8 @@ struct AsyncChunkIoTickMetrics
 class UWorldPersistence
 {
 public:
+  MemberCallbackStorageSnapshot InspectStoredLightObserver(bool known) const noexcept;
+
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
     out.Io(AsyncChunkIo.get());out.BlockCatalog(LightSignatureCatalog);
     for(const auto &entry:UnloadSaveReceipts)out.BlockCatalog(entry.second.catalog);
@@ -256,6 +259,8 @@ public:
                                    uint64_t *saved_revision = nullptr);
 
 private:
+  auto MakeStoredUWorldPersistence0();
+
   friend void RunTerrainSaveFailureProbe(UCore &core);
   DiskAirCancellationProbe AirCancellationProbe;
   DiskReadFailureProbe ReadFailureProbe;

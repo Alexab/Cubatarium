@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef WORLD_H
 #define WORLD_H
 #include <system_error>
@@ -234,6 +235,9 @@ struct UBackgroundQuiesceState
 class UWorld : public IUWorldPerception
 {
 public:
+  MemberCallbackStorageSnapshot InspectStoredEnterCallback(bool known) const noexcept;
+  MemberCallbackStorageSnapshot InspectStoredMemberCallbacks(const UGeometryEngine *geometry,const UApplication *application,const AllocatorSourcePhase &phase,bool known) const noexcept;
+
   WorldOwnedStorageSnapshot InspectOwnedGeneratorsAndCallbacks(const class UCore *core,const class UApplication *application,bool source_history_known) const noexcept;
   UChunkRenderDemandStore &GetRenderDemandStore();
   const UChunkRenderDemandStore &GetRenderDemandStore() const;
@@ -1667,6 +1671,8 @@ public:
   friend class UBlockBreakService;
 
 private:
+  auto MakeStoredSyncEnterVisualGateQuiesceFlags0();
+
   void TraceRelightWatchdog();
   bool CanRecoverUnlitFocusMeshes(int max_columns) const;
   bool HasMeshOrFirstMeshOwner(glm::ivec3 coord) const;
@@ -1685,6 +1691,8 @@ private:
   friend struct StreamingSchedulerReinitProbe;
   friend struct WorldOwnedStorageProbe;
   friend struct WorldOwnedStorageInspector;
+  friend struct MemberCallbackStorageInspector;
+  friend struct CallbackRootSourceProbe;
   void RebuildWorldGenPipelineFromResolvedSources();
   friend struct WorldKnownAirVersionCallback;
   friend struct WorldColumnMeshDirtyCallback;

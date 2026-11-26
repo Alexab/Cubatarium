@@ -378,12 +378,9 @@ void UWorldStreaming::WarmupSpawnAreaForEnterGame(UWorld &world)
   world.WarmupVisibleListAtCamera();
 }
 
-bool UWorldStreaming::InitChunkScheduler(UWorld &world)
+auto UWorldStreaming::MakeStoredInitChunkScheduler0(UWorld &world)
 {
-  if (!PrepareChunkScheduler(world))
-    return false;
-  ChunkScheduler->SetMarkDirtyFn(
-      [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
+  return [this, &world](glm::ivec3 coord, int min_y, int max_y, bool fluid_sealed)
       {
         const glm::ivec3 ground(coord.x, 0, coord.z);
         // A newly committed chunk changes the padded block/light inputs of
@@ -745,7 +742,553 @@ bool UWorldStreaming::InitChunkScheduler(UWorld &world)
         {
           world.SetColumnEmergeState(ground, ColumnEmergeState::LitReady);
         }
-      });
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks0(UWorld &world)
+{
+  return [this, &world](glm::ivec3 coord, uint64_t demand_id)
+      {
+        UWorldPersistence &persistence = *world.Persistence;
+        if (persistence.GetChunkStorage().IsColumnSavePending(coord))
+        {
+          return false;
+        }
+        if (persistence.IsTerrainColumnDiskLoadPending(coord))
+        {
+          return false;
+        }
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        if (settings.AsyncChunkIo)
+        {
+          persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
+          return false;
+        }
+        const auto t0 = std::chrono::high_resolution_clock::now();
+        const bool loaded = persistence.LoadTerrainColumn(
+                                coord, world.BlockWorld, *world.BlockRegistry,
+                                settings.MaxHeight, settings.MinHeight) > 0;
+        if (loaded)
+        {
+          if (!IsTerrainChunkComplete(world.BlockWorld, coord,
+                                      settings.MaxHeight, kNoTerrainChunkSlice,
+                                      settings.MinHeight))
+          {
+            persistence.PreserveIncompleteTerrainColumn(world.BlockWorld,
+                                                        coord);
+            FrameStreamingIoMs +=
+                std::chrono::duration<double, std::milli>(
+                    std::chrono::high_resolution_clock::now() - t0)
+                    .count();
+            return false;
+          }
+          persistence.TryEnqueueTerrainColumnRelight(
+              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
+              /*priority=*/false, settings.MinHeight, /*max_y=*/-1);
+        }
+        FrameStreamingIoMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t0)
+                .count();
+        return loaded;
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks1(UWorld &world)
+{
+  return [&world](glm::ivec3 coord)
+      {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        // Immediate seamed remesh on streamer-complete (H1 defer queue caused
+        // empty/flicker while drain lagged Exhausted). Sea-band neighbor remesh
+        // must run even under PendingLight.
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        const int remesh_min_y =
+            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
+        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
+        world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
+            ground, remesh_min_y, remesh_max_y, true,
+            MeshRevisionBumpReason::StreamerCommitSeaSeam);
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks2(UWorld &world)
+{
+  return [this, &world](int x, int z)
+      {
+        if (!world.AllowProceduralFill || !world.WorldGen)
+        {
+          return;
+        }
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                {FloorDiv(x, CHUNK_SIZE), 0, FloorDiv(z, CHUNK_SIZE)}))
+          return;
+        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
+        if (auto *composable =
+                dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
+        {
+          const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0,
+                                  FloorDiv(z, CHUNK_SIZE));
+          if (ground != SyncCoarseCacheGround)
+          {
+            if (SyncCoarseCacheGround.x != INT32_MAX)
+            {
+              composable->EndChunkCoarseCache();
+            }
+            const int blend_pad = std::clamp(
+                static_cast<int>(std::lround(
+                    world.GetProceduralSettings().Tuning.biomeBlendRadius)),
+                0, 16);
+            composable->BeginChunkCoarseCache(
+                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, blend_pad + 8);
+            SyncCoarseCacheGround = ground;
+          }
+        }
+        const auto t0 = std::chrono::high_resolution_clock::now();
+        world.WorldGen->GenerateColumn(x, z);
+        FrameStreamingGenMs +=
+            std::chrono::duration<double, std::milli>(
+                std::chrono::high_resolution_clock::now() - t0)
+                .count();
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks3(UWorld &world)
+{
+  return [this, &world](glm::ivec3 coord)
+      {
+        world.Collision.RemoveChunkMovementSolidCache(coord);
+        if (coord.y == 0 && ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(coord);
+        }
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks4(UWorld &world)
+{
+  return [this, &world](glm::ivec3 ground, int max_cy) -> bool
+      {
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                ground))
+          return false; // A failed read cannot authorize saving/purging local
+                        // edits.
+        const auto unload_started = std::chrono::steady_clock::now();
+        const bool trace_unload = IsStreamerUnloadTraceEnabled();
+        const glm::ivec2 col(ground.x, ground.z);
+        const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
+        // Cleanup erases the table entry below. Keep an owned snapshot for
+        // both the decision and its post-eviction diagnostics.
+        const auto *found_record = world.GetColumnRecords().Find(col);
+        const std::optional<ColumnRecord> record_snapshot =
+            found_record ? std::optional<ColumnRecord>(*found_record)
+                         : std::nullopt;
+        const auto *rec = record_snapshot ? &*record_snapshot : nullptr;
+        // ChunkStreamer calls this only after the column is outside its keep
+        // ring and the camera capsule. At that point visual work is
+        // cancelable; a pending ticket must not pin resident terrain forever.
+        const bool record_want =
+            UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(true);
+        const bool may_evict =
+            UColumnRecordCoordinator::DecideEvict(true, record_want, col);
+        const double decision_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - unload_started)
+                .count();
+        if (!may_evict)
+        {
+          if (trace_unload)
+          {
+            LogWorldColumnUnload(
+                "vetoed", ground,
+                "decision_ms=" + std::to_string(decision_ms) + " total_ms=" +
+                    std::to_string(
+                        std::chrono::duration<double, std::milli>(
+                            std::chrono::steady_clock::now() - unload_started)
+                            .count()));
+          }
+          return false;
+        }
+
+        const auto ownership_started = std::chrono::steady_clock::now();
+        UColumnFlowExecutor &flow = GetColumnFlowExecutor();
+        const auto &flow_scheduler = flow.Scheduler();
+        const bool flow_relight_ticket =
+            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh) ||
+            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
+        const UWorldPersistence::TerrainColumnRelightQueueInfo relight_queue =
+            world.Persistence->GetTerrainColumnRelightQueueInfo(world_key);
+        const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
+        const bool pending_light_before_mesh =
+            world.IsPendingLightBeforeMesh(col);
+        const bool relight_inflight = world.IsAsyncRelightColumnInFlight(col);
+        const bool record_pending_light = rec && rec->pending_light;
+        const bool record_visual_needs_relight =
+            rec && rec->visual == ColumnVisualState::NeedRelight;
+        const bool record_light_repair_obligation =
+            rec && rec->visual_obligation == VisualObligation::LightRepair;
+        const bool emerge_lighting = emerge == ColumnEmergeState::Lighting;
+        const bool flow_repair_ticket = flow.HasRepairTicket(col);
+        const bool disk_load_pending =
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground);
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
+        const bool needs_relight =
+            pending_light_before_mesh || relight_inflight ||
+            relight_queue.keyed || relight_queue.boundary_dependency ||
+            relight_queue.deferred_far || relight_queue.deferred_visible ||
+            flow_relight_ticket || emerge_lighting || record_pending_light ||
+            record_visual_needs_relight || record_light_repair_obligation;
+        const bool light_complete_before_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+
+        bool active_work = needs_relight || flow_repair_ticket ||
+                           (rec && ColumnHasActivePending(*rec)) ||
+                           disk_load_pending || generation_pending;
+        const double ownership_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - ownership_started)
+                .count();
+        const int min_cy =
+            FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
+        const int highest_cy = max_cy;
+        const UWorldMeshService &mesh = world.GetMeshService();
+        const auto mesh_scan_started = std::chrono::steady_clock::now();
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
+        {
+          const glm::ivec3 slice(ground.x, cy, ground.z);
+          active_work = active_work || mesh.IsChunkMeshDirty(slice) ||
+                        mesh.HasInflightMeshBuild(slice) ||
+                        mesh.IsPendingGpuApply(slice) ||
+                        mesh.IsGpuExtractInFlight(slice) ||
+                        mesh.GetCache().HasPendingCaptureWork(slice);
+        }
+        const double mesh_scan_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_scan_started)
+                .count();
+
+        // If we interrupt lighting, persist the column as light-incomplete.
+        // The next disk load will recompute light rather than trusting a
+        // partially updated lightmap saved with otherwise valid voxels.
+        const auto light_flags_started = std::chrono::steady_clock::now();
+        if (needs_relight)
+        {
+          world.Persistence->ClearColumnLightComplete(
+              col, "column_unload_with_relight_work");
+        }
+        const bool light_complete_after_invalidation =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+        const double light_flags_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - light_flags_started)
+                .count();
+
+        // Preserve data and visual owners while any write is pending/failed.
+        // Light flags above are invalidated before taking the save snapshot.
+        const auto save_started = std::chrono::high_resolution_clock::now();
+        const bool saved = world.Persistence->TrySaveTerrainColumnForUnload(world, ground);
+        FrameStreamingIoMs += std::chrono::duration<double, std::milli>(
+            std::chrono::high_resolution_clock::now() - save_started).count();
+        if (!saved)
+          return false;
+
+        const auto invalidation_started = std::chrono::steady_clock::now();
+        // Follow-up work belongs to the resident column being retired. Keep
+        // it through save vetoes, but never let it act on a later incarnation.
+        const auto same_column = [ground](glm::ivec3 pending)
+        { return pending.x == ground.x && pending.z == ground.z; };
+        const auto seed_count = DeferredPhysicsSeedQueue.size();
+        const auto shore_count = DeferredShoreSealQueue.size();
+        DeferredPhysicsSeedQueue.erase(
+            std::remove_if(DeferredPhysicsSeedQueue.begin(),
+                           DeferredPhysicsSeedQueue.end(), same_column),
+            DeferredPhysicsSeedQueue.end());
+        DeferredShoreSealQueue.erase(
+            std::remove_if(DeferredShoreSealQueue.begin(),
+                           DeferredShoreSealQueue.end(), same_column),
+            DeferredShoreSealQueue.end());
+        const bool retired_shore = DeferredShoreSealQueued.erase(ground) > 0;
+        const bool retired_intra = DeferredIntraChunkSealNeeded.erase(ground) > 0;
+        const bool retired_terrain_work =
+            seed_count != DeferredPhysicsSeedQueue.size() ||
+            shore_count != DeferredShoreSealQueue.size() ||
+            retired_shore || retired_intra;
+        flow.ForgetColumnWork(col);
+        bool invalidated_work = active_work || retired_terrain_work;
+        const int canceled_relight_work =
+            world.Persistence->CancelTerrainColumnRelight(world_key);
+        invalidated_work = canceled_relight_work > 0 || invalidated_work;
+        // Save runs after this callback. Cancelling the worker must not make
+        // the resident column incomplete before its serialization snapshot.
+        world.Persistence->CancelAsyncTerrainColumnLoad(world, ground, true);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
+        }
+        else
+          ChunkGenTokens.Retire(ground,ChunkGenTokens.Current(ground).sequence);
+        world.RetirePendingLightBeforeMesh(col);
+        world.ClearColumnEmergeState(col); // erase the obsolete column record
+        const auto mesh_remove_started = std::chrono::steady_clock::now();
+        world.GetMeshService().RemoveColumn(ground, min_cy, highest_cy);
+        const double mesh_remove_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - mesh_remove_started)
+                .count();
+        const auto collision_cleanup_started = std::chrono::steady_clock::now();
+        for (int cy = min_cy; cy <= highest_cy; ++cy)
+        {
+          world.Collision.RemoveChunkMovementSolidCache(
+              glm::ivec3(ground.x, cy, ground.z));
+        }
+        const double collision_cleanup_ms =
+            std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - collision_cleanup_started)
+                .count();
+        const bool light_complete_after_unload =
+            trace_unload && world.Persistence->IsColumnLightComplete(col);
+        if (ChunkScheduler)
+        {
+          ChunkScheduler->Invalidate(ground);
+        }
+        if (invalidated_work)
+        {
+          Streamer->NoteUnloadActiveWorkInvalidated();
+        }
+        if (trace_unload)
+        {
+          const double invalidation_ms =
+              std::chrono::duration<double, std::milli>(mesh_remove_started -
+                                                        invalidation_started)
+                  .count();
+          LogWorldColumnUnload(
+              "evicted", ground,
+              "max_cy=" + std::to_string(highest_cy) +
+                  " needs_relight=" + std::to_string(needs_relight) +
+                  " relight_keyed=" + std::to_string(relight_queue.keyed) +
+                  " relight_deferred_far=" +
+                  std::to_string(relight_queue.deferred_far) +
+                  " relight_deferred_visible=" +
+                  std::to_string(relight_queue.deferred_visible) +
+                  " relight_boundary_dependency=" +
+                  std::to_string(relight_queue.boundary_dependency) +
+                  " relight_inflight=" + std::to_string(relight_inflight) +
+                  " pending_light_before_mesh=" +
+                  std::to_string(pending_light_before_mesh) +
+                  " emerge_state=" + std::to_string(static_cast<int>(emerge)) +
+                  " emerge_lighting=" + std::to_string(emerge_lighting) +
+                  " record_pending_light=" +
+                  std::to_string(record_pending_light) + " record_visual=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual) : -1) +
+                  " record_visual_needs_relight=" +
+                  std::to_string(record_visual_needs_relight) +
+                  " record_visual_obligation=" +
+                  std::to_string(rec ? static_cast<int>(rec->visual_obligation)
+                                     : -1) +
+                  " record_light_repair_obligation=" +
+                  std::to_string(record_light_repair_obligation) +
+                  " record_pending_token=" +
+                  std::to_string(rec ? rec->pending.token : 0) +
+                  " record_debt_reason=" +
+                  std::to_string(rec ? rec->debt.reason : 0) +
+                  " flow_relight_ticket=" +
+                  std::to_string(flow_relight_ticket) +
+                  " flow_repair_ticket=" + std::to_string(flow_repair_ticket) +
+                  " disk_load_pending=" + std::to_string(disk_load_pending) +
+                  " generation_pending=" + std::to_string(generation_pending) +
+                  " relight_cancelled=" +
+                  std::to_string(canceled_relight_work) +
+                  " light_complete_before=" +
+                  std::to_string(light_complete_before_unload) +
+                  " light_complete_after_invalidation=" +
+                  std::to_string(light_complete_after_invalidation) +
+                  " light_complete_after_unload=" +
+                  std::to_string(light_complete_after_unload) +
+                  " active_work=" + std::to_string(active_work) +
+                  " invalidated_work=" + std::to_string(invalidated_work) +
+                  " decision_ms=" + std::to_string(decision_ms) +
+                  " ownership_ms=" + std::to_string(ownership_ms) +
+                  " mesh_scan_ms=" + std::to_string(mesh_scan_ms) +
+                  " light_flags_ms=" + std::to_string(light_flags_ms) +
+                  " invalidation_ms=" + std::to_string(invalidation_ms) +
+                  " mesh_remove_ms=" + std::to_string(mesh_remove_ms) +
+                  " collision_cleanup_ms=" +
+                  std::to_string(collision_cleanup_ms) + " total_ms=" +
+                  std::to_string(
+                      std::chrono::duration<double, std::milli>(
+                          std::chrono::steady_clock::now() - unload_started)
+                          .count()));
+        }
+        return true;
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks5(UWorld &world)
+{
+  const auto &procedural=world.GetProceduralSettings();
+  return [this, &world, &procedural](glm::ivec3 coord, int priority,
+                                  uint64_t demand_id)
+      {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        UWorldPersistence &persistence = *world.Persistence;
+        if (persistence.GetChunkStorage().IsColumnSavePending(ground)) return false;
+        if (persistence.IsTerrainColumnDiskLoadPending(ground)) return true;
+        const bool generation_pending =
+            ChunkScheduler && ChunkScheduler->IsPending(ground);
+        // Async streaming used to jump straight to procedural generation,
+        // bypassing OnLoadChunk. Reuse the bounded disk worker first so a
+        // previously visited column is restored with its saved voxel/light
+        // data. Do not issue a second disk load while a procedural request owns
+        // it; fall through so RequestLoad can refresh that request's priority.
+        if (procedural.AsyncChunkIo && !generation_pending)
+        {
+          persistence.RequestAsyncTerrainColumnLoad(world, ground, demand_id);
+          if (persistence.IsTerrainColumnDiskLoadPending(ground))
+          {
+            return true;
+          }
+        }
+        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
+                ground))
+          return false;
+        if (ChunkScheduler)
+        {
+          const auto focus=UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+          const int radius=std::max(Streamer->GetAsyncRequestRetentionRadius(focus),
+                                    world.GetRequiredPresentationRadius()+1);
+          const uint64_t side=2*uint64_t(std::max(0,radius))+1;
+          const uint64_t reserve=UChunkLoadScheduler::kMaxActiveGenerationRequests;
+          const uint64_t available=std::numeric_limits<size_t>::max()-reserve;
+          const uint64_t area=side>available/side ? available : side*side;
+          ChunkScheduler->SetMetadataCapacity(static_cast<size_t>(area+reserve));
+          glm::ivec2 column_origin(0);
+          bool has_origin = false;
+          if (auto camera = world.GetCurrentUserCamera())
+          {
+            const PlayerCapsule cap = camera->GetPlayerCapsule();
+            const glm::vec3 feet(camera->GetPosition().x,
+                                 cap.feetY(camera->GetPosition()) + 0.01f,
+                                 camera->GetPosition().z);
+            const glm::ivec3 feet_block = WorldPosToBlock(feet);
+            column_origin = glm::ivec2(feet_block.x, feet_block.z);
+            has_origin = true;
+          }
+          return ChunkScheduler->RequestLoad(ground, priority, procedural,
+                                      column_origin, has_origin, demand_id);
+        }
+        return false;
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks6(UWorld &world)
+{
+  return [&world, this](glm::ivec3 coord)
+      {
+        if (ChunkScheduler && ChunkScheduler->IsPending(coord))
+        {
+          return false;
+        }
+        // Column identity uses y=0, but complete low terrain need not own
+        // that section. Requiring it repeatedly reloads already committed
+        // negative-height columns and invalidates their light/mesh inputs.
+        return world.IsTerrainColumnCompleteFast({coord.x, 0, coord.z});
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks7(UWorld &world)
+{
+  return [this, &world](glm::ivec3 coord)
+      {
+        const glm::ivec3 ground(coord.x, 0, coord.z);
+        if (world.Persistence->GetChunkStorage().IsColumnSavePending(ground) ||
+            world.Persistence->IsTerrainColumnDiskLoadPending(ground))
+        {
+          return true;
+        }
+        return ChunkScheduler && ChunkScheduler->IsPending(ground);
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks8(UWorld &world)
+{
+  return [&world](glm::ivec3 coord)
+      {
+        // Outer ring unlock requires LitReady+ (not awaiting first light).
+        return !world.IsColumnVisualReadyForRing(coord);
+      };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks9(UWorld &world)
+{
+  return [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); };
+}
+
+auto UWorldStreaming::MakeStoredInitStreamerCallbacks10(UWorld &world)
+{
+  return [this, &world](glm::ivec3 ground)
+      {
+        const ProceduralSettings &settings = world.GetProceduralSettings();
+        std::vector<glm::ivec3> seal_changes;
+        if (settings.FillWater && world.BlockRegistry)
+        {
+          // Sync gen path: IntraChunk once, ShoreAir deferred (cheap).
+          SealFluidShoreOnChunkCommitted(world.BlockWorld, *world.BlockRegistry,
+                                         settings, world.WorldgenOwnerPackId,
+                                         ground, /*include_shore_air=*/false,
+                                         &seal_changes);
+          if (DeferredShoreSealQueued.insert(
+                  glm::ivec3(ground.x, 0, ground.z)).second)
+          {
+            DeferredShoreSealQueue.push_back(ground);
+          }
+        }
+        world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
+        const glm::ivec3 focus_ground =
+            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
+        const int focus_radius = world.GetStreamingFocusRadius();
+        const bool near_focus =
+            std::max(std::abs(ground.x - focus_ground.x),
+                     std::abs(ground.z - focus_ground.z)) <= focus_radius;
+        PublishFluidSealMutations(world, std::move(seal_changes), near_focus);
+        const int horiz = std::max(std::abs(ground.x - focus_ground.x),
+                                   std::abs(ground.z - focus_ground.z));
+        const int fifo_n =
+            world.Persistence
+                ? world.Persistence->GetPendingTerrainColumnRelightCount()
+                : 0;
+        const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
+        const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
+        const int relight_min =
+            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE * 2);
+        const int relight_max = settings.MaxHeight;
+        if (world.Persistence &&
+            ShouldDeferFarRelightEnqueueOnFifoPressure(
+                horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
+        {
+          world.Persistence->DeferFarRelightColumn(
+              glm::ivec2(ground.x, ground.z), relight_min, relight_max,
+              near_focus, "stream_dirty_fifo_pressure");
+          world.TryNotePendingLightBeforeMesh(ground, relight_min, relight_max,
+                                              __FUNCTION__);
+          ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
+        }
+        else
+        {
+          world.Persistence->EnqueueTerrainColumnRelight(
+              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
+              /*min_y=*/settings.MinHeight, /*max_y=*/-1,
+              "stream_dirty_callback", &world);
+        }
+      };
+}
+
+bool UWorldStreaming::InitChunkScheduler(UWorld &world)
+{
+  if (!PrepareChunkScheduler(world))
+    return false;
+  ChunkScheduler->SetMarkDirtyFn(
+      MakeStoredInitChunkScheduler0(world));
   world.Persistence->EnsureChunkIoInitialized();
   return true;
 }
@@ -5801,506 +6344,24 @@ void UWorldStreaming::InitStreamerCallbacks(UWorld &world)
   Streamer->SetEnabled(StreamingEnabled);
   Streamer->SetWorldFolder(world.GetWorldFolderPath());
   Streamer->SetCallbacks(
-      [this, &world](glm::ivec3 coord, uint64_t demand_id)
-      {
-        UWorldPersistence &persistence = *world.Persistence;
-        if (persistence.GetChunkStorage().IsColumnSavePending(coord))
-        {
-          return false;
-        }
-        if (persistence.IsTerrainColumnDiskLoadPending(coord))
-        {
-          return false;
-        }
-        const ProceduralSettings &settings = world.GetProceduralSettings();
-        if (settings.AsyncChunkIo)
-        {
-          persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
-          return false;
-        }
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded = persistence.LoadTerrainColumn(
-                                coord, world.BlockWorld, *world.BlockRegistry,
-                                settings.MaxHeight, settings.MinHeight) > 0;
-        if (loaded)
-        {
-          if (!IsTerrainChunkComplete(world.BlockWorld, coord,
-                                      settings.MaxHeight, kNoTerrainChunkSlice,
-                                      settings.MinHeight))
-          {
-            persistence.PreserveIncompleteTerrainColumn(world.BlockWorld,
-                                                        coord);
-            FrameStreamingIoMs +=
-                std::chrono::duration<double, std::milli>(
-                    std::chrono::high_resolution_clock::now() - t0)
-                    .count();
-            return false;
-          }
-          persistence.TryEnqueueTerrainColumnRelight(
-              world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
-              /*priority=*/false, settings.MinHeight, /*max_y=*/-1);
-        }
-        FrameStreamingIoMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-        return loaded;
-      },
+      MakeStoredInitStreamerCallbacks0(world),
       nullptr, // Save admission/completion is owned by the unload callback.
-      [&world](glm::ivec3 coord)
-      {
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        // Immediate seamed remesh on streamer-complete (H1 defer queue caused
-        // empty/flicker while drain lagged Exhausted). Sea-band neighbor remesh
-        // must run even under PendingLight.
-        const ProceduralSettings &settings = world.GetProceduralSettings();
-        const int remesh_min_y =
-            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE);
-        const int remesh_max_y = settings.SeaLevel + CHUNK_SIZE * 2;
-        world.GetMeshService().MarkTerrainChunkMeshDirtySeamed(
-            ground, remesh_min_y, remesh_max_y, true,
-            MeshRevisionBumpReason::StreamerCommitSeaSeam);
-      },
-      [this, &world](int x, int z)
-      {
-        if (!world.AllowProceduralFill || !world.WorldGen)
-        {
-          return;
-        }
-        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
-                {FloorDiv(x, CHUNK_SIZE), 0, FloorDiv(z, CHUNK_SIZE)}))
-          return;
-        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
-        if (auto *composable =
-                dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
-        {
-          const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0,
-                                  FloorDiv(z, CHUNK_SIZE));
-          if (ground != SyncCoarseCacheGround)
-          {
-            if (SyncCoarseCacheGround.x != INT32_MAX)
-            {
-              composable->EndChunkCoarseCache();
-            }
-            const int blend_pad = std::clamp(
-                static_cast<int>(std::lround(
-                    world.GetProceduralSettings().Tuning.biomeBlendRadius)),
-                0, 16);
-            composable->BeginChunkCoarseCache(
-                ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, blend_pad + 8);
-            SyncCoarseCacheGround = ground;
-          }
-        }
-        const auto t0 = std::chrono::high_resolution_clock::now();
-        world.WorldGen->GenerateColumn(x, z);
-        FrameStreamingGenMs +=
-            std::chrono::duration<double, std::milli>(
-                std::chrono::high_resolution_clock::now() - t0)
-                .count();
-      },
-      [this, &world](glm::ivec3 coord)
-      {
-        world.Collision.RemoveChunkMovementSolidCache(coord);
-        if (coord.y == 0 && ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(coord);
-        }
-      });
+      MakeStoredInitStreamerCallbacks1(world),
+      MakeStoredInitStreamerCallbacks2(world),
+      MakeStoredInitStreamerCallbacks3(world));
   Streamer->SetUnloadColumnCallback(
-      [this, &world](glm::ivec3 ground, int max_cy) -> bool
-      {
-        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
-                ground))
-          return false; // A failed read cannot authorize saving/purging local
-                        // edits.
-        const auto unload_started = std::chrono::steady_clock::now();
-        const bool trace_unload = IsStreamerUnloadTraceEnabled();
-        const glm::ivec2 col(ground.x, ground.z);
-        const glm::ivec2 world_key(col.x * CHUNK_SIZE, col.y * CHUNK_SIZE);
-        // Cleanup erases the table entry below. Keep an owned snapshot for
-        // both the decision and its post-eviction diagnostics.
-        const auto *found_record = world.GetColumnRecords().Find(col);
-        const std::optional<ColumnRecord> record_snapshot =
-            found_record ? std::optional<ColumnRecord>(*found_record)
-                         : std::nullopt;
-        const auto *rec = record_snapshot ? &*record_snapshot : nullptr;
-        // ChunkStreamer calls this only after the column is outside its keep
-        // ring and the camera capsule. At that point visual work is
-        // cancelable; a pending ticket must not pin resident terrain forever.
-        const bool record_want =
-            UColumnRecordCoordinator::RecordWantsEvictAfterInterestLoss(true);
-        const bool may_evict =
-            UColumnRecordCoordinator::DecideEvict(true, record_want, col);
-        const double decision_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - unload_started)
-                .count();
-        if (!may_evict)
-        {
-          if (trace_unload)
-          {
-            LogWorldColumnUnload(
-                "vetoed", ground,
-                "decision_ms=" + std::to_string(decision_ms) + " total_ms=" +
-                    std::to_string(
-                        std::chrono::duration<double, std::milli>(
-                            std::chrono::steady_clock::now() - unload_started)
-                            .count()));
-          }
-          return false;
-        }
-
-        const auto ownership_started = std::chrono::steady_clock::now();
-        UColumnFlowExecutor &flow = GetColumnFlowExecutor();
-        const auto &flow_scheduler = flow.Scheduler();
-        const bool flow_relight_ticket =
-            flow_scheduler.Contains(col, ColumnWorkKind::RelightThenMesh) ||
-            flow_scheduler.Contains(col, ColumnWorkKind::PromoteRelight);
-        const UWorldPersistence::TerrainColumnRelightQueueInfo relight_queue =
-            world.Persistence->GetTerrainColumnRelightQueueInfo(world_key);
-        const ColumnEmergeState emerge = world.GetColumnEmergeState(ground);
-        const bool pending_light_before_mesh =
-            world.IsPendingLightBeforeMesh(col);
-        const bool relight_inflight = world.IsAsyncRelightColumnInFlight(col);
-        const bool record_pending_light = rec && rec->pending_light;
-        const bool record_visual_needs_relight =
-            rec && rec->visual == ColumnVisualState::NeedRelight;
-        const bool record_light_repair_obligation =
-            rec && rec->visual_obligation == VisualObligation::LightRepair;
-        const bool emerge_lighting = emerge == ColumnEmergeState::Lighting;
-        const bool flow_repair_ticket = flow.HasRepairTicket(col);
-        const bool disk_load_pending =
-            world.Persistence->IsTerrainColumnDiskLoadPending(ground);
-        const bool generation_pending =
-            ChunkScheduler && ChunkScheduler->IsPending(ground);
-        const bool needs_relight =
-            pending_light_before_mesh || relight_inflight ||
-            relight_queue.keyed || relight_queue.boundary_dependency ||
-            relight_queue.deferred_far || relight_queue.deferred_visible ||
-            flow_relight_ticket || emerge_lighting || record_pending_light ||
-            record_visual_needs_relight || record_light_repair_obligation;
-        const bool light_complete_before_unload =
-            trace_unload && world.Persistence->IsColumnLightComplete(col);
-
-        bool active_work = needs_relight || flow_repair_ticket ||
-                           (rec && ColumnHasActivePending(*rec)) ||
-                           disk_load_pending || generation_pending;
-        const double ownership_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - ownership_started)
-                .count();
-        const int min_cy =
-            FloorDiv(world.GetProceduralSettings().MinHeight, CHUNK_SIZE);
-        const int highest_cy = max_cy;
-        const UWorldMeshService &mesh = world.GetMeshService();
-        const auto mesh_scan_started = std::chrono::steady_clock::now();
-        for (int cy = min_cy; cy <= highest_cy; ++cy)
-        {
-          const glm::ivec3 slice(ground.x, cy, ground.z);
-          active_work = active_work || mesh.IsChunkMeshDirty(slice) ||
-                        mesh.HasInflightMeshBuild(slice) ||
-                        mesh.IsPendingGpuApply(slice) ||
-                        mesh.IsGpuExtractInFlight(slice) ||
-                        mesh.GetCache().HasPendingCaptureWork(slice);
-        }
-        const double mesh_scan_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - mesh_scan_started)
-                .count();
-
-        // If we interrupt lighting, persist the column as light-incomplete.
-        // The next disk load will recompute light rather than trusting a
-        // partially updated lightmap saved with otherwise valid voxels.
-        const auto light_flags_started = std::chrono::steady_clock::now();
-        if (needs_relight)
-        {
-          world.Persistence->ClearColumnLightComplete(
-              col, "column_unload_with_relight_work");
-        }
-        const bool light_complete_after_invalidation =
-            trace_unload && world.Persistence->IsColumnLightComplete(col);
-        const double light_flags_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - light_flags_started)
-                .count();
-
-        // Preserve data and visual owners while any write is pending/failed.
-        // Light flags above are invalidated before taking the save snapshot.
-        const auto save_started = std::chrono::high_resolution_clock::now();
-        const bool saved = world.Persistence->TrySaveTerrainColumnForUnload(world, ground);
-        FrameStreamingIoMs += std::chrono::duration<double, std::milli>(
-            std::chrono::high_resolution_clock::now() - save_started).count();
-        if (!saved)
-          return false;
-
-        const auto invalidation_started = std::chrono::steady_clock::now();
-        // Follow-up work belongs to the resident column being retired. Keep
-        // it through save vetoes, but never let it act on a later incarnation.
-        const auto same_column = [ground](glm::ivec3 pending)
-        { return pending.x == ground.x && pending.z == ground.z; };
-        const auto seed_count = DeferredPhysicsSeedQueue.size();
-        const auto shore_count = DeferredShoreSealQueue.size();
-        DeferredPhysicsSeedQueue.erase(
-            std::remove_if(DeferredPhysicsSeedQueue.begin(),
-                           DeferredPhysicsSeedQueue.end(), same_column),
-            DeferredPhysicsSeedQueue.end());
-        DeferredShoreSealQueue.erase(
-            std::remove_if(DeferredShoreSealQueue.begin(),
-                           DeferredShoreSealQueue.end(), same_column),
-            DeferredShoreSealQueue.end());
-        const bool retired_shore = DeferredShoreSealQueued.erase(ground) > 0;
-        const bool retired_intra = DeferredIntraChunkSealNeeded.erase(ground) > 0;
-        const bool retired_terrain_work =
-            seed_count != DeferredPhysicsSeedQueue.size() ||
-            shore_count != DeferredShoreSealQueue.size() ||
-            retired_shore || retired_intra;
-        flow.ForgetColumnWork(col);
-        bool invalidated_work = active_work || retired_terrain_work;
-        const int canceled_relight_work =
-            world.Persistence->CancelTerrainColumnRelight(world_key);
-        invalidated_work = canceled_relight_work > 0 || invalidated_work;
-        // Save runs after this callback. Cancelling the worker must not make
-        // the resident column incomplete before its serialization snapshot.
-        world.Persistence->CancelAsyncTerrainColumnLoad(world, ground, true);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
-        else
-          ChunkGenTokens.Retire(ground,ChunkGenTokens.Current(ground).sequence);
-        world.RetirePendingLightBeforeMesh(col);
-        world.ClearColumnEmergeState(col); // erase the obsolete column record
-        const auto mesh_remove_started = std::chrono::steady_clock::now();
-        world.GetMeshService().RemoveColumn(ground, min_cy, highest_cy);
-        const double mesh_remove_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - mesh_remove_started)
-                .count();
-        const auto collision_cleanup_started = std::chrono::steady_clock::now();
-        for (int cy = min_cy; cy <= highest_cy; ++cy)
-        {
-          world.Collision.RemoveChunkMovementSolidCache(
-              glm::ivec3(ground.x, cy, ground.z));
-        }
-        const double collision_cleanup_ms =
-            std::chrono::duration<double, std::milli>(
-                std::chrono::steady_clock::now() - collision_cleanup_started)
-                .count();
-        const bool light_complete_after_unload =
-            trace_unload && world.Persistence->IsColumnLightComplete(col);
-        if (ChunkScheduler)
-        {
-          ChunkScheduler->Invalidate(ground);
-        }
-        if (invalidated_work)
-        {
-          Streamer->NoteUnloadActiveWorkInvalidated();
-        }
-        if (trace_unload)
-        {
-          const double invalidation_ms =
-              std::chrono::duration<double, std::milli>(mesh_remove_started -
-                                                        invalidation_started)
-                  .count();
-          LogWorldColumnUnload(
-              "evicted", ground,
-              "max_cy=" + std::to_string(highest_cy) +
-                  " needs_relight=" + std::to_string(needs_relight) +
-                  " relight_keyed=" + std::to_string(relight_queue.keyed) +
-                  " relight_deferred_far=" +
-                  std::to_string(relight_queue.deferred_far) +
-                  " relight_deferred_visible=" +
-                  std::to_string(relight_queue.deferred_visible) +
-                  " relight_boundary_dependency=" +
-                  std::to_string(relight_queue.boundary_dependency) +
-                  " relight_inflight=" + std::to_string(relight_inflight) +
-                  " pending_light_before_mesh=" +
-                  std::to_string(pending_light_before_mesh) +
-                  " emerge_state=" + std::to_string(static_cast<int>(emerge)) +
-                  " emerge_lighting=" + std::to_string(emerge_lighting) +
-                  " record_pending_light=" +
-                  std::to_string(record_pending_light) + " record_visual=" +
-                  std::to_string(rec ? static_cast<int>(rec->visual) : -1) +
-                  " record_visual_needs_relight=" +
-                  std::to_string(record_visual_needs_relight) +
-                  " record_visual_obligation=" +
-                  std::to_string(rec ? static_cast<int>(rec->visual_obligation)
-                                     : -1) +
-                  " record_light_repair_obligation=" +
-                  std::to_string(record_light_repair_obligation) +
-                  " record_pending_token=" +
-                  std::to_string(rec ? rec->pending.token : 0) +
-                  " record_debt_reason=" +
-                  std::to_string(rec ? rec->debt.reason : 0) +
-                  " flow_relight_ticket=" +
-                  std::to_string(flow_relight_ticket) +
-                  " flow_repair_ticket=" + std::to_string(flow_repair_ticket) +
-                  " disk_load_pending=" + std::to_string(disk_load_pending) +
-                  " generation_pending=" + std::to_string(generation_pending) +
-                  " relight_cancelled=" +
-                  std::to_string(canceled_relight_work) +
-                  " light_complete_before=" +
-                  std::to_string(light_complete_before_unload) +
-                  " light_complete_after_invalidation=" +
-                  std::to_string(light_complete_after_invalidation) +
-                  " light_complete_after_unload=" +
-                  std::to_string(light_complete_after_unload) +
-                  " active_work=" + std::to_string(active_work) +
-                  " invalidated_work=" + std::to_string(invalidated_work) +
-                  " decision_ms=" + std::to_string(decision_ms) +
-                  " ownership_ms=" + std::to_string(ownership_ms) +
-                  " mesh_scan_ms=" + std::to_string(mesh_scan_ms) +
-                  " light_flags_ms=" + std::to_string(light_flags_ms) +
-                  " invalidation_ms=" + std::to_string(invalidation_ms) +
-                  " mesh_remove_ms=" + std::to_string(mesh_remove_ms) +
-                  " collision_cleanup_ms=" +
-                  std::to_string(collision_cleanup_ms) + " total_ms=" +
-                  std::to_string(
-                      std::chrono::duration<double, std::milli>(
-                          std::chrono::steady_clock::now() - unload_started)
-                          .count()));
-        }
-        return true;
-      });
+      MakeStoredInitStreamerCallbacks4(world));
   Streamer->SetAsyncGeneration(procedural.AsyncChunkGeneration);
   Streamer->SetAsyncCallbacks(
-      [this, &world, &procedural](glm::ivec3 coord, int priority,
-                                  uint64_t demand_id)
-      {
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        UWorldPersistence &persistence = *world.Persistence;
-        if (persistence.GetChunkStorage().IsColumnSavePending(ground)) return false;
-        if (persistence.IsTerrainColumnDiskLoadPending(ground)) return true;
-        const bool generation_pending =
-            ChunkScheduler && ChunkScheduler->IsPending(ground);
-        // Async streaming used to jump straight to procedural generation,
-        // bypassing OnLoadChunk. Reuse the bounded disk worker first so a
-        // previously visited column is restored with its saved voxel/light
-        // data. Do not issue a second disk load while a procedural request owns
-        // it; fall through so RequestLoad can refresh that request's priority.
-        if (procedural.AsyncChunkIo && !generation_pending)
-        {
-          persistence.RequestAsyncTerrainColumnLoad(world, ground, demand_id);
-          if (persistence.IsTerrainColumnDiskLoadPending(ground))
-          {
-            return true;
-          }
-        }
-        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
-                ground))
-          return false;
-        if (ChunkScheduler)
-        {
-          const auto focus=UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-          const int radius=std::max(Streamer->GetAsyncRequestRetentionRadius(focus),
-                                    world.GetRequiredPresentationRadius()+1);
-          const uint64_t side=2*uint64_t(std::max(0,radius))+1;
-          const uint64_t reserve=UChunkLoadScheduler::kMaxActiveGenerationRequests;
-          const uint64_t available=std::numeric_limits<size_t>::max()-reserve;
-          const uint64_t area=side>available/side ? available : side*side;
-          ChunkScheduler->SetMetadataCapacity(static_cast<size_t>(area+reserve));
-          glm::ivec2 column_origin(0);
-          bool has_origin = false;
-          if (auto camera = world.GetCurrentUserCamera())
-          {
-            const PlayerCapsule cap = camera->GetPlayerCapsule();
-            const glm::vec3 feet(camera->GetPosition().x,
-                                 cap.feetY(camera->GetPosition()) + 0.01f,
-                                 camera->GetPosition().z);
-            const glm::ivec3 feet_block = WorldPosToBlock(feet);
-            column_origin = glm::ivec2(feet_block.x, feet_block.z);
-            has_origin = true;
-          }
-          return ChunkScheduler->RequestLoad(ground, priority, procedural,
-                                      column_origin, has_origin, demand_id);
-        }
-        return false;
-      },
-      [&world, this](glm::ivec3 coord)
-      {
-        if (ChunkScheduler && ChunkScheduler->IsPending(coord))
-        {
-          return false;
-        }
-        // Column identity uses y=0, but complete low terrain need not own
-        // that section. Requiring it repeatedly reloads already committed
-        // negative-height columns and invalidates their light/mesh inputs.
-        return world.IsTerrainColumnCompleteFast({coord.x, 0, coord.z});
-      });
+      MakeStoredInitStreamerCallbacks5(world),
+      MakeStoredInitStreamerCallbacks6(world));
   Streamer->SetColumnPendingCallback(
-      [this, &world](glm::ivec3 coord)
-      {
-        const glm::ivec3 ground(coord.x, 0, coord.z);
-        if (world.Persistence->GetChunkStorage().IsColumnSavePending(ground) ||
-            world.Persistence->IsTerrainColumnDiskLoadPending(ground))
-        {
-          return true;
-        }
-        return ChunkScheduler && ChunkScheduler->IsPending(ground);
-      });
+      MakeStoredInitStreamerCallbacks7(world));
   Streamer->SetColumnPendingLightCallback(
-      [&world](glm::ivec3 coord)
-      {
-        // Outer ring unlock requires LitReady+ (not awaiting first light).
-        return !world.IsColumnVisualReadyForRing(coord);
-      });
+      MakeStoredInitStreamerCallbacks8(world));
   Streamer->SetGenerationLightingHooks(
-      [&world](bool deferred) { world.SetLightingRelightDeferred(deferred); },
-      [this, &world](glm::ivec3 ground)
-      {
-        const ProceduralSettings &settings = world.GetProceduralSettings();
-        std::vector<glm::ivec3> seal_changes;
-        if (settings.FillWater && world.BlockRegistry)
-        {
-          // Sync gen path: IntraChunk once, ShoreAir deferred (cheap).
-          SealFluidShoreOnChunkCommitted(world.BlockWorld, *world.BlockRegistry,
-                                         settings, world.WorldgenOwnerPackId,
-                                         ground, /*include_shore_air=*/false,
-                                         &seal_changes);
-          if (DeferredShoreSealQueued.insert(
-                  glm::ivec3(ground.x, 0, ground.z)).second)
-          {
-            DeferredShoreSealQueue.push_back(ground);
-          }
-        }
-        world.SetColumnEmergeState(ground, ColumnEmergeState::Lighting);
-        const glm::ivec3 focus_ground =
-            UChunkManager::WorldToChunk(world.GetPreferredLoadFocusBlock());
-        const int focus_radius = world.GetStreamingFocusRadius();
-        const bool near_focus =
-            std::max(std::abs(ground.x - focus_ground.x),
-                     std::abs(ground.z - focus_ground.z)) <= focus_radius;
-        PublishFluidSealMutations(world, std::move(seal_changes), near_focus);
-        const int horiz = std::max(std::abs(ground.x - focus_ground.x),
-                                   std::abs(ground.z - focus_ground.z));
-        const int fifo_n =
-            world.Persistence
-                ? world.Persistence->GetPendingTerrainColumnRelightCount()
-                : 0;
-        const int soft_cap = URuntimeTuning::Get().RelightFifoSoftCap;
-        const float fifo_frac = URuntimeTuning::Get().RelightFifoAdmitFrac;
-        const int relight_min =
-            std::max(settings.MinHeight, settings.SeaLevel - CHUNK_SIZE * 2);
-        const int relight_max = settings.MaxHeight;
-        if (world.Persistence &&
-            ShouldDeferFarRelightEnqueueOnFifoPressure(
-                horiz, RelightMissPinMaxHoriz(), fifo_n, soft_cap, fifo_frac))
-        {
-          world.Persistence->DeferFarRelightColumn(
-              glm::ivec2(ground.x, ground.z), relight_min, relight_max,
-              near_focus, "stream_dirty_fifo_pressure");
-          world.TryNotePendingLightBeforeMesh(ground, relight_min, relight_max,
-                                              __FUNCTION__);
-          ++world.PhysicsTelemetryData.RelightDeferredFarEnqueueN;
-        }
-        else
-        {
-          world.Persistence->EnqueueTerrainColumnRelight(
-              ground.x * CHUNK_SIZE, ground.z * CHUNK_SIZE, near_focus,
-              /*min_y=*/settings.MinHeight, /*max_y=*/-1,
-              "stream_dirty_callback", &world);
-        }
-      });
+      MakeStoredInitStreamerCallbacks9(world),
+      MakeStoredInitStreamerCallbacks10(world));
 }
 
 void UWorldStreaming::RetryChunkSchedulerReplacement(UWorld &world)
@@ -7605,6 +7666,25 @@ void UWorldStreaming::MarkPersistedColumnsFromWorld()
   {
     Streamer->MarkPersistedColumnsFromWorld();
   }
+}
+
+MemberCallbackStorageSnapshot UWorldStreaming::InspectStoredCallbacks(UWorld &world,bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UWorldStreaming*>(this);
+  SetReferenceMemberCallback(out,MemberCallbackCell::SchedulerDirty,ChunkScheduler?&ChunkScheduler->MarkDirty:nullptr,self.MakeStoredInitChunkScheduler0(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetEmptyMemberCallback(out,MemberCallbackCell::SchedulerColumnDirty,ChunkScheduler?&ChunkScheduler->ColumnMeshDirty:nullptr,known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Load,Streamer?&Streamer->OnLoadChunk:nullptr,self.MakeStoredInitStreamerCallbacks0(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Dirty,Streamer?&Streamer->OnMarkDirty:nullptr,self.MakeStoredInitStreamerCallbacks1(world),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Generate,Streamer?&Streamer->OnGenerateColumn:nullptr,self.MakeStoredInitStreamerCallbacks2(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Unload,Streamer?&Streamer->OnUnloadChunk:nullptr,self.MakeStoredInitStreamerCallbacks3(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::UnloadColumn,Streamer?&Streamer->OnUnloadColumn:nullptr,self.MakeStoredInitStreamerCallbacks4(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::AsyncRequest,Streamer?&Streamer->OnRequestAsyncChunk:nullptr,self.MakeStoredInitStreamerCallbacks5(world),3,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Committed,Streamer?&Streamer->OnIsChunkCommitted:nullptr,self.MakeStoredInitStreamerCallbacks6(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Pending,Streamer?&Streamer->OnIsColumnPending:nullptr,self.MakeStoredInitStreamerCallbacks7(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::PendingLight,Streamer?&Streamer->OnIsColumnPendingLight:nullptr,self.MakeStoredInitStreamerCallbacks8(world),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::DeferRelight,Streamer?&Streamer->OnSetLightingRelightDeferred:nullptr,self.MakeStoredInitStreamerCallbacks9(world),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::RelightColumn,Streamer?&Streamer->OnRelightTerrainColumn:nullptr,self.MakeStoredInitStreamerCallbacks10(world),2,reinterpret_cast<uintptr_t>(this),known);
+  SetEmptyMemberCallback(out,MemberCallbackCell::Save,Streamer?&Streamer->OnSaveChunk:nullptr,known);
+  return out;
 }
 
 } // namespace cutum

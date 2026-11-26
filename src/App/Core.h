@@ -67,6 +67,8 @@ public:
         std::shared_ptr<UViewEngine> views);
 
   ~UCore();
+  const std::shared_ptr<UWorld> &GetWorldRootForStorage() const noexcept {return WorldInstance;}
+  const std::shared_ptr<UGeometryEngine> &GetGeometryRootForStorage() const noexcept {return GeometryEngineInstance;}
 
 public:
   void LoadConfig(const std::string &config_file_name);

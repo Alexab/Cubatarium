@@ -96,6 +96,7 @@ struct StreamingFrameStats
 
 class UChunkStreamer
 {
+  friend class UWorldStreaming;
 public:
   UChunkStreamer(const UChunkStreamer &) = delete;
   UChunkStreamer &operator=(const UChunkStreamer &) = delete;

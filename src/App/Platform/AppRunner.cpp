@@ -208,7 +208,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     StallStageMark("UCore+Application ctor");
     CubatariumLogInfo("App", "Starting application...");
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"desktop","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"desktop","menu");
     if (!application->StartupSucceeded())
     {
       CubatariumLogError("App",
@@ -336,7 +336,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"enter-game-smoke","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"enter-game-smoke","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "enter-game-smoke: startup failed" << std::endl;
@@ -366,7 +366,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
           if (application->GetState() == AppState::InGame)
           {
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"enter-game-smoke","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"enter-game-smoke","in-game");
           }
           return ingame_frames_seen >= in_game_frames;
         });
@@ -506,7 +506,7 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"autoload","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"autoload","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "autoload-last-world: startup failed" << std::endl;
@@ -593,7 +593,7 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
               }
             }
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"autoload","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"autoload","in-game");
             if (ingame_frames_seen >= opt.InGameFrames)
             {
               exit_reason = "ingame_ok";
@@ -1842,7 +1842,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"flight","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"flight","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "flight-sim: startup failed" << std::endl;
@@ -2168,7 +2168,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           if (application->GetState() == AppState::InGame)
           {
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine},"flight","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"flight","in-game");
             if (!ingame_clock_started)
             {
               world->GetBlockWorld().GetChunkManager().ForEachChunk(

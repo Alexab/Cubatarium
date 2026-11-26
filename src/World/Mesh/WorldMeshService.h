@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef WORLDMESHSERVICE_H
 #define WORLDMESHSERVICE_H
 
@@ -29,7 +30,10 @@ struct PhysicsTelemetry;
 /// Owns chunk mesh cache; bridge between World block data and Render meshing.
 class UWorldMeshService
 {
+  friend class UChunkEmergeCoordinator;
 public:
+  MemberCallbackStorageSnapshot InspectStoredDependencyCallback(bool known) const noexcept;
+
   UWorldMeshService();
 
   UChunkMeshCache &GetCache() { return Cache; }
@@ -465,6 +469,8 @@ public:
                                 size_t &maxSlots, uint64_t &stagingFailures);
 
 private:
+  auto MakeStoredUWorldMeshService0();
+
   void NotifyChunkBlocksChanged(glm::ivec3 chunk_coord);
   void NotifyChunkUnloaded(glm::ivec3 chunk_coord);
 

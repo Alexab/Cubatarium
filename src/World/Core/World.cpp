@@ -13903,6 +13903,12 @@ int UWorld::RepairEnterLitSnapshotFullyDarkRemesh()
   return scheduled;
 }
 
+auto UWorld::MakeStoredSyncEnterVisualGateQuiesceFlags0()
+{
+  return [this](glm::ivec2 col)
+        { return IsColumnLitReady(glm::ivec3(col.x, 0, col.y)); };
+}
+
 void UWorld::SyncEnterVisualGateQuiesceFlags()
 {
   if (!MeshService)
@@ -13930,8 +13936,7 @@ void UWorld::SyncEnterVisualGateQuiesceFlags()
   if (gate)
   {
     MeshService->SetEnterVoidTelemLitReadyFn(
-        [this](glm::ivec2 col)
-        { return IsColumnLitReady(glm::ivec3(col.x, 0, col.y)); });
+        MakeStoredSyncEnterVisualGateQuiesceFlags0());
   }
   else
   {
@@ -16854,6 +16859,12 @@ void UWorld::MarkBlockChunkDirtyFromPhysics(glm::ivec3 blockPos)
     return;
   }
   MarkBlockChunkDirty(blockPos);
+}
+
+MemberCallbackStorageSnapshot UWorld::InspectStoredEnterCallback(bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UWorld*>(this);
+  SetReferenceMemberCallback(out,MemberCallbackCell::EnterTelemetry,MeshService?&MeshService->GetCache().EnterVoidTelemLitReadyFn:nullptr,self.MakeStoredSyncEnterVisualGateQuiesceFlags0(),1,reinterpret_cast<uintptr_t>(this),known);
+  return out;
 }
 
 } // namespace cutum

@@ -6,6 +6,8 @@
 #include "Test/RuntimeNameStorageFixture.h"
 #include "Test/EngineThreadStorageFixture.h"
 #include "Test/WorldOwnedStorageFixture.h"
+#include "Test/MemberCallbackStorageFixture.h"
+#include "Test/RootStorageCompositionFixture.h"
 
 namespace cutum {
 struct StreamingSchedulerReinitProbe {
@@ -83,6 +85,8 @@ struct StreamingSchedulerReinitProbe {
     report["runtime_name_storage"]=RunRuntimeNameStorageProbe();
     report["engine_thread_storage"]=RunEngineThreadStorageProbe();
     report["world_owned_storage"]=RunWorldOwnedStorageProbe();
+    report["member_callback_storage"]=RunMemberCallbackStorageProbe();
+    report["root_storage_composition"]=RunRootStorageCompositionProbe();
     return report;
   }
 };

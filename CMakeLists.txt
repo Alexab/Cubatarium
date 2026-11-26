@@ -296,6 +296,8 @@ set(SOURCES
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
     src/World/Core/WorldOwnedStorage.cpp
+    src/World/Core/WorldMemberCallbackStorage.cpp
+    src/Core/Memory/RootStorageSource.cpp
     src/World/Core/MarkRelitInstall.cpp
     src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
@@ -3224,8 +3226,13 @@ add_test(NAME engine_thread_storage_test COMMAND $<TARGET_FILE:engine_thread_sto
     ${CMAKE_CURRENT_BINARY_DIR}/engine-thread-storage.json)
 set_tests_properties(engine_thread_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 if(TARGET CubatariumCompileConfig)
-  cubatarium_add_test(NAME world_owned_storage_test
-      SOURCES src/Test/WorldOwnedStorageTest.cpp
+  foreach(_storage_spec IN ITEMS "world_owned_storage_test|WorldOwnedStorageTest|world-owned-storage" "member_callback_storage_test|MemberCallbackStorageTest|member-callback-storage" "root_storage_source_test|RootStorageSourceTest|root-storage-source")
+    string(REPLACE "|" ";" _storage_fields "${_storage_spec}")
+    list(GET _storage_fields 0 _storage_target)
+    list(GET _storage_fields 1 _storage_source)
+    list(GET _storage_fields 2 _storage_report)
+    cubatarium_add_test(NAME ${_storage_target}
+      SOURCES src/Test/${_storage_source}.cpp
       LIBRARIES CubatariumCompileConfig
       WIN32_LIBRARIES dbghelp)
   foreach(_world_source_group IN LISTS CUBATARIUM_OBJECT_GROUPS)
@@ -3234,12 +3241,13 @@ if(TARGET CubatariumCompileConfig)
         message(FATAL_ERROR "world_owned_storage_test requires explicit handling of new root sources")
       endif()
     else()
-      target_sources(world_owned_storage_test PRIVATE $<TARGET_OBJECTS:CubatariumObjects_${_world_source_group}>)
+      target_sources(${_storage_target} PRIVATE $<TARGET_OBJECTS:CubatariumObjects_${_world_source_group}>)
     endif()
   endforeach()
-  add_test(NAME world_owned_storage_test COMMAND $<TARGET_FILE:world_owned_storage_test>
-      ${CMAKE_CURRENT_BINARY_DIR}/world-owned-storage.json)
-  set_tests_properties(world_owned_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+    add_test(NAME ${_storage_target} COMMAND $<TARGET_FILE:${_storage_target}>
+      ${CMAKE_CURRENT_BINARY_DIR}/${_storage_report}.json)
+    set_tests_properties(${_storage_target} PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+  endforeach()
 endif()
 endif()
 

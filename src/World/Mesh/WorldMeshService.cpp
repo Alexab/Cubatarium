@@ -22,17 +22,22 @@
 namespace cutum
 {
 
-UWorldMeshService::UWorldMeshService()
+auto UWorldMeshService::MakeStoredUWorldMeshService0()
 {
-  Cache.SetOnMeshDependencyAppliedFn(
-      [this](glm::ivec3 chunk_coord)
+  return [this](glm::ivec3 chunk_coord)
       {
         NotifyChunkBlocksChanged(chunk_coord);
         if (OnMeshColumnDirtyFn)
         {
           OnMeshColumnDirtyFn(chunk_coord);
         }
-      });
+      };
+}
+
+UWorldMeshService::UWorldMeshService()
+{
+  Cache.SetOnMeshDependencyAppliedFn(
+      MakeStoredUWorldMeshService0());
 }
 
 void UWorldMeshService::SetRenderSettings(const RenderSettings &settings)
@@ -1935,6 +1940,12 @@ void UWorldMeshService::GetGpuAllocationCounters(size_t &freeSlots,
     maxSlots = allocator.GetMaxSlots();
     stagingFailures = allocator.GetStagingAllocationFailureCount();
   }
+}
+
+MemberCallbackStorageSnapshot UWorldMeshService::InspectStoredDependencyCallback(bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UWorldMeshService*>(this);
+  SetReferenceMemberCallback(out,MemberCallbackCell::MeshDependency,&Cache.OnMeshDependencyAppliedFn_,self.MakeStoredUWorldMeshService0(),1,reinterpret_cast<uintptr_t>(this),known);
+  return out;
 }
 
 } // namespace cutum

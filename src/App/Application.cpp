@@ -4195,4 +4195,9 @@ void ApplicationCreatureCatalogCallback::operator()()const {
   if(owner->PaletteScreen)owner->PaletteScreen->InvalidateGrid();
 }
 
+MemberCallbackStorageSnapshot UApplication::InspectStoredActionCallbacks(bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;SetEmptyMemberCallback(out,MemberCallbackCell::PendingAction,&PendingMenuAction,known);
+  SetEmptyMemberCallback(out,MemberCallbackCell::OperationComplete,&WorldOpOnComplete,known);return out;
+}
+
 } // namespace cutum

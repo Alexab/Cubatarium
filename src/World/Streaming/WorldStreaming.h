@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef WORLDSTREAMING_H
 #define WORLDSTREAMING_H
 
@@ -37,6 +38,8 @@ struct RenderSettings;
 class UWorldStreaming
 {
 public:
+  MemberCallbackStorageSnapshot InspectStoredCallbacks(UWorld &world,bool known) const noexcept;
+
   UWorldStreaming();
   ~UWorldStreaming();
 
@@ -120,8 +123,22 @@ public:
   }
 
 private:
+  auto MakeStoredInitChunkScheduler0(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks0(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks1(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks2(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks3(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks4(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks5(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks6(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks7(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks8(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks9(UWorld &world);
+  auto MakeStoredInitStreamerCallbacks10(UWorld &world);
+
   friend void RunTerrainSaveFailureProbe(UCore &core);
   friend struct StreamingSchedulerReinitProbe;
+  friend struct CallbackRootSourceProbe;
   struct RecordRetirementResult { size_t visited{0}; size_t retired{0}; };
   RecordRetirementResult RetireUnownedColumnRecords(
       UWorld &world, UColumnFlowExecutor &flow, glm::ivec3 center,

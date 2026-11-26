@@ -228,18 +228,9 @@ bool HasChunkDataFiles(const std::string &chunks_dir)
 
 } // namespace
 
-UWorldPersistence::UWorldPersistence(UWorld *world_context)
-    : WorldContext(world_context)
+auto UWorldPersistence::MakeStoredUWorldPersistence0()
 {
-  ChunkStorage = std::make_unique<UChunkStorageService>();
-  AirCancellationProbe =
-      DiskAirCancellationProbe(DiskAirCancellationProbe::Parse(
-          std::getenv("CUBA_DISK_AIR_CANCEL_PROBE")));
-  ReadFailureProbe = DiskReadFailureProbe(DiskAirCancellationProbe::Parse(
-      std::getenv("CUBA_DISK_READ_FAILURE_PROBE")));
-  if (IsEnvironmentFlagEnabled("CUBA_SURFACE_LIGHT_DIAGNOSTICS"))
-    ChunkStorage->ObserveLightCapture =
-        [](glm::ivec3 column, const ColumnLightCaptureStats &stats)
+  return [](glm::ivec3 column, const ColumnLightCaptureStats &stats)
     {
       CubatariumLogInfo(
           "PersistedLightCapture",
@@ -271,6 +262,20 @@ UWorldPersistence::UWorldPersistence(UWorld *world_context)
               " content_before=" + std::to_string(stats.content_before) +
               " content_now=" + std::to_string(stats.content_now));
     };
+}
+
+UWorldPersistence::UWorldPersistence(UWorld *world_context)
+    : WorldContext(world_context)
+{
+  ChunkStorage = std::make_unique<UChunkStorageService>();
+  AirCancellationProbe =
+      DiskAirCancellationProbe(DiskAirCancellationProbe::Parse(
+          std::getenv("CUBA_DISK_AIR_CANCEL_PROBE")));
+  ReadFailureProbe = DiskReadFailureProbe(DiskAirCancellationProbe::Parse(
+      std::getenv("CUBA_DISK_READ_FAILURE_PROBE")));
+  if (IsEnvironmentFlagEnabled("CUBA_SURFACE_LIGHT_DIAGNOSTICS"))
+    ChunkStorage->ObserveLightCapture =
+        MakeStoredUWorldPersistence0();
 }
 
 void UWorldPersistence::SetWorldFolderPath(const std::string &path)
@@ -6794,6 +6799,12 @@ void UWorldPersistence::SaveWorldData(UWorld &world,
           file_name, std::vector<uint8_t>(text.begin(), text.end()), &failure))
     throw std::filesystem::filesystem_error(
         "Cannot save world metadata", file_name, failure);
+}
+
+MemberCallbackStorageSnapshot UWorldPersistence::InspectStoredLightObserver(bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UWorldPersistence*>(this);
+  SetReferenceMemberCallback(out,MemberCallbackCell::LightObserver,ChunkStorage?&ChunkStorage->ObserveLightCapture:nullptr,self.MakeStoredUWorldPersistence0(),0,reinterpret_cast<uintptr_t>(this),known);
+  return out;
 }
 
 } // namespace cutum

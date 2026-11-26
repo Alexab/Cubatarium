@@ -35,6 +35,7 @@ enum class ChunkLoadState
 
 class UChunkLoadScheduler
 {
+  friend class UWorldStreaming;
 public:
   template<class Inspector> void InspectJobPools(Inspector &out) const
   {out.Pool("stream-generation",Pool,4);}

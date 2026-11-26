@@ -83,6 +83,11 @@ class UBlockRegistry;
 class UBlockWorld;
 class UChunkMeshCache
 {
+  friend class UGeometryEngine;
+  friend struct MemberCallbackStorageInspector;
+  friend class UWorld;
+  friend class UWorldMeshService;
+  friend class UChunkEmergeCoordinator;
 public:
   // Publication bookkeeping can change without changing the mesh-cache data
   // view. Publication owners use this main-thread handle explicitly.

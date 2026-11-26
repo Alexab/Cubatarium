@@ -6762,11 +6762,9 @@ void UChunkEmergeCoordinator::TickMeshEmerge(
   }
 }
 
-void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
-    UWorldMeshService &mesh_service)
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks0()
 {
-  mesh_service.SetDeferMeshUntilLitFn(
-      [this](glm::ivec3 chunk_coord)
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -6828,12 +6826,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         return SoftDeferMeshUntilLitPolicy(
             underfeet, has_mesh, world_ref.RequiresLightingLitGate() && pending,
             in_focus, may_mesh, allow_unlit, allow_unlit_hole);
-      });
-  // A42: SoftDefer must not RemoveAt LightRepair drawable remesh Dirty.
-  // A42b: PendingLight ⊆ LightRepair — treat PL as LightRepair for Capture/
-  // SoftDefer schedule even if stamp lag behind NotePending.
-  mesh_service.SetIsLightRepairRemeshFn(
-      [this](glm::ivec3 chunk_coord) -> bool
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks1()
+{
+  return [this](glm::ivec3 chunk_coord) -> bool
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -6851,9 +6849,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         }
         const ColumnRecord *rec = world_ptr->GetColumnRecords().Find(xz);
         return rec && rec->visual_obligation == VisualObligation::LightRepair;
-      });
-  mesh_service.SetOnLitPendingNeededFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks2()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -6918,11 +6919,18 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           world_ref.NoteVisibleFirstMeshRelightBand(key, light_band_min,
                                                     light_band_max);
         }
-      });
-  mesh_service.SetOnSoftDeferHeldFn([this](glm::ivec3 chunk_coord)
-                                    { OnSoftDeferHeld(chunk_coord); });
-  mesh_service.SetOnLitDrawableCommittedFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks3()
+{
+  return [this](glm::ivec3 chunk_coord)
+                                    { OnSoftDeferHeld(chunk_coord); };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks4()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7006,9 +7014,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           }
         }
         (void)TryPromoteLitColumn(world_ref, col, GetColumnFlowExecutor());
-      });
-  mesh_service.SetOnFaceDebtFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks5()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7114,9 +7125,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           }
         }
         world_ref.NoteUnfinishedColumnDirty(col);
-      });
-  mesh_service.SetOnFaceDebtDirtyFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks6()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7145,9 +7159,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         }
         mesh_service.MarkDirty(chunk_coord,
                                MeshRevisionBumpReason::FaceDebtMaterialRetry);
-      });
-  mesh_service.SetOnFaceDebtMaskFn(
-      [this](glm::ivec3 chunk_coord, uint8_t mask)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks7()
+{
+  return [this](glm::ivec3 chunk_coord, uint8_t mask)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr || mask == 0)
@@ -7236,9 +7253,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
           EnqueueFaceDebtRepair(chunk_coord);
         }
         world_ref.NoteUnfinishedColumnDirty(col);
-      });
-  mesh_service.SetOnBoundaryOverlayPublishedFn(
-      [this](glm::ivec3 chunk_coord, uint8_t missing_face_mask)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks8()
+{
+  return [this](glm::ivec3 chunk_coord, uint8_t missing_face_mask)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7269,9 +7289,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         }
         world_ref.NoteUnfinishedColumnDirty(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
-      });
-  mesh_service.SetOnGpuPipelineProgressFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks9()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7288,15 +7311,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         {
           rec.visual = ColumnVisualState::Publishing;
         }
-      });
-  // R06: when coverage publishes, remesh face-neighbors in sea band that
-  // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
-  // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
-  // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
-  // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
-  // Sysreset v4: FaceDebt|overlay remesh in focus ring (cap 4).
-  mesh_service.SetOnFirstDrawableCoverageFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks10()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7618,9 +7638,12 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
               glm::ivec3(n.x, 0, n.z), remesh_min_y, remesh_max_y, false,
               MeshRevisionBumpReason::FirstDrawableSeaSeam);
         }
-      });
-  mesh_service.SetOnMeshColumnDirtyFn(
-      [this](glm::ivec3 chunk_coord)
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks11()
+{
+  return [this](glm::ivec3 chunk_coord)
       {
         UWorld *world_ptr = SoftDeferPolicy.world;
         if (!world_ptr)
@@ -7629,13 +7652,80 @@ void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
         }
         world_ptr->NoteUnfinishedColumnDirty(
             glm::ivec2(chunk_coord.x, chunk_coord.z));
-      });
+      };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks12()
+{
+  return [this](glm::ivec2 col)
+      { return GetColumnFlowExecutor().HasRepairTicket(col); };
+}
+
+auto UChunkEmergeCoordinator::MakeStoredInstallSoftDeferCallbacks13()
+{
+  return [this](glm::ivec3 chunk_coord)
+                                  { return HasResidentChunk(chunk_coord); };
+}
+
+void UChunkEmergeCoordinator::InstallSoftDeferCallbacks(
+    UWorldMeshService &mesh_service)
+{
+  mesh_service.SetDeferMeshUntilLitFn(
+      MakeStoredInstallSoftDeferCallbacks0());
+  // A42: SoftDefer must not RemoveAt LightRepair drawable remesh Dirty.
+  // A42b: PendingLight ⊆ LightRepair — treat PL as LightRepair for Capture/
+  // SoftDefer schedule even if stamp lag behind NotePending.
+  mesh_service.SetIsLightRepairRemeshFn(
+      MakeStoredInstallSoftDeferCallbacks1());
+  mesh_service.SetOnLitPendingNeededFn(
+      MakeStoredInstallSoftDeferCallbacks2());
+  mesh_service.SetOnSoftDeferHeldFn(MakeStoredInstallSoftDeferCallbacks3());
+  mesh_service.SetOnLitDrawableCommittedFn(
+      MakeStoredInstallSoftDeferCallbacks4());
+  mesh_service.SetOnFaceDebtFn(
+      MakeStoredInstallSoftDeferCallbacks5());
+  mesh_service.SetOnFaceDebtDirtyFn(
+      MakeStoredInstallSoftDeferCallbacks6());
+  mesh_service.SetOnFaceDebtMaskFn(
+      MakeStoredInstallSoftDeferCallbacks7());
+  mesh_service.SetOnBoundaryOverlayPublishedFn(
+      MakeStoredInstallSoftDeferCallbacks8());
+  mesh_service.SetOnGpuPipelineProgressFn(
+      MakeStoredInstallSoftDeferCallbacks9());
+  // R06: when coverage publishes, remesh face-neighbors in sea band that
+  // still carry sticky BoundaryOverlay toward the publisher (R2 overlay-only;
+  // no 3x3; underwater Y = publisher_cy; coalesce one dirty/col/frame).
+  // Regression 185830 H1/W1: do NOT broaden to any-active-overlay outside
+  // sea-band — remesh flood → FullyDark/blacks + flicker (R1 class).
+  // Sysreset v4: FaceDebt|overlay remesh in focus ring (cap 4).
+  mesh_service.SetOnFirstDrawableCoverageFn(
+      MakeStoredInstallSoftDeferCallbacks10());
+  mesh_service.SetOnMeshColumnDirtyFn(
+      MakeStoredInstallSoftDeferCallbacks11());
   mesh_service.SetColumnFlowContainsFn(
-      [this](glm::ivec2 col)
-      { return GetColumnFlowExecutor().HasRepairTicket(col); });
-  mesh_service.SetChunkResidentFn([this](glm::ivec3 chunk_coord)
-                                  { return HasResidentChunk(chunk_coord); });
+      MakeStoredInstallSoftDeferCallbacks12());
+  mesh_service.SetChunkResidentFn(MakeStoredInstallSoftDeferCallbacks13());
   SoftDeferCallbacksInstalled = true;
+}
+
+MemberCallbackStorageSnapshot UChunkEmergeCoordinator::InspectStoredCallbacks(const UWorldMeshService &mesh,const UWorld &world,bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UChunkEmergeCoordinator*>(this);const auto &cache=mesh.GetCache();
+  known=known && (!SoftDeferPolicy.world || SoftDeferPolicy.world==&world);
+  SetReferenceMemberCallback(out,MemberCallbackCell::DeferMesh,&cache.DeferMeshUntilLit,self.MakeStoredInstallSoftDeferCallbacks0(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::LightRepair,&cache.IsLightRepairRemesh,self.MakeStoredInstallSoftDeferCallbacks1(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::LitPending,&cache.OnLitPendingNeeded,self.MakeStoredInstallSoftDeferCallbacks2(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::SoftHeld,&cache.OnSoftDeferHeld,self.MakeStoredInstallSoftDeferCallbacks3(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::LitCommitted,&cache.OnLitDrawableCommitted,self.MakeStoredInstallSoftDeferCallbacks4(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::FaceDebt,&cache.OnFaceDebt,self.MakeStoredInstallSoftDeferCallbacks5(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::FaceDirty,&cache.OnFaceDebtDirty,self.MakeStoredInstallSoftDeferCallbacks6(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::FaceMask,&cache.OnFaceDebtMask,self.MakeStoredInstallSoftDeferCallbacks7(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Boundary,&cache.OnBoundaryOverlayPublished,self.MakeStoredInstallSoftDeferCallbacks8(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::GpuProgress,&cache.OnGpuPipelineProgress,self.MakeStoredInstallSoftDeferCallbacks9(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::FirstCoverage,&cache.OnFirstDrawableCoverage,self.MakeStoredInstallSoftDeferCallbacks10(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::MeshColumnDirty,&mesh.OnMeshColumnDirtyFn,self.MakeStoredInstallSoftDeferCallbacks11(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::FlowContains,&mesh.ColumnFlowContainsFn,self.MakeStoredInstallSoftDeferCallbacks12(),1,reinterpret_cast<uintptr_t>(this),known);
+  SetReferenceMemberCallback(out,MemberCallbackCell::Resident,&cache.ChunkResidentFn,self.MakeStoredInstallSoftDeferCallbacks13(),1,reinterpret_cast<uintptr_t>(this),known);
+  return out;
 }
 
 } // namespace cutum

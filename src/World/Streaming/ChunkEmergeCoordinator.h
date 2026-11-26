@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef CHUNKEMERGECOORDINATOR_H
 #define CHUNKEMERGECOORDINATOR_H
 
@@ -24,6 +25,8 @@ struct ProceduralSettings;
 class UChunkEmergeCoordinator
 {
 public:
+  MemberCallbackStorageSnapshot InspectStoredCallbacks(const UWorldMeshService &mesh,const UWorld &world,bool known) const noexcept;
+
   struct FrameBudget
   {
     int MaxChunkCommits{3};
@@ -62,7 +65,23 @@ public:
                                   UColumnFlowExecutor &executor);
 
 private:
+  auto MakeStoredInstallSoftDeferCallbacks0();
+  auto MakeStoredInstallSoftDeferCallbacks1();
+  auto MakeStoredInstallSoftDeferCallbacks2();
+  auto MakeStoredInstallSoftDeferCallbacks3();
+  auto MakeStoredInstallSoftDeferCallbacks4();
+  auto MakeStoredInstallSoftDeferCallbacks5();
+  auto MakeStoredInstallSoftDeferCallbacks6();
+  auto MakeStoredInstallSoftDeferCallbacks7();
+  auto MakeStoredInstallSoftDeferCallbacks8();
+  auto MakeStoredInstallSoftDeferCallbacks9();
+  auto MakeStoredInstallSoftDeferCallbacks10();
+  auto MakeStoredInstallSoftDeferCallbacks11();
+  auto MakeStoredInstallSoftDeferCallbacks12();
+  auto MakeStoredInstallSoftDeferCallbacks13();
+
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend struct CallbackRootSourceProbe;
   bool HasResidentChunk(glm::ivec3 chunk_coord);
   void OnSoftDeferHeld(glm::ivec3 chunk_coord);
   void ResetFaceDebtEpoch(UWorld &world);

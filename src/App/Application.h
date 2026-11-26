@@ -1,3 +1,4 @@
+#include "Core/Memory/MemberCallbackStorage.h"
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
@@ -78,6 +79,8 @@ class UApplication : public IUGuiMenuHost
   friend class UScreenNavigator;
   friend class UInputRouter;
 public:
+  MemberCallbackStorageSnapshot InspectStoredActionCallbacks(bool known) const noexcept;
+
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const {
     out.BlockStorage(BlockDefinitions,"application");out.Core(Core.get());out.World(World.get());out.Geometry(Geometry.get());
     out.GuiIcon(IconSource.get());out.Preview(ContentPreviewRenderer.get());out.Viewmodel(FpViewmodelRenderer.get());out.ItemLab(ItemLabScreen);
@@ -92,6 +95,8 @@ public:
                std::shared_ptr<UShaderManager> shader_manager,
                std::shared_ptr<UBlockDefinitionStorage> block_definitions);
   ~UApplication();
+  const std::shared_ptr<UWorld> &GetWorldRootForStorage() const noexcept {return World;}
+  const std::shared_ptr<UGeometryEngine> &GetGeometryRootForStorage() const noexcept {return Geometry;}
 
   void Startup(const std::string &configPath);
   bool StartupSucceeded() const { return StartupOk; }

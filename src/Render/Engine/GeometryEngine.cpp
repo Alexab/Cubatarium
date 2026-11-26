@@ -1,3 +1,5 @@
+#include "Render/Engine/RenderStoredCallbacks.h"
+#include "Core/Memory/RootStorageSource.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/RenderThreadState.h"
 #include <map>
@@ -4413,6 +4415,19 @@ void UGeometryEngine::SetCreatureTextureStorage(
   CreatureTextureStorage = std::move(storage);
 }
 
+std::shared_ptr<SectionRenderLightBinding> RenderPrepareLightCallback::operator()(uint64_t epoch,const SectionGeometryRenderInputs &geometry,const SectionRenderLightSnapshot &light)const {
+  const auto live=owner.lock();return live?live->PrepareForWorld(epoch,geometry,light):nullptr;
+}
+auto UGeometryEngine::MakeStoredPackedSwitchCallback()
+{
+  return [this](glm::ivec3 coord)
+          {
+            MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
+            MeshStore().RemoveCoord(GreedyGpuCutout, coord);
+            MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
+          };
+}
+
 void UGeometryEngine::EnsureRenderBackendsBound()
 {
   if (!URenderBackendFactory::IsBound(RenderBackends))
@@ -4478,13 +4493,7 @@ void UGeometryEngine::EnsureRenderBackendsBound()
         const std::weak_ptr<SectionRenderLightBindings> owner =
             SectionLightOwner;
         mesh.GetCache().SetPrepareRenderLightFn(
-            [owner](uint64_t epoch, const SectionGeometryRenderInputs &geometry,
-                    const SectionRenderLightSnapshot &light)
-            {
-              const auto live = owner.lock();
-              return live ? live->PrepareForWorld(epoch, geometry, light)
-                          : nullptr;
-            });
+            RenderPrepareLightCallback{owner});
         PhysicalLightPublicationBound_ = true;
       }
       else if (!physical && PhysicalLightPublicationBound_)
@@ -4498,12 +4507,7 @@ void UGeometryEngine::EnsureRenderBackendsBound()
     if (!PackedRepresentationSwitchBound_ && RenderBackends.Store)
     {
       mesh.GetCache().SetOnPackedRepresentationSwitchFn(
-          [this](glm::ivec3 coord)
-          {
-            MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
-            MeshStore().RemoveCoord(GreedyGpuCutout, coord);
-            MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
-          });
+          MakeStoredPackedSwitchCallback());
       PackedRepresentationSwitchBound_ = true;
     }
   }
@@ -4523,12 +4527,7 @@ bool UGeometryEngine::InitEngine()
     WorldInstance->GetMeshService()
         .GetCache()
         .SetOnPackedRepresentationSwitchFn(
-            [this](glm::ivec3 coord)
-            {
-              MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
-              MeshStore().RemoveCoord(GreedyGpuCutout, coord);
-              MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
-            });
+            MakeStoredPackedSwitchCallback());
     PackedRepresentationSwitchBound_ = true;
   }
 
@@ -7275,12 +7274,7 @@ void UGeometryEngine::DrawGreedyOpaqueBatches(
     WorldInstance->GetMeshService()
         .GetCache()
         .SetOnPackedRepresentationSwitchFn(
-            [this](glm::ivec3 coord)
-            {
-              MeshStore().RemoveCoord(GreedyGpuOpaque, coord);
-              MeshStore().RemoveCoord(GreedyGpuCutout, coord);
-              MeshStore().RemoveCoord(GreedyGpuTransparent, coord);
-            });
+            MakeStoredPackedSwitchCallback());
     PackedRepresentationSwitchBound_ = true;
   }
   IUMeshGpuStore &store = MeshStore();
@@ -9990,6 +9984,22 @@ void GetLightPreviewDebounceCounters(long long &raw_toggles,
 {
   raw_toggles = gLightPreviewRawToggles;
   shown_toggles = gLightPreviewShownToggles;
+}
+
+MemberCallbackStorageSnapshot UGeometryEngine::InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known)const noexcept {
+  MemberCallbackStorageSnapshot out;auto &self=*const_cast<UGeometryEngine*>(this);known=known && WorldInstance.get()==&world;
+  const auto &cache=world.GetMeshService().GetCache();const auto &fn=cache.PrepareRenderLight;
+  CallbackStorageSnapshot prepare;prepare.cell=reinterpret_cast<uintptr_t>(&fn);prepare.capture_inline=sizeof(RenderPrepareLightCallback);prepare.present=bool(fn);prepare.supported=known;
+  if(fn){const auto *target=fn.target<RenderPrepareLightCallback>();
+    if(!target || !SectionLightOwner || target->owner.owner_before(SectionLightOwner) || SectionLightOwner.owner_before(target->owner))prepare.supported=false;
+    else {prepare.requests=KnownCallbackRequestBytes<RenderPrepareLightCallback>(fn);prepare.owner=reinterpret_cast<uintptr_t>(SectionLightOwner.get());
+      const auto address=reinterpret_cast<uintptr_t>(target),cell=reinterpret_cast<uintptr_t>(&fn);
+      if((address>=cell && address-cell<sizeof(fn))!=(prepare.requests==0))prepare.supported=false;
+      out.held_root=CaptureWeakRootStorage(target->owner,phase,known);prepare.supported=prepare.supported && out.held_root.supported;}
+  }
+  out.Set(MemberCallbackCell::PrepareLight,prepare);
+  SetReferenceMemberCallback(out,MemberCallbackCell::PackedSwitch,&cache.OnPackedRepresentationSwitch,self.MakeStoredPackedSwitchCallback(),1,reinterpret_cast<uintptr_t>(this),known);
+  return out;
 }
 
 } // namespace cutum
