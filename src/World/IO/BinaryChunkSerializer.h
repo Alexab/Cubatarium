@@ -19,10 +19,12 @@ public:
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Binary; }
   const char *FileExtension() const override { return ".cchunk"; }
   SerializedChunk Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
-                            UBlockRegistry &registry) const override;
+                            UBlockRegistry &registry,
+                            const IoCodecProbe *probe = nullptr) const override;
   UChunkBuffer Deserialize(const std::vector<uint8_t> &bytes,
                            glm::ivec3 chunkCoord,
-                           UBlockRegistry &registry) const override;
+                           UBlockRegistry &registry,
+                           const IoCodecProbe *probe = nullptr) const override;
 };
 
 } // namespace cutum

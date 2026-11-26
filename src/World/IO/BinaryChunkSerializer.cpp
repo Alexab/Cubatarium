@@ -1,4 +1,5 @@
 #include "World/IO/BinaryChunkSerializer.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
@@ -98,7 +99,8 @@ bool ReadI32(const std::vector<uint8_t> &bytes, size_t &offset, int32_t &value)
 
 SerializedChunk
 UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
-                                  UBlockRegistry & /*registry*/) const
+                                  UBlockRegistry & /*registry*/,
+                                  const IoCodecProbe *probe) const
 {
   SerializedChunk out;
   out.format = ChunkDiskFormat::Binary;
@@ -195,13 +197,25 @@ UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
           ? std::numeric_limits<uint64_t>::max()
           : static_cast<uint64_t>(milliseconds + 0.5);
   AppendU64(bytes, last_update_ms);
+  if (probe)
+  {
+    StlSourceStorage scratch, output;
+    scratch.Hash(paletteIndex);
+    scratch.Buffer(palette.capacity(), sizeof(BlockId));
+    scratch.Buffer(runs.capacity(), sizeof(Run));
+    output.Buffer(bytes.capacity(), sizeof(uint8_t));
+    probe->sample(probe->context, {IoCodecKind::BinaryWrite, scratch.bytes.requested,
+                                  0, output.bytes.requested, 0,
+                                  scratch.bytes.supported && output.bytes.supported});
+  }
   return out;
 }
 
 UChunkBuffer
 UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                     glm::ivec3 chunkCoord,
-                                    UBlockRegistry &registry) const
+                                    UBlockRegistry &registry,
+                                    const IoCodecProbe *probe) const
 {
   UChunkBuffer buffer;
   if (bytes.size() < 4 + 1 + 12 + 2)
@@ -405,6 +419,15 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
 
   if (frame_valid && offset == bytes.size())
     buffer.MarkDecodedFrame(chunkCoord);
+  if (probe)
+  {
+    StlSourceStorage scratch, input;
+    scratch.Buffer(palette.capacity(), sizeof(BlockId));
+    input.Buffer(bytes.capacity(), sizeof(uint8_t));
+    probe->sample(probe->context, {IoCodecKind::BinaryRead, scratch.bytes.requested,
+                                  input.bytes.requested, buffer.GetOwnedAllocationBytes(), 0,
+                                  scratch.bytes.supported && input.bytes.supported});
+  }
   return buffer;
 }
 

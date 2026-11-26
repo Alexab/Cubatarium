@@ -1,4 +1,5 @@
 #include "World/IO/JsonChunkSerializer.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
@@ -37,7 +38,8 @@ BlockId ResolveVoxelId(const json &voxel, UBlockRegistry &registry)
 
 SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
                                                 const UChunk &chunk,
-                                                UBlockRegistry &registry) const
+                                                UBlockRegistry &registry,
+                                                const IoCodecProbe *probe) const
 {
   SerializedChunk out;
   out.format = ChunkDiskFormat::Json;
@@ -77,13 +79,25 @@ SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
       {"last_update_sec", std::max(0.0, chunk.GetWeatherLastUpdateSec())}};
   const std::string text = data.dump();
   out.bytes.assign(text.begin(), text.end());
+  if (probe)
+  {
+    StlSourceStorage scratch, output;
+    scratch.JsonTree(voxels);
+    scratch.JsonTree(data);
+    scratch.Text(text);
+    output.Buffer(out.bytes.capacity(), sizeof(uint8_t));
+    probe->sample(probe->context, {IoCodecKind::JsonWrite, scratch.bytes.requested,
+                                  0, output.bytes.requested, 0,
+                                  scratch.bytes.supported && output.bytes.supported});
+  }
   return out;
 }
 
 UChunkBuffer
 UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                   glm::ivec3 chunkCoord,
-                                  UBlockRegistry &registry) const
+                                  UBlockRegistry &registry,
+                                  const IoCodecProbe *probe) const
 {
   UChunkBuffer buffer;
   if (bytes.empty())
@@ -166,6 +180,16 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
     }
     if (frame_valid)
       buffer.MarkDecodedFrame(chunkCoord);
+    if (probe)
+    {
+      StlSourceStorage scratch, input;
+      scratch.Text(text);
+      scratch.JsonTree(data);
+      input.Buffer(bytes.capacity(), sizeof(uint8_t));
+      probe->sample(probe->context, {IoCodecKind::JsonRead, scratch.bytes.requested,
+                                    input.bytes.requested, buffer.GetOwnedAllocationBytes(), 0,
+                                    scratch.bytes.supported && input.bytes.supported});
+    }
   }
   catch (const json::exception &)
   {

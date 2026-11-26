@@ -5,6 +5,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/PersistedSectionLight.h"
 #include <nlohmann/json.hpp>
 #include <stdexcept>
 
@@ -58,6 +59,14 @@ struct AsyncIoStorageProbe
       for (size_t i = 0; i < used; ++i)
         if (records[i].kind == kind && records[i].stage == stage && records[i].key == key)
           return &records[i];
+      return nullptr;
+    }
+
+    const IoCodecStorage *FindCodec(IoCodecKind kind, uint64_t key) const
+    {
+      for (size_t i = 0; i < used; ++i)
+        if (records[i].codec.kind == kind && records[i].key == key)
+          return &records[i].codec;
       return nullptr;
     }
   };
@@ -126,7 +135,8 @@ struct AsyncIoStorageProbe
             {"callable", s.callable_bytes}, {"queued_backing", s.queued_backing},
             {"completed_backing", s.completed_backing}, {"shared_bytes", s.shared_bytes},
             {"shared_blocks", s.shared_blocks}, {"shared_aliases", s.shared_aliases},
-            {"unknown_jobs", s.unknown_jobs}};
+            {"unknown_jobs", s.unknown_jobs}, {"warmup_keys", s.warmup_keys},
+            {"warmup_requested", s.warmup_requested}};
   }
 
   static nlohmann::json CheckWorkerTrace(const WorkerTrace &trace)
@@ -161,14 +171,37 @@ struct AsyncIoStorageProbe
                 flags_entered->sources.queued_backing >=
                     flags_encoded->sources.queued_backing + 600 * sizeof(glm::ivec2),
             "actual save and flags serialization sources and vector transfer");
-    Require(trace.Find(Kind::Warmup, Stage::Finished, 0) &&
+    const auto *index = trace.Find(Kind::Warmup, Stage::Finished, 0);
+    Require(index && index->disk_index.supported && index->disk_index.initialized == 1 &&
+                index->disk_index.slices >= 1 &&
                 trace.Find(Kind::Receipts, Stage::BeforePublish, 202) &&
                 trace.Find(Kind::Cleanup, Stage::BeforePublish, 203) &&
                 trace.Find(Kind::Cleanup, Stage::BeforePublish, 0),
             "index, receipts and both cleanup paths reach their worker terminal checkpoint");
+    const auto *read_codec = trace.FindCodec(IoCodecKind::BinaryRead, 100);
+    const auto *write_codec = trace.FindCodec(IoCodecKind::BinaryWrite, 200);
+    const auto *receipt_encode = trace.FindCodec(IoCodecKind::ReceiptEncode, 201);
+    const auto *receipt_write = trace.FindCodec(IoCodecKind::ReceiptWrite, 201);
+    Require(read_codec && read_codec->input_bytes == raw->input_bytes &&
+                read_codec->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
+                write_codec && write_codec->scratch_bytes &&
+                write_codec->output_bytes == save->encoded_bytes &&
+                flags_encoded->codec.kind == IoCodecKind::FlagsWrite &&
+                flags_encoded->codec.scratch_bytes &&
+                flags_encoded->codec.output_bytes == flags_encoded->encoded_bytes &&
+                receipt_encode && receipt_encode->scratch_bytes &&
+                receipt_write && receipt_write->output_bytes,
+            "binary, receipt and flags codec storage joins the actual worker");
     return {{"entered", entered}, {"read_input", raw->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"binary_encoded", save->encoded_bytes},
-            {"flags_encoded", flags_encoded->encoded_bytes}, {"samples", trace.used}};
+            {"flags_encoded", flags_encoded->encoded_bytes}, {"samples", trace.used},
+            {"binary_read_scratch", read_codec->scratch_bytes},
+            {"binary_write_scratch", write_codec->scratch_bytes},
+            {"flags_dom", flags_encoded->codec.scratch_bytes},
+            {"receipt_write_dom", receipt_encode->scratch_bytes},
+            {"receipt_write_output", receipt_write->output_bytes},
+            {"disk_index_slices", index->disk_index.slices},
+            {"disk_index_requested", index->disk_index.requested}};
   }
 
   static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,
@@ -260,12 +293,23 @@ struct AsyncIoStorageProbe
     WorkerTrace trace;
     auto cancellation = std::make_shared<std::atomic<bool>>(false);
     std::weak_ptr<std::atomic<bool>> weak = cancellation;
-    trace.cancel_on_decode = cancellation.get();
     const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
     UChunkStorageService storage({ChunkWriteFormat::Json, false});
     UAsyncChunkIO io;
     ReleaseWorkers release{phase, trace};
     io.WorkerProbe = &probe;
+    const glm::ivec3 receipt_coord{0, 0, 0};
+    io.RequestLoad(receipt_coord, storage, registry, folder, {receipt_coord, 1},
+                   {}, 799, true);
+    Require(io.WaitIdleFor(std::chrono::seconds(6)), "receipt read finishes");
+    const auto receipt_result = io.DrainLoads();
+    const auto *receipt_codec = trace.FindCodec(IoCodecKind::ReceiptRead, 799);
+    Require(receipt_result.size() == 1 && receipt_result[0].columnLight &&
+                receipt_result[0].columnLight->size() == 1 && receipt_codec &&
+                receipt_codec->scratch_bytes && receipt_codec->output_bytes &&
+                receipt_codec->stack_buffer_bytes == 4096,
+            "actual persisted receipt recovers after DOM and text observation");
+    trace.cancel_on_decode = cancellation.get();
     const glm::ivec3 coord{2, 0, 0};
     world.SetBlock({2 * CHUNK_SIZE + 3, 2, 3}, 8);
     io.RequestSave(coord, storage, folder, world, registry, {coord, 1}, 800);
@@ -279,16 +323,27 @@ struct AsyncIoStorageProbe
     auto *save = trace.Find(Kind::Save, Stage::Encoded, 800);
     auto *decoded = trace.Find(Kind::Load, Stage::Decoded, 801);
     auto *cancelled = trace.Find(Kind::Load, Stage::Cancelled, 801);
+    const auto *json_write = trace.FindCodec(IoCodecKind::JsonWrite, 800);
+    const auto *json_read = trace.FindCodec(IoCodecKind::JsonRead, 801);
     Require(save && save->encoded_bytes && decoded && decoded->input_bytes &&
                 decoded->decoded_bytes && cancelled && !cancelled->input_bytes &&
                 cancelled->decoded_bytes == decoded->decoded_bytes &&
+                json_write && json_write->scratch_bytes &&
+                json_write->output_bytes == save->encoded_bytes &&
+                json_read && json_read->scratch_bytes &&
+                json_read->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
             "active cancellation retires decoded source without publication");
     cancellation.reset();
     Require(weak.expired() && Inspect(io).shared_blocks == 0 && !trace.overflow,
             "cancelled source leaves no retained I/O owner");
     return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
-            {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true}};
+            {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
+            {"json_write_scratch", json_write->scratch_bytes},
+            {"json_read_scratch", json_read->scratch_bytes},
+            {"receipt_read_scratch", receipt_codec->scratch_bytes},
+            {"receipt_read_output", receipt_codec->output_bytes},
+            {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes}};
   }
 
   static nlohmann::json Run(const std::filesystem::path &root)
@@ -324,8 +379,15 @@ struct AsyncIoStorageProbe
     auto receipts = std::make_shared<PersistedColumnLight>();
     auto receipt = std::make_shared<PersistedSectionLight>();
     receipt->coord = {0, 1, 0};
+    receipt->profile = {0, 31, 8};
+    receipt->signature = "io-worker-light-fixture";
     receipt->signature.reserve(4096);
     receipt->inputs.reserve(173);
+    for (int x = -1; x <= 1; ++x)
+      for (int y = 0; y <= 1; ++y)
+        for (int z = -1; z <= 1; ++z)
+          receipt->inputs.push_back({{x, y, z}, 1});
+    receipt->checksum = persisted_light_detail::Checksum(*receipt);
     receipts->push_back(receipt);
     const auto receipt_refs = receipts.use_count();
     io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 100);
@@ -382,6 +444,9 @@ struct AsyncIoStorageProbe
     const auto drained = Inspect(io);
     Require(drained.supported && drained.completed_backing == 0 && drained.shared_bytes == 0,
             "drained queues retain slots only");
+    Require(queued.warmup_keys == 1 && drained.warmup_keys == 1 &&
+                queued.warmup_requested == drained.warmup_requested,
+            "the warmed folder key remains owned after all I/O tasks retire");
 
     // The fallback route submits saves and warmup to the real load pool.
     Gate cancel_gate;

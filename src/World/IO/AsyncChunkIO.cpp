@@ -4,6 +4,7 @@
 #include "Core/Memory/CallbackStorageSource.h"
 #include "Core/Memory/NameStorageSource.h"
 #include "Core/Memory/RootStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/ChunkStorageService.h"
@@ -105,12 +106,29 @@ struct AsyncIoWorkerLocals
   const std::vector<uint8_t> *encoded_bytes{};
   const std::string *encoded_text{}, *temporary_name{}, *diagnostic{};
   const std::filesystem::path *target_path{}, *temporary_path{};
+  const IoCodecStorage *codec{};
+  const IoDiskIndexStorage *disk_index{};
+  bool codec_output_in_outer_sample{};
 
   AsyncIoWorkerLocals() = default;
   explicit AsyncIoWorkerLocals(const AsyncChunkLoadResult &value) : load(&value) {}
   explicit AsyncIoWorkerLocals(const AsyncChunkSaveRequest &value) : save(&value) {}
   explicit AsyncIoWorkerLocals(const AsyncColumnLightFlagsSaveResult &value) : flags(&value) {}
 };
+
+namespace
+{
+template<class Call, class Observer>
+decltype(auto) WithCodecProbe(bool enabled, const Call &call, Observer observe)
+{
+  if (!enabled)
+    return call(nullptr);
+  const IoCodecProbe probe{&observe, [](void *context, const IoCodecStorage &sample) noexcept {
+    (*static_cast<Observer *>(context))(sample);
+  }};
+  return call(&probe);
+}
+} // namespace
 
 struct UAsyncChunkIO::SaveFlagsJob
 {
@@ -143,12 +161,20 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
     const std::filesystem::path target =
         std::filesystem::path(worldFolder) / "column_light.json";
     const std::filesystem::path temp = target.string() + ".tmp";
-    if (owner->WorkerProbe)
+    if (owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen())
     {
       AsyncIoWorkerLocals locals(result);
       locals.encoded_text = &encoded;
       locals.target_path = &target;
       locals.temporary_path = &temp;
+      StlSourceStorage scratch, output;
+      scratch.JsonTree(data);
+      output.Text(encoded);
+      const IoCodecStorage codec{IoCodecKind::FlagsWrite, scratch.bytes.requested,
+                                0, output.bytes.requested, 0,
+                                scratch.bytes.supported && output.bytes.supported};
+      locals.codec = &codec;
+      locals.codec_output_in_outer_sample = true;
       owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::Encoded, revision, locals);
     }
     std::error_code ec;
@@ -269,7 +295,12 @@ void UAsyncChunkIO::IndexWarmupJob::operator()() const
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Entered, 0, {});
   storage.PrepareHighestChunkSliceIndex(worldFolder);
-  owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Finished, 0, {});
+  if (!owner->WorkerProbe || !owner->WorkerProbe->phase.IsOpen())
+    return;
+  AsyncIoWorkerLocals locals;
+  const auto index = storage.InspectDiskIndexStorage();
+  locals.disk_index = &index;
+  owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Finished, 0, locals);
 }
 
 void UAsyncChunkIO::RequestDiskIndexWarmup(
@@ -319,6 +350,11 @@ void UAsyncChunkIO::LoadJob::operator()() const
     return;
   }
   AsyncChunkLoadResult result;
+  const auto codec_observer = [&](const IoCodecStorage &codec) noexcept {
+    AsyncIoWorkerLocals locals(result);
+    locals.codec = &codec;
+    owner->ObserveWorker(*this, AsyncIoJobKind::Load, AsyncIoWorkerStage::Codec, demandId, locals);
+  };
   const auto observe = [&](AsyncIoWorkerStage stage) {
     owner->ObserveWorker(*this, AsyncIoJobKind::Load, stage, demandId, AsyncIoWorkerLocals(result));
   };
@@ -338,8 +374,9 @@ void UAsyncChunkIO::LoadJob::operator()() const
   if (includeColumnLight)
   {
     UChunkStorageService worker_storage(worker_storage_settings);
-    result.columnLight =
-        worker_storage.ReadColumnLight(worldFolder, coord);
+    result.columnLight = WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
+        [&](const IoCodecProbe *probe) { return worker_storage.ReadColumnLight(worldFolder, coord, probe); },
+        codec_observer);
   }
   if (is_cancelled())
   {
@@ -417,8 +454,9 @@ void UAsyncChunkIO::LoadJob::operator()() const
     {
       UChunkStorageService worker_storage(worker_storage_settings);
       result.decodedBuffer = std::make_unique<UChunkBuffer>(
-          worker_storage.DeserializeChunk(result.payload, coord, format,
-                                          registry));
+          WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(), [&](const IoCodecProbe *probe) {
+            return worker_storage.DeserializeChunk(result.payload, coord, format, registry, probe);
+          }, codec_observer));
     }
     catch (...)
     {
@@ -546,8 +584,15 @@ void UAsyncChunkIO::SaveReceiptsJob::operator()() const
   try
   {
     UChunkStorageService worker_storage(settings);
-    done.success = receipts && worker_storage.WriteColumnLight(
-                                   worldFolder, column, *receipts);
+    done.success = receipts && WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
+        [&](const IoCodecProbe *probe) {
+          return worker_storage.WriteColumnLight(worldFolder, column, *receipts, nullptr, probe);
+        }, [&](const IoCodecStorage &codec) noexcept {
+          AsyncIoWorkerLocals locals(done);
+          locals.codec = &codec;
+          owner->ObserveWorker(*this, AsyncIoJobKind::Receipts, AsyncIoWorkerStage::Codec,
+                               saveBatchId, locals);
+        });
     if (!done.success)
       done.error = "column_light_write_failed";
   }
@@ -625,8 +670,15 @@ void UAsyncChunkIO::SaveJob::operator()() const
     // does not consult registry/catalog state. Do not retain a mutable
     // main-thread registry reference across a reload/world switch.
     UBlockRegistry numeric_registry(nullptr);
-    const SerializedChunk serialized =
-        worker_storage.SerializeChunk(coord, *snapshot, numeric_registry);
+    const SerializedChunk serialized = WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
+        [&](const IoCodecProbe *probe) {
+          return worker_storage.SerializeChunk(coord, *snapshot, numeric_registry, probe);
+        }, [&](const IoCodecStorage &codec) noexcept {
+          AsyncIoWorkerLocals locals(done);
+          locals.codec = &codec;
+          owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Codec,
+                               saveBatchId, locals);
+        });
     done.format = serialized.format;
     done.filePath = worker_storage.ChunkFilePath(
         worldFolder, coord, serialized.format);
@@ -899,6 +951,15 @@ struct AsyncIoStorageInspector
 
   AsyncIoStorage Inspect()
   {
+    // Submissions and the warmup set are owned by the thread requesting this
+    // diagnostic. I/O workers modify the storage service's separate index.
+    StlSourceStorage warmup;
+    warmup.Hash(Owner.DiskIndexWarmupFolders);
+    for (const auto &path : Owner.DiskIndexWarmupFolders)
+      warmup.Text(path);
+    Result.warmup_keys = Owner.DiskIndexWarmupFolders.size();
+    Result.warmup_requested = warmup.bytes.requested;
+    Result.retained_supported &= warmup.bytes.supported;
     const auto visit = [&](const auto &job) { Pending(job); };
     Owner.LoadPool.InspectPendingJobs(visit, [&](auto counts, size_t bytes) {
       Pool(0, counts, bytes);
@@ -952,6 +1013,18 @@ struct AsyncIoStorageInspector
       inspector.Text(sample.path_bytes, locals.temporary_path->native());
     inspector.Add(inspector.Result.completed_backing, sample.encoded_bytes);
     inspector.Add(inspector.Result.completed_backing, sample.path_bytes);
+    if (locals.codec)
+    {
+      sample.codec = *locals.codec;
+      inspector.Result.retained_supported &= sample.codec.supported;
+      inspector.Add(inspector.Result.completed_backing, sample.codec.scratch_bytes);
+      // Read inputs are already included from locals.load. Flags encoding
+      // likewise supplies encoded_text at the outer checkpoint.
+      if (!locals.codec_output_in_outer_sample)
+        inspector.Add(inspector.Result.completed_backing, sample.codec.output_bytes);
+    }
+    if (locals.disk_index)
+      sample.disk_index = *locals.disk_index;
     sample.sources = inspector.Result;
     probe.sample(probe.context, sample);
   }
@@ -1337,6 +1410,7 @@ AsyncIoExecutionStorage JoinAsyncIoWorkers(
     if (bytes != expected)
       result.supported = false;
   };
+  add(result.local_backing, queues.warmup_requested);
   shared(queue_shared, queue_shared_count, queues.shared_bytes);
   for (size_t i = 0; i < worker_count; ++i)
   {

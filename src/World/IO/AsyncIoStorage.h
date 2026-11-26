@@ -1,13 +1,14 @@
 #pragma once
 
 #include "Core/Jobs/JobThreadPool.h"
+#include "World/IO/IoCodecStorage.h"
 #include <array>
 
 namespace cutum
 {
 struct AllocatorSourcePhase;
 enum class AsyncIoJobKind : size_t { Load, Save, Receipts, Flags, Warmup, Cleanup, Count };
-enum class AsyncIoWorkerStage { Entered, ReadBytes, Decoded, Encoded, BeforePublish, Finished, Cancelled };
+enum class AsyncIoWorkerStage { Entered, ReadBytes, Decoded, Encoded, BeforePublish, Finished, Cancelled, Codec };
 
 struct AsyncIoStorage
 {
@@ -18,6 +19,7 @@ struct AsyncIoStorage
   std::array<size_t, static_cast<size_t>(AsyncIoJobKind::Count)> queued{};
   size_t callable_bytes{}, queued_backing{}, completed_backing{}, shared_bytes{};
   size_t shared_blocks{}, shared_aliases{}, unknown_jobs{}, active{};
+  size_t warmup_keys{}, warmup_requested{};
   bool supported{}, retained_supported{}, overflow{}, scratch_exhausted{};
 };
 
@@ -40,6 +42,8 @@ struct AsyncIoWorkerSample
   AsyncIoStorage sources;
   std::array<AsyncIoStorageIdentity, 32> shared{};
   size_t input_bytes{}, decoded_bytes{}, encoded_bytes{}, path_bytes{};
+  IoCodecStorage codec;
+  IoDiskIndexStorage disk_index;
 };
 
 // Synchronous observation from the executing worker. The sink may park the

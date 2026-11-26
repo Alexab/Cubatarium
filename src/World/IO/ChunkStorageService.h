@@ -86,6 +86,7 @@ public:
   /// Build the per-world directory index before terrain streaming starts.
   /// Call from a background I/O job; later lookups are constant-time.
   void PrepareHighestChunkSliceIndex(const std::string &worldFolder) const;
+  IoDiskIndexStorage InspectDiskIndexStorage() const;
   bool RemoveChunkSliceFromDisk(const std::string &worldFolder,
                                 glm::ivec3 chunkCoord,
                                 std::string *outError = nullptr) const;
@@ -109,19 +110,23 @@ public:
                      UBlockRegistry &registry) const;
   bool WriteColumnLight(const std::string &worldFolder, glm::ivec3 column,
                         const PersistedColumnLight &receipts,
-                        std::error_code *failure = nullptr) const;
+                        std::error_code *failure = nullptr,
+                        const IoCodecProbe *probe = nullptr) const;
   std::shared_ptr<const PersistedColumnLight>
-  ReadColumnLight(const std::string &worldFolder, glm::ivec3 column) const;
+  ReadColumnLight(const std::string &worldFolder, glm::ivec3 column,
+                  const IoCodecProbe *probe = nullptr) const;
   int LoadTerrainColumn(glm::ivec3 groundCoord, UBlockWorld &world,
                         const std::string &worldFolder,
                         UBlockRegistry &registry, int maxWorldY,
                         int minWorldY = 0);
 
   SerializedChunk SerializeChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
-                                 UBlockRegistry &registry) const;
+                                 UBlockRegistry &registry,
+                                 const IoCodecProbe *probe = nullptr) const;
   UChunkBuffer DeserializeChunk(const std::vector<uint8_t> &bytes,
                                 glm::ivec3 chunkCoord, ChunkDiskFormat format,
-                                UBlockRegistry &registry) const;
+                                UBlockRegistry &registry,
+                                const IoCodecProbe *probe = nullptr) const;
   int ApplyBufferToWorld(const UChunkBuffer &buffer, UBlockWorld &world) const;
 
   bool WriteBytesAtomically(const std::string &filePath,

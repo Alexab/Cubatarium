@@ -1,4 +1,5 @@
 #include "World/IO/ChunkStorageService.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
@@ -244,20 +245,21 @@ const IUChunkSerializer &UChunkStorageService::GetWriteSerializer() const
 
 SerializedChunk
 UChunkStorageService::SerializeChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
-                                     UBlockRegistry &registry) const
+                                     UBlockRegistry &registry,
+                                     const IoCodecProbe *probe) const
 {
-  return GetWriteSerializer().Serialize(chunkCoord, chunk, registry);
+  return GetWriteSerializer().Serialize(chunkCoord, chunk, registry, probe);
 }
 
 UChunkBuffer UChunkStorageService::DeserializeChunk(
     const std::vector<uint8_t> &bytes, glm::ivec3 chunkCoord,
-    ChunkDiskFormat format, UBlockRegistry &registry) const
+    ChunkDiskFormat format, UBlockRegistry &registry, const IoCodecProbe *probe) const
 {
   if (format == ChunkDiskFormat::Absent || bytes.empty())
   {
     return {};
   }
-  return GetSerializer(format).Deserialize(bytes, chunkCoord, registry);
+  return GetSerializer(format).Deserialize(bytes, chunkCoord, registry, probe);
 }
 
 int UChunkStorageService::ApplyBufferToWorld(const UChunkBuffer &buffer,
@@ -560,6 +562,40 @@ void UChunkStorageService::PrepareHighestChunkSliceIndex(
   }
 }
 
+IoDiskIndexStorage UChunkStorageService::InspectDiskIndexStorage() const
+{
+  std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
+  IoDiskIndexStorage result;
+  StlSourceStorage storage;
+  const auto table = [&](const auto &values) {
+    ++result.tables;
+    result.nodes += values.size();
+    result.bucket_slots += values.bucket_count();
+    storage.Hash(values);
+  };
+  result.folders = HighestChunkSliceIndexByFolder.size();
+  table(HighestChunkSliceIndexByFolder);
+  for (const auto &[path, index] : HighestChunkSliceIndexByFolder)
+  {
+    storage.Text(path);
+    result.initialized += index.initialized;
+    result.heights += index.highest_cy.size();
+    result.columns += index.slice_cys.size();
+    result.dirty += index.dirty_columns.size();
+    table(index.highest_cy);
+    table(index.slice_cys);
+    table(index.dirty_columns);
+    for (const auto &entry : index.slice_cys)
+    {
+      result.slices += entry.second.size();
+      table(entry.second);
+    }
+  }
+  result.requested = storage.bytes.requested;
+  result.supported = storage.bytes.supported;
+  return result;
+}
+
 bool UChunkStorageService::RemoveChunkSliceFromDisk(
     const std::string &worldFolder, glm::ivec3 chunkCoord,
     std::string *outError) const
@@ -754,7 +790,8 @@ UChunkStorageService::CaptureColumnLight(glm::ivec3 column,
 
 bool UChunkStorageService::WriteColumnLight(
     const std::string &worldFolder, glm::ivec3 column,
-    const PersistedColumnLight &receipts, std::error_code *failure) const
+    const PersistedColumnLight &receipts, std::error_code *failure,
+    const IoCodecProbe *probe) const
 {
   if (failure)
     *failure = std::make_error_code(std::errc::invalid_argument);
@@ -773,17 +810,39 @@ bool UChunkStorageService::WriteColumnLight(
     bytes += PersistedLightBytes(*receipt);
     fields.push_back(EncodeSectionLight(*receipt));
   }
-  const auto text = json{{"format_version", 1},
-                         {"column", {column.x, column.z}},
-                         {"fields", std::move(fields)}}
-                        .dump();
+  const auto encode = [probe](const json &data) {
+    auto text = data.dump();
+    if (probe)
+    {
+      StlSourceStorage scratch, output;
+      scratch.JsonTree(data);
+      output.Text(text);
+      probe->sample(probe->context, {IoCodecKind::ReceiptEncode, scratch.bytes.requested,
+                                    0, output.bytes.requested, 0,
+                                    scratch.bytes.supported && output.bytes.supported});
+    }
+    return text;
+  };
+  const auto text = encode(json{{"format_version", 1},
+                                {"column", {column.x, column.z}},
+                                {"fields", std::move(fields)}});
   if (text.size() > kMaxColumnLightBytes)
     return false;
   try
   {
-    return WriteBytesAtomically(ColumnLightFilePath(worldFolder, column),
-                                std::vector<uint8_t>(text.begin(), text.end()),
-                                failure);
+    const auto path = ColumnLightFilePath(worldFolder, column);
+    const std::vector<uint8_t> payload(text.begin(), text.end());
+    if (probe)
+    {
+      StlSourceStorage scratch, output;
+      scratch.Text(text);
+      scratch.Text(path);
+      output.Buffer(payload.capacity(), sizeof(uint8_t));
+      probe->sample(probe->context, {IoCodecKind::ReceiptWrite, scratch.bytes.requested,
+                                    0, output.bytes.requested, 0,
+                                    scratch.bytes.supported && output.bytes.supported});
+    }
+    return WriteBytesAtomically(path, payload, failure);
   }
   catch (const std::filesystem::filesystem_error &error)
   {
@@ -795,7 +854,7 @@ bool UChunkStorageService::WriteColumnLight(
 
 std::shared_ptr<const PersistedColumnLight>
 UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
-                                      glm::ivec3 column) const
+                                      glm::ivec3 column, const IoCodecProbe *probe) const
 {
   try
   {
@@ -838,6 +897,27 @@ UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
       bytes += PersistedLightBytes(*receipt);
       receipts->push_back(
           std::make_shared<const PersistedSectionLight>(std::move(*receipt)));
+    }
+    if (probe)
+    {
+      StlSourceStorage scratch, output;
+      scratch.Text(text);
+      scratch.JsonTree(data);
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+      // Both the vector and each section came from the default make_shared
+      // factories directly above. The sections have no aliases here.
+      output.Add(sizeof(std::_Ref_count_obj2<PersistedColumnLight>));
+      output.Buffer(receipts->capacity(), sizeof(PersistedColumnLight::value_type));
+      for (const auto &section : *receipts)
+      {
+        output.Add(sizeof(std::_Ref_count_obj2<const PersistedSectionLight>));
+        output.Text(section->signature);
+        output.Buffer(section->inputs.capacity(), sizeof(PersistedSectionLight::Input));
+      }
+#endif
+      probe->sample(probe->context, {IoCodecKind::ReceiptRead, scratch.bytes.requested,
+                                    0, output.bytes.requested, sizeof(buffer),
+                                    scratch.bytes.supported && output.bytes.supported});
     }
     return receipts;
   }
