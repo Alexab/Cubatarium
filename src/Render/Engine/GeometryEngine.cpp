@@ -1,4 +1,5 @@
 #include "Render/Engine/GeometryEngine.h"
+#include "Render/Engine/RenderThreadState.h"
 #include <map>
 #include <tuple>
 #include "App/Platform/Log.h"
@@ -141,11 +142,11 @@ bool PixelProbeCenterEveryFrameEnabled()
 }
 
 // One targeted witness on the render thread; reset on each opaque pass.
-thread_local bool g_diagnostic_center_pixel_probe = false;
+
 
 bool PixelProbeCenterSampleEnabled()
 {
-  return g_diagnostic_center_pixel_probe || PixelProbeCenterEveryFrameEnabled();
+  return detail::CallingRenderThreadState().DiagnosticCenterPixelProbe || PixelProbeCenterEveryFrameEnabled();
 }
 
 int PixelProbeColumns()
@@ -363,12 +364,6 @@ struct GreedyVertexLightMatch
   std::shared_ptr<const BoundSectionLightCapture> bound_light;
 };
 
-using CpuBoundLightKey = std::tuple<int, int, int, uint16_t, BlockId>;
-thread_local std::map<
-    CpuBoundLightKey,
-    std::pair<std::shared_ptr<SectionRenderLightBinding>,
-              std::shared_ptr<const BoundSectionLightCapture>>>
-    g_cpu_bound_light_witnesses;
 
 struct ClosestTrianglePoint
 {
@@ -442,68 +437,8 @@ bool PixelProbeGpuDrawStateWindowContains(const glm::vec3 &camera_position)
          camera_position.x >= min_x && camera_position.x <= max_x;
 }
 
-struct GpuOpaqueDrawStateWitness
-{
-  bool valid{false};
-  bool submitted{false};
-  uint64_t frame_epoch{0};
-  uint8_t path{0};
-  glm::ivec3 chunk_coord{0};
-  int32_t block_id{-1};
-  uint32_t batch_index{0};
-  uint32_t command_slot{0};
-  uint32_t indirect_buffer{0};
-  uint8_t depth_test{0};
-  uint8_t depth_write{0};
-  uint8_t cull{0};
-  uint8_t scissor{0};
-  uint8_t stencil{0};
-  uint8_t rasterizer_discard{0};
-  uint8_t polygon_offset{0};
-  uint8_t blend{0};
-  uint8_t color_mask{0};
-  int32_t depth_func{0};
-  int32_t cull_mode{0};
-  int32_t front_face{0};
-  std::array<int32_t, 4> viewport{};
-  std::array<int32_t, 4> scissor_box{};
-  int32_t framebuffer{0};
-  int32_t program{0};
-  int32_t vao{0};
-  int32_t array_buffer{0};
-  int32_t element_buffer{0};
-  int32_t texture_2d{0};
-  uint8_t vertex_layout_checked{0};
-  uint8_t vertex_layout_match{0};
-  uint8_t mvp_matrix_valid{0};
-  uint8_t texture_alpha_valid{0};
-  uint8_t texture_alpha_min{0};
-  uint8_t texture_alpha_max{0};
-  uint8_t alpha_cutout{0};
-  uint8_t opaque_depth_guard{0};
-  int32_t greedy_mode{0};
-  int32_t anim_frame{0};
-  int32_t anim_frame_count{0};
-  int32_t active_texture{0};
-  float mvp_matrix_max_delta{-1.0f};
-  int32_t stencil_func{0};
-  int32_t stencil_ref{0};
-  int32_t stencil_value_mask{0};
-  int32_t stencil_write_mask{0};
-  int32_t polygon_mode_front{0};
-  int32_t polygon_mode_back{0};
-  float depth_range_near{0.0f};
-  float depth_range_far{1.0f};
-  float polygon_offset_factor{0.0f};
-  float polygon_offset_units{0.0f};
-};
 
-thread_local GpuOpaqueDrawStateWitness g_gpu_opaque_draw_state_witness;
-thread_local std::vector<GpuOpaqueDrawStateWitness>
-    g_gpu_opaque_draw_state_frame_witnesses;
-thread_local bool g_capture_gpu_draw_state_for_pixel_probe{false};
-thread_local bool g_capture_fluid_draw_witness_for_pixel_probe{false};
-thread_local uint8_t g_fluid_draw_witness_pass_ordinal{255};
+using GpuOpaqueDrawStateWitness=detail::GpuOpaqueDrawStateWitness;
 
 void CopyGpuOpaqueDrawStateWitness(const GpuOpaqueDrawStateWitness &witness,
                                    VisualBlackTraceRecord &record);
@@ -725,7 +660,7 @@ void CaptureGpuOpaqueDrawState(const GreedyGpuPassCache &pass,
   witness.polygon_mode_front = polygon_mode[0];
   witness.polygon_mode_back = polygon_mode[1];
 #endif
-  g_gpu_opaque_draw_state_witness = witness;
+  detail::CallingRenderThreadState().GpuCurrent = witness;
 }
 
 void AppendGpuOpaqueDrawStateRangeWitness(
@@ -742,7 +677,7 @@ void AppendGpuOpaqueDrawStateRangeWitness(
     const GreedyGpuBatch &batch = pass.batches[index];
     if (batch.blockId != static_cast<BlockId>(573) || batch.indexCountGl <= 0 ||
         batch.drawInstanceCount == 0 ||
-        g_gpu_opaque_draw_state_frame_witnesses.size() >= 8192u)
+        detail::CallingRenderThreadState().GpuFrames.size() >= 8192u)
     {
       continue;
     }
@@ -754,7 +689,7 @@ void AppendGpuOpaqueDrawStateRangeWitness(
     witness.block_id = static_cast<int32_t>(batch.blockId);
     witness.batch_index = batch.batchIndex;
     witness.command_slot = static_cast<uint32_t>(index);
-    g_gpu_opaque_draw_state_frame_witnesses.push_back(witness);
+    detail::CallingRenderThreadState().GpuFrames.push_back(witness);
   }
 }
 
@@ -764,8 +699,8 @@ void CopyMatchingGpuOpaqueDrawStateWitness(uint64_t frame_epoch,
                                            uint16_t batch_index,
                                            VisualBlackTraceRecord &record)
 {
-  const auto it = std::find_if(g_gpu_opaque_draw_state_frame_witnesses.begin(),
-                               g_gpu_opaque_draw_state_frame_witnesses.end(),
+  const auto it = std::find_if(detail::CallingRenderThreadState().GpuFrames.begin(),
+                               detail::CallingRenderThreadState().GpuFrames.end(),
                                [&](const GpuOpaqueDrawStateWitness &witness)
                                {
                                  return witness.frame_epoch == frame_epoch &&
@@ -774,7 +709,7 @@ void CopyMatchingGpuOpaqueDrawStateWitness(uint64_t frame_epoch,
                                             static_cast<int32_t>(block_id) &&
                                         witness.batch_index == batch_index;
                                });
-  if (it == g_gpu_opaque_draw_state_frame_witnesses.end())
+  if (it == detail::CallingRenderThreadState().GpuFrames.end())
   {
     return;
   }
@@ -904,7 +839,7 @@ void CaptureGpuRangeWitness(const GreedyGpuPassCache &pass,
       record.renderer_pixel_voxel_hit_y == 52 &&
       record.renderer_pixel_voxel_hit_z == 75;
 
-  const GpuOpaqueDrawStateWitness &draw_state = g_gpu_opaque_draw_state_witness;
+  const GpuOpaqueDrawStateWitness &draw_state = detail::CallingRenderThreadState().GpuCurrent;
   if (exact_m483_gap && draw_state.valid &&
       draw_state.chunk_coord == chunk_coord &&
       draw_state.block_id == static_cast<int32_t>(block_id) &&
@@ -1265,16 +1200,9 @@ long long gLightPreviewShownToggles = 0;
 LightPreviewUniforms ComputeLightPreviewUniforms(const UWorld *world,
                                                  glm::ivec3 coord)
 {
-  struct State
-  {
-    bool shown{false};        // preview state actually used for drawing
-    bool raw{false};          // last raw policy answer
-    double last_change{-1e9}; // when `shown` last changed
-    double pending_since{-1.0};
-    double fade_start{-1.0};
-  };
-  thread_local std::unordered_map<glm::ivec3, State, IVec3Hash> states;
-  thread_local uint64_t last_epoch = UINT64_MAX;
+  using State=detail::LightPreviewState;
+  auto &states=detail::CallingRenderThreadState().PreviewStates();
+  auto &last_epoch=detail::CallingRenderThreadState().PreviewEpoch;
   LightPreviewUniforms out;
   if (!world)
   {
@@ -1871,10 +1799,10 @@ void CaptureTransparentPixelProbe(
         const auto *batch = cache.TryGetGreedyBatch(ref);
         if (!batch)
           continue;
-        const auto captured = g_cpu_bound_light_witnesses.find(
+        const auto captured = detail::CallingRenderThreadState().CpuWitnesses().find(
             {coord.x, coord.y, coord.z, ref.batchIndex, batch->blockId});
         const auto bound =
-            captured != g_cpu_bound_light_witnesses.end() &&
+            captured != detail::CallingRenderThreadState().CpuWitnesses().end() &&
                     captured->second.first == batch->renderLightBinding
                 ? captured->second.second
                 : nullptr;
@@ -4410,9 +4338,9 @@ void UGeometryEngine::ApplyGreedyChunkWeatherUniforms(
   // The base environment is copied once per streaming epoch into a scratch
   // object; only the weather fields below differ per chunk. Copying the whole
   // (string/vector holding) state for every drawn chunk allocated each time.
-  thread_local UWorld::EnvironmentState local_env;
-  thread_local uint64_t scratch_epoch = UINT64_MAX;
-  thread_local const UWorld *scratch_owner = nullptr;
+  auto &local_env=detail::CallingRenderThreadState().Environment();
+  auto &scratch_epoch=detail::CallingRenderThreadState().EnvironmentEpoch;
+  auto &scratch_owner=detail::CallingRenderThreadState().EnvironmentOwner;
   if (scratch_epoch != epoch || scratch_owner != WorldInstance.get())
   {
     local_env = WorldInstance->GetEnvironmentState();
@@ -4463,7 +4391,7 @@ UGeometryEngine::~UGeometryEngine()
   DestroyGreedyMeshBuffers();
   if (SectionLightOwner)
     SectionLightOwner->Reset();
-  g_cpu_bound_light_witnesses.clear();
+  detail::CallingRenderThreadState().CpuWitnesses().clear();
   BoundLightProbe_.reset();
   FluidMap().DestroyGpuResources();
   OpaqueDepthCapture.DestroyGpuResources();
@@ -4955,16 +4883,16 @@ static void ResetOpaqueDrawWitness()
   // This frame-local handoff joins an opaque draw snapshot to a later
   // post-transparent pixel/ray trace. Both the legacy M483 exact-target
   // witness and the bounded per-frame pixel-probe witness use this handoff.
-  g_gpu_opaque_draw_state_witness = {};
-  g_gpu_opaque_draw_state_frame_witnesses.clear();
-  g_capture_gpu_draw_state_for_pixel_probe = false;
-  g_capture_fluid_draw_witness_for_pixel_probe = false;
+  detail::CallingRenderThreadState().GpuCurrent = {};
+  detail::CallingRenderThreadState().GpuFrames.clear();
+  detail::CallingRenderThreadState().CaptureGpu = false;
+  detail::CallingRenderThreadState().CaptureFluid = false;
 }
 
 void UGeometryEngine::DrawCubeGeometry()
 {
   CUBA_ZONE("DrawCubeGeometry");
-  g_diagnostic_center_pixel_probe = DiagnosticPixelProbePending_;
+  detail::CallingRenderThreadState().DiagnosticCenterPixelProbe = DiagnosticPixelProbePending_;
   DiagnosticPixelProbePending_ = false;
   ResetOpaqueDrawWitness();
   auto t_begin = std::chrono::high_resolution_clock::now();
@@ -5271,7 +5199,7 @@ void UGeometryEngine::DrawCubeGeometry()
       if (periodic_pixel_probe || focus_change_pixel_probe ||
           screen_ray_pixel_probe || camera_band_peak_pixel_probe ||
           stalled_census_pixel_probe || visual_hole_edge_pixel_probe ||
-          g_diagnostic_center_pixel_probe)
+          detail::CallingRenderThreadState().DiagnosticCenterPixelProbe)
       {
         pixel_probe_capture.probe_id = render_probe_count;
         pixel_probe_capture.visual_hole_event_frame_epoch =
@@ -5283,7 +5211,7 @@ void UGeometryEngine::DrawCubeGeometry()
             (camera_band_peak_pixel_probe ? 1u << 3 : 0u) |
             (stalled_census_pixel_probe ? 1u << 4 : 0u) |
             (visual_hole_edge_pixel_probe ? 1u << 5 : 0u) |
-            (g_diagnostic_center_pixel_probe ? 1u << 6 : 0u));
+            (detail::CallingRenderThreadState().DiagnosticCenterPixelProbe ? 1u << 6 : 0u));
         const bool ray_grid_row_layout =
             screen_ray_aligned_capture || visual_hole_edge_pixel_probe;
         pixel_probe_capture.rows =
@@ -5292,7 +5220,7 @@ void UGeometryEngine::DrawCubeGeometry()
                 : (visual_hole_edge_pixel_probe
                        ? std::max(kScreenRayAlignedPixelRows, PixelProbeRows())
                        : PixelProbeRows());
-        if (g_diagnostic_center_pixel_probe)
+        if (detail::CallingRenderThreadState().DiagnosticCenterPixelProbe)
           pixel_probe_capture.rows = 1;
         pixel_probe_capture.screen_ray_aligned_rows = ray_grid_row_layout;
         if (camera_band_peak_pixel_probe)
@@ -5311,17 +5239,17 @@ void UGeometryEngine::DrawCubeGeometry()
     {
       UScopedPhase opaque_phase(&opaque_ms);
       CUBA_ZONE("Scene.OpaqueDraw");
-      g_capture_gpu_draw_state_for_pixel_probe =
+      detail::CallingRenderThreadState().CaptureGpu =
           pixel_probe_capture.probe_id != 0 &&
           PixelProbeGpuDrawStateWindowContains(camera->GetRenderPosition());
       CaptureBoundLight_ = pixel_probe_capture.probe_id != 0 &&
                            BoundSectionLightProbeRequested();
       BoundLightCaptures_ = 0;
-      g_cpu_bound_light_witnesses.clear();
+      detail::CallingRenderThreadState().CpuWitnesses().clear();
       DrawGreedyOpaqueBatches(draw.cache, opaqueCutoutRefs, vp,
                               camera->GetRenderPosition(), textures,
                               draw.meshRevision, draw.cullRevision);
-      g_capture_gpu_draw_state_for_pixel_probe = false;
+      detail::CallingRenderThreadState().CaptureGpu = false;
       CaptureBoundLight_ = false;
       {
         double cross_ms = 0.0;
@@ -5361,10 +5289,10 @@ void UGeometryEngine::DrawCubeGeometry()
                                         camera->GetRenderPosition(),
                                         WorldInstance->GetBlockRegistry(),
                                         textures};
-      g_capture_fluid_draw_witness_for_pixel_probe =
+      detail::CallingRenderThreadState().CaptureFluid =
           pixel_probe_capture.probe_id != 0;
       UGreedyTransparentPipeline::Draw(*this, tctx);
-      g_capture_fluid_draw_witness_for_pixel_probe = false;
+      detail::CallingRenderThreadState().CaptureFluid = false;
     }
     if (UJobStageTrace::VisualBlackTraceEnabled())
     {
@@ -5915,7 +5843,7 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
                              uint8_t pass_ordinal, uint8_t submit_path,
                              bool mdi_eligible)
 {
-  if (!g_capture_fluid_draw_witness_for_pixel_probe ||
+  if (!detail::CallingRenderThreadState().CaptureFluid ||
       !UJobStageTrace::VisualBlackTraceEnabled() ||
       !FluidRenderDiagnosticWindowContains(camera_position) ||
       pass_ordinal > 2 ||
@@ -5925,10 +5853,7 @@ void NoteFluidGpuDrawWitness(const GreedyGpuPassCache &cache,
     return;
   }
 
-  static thread_local std::array<uint64_t, 3> last_epoch{
-      std::numeric_limits<uint64_t>::max(),
-      std::numeric_limits<uint64_t>::max(),
-      std::numeric_limits<uint64_t>::max()};
+  auto &last_epoch=detail::CallingRenderThreadState().FluidEpochs;
   const size_t pass_slot = pass_ordinal;
   if (last_epoch[pass_slot] == frame_epoch)
   {
@@ -6393,7 +6318,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         uint32_t(batch.indexCountGl),
         uint32_t(batch.eboByteOffset / sizeof(uint32_t)),
         uint32_t(batch.vboByteOffset / sizeof(GreedyMeshVertex))};
-    g_cpu_bound_light_witnesses[{batch.chunkCoord.x, batch.chunkCoord.y,
+    detail::CallingRenderThreadState().CpuWitnesses()[{batch.chunkCoord.x, batch.chunkCoord.y,
                                  batch.chunkCoord.z, batch.batchIndex,
                                  batch.blockId}] = {binding, capture};
   };
@@ -6418,7 +6343,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     {
       NoteFluidGpuDrawWitness(cache, batch, camera_position,
                               WorldInstance->GetStreamingFrameEpoch(), mode,
-                              g_fluid_draw_witness_pass_ordinal, submit_path,
+                              detail::CallingRenderThreadState().FluidPassOrdinal, submit_path,
                               use_mdi);
     }
   };
@@ -6446,7 +6371,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
         }
         NoteFluidGpuDrawWitness(cache, batch, camera_position,
                                 WorldInstance->GetStreamingFrameEpoch(), mode,
-                                g_fluid_draw_witness_pass_ordinal, submit_path,
+                                detail::CallingRenderThreadState().FluidPassOrdinal, submit_path,
                                 use_mdi);
         break;
       }
@@ -6454,7 +6379,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   };
   const bool generic_gpu_draw_state_window =
       !transparentPass && mode == GreedyShaderMode::TransparentColor &&
-      g_capture_gpu_draw_state_for_pixel_probe && WorldInstance != nullptr;
+      detail::CallingRenderThreadState().CaptureGpu && WorldInstance != nullptr;
   glm::vec3 draw_witness_camera_position(0.0f);
   bool gpu_draw_witness_window = !transparentPass &&
                                  mode == GreedyShaderMode::TransparentColor &&
@@ -6488,7 +6413,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
   };
   const auto note_m483_draw_state = [&]()
   {
-    if (!g_gpu_opaque_draw_state_witness.valid ||
+    if (!detail::CallingRenderThreadState().GpuCurrent.valid ||
         !UJobStageTrace::VisualBlackTraceEnabled() || !WorldInstance)
     {
       return;
@@ -6496,9 +6421,9 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     VisualBlackTraceRecord trace{};
     trace.sample_kind = 17;
     trace.frame_epoch = WorldInstance->GetStreamingFrameEpoch();
-    trace.cx = g_gpu_opaque_draw_state_witness.chunk_coord.x;
-    trace.cy = g_gpu_opaque_draw_state_witness.chunk_coord.y;
-    trace.cz = g_gpu_opaque_draw_state_witness.chunk_coord.z;
+    trace.cx = detail::CallingRenderThreadState().GpuCurrent.chunk_coord.x;
+    trace.cy = detail::CallingRenderThreadState().GpuCurrent.chunk_coord.y;
+    trace.cz = detail::CallingRenderThreadState().GpuCurrent.chunk_coord.z;
     trace.camera_x =
         static_cast<int32_t>(std::floor(draw_witness_camera_position.x));
     trace.camera_y =
@@ -6510,11 +6435,11 @@ void UGeometryEngine::DrawGreedyGpuBatches(
     trace.renderer_pixel_voxel_hit_z = 75;
     trace.renderer_pixel_voxel_hit_block_id = 573;
     trace.renderer_pixel_voxel_mesh_ray_gpu_batch_index =
-        g_gpu_opaque_draw_state_witness.batch_index;
+        detail::CallingRenderThreadState().GpuCurrent.batch_index;
     trace.renderer_pixel_voxel_mesh_ray_gpu_command_slot =
-        g_gpu_opaque_draw_state_witness.command_slot;
+        detail::CallingRenderThreadState().GpuCurrent.command_slot;
     trace.renderer_pixel_voxel_mesh_ray_gpu_draw_state_match = 1;
-    CopyGpuOpaqueDrawStateWitness(g_gpu_opaque_draw_state_witness, trace);
+    CopyGpuOpaqueDrawStateWitness(detail::CallingRenderThreadState().GpuCurrent, trace);
     UJobStageTrace::NoteVisualBlack(trace);
   };
   if (use_mdi)
@@ -6652,7 +6577,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       if (capture_generic_draw_state)
       {
         CaptureGpuOpaqueDrawState(cache, i, 1, vp);
-        generic_draw_state = g_gpu_opaque_draw_state_witness;
+        generic_draw_state = detail::CallingRenderThreadState().GpuCurrent;
       }
       const bool gpu_range_submitted =
           [&] {
@@ -6664,7 +6589,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           }();
       if (has_draw_witness_batch)
       {
-        g_gpu_opaque_draw_state_witness.submitted = gpu_range_submitted;
+        detail::CallingRenderThreadState().GpuCurrent.submitted = gpu_range_submitted;
       }
       if (gpu_range_submitted)
       {
@@ -6696,12 +6621,12 @@ void UGeometryEngine::DrawGreedyGpuBatches(
           if (capture_generic_draw_state)
           {
             CaptureGpuOpaqueDrawState(cache, i, 2, vp);
-            generic_draw_state = g_gpu_opaque_draw_state_witness;
+            generic_draw_state = detail::CallingRenderThreadState().GpuCurrent;
           }
           cpu_range_submitted = store.SubmitIndirectCommands(cmds);
           if (has_draw_witness_batch)
           {
-            g_gpu_opaque_draw_state_witness.submitted = cpu_range_submitted;
+            detail::CallingRenderThreadState().GpuCurrent.submitted = cpu_range_submitted;
           }
         }
         if (cpu_command_count > 0 && cpu_range_submitted)
@@ -6746,7 +6671,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             if (capture_generic_draw_state)
             {
               CaptureGpuOpaqueDrawState(cache, k, 3, vp);
-              single_draw_state = g_gpu_opaque_draw_state_witness;
+              single_draw_state = detail::CallingRenderThreadState().GpuCurrent;
             }
             glDrawElementsBaseVertex(
                 GL_TRIANGLES, gpu.indexCountGl, GL_UNSIGNED_INT,
@@ -6762,7 +6687,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
             note_fluid_single_submit(gpu, 3u);
             if (has_draw_witness_batch && k == witness_batch_index)
             {
-              g_gpu_opaque_draw_state_witness.submitted = true;
+              detail::CallingRenderThreadState().GpuCurrent.submitted = true;
             }
             ++draw_cmds;
 #endif
@@ -6849,7 +6774,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       note_fluid_single_submit(gpu, 4u);
       if (witness_target)
       {
-        g_gpu_opaque_draw_state_witness.submitted = true;
+        detail::CallingRenderThreadState().GpuCurrent.submitted = true;
         note_m483_draw_state();
       }
       NoteGpuHotPathFallback();
@@ -6947,7 +6872,7 @@ void UGeometryEngine::DrawGreedyGpuBatches(
       note_fluid_single_submit(gpu, 5u);
       if (witness_target)
       {
-        g_gpu_opaque_draw_state_witness.submitted = true;
+        detail::CallingRenderThreadState().GpuCurrent.submitted = true;
         note_m483_draw_state();
       }
       NoteGpuHotPathFallback();
@@ -8502,18 +8427,17 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
     return;
   }
   const uint8_t previous_witness_pass_ordinal =
-      g_fluid_draw_witness_pass_ordinal;
-  if (g_capture_fluid_draw_witness_for_pixel_probe && WorldInstance)
+      detail::CallingRenderThreadState().FluidPassOrdinal;
+  if (detail::CallingRenderThreadState().CaptureFluid && WorldInstance)
   {
     if (mode == GreedyShaderMode::ShellDepthPrepass)
     {
-      g_fluid_draw_witness_pass_ordinal = 0;
+      detail::CallingRenderThreadState().FluidPassOrdinal = 0;
     }
     else if (mode == GreedyShaderMode::TransparentColor)
     {
-      static thread_local uint64_t last_witness_frame_epoch =
-          std::numeric_limits<uint64_t>::max();
-      static thread_local uint8_t color_pass_ordinal = 0;
+      auto &last_witness_frame_epoch=detail::CallingRenderThreadState().TransparentEpoch;
+      auto &color_pass_ordinal=detail::CallingRenderThreadState().TransparentOrdinal;
       const uint64_t frame_epoch = WorldInstance->GetStreamingFrameEpoch();
       if (last_witness_frame_epoch != frame_epoch)
       {
@@ -8522,11 +8446,11 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
       }
       color_pass_ordinal = static_cast<uint8_t>(
           std::min<unsigned int>(color_pass_ordinal + 1u, 2u));
-      g_fluid_draw_witness_pass_ordinal = color_pass_ordinal;
+      detail::CallingRenderThreadState().FluidPassOrdinal = color_pass_ordinal;
     }
     else
     {
-      g_fluid_draw_witness_pass_ordinal = 255;
+      detail::CallingRenderThreadState().FluidPassOrdinal = 255;
     }
   }
   const bool kAlphaCutout =
@@ -8534,7 +8458,7 @@ void UGeometryEngine::DrawPreparedTransparent(GreedyShaderMode mode,
   DrawGreedyGpuBatches(GreedyGpuTransparent, PreparedTransparentVp,
                        *PreparedTransparentTextures, kAlphaCutout, true, mode,
                        shellAlpha);
-  g_fluid_draw_witness_pass_ordinal = previous_witness_pass_ordinal;
+  detail::CallingRenderThreadState().FluidPassOrdinal = previous_witness_pass_ordinal;
   if (PreparedTransparentCache)
   {
     DrawPackedGpuMeshes(*PreparedTransparentCache,

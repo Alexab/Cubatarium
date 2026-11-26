@@ -3215,6 +3215,13 @@ cubatarium_add_test(NAME runtime_name_storage_test
 add_test(NAME runtime_name_storage_test COMMAND $<TARGET_FILE:runtime_name_storage_test>
     ${CMAKE_CURRENT_BINARY_DIR}/runtime-name-storage.json)
 set_tests_properties(runtime_name_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+cubatarium_add_test(NAME engine_thread_storage_test
+    SOURCES src/Test/EngineThreadStorageTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+add_test(NAME engine_thread_storage_test COMMAND $<TARGET_FILE:engine_thread_storage_test>
+    ${CMAKE_CURRENT_BINARY_DIR}/engine-thread-storage.json)
+set_tests_properties(engine_thread_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 endif()
 
 cubatarium_add_test(NAME worldgen_populate_parity_probe

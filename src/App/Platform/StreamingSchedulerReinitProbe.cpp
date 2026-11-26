@@ -4,6 +4,7 @@
 #include "Test/GenerationProducerRetirementFixture.h"
 #include "Test/PipelineRetainedStorageFixture.h"
 #include "Test/RuntimeNameStorageFixture.h"
+#include "Test/EngineThreadStorageFixture.h"
 
 namespace cutum {
 struct StreamingSchedulerReinitProbe {
@@ -79,6 +80,7 @@ struct StreamingSchedulerReinitProbe {
     }
     report["pipeline_retained_storage"]=RunPipelineRetainedStorageProbe();
     report["runtime_name_storage"]=RunRuntimeNameStorageProbe();
+    report["engine_thread_storage"]=RunEngineThreadStorageProbe();
     return report;
   }
 };

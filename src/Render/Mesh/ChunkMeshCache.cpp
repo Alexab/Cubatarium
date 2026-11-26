@@ -1,3 +1,4 @@
+#include "Render/Mesh/MeshPublicationThreadState.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "App/Platform/Log.h"
 #include "Blocks/BlockRegistry.h"
@@ -3231,9 +3232,9 @@ bool UChunkMeshCache::CanRefreshPublishedLight(
     const auto field = world.GetChunkManager().GetSectionLightField(coord);
     const auto revision = MeshRevisions.Current(coord);
     const auto field_revision = field ? field->GetRevision() : 0;
-    static thread_local const UChunkMeshCache *last_cache = nullptr;
-    static thread_local std::string last_state;
-    static thread_local uint64_t last_frame = 0;
+    auto &last_cache=detail::CallingMeshPublicationThreadState().LastCache;
+    auto &last_state=detail::CallingMeshPublicationThreadState().LastState;
+    auto &last_frame=detail::CallingMeshPublicationThreadState().LastFrame;
     std::ostringstream state;
     state << CaptureStore.WorldEpoch() << ':' << reason << ':' << revision
           << ':' << mesh.PublishRevs.geom_rev << ':' << field_revision;

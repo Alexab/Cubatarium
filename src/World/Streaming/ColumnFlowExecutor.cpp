@@ -1,3 +1,4 @@
+#include "World/Core/WorldThreadState.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
 #include "World/Streaming/ColumnDesiredStage.h"
 #include "World/Streaming/ColumnEmergeState.h"
@@ -374,7 +375,7 @@ const ColumnRecord &RecordForDecide(UWorld &world, glm::ivec2 column)
   {
     return *rec;
   }
-  thread_local ColumnRecord scratch{};
+  auto &scratch=detail::CallingWorldThreadState().FallbackRecord;
   scratch = {};
   scratch.resident = world.GetBlockWorld().GetChunkManager().HasChunk(
       glm::ivec3(column.x, 0, column.y));

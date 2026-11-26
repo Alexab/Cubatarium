@@ -7,6 +7,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include "Core/Jobs/PipelineAdmission.h"
 #include "WorldGen/Core/RuntimeNameStorage.h"
+#include "Core/Memory/EngineThreadStorage.h"
 #include <nlohmann/json.hpp>
 #include <condition_variable>
 #include <stdexcept>
@@ -26,10 +27,11 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
     std::vector<AllocatorSourcePacket> active,idle,post_task;
     std::vector<PipelineStoragePacket> storage;
     std::vector<RuntimeNameStoragePacket> names;
+    std::vector<EngineThreadStoragePacket> engine;
     std::vector<bool> passive_ok,passive_fresh,idle_clean,observer_restored;
     AllocatorSourcePhase *active_phase{},*idle_phase{};
     size_t active_ready{},idle_ready{},post_ready{};bool release_active{},release_idle{},release_post{},disabled{};int mode{};
-    explicit Bridge(size_t n):active(n),idle(n),post_task(n),storage(n),names(n),passive_ok(n),passive_fresh(n),idle_clean(n),observer_restored(n){
+    explicit Bridge(size_t n):active(n),idle(n),post_task(n),storage(n),names(n),engine(n),passive_ok(n),passive_fresh(n),idle_clean(n),observer_restored(n){
       for(auto &p:active)p.nodes.reserve(128);for(auto &p:idle)p.nodes.reserve(128);
       for(auto &p:post_task)p.nodes.reserve(128);
     }
@@ -149,10 +151,10 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
       PipelineAllocatorThreadView state;bool clean=source_clear;
       if(refusal.set)refusal.set(true);
       try{if(clean){state=InspectPipelineCallingThreadAllocators(census);census.ExportInto(bridge.post_task[i],post_phase,i+1,state.initialized && !state.resident_fields);
-        ExportPipelineStorage(bridge.storage[i],storage_phase,i);ExportRuntimeNameStorage(bridge.names[i],storage_phase,i);}}
+        ExportPipelineStorage(bridge.storage[i],storage_phase,i);ExportRuntimeNameStorage(bridge.names[i],storage_phase,i);ExportEngineThreadStorage(bridge.engine[i],storage_phase,i,true,true);}}
       catch(...){clean=false;}
       if(refusal.set)refusal.set(false);clean=clean && (!refusal.attempts || !refusal.attempts());
-      if(!clean){bridge.post_task[i].supported=false;bridge.storage[i].supported=false;bridge.names[i].supported=false;}
+      if(!clean){bridge.post_task[i].supported=false;bridge.storage[i].supported=false;bridge.names[i].supported=false;bridge.engine[i].supported=false;}
       std::unique_lock lock(bridge.mutex);++bridge.post_ready;bridge.cv.notify_all();
       if(!bridge.cv.wait_for(lock,std::chrono::seconds(10),[&]{return bridge.release_post;}))std::abort();
     });
@@ -199,8 +201,22 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
     wrong_name=bridge.names.back();wrong_name.source.layout.flag_entry+=1;
     require(name_storage.supported && name_controls && name_storage.requested==name_source_total &&
       !JoinRuntimeNameStorage(storage_phase,invalid_names,true,true).supported,"complete actual worker name sources and negative controls");
+    std::vector<const EngineThreadStoragePacket*> engine_packets;size_t engine_source_total=0;
+    for(size_t i=0;i<workers;++i){engine_packets.push_back(&bridge.engine[i]);engine_source_total+=bridge.engine[i].source.Total();
+      require(bridge.engine[i].thread==bridge.names[i].thread,"same actual worker engine/name source views");}
+    const auto engine_storage=JoinEngineThreadStorage(storage_phase,engine_packets,true,true);
+    auto engine_missing=engine_packets;engine_missing.pop_back();auto engine_aliases=engine_packets;
+    for(int alias=0;alias<64;++alias)engine_aliases.push_back(engine_packets[0]);
+    const auto engine_dedup=JoinEngineThreadStorage(storage_phase,engine_aliases,true,true);
+    auto bad_engine=bridge.engine.back();bad_engine.epoch+=1;auto engine_invalid=engine_packets;engine_invalid.back()=&bad_engine;
+    const bool engine_controls=engine_storage.supported && engine_storage.requested==engine_source_total &&
+      !JoinEngineThreadStorage(storage_phase,engine_missing,true,true).supported && !JoinEngineThreadStorage(storage_phase,engine_invalid,true,true).supported &&
+      !JoinEngineThreadStorage(storage_phase,engine_packets,false,true).supported && !JoinEngineThreadStorage(storage_phase,engine_packets,true,false).supported &&
+      engine_dedup.supported && engine_dedup.requested==engine_source_total;
+    require(engine_controls,"actual worker engine source phase/domain/alias controls");
     storage_phase.Close();const bool storage_closed=!JoinPipelineStorage(storage_phase,storage_packets,true,true,true).supported;
     const bool names_closed=!JoinRuntimeNameStorage(storage_phase,name_packets,true,true).supported;
+    const bool engine_closed=!JoinEngineThreadStorage(storage_phase,engine_packets,true,true).supported;
     post_phase.Close();
     {std::lock_guard lock(bridge.mutex);bridge.release_post=true;bridge.cv.notify_all();}
     require(AllocatorOwnerCensus::WaitSchedulerIdle(scheduler,std::chrono::seconds(10)),"allocator post-task probes idle");
@@ -229,6 +245,7 @@ inline nlohmann::json RunAllocatorWorkerThreadProbe(AllocatorProbeRefusal refusa
       {"pipeline_storage_requests",retained_rows},{"pipeline_storage_additional",retained.additional_requests},
       {"pipeline_storage_controls",storage_controls && storage_closed},{"pipeline_allocator_coverage",allocator_coverage},
       {"name_storage_additional",name_storage.requested},{"name_storage_controls",name_controls && names_closed},
+      {"engine_storage_additional",engine_storage.requested},{"engine_storage_controls",engine_controls && engine_closed},
       {"global_work_slots_active",global_active_slots},{"global_work_slots_after",global_after_slots},
       {"exclusive_work_slot_domain",exclusive_work_slot_domain},
       {"all_idle_scopes_restored",idle_clean},{"passive_query_ok",passive},{"outcomes_correct",outcomes},{"debt0",debt0},

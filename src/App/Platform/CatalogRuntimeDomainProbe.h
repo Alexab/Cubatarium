@@ -19,6 +19,7 @@
 #include "WorldGen/Core/AllocatorOwnerCensus.h"
 #include "WorldGen/Core/PipelineAllocatorThreadView.h"
 #include "WorldGen/Core/RuntimeNameStorage.h"
+#include "Core/Memory/EngineThreadStorage.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -65,6 +66,8 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   out.World(launcher.world.get());out.Geometry(launcher.geometry.get());
   out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
   const auto content=CaptureWorldGenContentSnapshot();out.Content(content);out.CallingThread();out.ActiveDirectory();
+  InspectCallingThreadRenderWitnessRoots(out);
+  const auto engine_storage=InspectCallingThreadEngineStorage(true,true);
   const auto pipeline_allocator_view=InspectPipelineCallingThreadAllocators(out.AllocationOwners);
   const auto allocation_owners=out.AllocationOwners.Result(true);
   const auto census=out.Catalogs();Json pools=Json::array(),roles=Json::array();
@@ -104,6 +107,12 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"name_requests",names.environment_names},{"merge_requests",names.merge_name},{"requested",names.Total()},
     {"inline_shells_already_counted",names.layout.environment_inline+names.layout.merge_inline},
     {"whole_runtime_complete",false},{"scope","Read-only actual calling-thread cache capacities;foreign TLS and total process remain separate."}};
+  report["engine_thread_storage"]={{"schema","engine-calling-thread-storage.v1"},{"status",engine_storage.supported?"PASS":"UNSUPPORTED"},
+    {"inline_bytes",engine_storage.layout.inline_bytes},{"widths",engine_storage.layout.widths},{"requests",engine_storage.requests},
+    {"requested",engine_storage.Total()},{"cpu_entries",engine_storage.cpu_entries},{"capture_owners",engine_storage.capture_owners},
+    {"binding_handles",engine_storage.binding_handles},{"gpu_capacity",engine_storage.gpu_capacity},{"preview_entries",engine_storage.preview_entries},
+    {"preview_buckets",engine_storage.preview_buckets},{"celestial_capacity",engine_storage.celestial_capacity},{"whole_runtime_complete",false},
+    {"scope","Actual calling-thread caches and same-graph publication binding roots;foreign TLS/window/CRT/GPU/process remain separate."}};
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){

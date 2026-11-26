@@ -42,6 +42,7 @@
 #include "World/Core/FluidColumnSurfaceQuery.h"
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
+#include "World/Core/WorldThreadState.h"
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/JobStageTrace.h"
@@ -16160,17 +16161,9 @@ bool UWorld::HasNearbyFluidSurface(glm::ivec3 cameraBlock,
   // Called 4+ times per frame with the same arguments (fog pass, streaming
   // pressure, mesh emerge, ...); every call scans a column grid through the
   // block registry (~7% of the main thread). Memoize per streaming epoch.
-  struct Memo
-  {
-    bool valid{false};
-    const UWorld *owner{nullptr};
-    uint64_t epoch{0};
-    glm::ivec3 block{0};
-    int radius{0};
-    bool value{false};
-  };
-  thread_local Memo memo[4];
-  thread_local size_t next_slot = 0;
+  using Memo=detail::FluidSurfaceMemo;
+  auto &memo=detail::CallingWorldThreadState().FluidMemos;
+  auto &next_slot=detail::CallingWorldThreadState().NextFluidMemo;
   for (const Memo &entry : memo)
   {
     if (entry.valid && entry.owner == this &&
