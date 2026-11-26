@@ -18,6 +18,7 @@
 #include "WorldGen/Core/CatalogConstructionComposition.h"
 #include "WorldGen/Core/AllocatorOwnerCensus.h"
 #include "WorldGen/Core/PipelineAllocatorThreadView.h"
+#include "WorldGen/Core/RuntimeNameStorage.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -97,6 +98,12 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"calling_pipeline_initialized",pipeline_allocator_view.initialized},{"calling_pipeline_builds",pipeline_allocator_view.builds},
     {"whole_runtime_complete",false},
     {"scope","Actual supplied E11 worlds/managers/free-list/schedulers/completed-buffer and direct calling-thread allocator slots;ordinary main-world field source profile. Active worker/caller/TLS scratch/weak-only external source views and total process coverage remain separate. Inspector owns no strong/weak source mirrors."}};
+  const auto names=InspectCallingThreadRuntimeNames();
+  report["runtime_name_storage"]={{"schema","runtime-name-calling-thread.v1"},{"status",names.supported?"PASS":"UNSUPPORTED"},
+    {"flags",names.flags},{"flag_capacity",names.flag_capacity},{"vector_requests",names.environment_vector},
+    {"name_requests",names.environment_names},{"merge_requests",names.merge_name},{"requested",names.Total()},
+    {"inline_shells_already_counted",names.layout.environment_inline+names.layout.merge_inline},
+    {"whole_runtime_complete",false},{"scope","Read-only actual calling-thread cache capacities;foreign TLS and total process remain separate."}};
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){

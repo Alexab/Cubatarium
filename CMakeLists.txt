@@ -3207,6 +3207,14 @@ cubatarium_add_test(NAME pipeline_retained_storage_test
 add_test(NAME pipeline_retained_storage_test COMMAND $<TARGET_FILE:pipeline_retained_storage_test>
     ${CMAKE_CURRENT_BINARY_DIR}/pipeline-retained-storage.json)
 set_tests_properties(pipeline_retained_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+cubatarium_add_test(NAME runtime_name_storage_test
+    SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES} src/Test/RuntimeNameStorageTest.cpp
+    DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+    LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
+    WIN32_LIBRARIES dbghelp)
+add_test(NAME runtime_name_storage_test COMMAND $<TARGET_FILE:runtime_name_storage_test>
+    ${CMAKE_CURRENT_BINARY_DIR}/runtime-name-storage.json)
+set_tests_properties(runtime_name_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 endif()
 
 cubatarium_add_test(NAME worldgen_populate_parity_probe

@@ -84,7 +84,16 @@ public:
   void PopulateTextureBaseStorage(UTextureBaseStorage &out) const;
 
   bool HasBlockId(BlockId id) const;
-  const std::string *GetTypeNameById(BlockId id) const;
+  const std::string *GetTypeNameById(BlockId id) const
+  {
+    auto &cached_name=CallingThreadMutableTypeName();
+    std::shared_lock lock(CatalogMutex);
+    const auto it=IdToName.find(id);
+    if(it==IdToName.end())return nullptr;
+    cached_name=it->second;return &cached_name;
+  }
+  // Calling-thread borrowed source;no catalog lookup or publication is made.
+  static const std::string &CallingThreadTypeNameForStorage() noexcept {return CallingThreadMutableTypeName();}
 
   const std::vector<MergedCubeDesc> &GetCubeDescriptors() const
   {
@@ -119,6 +128,8 @@ public:
   }
 
 private:
+  friend struct RuntimeNameStorageProbe;
+  static std::string &CallingThreadMutableTypeName() noexcept {thread_local std::string name;return name;}
   struct PendingBlock
   {
     std::string RegistryName;

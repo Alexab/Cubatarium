@@ -6,11 +6,20 @@
 #include <string>
 #include <string_view>
 #include <vector>
+#include <new>
+#include <stdexcept>
 
 namespace cutum
 {
+namespace detail {
+struct EnvironmentFlagEntry {std::string name;bool value;};
+using EnvironmentFlagCache=std::vector<EnvironmentFlagEntry>;
+inline EnvironmentFlagCache &CallingThreadEnvironmentFlagCache() noexcept {
+  thread_local EnvironmentFlagCache cache;return cache;
+}
+}
 inline constexpr size_t EnvironmentFlagCacheInlineBytes() noexcept
-{return sizeof(std::vector<std::string>);}
+{return sizeof(detail::EnvironmentFlagCache);}
 
 /// Treat common textual false values as disabled for environment feature flags.
 /// In particular, setting a flag to "0" must not enable diagnostic work.
@@ -76,14 +85,9 @@ inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
   {
     return false;
   }
-  struct Entry
-  {
-    std::string name;
-    bool value;
-  };
-  thread_local std::vector<Entry> cache;
+  auto &cache=detail::CallingThreadEnvironmentFlagCache();
   static_assert(sizeof(cache)==EnvironmentFlagCacheInlineBytes());
-  for (const Entry &entry : cache)
+  for (const auto &entry : cache)
   {
     if (entry.name == name)
     {
@@ -91,7 +95,11 @@ inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
     }
   }
   const bool value = IsEnvironmentFlagEnabledUncached(name);
-  cache.push_back(Entry{name, value});
+  // Caching is optional. Preserve the computed value and existing entries
+  // when a string/vector request cannot be admitted inside this noexcept API.
+  try {cache.push_back(detail::EnvironmentFlagEntry{name,value});}
+  catch(const std::bad_alloc &) {}
+  catch(const std::length_error &) {}
   return value;
 }
 

@@ -711,17 +711,4 @@ bool UBlockMergeRegistry::HasBlockId(BlockId id) const
   return IdToName.find(id) != IdToName.end();
 }
 
-const std::string *UBlockMergeRegistry::GetTypeNameById(BlockId id) const
-{
-  thread_local std::string cached_name;
-  std::shared_lock lock(CatalogMutex);
-  const auto it = IdToName.find(id);
-  if (it != IdToName.end())
-  {
-    cached_name = it->second;
-    return &cached_name;
-  }
-  return nullptr;
-}
-
 } // namespace cutum
