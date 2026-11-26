@@ -1,4 +1,5 @@
 #pragma once
+#include "App/Platform/IUPlatformWindow.h"
 
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "App/Core.h"
@@ -93,6 +94,7 @@ struct CatalogLauncherRootsView
   const std::shared_ptr<UGeometryEngine> &geometry;
   const std::shared_ptr<UCore> *core{};
   const std::shared_ptr<UApplication> *application{};
+  const IUPlatformWindow *window{};
 };
 inline void InspectWorldPackedBuffers(const UWorld &world, TerrainGpuBufferCensus &out)
 {
@@ -516,6 +518,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   TerrainGpuBufferCensus terrainBuffers;
   TerrainGpuBufferCensus actorBuffers;
   TerrainGpuBufferCensus geometryBuffers;
+  TerrainGpuBufferCensus effectsBuffers;
   RenderImageCensus renderImages;
   if (launcher.cubes)
     launcher.cubes->InspectRenderImages(renderImages);
@@ -526,6 +529,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     geometry->InspectTerrainGpuBuffers(terrainBuffers);
     geometry->InspectActorGpuBuffers(actorBuffers);
     geometry->InspectGeometryGpuBuffers(geometryBuffers);
+    geometry->InspectEffectsGpuBuffers(effectsBuffers);
     geometry->InspectRenderImages(renderImages);
   }
   for (const auto *world : out.member_worlds)
@@ -545,8 +549,11 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   application.InspectActorGpuBuffers(actorBuffers);
   report["actor_gpu_buffers"] = DescribeActorGpuBuffers(actorBuffers.Read());
   report["geometry_gpu_buffers"] = DescribeGeometryGpuBuffers(geometryBuffers.Read());
+  if (launcher.window)
+    launcher.window->InspectFlightCaptureGpuBuffers(effectsBuffers);
+  report["effects_gpu_buffers"] = DescribeEffectsGpuBuffers(effectsBuffers.Read());
   report["selected_gpu_buffers"] = DescribeSelectedGpuBuffers(
-      {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers});
+      {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers});
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(driverMemory);

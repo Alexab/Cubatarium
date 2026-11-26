@@ -25,7 +25,7 @@ enum class TerrainGpuBufferRole
   GeometryCubeVertices, GeometryCubeIndices, GeometryCubeInstances,
   GeometryFaceVertices, GeometryFaceIndices, GeometryFaceInstances,
   GeometryPreviewVertices, GeometryPreviewIndices, GeometryOutlineVertices, GeometryOutlineIndices,
-  GeometryCrosshairVertices, Count
+  GeometryCrosshairVertices, SkyGradient, BlockCracks, BlockDebris, InfluenceLines, WeatherParticles, WindowCapture, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
@@ -43,7 +43,7 @@ inline constexpr std::array TerrainGpuBufferRoleNames{
     "geometry_cube_vertices", "geometry_cube_indices", "geometry_cube_instances",
     "geometry_face_vertices", "geometry_face_indices", "geometry_face_instances",
     "geometry_preview_vertices", "geometry_preview_indices", "geometry_outline_vertices", "geometry_outline_indices",
-    "geometry_crosshair_vertices"};
+    "geometry_crosshair_vertices", "sky_gradient", "block_cracks", "block_debris", "influence_lines", "weather_particles", "window_capture"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
 static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint64_t>::digits);
 

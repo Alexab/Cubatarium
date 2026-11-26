@@ -1,4 +1,6 @@
 #include "Render/Engine/SkyGradientPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 
 #include "Core/Memory/NativeThreadStack.h"
 #include "Render/Engine/RenderImageStorage.h"
@@ -21,6 +23,11 @@ void USkyGradientPass::InspectRenderImages(RenderImageCensus &out) const
   out.Add(RenderImageRole::CloudField, GL_TEXTURE_2D, WeatherFieldTexture);
 }
 
+void USkyGradientPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::SkyGradient, SkyVbo);
+}
+
 namespace
 {
 constexpr int kAttrPos = 0;
@@ -40,11 +47,12 @@ bool USkyGradientPass::EnsureBuffers()
   {
     return true;
   }
+  const GlVertexBufferScope restore;
   glGenVertexArrays(1, &SkyVao);
   glGenBuffers(1, &SkyVbo);
   if (SkyVao == 0 || SkyVbo == 0)
   {
-    DestroyBuffers();
+    RetireVertexBuffers(SkyVao, {&SkyVbo});
     return false;
   }
   glBindVertexArray(SkyVao);
@@ -57,8 +65,11 @@ bool USkyGradientPass::EnsureBuffers()
   glEnableVertexAttribArray(kAttrTexCoord);
   glVertexAttribPointer(kAttrTexCoord, 2, GL_FLOAT, GL_FALSE,
                         5 * sizeof(GLfloat), (void *)(3 * sizeof(GLfloat)));
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    RetireVertexBuffers(SkyVao, {&SkyVbo});
+    return false;
+  }
   return true;
 }
 
@@ -71,16 +82,7 @@ void USkyGradientPass::DestroyBuffers()
   }
   WeatherFieldResolution = 0;
   WeatherFieldPixels.clear();
-  if (SkyVbo != 0)
-  {
-    glDeleteBuffers(1, &SkyVbo);
-    SkyVbo = 0;
-  }
-  if (SkyVao != 0)
-  {
-    glDeleteVertexArrays(1, &SkyVao);
-    SkyVao = 0;
-  }
+  RetireVertexBuffers(SkyVao, {&SkyVbo});
 }
 
 bool USkyGradientPass::UpdateWeatherFieldTexture(const UWorld &world,

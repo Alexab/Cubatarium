@@ -23,6 +23,7 @@ class UBlockBreakFxPass : public IUInfluenceEventSink
 public:
   bool InitShaders(const std::shared_ptr<UShaderManager> &shader_manager);
   void DestroyGpuResources();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   /// Spawns hit/burst debris from break-session transitions, then draws.
   void UpdateAndRender(UWorld &world, float dt_seconds,
@@ -32,7 +33,9 @@ public:
   void OnInfluenceEvent(const InfluenceEvent &event) override;
 
 private:
+  friend struct EffectsGpuStorageProbe;
   bool EnsureGpu();
+  void DestroyBuffers();
   void SyncFromWorld(UWorld &world);
   void ApplyDigProgress(glm::ivec3 block_pos, float progress);
   void NotifyDigEnded(bool completed);

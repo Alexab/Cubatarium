@@ -42,6 +42,7 @@ struct RejectUpload
   }
   ~RejectUpload() { __glewBufferData = Original; Active = nullptr; }
   std::array<GLuint, 3> observed{};
+  GLuint packBuffer{};
 
 private:
   PFNGLBUFFERDATAPROC Original;
@@ -55,6 +56,7 @@ private:
     {
       test.observed = {GLuint(Binding(GL_VERTEX_ARRAY_BINDING)), GLuint(Binding(GL_ARRAY_BUFFER_BINDING)),
                        GLuint(Binding(GL_ELEMENT_ARRAY_BUFFER_BINDING))};
+      test.packBuffer = GLuint(Binding(GL_PIXEL_PACK_BUFFER_BINDING));
       bytes = -1;
     }
     test.Original(target, bytes, source, usage);

@@ -13,6 +13,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
 #include <optional>
+#include <filesystem>
+#include <nlohmann/json_fwd.hpp>
 #include <unordered_map>
 
 namespace cutum
@@ -26,6 +28,7 @@ class UInputManager;
 class UApplication;
 class UBlockInputController;
 class UFlightCaptureService;
+struct FlightCaptureGpuCheckpoint;
 
 class UWindowManager
 {
@@ -35,7 +38,8 @@ public:
 
   bool Initialize(int width = 1280, int height = 720,
                   const char *title = "Cubatarium", bool visible = true);
-  void Run();
+  void Run(FlightCaptureGpuCheckpoint *captureCheckpoint = nullptr);
+  void InspectFlightCaptureGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void SetStopPredicate(std::function<bool()> predicate);
   /// Synthetic held keys for headless autopilot (OR'd with real keyboard).
   void SetAutopilotKey(KeyCode key, bool held);
@@ -132,6 +136,10 @@ private: // Instances of core systems
   std::shared_ptr<UApplication> Application;
 
   std::unique_ptr<UBlockInputController> BlockInput;
+  friend struct WindowCaptureGpuStorageProbe;
+  bool QueueFlightCapture(const std::filesystem::path &path, uint32_t index,
+                          float cameraX, float cameraY, GLenum source, nlohmann::json receipt);
+  void StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint = nullptr);
   std::unique_ptr<UFlightCaptureService> FlightCapture;
   std::optional<unsigned> PendingDiagnosticCapture;
   unsigned DiagnosticCapturesQueued{0};

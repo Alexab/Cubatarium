@@ -1,4 +1,5 @@
 #include "App/Platform/WindowManager.h"
+#include "App/Platform/FlightCaptureGpuCheckpoint.h"
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
@@ -145,6 +146,12 @@ public:
 
   ~UFlightCaptureService() { Shutdown(); }
 
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+  {
+    for (const PboSlot &slot : PboSlots)
+      out.Add(TerrainGpuBufferRole::WindowCapture, slot.Buffer);
+  }
+
   bool HasPendingGpuReadback() const
   {
     return std::any_of(PboSlots.begin(), PboSlots.end(),
@@ -180,34 +187,12 @@ public:
         continue;
       }
 
-      if (slot.Payload.Pixels.empty())
+      if (!CopyPixels(slot))
       {
-        GLint previous_pack_buffer = 0;
-        glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
-        const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
-                                  static_cast<size_t>(slot.Payload.Height) * 4u;
-        const auto *mapped =
-            static_cast<const unsigned char *>(glMapBufferRange(
-                GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
-                GL_MAP_READ_BIT));
-        bool copied = false;
-        if (mapped)
-        {
-          slot.Payload.Pixels.assign(mapped, mapped + byte_count);
-          copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
-        }
-        glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                     static_cast<GLuint>(previous_pack_buffer));
-
-        if (!copied)
-        {
-          CubatariumLogInfo("FlightCapture",
-                            "GPU readback map failed index=" +
-                                std::to_string(slot.Payload.Index));
-          ReleaseSlot(slot);
-          continue;
-        }
+        CubatariumLogInfo("FlightCapture", "GPU readback copy failed index=" +
+                                            std::to_string(slot.Payload.Index));
+        ReleaseSlot(slot);
+        continue;
       }
       // A completed diagnostic frame remains owned by its bounded PBO slot
       // while the encoder is full. QueueImage does not move on rejection.
@@ -230,7 +215,7 @@ public:
                     GLenum source_buffer,
                     nlohmann::json receipt = nullptr)
   {
-    if (!window || !EnsurePboBuffers())
+    if (!window)
     {
       return false;
     }
@@ -256,38 +241,45 @@ public:
     {
       return false;
     }
-    const size_t byte_count =
-        static_cast<size_t>(width) * static_cast<size_t>(height) * 4u;
-    if (byte_count >
-        static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()))
+    const auto rowBytes = uint64_t(width) * 4;
+    const auto pngIntMax = uint64_t(std::numeric_limits<int>::max());
+    // The PNG encoder accumulates signed-byte filter scores and includes one filter byte per row.
+    if (rowBytes > pngIntMax / 128 || (rowBytes + 1) * uint64_t(height) > pngIntMax ||
+        rowBytes * uint64_t(height) > uint64_t(std::numeric_limits<GLsizeiptr>::max()))
     {
       return false;
     }
+    const auto byte_count = static_cast<GLsizeiptr>(rowBytes * uint64_t(height));
+    Frame payload{width, height, path, index, camera_x, camera_y, source_buffer, {}, std::move(receipt)};
 
-    GLint previous_read_framebuffer = 0;
-    GLint previous_read_buffer = GL_BACK;
-    GLint previous_pack_alignment = 4;
-    GLint previous_pack_buffer = 0;
-    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &previous_read_framebuffer);
-    glGetIntegerv(GL_READ_BUFFER, &previous_read_buffer);
-    glGetIntegerv(GL_PACK_ALIGNMENT, &previous_pack_alignment);
-    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
-
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-    glReadBuffer(source_buffer);
-    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    const PackCaptureScope pack(source_buffer);
+    const bool cold = !slot->Buffer;
+    if (cold)
+      glGenBuffers(1, &slot->Buffer);
+    if (!slot->Buffer)
+      return false;
     glBindBuffer(GL_PIXEL_PACK_BUFFER, slot->Buffer);
-    glBufferData(GL_PIXEL_PACK_BUFFER, static_cast<GLsizeiptr>(byte_count),
-                 nullptr, GL_STREAM_READ);
+    if (slot->StoreBytes != byte_count)
+    {
+      glBufferData(GL_PIXEL_PACK_BUFFER, byte_count, nullptr, GL_STREAM_READ);
+      if (glGetError() != GL_NO_ERROR)
+      {
+        slot->StoreBytes = 0;
+        if (cold)
+        {
+          glDeleteBuffers(1, &slot->Buffer);
+          slot->Buffer = 0;
+        }
+        return false;
+      }
+      slot->StoreBytes = byte_count;
+    }
+    else if (glGetError() != GL_NO_ERROR)
+      return false;
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if (glGetError() != GL_NO_ERROR)
+      return false;
     GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-
-    glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                 static_cast<GLuint>(previous_pack_buffer));
-    glPixelStorei(GL_PACK_ALIGNMENT, previous_pack_alignment);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER,
-                      static_cast<GLuint>(previous_read_framebuffer));
-    glReadBuffer(static_cast<GLenum>(previous_read_buffer));
 
     if (!fence)
     {
@@ -299,8 +291,7 @@ public:
       return false;
     }
 
-    slot->Payload = Frame{width,    height,   path,          index,
-                          camera_x, camera_y, source_buffer, {}, std::move(receipt)};
+    slot->Payload = std::move(payload);
     slot->Fence = fence;
     slot->Busy = true;
     return true;
@@ -333,14 +324,12 @@ public:
 
     for (PboSlot &slot : PboSlots)
     {
-      if (slot.Fence)
-      {
-        glDeleteSync(slot.Fence);
-        slot.Fence = nullptr;
-      }
+      ReleaseSlot(slot);
+      if (slot.Buffer)
+        glDeleteBuffers(1, &slot.Buffer);
+      slot.Buffer = 0;
+      slot.StoreBytes = 0;
     }
-    glDeleteBuffers(static_cast<GLsizei>(PboSlots.size()), PboBuffers.data());
-    PboBuffers.fill(0);
     Stopped = true;
   }
 
@@ -361,6 +350,7 @@ private:
   struct PboSlot
   {
     GLuint Buffer{};
+    GLsizeiptr StoreBytes{};
     GLsync Fence{};
     Frame Payload;
     bool Busy{};
@@ -370,30 +360,65 @@ private:
   static constexpr size_t KMaxQueuedImages = 4;
   size_t EncoderBackpressureCount{0};
 
-  bool EnsurePboBuffers()
+  struct PackCaptureScope
   {
-    if (std::all_of(PboBuffers.begin(), PboBuffers.end(),
-                    [](GLuint buffer) { return buffer != 0; }))
+    static constexpr std::array<GLenum, 4> Fields{
+        GL_PACK_ALIGNMENT, GL_PACK_ROW_LENGTH, GL_PACK_SKIP_ROWS, GL_PACK_SKIP_PIXELS};
+    std::array<GLint, Fields.size()> Previous{};
+    GLint ReadFramebuffer{}, DefaultReadBuffer{}, PackBuffer{};
+
+    explicit PackCaptureScope(GLenum source)
     {
-      return true;
-    }
-    if (std::any_of(PboBuffers.begin(), PboBuffers.end(),
-                    [](GLuint buffer) { return buffer != 0; }))
-    {
-      glDeleteBuffers(static_cast<GLsizei>(PboBuffers.size()),
-                      PboBuffers.data());
-      PboBuffers.fill(0);
-      for (PboSlot &slot : PboSlots)
+      glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &ReadFramebuffer);
+      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &PackBuffer);
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+      glGetIntegerv(GL_READ_BUFFER, &DefaultReadBuffer);
+      glReadBuffer(source);
+      for (size_t i = 0; i < Fields.size(); ++i)
       {
-        slot.Buffer = 0;
+        glGetIntegerv(Fields[i], &Previous[i]);
+        glPixelStorei(Fields[i], i == 0 ? 1 : 0);
       }
     }
-    glGenBuffers(static_cast<GLsizei>(PboBuffers.size()), PboBuffers.data());
-    for (size_t i = 0; i < PboSlots.size(); ++i)
+    ~PackCaptureScope()
     {
-      PboSlots[i].Buffer = PboBuffers[i];
+      for (size_t i = 0; i < Fields.size(); ++i)
+        glPixelStorei(Fields[i], Previous[i]);
+      glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(PackBuffer));
+      glReadBuffer(static_cast<GLenum>(DefaultReadBuffer));
+      glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(ReadFramebuffer));
     }
-    return PboBuffers[0] != 0 && PboBuffers[1] != 0 && PboBuffers[2] != 0;
+  };
+
+  static bool CopyPixels(PboSlot &slot)
+  {
+    if (!slot.Payload.Pixels.empty())
+      return true;
+    if (slot.StoreBytes <= 0)
+      return false;
+    std::vector<unsigned char> pixels;
+    try
+    {
+      pixels.resize(static_cast<size_t>(slot.StoreBytes));
+    }
+    catch (const std::bad_alloc &)
+    {
+      return false;
+    }
+    GLint previous = 0;
+    glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
+    const void *mapped = glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, slot.StoreBytes, GL_MAP_READ_BIT);
+    bool copied = false;
+    if (mapped)
+    {
+      std::memcpy(pixels.data(), mapped, pixels.size());
+      copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
+    }
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(previous));
+    if (copied)
+      slot.Payload.Pixels = std::move(pixels);
+    return copied;
   }
 
   void ReleaseSlot(PboSlot &slot)
@@ -442,28 +467,7 @@ private:
         ReleaseSlot(slot);
         continue;
       }
-      bool copied = !slot.Payload.Pixels.empty();
-      if (!copied)
-      {
-        GLint previous_pack_buffer = 0;
-        glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &previous_pack_buffer);
-        glBindBuffer(GL_PIXEL_PACK_BUFFER, slot.Buffer);
-        const size_t byte_count = static_cast<size_t>(slot.Payload.Width) *
-                                  static_cast<size_t>(slot.Payload.Height) * 4u;
-        const auto *mapped =
-            static_cast<const unsigned char *>(glMapBufferRange(
-                GL_PIXEL_PACK_BUFFER, 0, static_cast<GLsizeiptr>(byte_count),
-                GL_MAP_READ_BIT));
-
-        if (mapped)
-        {
-          slot.Payload.Pixels.assign(mapped, mapped + byte_count);
-          copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
-        }
-        glBindBuffer(GL_PIXEL_PACK_BUFFER,
-                     static_cast<GLuint>(previous_pack_buffer));
-      }
-      if (copied)
+      if (CopyPixels(slot))
       {
         Frame frame = std::move(slot.Payload);
         ReleaseSlot(slot);
@@ -577,7 +581,6 @@ private:
     }
   }
 
-  std::array<GLuint, KPboSlotCount> PboBuffers{};
   std::array<PboSlot, KPboSlotCount> PboSlots{};
   std::mutex Mutex;
   std::condition_variable WorkAvailable;
@@ -823,7 +826,7 @@ void UWindowManager::ApplyPresentSettings()
                                   " SwapInterval=" + std::to_string(interval));
 }
 
-void UWindowManager::Run()
+void UWindowManager::Run(FlightCaptureGpuCheckpoint *captureCheckpoint)
 {
   if (!IsInitialized)
   {
@@ -1078,9 +1081,8 @@ void UWindowManager::Run()
                          {"position", {position.x, position.y, position.z}},
                          {"yaw", camera->GetYaw()}, {"pitch", camera->GetPitch()}};
             }
-            if (!FlightCapture->QueueCapture(Window, capture_path, frame_index,
-                                             camera_x, camera_y, GL_BACK,
-                                             std::move(receipt)))
+            if (!QueueFlightCapture(capture_path, frame_index, camera_x, camera_y, GL_BACK,
+                                    std::move(receipt)))
             {
               CubatariumLogInfo("FlightCapture",
                                 "Unable to queue framebuffer capture index=" +
@@ -1126,9 +1128,8 @@ void UWindowManager::Run()
     if (capture_front_after_swap && FlightCapture)
     {
       UFrameStageWatchdog::Scope stage("window.frame_capture_front");
-      if (!FlightCapture->QueueCapture(
-              Window, front_capture_path, front_capture_index,
-              front_capture_camera_x, front_capture_camera_y, GL_FRONT))
+      if (!QueueFlightCapture(front_capture_path, front_capture_index,
+                              front_capture_camera_x, front_capture_camera_y, GL_FRONT, nullptr))
       {
         CubatariumLogInfo(
             "FlightCapture",
@@ -1157,11 +1158,7 @@ void UWindowManager::Run()
     RecordFrameTiming(swap_wait_ms, frame_wall_ms);
   }
 
-  if (FlightCapture)
-  {
-    FlightCapture->Shutdown();
-    FlightCapture.reset();
-  }
+  StopFlightCapture(captureCheckpoint);
   UCreaturePassTimingProbe::ShutdownSession();
   UFramePerfMonitor::Shutdown();
 }
@@ -1186,6 +1183,35 @@ void UWindowManager::RecordFrameTiming(double swap_wait_ms,
                                      frame_wall_ms);
     Application->RecordItemPerformanceFrame(frame_wall_ms, swap_wait_ms);
   }
+}
+
+bool UWindowManager::QueueFlightCapture(const std::filesystem::path &path, uint32_t index,
+                                         float cameraX, float cameraY, GLenum source, nlohmann::json receipt)
+{
+  if (!Window)
+    return false;
+  if (!FlightCapture)
+    FlightCapture = std::make_unique<UFlightCaptureService>();
+  return FlightCapture->QueueCapture(Window, path, index, cameraX, cameraY, source, std::move(receipt));
+}
+
+void UWindowManager::InspectFlightCaptureGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (FlightCapture)
+    FlightCapture->InspectGpuBuffers(out);
+}
+
+void UWindowManager::StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint)
+{
+  TerrainGpuBufferCensus names;
+  if (checkpoint)
+  {
+    InspectFlightCaptureGpuBuffers(names);
+    checkpoint->beforeShutdown = names.Read();
+  }
+  FlightCapture.reset();
+  if (checkpoint)
+    checkpoint->afterShutdown = names.Read();
 }
 
 void UWindowManager::SetStopPredicate(std::function<bool()> predicate)
@@ -2022,11 +2048,7 @@ void UWindowManager::Shutdown()
     glfwMakeContextCurrent(Window);
   }
 
-  if (FlightCapture)
-  {
-    FlightCapture->Shutdown();
-    FlightCapture.reset();
-  }
+  StopFlightCapture();
 
   if (World)
   {

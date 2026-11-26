@@ -26,9 +26,11 @@ public:
             const glm::mat4 &inv_projection, float horizon_boost = 0.0f);
   void InvalidateGpuResources();
   void InspectRenderImages(class RenderImageCensus &out) const;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   double GetLastDrawMs() const { return LastDrawMs; }
 
 private:
+  friend struct EffectsGpuStorageProbe;
   bool EnsureBuffers();
   void DestroyBuffers();
   bool UpdateWeatherFieldTexture(const UWorld &world, PerformancePreset preset,

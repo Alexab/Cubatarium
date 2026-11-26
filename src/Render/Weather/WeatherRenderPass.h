@@ -37,6 +37,7 @@ class UWeatherRenderPass
 public:
   bool InitShaders(const std::shared_ptr<UShaderManager> &shader_manager);
   void DestroyGpuResources();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectRenderImages(class RenderImageCensus &out) const { DepthCapture.InspectRenderImages(out); }
 
   void Render(const WeatherRenderContext &ctx, const UWorld &world);
@@ -46,6 +47,7 @@ public:
   int GetActiveParticleCount() const { return ParticleSystem.GetActiveCount(); }
 
 private:
+  friend struct EffectsGpuStorageProbe;
   bool PrecipActive(const WeatherSample &weather) const;
   float QualityForPreset(PerformancePreset preset) const;
   int ParticleBudget(PerformancePreset preset, int weather_kind) const;
@@ -55,6 +57,7 @@ private:
   void RenderParticlesPass(const WeatherRenderContext &ctx, const UWorld &world,
                            const WeatherSample &weather);
   bool EnsureParticleBuffers();
+  void DestroyParticleBuffers();
 
   std::shared_ptr<UShaderProgram> StreaksShader;
   std::shared_ptr<UShaderProgram> ParticleShader;

@@ -1,4 +1,6 @@
 #include "Render/Blocks/BlockCrackOverlayPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 
 #include "App/Platform/GameDataRoot.h"
 #include "App/Platform/IUPlatformPaths.h"
@@ -183,21 +185,13 @@ void UBlockCrackOverlayPass::DestroyGpuResources()
   TexturesReady = false;
   LoadAttempted = false;
 
-  if (Ebo != 0)
-  {
-    glDeleteBuffers(1, &Ebo);
-    Ebo = 0;
-  }
-  if (Vbo != 0)
-  {
-    glDeleteBuffers(1, &Vbo);
-    Vbo = 0;
-  }
-  if (Vao != 0)
-  {
-    glDeleteVertexArrays(1, &Vao);
-    Vao = 0;
-  }
+  RetireVertexBuffers(Vao, {&Vbo, &Ebo});
+}
+
+void UBlockCrackOverlayPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::BlockCracks, Vbo);
+  out.Add(TerrainGpuBufferRole::BlockCracks, Ebo);
 }
 
 bool UBlockCrackOverlayPass::EnsureTextures()
@@ -290,11 +284,13 @@ bool UBlockCrackOverlayPass::EnsureCube()
     indices[out + 5] = base + 2u;
   }
 
+  const GlVertexBufferScope restore;
   glGenVertexArrays(1, &Vao);
   glGenBuffers(1, &Vbo);
   glGenBuffers(1, &Ebo);
   if (Vao == 0 || Vbo == 0 || Ebo == 0)
   {
+    RetireVertexBuffers(Vao, {&Vbo, &Ebo});
     return false;
   }
 
@@ -310,7 +306,11 @@ bool UBlockCrackOverlayPass::EnsureCube()
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
-  glBindVertexArray(0);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    RetireVertexBuffers(Vao, {&Vbo, &Ebo});
+    return false;
+  }
   return true;
 }
 

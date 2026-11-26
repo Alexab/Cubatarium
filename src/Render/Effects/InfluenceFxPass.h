@@ -17,9 +17,11 @@ class UInfluenceFxPass
 public:
   bool InitShaders(const std::shared_ptr<UShaderManager> &shader_manager);
   void DestroyGpuResources();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void UpdateAndRender(const glm::mat4 &view_proj, float dt);
 
 private:
+  friend struct EffectsGpuStorageProbe;
   bool EnsureLineBuffers();
 
   std::shared_ptr<UShaderProgram> LineShader;

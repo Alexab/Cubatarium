@@ -63,7 +63,14 @@ inline nlohmann::json DescribeActorGpuBuffers(const TerrainGpuBufferSnapshot &sn
 inline nlohmann::json DescribeGeometryGpuBuffers(const TerrainGpuBufferSnapshot &snapshot)
 {
   return DescribeGpuBufferRoles(snapshot, "geometry-gpu-buffers.v1",
-                                static_cast<std::size_t>(TerrainGpuBufferRole::GeometryCubeVertices), snapshot.roles.size());
+                                static_cast<std::size_t>(TerrainGpuBufferRole::GeometryCubeVertices),
+                                static_cast<std::size_t>(TerrainGpuBufferRole::SkyGradient));
+}
+
+inline nlohmann::json DescribeEffectsGpuBuffers(const TerrainGpuBufferSnapshot &snapshot)
+{
+  return DescribeGpuBufferRoles(snapshot, "effects-gpu-buffers.v1",
+                                static_cast<std::size_t>(TerrainGpuBufferRole::SkyGradient), snapshot.roles.size());
 }
 
 inline nlohmann::json DescribeSelectedGpuBuffers(std::initializer_list<const TerrainGpuBufferCensus *> groups)

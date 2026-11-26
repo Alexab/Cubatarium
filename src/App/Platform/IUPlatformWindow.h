@@ -28,6 +28,7 @@ public:
   virtual void PollEvents() = 0;
   virtual void SwapBuffers() = 0;
   virtual glm::ivec2 GetFramebufferSize() const = 0;
+  virtual void InspectFlightCaptureGpuBuffers(class TerrainGpuBufferCensus &) const {}
   virtual bool ShouldClose() const = 0;
   virtual void RequestClose() = 0;
   virtual double DeltaTime() const = 0;

@@ -1,4 +1,6 @@
 #include "Render/Weather/WeatherRenderPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -63,28 +65,21 @@ bool UWeatherRenderPass::InitShaders(
 void UWeatherRenderPass::DestroyGpuResources()
 {
   DepthCapture.DestroyGpuResources();
-  if (ParticleEbo != 0)
-  {
-    glDeleteBuffers(1, &ParticleEbo);
-    ParticleEbo = 0;
-  }
-  if (ParticleInstanceVbo != 0)
-  {
-    glDeleteBuffers(1, &ParticleInstanceVbo);
-    ParticleInstanceVbo = 0;
-  }
-  if (ParticleCornerVbo != 0)
-  {
-    glDeleteBuffers(1, &ParticleCornerVbo);
-    ParticleCornerVbo = 0;
-  }
-  if (ParticleVao != 0)
-  {
-    glDeleteVertexArrays(1, &ParticleVao);
-    ParticleVao = 0;
-  }
+  DestroyParticleBuffers();
+}
+
+void UWeatherRenderPass::DestroyParticleBuffers()
+{
+  RetireVertexBuffers(ParticleVao, {&ParticleCornerVbo, &ParticleInstanceVbo, &ParticleEbo});
   InstanceCapacity = 0;
   ParticleIndexCount = 0;
+}
+
+void UWeatherRenderPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::WeatherParticles, ParticleCornerVbo);
+  out.Add(TerrainGpuBufferRole::WeatherParticles, ParticleInstanceVbo);
+  out.Add(TerrainGpuBufferRole::WeatherParticles, ParticleEbo);
 }
 
 bool UWeatherRenderPass::PrecipActive(const WeatherSample &weather) const
@@ -224,10 +219,16 @@ bool UWeatherRenderPass::EnsureParticleBuffers()
   const float corners[] = {-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f};
   const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
 
+  const GlVertexBufferScope restore;
   glGenVertexArrays(1, &ParticleVao);
   glGenBuffers(1, &ParticleCornerVbo);
   glGenBuffers(1, &ParticleInstanceVbo);
   glGenBuffers(1, &ParticleEbo);
+  if (!ParticleVao || !ParticleCornerVbo || !ParticleInstanceVbo || !ParticleEbo)
+  {
+    DestroyParticleBuffers();
+    return false;
+  }
 
   glBindVertexArray(ParticleVao);
   glBindBuffer(GL_ARRAY_BUFFER, ParticleCornerVbo);
@@ -260,10 +261,14 @@ bool UWeatherRenderPass::EnsureParticleBuffers()
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices,
                GL_STATIC_DRAW);
 
-  glBindVertexArray(0);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyParticleBuffers();
+    return false;
+  }
   ParticleIndexCount = 6;
   InstanceCapacity = 256;
-  return ParticleVao != 0;
+  return true;
 }
 
 void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
@@ -312,16 +317,20 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   }
 
   const size_t byte_size = gpu_instances.size() * sizeof(ParticleInstanceGpu);
+  const GlVertexBufferScope restore;
+  glBindBuffer(GL_ARRAY_BUFFER, ParticleInstanceVbo);
   if (gpu_instances.size() > InstanceCapacity)
   {
-    InstanceCapacity = gpu_instances.size();
-    glBindBuffer(GL_ARRAY_BUFFER, ParticleInstanceVbo);
     glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(byte_size), nullptr,
                  GL_DYNAMIC_DRAW);
+    if (glGetError() != GL_NO_ERROR)
+      return;
+    InstanceCapacity = gpu_instances.size();
   }
-  glBindBuffer(GL_ARRAY_BUFFER, ParticleInstanceVbo);
   glBufferSubData(GL_ARRAY_BUFFER, 0, static_cast<GLsizeiptr>(byte_size),
                   gpu_instances.data());
+  if (glGetError() != GL_NO_ERROR)
+    return;
 
   const uint8_t debug_mode = world.GetLightingSettings().WeatherDebugMode;
 
@@ -346,7 +355,6 @@ void UWeatherRenderPass::RenderParticlesPass(const WeatherRenderContext &ctx,
   glBindVertexArray(ParticleVao);
   glDrawElementsInstanced(GL_TRIANGLES, ParticleIndexCount, GL_UNSIGNED_INT,
                           nullptr, static_cast<GLsizei>(gpu_instances.size()));
-  glBindVertexArray(0);
   ParticleShader->Unuse();
 
   const auto t_end = std::chrono::high_resolution_clock::now();

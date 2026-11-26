@@ -30,6 +30,11 @@ public:
   }
   void SetAutosaveEnabled(bool enabled);
   void Run() override;
+  void Run(FlightCaptureGpuCheckpoint *checkpoint) { WindowManager.Run(checkpoint); }
+  void InspectFlightCaptureGpuBuffers(class TerrainGpuBufferCensus &out) const override
+  {
+    WindowManager.InspectFlightCaptureGpuBuffers(out);
+  }
   void Shutdown() override;
   void PollEvents() override;
   void SwapBuffers() override;

@@ -4,6 +4,7 @@
 #include "App/Diagnostics/DiagnosticWorldActions.h"
 #include "App/Platform/CreatureQaCapture.h"
 #include "App/Platform/FlightSimHarness.h"
+#include "App/Platform/FlightCaptureGpuCheckpoint.h"
 #include "App/Platform/SampleProfiler.h"
 #include "Core/StallTimer.h"
 #include "Core/UiPump.h"
@@ -208,7 +209,7 @@ int RunCubatarium(IUPlatformWindow &window, IUPlatformPaths &paths)
     StallStageMark("UCore+Application ctor");
     CubatariumLogInfo("App", "Starting application...");
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"desktop","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"desktop","menu");
     if (!application->StartupSucceeded())
     {
       CubatariumLogError("App",
@@ -336,7 +337,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"enter-game-smoke","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"enter-game-smoke","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "enter-game-smoke: startup failed" << std::endl;
@@ -366,7 +367,7 @@ int RunEnterGameSmoke(IUPlatformPaths &paths, int in_game_frames)
           if (application->GetState() == AppState::InGame)
           {
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"enter-game-smoke","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"enter-game-smoke","in-game");
           }
           return ingame_frames_seen >= in_game_frames;
         });
@@ -506,7 +507,7 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"autoload","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"autoload","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "autoload-last-world: startup failed" << std::endl;
@@ -593,7 +594,7 @@ int RunAutoloadLastWorld(IUPlatformPaths &paths,
               }
             }
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"autoload","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"autoload","in-game");
             if (ingame_frames_seen >= opt.InGameFrames)
             {
               exit_reason = "ingame_ok";
@@ -1842,7 +1843,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     window.SetApplication(application);
 
     application->Startup(paths.ResolveWritable("config.json").string());
-    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"flight","menu");
+    WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"flight","menu");
     if (!application->StartupSucceeded())
     {
       std::cerr << "flight-sim: startup failed" << std::endl;
@@ -2168,7 +2169,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           if (application->GetState() == AppState::InGame)
           {
             ++ingame_frames_seen;
-            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application},"flight","in-game");
+            if(ingame_frames_seen==1)WriteCatalogRuntimeDomain(*core,*application,{block_definitions,texture_base_instance,texture_cube_instance,object_library,world,geometry_engine,&core,&application,&window},"flight","in-game");
             if (!ingame_clock_started)
             {
               world->GetBlockWorld().GetChunkManager().ForEachChunk(
@@ -3196,7 +3197,8 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           return false;
         });
 
-    window.Run();
+    FlightCaptureGpuCheckpoint captureCheckpoint;
+    window.Run(native_thread_stack_detail::Enabled() ? &captureCheckpoint : nullptr);
     if (bot_replay)
       bot_replay->Finish();
     window.ClearAutopilotKeys();
@@ -3388,8 +3390,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           geometry_engine->InspectGeometryGpuBuffers(geometryBuffers);
           report << "  \"geometry_gpu_buffers_after_loop\": "
                  << DescribeGeometryGpuBuffers(geometryBuffers.Read()).dump() << ",\n";
+          TerrainGpuBufferCensus effectsBuffers;
+          geometry_engine->InspectEffectsGpuBuffers(effectsBuffers);
+          window.InspectFlightCaptureGpuBuffers(effectsBuffers);
+          report << "  \"effects_gpu_buffers_after_loop\": "
+                 << DescribeEffectsGpuBuffers(effectsBuffers.Read()).dump() << ",\n";
+          report << "  \"window_capture_gpu_lifetime\": " << nlohmann::json{
+              {"before_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.beforeShutdown)},
+              {"after_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.afterShutdown)}}.dump() << ",\n";
           report << "  \"selected_gpu_buffers_after_loop\": " << DescribeSelectedGpuBuffers(
-              {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers}).dump() << ",\n";
+              {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers}).dump() << ",\n";
           RenderImageCensus renderImages;
           if (texture_cube_instance)
             texture_cube_instance->InspectRenderImages(renderImages);

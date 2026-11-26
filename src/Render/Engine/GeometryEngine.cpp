@@ -57,6 +57,7 @@
 #include "Render/Mesh/PackedQuadGeometry.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 #include "Render/Pipeline/GreedyDrawCategory.h"
 #include "Render/Pipeline/GreedyTransparentPipeline.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
@@ -110,21 +111,6 @@ namespace cutum
 
 namespace
 {
-struct RestoreGeometryBindings
-{
-  GLint vao{}, array{};
-  RestoreGeometryBindings()
-  {
-    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
-    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &array);
-  }
-  ~RestoreGeometryBindings()
-  {
-    glBindVertexArray(static_cast<GLuint>(vao));
-    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(array));
-  }
-};
-
 // PERF holes: the fluid surface map reference for the probe diagnostics.
 // Set once per frame by the engine before the probe capture walks.
 const UFluidSurfaceMap *g_probe_fluid_map = nullptr;
@@ -4574,6 +4560,15 @@ void UGeometryEngine::InspectGeometryGpuBuffers(TerrainGpuBufferCensus &out) con
   out.Add(Role::GeometryCrosshairVertices, crosshairVBO);
 }
 
+void UGeometryEngine::InspectEffectsGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  SkyGradientPass_.InspectGpuBuffers(out);
+  BlockCrackPass.InspectGpuBuffers(out);
+  BlockBreakFx.InspectGpuBuffers(out);
+  InfluenceFx.InspectGpuBuffers(out);
+  WeatherPass.InspectGpuBuffers(out);
+}
+
 void UGeometryEngine::InspectRenderImages(RenderImageCensus &out) const
 {
   if (TextureCubeStorageInstance)
@@ -5621,7 +5616,7 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
     return;
   }
 
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
   glBindTexture(GL_TEXTURE_2D, batch.textureID);
   activeShader->Use();
   activeShader->SetInt("texture0", 0);
@@ -9142,7 +9137,7 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
       centerX + halfThick,     centerY + crosshairSize,
   };
 
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
   if (!crosshairVAO)
   {
     glGenVertexArrays(1, &crosshairVAO);
@@ -9312,7 +9307,7 @@ bool UGeometryEngine::InitPreviewBuffers()
 {
   if (previewVAO)
     return true;
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
   // Create a simple cube for preview (smaller scale)
   float scale = 0.3f; // Smaller cube for preview
   float cube_shift = 1.0f / 6.0f;
@@ -9512,7 +9507,7 @@ bool UGeometryEngine::InitCubeBuffers()
 {
   if (cubeVAO != 0)
     return true;
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
 
   float cube_shift = 1.0f / 6.0f;
   const float vertices[] = {
@@ -9600,7 +9595,7 @@ bool UGeometryEngine::InitFaceQuadBuffers()
 {
   if (faceVAO != 0)
     return true;
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
 
   const float vertices[] = {
       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
@@ -9714,7 +9709,7 @@ bool UGeometryEngine::InitOutlineBuffers()
   {
     return true;
   }
-  const RestoreGeometryBindings restore;
+  const GlVertexBufferScope restore;
 
   constexpr float half = 0.5f + 0.005f;
   const float vertices[] = {

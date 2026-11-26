@@ -1,4 +1,6 @@
 #include "Render/Effects/InfluenceFxPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 #include "Render/Effects/InfluenceFxSystem.h"
 #include "Render/GlIncludes.h"
 #include "Render/Engine/ShaderManager.h"
@@ -28,17 +30,13 @@ bool UInfluenceFxPass::InitShaders(
 
 void UInfluenceFxPass::DestroyGpuResources()
 {
-  if (LineVbo != 0)
-  {
-    glDeleteBuffers(1, &LineVbo);
-    LineVbo = 0;
-  }
-  if (LineVao != 0)
-  {
-    glDeleteVertexArrays(1, &LineVao);
-    LineVao = 0;
-  }
+  RetireVertexBuffers(LineVao, {&LineVbo});
   LineShader.reset();
+}
+
+void UInfluenceFxPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::InfluenceLines, LineVbo);
 }
 
 bool UInfluenceFxPass::EnsureLineBuffers()
@@ -47,16 +45,26 @@ bool UInfluenceFxPass::EnsureLineBuffers()
   {
     return true;
   }
+  const GlVertexBufferScope restore;
   glGenVertexArrays(1, &LineVao);
   glGenBuffers(1, &LineVbo);
+  if (!LineVao || !LineVbo)
+  {
+    RetireVertexBuffers(LineVao, {&LineVbo});
+    return false;
+  }
   glBindVertexArray(LineVao);
   glBindBuffer(GL_ARRAY_BUFFER, LineVbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 64, nullptr, GL_DYNAMIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float),
                         reinterpret_cast<void *>(0));
   glEnableVertexAttribArray(0);
-  glBindVertexArray(0);
-  return LineVao != 0;
+  if (glGetError() != GL_NO_ERROR)
+  {
+    RetireVertexBuffers(LineVao, {&LineVbo});
+    return false;
+  }
+  return true;
 }
 
 void UInfluenceFxPass::UpdateAndRender(const glm::mat4 &view_proj, float dt)
@@ -98,15 +106,18 @@ void UInfluenceFxPass::UpdateAndRender(const glm::mat4 &view_proj, float dt)
     return;
   }
 
-  glDisable(GL_CULL_FACE);
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-  glLineWidth(2.5f);
-
+  const GlVertexBufferScope restore;
   glBindVertexArray(LineVao);
   glBindBuffer(GL_ARRAY_BUFFER, LineVbo);
   glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(verts.size() * sizeof(float)),
                verts.data(), GL_DYNAMIC_DRAW);
+  if (glGetError() != GL_NO_ERROR)
+    return;
+
+  glDisable(GL_CULL_FACE);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+  glLineWidth(2.5f);
 
   LineShader->Use();
   LineShader->SetMat4("mvp_matrix", view_proj);
@@ -115,7 +126,6 @@ void UInfluenceFxPass::UpdateAndRender(const glm::mat4 &view_proj, float dt)
 
   glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(verts.size() / 3));
   LineShader->Unuse();
-  glBindVertexArray(0);
   glDisable(GL_BLEND);
 }
 

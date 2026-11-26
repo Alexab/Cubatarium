@@ -1,4 +1,6 @@
 #include "Render/Blocks/BlockBreakFxPass.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
+#include "Render/Pipeline/GlVertexBufferScope.h"
 
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -65,31 +67,24 @@ void UBlockBreakFxPass::DestroyGpuResources()
     SinkRegistered = false;
   }
   Particles.Reset();
-  if (Ebo != 0)
-  {
-    glDeleteBuffers(1, &Ebo);
-    Ebo = 0;
-  }
-  if (InstanceVbo != 0)
-  {
-    glDeleteBuffers(1, &InstanceVbo);
-    InstanceVbo = 0;
-  }
-  if (CornerVbo != 0)
-  {
-    glDeleteBuffers(1, &CornerVbo);
-    CornerVbo = 0;
-  }
-  if (Vao != 0)
-  {
-    glDeleteVertexArrays(1, &Vao);
-    Vao = 0;
-  }
-  InstanceCapacity = 0;
-  IndexCount = 0;
+  DestroyBuffers();
   HadSession = false;
   LastProgress = 0.0f;
   HitProgressCursor = 0.0f;
+}
+
+void UBlockBreakFxPass::DestroyBuffers()
+{
+  RetireVertexBuffers(Vao, {&CornerVbo, &InstanceVbo, &Ebo});
+  InstanceCapacity = 0;
+  IndexCount = 0;
+}
+
+void UBlockBreakFxPass::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::BlockDebris, CornerVbo);
+  out.Add(TerrainGpuBufferRole::BlockDebris, InstanceVbo);
+  out.Add(TerrainGpuBufferRole::BlockDebris, Ebo);
 }
 
 void UBlockBreakFxPass::ApplyDigProgress(glm::ivec3 block_pos, float progress)
@@ -174,7 +169,7 @@ bool UBlockBreakFxPass::EnsureGpu()
 
   const float corners[] = {-1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f};
   const unsigned int indices[] = {0, 1, 2, 0, 2, 3};
-  IndexCount = 6;
+  const GlVertexBufferScope restore;
 
   glGenVertexArrays(1, &Vao);
   glGenBuffers(1, &CornerVbo);
@@ -182,6 +177,7 @@ bool UBlockBreakFxPass::EnsureGpu()
   glGenBuffers(1, &Ebo);
   if (Vao == 0 || CornerVbo == 0 || InstanceVbo == 0 || Ebo == 0)
   {
+    DestroyBuffers();
     return false;
   }
 
@@ -195,7 +191,6 @@ bool UBlockBreakFxPass::EnsureGpu()
   glBindBuffer(GL_ARRAY_BUFFER, InstanceVbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(DebrisInstanceGpu) * 64, nullptr,
                GL_DYNAMIC_DRAW);
-  InstanceCapacity = 64;
   const GLsizei stride = static_cast<GLsizei>(sizeof(DebrisInstanceGpu));
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride,
                         reinterpret_cast<void *>(offsetof(DebrisInstanceGpu, WorldPos)));
@@ -212,7 +207,13 @@ bool UBlockBreakFxPass::EnsureGpu()
 
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, Ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-  glBindVertexArray(0);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyBuffers();
+    return false;
+  }
+  IndexCount = 6;
+  InstanceCapacity = 64;
   return true;
 }
 
@@ -237,20 +238,25 @@ void UBlockBreakFxPass::DrawInstances(const glm::mat4 &view_proj,
     upload.push_back(dst);
   }
 
+  const GlVertexBufferScope restore;
+  glBindBuffer(GL_ARRAY_BUFFER, InstanceVbo);
   if (upload.size() > InstanceCapacity)
   {
-    InstanceCapacity = upload.size() + upload.size() / 2 + 16;
-    glBindBuffer(GL_ARRAY_BUFFER, InstanceVbo);
+    const auto capacity = upload.size() + upload.size() / 2 + 16;
     glBufferData(GL_ARRAY_BUFFER,
-                 static_cast<GLsizeiptr>(InstanceCapacity *
+                 static_cast<GLsizeiptr>(capacity *
                                          sizeof(DebrisInstanceGpu)),
                  nullptr, GL_DYNAMIC_DRAW);
+    if (glGetError() != GL_NO_ERROR)
+      return;
+    InstanceCapacity = capacity;
   }
-  glBindBuffer(GL_ARRAY_BUFFER, InstanceVbo);
   glBufferSubData(GL_ARRAY_BUFFER, 0,
                   static_cast<GLsizeiptr>(upload.size() *
                                          sizeof(DebrisInstanceGpu)),
                   upload.data());
+  if (glGetError() != GL_NO_ERROR)
+    return;
 
   UGlStateScope gl_guard(kGlMaskBreakDebris);
   glEnable(GL_DEPTH_TEST);
@@ -266,7 +272,6 @@ void UBlockBreakFxPass::DrawInstances(const glm::mat4 &view_proj,
   glBindVertexArray(Vao);
   glDrawElementsInstanced(GL_TRIANGLES, IndexCount, GL_UNSIGNED_INT, nullptr,
                           static_cast<GLsizei>(upload.size()));
-  glBindVertexArray(0);
   Shader->Unuse();
 }
 

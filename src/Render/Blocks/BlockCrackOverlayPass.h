@@ -29,11 +29,13 @@ public:
 
   bool InitShader(const std::shared_ptr<UShaderManager> &shader_manager);
   void DestroyGpuResources();
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   /// Draws the crack cube. False means the caller should draw its fallback.
   bool Render(const BlockCrackOverlayRequest &request);
 
 private:
+  friend struct EffectsGpuStorageProbe;
   bool EnsureTextures();
   bool EnsureCube();
 
