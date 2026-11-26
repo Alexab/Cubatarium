@@ -5,6 +5,7 @@
 #include "Test/PipelineRetainedStorageFixture.h"
 #include "Test/RuntimeNameStorageFixture.h"
 #include "Test/EngineThreadStorageFixture.h"
+#include "Test/WorldOwnedStorageFixture.h"
 
 namespace cutum {
 struct StreamingSchedulerReinitProbe {
@@ -81,6 +82,7 @@ struct StreamingSchedulerReinitProbe {
     report["pipeline_retained_storage"]=RunPipelineRetainedStorageProbe();
     report["runtime_name_storage"]=RunRuntimeNameStorageProbe();
     report["engine_thread_storage"]=RunEngineThreadStorageProbe();
+    report["world_owned_storage"]=RunWorldOwnedStorageProbe();
     return report;
   }
 };

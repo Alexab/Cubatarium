@@ -26,6 +26,7 @@ struct BlockDefinitionCatalog;
 
 class UBlockWorld
 {
+  friend struct WorldOwnedStorageInspector;
 public:
   // Known default scratch-world factory;does not cover arbitrary live worlds.
   static std::array<size_t,4> GetPipelineScratchStorageLayout() noexcept;

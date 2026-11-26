@@ -73,6 +73,8 @@ enum class MenuSubview
 
 class UApplication : public IUGuiMenuHost
 {
+  friend struct ApplicationBlockCatalogCallback;
+  friend struct ApplicationCreatureCatalogCallback;
   friend class UScreenNavigator;
   friend class UInputRouter;
 public:

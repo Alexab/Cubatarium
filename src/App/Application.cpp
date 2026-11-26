@@ -1,3 +1,4 @@
+#include "World/Core/WorldOwnedCallbacks.h"
 #include "App/Application.h"
 #include "App/Platform/IUPlatformPaths.h"
 #include "Core/StallTimer.h"
@@ -202,24 +203,8 @@ UApplication::UApplication(
   GameSession = std::make_unique<UGameSession>(this, World);
   if (World)
   {
-    World->SetOnBlockRegistryChanged([this]() { RefreshBlockCatalog(); });
-    World->SetOnCreatureCatalogChanged(
-        [this]()
-        {
-          RefreshCreatureCatalog();
-          if (IconSource)
-          {
-            IconSource->ClearCreatureIconCache();
-          }
-          if (CreaturePreviewRenderer)
-          {
-            CreaturePreviewRenderer->Invalidate();
-          }
-          if (PaletteScreen)
-          {
-            PaletteScreen->InvalidateGrid();
-          }
-        });
+    World->SetOnBlockRegistryChanged(ApplicationBlockCatalogCallback{this});
+    World->SetOnCreatureCatalogChanged(ApplicationCreatureCatalogCallback{this});
   }
 }
 
@@ -4200,6 +4185,14 @@ bool UApplication::RouteScroll(double Xoffset, double Yoffset, int mouseX,
                                int mouseY)
 {
   return InputRouter.RouteScroll(*this, Xoffset, Yoffset, mouseX, mouseY);
+}
+
+void ApplicationBlockCatalogCallback::operator()()const {owner->RefreshBlockCatalog();}
+void ApplicationCreatureCatalogCallback::operator()()const {
+  owner->RefreshCreatureCatalog();
+  if(owner->IconSource)owner->IconSource->ClearCreatureIconCache();
+  if(owner->CreaturePreviewRenderer)owner->CreaturePreviewRenderer->Invalidate();
+  if(owner->PaletteScreen)owner->PaletteScreen->InvalidateGrid();
 }
 
 } // namespace cutum

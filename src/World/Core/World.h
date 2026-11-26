@@ -46,6 +46,7 @@
 #include "World/Streaming/WorldBorderPolicy.h"
 #include "World/View/WorldViewSettings.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
+#include "World/Core/WorldOwnedStorage.h"
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenSets.h"
 #include "WorldGen/Features/ObjectFeatureConfig.h"
@@ -233,6 +234,7 @@ struct UBackgroundQuiesceState
 class UWorld : public IUWorldPerception
 {
 public:
+  WorldOwnedStorageSnapshot InspectOwnedGeneratorsAndCallbacks(const class UCore *core,const class UApplication *application,bool source_history_known) const noexcept;
   UChunkRenderDemandStore &GetRenderDemandStore();
   const UChunkRenderDemandStore &GetRenderDemandStore() const;
 
@@ -1681,6 +1683,12 @@ private:
   friend class UWorldCooperativeSession;
   friend void RunTerrainSaveFailureProbe(UCore &core);
   friend struct StreamingSchedulerReinitProbe;
+  friend struct WorldOwnedStorageProbe;
+  friend struct WorldOwnedStorageInspector;
+  void RebuildWorldGenPipelineFromResolvedSources();
+  friend struct WorldKnownAirVersionCallback;
+  friend struct WorldColumnMeshDirtyCallback;
+  friend struct WorldPopulationInvalidationCallback;
   friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);
   friend class UWorldStreaming;
   friend class UWorldPersistence;

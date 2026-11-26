@@ -29,10 +29,12 @@ namespace cutum
 struct CatalogApplicationDomain final : CatalogRuntimeDomain
 {
   AllocatorOwnerCensus AllocationOwners;
+  const UCore *owner_core{};const UApplication *owner_application{};
+  std::vector<WorldOwnedStorageSnapshot> world_owned;
   using CatalogRuntimeDomain::Geometry;
   void Core(const UCore *v){if(Enter(Kind::Core,v))v->InspectCatalogDomain(*this);}
   void Application(const UApplication *v){if(Enter(Kind::Application,v))v->InspectCatalogDomain(*this);}
-  void World(const UWorld *v){if(Enter(Kind::World,v)){AllocationOwners.Manager(v->GetBlockWorld().GetChunkManager(),nullptr,false,!ActiveScopedSharedResource);v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);}}
+  void World(const UWorld *v){if(Enter(Kind::World,v)){AllocationOwners.Manager(v->GetBlockWorld().GetChunkManager(),nullptr,false,!ActiveScopedSharedResource);v->InspectCatalogDomain(*this);v->GetBlockWorld().InspectCatalogRoots(*this);world_owned.push_back(v->InspectOwnedGeneratorsAndCallbacks(owner_core,owner_application,true));}}
   void Geometry(const UGeometryEngine *v){if(Enter(Kind::Geometry,v)){v->InspectCatalogDomain(*this);v->InspectCatalogRoots(*this);}}
   void GuiIcon(const UGuiIconSource *v){if(Enter(Kind::GuiIcon,v))v->InspectCatalogDomain(*this);}
   void ObjectIcon(const UObjectIconCache *v){if(Enter(Kind::ObjectIcon,v))v->InspectCatalogDomain(*this);}
@@ -61,7 +63,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     CatalogLauncherRootsView launcher,const char *entrypoint,const char *phase)
 {
   const char *directory=std::getenv("CUBA_CATALOG_RUNTIME_DOMAIN");if(!directory || !*directory)return;
-  using Json=nlohmann::json;CatalogApplicationDomain out;
+  using Json=nlohmann::json;CatalogApplicationDomain out;out.owner_core=&core;out.owner_application=&application;
   out.Core(&core);out.Application(&application);
   out.World(launcher.world.get());out.Geometry(launcher.geometry.get());
   out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
@@ -113,10 +115,24 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"binding_handles",engine_storage.binding_handles},{"gpu_capacity",engine_storage.gpu_capacity},{"preview_entries",engine_storage.preview_entries},
     {"preview_buckets",engine_storage.preview_buckets},{"celestial_capacity",engine_storage.celestial_capacity},{"whole_runtime_complete",false},
     {"scope","Actual calling-thread caches and same-graph publication binding roots;foreign TLS/window/CRT/GPU/process remain separate."}};
+  std::vector<const WorldOwnedStorageSnapshot*> owned_views;Json owned_rows=Json::array();
+  for(const auto &source:out.world_owned){owned_views.push_back(&source);std::array<size_t,10> callbacks{},captures{};std::array<bool,10> present{};
+    for(size_t i=0;i<callbacks.size();++i){callbacks[i]=source.callbacks[i].requests;captures[i]=source.callbacks[i].capture_inline;present[i]=source.callbacks[i].present;}
+    owned_rows.push_back({{"supported",source.supported},{"generation_present",source.generation.initialized},{"generation_requests",source.generation.requests},
+      {"lighting_requests",source.lighting_requests},{"lighting_kind",source.lighting_kind},{"callback_requests",callbacks},{"callback_capture_inline",captures},
+      {"callback_present",present},{"borrowed_context_matches",source.borrowed_context_matches},{"requested",source.Total()}});
+  }
+  const auto owned=JoinWorldOwnedStorage(owned_views,out.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)],true,true);
+  const auto owned_layout=GetWorldOwnedStorageLayout();
+  report["world_owned_storage"]={{"schema","world-owned-runtime.v1"},{"status",owned.supported?"PASS":"UNSUPPORTED"},
+    {"worlds",owned.worlds},{"requested",owned.requested},{"rows",owned_rows},{"generation_layout",owned_layout.generation.widths},
+    {"lighting_layout",owned_layout.lighting},{"parent_inline",{owned_layout.world_inline,owned_layout.block_world_inline,owned_layout.function_inline}},
+    {"parent_shells_counted_here",false},{"whole_runtime_complete",false},
+    {"scope","Unique supplied E11 worlds;selected private generator/lighting/callback requests. Parent shell/coallocation and external borrowed resources remain separately supplied terms."}};
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.
   if(std::string(phase)=="in-game"){
-    CatalogApplicationDomain diagnostic;diagnostic.Core(&core);diagnostic.Application(&application);
+    CatalogApplicationDomain diagnostic;diagnostic.owner_core=&core;diagnostic.owner_application=&application;diagnostic.Core(&core);diagnostic.Application(&application);
     const auto before=diagnostic.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)];
     {UWorld auxiliary(nullptr,nullptr);diagnostic.World(&auxiliary);
       report["diagnostic_worlds_with_auxiliary"]=diagnostic.objects[static_cast<size_t>(CatalogRuntimeDomain::Kind::World)];

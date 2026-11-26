@@ -58,6 +58,7 @@ public:
   int SurfaceYAt(int worldX, int worldZ) const override;
   PipelineStorageSnapshot InspectRetainedStorage(bool ordinary_heap_factory_known) const noexcept override;
   static PipelineStorageLayout GetRetainedStorageLayout() noexcept;
+  PipelineStorageSnapshot InspectRetainedStorageForWorld(bool ordinary_heap_factory_known,const class UWorld *owner) const noexcept;
 
   ColumnSampleContext BuildColumnSample(int world_x, int world_z) const;
   int LakeCenterSurfaceYAt(int world_x, int world_z) const;
@@ -83,6 +84,7 @@ public:
     return AquiferSampler.has_value() ? &*AquiferSampler : nullptr;
   }
   WorldGenContext &GetContext() { return Ctx; }
+  const WorldGenContext &GetContext() const { return Ctx; }
   size_t GetRetainedSampleSeedTextCapacityBytes() const
   { return SampleBuilder ? SampleBuilder->GetRetainedSeedTextCapacityBytes() : 0; }
   size_t GetRetainedSampleSettingsTextCapacityBytes() const

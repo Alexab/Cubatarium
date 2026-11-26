@@ -1,3 +1,4 @@
+#include "World/Core/WorldOwnedCallbacks.h"
 // #include <QPainter>
 // #include <QJsonDocument>
 // #include <QJsonObject>
@@ -558,11 +559,7 @@ void UCore::LoadConfig(const std::string &config_file_name)
     StallStageMark("LoadConfig.InitPlaceholderCache");
 
     WorldInstance->SetBlockMergeRegistry(BlockMergeRegistryInstance);
-    WorldInstance->SetOnAfterWorldDataLoaded(
-        [this]()
-        {
-          ResourcePackBootstrap.ApplyResourcePacksAfterWorldDataLoaded(*this);
-        });
+    WorldInstance->SetOnAfterWorldDataLoaded(CoreAfterWorldLoadedCallback{this});
 
     WorldInstance->SetBlockDefinitionStorage(blockDefinitions);
 
@@ -1321,6 +1318,10 @@ bool UCore::CreateWorldHeadless(const CreateWorldCliArgs &args,
                                 CreateWorldReport &report)
 {
   return WorldLifecycle.CreateWorldHeadless(*this, args, report);
+}
+
+void CoreAfterWorldLoadedCallback::operator()()const {
+  owner->ResourcePackBootstrap.ApplyResourcePacksAfterWorldDataLoaded(*owner);
 }
 
 } // namespace cutum

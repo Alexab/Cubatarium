@@ -295,6 +295,7 @@ set(SOURCES
     src/Creatures/Player/User.cpp
     src/Render/Engine/ViewEngine.cpp
     src/World/Core/World.cpp
+    src/World/Core/WorldOwnedStorage.cpp
     src/World/Core/MarkRelitInstall.cpp
     src/World/Adapters/WorldRenderReadAdapter.cpp
     src/World/Core/WorldViewBinding.cpp
@@ -3222,6 +3223,24 @@ cubatarium_add_test(NAME engine_thread_storage_test
 add_test(NAME engine_thread_storage_test COMMAND $<TARGET_FILE:engine_thread_storage_test>
     ${CMAKE_CURRENT_BINARY_DIR}/engine-thread-storage.json)
 set_tests_properties(engine_thread_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+if(TARGET CubatariumCompileConfig)
+  cubatarium_add_test(NAME world_owned_storage_test
+      SOURCES src/Test/WorldOwnedStorageTest.cpp
+      LIBRARIES CubatariumCompileConfig
+      WIN32_LIBRARIES dbghelp)
+  foreach(_world_source_group IN LISTS CUBATARIUM_OBJECT_GROUPS)
+    if(_world_source_group STREQUAL "src")
+      if(NOT CUBATARIUM_OBJECT_SOURCES_src STREQUAL "src/main.cpp")
+        message(FATAL_ERROR "world_owned_storage_test requires explicit handling of new root sources")
+      endif()
+    else()
+      target_sources(world_owned_storage_test PRIVATE $<TARGET_OBJECTS:CubatariumObjects_${_world_source_group}>)
+    endif()
+  endforeach()
+  add_test(NAME world_owned_storage_test COMMAND $<TARGET_FILE:world_owned_storage_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/world-owned-storage.json)
+  set_tests_properties(world_owned_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
+endif()
 endif()
 
 cubatarium_add_test(NAME worldgen_populate_parity_probe

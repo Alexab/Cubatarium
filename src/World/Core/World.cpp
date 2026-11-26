@@ -43,6 +43,7 @@
 #include "World/Core/RuntimeTuning.h"
 #include "World/Core/World.h"
 #include "World/Core/WorldThreadState.h"
+#include "World/Core/WorldOwnedCallbacks.h"
 #include "World/Core/WorldFluidFacade.h"
 #include "World/Core/WorldViewBinding.h"
 #include "World/Diagnostics/JobStageTrace.h"
@@ -462,6 +463,24 @@ glm::vec3 ComputeCelestialDirection(const UWorld::UCelestialBodyVisual &body,
 
 } // namespace
 
+std::optional<int> WorldKnownAirFloorCallback::operator()(glm::ivec3 column)const {return KnownAirTerrainColumnFloor(*owner,column);}
+bool WorldKnownAirSliceCallback::operator()(glm::ivec3 coord)const {return IsKnownAbsentInternalTerrainSlice(*owner,coord);}
+UBlockWorld::KnownAirEvidenceVersion WorldKnownAirVersionCallback::operator()()const {
+  UBlockWorld::KnownAirEvidenceVersion version;
+  if(owner->Streaming)if(const auto *streamer=owner->Streaming->GetStreamer()){
+    version.producers[0]=streamer->GetTerrainEvidenceIdentity();version.producers[1]=streamer->GetTerrainEvidenceRevision();}
+  if(owner->Persistence){const auto &storage=owner->Persistence->GetChunkStorage();
+    version.producers[2]=storage.GetKnownAirEvidenceIdentity();version.producers[3]=storage.GetKnownAirEvidenceRevision();
+    version.folder=owner->Persistence->GetWorldFolderPath();}
+  version.min_y=owner->ProceduralTemplate.MinHeight;version.max_y=owner->ProceduralTemplate.MaxHeight;return version;
+}
+void WorldColumnMeshDirtyCallback::operator()(int x,int z,int min_y,int max_y)const {
+  if(owner->CooperativeBulkGenerating)return;
+  if(!owner->LightingRelightDeferred)owner->RelightTerrainColumn(x,z,min_y,max_y);
+  owner->MeshService->MarkColumnMeshDirty(x,z,min_y,max_y);
+}
+void WorldPopulationInvalidationCallback::operator()(glm::ivec3 coord)const {owner->ChunkPopulationPending_.Push(coord);}
+
 UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
                std::shared_ptr<UViewEngine> views)
     : TextureCubeInstance(texture_cube),
@@ -479,31 +498,7 @@ UWorld::UWorld(std::shared_ptr<UTextureCubeStorage> texture_cube,
     Collision.SetBlockRegistry(BlockRegistry.get());
   }
   MeshService->GetCache().SetRepairGuardWorld(&BlockWorld);
-  BlockWorld.SetKnownAirColumnFloorQuery(
-      [this](glm::ivec3 column)
-      { return KnownAirTerrainColumnFloor(*this, column); },
-      [this]()
-      {
-        UBlockWorld::KnownAirEvidenceVersion version;
-        if (Streaming)
-          if (const auto *streamer = Streaming->GetStreamer())
-          {
-            version.producers[0] = streamer->GetTerrainEvidenceIdentity();
-            version.producers[1] = streamer->GetTerrainEvidenceRevision();
-          }
-        if (Persistence)
-        {
-          const auto &storage = Persistence->GetChunkStorage();
-          version.producers[2] = storage.GetKnownAirEvidenceIdentity();
-          version.producers[3] = storage.GetKnownAirEvidenceRevision();
-          version.folder = Persistence->GetWorldFolderPath();
-        }
-        version.min_y = ProceduralTemplate.MinHeight;
-        version.max_y = ProceduralTemplate.MaxHeight;
-        return version;
-      },
-      [this](glm::ivec3 coord)
-      { return IsKnownAbsentInternalTerrainSlice(*this, coord); });
+  BlockWorld.SetKnownAirColumnFloorQuery(WorldKnownAirFloorCallback{this},WorldKnownAirVersionCallback{this},WorldKnownAirSliceCallback{this});
   SubscribeChunkPopulationInvalidation();
   IsIntersectionExists = false;
   HasIntersectionBlock = false;
@@ -11130,6 +11125,11 @@ void UWorld::RebuildWorldGenPipeline()
     return;
   }
   RebuildResolvedObjectFeatures();
+  RebuildWorldGenPipelineFromResolvedSources();
+}
+
+void UWorld::RebuildWorldGenPipelineFromResolvedSources()
+{
   WorldGenContext ctx{BlockWorld, *BlockRegistry, ProceduralTemplate,
                       ObjectLibrary};
   ctx.WorldgenOwnerPackId = WorldgenOwnerPackId;
@@ -11140,18 +11140,7 @@ void UWorld::RebuildWorldGenPipeline()
   {
     ctx.ObjectFeatures = &ResolvedObjectFeatures;
   }
-  ctx.OnColumnMeshDirty = [this](int world_x, int world_z, int min_y, int max_y)
-  {
-    if (CooperativeBulkGenerating)
-    {
-      return;
-    }
-    if (!LightingRelightDeferred)
-    {
-      RelightTerrainColumn(world_x, world_z, min_y, max_y);
-    }
-    MeshService->MarkColumnMeshDirty(world_x, world_z, min_y, max_y);
-  };
+  ctx.OnColumnMeshDirty = WorldColumnMeshDirtyCallback{this};
   WorldGen = UProceduralWorldGenFactory::Create(ctx);
 }
 
@@ -11183,8 +11172,7 @@ void UWorld::InitStreamerCallbacks()
 
 void UWorld::SubscribeChunkPopulationInvalidation()
 {
-  BlockWorld.GetChunkManager().OnChunkBecameNonAir = [this](glm::ivec3 coord)
-  { ChunkPopulationPending_.Push(coord); };
+  BlockWorld.GetChunkManager().OnChunkBecameNonAir = WorldPopulationInvalidationCallback{this};
 }
 
 void UWorld::DrainChunkPopulationInvalidations()

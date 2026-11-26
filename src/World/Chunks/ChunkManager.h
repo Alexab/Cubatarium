@@ -33,6 +33,7 @@ struct ChunkGenerationToken;
 
 class UChunkManager
 {
+  friend struct WorldOwnedStorageInspector;
   friend class AllocatorOwnerCensus;
 public:
   std::shared_ptr<UConcurrentAllocationCountingResource> GetMetadataAllocationResource() const

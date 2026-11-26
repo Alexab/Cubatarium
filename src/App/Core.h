@@ -51,6 +51,7 @@ class UAudioDirector;
 
 class UCore : public IUGameContent
 {
+  friend struct CoreAfterWorldLoadedCallback;
   friend class UWorldLifecycleFacade;
   friend void RunTerrainSaveFailureProbe(UCore &core);
   friend void RunSaveErrorUiProbe(UApplication &application, UCore &core);

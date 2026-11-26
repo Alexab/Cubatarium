@@ -1,3 +1,5 @@
+#include "World/Core/WorldOwnedCallbacks.h"
+#include "Core/Memory/CallbackStorageSource.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Core/BlockWorld.h"
@@ -40,6 +42,9 @@ PipelineStorageLayout UComposableWorldGenerator::GetRetainedStorageLayout() noex
 }
 
 PipelineStorageSnapshot UComposableWorldGenerator::InspectRetainedStorage(bool ordinary_heap_factory_known) const noexcept
+{return InspectRetainedStorageForWorld(ordinary_heap_factory_known,nullptr);}
+
+PipelineStorageSnapshot UComposableWorldGenerator::InspectRetainedStorageForWorld(bool ordinary_heap_factory_known,const UWorld *owner) const noexcept
 {
   PipelineStorageSnapshot out;out.layout=GetRetainedStorageLayout();out.initialized=true;
   out.pipeline=reinterpret_cast<uintptr_t>(this);out.supported=ordinary_heap_factory_known && out.layout.supported && typeid(*this)==typeid(UComposableWorldGenerator);
@@ -59,7 +64,10 @@ PipelineStorageSnapshot UComposableWorldGenerator::InspectRetainedStorage(bool o
   if(!direct(DirectCoarseHeightFn))out.supported=false;
   if(Ctx.CoarseSurfaceYAt){const auto *p=Ctx.CoarseSurfaceYAt.target<SampleCoarseCallback>();
     if(!p || p->owner!=this)out.supported=false;else callbacks=AddTextCapacityBytes(callbacks,out.layout.widths[4]);}
-  if(Ctx.OnColumnMeshDirty)out.supported=false;
+  if(Ctx.OnColumnMeshDirty){
+    const auto callback=InspectKnownOwnerCallback<WorldColumnMeshDirtyCallback>(Ctx.OnColumnMeshDirty,owner,owner!=nullptr);
+    out.supported=out.supported && callback.supported;callbacks=AddTextCapacityBytes(callbacks,callback.requests);
+  }
   if(BiomeSampler){const auto &fn=BiomeSampler->GetCoarseHeightCallbackForStorage();
     if(const auto *p=fn.target<CachedCoarseCallback>()){
       if(!ChunkCoarseCache || p->cache!=&*ChunkCoarseCache || !direct(p->direct))out.supported=false;

@@ -101,6 +101,8 @@ public:
     Inner.RelightAllLoadedChunks(world, registry);
   }
 
+  static size_t GetInnerInlineBytesForStorage() noexcept {return sizeof(Inner);}
+
   const char *BackendName() const { return "gpu_transport_with_cpu_fallback"; }
   uint64_t GetComputeDispatchCount() const
   {
