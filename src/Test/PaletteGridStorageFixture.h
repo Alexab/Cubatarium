@@ -40,8 +40,8 @@ public:
   void WarmupBlockIcons(size_t count) override
   {
     for (size_t i = 0; i < count; ++i)
-      if (const auto id = Queue.PopFront())
-        GetBlockIconTexture(*id);
+      if (!Queue.RunFront([this](const auto &id) { GetBlockIconTexture(id); }))
+        break;
   }
   size_t PendingBlockIcons() const override { return Queue.Size(); }
   unsigned GetObjectIconTexture(const std::string &) override { return 0; }
@@ -89,7 +89,8 @@ inline size_t CheckIconQueueRefusals()
       observation::State.fail_after = SIZE_MAX;
       Require(refused && queue.Empty() && queue.Push(first) && !queue.Push(first) && queue.Push(second),
               "icon queue refusal preserves retry, deduplication and pending work");
-      Require(queue.PopFront() == first && queue.PopFront() == second && !queue.PopFront(),
+      Require(queue.RunFront([&](const auto &id) { Require(id == first, "first queued icon"); }) &&
+                  queue.RunFront([&](const auto &id) { Require(id == second, "second queued icon"); }) && queue.Empty(),
               "icon queue retains FIFO ordering through refusal and retry");
     }
     Require(!observation::State.live && !observation::State.blocks,

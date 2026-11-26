@@ -1,5 +1,4 @@
 #include "Gui/Cache/ObjectIconCache.h"
-#include "Gui/Cache/GuiOffscreenIconCacheBase.h"
 #include "Gui/Cache/InventoryIconService.h"
 #include "Gui/Preview/ObjectPreviewLayout.h"
 
@@ -84,8 +83,10 @@ bool UObjectIconCache::Initialize()
 
 void UObjectIconCache::Shutdown()
 {
-  UGuiOffscreenIconCacheBase::DeleteGlTextures(Cache, ColorTex);
-  UGuiOffscreenIconCacheBase::DeleteGlTextures(BlockCache, ColorTex);
+  Cache.clear();
+  BlockCache.clear();
+  Warmup.Clear();
+  BlockWarmup.Clear();
 
   if (DepthRbo != 0)
   {
@@ -296,7 +297,7 @@ GLuint UObjectIconCache::GetBlockTexture(BlockId blockId) const
 
 void UObjectIconCache::ClearBlockIconCache()
 {
-  UGuiOffscreenIconCacheBase::DeleteGlTextures(BlockCache, ColorTex);
+  BlockCache.clear();
   if (IconService)
   {
     IconService->InvalidateKind("block");
@@ -316,7 +317,7 @@ GLuint UObjectIconCache::GetBlockIconTextureIfCached(
     return 0;
   }
   const auto it = BlockCache.find(def->Id);
-  return it != BlockCache.end() ? it->second : 0;
+  return it != BlockCache.end() ? it->second.Get() : 0;
 }
 
 void UObjectIconCache::QueueBlockIcon(const std::string &blockName)
@@ -329,12 +330,8 @@ void UObjectIconCache::WarmupBlockIcons(size_t count)
   size_t done = 0;
   while (done < count)
   {
-    const auto next = BlockWarmup.PopFront();
-    if (!next)
-    {
+    if (!BlockWarmup.RunFront([this](const auto &name) { GetBlockIconTexture(name); }))
       break;
-    }
-    GetBlockIconTexture(*next);
     ++done;
   }
   if (done > 0 && IconService)
@@ -357,7 +354,7 @@ GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
   const BlockId Id = def->Id;
   if (auto it = BlockCache.find(Id); it != BlockCache.end())
   {
-    return it->second;
+    return it->second.Get();
   }
 
   const std::string fingerprint = BuildBlockFingerprint(blockName);
@@ -367,21 +364,16 @@ GLuint UObjectIconCache::GetBlockIconTexture(const std::string &blockName)
     if (IconService->TryLoadIconTexture("block", blockName, "", fingerprint,
                                         kIconSize, cachedTex))
     {
-      BlockCache[Id] = cachedTex;
-      return cachedTex;
+      return BlockCache.try_emplace(Id, UGlTextureOwner(cachedTex)).first->second.Get();
     }
   }
 
-  const GLuint tex = RenderBlockIcon(Id);
-  if (tex != 0)
-  {
-    if (IconService && !fingerprint.empty())
-    {
-      IconService->StoreIconTexture("block", blockName, "", fingerprint,
-                                    kIconSize, tex);
-    }
-    BlockCache[Id] = tex;
-  }
+  UGlTextureOwner rendered(RenderBlockIcon(Id));
+  if (!rendered.Get())
+    return 0;
+  const auto tex = BlockCache.try_emplace(Id, std::move(rendered)).first->second.Get();
+  if (IconService && !fingerprint.empty())
+    IconService->StoreIconTexture("block", blockName, "", fingerprint, kIconSize, tex);
   return tex;
 }
 
@@ -394,19 +386,19 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
     return 0;
   }
 
+  UGlStateScope glState(kGlMaskIconFbo);
   GLuint iconTex = 0;
   glGenTextures(1, &iconTex);
+  UGlTextureOwner texture(iconTex);
+  if (!iconTex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlStateScope glState(kGlMaskIconFbo);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         iconTex, 0);
+  UGlIconColorAttachment attachment(Fbo, iconTex, ColorTex);
   glViewport(0, 0, kIconSize, kIconSize);
   glEnable(GL_DEPTH_TEST);
   glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
@@ -447,7 +439,7 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
   glBindVertexArray(0);
   Shader->Unuse();
 
-  return iconTex;
+  return texture.Release();
 }
 
 GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
@@ -458,18 +450,19 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
     return 0;
   }
 
+  UGlStateScope glState(kGlMaskIconFbo);
   GLuint iconTex = 0;
   glGenTextures(1, &iconTex);
+  UGlTextureOwner texture(iconTex);
+  if (!iconTex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, kIconSize, kIconSize, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         iconTex, 0);
+  UGlIconColorAttachment attachment(Fbo, iconTex, ColorTex);
   glViewport(0, 0, kIconSize, kIconSize);
   glEnable(GL_DEPTH_TEST);
   glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
@@ -495,13 +488,13 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
 
   glBindVertexArray(0);
   Shader->Unuse();
-  return iconTex;
+  return texture.Release();
 }
 
 GLuint UObjectIconCache::GetIconIfCached(const std::string &objectName) const
 {
   const auto it = Cache.find(objectName);
-  return it != Cache.end() ? it->second : 0;
+  return it != Cache.end() ? it->second.Get() : 0;
 }
 
 GLuint UObjectIconCache::GetIcon(const std::string &objectName)
@@ -521,17 +514,15 @@ GLuint UObjectIconCache::GetIcon(const std::string &objectName)
     if (IconService->TryLoadIconTexture("object", objectName, "", fingerprint,
                                         kIconSize, cachedTex))
     {
-      Cache[objectName] = cachedTex;
-      return cachedTex;
+      return Cache.try_emplace(objectName, UGlTextureOwner(cachedTex)).first->second.Get();
     }
   }
-  const GLuint tex = RenderObjectIcon(objectName);
-  if (tex != 0 && IconService && !fingerprint.empty())
-  {
-    IconService->StoreIconTexture("object", objectName, "", fingerprint,
-                                  kIconSize, tex);
-  }
-  Cache[objectName] = tex;
+  UGlTextureOwner rendered(RenderObjectIcon(objectName));
+  if (!rendered.Get())
+    return 0;
+  const auto tex = Cache.try_emplace(objectName, std::move(rendered)).first->second.Get();
+  if (IconService && !fingerprint.empty())
+    IconService->StoreIconTexture("object", objectName, "", fingerprint, kIconSize, tex);
   return tex;
 }
 
@@ -539,12 +530,8 @@ void UObjectIconCache::WarmupNext(size_t count)
 {
   for (size_t n = 0; n < count; ++n)
   {
-    const auto next = Warmup.PopFront();
-    if (!next)
-    {
+    if (!Warmup.RunFront([this](const auto &name) { GetIcon(name); }))
       break;
-    }
-    GetIcon(*next);
   }
   if (IconService)
   {

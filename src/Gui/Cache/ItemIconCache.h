@@ -6,6 +6,7 @@
 #include "Gui/Cache/InventoryIconService.h"
 #include "Items/ItemDefinitionStorage.h"
 #include "Items/ItemVisualInputs.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -54,17 +55,13 @@ private:
   std::unordered_map<std::string, StateRequest> StateRequests;
   GLuint RenderItemIcon(const std::string &itemId,
                         const ItemVisualInputs &inputs = {});
-  void EnsureFbo(int size);
+  void CompleteWarmupIcon(const std::string &itemId);
 
   std::shared_ptr<UItemDefinitionStorage> Items;
   std::shared_ptr<UInventoryIconService> IconService;
   std::shared_ptr<UItemPreviewRenderer> ItemPreview;
-  std::unordered_map<std::string, GLuint> Cache;
+  std::unordered_map<std::string, UGlTextureOwner> Cache;
   UGuiIconWarmupQueue Warmup;
-  GLuint Fbo{0};
-  GLuint ColorTex{0};
-  GLuint DepthRbo{0};
-  int FboSize{0};
 };
 
 } // namespace cutum

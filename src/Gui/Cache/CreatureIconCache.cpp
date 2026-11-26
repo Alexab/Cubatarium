@@ -1,5 +1,4 @@
 #include "Gui/Cache/CreatureIconCache.h"
-#include "Gui/Cache/GuiOffscreenIconCacheBase.h"
 #include "Gui/Cache/InventoryIconService.h"
 
 #include "Creatures/Core/CreatureCatalogTypes.h"
@@ -56,60 +55,34 @@ UCreatureIconCache::~UCreatureIconCache() { Shutdown(); }
 bool UCreatureIconCache::Initialize()
 {
   if (!Preview)
-  {
     return false;
-  }
-  UCreatureDefinitionStorage *species = Preview->GetSpecies();
-  USkinDefinitionStorage *skins = Preview->GetSkins();
-    Warmup.Clear();
-    if (species)
-    {
-      for (const std::string &Id : species->ListSpawnable())
-      {
-        Warmup.Push(Id);
-      }
-      for (const std::string &Id : species->ListAllIds())
-      {
-        if (const CreatureDefinition *def = species->Get(Id))
-        {
-          if (def->role == CreatureRole::ControlledDefault)
-          {
-            Warmup.Push(Id);
-          }
-        }
-      }
-    }
-    if (skins)
-    {
-      for (const std::string &Id : skins->ListEquippable())
-      {
-        Warmup.Push("skin:" + Id);
-      }
-    }
+  RebuildWarmupList();
   return true;
+}
+
+void UCreatureIconCache::RebuildWarmupList()
+{
+  UGuiIconWarmupQueue next;
+  if (Preview)
+  {
+    if (const auto *species = Preview->GetSpecies())
+    {
+      for (const auto &id : species->ListSpawnable())
+        next.Push(id);
+      for (const auto &id : species->ListAllIds())
+        if (const auto *def = species->Get(id); def && def->role == CreatureRole::ControlledDefault)
+          next.Push(id);
+    }
+    if (const auto *skins = Preview->GetSkins())
+      for (const auto &id : skins->ListEquippable())
+        next.Push("skin:" + id);
+  }
+  Warmup.Swap(next);
 }
 
 void UCreatureIconCache::ClearRenderedIcons()
 {
-  UGuiOffscreenIconCacheBase::DeleteGlTextures(SpeciesCache);
-  for (const auto &entry : SkinCache)
-  {
-    GLuint tex = entry.second;
-    if (tex == 0)
-    {
-      continue;
-    }
-    if (Preview && Preview->GetTextures())
-    {
-      const GLuint diffuse = Preview->GetTextures()->GetTexture(
-          "skin/" + entry.first + "/diffuse");
-      if (tex == diffuse)
-      {
-        continue;
-      }
-    }
-    glDeleteTextures(1, &tex);
-  }
+  RebuildWarmupList();
   SpeciesCache.clear();
   SkinCache.clear();
   if (IconService)
@@ -117,61 +90,13 @@ void UCreatureIconCache::ClearRenderedIcons()
     IconService->InvalidateKind("creature");
     IconService->InvalidateKind("skin");
   }
-  if (!Preview)
-  {
-    return;
-  }
-  UCreatureDefinitionStorage *species = Preview->GetSpecies();
-  USkinDefinitionStorage *skins = Preview->GetSkins();
-    Warmup.Clear();
-    if (species)
-    {
-      for (const std::string &Id : species->ListSpawnable())
-      {
-        Warmup.Push(Id);
-      }
-      for (const std::string &Id : species->ListAllIds())
-      {
-        if (const CreatureDefinition *def = species->Get(Id))
-        {
-          if (def->role == CreatureRole::ControlledDefault)
-          {
-            Warmup.Push(Id);
-          }
-        }
-      }
-    }
-    if (skins)
-    {
-      for (const std::string &Id : skins->ListEquippable())
-      {
-        Warmup.Push("skin:" + Id);
-      }
-    }
 }
 
 void UCreatureIconCache::Shutdown()
 {
-  UGuiOffscreenIconCacheBase::DeleteGlTextures(SpeciesCache);
-  for (const auto &entry : SkinCache)
-  {
-    if (entry.second == 0)
-    {
-      continue;
-    }
-    if (Preview && Preview->GetTextures())
-    {
-      const GLuint diffuse = Preview->GetTextures()->GetTexture(
-          "skin/" + entry.first + "/diffuse");
-      if (entry.second == diffuse)
-      {
-        continue;
-      }
-    }
-    glDeleteTextures(1, &entry.second);
-  }
   SpeciesCache.clear();
   SkinCache.clear();
+  Warmup.Clear();
 }
 
 GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
@@ -179,7 +104,7 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
   const auto it = SpeciesCache.find(speciesId);
   if (it != SpeciesCache.end())
   {
-    return it->second;
+    return it->second.Get();
   }
   if (!Preview)
   {
@@ -193,25 +118,23 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
     if (IconService->TryLoadIconTexture("creature", speciesId, "", fingerprint,
                                         kIconSize, cachedTex))
     {
-      SpeciesCache[speciesId] = cachedTex;
-      return cachedTex;
+      return SpeciesCache.try_emplace(speciesId, UGlTextureOwner(cachedTex)).first->second.Get();
     }
   }
 
   // Prefer rendered icon from current 3D model so slot preview stays aligned
   // with the actual creature visual; use packed icon texture only as fallback.
-  GLuint tex = Preview->RenderToUniqueTexture(speciesId, "", kIconSize,
-                                              kIconYaw, kIconPitch);
-  const bool rendered = tex != 0;
-  if (tex == 0)
+  UGlTextureOwner texture(Preview->RenderToUniqueTexture(speciesId, "", kIconSize,
+                                                         kIconYaw, kIconPitch));
+  const bool rendered = texture.Get() != 0;
+  if (!rendered)
   {
     if (const GLuint direct = Preview->TryGetDirectSpeciesIcon(speciesId))
     {
-      SpeciesCache[speciesId] = direct;
-      return direct;
+      return SpeciesCache.try_emplace(speciesId, UGlTextureOwner::Borrow(direct)).first->second.Get();
     }
   }
-  if (tex == 0)
+  if (!rendered)
   {
     glm::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
     if (UCreatureDefinitionStorage *species = Preview->GetSpecies())
@@ -221,15 +144,14 @@ GLuint UCreatureIconCache::GetOrCreateSpeciesIcon(const std::string &speciesId)
         color = def->visual.wireframeColor;
       }
     }
-    tex = Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b,
-                                           color.a);
+    texture = UGlTextureOwner(Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b, color.a));
   }
+  const auto tex = SpeciesCache.try_emplace(speciesId, std::move(texture)).first->second.Get();
   if (rendered && IconService && !fingerprint.empty())
   {
     IconService->StoreIconTexture("creature", speciesId, "", fingerprint,
                                   kIconSize, tex);
   }
-  SpeciesCache[speciesId] = tex;
   return tex;
 }
 
@@ -238,7 +160,7 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
   const auto it = SkinCache.find(skinId);
   if (it != SkinCache.end())
   {
-    return it->second;
+    return it->second.Get();
   }
   if (!Preview)
   {
@@ -252,33 +174,31 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
     if (IconService->TryLoadIconTexture("skin", skinId, "", fingerprint,
                                         kIconSize, cachedTex))
     {
-      SkinCache[skinId] = cachedTex;
-      return cachedTex;
+      return SkinCache.try_emplace(skinId, UGlTextureOwner(cachedTex)).first->second.Get();
     }
   }
 
-  GLuint rendered = 0;
-  if (UCreatureTextureStorage *textures = Preview->GetTextures())
+  UGlTextureOwner rendered;
+  if (Preview->GetTextures())
   {
     if (USkinDefinitionStorage *skins = Preview->GetSkins())
     {
       if (const SkinDefinition *def = skins->Get(skinId))
       {
-        rendered = Preview->RenderToUniqueTexture(def->creatureId, skinId,
-                                                  kIconSize, kIconYaw,
-                                                  kIconPitch);
+        rendered = UGlTextureOwner(Preview->RenderToUniqueTexture(def->creatureId, skinId,
+                                                                   kIconSize, kIconYaw, kIconPitch));
       }
     }
   }
-  if (rendered != 0)
+  if (rendered.Get())
   {
+    const auto tex = SkinCache.try_emplace(skinId, std::move(rendered)).first->second.Get();
     if (IconService && !fingerprint.empty())
     {
       IconService->StoreIconTexture("skin", skinId, "", fingerprint, kIconSize,
-                                    rendered);
+                                    tex);
     }
-    SkinCache[skinId] = rendered;
-    return rendered;
+    return tex;
   }
 
   if (UCreatureTextureStorage *textures = Preview->GetTextures())
@@ -286,8 +206,7 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
     const GLuint existing = textures->GetTexture("skin/" + skinId + "/diffuse");
     if (existing != 0)
     {
-      SkinCache[skinId] = existing;
-      return existing;
+      return SkinCache.try_emplace(skinId, UGlTextureOwner::Borrow(existing)).first->second.Get();
     }
   }
 
@@ -299,10 +218,8 @@ GLuint UCreatureIconCache::GetOrCreateSkinIcon(const std::string &skinId)
       color = def->iconFallbackColor;
     }
   }
-  const GLuint tex = Preview->CreateSolidColorTexture(
-      kIconSize, color.r, color.g, color.b, color.a);
-  SkinCache[skinId] = tex;
-  return tex;
+  UGlTextureOwner texture(Preview->CreateSolidColorTexture(kIconSize, color.r, color.g, color.b, color.a));
+  return SkinCache.try_emplace(skinId, std::move(texture)).first->second.Get();
 }
 
 std::string UCreatureIconCache::BuildSpeciesFingerprint(
@@ -392,20 +309,13 @@ void UCreatureIconCache::WarmupNext(size_t count)
 {
   for (size_t i = 0; i < count; ++i)
   {
-    const auto next = Warmup.PopFront();
-    if (!next)
-    {
+    if (!Warmup.RunFront([this](const std::string &key) {
+          if (key.rfind("skin:", 0) == 0)
+            GetOrCreateSkinIcon(key.substr(5));
+          else
+            GetOrCreateSpeciesIcon(key);
+        }))
       break;
-    }
-    const std::string &key = *next;
-    if (key.rfind("skin:", 0) == 0)
-    {
-      GetOrCreateSkinIcon(key.substr(5));
-    }
-    else
-    {
-      GetOrCreateSpeciesIcon(key);
-    }
   }
   if (IconService)
   {

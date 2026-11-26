@@ -214,6 +214,7 @@ void UApplication::PrepareForShutdown()
 {
   CubatariumSetSuppressErrorDialogs(true);
   WorldOpRunner.reset();
+  IconSource.reset();
   if (World)
   {
     World->PrepareForShutdown();
@@ -3299,6 +3300,8 @@ void UApplication::UpdateNativeItemsQa(double dt)
     {
       playerWindowQaDone = true;
       RunPlayerWindowQa(path);
+      if (const char *iconsPath = std::getenv("CUBA_INVENTORY_ICONS_QA"); iconsPath && *iconsPath)
+        RunInventoryIconsQa(iconsPath);
       EnterInGameInputState();
     }
   static bool itemsQaDone = false;

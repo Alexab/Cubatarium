@@ -2,6 +2,7 @@
 #define CREATURE_ICON_CACHE_H
 
 #include "Gui/Cache/IconWarmupQueue.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -42,8 +43,8 @@ private:
   std::shared_ptr<UCreaturePreviewRenderer> Preview;
   std::shared_ptr<UInventoryIconService> IconService;
 
-  std::unordered_map<std::string, GLuint> SpeciesCache;
-  std::unordered_map<std::string, GLuint> SkinCache;
+  std::unordered_map<std::string, UGlTextureOwner> SpeciesCache;
+  std::unordered_map<std::string, UGlTextureOwner> SkinCache;
   UGuiIconWarmupQueue Warmup;
 
   static constexpr int kIconSize = 64;

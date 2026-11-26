@@ -53,12 +53,19 @@ public:
   void InvalidateKind(const std::string &kind);
 
   const Stats &GetStats() const { return Metrics; }
+  struct ReadbackStorage
+  {
+    size_t jobs{}, buffer_bytes{};
+    GLuint first_buffer{};
+    bool supported{};
+  };
+  ReadbackStorage InspectReadbackStorage() const noexcept;
+  void CancelPendingItemReadbacks() noexcept;
 
 private:
   struct ReadbackState;
   std::unique_ptr<ReadbackState> Readbacks;
   void DrainReadbacks();
-  void CancelReadbacks(const std::string &kind);
 
   struct Entry
   {

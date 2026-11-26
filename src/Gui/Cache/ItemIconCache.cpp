@@ -4,6 +4,7 @@
 #include "Gui/Preview/ItemPreviewRenderer.h"
 #include "Items/ItemRenderAsset.h"
 #include "Render/GlIncludes.h"
+#include "Render/Pipeline/GlStateScope.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -103,8 +104,6 @@ UItemIconCache::UItemIconCache(
 {
 }
 
-void UItemIconCache::EnsureFbo(int) {}
-
 GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
                                       const ItemVisualInputs &inputs)
 {
@@ -123,8 +122,12 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
   std::vector<unsigned char> pixels(static_cast<size_t>(kSize * kSize * 4), 0);
   PaintTool(pixels, kSize, itemId);
 
+  UGlStateScope state(kGlMaskIconFbo);
   GLuint outTex = 0;
   glGenTextures(1, &outTex);
+  UGlTextureOwner texture(outTex);
+  if (!outTex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, outTex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, kSize, kSize, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, pixels.data());
@@ -132,7 +135,7 @@ GLuint UItemIconCache::RenderItemIcon(const std::string &itemId,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  return outTex;
+  return texture.Release();
 }
 
 GLuint UItemIconCache::GetIcon(const InventoryEntryRef &entry)
@@ -159,11 +162,21 @@ GLuint UItemIconCache::GetIcon(const InventoryEntryRef &entry)
                     key = entry.Id + "|" + variant;
   const auto found = Cache.find(key);
   if (found != Cache.end())
-    return found->second;
+    return found->second.Get();
+  if (StateRequests.find(key) != StateRequests.end())
+    return 0;
   auto inputs = MakeItemVisualInputs(&entry);
   inputs.ContentsUnits = units;
-  StateRequests[key] = {entry.Id, variant, inputs};
-  Warmup.Push(key);
+  const auto request = StateRequests.try_emplace(key, StateRequest{entry.Id, variant, inputs}).first;
+  try
+  {
+    Warmup.Push(key);
+  }
+  catch (...)
+  {
+    StateRequests.erase(request);
+    throw;
+  }
   return 0;
 }
 
@@ -177,7 +190,7 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
   const auto it = Cache.find(itemId);
   if (it != Cache.end())
   {
-    return it->second;
+    return it->second.Get();
   }
   // UX U3: queue for the per-frame drain instead of rendering synchronously
   // (glTF parse + FBO + glReadPixels + PNG write used to stall the frame).
@@ -188,78 +201,63 @@ GLuint UItemIconCache::GetIcon(const std::string &itemId)
 void UItemIconCache::WarmupNext(size_t count)
 {
   SyncRevision();
-  size_t done = 0;
   const auto started = std::chrono::steady_clock::now();
-  // Bound expensive disk validation, model loading and rendering together.
-  // Always advance one queued icon; reopening the window is never required.
+  // Count examined entries as work and allow one attempt inside every active frame.
   constexpr auto budget = std::chrono::milliseconds(4);
-  while (done < count &&
-         (done == 0 || std::chrono::steady_clock::now() - started < budget))
-  {
-    const auto next = Warmup.PopFront();
-    if (!next)
-    {
+  for (size_t examined = 0; examined < count &&
+       (examined == 0 || std::chrono::steady_clock::now() - started < budget); ++examined)
+    if (!Warmup.RunFront([this](const auto &id) { CompleteWarmupIcon(id); }))
       break;
-    }
-    const std::string itemId = *next;
-    if (Cache.find(itemId) != Cache.end())
+  if (IconService)
+    IconService->FlushManifest();
+}
+
+void UItemIconCache::CompleteWarmupIcon(const std::string &itemId)
+{
+  const auto state = StateRequests.find(itemId);
+  if (Cache.find(itemId) == Cache.end())
+  {
+    const std::string ordinaryVariant;
+    const auto &definitionId = state == StateRequests.end() ? itemId : state->second.Id;
+    const auto &variant = state == StateRequests.end() ? ordinaryVariant : state->second.Variant;
+    GLuint cached = 0;
+    if (IconService && !SkipDiskCache &&
+        IconService->TryLoadIconTexture("item", definitionId, variant,
+                                       FingerprintFor(definitionId), kIconSize, cached))
     {
-      continue;
+      Cache.try_emplace(itemId, UGlTextureOwner(cached));
     }
-    const auto state = StateRequests.find(itemId);
-    const auto &definitionId =
-        state == StateRequests.end() ? itemId : state->second.Id;
-    ++done;
-    if (IconService && !SkipDiskCache)
+    else
     {
-      GLuint cached = 0;
-      if (IconService->TryLoadIconTexture(
-              "item", definitionId,
-              state == StateRequests.end() ? "" : state->second.Variant,
-              FingerprintFor(definitionId), kIconSize, cached) &&
-          cached)
+      const auto renderStart = std::chrono::steady_clock::now();
+      UGlTextureOwner rendered(RenderItemIcon(definitionId,
+          state == StateRequests.end() ? ItemVisualInputs{} : state->second.Inputs));
+      const auto renderEnd = std::chrono::steady_clock::now();
+      const auto texture = Cache.try_emplace(itemId, std::move(rendered)).first->second.Get();
+      auto fingerprintEnd = renderEnd;
+      auto storeEnd = renderEnd;
+      if (IconService)
       {
-        Cache[itemId] = cached;
-        continue;
+        const auto fingerprint = FingerprintFor(definitionId);
+        fingerprintEnd = std::chrono::steady_clock::now();
+        IconService->StoreIconTexture("item", definitionId, variant, fingerprint, kIconSize, texture);
+        storeEnd = std::chrono::steady_clock::now();
+      }
+      if (const char *path = std::getenv("CUBA_ICON_TIMING"))
+      {
+        const auto ms = [](auto a, auto b)
+        { return std::chrono::duration<double, std::milli>(b - a).count(); };
+        std::ofstream output(path, std::ios::app);
+        output << nlohmann::json{{"id", definitionId},
+                                 {"render_ms", ms(renderStart, renderEnd)},
+                                 {"fingerprint_ms", ms(renderEnd, fingerprintEnd)},
+                                 {"store_ms", ms(fingerprintEnd, storeEnd)},
+                                 {"disk_service", bool(IconService)}}.dump() << '\n';
       }
     }
-    const auto renderStart = std::chrono::steady_clock::now();
-    const GLuint tex = RenderItemIcon(definitionId, state == StateRequests.end()
-                                                        ? ItemVisualInputs{}
-                                                        : state->second.Inputs);
-    const auto renderEnd = std::chrono::steady_clock::now();
-    Cache[itemId] = tex;
-    auto fingerprintEnd = renderEnd;
-    auto storeEnd = renderEnd;
-    if (IconService)
-    {
-      const auto fingerprint = FingerprintFor(definitionId);
-      fingerprintEnd = std::chrono::steady_clock::now();
-      IconService->StoreIconTexture(
-          "item", definitionId,
-          state == StateRequests.end() ? "" : state->second.Variant,
-          fingerprint, kIconSize, tex);
-      storeEnd = std::chrono::steady_clock::now();
-    }
-    if (const char *path = std::getenv("CUBA_ICON_TIMING"))
-    {
-      const auto ms = [](auto a, auto b)
-      { return std::chrono::duration<double, std::milli>(b - a).count(); };
-      std::ofstream output(path, std::ios::app);
-      output << nlohmann::json{{"id", definitionId},
-                               {"render_ms", ms(renderStart, renderEnd)},
-                               {"fingerprint_ms",
-                                ms(renderEnd, fingerprintEnd)},
-                               {"store_ms", ms(fingerprintEnd, storeEnd)},
-                               {"disk_service", bool(IconService)}}
-                    .dump()
-             << '\n';
-    }
   }
-  if (IconService)
-  {
-    IconService->FlushManifest();
-  }
+  if (state != StateRequests.end())
+    StateRequests.erase(state);
 }
 
 std::string UItemIconCache::FingerprintFor(const std::string &itemId) const
@@ -287,18 +285,13 @@ void UItemIconCache::Invalidate()
 {
   CachedRevision = UItemDefinitionStorage::ContentRevision();
   SkipDiskCache = true;
+  if (IconService)
+    IconService->CancelPendingItemReadbacks();
   Warmup.Clear();
   StateRequests.clear();
   Fingerprints.clear();
   if (ItemPreview)
     ItemPreview->Invalidate();
-  for (auto &pair : Cache)
-  {
-    if (pair.second)
-    {
-      glDeleteTextures(1, &pair.second);
-    }
-  }
   Cache.clear();
 }
 

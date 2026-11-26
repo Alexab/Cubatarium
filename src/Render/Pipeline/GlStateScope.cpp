@@ -19,7 +19,8 @@ UGlStateScope::UGlStateScope(GlStateMask mask) : Mask(mask)
 {
   if (HasBit(Mask, GlStateBit::ViewportFb))
   {
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &Framebuffer);
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &Framebuffer);
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &ReadFramebuffer);
     glGetIntegerv(GL_VIEWPORT, Viewport);
     glGetIntegerv(GL_ACTIVE_TEXTURE, &ActiveTexture);
     glActiveTexture(GL_TEXTURE0);
@@ -133,10 +134,12 @@ UGlStateScope::~UGlStateScope()
   }
   if (HasBit(Mask, GlStateBit::ViewportFb))
   {
-    glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(Framebuffer));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(Framebuffer));
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(ReadFramebuffer));
     glViewport(Viewport[0], Viewport[1], Viewport[2], Viewport[3]);
-    glActiveTexture(static_cast<GLenum>(ActiveTexture));
+    glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(BoundTexture));
+    glActiveTexture(static_cast<GLenum>(ActiveTexture));
     glUseProgram(static_cast<GLuint>(Program));
     glBindVertexArray(static_cast<GLuint>(Vao));
   }

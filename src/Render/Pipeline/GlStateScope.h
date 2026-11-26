@@ -37,6 +37,7 @@ private:
   GLboolean ColorMask[4]{GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE};
 
   GLint Framebuffer{0};
+  GLint ReadFramebuffer{0};
   GLint Viewport[4]{0, 0, 0, 0};
   GLint ActiveTexture{0};
   GLint BoundTexture{0};

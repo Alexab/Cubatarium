@@ -2,6 +2,7 @@
 #define OBJECT_ICON_CACHE_H
 
 #include "Gui/Cache/IconWarmupQueue.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include "World/Math/BlockTypes.h"
 #include <memory>
 #include <string>
@@ -64,8 +65,8 @@ private:
   std::shared_ptr<UInventoryIconService> IconService;
   std::shared_ptr<class UShaderProgram> Shader;
 
-  std::unordered_map<std::string, GLuint> Cache;
-  std::unordered_map<BlockId, GLuint> BlockCache;
+  std::unordered_map<std::string, UGlTextureOwner> Cache;
+  std::unordered_map<BlockId, UGlTextureOwner> BlockCache;
   UGuiIconWarmupQueue BlockWarmup;
   UGuiIconWarmupQueue Warmup;
 

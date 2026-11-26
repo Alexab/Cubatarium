@@ -2,6 +2,7 @@
 
 #include "App/Platform/IUPlatformPaths.h"
 #include "Render/GlIncludes.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include "ThirdParty/stb_image.h"
 #include "ThirdParty/stb_image_write.h"
 #include <cstring>
@@ -16,6 +17,8 @@ namespace cutum
 namespace
 {
 constexpr int kManifestVersion = 2;
+constexpr size_t kMaxReadbacks = 256;
+constexpr int kMaxReadbackSize = 512;
 }
 
 // Pixel-pack state belongs to the caller, including distinct read/draw targets.
@@ -54,10 +57,21 @@ struct UInventoryIconService::ReadbackState
 {
   struct Pending
   {
-    std::string Kind, Key, Fingerprint, File;
+    std::string Key, Fingerprint, File;
     int Size{};
     GLuint Buffer{};
     GLsync Fence{};
+    Pending(std::string key, std::string fingerprint, std::string file, int size)
+        : Key(std::move(key)), Fingerprint(std::move(fingerprint)), File(std::move(file)), Size(size) {}
+    Pending(const Pending &) = delete;
+    Pending &operator=(const Pending &) = delete;
+    ~Pending()
+    {
+      if (Fence)
+        glDeleteSync(Fence);
+      if (Buffer)
+        glDeleteBuffers(1, &Buffer);
+    }
   };
   std::deque<Pending> Jobs;
 };
@@ -67,22 +81,31 @@ UInventoryIconService::UInventoryIconService()
 {
 }
 
-UInventoryIconService::~UInventoryIconService() { CancelReadbacks(""); }
+UInventoryIconService::~UInventoryIconService() = default;
 
-void UInventoryIconService::CancelReadbacks(const std::string &kind)
+void UInventoryIconService::CancelPendingItemReadbacks() noexcept
 {
-  auto &jobs = Readbacks->Jobs;
-  for (auto it = jobs.begin(); it != jobs.end();)
+  Readbacks->Jobs.clear();
+}
+
+UInventoryIconService::ReadbackStorage UInventoryIconService::InspectReadbackStorage() const noexcept
+{
+  ReadbackStorage out;
+  const auto &jobs = Readbacks->Jobs;
+  out.jobs = jobs.size();
+  out.supported = jobs.size() <= kMaxReadbacks;
+  if (!jobs.empty())
+    out.first_buffer = jobs.front().Buffer;
+  for (const auto &job : jobs)
   {
-    if (kind.empty() || it->Kind == kind)
+    if (!job.Buffer || !job.Fence || job.Size <= 0 || job.Size > kMaxReadbackSize)
     {
-      glDeleteSync(it->Fence);
-      glDeleteBuffers(1, &it->Buffer);
-      it = jobs.erase(it);
+      out.supported = false;
+      continue;
     }
-    else
-      ++it;
+    out.buffer_bytes += size_t(job.Size) * job.Size * 4;
   }
+  return out;
 }
 
 void UInventoryIconService::DrainReadbacks()
@@ -99,17 +122,20 @@ void UInventoryIconService::DrainReadbacks()
     std::vector<unsigned char> pixels;
     if (ready != GL_WAIT_FAILED)
     {
+      // Allocate CPU storage before mapping the immutable pack buffer.
+      pixels.resize(bytes);
       IconReadbackScope state;
       glBindBuffer(GL_PIXEL_PACK_BUFFER, job.Buffer);
       const void *mapped =
           glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, bytes, GL_MAP_READ_BIT);
       if (mapped)
       {
-        pixels.resize(bytes);
         std::memcpy(pixels.data(), mapped, bytes);
         if (!glUnmapBuffer(GL_PIXEL_PACK_BUFFER))
           pixels.clear();
       }
+      else
+        pixels.clear();
     }
     if (!pixels.empty() && WritePngRgba(CacheRoot / job.File, job.Size, pixels))
     {
@@ -119,8 +145,6 @@ void UInventoryIconService::DrainReadbacks()
     }
     else if (pixels.empty())
       ++Metrics.PngWriteFailures;
-    glDeleteSync(job.Fence);
-    glDeleteBuffers(1, &job.Buffer);
     jobs.pop_front();
   }
 }
@@ -269,17 +293,15 @@ bool UInventoryIconService::ReadPngRgba(const std::filesystem::path &path,
   int width = 0;
   int height = 0;
   int channels = 0;
-  unsigned char *data =
-      stbi_load(path.string().c_str(), &width, &height, &channels, 4);
+  const std::unique_ptr<unsigned char, decltype(&stbi_image_free)> data(
+      stbi_load(path.string().c_str(), &width, &height, &channels, 4), stbi_image_free);
   if (!data || width <= 0 || height <= 0 || width != height)
   {
-    stbi_image_free(data);
     ++Metrics.PngReadFailures;
     return false;
   }
   if (expectedSize > 0 && width != expectedSize)
   {
-    stbi_image_free(data);
     ++Metrics.PngReadFailures;
     return false;
   }
@@ -287,8 +309,7 @@ bool UInventoryIconService::ReadPngRgba(const std::filesystem::path &path,
   const size_t bytes =
       static_cast<size_t>(width) * static_cast<size_t>(height) * 4;
   pixels.resize(bytes);
-  std::memcpy(pixels.data(), data, bytes);
-  stbi_image_free(data);
+  std::memcpy(pixels.data(), data.get(), bytes);
   return true;
 }
 
@@ -324,22 +345,21 @@ bool UInventoryIconService::CaptureTexturePixels(
   {
     return false;
   }
+  pixels.resize(static_cast<size_t>(size) * static_cast<size_t>(size) * 4);
   IconReadbackScope state;
   glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-  GLuint fbo = 0;
-  glGenFramebuffers(1, &fbo);
-  glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+  UGlFramebufferOwner fbo;
+  if (!fbo.Get())
+    return false;
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.Get());
   glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                          GL_TEXTURE_2D, texture, 0);
   const GLenum status = glCheckFramebufferStatus(GL_READ_FRAMEBUFFER);
   if (status != GL_FRAMEBUFFER_COMPLETE)
   {
-    glDeleteFramebuffers(1, &fbo);
     return false;
   }
-  pixels.resize(static_cast<size_t>(size) * static_cast<size_t>(size) * 4);
   glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-  glDeleteFramebuffers(1, &fbo);
   return true;
 }
 
@@ -351,8 +371,12 @@ GLuint UInventoryIconService::CreateTextureFromPixels(
   {
     return 0;
   }
+  GLint previousTexture{};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &previousTexture);
   GLuint tex = 0;
   glGenTextures(1, &tex);
+  if (!tex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, size, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, pixels.data());
@@ -360,7 +384,7 @@ GLuint UInventoryIconService::CreateTextureFromPixels(
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glBindTexture(GL_TEXTURE_2D, 0);
+  glBindTexture(GL_TEXTURE_2D, GLuint(previousTexture));
   return tex;
 }
 
@@ -417,37 +441,52 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   {
     // Bounded optional cache work: the visible in-memory icon is unaffected if
     // persistence cannot be queued. No gameplay resources are held here.
-    if (Readbacks->Jobs.size() >= 256 || size > 512)
+    auto &jobs = Readbacks->Jobs;
+    if (jobs.size() >= kMaxReadbacks || size > kMaxReadbackSize)
       return false;
+    auto file = SanitizeFileToken(kind + "_" + entityId + "_" + variantId) + "_" +
+                HashFingerprint(fingerprint) + ".png";
+    auto &job = jobs.emplace_back(BuildCacheKey(kind, entityId, variantId), fingerprint,
+                                  std::move(file), size);
     IconReadbackScope state;
-    GLuint fbo = 0, buffer = 0;
-    glGenFramebuffers(1, &fbo);
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
+    UGlFramebufferOwner fbo;
+    if (!fbo.Get())
+    {
+      jobs.pop_back();
+      return false;
+    }
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo.Get());
     glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, texture, 0);
     if (glCheckFramebufferStatus(GL_READ_FRAMEBUFFER) !=
         GL_FRAMEBUFFER_COMPLETE)
     {
-      glDeleteFramebuffers(1, &fbo);
+      jobs.pop_back();
       return false;
     }
-    glGenBuffers(1, &buffer);
-    glBindBuffer(GL_PIXEL_PACK_BUFFER, buffer);
-    glBufferData(GL_PIXEL_PACK_BUFFER, size_t(size) * size * 4, nullptr,
-                 GL_STREAM_READ);
-    glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    const auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    glDeleteFramebuffers(1, &fbo);
-    if (!fence)
+    glGenBuffers(1, &job.Buffer);
+    if (!job.Buffer)
     {
-      glDeleteBuffers(1, &buffer);
+      jobs.pop_back();
       return false;
     }
-    const auto file =
-        SanitizeFileToken(kind + "_" + entityId + "_" + variantId) + "_" +
-        HashFingerprint(fingerprint) + ".png";
-    Readbacks->Jobs.push_back({kind, BuildCacheKey(kind, entityId, variantId),
-                               fingerprint, file, size, buffer, fence});
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, job.Buffer);
+    const int requestedBytes = size * size * 4;
+    glBufferData(GL_PIXEL_PACK_BUFFER, requestedBytes, nullptr, GL_STREAM_READ);
+    GLint allocatedBytes = 0;
+    glGetBufferParameteriv(GL_PIXEL_PACK_BUFFER, GL_BUFFER_SIZE, &allocatedBytes);
+    if (allocatedBytes != requestedBytes)
+    {
+      jobs.pop_back();
+      return false;
+    }
+    glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    job.Fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!job.Fence)
+    {
+      jobs.pop_back();
+      return false;
+    }
     return true;
   }
   std::vector<unsigned char> pixels;
@@ -486,7 +525,7 @@ void UInventoryIconService::FlushManifest()
 
 void UInventoryIconService::InvalidateAll()
 {
-  CancelReadbacks("");
+  CancelPendingItemReadbacks();
   ManifestDirty = false;
   Entries.clear();
   std::error_code ec;
@@ -513,7 +552,8 @@ void UInventoryIconService::InvalidateKind(const std::string &kind)
   {
     return;
   }
-  CancelReadbacks(kind);
+  if (kind == "item")
+    CancelPendingItemReadbacks();
   std::vector<std::string> eraseKeys;
   for (const auto &[key, entry] : Entries)
   {

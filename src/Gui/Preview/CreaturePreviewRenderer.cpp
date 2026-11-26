@@ -38,6 +38,7 @@
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Textures/GlTextureOwner.h"
 
 #include "Render/GlIncludes.h"
 #include <algorithm>
@@ -338,6 +339,7 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
                                                          float a)
 {
   const int clamped = std::max(1, std::min(size, 512));
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
   if (!EnsureFboSize(FboSize > 0 ? FboSize : 256))
   {
     return 0;
@@ -345,37 +347,21 @@ GLuint UCreaturePreviewRenderer::CreateSolidColorTexture(int size, float r,
 
   GLuint tex = 0;
   glGenTextures(1, &tex);
+  UGlTextureOwner texture(tex);
+  if (!tex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-  UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex, 0);
-  if (DepthRbo != 0 && FboSize != clamped)
-  {
-    glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                          clamped);
-  }
+  UGlIconColorAttachment attachment(Fbo, tex, ColorTex, DepthRbo, clamped, FboSize);
   glViewport(0, 0, clamped, clamped);
   glClearColor(r, g, b, a);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-  if (DepthRbo != 0 && FboSize != clamped)
-  {
-    glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, FboSize,
-                          FboSize);
-  }
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  return tex;
+  return texture.Release();
 }
 
 // Queue sink for the preview FBO: draws creature requests with the preview
@@ -1005,30 +991,21 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   }
   const int clamped = std::max(64, std::min(size, 512));
 
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
+  if (Fbo == 0 && !EnsureFboSize(clamped))
+    return 0;
   GLuint tex = 0;
   glGenTextures(1, &tex);
+  UGlTextureOwner texture(tex);
+  if (!tex)
+    return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  if (Fbo == 0 && !EnsureFboSize(clamped))
-  {
-    glDeleteTextures(1, &tex);
-    return 0;
-  }
-
-  UGlStateScope glState(kGlMaskIconFbo);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex, 0);
-  if (DepthRbo != 0 && FboSize != clamped)
-  {
-    glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                          clamped);
-  }
+  UGlIconColorAttachment attachment(Fbo, tex, ColorTex, DepthRbo, clamped, FboSize);
   glViewport(0, 0, clamped, clamped);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
@@ -1037,22 +1014,8 @@ GLuint UCreaturePreviewRenderer::RenderToUniqueTexture(
   if (!DrawSpeciesParts(speciesId, skinId, clamped, yawDeg, pitchDeg,
                         animTimeSec, animateWalk, armor, mainItemId,
                         offhandItemId, human, mainInputs, offInputs))
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDeleteTextures(1, &tex);
     return 0;
-  }
-
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-  if (DepthRbo != 0 && FboSize != clamped)
-  {
-    glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, FboSize,
-                          FboSize);
-  }
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  return tex;
+  return texture.Release();
 }
 
 } // namespace cutum
