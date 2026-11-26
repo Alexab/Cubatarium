@@ -3,6 +3,7 @@
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Preview/CreaturePreviewRenderer.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Textures/TextureCube.h"
 #include <array>
 
@@ -24,6 +25,33 @@ UGuiIconSource::UGuiIconSource(
     : Textures(std::move(textures)), ObjectCache(std::move(objectCache)),
       CreatureCache(std::move(creatureCache)), ItemCache(std::move(itemCache))
 {
+}
+
+void UGuiIconSource::InspectRenderImages(RenderImageCensus &out) const
+{
+  using Role = RenderImageRole;
+  const auto textures = [&](const auto &table, Role role) {
+    for (const auto &entry : table)
+      out.Add(role, GL_TEXTURE_2D, entry.second.Get());
+  };
+  if (ObjectCache)
+  {
+    textures(ObjectCache->Cache, Role::ObjectIcon);
+    textures(ObjectCache->BlockCache, Role::BlockIcon);
+    out.Add(Role::IconTargetColor, GL_TEXTURE_2D, ObjectCache->Target.Color);
+    out.Add(Role::IconTargetDepth, GL_RENDERBUFFER, ObjectCache->Target.Depth);
+  }
+  if (CreatureCache)
+  {
+    textures(CreatureCache->SpeciesCache, Role::CreatureIcon);
+    textures(CreatureCache->SkinCache, Role::SkinIcon);
+  }
+  if (ItemCache)
+  {
+    textures(ItemCache->Cache, Role::ItemIcon);
+    if (ItemCache->ItemPreview)
+      ItemCache->ItemPreview->InspectRenderImages(out);
+  }
 }
 
 GLuint UGuiIconSource::GetBlockIconTexture(const std::string &blockName)

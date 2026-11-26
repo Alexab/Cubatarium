@@ -3,6 +3,7 @@
 #include "Core/Memory/StlSourceStorage.h"
 #include "Core/Memory/VisualFilesystemSource.h"
 #include "Render/Textures/VisualTextureUpload.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <atomic>
 #include <fstream>
@@ -340,6 +341,20 @@ VisualTextureStorage ItemGltfTextureCache::InspectCurrentStorage()
   out.rgbaBytes = images.bytes.requested;
   out.supported &= table.bytes.supported && images.bytes.supported;
   return out;
+}
+
+void ItemGltfTextureCache::InspectRenderImages(RenderImageCensus &out)
+{
+  auto *cache = PublishedCache.load(std::memory_order_acquire);
+  if (!cache)
+    return;
+  std::lock_guard<std::mutex> lock(cache->Mu);
+  for (const auto &entry : cache->ByModel)
+    for (const auto &image : entry.second.Images)
+      out.Add(RenderImageRole::ModelTexture, GL_TEXTURE_2D, image.Name.Get());
+  for (const auto &entry : cache->LinearAlbedo)
+    out.Add(RenderImageRole::ItemAlbedo, GL_TEXTURE_2D, entry.second.Name.Get(),
+            RenderTextureLevels::Allocated);
 }
 
 ItemGltfTextureCache::MemoryStats ItemGltfTextureCache::InspectMemory(bool itemsOnly)

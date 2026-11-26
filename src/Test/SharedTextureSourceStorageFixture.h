@@ -3,6 +3,7 @@
 #include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Items/ItemGltfTextureCache.h"
 #include "Render/Textures/VisualTextureUpload.h"
+#include "Render/Engine/RenderImageStorageReport.h"
 #include "Test/InventoryIconServiceStorageFixture.h"
 #include "Test/SharedContentPreviewStorageFixture.h"
 #include "ThirdParty/stb_image_write.h"
@@ -167,11 +168,18 @@ inline Json CheckItems(const std::filesystem::path &root)
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &format);
     Require(format == GL_SRGB8_ALPHA8, "linear sampling uses sRGB decode before filtering");
   }
+  RenderImageCensus retained;
+  ItemGltfTextureCache::InspectRenderImages(retained);
+  const auto images = retained.Read();
+  Require(images.contextAvailable && !images.failedQueries && images.references == 1 &&
+              images.images.size() == 1 && images.logicalBytes == 72 && images.images[0].levels.size() == 3,
+          "one cache-owned albedo contributes all actual levels through both file aliases");
   cache.Clear();
-  Require(!glIsTexture(albedo) && ReadCallerState() == caller, "linear alias retirement leaves no GL texture or changed binding");
+  Require(!glIsTexture(albedo) && ReadCallerState() == caller && retained.Read().namesWithoutObject == 1,
+          "linear alias retirement leaves no GL texture or changed binding");
   return {{"legacy_table_bytes", tableBytes}, {"legacy_rgba_bytes", rgbaBytes},
           {"linear_rgba_bytes", linear.rgbaBytes}, {"unused_upload_retired", true},
-          {"item_refusals_recovered", true}};
+          {"item_refusals_recovered", true}, {"allocated_mips", DescribeRenderImages(images)}};
 }
 
 inline Json CheckCreatures(const std::filesystem::path &root)
@@ -228,6 +236,15 @@ inline Json CheckCreatures(const std::filesystem::path &root)
                   !glIsTexture(oldSpecies) && !glIsTexture(oldSkin) && stats.images == 2 && stats.rgbaBytes == 24 &&
                   stats.tableBytes + stats.controlBytes == observation::State.live,
               "successful overlay replaces one image and retires previous and shadowed names");
+    }
+    {
+      RenderImageCensus retained;
+      storage->InspectRenderImages(retained);
+      storage->InspectRenderImages(retained);
+      const auto images = retained.Read();
+      Require(images.contextAvailable && !images.failedQueries && images.references == 4 &&
+                  images.images.size() == 2 && images.logicalBytes == stats.rgbaBytes,
+              "shared creature roots contribute each current uploaded image once");
     }
     const auto mergeRoot = (overlay / "creatures").string();
     Require(storage->MergeCreatureRoot(mergeRoot) && storage->GetTexture(skinKey) == replacedSkin && !glIsTexture(replaced),

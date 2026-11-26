@@ -22,6 +22,7 @@ public:
   static ItemGltfTextureCache &Instance();
   static void ClearForContextShutdown();
   static VisualTextureStorage InspectCurrentStorage();
+  static void InspectRenderImages(class RenderImageCensus &out);
 
   /// Absolute glTF path: inventory and worn variants can share a folder.
   GLuint Get(const std::filesystem::path &modelGltfAbs,

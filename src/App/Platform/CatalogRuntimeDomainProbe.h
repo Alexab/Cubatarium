@@ -510,6 +510,10 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   report["native_thread_stacks"] = DescribeNativeThreadStacks();
   TerrainGpuBufferCensus terrainBuffers;
   RenderImageCensus renderImages;
+  if (launcher.cubes)
+    launcher.cubes->InspectRenderImages(renderImages);
+  if (const auto &textures = core.GetCreatureTextureStorage())
+    textures->InspectRenderImages(renderImages);
   for (const auto *geometry : out.member_geometry)
   {
     geometry->InspectTerrainGpuBuffers(terrainBuffers);

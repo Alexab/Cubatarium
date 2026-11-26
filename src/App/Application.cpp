@@ -56,6 +56,7 @@
 #include "Gui/Cache/ObjectIconCache.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiIconSource.h"
+#include "Items/ItemGltfTextureCache.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Core/GuiRenderer.h"
 #include "Gui/Core/GuiScale.h"
@@ -766,6 +767,9 @@ void UApplication::InspectRenderImages(RenderImageCensus &out) const
     ContentPreviewRenderer->InspectRenderImages(out);
   if (ItemLabScreen)
     ItemLabScreen->InspectRenderImages(out);
+  if (IconSource)
+    IconSource->InspectRenderImages(out);
+  ItemGltfTextureCache::InspectRenderImages(out);
 }
 
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const

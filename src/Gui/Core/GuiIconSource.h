@@ -52,6 +52,7 @@ public:
       const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
       const UShaderManager *shaders) const noexcept;
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   static CreatureItemIconStorage InspectCreatureItemIconStorage(const UGuiIconSource *source,
       const UContentPreviewRenderer *content, const std::shared_ptr<UCreaturePreviewRenderer> &creaturePreview,
       const UCreatureDefinitionStorage *species, const USkinDefinitionStorage *skins,

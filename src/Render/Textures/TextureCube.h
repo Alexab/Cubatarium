@@ -113,6 +113,7 @@ public:
   void RemoveCubeDescriptors(const std::vector<BlockId> &blockIds);
 
   const std::map<size_t, UTextureCube> &GetTextures() const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   size_t GetTypeIdByName(const std::string &Name) const;
 
   // CPU-side catalog only; GL names do not describe GPU allocation bytes.

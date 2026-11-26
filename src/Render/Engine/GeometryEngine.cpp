@@ -16,6 +16,7 @@
 #include "Creatures/Locomotion/CreatureLocomotionFacts.h"
 #include "Creatures/Player/User.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/CreatureVisibility.h"
 #include "Creatures/Visual/CreatureVisual.h"
 #include "Pose/CreaturePoseParams.h"
@@ -4540,6 +4541,10 @@ void UGeometryEngine::InspectTerrainGpuBuffers(TerrainGpuBufferCensus &out) cons
 
 void UGeometryEngine::InspectRenderImages(RenderImageCensus &out) const
 {
+  if (TextureCubeStorageInstance)
+    TextureCubeStorageInstance->InspectRenderImages(out);
+  if (CreatureTextureStorage)
+    CreatureTextureStorage->InspectRenderImages(out);
   if (SectionLightOwner)
     SectionLightOwner->InspectRenderImages(out);
   OpaqueDepthCapture.InspectRenderImages(out);

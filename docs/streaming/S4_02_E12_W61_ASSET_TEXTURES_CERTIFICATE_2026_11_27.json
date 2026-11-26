@@ -1,0 +1,1131 @@
+{
+  "schema": "s4-e12-w61-asset-textures.v1",
+  "status": "SCOPED_ASSET_TEXTURE_PASS_E12_OPEN",
+  "baseline_commit": "b88c91ec7f6dafdc8a31584b3c263da43e26fb80",
+  "prior_certificate": "S4_02_E12_W60_RENDER_IMAGES_CERTIFICATE_2026_11_27.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W61 accounts the selected block atlas, creature, glTF model, item albedo and GUI icon textures at the real renderer roots. GL names deduplicate shared uploads, and all defined albedo levels are observed independently of sampling limits. Desktop GL reports the actual compressed image byte extent. Release fixtures verify NPOT, sparse and compressed storage, item path aliases, GL binding preservation, and retirement. A real two-atlas replacement reaches 480 logical bytes while both predecessor and successor stores are live. The new-upload failure probe retires candidate stores and preserves the old pair. Atlas upload and same-size patch now isolate pixel-unpack parameters and restore the caller's PBO. All 46 Release regression groups, targeted GL fixtures and Flat and Full startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W61. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. Verify later-driver-failure rollback for a batch of in-place atlas updates. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Logical image extents from selected current renderer and GUI asset owners, with a controlled atlas replacement",
+  "composition_rule": "Count each GL texture once in the observed context and each defined selected level once. Desktop compressed image sizes describe the encoded GL extent. WDDM and PSAPI are separate observations. Candidate upload, driver residency and private staging have independent lifetimes.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix"
+  ],
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetTexLevelParameter.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glCompressedTexImage2D.xml"
+  ],
+  "mip_fixture": {
+    "resident": {
+      "failed_queries": 0,
+      "images": [
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 5,
+          "internal_format": 35907,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 5,
+              "internal_format": 35907,
+              "level": 0,
+              "logical_bytes": 60,
+              "samples": 1,
+              "width": 3
+            },
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 35907,
+              "level": 1,
+              "logical_bytes": 8,
+              "samples": 1,
+              "width": 1
+            },
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 1,
+              "internal_format": 35907,
+              "level": 2,
+              "logical_bytes": 4,
+              "samples": 1,
+              "width": 1
+            }
+          ],
+          "logical_bytes": 72,
+          "name": 1,
+          "roles": [
+            "model_texture",
+            "item_albedo"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 3
+        },
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 5,
+          "internal_format": 35907,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 5,
+              "internal_format": 35907,
+              "level": 0,
+              "logical_bytes": 60,
+              "samples": 1,
+              "width": 3
+            },
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 1,
+              "internal_format": 32856,
+              "level": 3,
+              "logical_bytes": 4,
+              "samples": 1,
+              "width": 1
+            }
+          ],
+          "logical_bytes": 64,
+          "name": 2,
+          "roles": [
+            "item_albedo"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 3
+        },
+        {
+          "bits_per_sample": 0,
+          "depth": 1,
+          "height": 4,
+          "internal_format": 36283,
+          "levels": [
+            {
+              "bits_per_sample": 0,
+              "compressed": true,
+              "depth": 1,
+              "height": 4,
+              "internal_format": 36283,
+              "level": 0,
+              "logical_bytes": 8,
+              "samples": 1,
+              "width": 4
+            }
+          ],
+          "logical_bytes": 8,
+          "name": 3,
+          "roles": [
+            "model_texture"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 4
+        }
+      ],
+      "images_without_storage": 0,
+      "logical_bytes": 144,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "retired": {
+      "failed_queries": 0,
+      "images": [],
+      "images_without_storage": 0,
+      "logical_bytes": 0,
+      "names_without_object": 3,
+      "overflow": false,
+      "references": 4,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "schema": "asset-mip-lifecycle.v1",
+    "status": "PASS"
+  },
+  "atlas_peak_fixture": {
+    "baseline": {
+      "failed_queries": 0,
+      "images": [
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 96,
+              "samples": 1,
+              "width": 12
+            }
+          ],
+          "logical_bytes": 96,
+          "name": 1,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 12
+        },
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 96,
+              "samples": 1,
+              "width": 12
+            }
+          ],
+          "logical_bytes": 96,
+          "name": 2,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 12
+        }
+      ],
+      "images_without_storage": 0,
+      "logical_bytes": 192,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "cleaned": true,
+    "failed_publication": {
+      "failed_queries": 0,
+      "images": [
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 96,
+              "samples": 1,
+              "width": 12
+            }
+          ],
+          "logical_bytes": 96,
+          "name": 1,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 12
+        },
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 96,
+              "samples": 1,
+              "width": 12
+            }
+          ],
+          "logical_bytes": 96,
+          "name": 2,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 12
+        }
+      ],
+      "images_without_storage": 0,
+      "logical_bytes": 192,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "failed_upload_live_bytes": 336,
+    "failed_upload_observed": 1,
+    "publication": true,
+    "replacement": {
+      "failed_queries": 0,
+      "images": [
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 144,
+              "samples": 1,
+              "width": 18
+            }
+          ],
+          "logical_bytes": 144,
+          "name": 3,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 18
+        },
+        {
+          "bits_per_sample": 32,
+          "depth": 1,
+          "height": 2,
+          "internal_format": 6408,
+          "levels": [
+            {
+              "bits_per_sample": 32,
+              "compressed": false,
+              "depth": 1,
+              "height": 2,
+              "internal_format": 6408,
+              "level": 0,
+              "logical_bytes": 144,
+              "samples": 1,
+              "width": 18
+            }
+          ],
+          "logical_bytes": 144,
+          "name": 4,
+          "roles": [
+            "block_atlas"
+          ],
+          "samples": 1,
+          "target": 3553,
+          "width": 18
+        }
+      ],
+      "images_without_storage": 0,
+      "logical_bytes": 288,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "retired": {
+      "failed_queries": 0,
+      "images": [],
+      "images_without_storage": 0,
+      "logical_bytes": 0,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 0,
+      "schema": "render-image-storage.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "rollback": true,
+    "same_size_reuse_under_unpack_state": true,
+    "schema": "block-atlas-gpu-peak.v1",
+    "simultaneous_logical_bytes": [
+      336,
+      480
+    ],
+    "status": "PASS"
+  },
+  "item_cache_mips": {
+    "failed_queries": 0,
+    "images": [
+      {
+        "bits_per_sample": 32,
+        "depth": 1,
+        "height": 5,
+        "internal_format": 35907,
+        "levels": [
+          {
+            "bits_per_sample": 32,
+            "compressed": false,
+            "depth": 1,
+            "height": 5,
+            "internal_format": 35907,
+            "level": 0,
+            "logical_bytes": 60,
+            "samples": 1,
+            "width": 3
+          },
+          {
+            "bits_per_sample": 32,
+            "compressed": false,
+            "depth": 1,
+            "height": 2,
+            "internal_format": 35907,
+            "level": 1,
+            "logical_bytes": 8,
+            "samples": 1,
+            "width": 1
+          },
+          {
+            "bits_per_sample": 32,
+            "compressed": false,
+            "depth": 1,
+            "height": 1,
+            "internal_format": 35907,
+            "level": 2,
+            "logical_bytes": 4,
+            "samples": 1,
+            "width": 1
+          }
+        ],
+        "logical_bytes": 72,
+        "name": 1,
+        "roles": [
+          "item_albedo"
+        ],
+        "samples": 1,
+        "target": 3553,
+        "width": 3
+      }
+    ],
+    "images_without_storage": 0,
+    "logical_bytes": 72,
+    "names_without_object": 0,
+    "overflow": false,
+    "references": 1,
+    "schema": "render-image-storage.v1",
+    "status": "PASS",
+    "whole_runtime_complete": false
+  },
+  "ordinary_publication_refusal_and_retry_cases": 613,
+  "native": {
+    "flat": {
+      "stages": {
+        "menu": {
+          "sizes": {
+            "textures": 1937,
+            "logical_bytes": 24061952,
+            "item_albedo_level_counts": [],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 24520704,
+            "all_image_references": 3876
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 69017600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 234237952,
+            "working_set_bytes": 194502656
+          }
+        },
+        "in-game": {
+          "sizes": {
+            "textures": 1941,
+            "logical_bytes": 24460628,
+            "item_albedo_level_counts": [
+              9
+            ],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 3,
+                "logical_bytes": 49152
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 1,
+                "logical_bytes": 349524
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 28774996,
+            "all_image_references": 3885
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 250236928
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 983957504,
+            "working_set_bytes": 424726528
+          }
+        },
+        "after-loop": {
+          "sizes": {
+            "textures": 1941,
+            "logical_bytes": 24460628,
+            "item_albedo_level_counts": [
+              9
+            ],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 3,
+                "logical_bytes": 49152
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 1,
+                "logical_bytes": 349524
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 28774996,
+            "all_image_references": 3885
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 275402752
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ]
+        }
+      },
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 879
+    },
+    "full": {
+      "stages": {
+        "menu": {
+          "sizes": {
+            "textures": 1937,
+            "logical_bytes": 24061952,
+            "item_albedo_level_counts": [],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 24520704,
+            "all_image_references": 3876
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 69017600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 240467968,
+            "working_set_bytes": 201363456
+          }
+        },
+        "in-game": {
+          "sizes": {
+            "textures": 1941,
+            "logical_bytes": 24460628,
+            "item_albedo_level_counts": [
+              9
+            ],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 3,
+                "logical_bytes": 49152
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 1,
+                "logical_bytes": 349524
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 61624916,
+            "all_image_references": 3887
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 369258496
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 1364692992,
+            "working_set_bytes": 709599232
+          }
+        },
+        "after-loop": {
+          "sizes": {
+            "textures": 1941,
+            "logical_bytes": 24460628,
+            "item_albedo_level_counts": [
+              9
+            ],
+            "roles": {
+              "block_atlas": {
+                "textures": 1757,
+                "logical_bytes": 10905600
+              },
+              "block_icon": {
+                "textures": 3,
+                "logical_bytes": 49152
+              },
+              "creature_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "creature_texture": {
+                "textures": 178,
+                "logical_bytes": 13127680
+              },
+              "icon_target_color": {
+                "textures": 1,
+                "logical_bytes": 16384
+              },
+              "icon_target_depth": {
+                "textures": 1,
+                "logical_bytes": 12288
+              },
+              "item_albedo": {
+                "textures": 1,
+                "logical_bytes": 349524
+              },
+              "item_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "model_texture": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "object_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              },
+              "skin_icon": {
+                "textures": 0,
+                "logical_bytes": 0
+              }
+            },
+            "all_image_logical_bytes": 61674068,
+            "all_image_references": 3887
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 399667200
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ]
+        }
+      },
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 639
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "3a12acf176779ba97a317d9569d1a8fcd6ab5e99c89e9a3c579bc135fa55dfd1",
+  "fixture_exe_sha256": {
+    "section_light_atlas_driver_test": "a961329d2786fbd4d8b1fa11eaeff598512d179f4f5a059511e2cfc0650b277e",
+    "texture_publication_driver_test": "c7b4de6fea313e3f9a89f1739a95f77e9b4187710b54636d8b766f5f8de2b92e"
+  },
+  "source_sha256_raw": {
+    "src/Render/Engine/RenderImageStorage.h": "7d1e85e91f77a3fd2943697db97490ecc91169cdf40b3bd0fd3752b7028b7c25",
+    "src/Render/Engine/RenderImageStorageReport.h": "b55bfd116c7521c07ad4edccc3e502f7c2ee62bf0a0d0fc263558506acc70733",
+    "src/Render/Textures/TextureCube.h": "71449e821e11f013eb909071406d551e84905ef5346f0815f0e8eccc978093e1",
+    "src/Render/Textures/TextureCube.cpp": "6fc2c513e5d219ebb2d8be2bb227126837455f59ab3e700e0ffbeef024a18977",
+    "src/Core/Memory/TexturePublicationObservation.h": "7edd1d804b5a3ce1aadcbd2a3e95c87ca66fb120ea61c9c6208be5ae54ca1501",
+    "src/Creatures/Visual/CreatureTextureStorage.h": "9897ac8cddaa3282ff2b7883157438e97196e9b15e2312b33df92ccf2991bec3",
+    "src/Creatures/Visual/CreatureTextureStorage.cpp": "e43d94272f8619c2189f0336d5268bde43579997894a68c1af2e14c0b6b6c1cc",
+    "src/Items/ItemGltfTextureCache.h": "ba9af921ea83f9564cc4d4e87f9ac09261597939b847988ece95c16a7aab8882",
+    "src/Items/ItemGltfTextureCache.cpp": "3f0f40baa4948507813ebda6077bbffc8daf42c5d228d114eb90a6b04e6120fe",
+    "src/Render/Engine/GeometryEngine.cpp": "4c1e164d38741d8343a53e1d74cb7ceeca69f2161d0ba0b7c915485010354397",
+    "src/Gui/Core/GuiIconSource.h": "3a5197df350bfc2c854afca8c1220013ef49513b8005f37a6a52487209cd45a0",
+    "src/Gui/Core/GuiIconSource.cpp": "774b8fd80c9d4eb47e7020e807665e6dab66e509e0b2b37c137808c5f6fb482a",
+    "src/App/Application.cpp": "a689697b0a8191ad6dea9874a0e9a57e99edc8d9ef80e4cf5690cb4e5a35dae1",
+    "src/App/Platform/AppRunner.cpp": "3205f48ad8b8e14bc2d096e46c525e5bdb230b509d898b58ed3ec764cac5dd03",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "8fba9699fb0b1df9cbe8ab8f816b74569f3161d87c237c804c88601e1360f0e5",
+    "src/Test/SectionLightAtlasDriverTest.cpp": "8bc1bbd4079080ab83bbf745dfdff9ba4b9bfb4e5879b772d29a619a9def216a",
+    "src/Test/SharedTextureSourceStorageFixture.h": "8a0af1d84a143df3d84fe0f7e6b5b058990de06821f08be95c2253e8aa512391",
+    "src/Test/TexturePublicationDriverTest.cpp": "0fd8c20703ccda79084e0f0e1027019ca2a500150345ff08afb75fa7b15073f6"
+  },
+  "desktop_exe_sha256": "edd83cb7bc7175b30ccb06559d3bb495b9c5fb1185cf3f9eb6c3c6afcb250fbc",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-asset-mips-provenance.json": "3b08dcd0d17d18af31a8e98f5aae6c498b2d239c18a9cd3710c231fe7653534c",
+    "build/desktop-msvc/s4-asset-mips-frozen-source.json": "1cfb3ad432307685b14293f99e6f6b1df36d9bb73d6c76e2901fe5563e676145",
+    "build/desktop-msvc/s4-asset-mips-regressions.json": "2fe6a9cb3dc869dd304065f8d74ec41f1021764c6fe5c1acf81c8fbcc52a21fc",
+    "build/desktop-msvc/s4-asset-mips-application-ops.json": "1aec8a1f9845386a24dfc6dfcbcd68070e36f3dfbf8e517a1c79293c6c458044",
+    "build/desktop-msvc/s4-asset-mips-final-mips.json": "c02b63d9e500cc1650c47e98df706aa32f59b22b6e2f84941d1f0441f76dc3fc",
+    "build/desktop-msvc/s4-asset-mips-final-peak.json": "70219b0515cd4d7992483bb68c4ddcb3937df4679ff4e894ec8f766a6768237f",
+    "build/desktop-msvc/s4-asset-mips-final-image-lifecycle.json": "582a3bca38c2930a3fd0a9a5d5944e70e1833d0ad8d4a8a3385cf144258a7a2b",
+    "build/desktop-msvc/s4-asset-mips-publication.json": "511db42983edda7c63f6b173924046d6e0af937ec5b04c8c86070b5f00cd649f",
+    "build/desktop-msvc/s4-asset-mips-flat-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-asset-mips-flat-native/terrain-save-probe/report.json": "7b92a0f07c417770ce9511a5d9fd46340f255489df3bc00fb1ea2a8c06ccc6dc",
+    "build/desktop-msvc/s4-asset-mips-flat-native/owner-domain/flight-menu.json": "3053726dcc5183782b5f7707449d2a3fe003ea56fa6faa4e420a70b00e325354",
+    "build/desktop-msvc/s4-asset-mips-flat-native/owner-domain/flight-in-game.json": "b95e09f1432b9e881625986c13d5df27be9ce99643942eafcd45f0f8ade257c0",
+    "build/desktop-msvc/s4-asset-mips-flat-native/smoke-verdict.json": "78215416ff73ce61509f5ea5a06e0a398b39231ed7e702f244e615563e3fade1",
+    "build/desktop-msvc/s4-asset-mips-flat-native/flight_sim_report.json": "b8194dc6dc49ad5987359c1bc547ce9e61d3b4bde81f1ad37350333c9fd14318",
+    "build/desktop-msvc/s4-asset-mips-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-asset-mips-full-native/owner-domain/flight-menu.json": "1cdf693b18e67be1c7a6dd3083b3327ea36b103c80bd51b7e7e3222583a6a936",
+    "build/desktop-msvc/s4-asset-mips-full-native/owner-domain/flight-in-game.json": "d6307af7d7416c21b22c879f689eb507829b51fa0d778a21bbe2a7ea2ea3bcb1",
+    "build/desktop-msvc/s4-asset-mips-full-native/smoke-verdict.json": "c7751b63da4db3f3687d4e0fde3437d382496ef3bd2b3a1e5f64bc4faa389e49",
+    "build/desktop-msvc/s4-asset-mips-full-native/flight_sim_report.json": "840f209cfb89f7e5dbe06260993b870897e2511a5c74ea3d912653e4e2e8ec89",
+    "build/desktop-msvc/s4-asset-mips-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

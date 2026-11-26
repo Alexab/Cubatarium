@@ -1,6 +1,7 @@
 #include "Creatures/Visual/CreatureTextureStorage.h"
 
 #include "Core/Memory/VisualAssetStorage.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Textures/VisualTextureUpload.h"
 #include <iostream>
 #include <stdexcept>
@@ -143,6 +144,12 @@ VisualTextureStorage UCreatureTextureStorage::InspectOwnedStorage() const noexce
   out.rgbaBytes = images.bytes.requested;
   out.supported = table.bytes.supported && control.bytes.supported && images.bytes.supported;
   return out;
+}
+
+void UCreatureTextureStorage::InspectRenderImages(RenderImageCensus &out) const
+{
+  for (const auto &entry : Textures)
+    out.Add(RenderImageRole::CreatureTexture, GL_TEXTURE_2D, entry.second.Name.Get());
 }
 
 } // namespace cutum

@@ -11,6 +11,8 @@
 #include "Render/Textures/TextureCube.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Render/GlIncludes.h"
+#include "Render/Engine/RenderImageStorage.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "ThirdParty/stb_image.h"
 #include <cstring>
@@ -83,6 +85,12 @@ void UTextureCubeStorage::SetBlockDefinitions(
 }
 
 void UTextureCubeStorage::GenerateCubeTextures() {}
+
+void UTextureCubeStorage::InspectRenderImages(RenderImageCensus &out) const
+{
+  for (const auto &entry : Textures)
+    out.Add(RenderImageRole::BlockAtlas, GL_TEXTURE_2D, entry.second.GetTexture());
+}
 
 // Prepared maps borrow existing GL names until publication. Newly created
 // names belong to Pending until the no-allocation map swap commits ownership.
@@ -179,6 +187,7 @@ struct UTextureCubeStorage::TexturePublication
       // All source owners/map nodes/metadata exist. One maximum-size scratch
       // allocation serves every row;subsequent assigns cannot grow its backing.
       Scratch.Rgba.resize(maximum);
+      const UGlPixelUnpackScope unpack;
       for(auto &entry:Rows){auto &row=entry.second;if(!row.ReuseName){Fill(row);row.NewName=Storage.UploadCubeAtlas(Scratch);row.Target->SetTexture(row.NewName);}}
       // New resources are ready before the first in-place update. No callbacks,
       // metadata construction,decoder allocations or growing vectors follow.
@@ -510,6 +519,7 @@ GLuint UTextureCubeStorage::UploadCubeAtlas(const CubeAtlasPixels &atlas)
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT);glBindTexture(GL_TEXTURE_2D,0);
   if(glGetError()!=GL_NO_ERROR)throw std::runtime_error("GL texture allocation/upload failed");
+  ObserveTextureUploaded(name);
   pending.Name=0;return name;
 }
 

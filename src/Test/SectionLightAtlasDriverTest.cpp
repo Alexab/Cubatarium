@@ -723,12 +723,13 @@ void RunImageStorage(const char *path)
                sample.images.size() == 4 && sample.references == 5 &&
                sample.logicalBytes == 64000u + 8192u + std::uint64_t(side) * side * 7,
            "measure the distinct light textures, preview color and depth image");
-    const auto find = [&](Role role) -> const RenderImageStorage & {
+    const auto find = [&](Role role) -> const RenderImageLevel & {
       const auto row = std::find_if(sample.images.begin(), sample.images.end(), [&](const auto &image) {
         return (image.roles & (std::uint32_t{1} << static_cast<std::size_t>(role))) != 0;
       });
       Expect(row != sample.images.end(), "observe the expected image role");
-      return *row;
+      Expect(row->levels.size() == 1, "the selected target owns one defined image level");
+      return row->levels.front();
     };
     Expect(find(Role::LightAtlas).format == GL_R8UI && find(Role::LightAtlas).depth == 40 &&
                find(Role::LightAtlas).bitsPerSample == 8 &&
@@ -858,6 +859,68 @@ void RunImageStorage(const char *path)
   out << report.dump(2) << '\n';
   Expect(static_cast<bool>(out), "write the render image and overlay lifecycle result");
 }
+
+void RunAssetMipStorage(const char *path)
+{
+  using namespace cutum;
+  using Role = RenderImageRole;
+  std::array<GLuint, 3> names{};
+  glGenTextures(static_cast<GLsizei>(names.size()), names.data());
+  const auto makeRgba = [](GLuint texture) {
+    std::array<unsigned char, 3 * 5 * 4> pixels{};
+    pixels.fill(255);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB8_ALPHA8, 3, 5, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+  };
+  makeRgba(names[0]);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  makeRgba(names[1]);
+  glTexImage2D(GL_TEXTURE_2D, 3, GL_RGBA8, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+  glBindTexture(GL_TEXTURE_2D, names[2]);
+  const std::array<unsigned char, 8> compressed{};
+  glCompressedTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RED_RGTC1, 4, 4, 0,
+                         static_cast<GLsizei>(compressed.size()), compressed.data());
+  Expect(glGetError() == GL_NO_ERROR, "create real complete, sparse and compressed GL image storage");
+  RenderImageCensus census;
+  census.Add(Role::ItemAlbedo, GL_TEXTURE_2D, names[0], RenderTextureLevels::Allocated);
+  census.Add(Role::ModelTexture, GL_TEXTURE_2D, names[0]);
+  census.Add(Role::ItemAlbedo, GL_TEXTURE_2D, names[1], RenderTextureLevels::Allocated);
+  census.Add(Role::ModelTexture, GL_TEXTURE_2D, names[2], RenderTextureLevels::Allocated);
+  const auto resident = census.Read();
+  const auto levels = [&](GLuint name) -> const std::vector<RenderImageLevel> & {
+    const auto image = std::find_if(resident.images.begin(), resident.images.end(), [name](const auto &entry) {
+      return entry.name == name;
+    });
+    Expect(image != resident.images.end(), "find a successful driver image observation");
+    return image->levels;
+  };
+  const auto &npot = levels(names[0]);
+  const auto &sparse = levels(names[1]);
+  const auto &blocks = levels(names[2]);
+  GLint binding{};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding);
+  Expect(resident.contextAvailable && !resident.failedQueries && resident.images.size() == 3 &&
+             resident.references == 4 && resident.logicalBytes == 144 &&
+             static_cast<GLuint>(binding) == names[2],
+         "sum distinct driver level bytes and preserve the previous texture binding");
+  Expect(npot.size() == 3 && npot[0].logicalBytes == 60 && npot[1].width == 1 &&
+             npot[1].height == 2 && npot[1].logicalBytes == 8 && npot[2].logicalBytes == 4 &&
+             npot[2].format == GL_SRGB8_ALPHA8 &&
+             sparse.size() == 2 && sparse[0].level == 0 && sparse[1].level == 3 &&
+             sparse[1].logicalBytes == 4 && blocks.size() == 1 && blocks[0].compressed &&
+             blocks[0].logicalBytes == compressed.size() && glGetError() == GL_NO_ERROR,
+         "read real NPOT mip dimensions, a stored level outside the sampler range and compressed bytes");
+  glDeleteTextures(static_cast<GLsizei>(names.size()), names.data());
+  const auto retired = census.Read();
+  Expect(retired.namesWithoutObject == 3 && retired.images.empty() && !retired.logicalBytes,
+         "allocated mip observations do not keep retired textures alive or recreate them");
+  const nlohmann::json report{{"schema", "asset-mip-lifecycle.v1"}, {"status", "PASS"},
+      {"resident", DescribeRenderImages(resident)}, {"retired", DescribeRenderImages(retired)}};
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+  Expect(static_cast<bool>(out), "write the allocated mip lifecycle result");
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -897,6 +960,8 @@ int main(int argc, char **argv)
   {
     if (argc == 3 && std::string(argv[1]) == "--render-image-storage")
       RunImageStorage(argv[2]);
+    else if (argc == 3 && std::string(argv[1]) == "--asset-mip-storage")
+      RunAssetMipStorage(argv[2]);
     else
     {
       Run();

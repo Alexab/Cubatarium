@@ -28,6 +28,7 @@ public:
   void Clear() noexcept;
   void SwapContents(UCreatureTextureStorage &other) noexcept { Textures.swap(other.Textures); }
   VisualTextureStorage InspectOwnedStorage() const noexcept;
+  void InspectRenderImages(class RenderImageCensus &out) const;
 
 private:
   using TextureTable = std::unordered_map<std::string, VisualTexture>;

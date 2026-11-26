@@ -4,6 +4,7 @@
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 #include "Render/Textures/TextureCube.h"
+#include "Render/Engine/RenderImageStorageReport.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "Core/Memory/TexturePublicationObservation.h"
 #include "Core/UiPump.h"
@@ -52,6 +53,149 @@ inline Json Snapshot(const UTextureCubeStorage &storage)
 inline size_t Orphans(const UTextureCubeStorage &storage,bool cleanup)
 {std::set<GLuint> owned;for(const auto &p:storage.GetTextures())owned.insert(p.second.GetTexture());size_t leaks=0;for(size_t i=0;i<CreatedCount;++i)if(glIsTexture(Created[i]) && !owned.count(Created[i])){++leaks;if(cleanup)glDeleteTextures(1,&Created[i]);}return leaks;}
 inline void ResetObservation(){CreatedCount=0;FirstMutationAttempt=FirstMutationDecoderAttempt=SIZE_MAX;Overflow=false;FreezeAfterMutation=false;}
+
+struct AtlasPeak
+{
+  std::array<GLuint, 2> predecessor{}, candidates{};
+  std::array<std::uint64_t, 2> simultaneousBytes{};
+  std::size_t observed{};
+  bool consistent{true};
+
+  void Uploaded(GLuint name) noexcept
+  {
+    if (observed >= candidates.size())
+    {
+      consistent = false;
+      return;
+    }
+    candidates[observed] = name;
+    GLint prior{};
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &prior);
+    const auto size = [&](GLuint texture) -> std::uint64_t {
+      if (!texture || !glIsTexture(texture))
+      {
+        consistent = false;
+        return 0;
+      }
+      glBindTexture(GL_TEXTURE_2D, texture);
+      GLint w{}, h{};
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &w);
+      glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &h);
+      consistent &= w > 0 && h > 0;
+      return std::uint64_t(w) * std::uint64_t(h) * 4;
+    };
+    auto &total = simultaneousBytes[observed];
+    for (const auto texture : predecessor)
+    {
+      consistent &= std::find(candidates.begin(), candidates.end(), texture) == candidates.end();
+      total += size(texture);
+    }
+    for (std::size_t i = 0; i <= observed; ++i)
+      total += size(candidates[i]);
+    glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(prior));
+    ++observed;
+  }
+};
+
+inline AtlasPeak *ObservePeak{};
+inline bool RefuseSecondUpload{};
+
+inline bool Golden(const UTextureCubeStorage &storage, const std::vector<MergedCubeDesc> &old,
+                   const std::vector<MergedCubeDesc> &rows, int route);
+
+inline int GpuPeak(const char *path)
+{
+  auto bases = std::make_shared<UTextureBaseStorage>();
+  UTextureCubeStorage storage(bases);
+  const auto original = Author(*bases, 2, 2, 2, 3, 10, "original_");
+  const auto successor = Author(*bases, 2, 3, 2, 103, 10, "successor_");
+  const auto sameSize = Author(*bases, 2, 3, 2, 93, 10, "same_size_");
+  storage.PatchDescriptors(original);
+  const auto before = Snapshot(storage);
+  const auto observe = [&] {
+    RenderImageCensus census;
+    storage.InspectRenderImages(census);
+    return census.Read();
+  };
+  const auto baseline = observe();
+  const std::array<GLuint, 2> old{storage.GetTextures().at(10).GetTexture(),
+                                  storage.GetTextures().at(11).GetTexture()};
+  GLuint pbo{};
+  glGenBuffers(1, &pbo);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbo);
+  glBufferData(GL_PIXEL_UNPACK_BUFFER, 4, nullptr, GL_STATIC_DRAW);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 8);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 37);
+  glPixelStorei(GL_UNPACK_SKIP_ROWS, 2);
+  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 1);
+  const auto unpackRestored = [&] {
+    GLint buffer{}, alignment{}, length{}, rows{}, pixels{};
+    glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &buffer);
+    glGetIntegerv(GL_UNPACK_ALIGNMENT, &alignment);
+    glGetIntegerv(GL_UNPACK_ROW_LENGTH, &length);
+    glGetIntegerv(GL_UNPACK_SKIP_ROWS, &rows);
+    glGetIntegerv(GL_UNPACK_SKIP_PIXELS, &pixels);
+    return static_cast<GLuint>(buffer) == pbo && alignment == 8 && length == 37 && rows == 2 && pixels == 1;
+  };
+  AtlasPeak refused{old};
+  ObservePeak = &refused;
+  RefuseSecondUpload = true;
+  ResetObservation();
+  bool rejected = false;
+  try { storage.PatchDescriptors(successor); }
+  catch (const std::runtime_error &) { rejected = true; }
+  RefuseSecondUpload = false;
+  ObservePeak = nullptr;
+  const auto afterFailure = observe();
+  const bool rollback = rejected && refused.consistent && refused.observed == 1 &&
+      refused.simultaneousBytes[0] == 336 && CreatedCount == 2 &&
+      !glIsTexture(Created[0]) && !glIsTexture(Created[1]) && unpackRestored() && Snapshot(storage) == before;
+
+  AtlasPeak published{old};
+  ObservePeak = &published;
+  ResetObservation();
+  storage.PatchDescriptors(successor);
+  ObservePeak = nullptr;
+  const auto replacement = observe();
+  const auto actual = Snapshot(storage);
+  const bool publication = published.consistent && published.observed == 2 &&
+      published.simultaneousBytes == std::array<std::uint64_t, 2>{336, 480} &&
+      !glIsTexture(old[0]) && !glIsTexture(old[1]) && unpackRestored() &&
+      actual["textures"]["10"]["rgba"][0] == 103 && actual["textures"]["11"]["rgba"][0] == 110;
+  const std::array<GLuint, 2> live{storage.GetTextures().at(10).GetTexture(),
+                                   storage.GetTextures().at(11).GetTexture()};
+  ResetObservation();
+  storage.PatchDescriptors(sameSize);
+  const bool inPlace = unpackRestored() && storage.GetTextures().at(10).GetTexture() == live[0] &&
+      storage.GetTextures().at(11).GetTexture() == live[1] && !CreatedCount && Golden(storage, original, sameSize, 3);
+  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+  glDeleteBuffers(1, &pbo);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+  storage.Clear();
+  const auto retired = observe();
+  const bool cleaned = !glIsTexture(live[0]) && !glIsTexture(live[1]) && !retired.references &&
+      !retired.logicalBytes && glGetError() == GL_NO_ERROR;
+  const bool ok = rollback && publication && inPlace && cleaned && baseline.logicalBytes == 192 &&
+      afterFailure.logicalBytes == 192 && replacement.logicalBytes == 288;
+  const Json report{{"schema", "block-atlas-gpu-peak.v1"}, {"status", ok ? "PASS" : "FAIL"},
+      {"baseline", DescribeRenderImages(baseline)}, {"failed_publication", DescribeRenderImages(afterFailure)},
+      {"replacement", DescribeRenderImages(replacement)}, {"retired", DescribeRenderImages(retired)},
+      {"failed_upload_observed", refused.observed}, {"failed_upload_live_bytes", refused.simultaneousBytes[0]},
+      {"simultaneous_logical_bytes", published.simultaneousBytes}, {"rollback", rollback},
+      {"publication", publication}, {"same_size_reuse_under_unpack_state", inPlace}, {"cleaned", cleaned}};
+  if (path)
+  {
+    std::ofstream file(path);
+    file << report.dump(2) << '\n';
+    if (!file)
+      return 1;
+  }
+  return ok ? 0 : 1;
+}
+
 inline int Baseline(const char *path)
 {
   const auto root=fs::path("build/desktop-msvc/s4-texture-publication-fixtures/baseline");fs::create_directories(root);const auto directory=root.string();
@@ -247,13 +391,31 @@ inline int Accepted(const char *path)
 namespace cutum
 {
 void ObserveTextureCreated(unsigned int name)noexcept{texture_publication_fixture::Record(name);}
-void ObserveTextureMutation(unsigned int)noexcept{texture_publication_fixture::Mutation();}
+void ObserveTextureMutation(unsigned int)noexcept
+{
+  using namespace texture_publication_fixture;
+  Mutation();
+  if (RefuseSecondUpload && CreatedCount == 2)
+    glBindTexture(0, 0);
+}
+void ObserveTextureUploaded(unsigned int name)noexcept
+{
+  if (auto *observer = texture_publication_fixture::ObservePeak)
+    observer->Uploaded(name);
+}
 }
 int main(int argc,char **argv)
 {
   if(!glfwInit())return 77;glfwWindowHint(GLFW_VISIBLE,GLFW_FALSE);glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
   GLFWwindow *window=glfwCreateWindow(32,32,"Texture publication verification",nullptr,nullptr);if(!window){glfwTerminate();return 77;}glfwMakeContextCurrent(window);glewExperimental=GL_TRUE;if(glewInit()!=GLEW_OK){glfwDestroyWindow(window);glfwTerminate();return 77;}while(glGetError()!=GL_NO_ERROR){}
   glPixelStorei(GL_PACK_ALIGNMENT,1);glPixelStorei(GL_UNPACK_ALIGNMENT,1);int result=1;
-  try{if(argc>1 && std::string(argv[1])=="--baseline")result=texture_publication_fixture::Baseline(argc>2?argv[2]:nullptr);else result=texture_publication_fixture::Accepted(argc>1?argv[1]:nullptr);}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;}
+  try{
+    if(argc>1 && std::string(argv[1])=="--baseline")
+      result=texture_publication_fixture::Baseline(argc>2?argv[2]:nullptr);
+    else if(argc>1 && std::string(argv[1])=="--gpu-peak")
+      result=texture_publication_fixture::GpuPeak(argc>2?argv[2]:nullptr);
+    else
+      result=texture_publication_fixture::Accepted(argc>1?argv[1]:nullptr);
+  }catch(const std::exception &e){std::cerr<<e.what()<<std::endl;}
   glfwDestroyWindow(window);glfwTerminate();return result;
 }
