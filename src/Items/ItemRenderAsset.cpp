@@ -6,7 +6,6 @@
 #include <array>
 #include <cmath>
 #include <cstring>
-#include <fstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <limits>
@@ -72,20 +71,38 @@ void Require(bool condition, const char *reason)
     throw std::runtime_error(std::string("Item glTF: ") + reason);
 }
 
-std::filesystem::path Resource(const std::filesystem::path &folder,
-                               const std::string &uri)
+class ItemResourcePaths
 {
-  Require(!uri.empty() && uri.find(':') == std::string::npos,
-          "only relative external resources are supported");
-  const auto root = std::filesystem::weakly_canonical(folder);
-  const auto path = std::filesystem::weakly_canonical(folder / uri);
-  const auto relative = path.lexically_relative(root);
-  Require(!relative.empty() && *relative.begin() != ".." &&
-              !relative.is_absolute(),
-          "resource escapes the item directory");
-  Require(std::filesystem::is_regular_file(path), "missing external resource");
-  return path;
-}
+public:
+  ItemResourcePaths(const std::filesystem::path &modelPath, VisualLoaderSource &source)
+      : Folder(modelPath.parent_path()), Source(source) {}
+
+  std::filesystem::path Resolve(const std::string &uri)
+  {
+    Require(!uri.empty() && uri.find(':') == std::string::npos,
+            "only relative external resources are supported");
+    if (!CanonicalFolder)
+    {
+      CanonicalFolder = std::filesystem::weakly_canonical(Folder);
+      Source.ResourceRootResolved();
+    }
+    const auto joined = Folder / uri;
+    auto path = std::filesystem::weakly_canonical(joined);
+    const auto relative = path.lexically_relative(*CanonicalFolder);
+    Source.ResourcePath(uri, Folder, *CanonicalFolder, joined, path, relative);
+    Require(!relative.empty() && *relative.begin() != ".." &&
+                !relative.is_absolute(),
+            "resource escapes the item directory");
+    Require(std::filesystem::is_regular_file(path), "missing external resource");
+    Source.ResourceFileResolved();
+    return path;
+  }
+
+private:
+  const std::filesystem::path Folder;
+  std::optional<std::filesystem::path> CanonicalFolder;
+  VisualLoaderSource &Source;
+};
 
 struct Reader
 {
@@ -369,11 +386,12 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
               (requiredExtensions == g.end() || requiredExtensions->empty()),
           "skins, animation clips and required extensions are unsupported");
   const auto &buffers = g.at("buffers");
+  std::optional<ItemResourcePaths> resources(std::in_place, path, source);
   reader.Buffers.reserve(buffers.size());
   source.BinaryTable(reader.Buffers);
   for (const auto &b : buffers)
   {
-    auto bytes = ReadVisualModelBuffer(Resource(path.parent_path(), b.at("uri")), source,
+    auto bytes = ReadVisualModelBuffer(resources->Resolve(b.at("uri")), source,
                                        b.at("byteLength").get<size_t>());
     Require(bytes.has_value(), "could not read declared buffer length");
     reader.Buffers.push_back(std::move(*bytes));
@@ -468,9 +486,10 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
             "only TEXCOORD_0 without texture transforms is supported");
     const auto &tex = g.at("textures").at(info.at("index").get<size_t>());
     const auto &image = g.at("images").at(tex.at("source").get<size_t>());
-    material.Albedo = Resource(path.parent_path(), image.at("uri"));
+    material.Albedo = resources->Resolve(image.at("uri"));
     asset->Materials.push_back(std::move(material));
   }
+  resources.reset();
   asset->Low = glm::vec3(std::numeric_limits<float>::max());
   asset->High = -asset->Low;
   std::vector<bool> visited(g.at("nodes").size(), false);
@@ -623,11 +642,9 @@ LoadItemRenderAsset(const std::filesystem::path &path,
                     bool legacyPreviewNormals)
 {
   VisualLoaderSource source(VisualLoaderKind::Item);
-  source.Path(path);
-  std::ifstream in(path);
-  Require(bool(in), "cannot open model");
-  auto data = source.ReadDocument(in, CatalogJsonKind::ItemSurface);
-  return DecodeItemRenderAsset(path, std::move(data), legacyPreviewNormals, source);
+  auto data = source.ReadDocument(path, CatalogJsonKind::ItemSurface);
+  Require(data.has_value(), "cannot open model");
+  return DecodeItemRenderAsset(path, std::move(*data), legacyPreviewNormals, source);
 }
 
 std::shared_ptr<const ItemRenderAsset>
@@ -656,15 +673,13 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     return found->second;
   }
   VisualLoaderSource source(VisualLoaderKind::Item);
-  source.Path(path);
-  std::ifstream in(path);
-  if (!in)
+  auto data = source.ReadDocument(path, CatalogJsonKind::ItemSurface);
+  if (!data)
     return nullptr;
-  auto data = source.ReadDocument(in, CatalogJsonKind::ItemSurface);
   std::shared_ptr<const ItemRenderAsset> asset;
-  const auto *extras = ItemExtras(data);
+  const auto *extras = ItemExtras(*data);
   if (extras && extras->value("design_version", 0) == 3)
-    asset = DecodeItemRenderAsset(path, std::move(data), false, source);
+    asset = DecodeItemRenderAsset(path, std::move(*data), false, source);
   const auto inserted = Assets.emplace(key, std::move(asset)).first;
   try
   {

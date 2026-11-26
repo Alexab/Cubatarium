@@ -4,7 +4,6 @@
 #include "Core/Memory/VisualLoaderSource.h"
 
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 
 namespace cutum
@@ -17,18 +16,10 @@ std::shared_ptr<const CreatureRigidModelParts> ReadParts(const std::string &path
 {
   VisualLoaderSource load(VisualLoaderKind::Rigid);
   const std::filesystem::path modelPath(path);
-  load.Path(modelPath);
-  std::ifstream file(modelPath);
-  if (!file)
-  {
-    std::cerr << "CreatureRigidModelCache: cannot open " << path << std::endl;
-    return {};
-  }
-
-  CatalogJsonDocument data;
+  std::optional<CatalogJsonDocument> document;
   try
   {
-    data = load.ReadDocument(file, CatalogJsonKind::Definitions);
+    document = load.ReadDocument(modelPath, CatalogJsonKind::Definitions);
   }
   catch (const nlohmann::json::exception &ex)
   {
@@ -36,7 +27,13 @@ std::shared_ptr<const CreatureRigidModelParts> ReadParts(const std::string &path
               << ex.what() << std::endl;
     return {};
   }
+  if (!document)
+  {
+    std::cerr << "CreatureRigidModelCache: cannot open " << path << std::endl;
+    return {};
+  }
 
+  const auto &data = *document;
   const auto source = data.find("parts");
   if (source == data.end() || !source->is_array())
   {

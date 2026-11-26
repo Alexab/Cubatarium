@@ -9,7 +9,6 @@
 #include <limits>
 #include <cstring>
 #include <filesystem>
-#include <fstream>
 #include <glm/gtc/quaternion.hpp>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -34,8 +33,13 @@ std::vector<std::vector<uint8_t>> LoadGltfBuffers(
     const std::string uri = gltf["buffers"][i].value("uri", "");
     if (uri.empty() || uri.rfind("data:", 0) == 0)
       continue;
-    if (auto bytes = ReadVisualModelBuffer(baseDir / uri, source))
+    const auto path = baseDir / uri;
+    source.ResourcePath(uri, baseDir, path);
+    if (auto bytes = ReadVisualModelBuffer(path, source))
+    {
       bins[i] = std::move(*bytes);
+      source.ResourceFileResolved();
+    }
   }
   return bins;
 }
@@ -392,17 +396,10 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
 {
   VisualLoaderSource source(VisualLoaderKind::Gltf);
   const std::filesystem::path modelPath(gltfPath);
-  source.Path(modelPath);
-  std::ifstream in(modelPath);
-  if (!in)
-  {
-    std::cerr << "CreatureGltfLoader: cannot open " << gltfPath << std::endl;
-    return nullptr;
-  }
-  CatalogJsonDocument gltf;
+  std::optional<CatalogJsonDocument> document;
   try
   {
-    gltf = source.ReadDocument(in, CatalogJsonKind::Definitions, false);
+    document = source.ReadDocument(modelPath, CatalogJsonKind::Definitions, false);
   }
   catch (const std::exception &ex)
   {
@@ -410,6 +407,12 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
               << ex.what() << std::endl;
     return nullptr;
   }
+  if (!document)
+  {
+    std::cerr << "CreatureGltfLoader: cannot open " << gltfPath << std::endl;
+    return nullptr;
+  }
+  auto &gltf = *document;
 
   auto bins = LoadGltfBuffers(gltf, modelPath.parent_path(), source);
 

@@ -363,13 +363,29 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
         {"unsupported_samples", row.unsupportedSamples}, {"binary_reads", row.binaryReads},
         {"json_bytes_max", row.jsonBytesMax}, {"json_heap_upper_max", row.jsonHeapUpperMax},
         {"binary_bytes_max", row.binaryBytesMax}, {"binary_backing_max", row.binaryBackingMax},
-        {"scratch_backing_max", row.scratchBackingMax}, {"path_units_max", row.pathUnitsMax}};
+        {"scratch_backing_max", row.scratchBackingMax}, {"path_units_max", row.pathUnitsMax},
+        {"resource_roots", row.resourceRoots}, {"resource_files", row.resourceFiles},
+        {"resource_path_backing_max", row.resourcePathBackingMax}};
   }
   report["visual_loader_sources"] = {
       {"schema", "visual-loader-sources.v1"},
       {"status", visualFilesSupported ? "PASS" : "UNSUPPORTED"},
       {"loaders", std::move(loaderRows)}, {"counters_inline_bytes", sizeof(visualFiles) + sizeof(std::mutex)},
       {"whole_runtime_complete", false}};
+  const auto fileBuffers = GetVisualFileBuffers();
+  report["visual_file_buffers"] = {
+      {"schema", "visual-file-buffers.v1"},
+      {"status", StlSourceStorage::SupportedProfile() && !fileBuffers.fallback &&
+          !fileBuffers.closeFailures ? "PASS" : "UNSUPPORTED"},
+      {"opened", fileBuffers.opened}, {"configured", fileBuffers.configured},
+      {"closed", fileBuffers.closed}, {"fallback", fileBuffers.fallback},
+      {"unretired_after_close", fileBuffers.closeFailures},
+      {"active_streams", fileBuffers.active}, {"peak_open_streams", fileBuffers.peakActive},
+      {"active_read_buffer_bytes", fileBuffers.activeBufferBytes},
+      {"peak_read_buffer_bytes", fileBuffers.peakBufferBytes},
+      {"owned_array_bytes_per_stream", VisualModelInputFile::BufferBytes},
+      {"inline_file_owner_bytes", sizeof(VisualModelInputFile)},
+      {"additional_counters_inline_bytes", sizeof(fileBuffers)}, {"whole_runtime_complete", false}};
   const auto skeletonBuilds = GetSkeletonMeshBuildSnapshot();
   const auto &skeleton = skeletonBuilds.largest;
   report["skeleton_mesh_construction"] = {

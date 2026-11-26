@@ -9,6 +9,82 @@
 namespace cutum::shared_visual_source_fixture
 {
 
+inline Json CheckVisualFileBuffers(const std::filesystem::path &report)
+{
+  auto folder = report;
+  folder += ".visual-files";
+  Require(std::filesystem::create_directory(folder), "create isolated file-buffer input");
+  const auto model = folder / "buffered.json";
+  const auto broken = folder / "malformed.json";
+  const auto binary = folder / "mesh.bin";
+  constexpr size_t buffer = VisualModelInputFile::BufferBytes;
+  const std::string payload(buffer * 2 + 17, 'v');
+  {
+    std::ofstream out(model, std::ios::binary);
+    out << "{\r\n  \"payload\": \"" << payload << "\"\r\n}\r\n";
+    Require(bool(out), "write a model spanning multiple text refills");
+  }
+  {
+    std::ofstream out(broken, std::ios::binary);
+    out << "{\"payload\":[0,";
+    Require(bool(out), "write an incomplete model");
+  }
+  {
+    std::ofstream out(binary, std::ios::binary);
+    out.write(payload.data(), static_cast<std::streamsize>(payload.size()));
+    Require(bool(out), "write a buffer spanning multiple binary refills");
+  }
+
+  const auto before = GetVisualFileBuffers();
+  VisualLoaderSource source(VisualLoaderKind::Rigid);
+  {
+    VisualModelInputFile one(model, source);
+    VisualModelInputFile two(binary, source, std::ios::binary);
+    const auto both = GetVisualFileBuffers();
+    Require(one && two && both.active == before.active + 2 &&
+                both.activeBufferBytes == before.activeBufferBytes + 2 * buffer &&
+                both.peakBufferBytes >= both.activeBufferBytes &&
+                both.configured == before.configured + 2,
+            "both open streams simultaneously use their own fixed buffer");
+    Require(one.Stream().get() == '{' && two.Stream().get() == 'v',
+            "attached streams return the original contents");
+    Require(one.Close() && one.Close(), "explicit retirement is idempotent");
+    const auto second = GetVisualFileBuffers();
+    Require(second.active == before.active + 1 &&
+                second.activeBufferBytes == before.activeBufferBytes + buffer &&
+                second.closed == before.closed + 1,
+            "the remaining stream keeps exactly one attached buffer");
+  }
+  bool rejected = false;
+  try { source.ReadDocument(broken, CatalogJsonKind::Definitions); }
+  catch (const nlohmann::json::exception &) { rejected = true; }
+  const auto afterError = GetVisualFileBuffers();
+  Require(rejected && afterError.active == before.active &&
+              afterError.closed == before.closed + 3,
+          "a parser exception closes its input stream");
+
+  auto document = source.ReadDocument(model, CatalogJsonKind::Definitions);
+  Require(document && document->at("payload") == payload,
+          "the same reader decodes complete CRLF text across buffer boundaries");
+  auto bytes = ReadVisualModelBuffer(binary, source, payload.size());
+  Require(bytes && bytes->size() == payload.size() &&
+              std::equal(bytes->begin(), bytes->end(), payload.begin()),
+          "bulk binary read keeps all bytes at the declared extent");
+  Require(!ReadVisualModelBuffer(binary, source, payload.size() - 1),
+          "a size mismatch retires the stream without returning a candidate");
+  Require(!source.ReadDocument(folder / "absent.json", CatalogJsonKind::Definitions),
+          "missing input retains the recoverable open result");
+  const auto after = GetVisualFileBuffers();
+  Require(after.active == before.active && after.activeBufferBytes == before.activeBufferBytes &&
+              after.opened == before.opened + 6 && after.configured == before.configured + 6 &&
+              after.closed == before.closed + 6 && after.fallback == before.fallback &&
+              after.closeFailures == before.closeFailures,
+          "success, exception, extent mismatch and open refusal leave no active file buffer");
+  return {{"status", "PASS"}, {"bytes_per_stream", buffer},
+          {"simultaneous_buffer_bytes", 2 * buffer}, {"opened_and_retired", size_t(6)},
+          {"crlf_and_binary_bytes", payload.size()}, {"inline_file_owner_bytes", sizeof(VisualModelInputFile)}};
+}
+
 inline Json CheckSkeletonMeshConstruction()
 {
   creature_item_icon_fixture::PlatformFixture platform;
@@ -209,6 +285,12 @@ inline Json CheckVisualLoaderConstruction(const std::filesystem::path &report)
           "cold rigid source loads its original definition");
   rigid.Clear();
   const auto after = GetVisualLoaderSources();
+  const auto &item = after[index(VisualLoaderKind::Item)];
+  const auto &previousItem = before[index(VisualLoaderKind::Item)];
+  Require(item.resourceRoots == previousItem.resourceRoots + 1 &&
+              item.resourceFiles >= previousItem.resourceFiles + 2 &&
+              item.resourcePathBackingMax > 0,
+          "the real item resolves a single root for its binary and albedo paths");
   for (size_t i = 0; i < after.size(); ++i)
   {
     const auto &row = after[i];
@@ -224,6 +306,8 @@ inline Json CheckVisualLoaderConstruction(const std::filesystem::path &report)
           {"gltf_binary_requested", binaryRequest.bytes.requested},
           {"gltf_peak_requested", peak}, {"gltf_returned_requested", returned},
           {"item_peak_requested", itemPeak}, {"item_returned_requested", itemReturned},
+          {"item_resource_roots", item.resourceRoots - previousItem.resourceRoots},
+          {"item_resource_files", item.resourceFiles - previousItem.resourceFiles},
           {"legacy_json_prefix", true}, {"glTF_view_range_checked", true},
           {"extent_type_checked", true}, {"index_range_checked", true},
           {"constructors_checked", after.size()}};

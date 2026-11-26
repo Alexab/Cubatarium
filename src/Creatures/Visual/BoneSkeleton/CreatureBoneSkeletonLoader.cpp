@@ -4,7 +4,6 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 
@@ -186,14 +185,13 @@ CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
   try
   {
     const std::filesystem::path modelPath(path);
-    source.Path(modelPath);
-    std::ifstream file(modelPath);
-    if (!file.is_open())
+    auto document = source.ReadDocument(modelPath, CatalogJsonKind::Definitions, false);
+    if (!document)
     {
       std::cerr << "CreatureBoneSkeletonLoader: cannot open " << path << std::endl;
       return std::nullopt;
     }
-    auto root = source.ReadDocument(file, CatalogJsonKind::Definitions, false);
+    auto &root = *document;
 
     CreatureBoneSkeletonGeometry geometry;
 
