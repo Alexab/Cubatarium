@@ -25,6 +25,7 @@
 #include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
+#include "Core/Memory/WindowsCrtLocaleStorage.h"
 #include "Core/Memory/WindowsCrtThreadStorage.h"
 #include "Core/Memory/WindowsProcessMemory.h"
 #include "Core/Memory/NativeThreadStack.h"
@@ -105,6 +106,7 @@ inline nlohmann::json DescribeNativeThreadStacks()
   }
   const auto mainScopes = stacks.rows[static_cast<size_t>(NativeThreadKind::Main)].active;
   const auto crt = BoundWindowsCrtThreadStorage(stacks.registered, mainScopes);
+  const auto locale = ObserveWindowsCrtLocale();
   return {
       {"schema", "native-thread-stacks.v1"},
       {"status", stacks.processThreadsObserved && stacks.registered && sampled == stacks.registered ? "PASS" : "UNSUPPORTED"},
@@ -122,6 +124,16 @@ inline nlohmann::json DescribeNativeThreadStacks()
           {"time_scratch_requested_upper", crt.timeScratchUpper}, {"main_vcrt_static_bytes", crt.mainVcrtStaticBytes},
           {"exe_tls_raw_per_thread", crt.tlsRawPerThread}, {"exe_tls_zero_fill_per_thread", crt.tlsZeroFillPerThread},
           {"exe_tls_template_payload", crt.tlsTemplatePayload}, {"whole_runtime_complete", false}}},
+      {"crt_locale_storage", {
+          {"schema", "windows-crt-locale-storage.v1"},
+          {"status", locale.sampled ? "PASS" : locale.supported ? "UNOBSERVED" : "UNSUPPORTED"},
+          {"initial_named_bytes_per_image", locale.initialNamedBytes},
+          {"snapshot_requested_bytes", locale.snapshotRequestBytes},
+          {"calling_locale_root_requested_bytes", locale.localeRootRequest},
+          {"calling_multibyte_root_requested_bytes", locale.multibyteRootRequest},
+          {"calling_thread_initial_locale", locale.initialLocale},
+          {"calling_thread_initial_multibyte", locale.initialMultibyte},
+          {"calling_thread_private_mode", locale.privateMode}, {"whole_runtime_complete", false}}},
       {"whole_runtime_complete", false}};
 }
 

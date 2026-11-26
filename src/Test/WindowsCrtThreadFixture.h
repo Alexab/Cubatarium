@@ -80,7 +80,8 @@ inline Sample OnWorker(int value)
 }
 #pragma warning(pop)
 
-inline std::size_t CountTrackedBusyBlocks(const std::array<std::uintptr_t, 2 * BlockCount> &tracked)
+template<std::size_t Size>
+inline std::size_t CountTrackedBusyBlocks(const std::array<std::uintptr_t, Size> &tracked)
 {
   const auto heap = GetProcessHeap();
   Require(HeapLock(heap) != 0, "lock the process heap for the isolated CRT lifetime check");
