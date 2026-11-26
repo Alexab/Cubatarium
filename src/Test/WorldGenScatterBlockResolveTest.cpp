@@ -475,6 +475,8 @@ static void TestResourceCatalogCensus()
 int main(int argc,char **argv)
 {
   if(argc>1 && std::string(argv[1])=="--catalog-owner-composition")return catalog_composition_fixture::Run(argc>2?argv[2]:nullptr,true);
+  if(argc>1 && std::string(argv[1])=="--settings-owner-binding")return settings_composition_fixture::Run(argc>2?argv[2]:nullptr,true);
+  if(argc>1 && std::string(argv[1])=="--texture-owner-binding")return texture_construction_fixture::Run(argc>2?argv[2]:nullptr,true);
   if(argc>1 && std::string(argv[1])=="--texture-construction-baseline")return texture_construction_fixture::Baseline(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--texture-construction")return texture_construction_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--settings-composition") return settings_composition_fixture::Run(argc>2?argv[2]:nullptr);

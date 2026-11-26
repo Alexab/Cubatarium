@@ -1,0 +1,1521 @@
+{
+  "schema": "s4-catalog-final-source-profile-binding.v1",
+  "status": "PROPERTY_ACCEPTED_C01_C06_SUPPLIED_SOURCE_PROFILES_E12_PROCESS_OPEN",
+  "summary": "COMP01 final named source-profile bindings PASS. Checked binder requires all18 existing C06 owner rows and9 explicit input-family maxima;missing row/family,runtime-history declaration,unsupported source model or overflow rejects proof. Joins deduplicated catalog retained entry with settings/DOM/path heap and actual managed retirement arena once;decoder process ledgers remain mirrors. Runtime-copy envelope is derived from world/thread/shared/cooperative/caller/constructor domain,with4 world and6 thread bundle overlap plus explicit callable/settings copies;one registry-name history/thread. Numeric TLS key retains no text;existing Populate scope clears context selectors/owner label and sampling strips text. Finite declared source example:1238 catalog root units,458 runtime bundles,63 name histories;not measured runtime counts or a RAM quota. Existing pack/resource5,settings8,prefab2,CPU texture4,actual GL publication2 phases all satisfy both original entry+new-source and count/profile-composed bounds. Settings actual arena56 and262159-byte spare DOM capacity counted;retained331733<=339790. Prefab688 ordinary refusal/retry cases;GPU613 ordinary cases;all graph-retirement/alias/old-current/returned/pixel controls PASS. All8 Release groups PASS. Source families cover prior C05 file/path/parser/catalog/settings/prefab/texture schedules under their accepted default MSVC/callback/allocator profiles;live-version maxima remain explicit preconditions and unknown histories cannot become0. Fresh frozen desktop/native runtime/startup/direct save/UI/provenance and8 native+2 publication GL readbacks PASS;aggregate startup-only smoke UNTESTED. C01..C06 E11 named requested-data/source-profile composition accepted;E12 process/platform scope remains separate and OPEN.",
+  "remaining": "Next E12 within S4.02 LIMIT.Q09:finish the existing finite platform/runtime list,starting with the already source-attributed glog LogStream constructor refusal retention (two16-byte MSVC stream allocations survive worker/logger shutdown;see S4_02_C05_PREFAB_COMPOSITION_CERTIFICATE and s4-prefab-composition-source-trace.json). Reuse exact source/dependency evidence before a new repro,fix the actual owner/adapter or explicitly bound a valid retained runtime cache,then address shared/weak coallocated shells,allocator/upstream/CRT/locale/exception/stack/TLS/numeric cache/window/OS/driver/GPU terms with supplied world/thread/backend/callback domains. Join requested producer/catalog/input terms without adding STBI32 prefixes or candidate shared blocks twice. Source-profile proof is not an implemented global asset/process quota;unknown external caller/world/thread/version/callback domains remain UNSUPPORTED. Whole-process matched workloads,RSS/high-water/frame/performance/memory and original full native matrix remain required under S6.06/S6.05;local startup-only smoke stays UNTESTED overall. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged,ecology S6.05 mismatch preserved;full S0..S6 retained,no audit restart or reduced acceptance.",
+  "owner_rows": [
+    {
+      "id": "G01",
+      "source_count_binding": "3 Active roots;Pack includes registry/image and Features diagnostics",
+      "input_families": [
+        "PackRegistry",
+        "FeaturesRefs"
+      ],
+      "source": "src/WorldGen/Core/WorldGenContentPin.cpp",
+      "source_sha256_raw": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133"
+    },
+    {
+      "id": "G02",
+      "source_count_binding": "supplied resource_roots;deduplicate shared wrappers/current catalogs",
+      "input_families": [
+        "BlockMerge",
+        "PrefabLibrary",
+        "CpuTexture",
+        "GpuPublication"
+      ],
+      "source": "src/App/Core.h",
+      "source_sha256_raw": "086d2a91065eebb9e75655363fdcb52778f8991543a2f1c4de40873c100f0d73"
+    },
+    {
+      "id": "G03",
+      "source_count_binding": "2 value roots/world;primary/template/populator source text in4*worlds bundles",
+      "input_families": [
+        "WorldInputs",
+        "RuntimeText"
+      ],
+      "source": "src/World/Core/World.h",
+      "source_sha256_raw": "34fec9b85145e14d76a4fad046c8ffcd686f88c14c27678989c526564ac85749"
+    },
+    {
+      "id": "G04",
+      "source_count_binding": "each supplied escaped key can retain whole registry;unknown owner rejected",
+      "input_families": [
+        "PackRegistry"
+      ],
+      "source": "src/WorldGen/Sampling/BiomeTypes.h",
+      "source_sha256_raw": "821bb7b8497a793daff32d09245b7f40b8857ea8d5fc50410d3e8774919d3e4a"
+    },
+    {
+      "id": "T01",
+      "source_count_binding": "shared work default8;4 content handles/job upper,reader cleanup before credit",
+      "input_families": [
+        "PackRegistry",
+        "FeaturesRefs",
+        "BlockMerge"
+      ],
+      "source": "src/World/Chunks/ChunkLoadScheduler.cpp",
+      "source_sha256_raw": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c"
+    },
+    {
+      "id": "T02",
+      "source_count_binding": "7 readers and4 pin cells per supplied thread;name history1/thread",
+      "input_families": [
+        "PackRegistry",
+        "FeaturesRefs",
+        "BlockMerge",
+        "PrefabLibrary",
+        "RuntimeText"
+      ],
+      "source": "src/WorldGen/Core/CatalogThreadReads.h",
+      "source_sha256_raw": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672"
+    },
+    {
+      "id": "T03",
+      "source_count_binding": "one TLS pipeline/thread;6 weak owner controls E12,numeric key no text;active text/copy overlap<=6 bundles/thread",
+      "input_families": [
+        "RuntimeText"
+      ],
+      "source": "src/WorldGen/Core/PipelineChunkPopulator.cpp",
+      "source_sha256_raw": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523"
+    },
+    {
+      "id": "T04",
+      "source_count_binding": "all supplied calling+member+constructing threads;default per-world8 named pools/27 workers,serialized component replacement<=8 extra;no OS-thread inference",
+      "input_families": [
+        "RuntimeText"
+      ],
+      "source": "src/Core/Jobs/JobThreadBudget.h",
+      "source_sha256_raw": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424"
+    },
+    {
+      "id": "RQ01",
+      "source_count_binding": "separate cooperative3W<=12 callable roots plus main scheduling locals;4 handles/request,text2 bundles/request;not shared work8",
+      "input_families": [
+        "PackRegistry",
+        "FeaturesRefs",
+        "RuntimeText"
+      ],
+      "source": "src/World/Core/WorldCooperativeOps.cpp",
+      "source_sha256_raw": "f0aa5d9e5479d050d4eb95e8995edad22ffc02bc53779c9f124066d8f572f422"
+    },
+    {
+      "id": "RQ02",
+      "source_count_binding": "shared work up to2 catalog versions/mesh;2*K_mesh completed roots;defaultK=6W<=48,positive supplied K overrides;cap0 no queue count bound",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
+      "source_sha256_raw": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50"
+    },
+    {
+      "id": "RQ03",
+      "source_count_binding": "snapshot/result/certificate alias1 captured material catalog;K_relight completed roots;defaultK=8W<=32,actual positive K overrides",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/World/Lighting/AsyncRelightBuilder.cpp",
+      "source_sha256_raw": "6d3835fb0c54f7286526008518239a3446d2663c721323ebf2676d35fb42055a"
+    },
+    {
+      "id": "R01",
+      "source_count_binding": "2 context roots/field+1 world memo;stale proofs still count;weak memo<=2*fields+1024 E12",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/World/Lighting/SectionLightField.h",
+      "source_sha256_raw": "406af5b55af26a88526fde6eab8676c3e2a80f1551b6e85f25ba37f9494d24a4"
+    },
+    {
+      "id": "R02",
+      "source_count_binding": "actual geometry/light cells+2 cells/binding lease;packed and Cross range aliases deduplicate",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "source_sha256_raw": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a"
+    },
+    {
+      "id": "R03",
+      "source_count_binding": "2 roots/awaiting result,2/pending GPU,1/captured snapshot;source32 awaiting and512 capture maxima supplied with byte caps;caller copies separate",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/Render/Mesh/ChunkMeshCache.h",
+      "source_sha256_raw": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a"
+    },
+    {
+      "id": "R04",
+      "source_count_binding": "2 roots/actual backend lease;invalid/reset CPU ownership persists;all Greedy/Cross containers visited",
+      "input_families": [
+        "BlockMerge",
+        "GpuPublication"
+      ],
+      "source": "src/Render/Engine/GeometryEngine.h",
+      "source_sha256_raw": "4b9558691c4feaafc092b114c2358de523ce4c5e9fcf4424e6c411c67b819da3"
+    },
+    {
+      "id": "R05",
+      "source_count_binding": "1 geometry catalog/no-surface proof including returned proof",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/Render/Mesh/GreedyMesher.h",
+      "source_sha256_raw": "39c295d102762f5e0f17cf255dd1ff63ddb71b27673826852c31587adcd8ab47"
+    },
+    {
+      "id": "R06",
+      "source_count_binding": "1 catalog/receipt+1/persistence signature+1/cooperative save session;IO bytes are not another catalog",
+      "input_families": [
+        "BlockMerge"
+      ],
+      "source": "src/World/Persistence/WorldPersistence.h",
+      "source_sha256_raw": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b"
+    },
+    {
+      "id": "P01",
+      "source_count_binding": "explicit escaped/constructor roots;all admitted source/version maxima and managed arenas required;unknown history/callback/source model rejected",
+      "input_families": [
+        "PackRegistry",
+        "FeaturesRefs",
+        "BlockMerge",
+        "PrefabLibrary",
+        "WorldInputs",
+        "ManagedFiles",
+        "CpuTexture",
+        "GpuPublication",
+        "RuntimeText"
+      ],
+      "source": "src/WorldGen/Core/CatalogOwnerProfileBinding.h",
+      "source_sha256_raw": "ac19d64bc814332318ee5a8b56e6e8d610839bce0fc30e2de53c49f0865bd49c"
+    }
+  ],
+  "input_families": [
+    "PackRegistry",
+    "FeaturesRefs",
+    "BlockMerge",
+    "PrefabLibrary",
+    "WorldInputs",
+    "ManagedFiles",
+    "CpuTexture",
+    "GpuPublication",
+    "RuntimeText"
+  ],
+  "actual_phase_graphs": {
+    "pack": {
+      "directory": {
+        "biome_files": 2,
+        "decoder_upper": 219840,
+        "json_files": 12,
+        "legacy_publications_after_refusal": 0,
+        "ordinary_attempts": 441,
+        "ordinary_peak": 8120,
+        "ordinary_upper": 22608174,
+        "pass": true,
+        "refusal_and_exact_retry_cases": 441
+      },
+      "failed_cases": 0,
+      "graph_final_zero": true,
+      "negative_control": true,
+      "old_current_oracles": true,
+      "overflow_rejected": true,
+      "owner_composition": {
+        "alias64_cross_domain_deduplicated": true,
+        "controls": {
+          "add_multiply_thread_byte_overflow_rejected": true,
+          "completed_catalog_slots": 256,
+          "cooperative_content_slots": 100,
+          "count_weighted_retained_upper": 33531922042,
+          "missing_source_budget_rejected": true,
+          "pass": true,
+          "pin_slots": 252,
+          "publication_catalog_slots": 126,
+          "reader_slots": 441,
+          "root_slots_upper": 1238,
+          "save_catalog_slots": 10,
+          "scope": "Conservative source count profile for two supplied worlds,54 member+8 constructing pool workers,explicit artifact/caller counts;not observed live thread count or process budget",
+          "shared_work_slots": 32,
+          "supplied_root_source_upper": 27085559,
+          "thread_upper": 63,
+          "unknown_thread_caller_source_and_zero_capacity_rejected": true
+        },
+        "omitted_known_bytes": 28348,
+        "omitted_returned_catalogs": 2,
+        "pass": true,
+        "returned_types_scope": "Actual mesh/relight result owner types populated directly with real catalog publication;real solver/mesh/queue semantics remain covered by retained RQ01/publication certificates",
+        "union_catalogs": 3,
+        "union_known_bytes": 61604
+      },
+      "owner_profile_binding": {
+        "covered_owner_rows": 262143,
+        "missing_row_family_history_and_unsupported_model_rejected": true,
+        "pass": true,
+        "per_version_source_history_upper": 27085559,
+        "registry_name_threads": 63,
+        "retained_bound": 47643498281,
+        "root_count_upper": 1238,
+        "runtime_source_copy_count_overflow_rejected": true,
+        "runtime_text_copies": 458,
+        "supplied_input_families": 511,
+        "text_count_byte_overflow_rejected": true
+      },
+      "phases": [
+        {
+          "composed_upper": 22886221,
+          "entry_observed": 51371,
+          "entry_upper": 58207,
+          "name": "whole_pack_directory",
+          "new_decoder_peak": 28800,
+          "observed_component_envelope": 88291,
+          "ordinary_peak": 59447,
+          "owner_count_source_upper": 28355969612,
+          "owner_profile_upper": 40279690753,
+          "pass": true,
+          "retained_decoder": 44
+        },
+        {
+          "composed_upper": 4134875,
+          "entry_observed": 70875,
+          "entry_upper": 80468,
+          "name": "merge_rebuild",
+          "new_decoder_peak": 0,
+          "observed_component_envelope": 73425,
+          "ordinary_peak": 61061,
+          "owner_count_source_upper": 33356551871,
+          "owner_profile_upper": 47392619059,
+          "pass": true,
+          "retained_decoder": 12364
+        },
+        {
+          "composed_upper": 105276,
+          "entry_observed": 70875,
+          "entry_upper": 80468,
+          "name": "definition_publication",
+          "new_decoder_peak": 0,
+          "observed_component_envelope": 73291,
+          "ordinary_peak": 60927,
+          "owner_count_source_upper": 33383234576,
+          "owner_profile_upper": 47432226732,
+          "pass": true,
+          "retained_decoder": 12364
+        },
+        {
+          "composed_upper": 183965,
+          "entry_observed": 72211,
+          "entry_upper": 82086,
+          "name": "texture_publication",
+          "new_decoder_peak": 0,
+          "observed_component_envelope": 74363,
+          "ordinary_peak": 61999,
+          "owner_count_source_upper": 33509437849,
+          "owner_profile_upper": 47611508964,
+          "pass": true,
+          "retained_decoder": 12364
+        },
+        {
+          "composed_upper": 100330,
+          "entry_observed": 72211,
+          "entry_upper": 82086,
+          "name": "fingerprint",
+          "new_decoder_peak": 0,
+          "observed_component_envelope": 73075,
+          "ordinary_peak": 60711,
+          "owner_count_source_upper": 33531940286,
+          "owner_profile_upper": 47643516525,
+          "pass": true,
+          "retained_decoder": 12364
+        }
+      ],
+      "retained": {
+        "alias64_deduplicated": true,
+        "decoder_requests_once": 12364,
+        "observed_components": 72243,
+        "owners": 15,
+        "upper": 82118
+      },
+      "schema": "catalog-construction-composition.v1",
+      "scope": "Real five-phase C05 pack/resource graph joined with escaped result catalog through one weak-only identity set;checked explicit source counts and supplied per-version history envelope. Catalog requested-data only;foreign thread/caller/root source domains must be supplied explicitly,other C05 schedules reused by unchanged construction composition mechanism. No process/CRT/stack/GPU/full matrix verdict.",
+      "status": "PASS"
+    },
+    "settings": {
+      "failed_cases": 0,
+      "file_refusal_and_exact_retry_cases": 328,
+      "file_refusals": [
+        {
+          "attempts": 139,
+          "kind": 0,
+          "pass": true,
+          "peak": 21810,
+          "upper": 26458243
+        },
+        {
+          "attempts": 68,
+          "kind": 1,
+          "pass": true,
+          "peak": 2312,
+          "upper": 626038
+        },
+        {
+          "attempts": 59,
+          "kind": 2,
+          "pass": true,
+          "peak": 16610,
+          "upper": 5020576
+        },
+        {
+          "attempts": 62,
+          "kind": 3,
+          "pass": true,
+          "peak": 2998,
+          "upper": 2637092
+        }
+      ],
+      "graph_final_zero": true,
+      "negative_control": true,
+      "old_current_oracles": true,
+      "overflow_rejected": true,
+      "owner_profile_binding": {
+        "arena_overflow_rejected": true,
+        "covered_owner_rows": 262143,
+        "managed_arena_requests": 56,
+        "missing_row_family_history_and_unsupported_model_rejected": true,
+        "pass": true,
+        "per_version_source_history_upper": 35229650,
+        "registry_name_threads": 63,
+        "retained_bound": 61968954350,
+        "root_count_upper": 1238,
+        "runtime_source_copy_count_overflow_rejected": true,
+        "runtime_text_copies": 458,
+        "supplied_input_families": 511,
+        "text_count_byte_overflow_rejected": true,
+        "unknown_arena_profile_rejected": true
+      },
+      "phases": [
+        {
+          "entry_observed": 288957,
+          "entry_upper": 292469,
+          "name": "feature_file_publication",
+          "owner_profile_upper": 47080960651,
+          "pass": true,
+          "peak": 310959,
+          "upper": 26750712
+        },
+        {
+          "entry_observed": 298637,
+          "entry_upper": 304156,
+          "name": "refs_file_publication",
+          "owner_profile_upper": 48156329288,
+          "pass": true,
+          "peak": 301125,
+          "upper": 930194
+        },
+        {
+          "entry_observed": 299525,
+          "entry_upper": 305482,
+          "name": "manifest_file_result",
+          "owner_profile_upper": 56991917010,
+          "pass": true,
+          "peak": 316135,
+          "upper": 5326058
+        },
+        {
+          "entry_observed": 303932,
+          "entry_upper": 310045,
+          "name": "definition_directory_publication",
+          "owner_profile_upper": 61628178354,
+          "pass": true,
+          "peak": 307106,
+          "upper": 2947137
+        },
+        {
+          "entry_observed": 305476,
+          "entry_upper": 311988,
+          "name": "preparsed_settings",
+          "owner_profile_upper": 61741604462,
+          "pass": true,
+          "peak": 306668,
+          "upper": 377933
+        },
+        {
+          "entry_observed": 306060,
+          "entry_upper": 312572,
+          "name": "default_settings",
+          "owner_profile_upper": 61874826837,
+          "pass": true,
+          "peak": 316571,
+          "upper": 388304
+        },
+        {
+          "entry_observed": 315379,
+          "entry_upper": 321427,
+          "name": "legacy_settings_upgrade",
+          "owner_profile_upper": 61914208545,
+          "pass": true,
+          "peak": 322490,
+          "upper": 343846
+        },
+        {
+          "entry_observed": 322490,
+          "entry_upper": 328538,
+          "name": "resolved_features",
+          "owner_profile_upper": 61968985486,
+          "pass": true,
+          "peak": 331733,
+          "upper": 359674
+        }
+      ],
+      "retained": {
+        "ignored_spare_capacity": 262159,
+        "input_alias_deduplicated": true,
+        "input_heap": 284069,
+        "observed": 331733,
+        "upper": 339790
+      },
+      "schema": "settings-file-construction-composition.v1",
+      "scope": "Eight actual file/settings phases with supplied old/current/global/TLS and returned rules,preparsed DOM/settings capacities deduplicated independently. Standard warmed MSVC Release/default files. No prefab/legacy cube/atlas/all-world/thread/CRT/OS/GPU/process acceptance;input inspector scratch and native exception objects separate.",
+      "status": "PASS"
+    },
+    "prefab": {
+      "concurrent_reader": {
+        "pass": true,
+        "reads": 119869,
+        "writer_cycles": 32
+      },
+      "directory_domain": {
+        "depth_including_empty": 3,
+        "files": 9,
+        "max_path_units": 94,
+        "prefix_bytes": 81,
+        "scans": 6
+      },
+      "failed_cases": 0,
+      "filesystem_error_preserves_prior": true,
+      "graph_final_zero": true,
+      "negative_control": true,
+      "old_current_oracles": true,
+      "overflow_rejected": true,
+      "owner_profile_binding": {
+        "covered_owner_rows": 262143,
+        "missing_row_family_history_and_unsupported_model_rejected": true,
+        "pass": true,
+        "per_version_source_history_upper": 728400603,
+        "registry_name_threads": 63,
+        "retained_bound": 1281256660677,
+        "root_count_upper": 1238,
+        "runtime_source_copy_count_overflow_rejected": true,
+        "runtime_text_copies": 458,
+        "supplied_input_families": 511,
+        "text_count_byte_overflow_rejected": true
+      },
+      "phases": [
+        {
+          "entry_observed": 2600,
+          "entry_upper": 4001,
+          "name": "rebind_current_library",
+          "owner_profile_upper": 200454719,
+          "pass": true,
+          "peak": 4304,
+          "upper": 113897
+        },
+        {
+          "entry_observed": 3304,
+          "entry_upper": 5182,
+          "name": "merged_directory_publication",
+          "owner_profile_upper": 1281984947383,
+          "pass": true,
+          "peak": 10163,
+          "upper": 728291888
+        }
+      ],
+      "refusal_and_exact_retry_cases": 688,
+      "refusals": [
+        {
+          "attempts": 658,
+          "pass": true,
+          "peak": 6582,
+          "prefixes": 658,
+          "route": 0,
+          "upper": 728286706
+        },
+        {
+          "attempts": 13,
+          "pass": true,
+          "peak": 656,
+          "prefixes": 13,
+          "route": 1,
+          "upper": 152926
+        },
+        {
+          "attempts": 17,
+          "pass": true,
+          "peak": 1704,
+          "prefixes": 17,
+          "route": 2,
+          "upper": 109896
+        }
+      ],
+      "repeated_missing_type_diagnostics_deduplicated": true,
+      "retained": {
+        "alias64_deduplicated": true,
+        "observed": 4904,
+        "upper": 7502
+      },
+      "schema": "prefab-construction-composition.v1",
+      "scope": "Actual merged directory/rebind source+selected library/escaped-owner graph;borrowed registry/manifests/paths separate. Default MSVC Release allocator,warmed standard streams,ordinary-new requests. C06 all-world/thread/weak-only multiplicities and E12 glog/CRT/OS/stack/GPU/process totals remain open.",
+      "status": "PASS",
+      "unchanged_zero_allocation": true
+    },
+    "cpu-texture": {
+      "atlas_cases": [
+        {
+          "batch": false,
+          "decoder_attempts": 9,
+          "decoder_peak": 29264,
+          "decoder_upper": 236352,
+          "name": "mixed",
+          "ordinary_attempts": 3,
+          "ordinary_peak": 160,
+          "ordinary_upper": 16736,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "explicit",
+          "ordinary_attempts": 1,
+          "ordinary_peak": 192,
+          "ordinary_upper": 16640,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "strip",
+          "ordinary_attempts": 1,
+          "ordinary_peak": 192,
+          "ordinary_upper": 16640,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_upper": 318336,
+          "name": "png_repeated",
+          "ordinary_attempts": 2,
+          "ordinary_peak": 98375,
+          "ordinary_upper": 115175,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "five",
+          "ordinary_attempts": 1,
+          "ordinary_peak": 96,
+          "ordinary_upper": 16544,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "seven",
+          "ordinary_attempts": 1,
+          "ordinary_peak": 96,
+          "ordinary_upper": 16544,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "empty",
+          "ordinary_attempts": 0,
+          "ordinary_peak": 0,
+          "ordinary_upper": 16448,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "missing",
+          "ordinary_attempts": 0,
+          "ordinary_peak": 0,
+          "ordinary_upper": 16448,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "invalid_memory",
+          "ordinary_attempts": 0,
+          "ordinary_peak": 0,
+          "ordinary_upper": 16448,
+          "pass": true
+        },
+        {
+          "batch": false,
+          "decoder_attempts": 3,
+          "decoder_peak": 18600,
+          "decoder_upper": 18888,
+          "name": "invalid_strip",
+          "ordinary_attempts": 1,
+          "ordinary_peak": 32,
+          "ordinary_upper": 16832,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 9,
+          "decoder_peak": 29264,
+          "decoder_upper": 236352,
+          "name": "mixed",
+          "ordinary_attempts": 10,
+          "ordinary_peak": 800,
+          "ordinary_upper": 22312,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "explicit",
+          "ordinary_attempts": 4,
+          "ordinary_peak": 480,
+          "ordinary_upper": 18688,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "strip",
+          "ordinary_attempts": 4,
+          "ordinary_peak": 480,
+          "ordinary_upper": 18688,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_upper": 318336,
+          "name": "png_repeated",
+          "ordinary_attempts": 7,
+          "ordinary_peak": 98839,
+          "ordinary_upper": 124279,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "five",
+          "ordinary_attempts": 4,
+          "ordinary_peak": 384,
+          "ordinary_upper": 18592,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "seven",
+          "ordinary_attempts": 4,
+          "ordinary_peak": 384,
+          "ordinary_upper": 18592,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "empty",
+          "ordinary_attempts": 3,
+          "ordinary_peak": 288,
+          "ordinary_upper": 18496,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "missing",
+          "ordinary_attempts": 3,
+          "ordinary_peak": 288,
+          "ordinary_upper": 18496,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_upper": 0,
+          "name": "invalid_memory",
+          "ordinary_attempts": 3,
+          "ordinary_peak": 288,
+          "ordinary_upper": 18496,
+          "pass": true
+        },
+        {
+          "batch": true,
+          "decoder_attempts": 3,
+          "decoder_peak": 18600,
+          "decoder_upper": 18888,
+          "name": "invalid_strip",
+          "ordinary_attempts": 6,
+          "ordinary_peak": 496,
+          "ordinary_upper": 25936,
+          "pass": true
+        }
+      ],
+      "candidate_cases": 9,
+      "changed_pixel_control": true,
+      "decoder_refusal_and_retry_cases": 36,
+      "descriptor_file": {
+        "attempts": 62,
+        "pass": true,
+        "peak": 2788,
+        "upper": 767852
+      },
+      "escaped_batch_cross_thread_retirement": true,
+      "explicit_cache_isolation": true,
+      "failed_cases": 0,
+      "filesystem_error_preserves_prior": true,
+      "graph_final_zero": true,
+      "independent_concurrent_batches": true,
+      "invalid_descriptor_files": [
+        {
+          "attempts": 29,
+          "kind": 0,
+          "pass": true,
+          "peak": 643,
+          "upper": 70130
+        },
+        {
+          "attempts": 28,
+          "kind": 1,
+          "pass": true,
+          "peak": 632,
+          "upper": 96198
+        },
+        {
+          "attempts": 2,
+          "kind": 2,
+          "pass": true,
+          "peak": 32,
+          "upper": 51584
+        }
+      ],
+      "negative_cache_new_batch_recovery": true,
+      "old_current_returned_oracles": true,
+      "ordinary_refusal_and_retry_cases": 225,
+      "overflow_rejected": true,
+      "owner_profile_binding": {
+        "covered_owner_rows": 262143,
+        "missing_row_family_history_and_unsupported_model_rejected": true,
+        "pass": true,
+        "per_version_source_history_upper": 1424686,
+        "registry_name_threads": 63,
+        "retained_bound": 2506022674,
+        "root_count_upper": 1238,
+        "runtime_source_copy_count_overflow_rejected": true,
+        "runtime_text_copies": 458,
+        "supplied_input_families": 511,
+        "text_count_byte_overflow_rejected": true
+      },
+      "phases": [
+        {
+          "entry_observed": 22175,
+          "entry_upper": 26238,
+          "name": "legacy_registration",
+          "new_decoder_attempts": 0,
+          "new_decoder_peak": 0,
+          "observed_components": 23557,
+          "ordinary_attempts": 21,
+          "ordinary_peak": 7093,
+          "owner_profile_upper": 234141762,
+          "pass": true,
+          "retained_decoder": 16464,
+          "upper": 133050
+        },
+        {
+          "entry_observed": 22535,
+          "entry_upper": 26676,
+          "name": "legacy_descriptor_file",
+          "new_decoder_attempts": 0,
+          "new_decoder_peak": 0,
+          "observed_components": 25323,
+          "ordinary_attempts": 62,
+          "ordinary_peak": 8859,
+          "owner_profile_upper": 1585454470,
+          "pass": true,
+          "retained_decoder": 16464,
+          "upper": 794528
+        },
+        {
+          "entry_observed": 22839,
+          "entry_upper": 27356,
+          "name": "new_cpu_batch",
+          "new_decoder_attempts": 12,
+          "new_decoder_peak": 29308,
+          "observed_components": 53235,
+          "ordinary_attempts": 13,
+          "ordinary_peak": 7463,
+          "owner_profile_upper": 2043138458,
+          "pass": true,
+          "retained_decoder": 16464,
+          "upper": 287840
+        },
+        {
+          "entry_observed": 40435,
+          "entry_upper": 45243,
+          "name": "cache_hit_returned_atlas",
+          "new_decoder_attempts": 0,
+          "new_decoder_peak": 0,
+          "observed_components": 40579,
+          "ordinary_attempts": 1,
+          "ordinary_peak": 7607,
+          "owner_profile_upper": 2506285974,
+          "pass": true,
+          "retained_decoder": 32972,
+          "upper": 308543
+        }
+      ],
+      "registration": {
+        "attempts": 21,
+        "pass": true,
+        "peak": 1382,
+        "upper": 106812
+      },
+      "retained": {
+        "alias64_deduplicated": true,
+        "decoder_allocations": 5,
+        "decoder_requests_once": 32972,
+        "observed": 40579,
+        "upper": 45426
+      },
+      "schema": "texture-source-construction-composition.v1",
+      "status": "PASS",
+      "unmodeled_allocation_rejected": true
+    },
+    "gpu-texture": {
+      "allocator_failure_generation_thread_isolation": true,
+      "allocator_thread_inline_bytes": 24,
+      "backend_dimension_rejected_before_publication": true,
+      "callback_recovers_after_throw": true,
+      "changed_real_GL_pixel_rejected": true,
+      "combined_removal_patch": {
+        "attempts": 55,
+        "no_late_allocations": true,
+        "pass": true,
+        "peak": 2920,
+        "prefixes": 55,
+        "upper": 113800
+      },
+      "decoder_refusal_and_exact_retry_cases": 30,
+      "duplicate_id_last_valid_wins": true,
+      "extended_routes": [
+        {
+          "decoder_attempts": 0,
+          "decoder_peak": 0,
+          "decoder_prefixes": 0,
+          "decoder_upper": 0,
+          "kind": 0,
+          "no_late_allocations": true,
+          "ordinary_attempts": 30,
+          "ordinary_peak": 2232,
+          "ordinary_prefixes": 30,
+          "ordinary_upper": 117464,
+          "pass": true,
+          "route": 2
+        },
+        {
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_prefixes": 6,
+          "decoder_upper": 416832,
+          "kind": 1,
+          "no_late_allocations": true,
+          "ordinary_attempts": 27,
+          "ordinary_peak": 100319,
+          "ordinary_prefixes": 27,
+          "ordinary_upper": 227999,
+          "pass": true,
+          "route": 0
+        },
+        {
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_prefixes": 6,
+          "decoder_upper": 416832,
+          "kind": 2,
+          "no_late_allocations": true,
+          "ordinary_attempts": 37,
+          "ordinary_peak": 101423,
+          "ordinary_prefixes": 37,
+          "ordinary_upper": 227999,
+          "pass": true,
+          "route": 1
+        },
+        {
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_prefixes": 6,
+          "decoder_upper": 416832,
+          "kind": 3,
+          "no_late_allocations": true,
+          "ordinary_attempts": 31,
+          "ordinary_peak": 100319,
+          "ordinary_prefixes": 31,
+          "ordinary_upper": 227999,
+          "pass": true,
+          "route": 2
+        },
+        {
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_prefixes": 6,
+          "decoder_upper": 416832,
+          "kind": 4,
+          "no_late_allocations": true,
+          "ordinary_attempts": 31,
+          "ordinary_peak": 100319,
+          "ordinary_prefixes": 31,
+          "ordinary_upper": 227999,
+          "pass": true,
+          "route": 3
+        },
+        {
+          "decoder_attempts": 6,
+          "decoder_peak": 29216,
+          "decoder_prefixes": 6,
+          "decoder_upper": 416832,
+          "kind": 5,
+          "no_late_allocations": true,
+          "ordinary_attempts": 142,
+          "ordinary_peak": 101423,
+          "ordinary_prefixes": 142,
+          "ordinary_upper": 3886299,
+          "pass": true,
+          "route": 4
+        }
+      ],
+      "failed_cases": 0,
+      "graph_final_zero": true,
+      "invalid_source_and_empty_operations": true,
+      "legacy_missing_source_preserves_existing_texture": true,
+      "name_alias_owner_retirement": true,
+      "ordinary_refusal_and_exact_retry_cases": 613,
+      "overflow_rejected": true,
+      "owner_profile_binding": {
+        "covered_owner_rows": 262143,
+        "missing_row_family_history_and_unsupported_model_rejected": true,
+        "pass": true,
+        "per_version_source_history_upper": 3229246,
+        "registry_name_threads": 63,
+        "retained_bound": 5680243714,
+        "root_count_upper": 1238,
+        "runtime_source_copy_count_overflow_rejected": true,
+        "runtime_text_copies": 458,
+        "supplied_input_families": 511,
+        "text_count_byte_overflow_rejected": true
+      },
+      "phases": [
+        {
+          "entry_observed": 8112,
+          "entry_upper": 12850,
+          "name": "multi_texture_patch",
+          "observed_components": 11112,
+          "owner_profile_upper": 239561870,
+          "pass": true,
+          "upper": 136122
+        },
+        {
+          "entry_observed": 8112,
+          "entry_upper": 12850,
+          "name": "legacy_explicit_frames",
+          "observed_components": 13126,
+          "owner_profile_upper": 5683336838,
+          "pass": true,
+          "upper": 3105974
+        }
+      ],
+      "retained": {
+        "alias64_deduplicated": true,
+        "observed": 9080,
+        "upper": 14403
+      },
+      "retained_and_independent_pixel_oracles": true,
+      "routes": [
+        {
+          "attempts": 24,
+          "no_allocation_after_first_GL_mutation": true,
+          "ordinary_upper": 116440,
+          "pass": true,
+          "peak": 2232,
+          "prefixes": 24,
+          "route": 0
+        },
+        {
+          "attempts": 34,
+          "no_allocation_after_first_GL_mutation": true,
+          "ordinary_upper": 116440,
+          "pass": true,
+          "peak": 3336,
+          "prefixes": 34,
+          "route": 1
+        },
+        {
+          "attempts": 28,
+          "no_allocation_after_first_GL_mutation": true,
+          "ordinary_upper": 116440,
+          "pass": true,
+          "peak": 2232,
+          "prefixes": 28,
+          "route": 2
+        },
+        {
+          "attempts": 28,
+          "no_allocation_after_first_GL_mutation": true,
+          "ordinary_upper": 116488,
+          "pass": true,
+          "peak": 2232,
+          "prefixes": 28,
+          "route": 3
+        },
+        {
+          "attempts": 146,
+          "no_allocation_after_first_GL_mutation": true,
+          "ordinary_upper": 4193428,
+          "pass": true,
+          "peak": 3806,
+          "prefixes": 146,
+          "route": 4
+        }
+      ],
+      "same_extent_animation_and_definition_priority": true,
+      "schema": "texture-publication-real-gl.v1",
+      "status": "PASS",
+      "unknown_callback_profile_rejected": true,
+      "unmodeled_allocation_control": true
+    }
+  },
+  "unit_runs": [
+    {
+      "name": "pack",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-pack.json"
+      ],
+      "returncode": 0,
+      "seconds": 1.0583178999368101,
+      "exe_sha256": "e1ceeb306fb41f9cc7005ddc5a83aefba1d9b901823476e83f9d51dbb6aa40b6",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-pack.log"
+    },
+    {
+      "name": "settings",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-settings.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.22521739988587797,
+      "exe_sha256": "e1ceeb306fb41f9cc7005ddc5a83aefba1d9b901823476e83f9d51dbb6aa40b6",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-settings.log"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-prefab.json"
+      ],
+      "returncode": 0,
+      "seconds": 2.1591427999082953,
+      "exe_sha256": "84f65b2852bd664316a4e9d4a2cfb02ffaa06817b6e50dd5646271a569c54a09",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-prefab.log"
+    },
+    {
+      "name": "cpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-cpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.06533610005863011,
+      "exe_sha256": "e1ceeb306fb41f9cc7005ddc5a83aefba1d9b901823476e83f9d51dbb6aa40b6",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-cpu-texture.log"
+    },
+    {
+      "name": "gpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\texture_publication_driver_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-gpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 1.3818653000053018,
+      "exe_sha256": "bbdbc5d01bd3a44b7019ea39091ac3e02b602aad343660649b161927328ef2af",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-gpu-texture.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013959799893200397,
+      "exe_sha256": "6f19c85fc8725ccb518a73496c4363400af293f19027090169fc57009ea69427",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-runtime-domain.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.011273299809545279,
+      "exe_sha256": "6f19c85fc8725ccb518a73496c4363400af293f19027090169fc57009ea69427",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-cooperative.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-catalog-profile-bindings-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.24111109995283186,
+      "exe_sha256": "dd251cefbe39dd9b324cc1386533b2a0e4b3fd9679d593546db508ded205eff7",
+      "log": "build\\desktop-msvc\\s4-catalog-profile-bindings-publication-gl.log"
+    }
+  ],
+  "native_menu": {
+    "active_roles_current": true,
+    "applications": 1,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 10,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7493156,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "menu",
+    "pool_count": 2,
+    "pool_workers": 9,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 0,
+    "publication_fields": 0,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12474043,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "native_first_game": {
+    "active_roles_current": true,
+    "applications": 1,
+    "auxiliary_domain_supported": true,
+    "auxiliary_world_counted": true,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 20,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "diagnostic_pool_count_with_auxiliary": 6,
+    "diagnostic_pool_workers_with_auxiliary": 19,
+    "diagnostic_thread_upper_with_auxiliary": 20,
+    "diagnostic_worlds_with_auxiliary": 2,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7552364,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "in-game",
+    "pool_count": 6,
+    "pool_workers": 19,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "stream-generation",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-load",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-background",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "io-light-flags",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 652,
+    "publication_fields": 981,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12575831,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "previous_unified_composition_certificate": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json",
+  "unchanged_C05_models": [
+    {
+      "certificate": "S4_02_C05_TEXTURE_CONSTRUCTION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "982501cdd12da3fa611e592c1697e149ac1fcb911138f66722addc11ca54f67f",
+      "unchanged_models": {
+        "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+        "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_SETTINGS_FILE_COMPOSITION_CERTIFICATE_2026_11_25.json",
+      "certificate_sha256": "e132128e47deeb7464ef45355437f6b0c2d0545e970206857905d11614094bee",
+      "unchanged_models": {
+        "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
+        "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_PREFAB_COMPOSITION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "a1c479b55842d030d1ff9fce2034c5a380eb08d461400d423dc9264edce21592",
+      "unchanged_models": {
+        "src/WorldGen/Core/PrefabConstructionComposition.h": "34472a086adf3dd4165e3746d3e7576eb33437b3786f21ab8e887fbafe82775c"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    },
+    {
+      "certificate": "S4_02_C05_TEXTURE_PUBLICATION_CERTIFICATE_2026_11_26.json",
+      "certificate_sha256": "ffa0ca9068cb220520d59c34d975d7ce858a43839d6ec2800e3278f197fa018a",
+      "unchanged_models": {
+        "src/WorldGen/Core/TexturePublicationSourceEnvelope.h": "2d8ef22b386549a82f0c5d33ca1b60dd8f8c7f5846f4211a0172f639faaa4c7a"
+      },
+      "status": "SOURCE_PRIMITIVE_UNCHANGED_FINAL_PROFILE_BINDING_PENDING"
+    }
+  ],
+  "source_sha256_raw": {
+    "CMakeLists.txt": "ed259005a27f13997dbf687c567a54d8f8a4c62635371a2103b0730a431a64e1",
+    "src/WorldGen/Core/CatalogOwnerProfileBinding.h": "ac19d64bc814332318ee5a8b56e6e8d610839bce0fc30e2de53c49f0865bd49c",
+    "src/WorldGen/Core/CatalogOwnerComposition.h": "266497fdab12cf9611ed36396b3f2e36a27ea83bfcfd53be2545715d8804f18f",
+    "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+    "src/WorldGen/Core/CatalogJsonSource.h": "33e1034cd3d56186566c8a86a41b7f1ba614d14dbb47470102eb71146dd6a6d4",
+    "src/WorldGen/Core/PrefabConstructionComposition.h": "34472a086adf3dd4165e3746d3e7576eb33437b3786f21ab8e887fbafe82775c",
+    "src/WorldGen/Core/TextureConstructionComposition.h": "18a35226b1a0810c1e65ee0bc907138b68e99db7cbe67c18b3b39c7f0096d6f1",
+    "src/WorldGen/Core/TexturePublicationSourceEnvelope.h": "2d8ef22b386549a82f0c5d33ca1b60dd8f8c7f5846f4211a0172f639faaa4c7a",
+    "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
+    "src/WorldGen/Core/RuntimeSettingsText.h": "1ec3255d471dbef1c4d3b1b3920d5ffd2e2ac415a0417001fe4ca150116db758",
+    "src/WorldGen/Core/SettingsTextBudget.h": "9071c345ee2fecc026fa0de3e19313704afc2042665d9aa47c76fe9f362ccbab",
+    "src/WorldGen/Core/PipelineSettingsKey.h": "205232e9186e9487e29976d6a6d68d759c8f40092191ecc56e8cc082dd7f3ce5",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
+    "src/WorldGen/Sampling/ColumnSample.cpp": "23f2bf1c2df1fe6fe0c4262691a36cabe4cd638103eb0ce0ab9c60c92c2918ee",
+    "src/WorldGen/Core/CatalogRuntimeDomain.h": "ae4b0790f2f20c6cf9edc64fa5cd4979d9ee8d9d5a95933dddb698b8b4523e75",
+    "src/WorldGen/Core/CatalogPublicationRoots.h": "374b507d5de7e9227a2ee38a2894d6443ea23a4cc84ee431987286c946fdc6b6",
+    "src/Test/CatalogBoundProfileFixture.h": "c5c5c47a10f454a6043529059d7748ed56bdabc38e7f6f4a668f3da993731aa2",
+    "src/Test/CatalogOwnerCompositionControls.h": "3ce48110d2f40400e4ecee6fcad66327b887aedcc87f8de8a7f8aea8f0f6677c",
+    "src/Test/CatalogCompositionFixture.h": "8c19f3d4a21313259a4daedbef957bc3f7a2627bf0d213e56bed8a3433989286",
+    "src/Test/SettingsCompositionFixture.h": "2f4ee975a2a3deda5fe2d427a284c734681a1eed5d572b04264dfe5d830450df",
+    "src/Test/PrefabCompositionFixture.h": "f495903374c35809fd04519dd755a8b05560dcf7e530ceb73e677d21123f4a84",
+    "src/Test/TextureConstructionFixture.h": "559b3591eda67612f057fa776fa35aaf5fb00f299d33ffbea3a13259f7faaccd",
+    "src/Test/TexturePublicationDriverTest.cpp": "d138f71b609ca8a6c859e30c2a0fdbc3f755c49c8035372d636b69dcc350f9f4",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "9d1363c8ea4b13e9f289efcbc21da3114025c0947616245ca1ce74a0b16bafc1",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "3c611dd8d81ce13248f7f03cc71411f1e8d63618e51994de0947f98736dafbd5"
+  },
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\lib\\glog.lib": "c9384c6e03f8458fa1c4e1bded35710c0ce7bd2a5472351e28cf910e4cbb4a3f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c"
+  },
+  "provenance": "build\\desktop-msvc\\s4-catalog-profile-bindings-provenance.json",
+  "desktop_exe_sha256": "dfca0d770ef2e877453c560f6fd3f875ca7d3e9d9bcd9aedef3ffe8681d86bf4",
+  "native": {
+    "artifact": "build\\desktop-msvc\\s4-catalog-profile-bindings-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "actual_GL_readbacks": 8,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true
+  },
+  "acceptance_boundary": "Parameterized named source/count proof for supplied complete domains and admitted input histories under current default MSVC Release/STL/make_shared/stream/callback/decoder profiles. Counts and per-family maxima are caller inputs with explicit completeness preconditions,not automatically discovered all-process state. Fixture two-world arithmetic is not a measured two-world run;native supplied-owner point remains separate. Uniform maxima give deliberately loose multi-GB/TB upper numbers;they are not allocated,test thresholds,RSS predictions or acceptable performance budgets. Existing original tighter per-operation bounds are still checked for every measured phase. Primary/numeric pipeline caches,weak/control/CRT/OS/GPU/process bytes and original full matrix remain E12/S6 requirements. No new global ledger,strong mirrors or game quotas;normal application behavior unchanged."
+}

@@ -11,6 +11,7 @@
 #include "Test/StbiAllocationFixture.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Test/OrdinaryNewObservation.h"
+#include "Test/CatalogBoundProfileFixture.h"
 #include <nlohmann/json.hpp>
 #include <array>
 #include <filesystem>
@@ -183,11 +184,13 @@ inline void Extended(const fs::path &root,Json &report,size_t &failures,size_t &
     std::shared_ptr<UTextureBaseStorage> bases;std::shared_ptr<UTextureCubeStorage> storage;UTextureCubeStorage::CubeAtlasPixels escaped;
     ResetObservation();{observation::Scope scope;bases=std::make_shared<UTextureBaseStorage>(*input);storage=std::make_shared<UTextureCubeStorage>(bases);storage->PatchDescriptors(old);escaped=storage->BuildCubeAtlasPixels("escaped",std::vector<std::string>(old[0].Stems.begin(),old[0].Stems.end()),0);}
     const auto census=[&]{detail::CatalogStorageInspector out;out.TextureCubes(storage);out.TextureBases(bases);out.AtlasPixels(&escaped);return out.Result;};
+    catalog_bound_profile_fixture::Profile profile(BoundRetainedCatalogRequests(census()));
     size_t calls=0;UBlockingWorkPump::Install([&](const char *,float){++calls;void *p=::operator new(512);::operator delete(p);},0);report["phases"]=Json::array();
     const auto phase=[&](const char *name,const TexturePublicationSourceEnvelope &source,auto operation){const auto c=census();const auto entry=BoundRetainedCatalogRequests(c);const auto bound=ComposeCatalogConstruction(entry,source.combined_additional_upper,source.supported,source.overflow);const auto held=GetStbiProcessAllocationSnapshot().live_request_bytes;const auto observed=observation::State.live+held;auto ledger=std::make_shared<UStbiAllocationLedger>();
+      const auto ownerBound=profile.Phase(entry,source.combined_additional_upper,source.supported,source.overflow);
       observation::State.peak=observation::State.live;observation::State.active=true;{UStbiAllocationScope active(ledger);operation();}observation::State.active=false;
-      const auto peak=observation::State.peak+held+ledger->GetSnapshot().peak_admitted_request_bytes;const bool ok=bound.supported && !bound.overflow && c.decoder_request_bytes==held && observed<=entry.requested_heap_upper && peak<=bound.requested_heap_upper;if(!ok)++failures;
-      report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"observed_components",peak},{"upper",bound.requested_heap_upper}});
+      const auto peak=observation::State.peak+held+ledger->GetSnapshot().peak_admitted_request_bytes;const bool ok=bound.supported && !bound.overflow && c.decoder_request_bytes==held && observed<=entry.requested_heap_upper && peak<=bound.requested_heap_upper && ownerBound.supported && !ownerBound.overflow && peak<=ownerBound.requested_heap_upper;if(!ok)++failures;
+      report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"observed_components",peak},{"upper",bound.requested_heap_upper},{"owner_profile_upper",ownerBound.requested_heap_upper}});
     };
     const auto source=BoundTexturePublicationSource(SourceDomain(*storage,rows,144,nullptr,512));phase("multi_texture_patch",source,[&]{storage->PatchDescriptors(rows);});
     const auto fileSource=BoundTexturePublicationSource(SourceDomain(*storage,{},192,&directory,512));phase("legacy_explicit_frames",fileSource,[&]{storage->Load(directory.string());});
@@ -197,6 +200,7 @@ inline void Extended(const fs::path &root,Json &report,size_t &failures,size_t &
     const auto alias=[&]{detail::CatalogStorageInspector one,many;one.TextureCubes(storage);one.AtlasPixels(&escaped);for(int i=0;i<64;++i){many.TextureCubes(storage);many.AtlasPixels(&escaped);}return one.Result.known_storage_bytes==many.Result.known_storage_bytes && one.Result.shared_owners==many.Result.shared_owners;};const bool dedup=alias();
     const auto retained=BoundRetainedCatalogRequests(census());const auto observed=observation::State.live+GetStbiProcessAllocationSnapshot().live_request_bytes;oracle=oracle && dedup && observed<=retained.requested_heap_upper;
     report["retained"]={{"observed",observed},{"upper",retained.requested_heap_upper},{"alias64_deduplicated",dedup}};report["retained_and_independent_pixel_oracles"]=oracle;if(!oracle)++failures;
+    auto boundChecks=profile.Controls(retained);if(!boundChecks["pass"].get<bool>())++failures;report["owner_profile_binding"]=boundChecks;
     storage->Clear();storage.reset();bases.reset();escaped={};const bool zero=!observation::State.live && !observation::State.blocks && !GetStbiProcessAllocationSnapshot().live_request_bytes;if(!zero)++failures;report["graph_final_zero"]=zero;
   }
   TexturePublicationSourceDomain overflow;overflow.rows=SIZE_MAX;const bool overflowRejected=BoundTexturePublicationSource(overflow).overflow;TexturePublicationSourceDomain missing;missing.callback_calls=1;missing.callback_profile_known=false;

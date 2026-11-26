@@ -1,6 +1,6 @@
 {
   "schema": "s4-catalog-root-owner-ledger.v1",
-  "status": "OPEN_COMP01_FINAL_PROFILE_BINDINGS_UNIFIED_COUNT_SOURCE_GRAPH_SCOPED_PASS",
+  "status": "PROPERTY_ACCEPTED_C06_SUPPLIED_NAMED_SOURCE_PROFILES_E12_OPEN",
   "scope": "Continuation of C06,not a new audit or process-memory cap. Current R installed/cached/returned graph has scoped proof;all declaration candidates/value/capture roots below must be composed before C06 closes.",
   "current_certificate": "S4_02_C06_PUBLICATION_ROOTS_CERTIFICATE_2026_11_26.json",
   "rows": [
@@ -9,141 +9,343 @@
       "owner": "global snapshots",
       "source": "src/WorldGen/Core/WorldGenContentPin.cpp",
       "bound_or_obligation": "Pack/features/refs Active3;Pack owns registry/image;Biomes handle aliases Pack registry. Reload candidates overlap old/current via accepted C05 source phases.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "G01",
+        "source_count_binding": "3 Active roots;Pack includes registry/image and Features diagnostics",
+        "input_families": [
+          "PackRegistry",
+          "FeaturesRefs"
+        ],
+        "source": "src/WorldGen/Core/WorldGenContentPin.cpp",
+        "source_sha256_raw": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "G02",
       "owner": "resource/storage wrappers",
       "source": "src/App/Core.h",
       "bound_or_obligation": "Core5 resource handles;World/registry/texture cube/Application/geometry/viewmodel/GUI wrappers and launcher locals may alias or retain another storage. Count distinct storage/library/texture objects,not one payload per wrapper. Current BlockDefinitionStorage Active1 each.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "G02",
+        "source_count_binding": "supplied resource_roots;deduplicate shared wrappers/current catalogs",
+        "input_families": [
+          "BlockMerge",
+          "PrefabLibrary",
+          "CpuTexture",
+          "GpuPublication"
+        ],
+        "source": "src/App/Core.h",
+        "source_sha256_raw": "086d2a91065eebb9e75655363fdcb52778f8991543a2f1c4de40873c100f0d73"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "G03",
       "owner": "world values and primary pipeline",
       "source": "src/World/Core/World.h",
       "bound_or_obligation": "WorldGenSets and resolved config1 per live world,plus one primary generator. ObjectLibrary raw;copied pipeline settings/config are source payload,not another shared catalog owner. Additional native diagnostic worlds separate profile.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "G03",
+        "source_count_binding": "2 value roots/world;primary/template/populator source text in4*worlds bundles",
+        "input_families": [
+          "WorldInputs",
+          "RuntimeText"
+        ],
+        "source": "src/World/Core/World.h",
+        "source_sha256_raw": "34fec9b85145e14d76a4fad046c8ffcd686f88c14c27678989c526564ac85749"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "G04",
       "owner": "escaped biome/sample keys",
       "source": "src/WorldGen/Sampling/BiomeTypes.h",
       "bound_or_obligation": "BiomeKeyRef owns aliasing key handle;key owner can preserve whole registry after Pack retirement. Caller-returned refs and fixed builtin table must be counted,not inferred zero from expired Pack.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "G04",
+        "source_count_binding": "each supplied escaped key can retain whole registry;unknown owner rejected",
+        "input_families": [
+          "PackRegistry"
+        ],
+        "source": "src/WorldGen/Sampling/BiomeTypes.h",
+        "source_sha256_raw": "821bb7b8497a793daff32d09245b7f40b8857ea8d5fc50410d3e8774919d3e4a"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "T01",
       "owner": "generation scheduler readers",
       "source": "src/World/Chunks/ChunkLoadScheduler.cpp",
       "bound_or_obligation": "Existing default process8 admitted mesh/relight/generation work graph;this scheduler input4 handles per admitted request. Generation reader guard retires7 convenience slots/name before work credit;idle0,at most56 scheduler-generation reader slot references while running.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "T01",
+        "source_count_binding": "shared work default8;4 content handles/job upper,reader cleanup before credit",
+        "input_families": [
+          "PackRegistry",
+          "FeaturesRefs",
+          "BlockMerge"
+        ],
+        "source": "src/World/Chunks/ChunkLoadScheduler.cpp",
+        "source_sha256_raw": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "T02",
       "owner": "thread convenience and pins",
       "source": "src/WorldGen/Core/WorldGenContentPin.h",
       "bound_or_obligation": "Per participating thread7 strong convenience slots160 inline bytes plus registry-name backing. One active nonnested pin4 strong handles and TLS borrowed pointer8 bytes;STBI ledger/failure-generation24 per participating thread. Main/other-pool/cooperative readers not covered by scheduler guard.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "T02",
+        "source_count_binding": "7 readers and4 pin cells per supplied thread;name history1/thread",
+        "input_families": [
+          "PackRegistry",
+          "FeaturesRefs",
+          "BlockMerge",
+          "PrefabLibrary",
+          "RuntimeText"
+        ],
+        "source": "src/WorldGen/Core/CatalogThreadReads.h",
+        "source_sha256_raw": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "T03",
       "owner": "weak pipeline and validation owners",
       "source": "src/WorldGen/Core/PipelineChunkPopulator.cpp",
       "bound_or_obligation": "One TLS pipeline per participating generation thread;6 weak owner slots+borrowed objects pointer. Coallocated shells survive last payload. UBlockWorld memo entries hold weak input contexts and strong geometry identity;bounded by2*field_count+1024. Numeric noise/TLS histories remain E12.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "T03",
+        "source_count_binding": "one TLS pipeline/thread;6 weak owner controls E12,numeric key no text;active text/copy overlap<=6 bundles/thread",
+        "input_families": [
+          "RuntimeText"
+        ],
+        "source": "src/WorldGen/Core/PipelineChunkPopulator.cpp",
+        "source_sha256_raw": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "T04",
       "owner": "actual application pools",
       "source": "src/Core/Jobs/JobThreadBudget.h",
       "bound_or_obligation": "Per owner generation<=4,coop<=4,relight<=4,mesh<=8,IO load<=4,optional IO background1,light-flags1. Capture worker disabled (class supports1 created worker);count actual construction/replace overlap and all live world owners. Auxiliary watchdog/audio/fluid-summary/profiler/window/Sky future threads have no named catalog snapshots;native/runtime TLS overhead remains E12.",
-      "status": "SCOPED_GT01_SOURCE_AND_SUPPLIED_RUNTIME_DOMAIN_PASS_E12_BYTES_SEPARATE",
-      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "T04",
+        "source_count_binding": "all supplied calling+member+constructing threads;default per-world8 named pools/27 workers,serialized component replacement<=8 extra;no OS-thread inference",
+        "input_families": [
+          "RuntimeText"
+        ],
+        "source": "src/Core/Jobs/JobThreadBudget.h",
+        "source_sha256_raw": "25b5a54519bde5d101bf58819fd593d6fe22ad494ab117fed159ca7945aec424"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "RQ01",
       "owner": "cooperative generation",
       "source": "src/World/Core/WorldCooperativeOps.cpp",
       "bound_or_obligation": "Separate session W<=4,logical InFlight<=2W<=8;actual captured callable upper3W<=12 includes up toW completed-publication tails before callable destruction. One scheduling local request separate;4 content handles/request and pin aliases. No shared global8 credit. Save.Catalog1 until reset/destruction;COMP01 composition required.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "RQ01",
+        "source_count_binding": "separate cooperative3W<=12 callable roots plus main scheduling locals;4 handles/request,text2 bundles/request;not shared work8",
+        "input_families": [
+          "PackRegistry",
+          "FeaturesRefs",
+          "RuntimeText"
+        ],
+        "source": "src/World/Core/WorldCooperativeOps.cpp",
+        "source_sha256_raw": "f0aa5d9e5479d050d4eb95e8995edad22ffc02bc53779c9f124066d8f572f422"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "RQ02",
       "owner": "mesh queued/running/completed",
       "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
       "bound_or_obligation": "Active callable work credits shared8;catalogKeep plus captured snapshot field. Returned MeshBuildResult direct InputCatalog/GeometryInputs/optional RenderLight/PendingSnapshot/batch bindings. Completion cap runtime tuning or6*worker_count<=48 default;drained/escaped vectors supplied separately.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "RQ02",
+        "source_count_binding": "shared work up to2 catalog versions/mesh;2*K_mesh completed roots;defaultK=6W<=48,positive supplied K overrides;cap0 no queue count bound",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/Render/Mesh/AsyncMeshBuilder.cpp",
+        "source_sha256_raw": "c312c38ee65638327a9dd51291ec757058eaa328887af82d46bdf0ba103bfb50"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "RQ03",
       "owner": "relight queued/running/completed",
       "source": "src/World/Lighting/AsyncRelightBuilder.cpp",
       "bound_or_obligation": "Actual input snapshot/callable/result/certificate alias one captured catalog;shared work credit8 through callable destruction. Completed runtime tuning or8*workers<=32 default,not6W. Drained/escaped values supplied separately;cap0 supplies no count cap. Retry metadata owns no catalogs.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "RQ03",
+        "source_count_binding": "snapshot/result/certificate alias1 captured material catalog;K_relight completed roots;defaultK=8W<=32,actual positive K overrides",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/World/Lighting/AsyncRelightBuilder.cpp",
+        "source_sha256_raw": "6d3835fb0c54f7286526008518239a3446d2663c721323ebf2676d35fb42055a"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R01",
       "owner": "installed fields and memo",
       "source": "src/World/Lighting/SectionLightField.h",
       "bound_or_obligation": "At most2 shared input contexts per actual field,regardless current proof validity;distinct contexts each direct catalog plus optional certificate catalog. Map/chunk aliases deduplicate. BlockWorld memo adds one strong catalog;memo weak input slots and geometry owner separate.",
-      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "final_source_binding": {
+        "id": "R01",
+        "source_count_binding": "2 context roots/field+1 world memo;stale proofs still count;weak memo<=2*fields+1024 E12",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/World/Lighting/SectionLightField.h",
+        "source_sha256_raw": "406af5b55af26a88526fde6eab8676c3e2a80f1551b6e85f25ba37f9494d24a4"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R02",
       "owner": "CPU/GPU cached artifacts",
       "source": "src/Render/Mesh/ChunkMeshCache.h",
       "bound_or_obligation": "Per mesh RenderGeometryInputs,optional RenderLight,CPU/GPU bindings,CPU batch bindings,optional no-surface geometry. Cross light ranges and packed draw refs may retain aliases beyond a source mesh. Current iterator visits actual stored cells,not only drawable/valid artifacts.",
-      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "final_source_binding": {
+        "id": "R02",
+        "source_count_binding": "actual geometry/light cells+2 cells/binding lease;packed and Cross range aliases deduplicate",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/Render/Mesh/ChunkMeshCache.h",
+        "source_sha256_raw": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R03",
       "owner": "pending/capture/awaiting",
       "source": "src/Render/Mesh/ChunkMeshCache.h",
       "bound_or_obligation": "Awaiting geometry<=32/32MiB,result catalog-bearing members;pending GPU inputCatalog+snapshot light. Capture store<=512 snapshots. Current iterator follows those actual stored objects;worker callable/completion queues supplied separately. Existing queue receipts remain authoritative for payload/byte caps.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "R03",
+        "source_count_binding": "2 roots/awaiting result,2/pending GPU,1/captured snapshot;source32 awaiting and512 capture maxima supplied with byte caps;caller copies separate",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/Render/Mesh/ChunkMeshCache.h",
+        "source_sha256_raw": "e5aed1e790d15b32a9b8f7a10edfdb01a8380a3e4b494ce9f507b2ee135d6a5a"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R04",
       "owner": "binding lease and backend batches",
       "source": "src/Render/Lighting/SectionRenderLightBinding.h",
       "bound_or_obligation": "Binding owns geometry+light snapshot2 catalog cells,weak GL State;invalid/reset lease still owns CPU catalog. Actual GreedyGPU batches and CrossGPU lightRanges visited by const pass adapters;actual batch/range counts and staging/escaped overlaps supplied COMP01. Direct metadata population is not upload transaction proof.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "R04",
+        "source_count_binding": "2 roots/actual backend lease;invalid/reset CPU ownership persists;all Greedy/Cross containers visited",
+        "input_families": [
+          "BlockMerge",
+          "GpuPublication"
+        ],
+        "source": "src/Render/Engine/GeometryEngine.h",
+        "source_sha256_raw": "4b9558691c4feaafc092b114c2358de523ce4c5e9fcf4424e6c411c67b819da3"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R05",
       "owner": "no-surface proof",
       "source": "src/Render/Mesh/GreedyMesher.h",
       "bound_or_obligation": "Mesher-created SectionNoSurfaceProof owns1 SectionGeometryRenderInputs catalog;cached and returned proof nodes must be followed even if other mesh slots are empty.",
-      "status": "SCOPED_CURRENT_PUBLICATION_CERTIFICATE"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "final_source_binding": {
+        "id": "R05",
+        "source_count_binding": "1 geometry catalog/no-surface proof including returned proof",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/Render/Mesh/GreedyMesher.h",
+        "source_sha256_raw": "39c295d102762f5e0f17cf255dd1ff63ddb71b27673826852c31587adcd8ab47"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "R06",
       "owner": "persistence and cooperative save",
       "source": "src/World/Persistence/WorldPersistence.h",
       "bound_or_obligation": "UnloadSaveReceipt1 catalog per live receipt;LightSignatureCatalog1 per persistence owner;cooperative Save.Catalog1. Save snapshots/returned receipts and current-field light certificates require input-domain counts. Terrain save snapshots clear copied calculation authority;do not invent extra full catalog per serialized byte buffer.",
-      "status": "SCOPED_RQ01_SOURCE_AND_LIFETIME_PASS_COMP01_E12_OPEN",
-      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "R06",
+        "source_count_binding": "1 catalog/receipt+1/persistence signature+1/cooperative save session;IO bytes are not another catalog",
+        "input_families": [
+          "BlockMerge"
+        ],
+        "source": "src/World/Persistence/WorldPersistence.h",
+        "source_sha256_raw": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     },
     {
       "id": "P01",
       "owner": "publisher and returned roots",
       "source": "src/WorldGen/Core/CatalogStorageCensus.h",
       "bound_or_obligation": "CatalogSnapshot/Compile/DOM/file/resource/texture returned objects and old/current/candidate overlap from accepted C05. Count all caller-owned results and aliases via supplied roots;arbitrary external caller histories are not bounded by active jobs and unknown domains cannot be certified as0.",
-      "status": "PARTIAL_UNIFIED_RESOURCE_RETURNED_COMPOSITION_PASS_FINAL_INPUT_PROFILE_BINDINGS_OPEN",
-      "evidence": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json"
+      "status": "PROPERTY_ACCEPTED_SUPPLIED_SOURCE_PROFILE_E12_SEPARATE",
+      "evidence": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json",
+      "final_source_binding": {
+        "id": "P01",
+        "source_count_binding": "explicit escaped/constructor roots;all admitted source/version maxima and managed arenas required;unknown history/callback/source model rejected",
+        "input_families": [
+          "PackRegistry",
+          "FeaturesRefs",
+          "BlockMerge",
+          "PrefabLibrary",
+          "WorldInputs",
+          "ManagedFiles",
+          "CpuTexture",
+          "GpuPublication",
+          "RuntimeText"
+        ],
+        "source": "src/WorldGen/Core/CatalogOwnerProfileBinding.h",
+        "source_sha256_raw": "ac19d64bc814332318ee5a8b56e6e8d610839bce0fc30e2de53c49f0865bd49c"
+      },
+      "final_binding_evidence": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
     }
   ],
   "declaration_candidates": [
@@ -516,7 +718,7 @@
   ],
   "declaration_rule": "Header regex candidate list only;includes some parameters,does not cover aliases/value wrappers/cpp TLS or capture sites. It is NOT a proof that all owners are enumerated. Named rows include those additional sites.",
   "source_sha256": {
-    "CMakeLists.txt": "c0c6cf3eaee00add058d6d8cda43dd7aa01d197ce350d6ed49c529c5823cb09c",
+    "CMakeLists.txt": "ed259005a27f13997dbf687c567a54d8f8a4c62635371a2103b0730a431a64e1",
     "src/App/Application.cpp": "f92982c7fe179a0e936ba945e4705c95c5e7a253612f2b8b491124b1ce01b4fc",
     "src/App/Application.h": "3d8dd2c708b9de5e705ce377bf5752d0bdcd4c9cea25bf8fbc6875d21abf8eec",
     "src/App/Core.cpp": "833fa0ee090430480ceca3fd8b7981b52541c051ee8f2e0b912e9eed2dd0a219",
@@ -553,7 +755,8 @@
     "src/Render/Mesh/MeshCaptureWorker.h": "868cb90f5355f0eeffa7bc7460d26d82eb976dd3592920edb34aeb35426be75e",
     "src/Render/Textures/TextureCube.h": "941189553621f7d05b1fa5b0019d6a94a2bf56f51883466664b4328b5787251b",
     "src/Test/AsyncRelightLifecycleTest.cpp": "163df9b70db44391acfe077251998b6f4e64d58e859ad60a816c0817ad76071b",
-    "src/Test/CatalogCompositionFixture.h": "97d906808a57bc9ca6aa827bb5860e1988882ae25609d4a22e0605c1bf8ae7af",
+    "src/Test/CatalogBoundProfileFixture.h": "c5c5c47a10f454a6043529059d7748ed56bdabc38e7f6f4a668f3da993731aa2",
+    "src/Test/CatalogCompositionFixture.h": "8c19f3d4a21313259a4daedbef957bc3f7a2627bf0d213e56bed8a3433989286",
     "src/Test/CatalogCooperativeOwners.h": "e399ffd8c4de526c5f5f60d548fd64b6dbb4fbd8d79aab310297c89b9820b02f",
     "src/Test/CatalogMeshQueueOwners.h": "5b67b39f642a90c4613fbda527c0a981de59da5c74765385bc102bfdbaa0d4b2",
     "src/Test/CatalogOwnerCompositionControls.h": "3ce48110d2f40400e4ecee6fcad66327b887aedcc87f8de8a7f8aea8f0f6677c",
@@ -561,7 +764,12 @@
     "src/Test/CatalogRelightQueueOwners.h": "6a8c7528b8be03a09aed5b7563d5dc5a2e788412e2dc2bf20e1f8c9886577e2b",
     "src/Test/CatalogWorkerRetirementTest.cpp": "60d0e85f97149a05be86faaf9ace2523c3a32b296838bb22759b5f6f02cba86c",
     "src/Test/DecorMeshIntegrationTest.cpp": "a3a989497d4c99a90c47a253bd9e36744cd9cb8b971fe03d5d926cf13cf2703c",
-    "src/Test/WorldGenScatterBlockResolveTest.cpp": "4277eb98c7dd80b045582939bcc9b325bc945b9d00d7b821e7b0f0688b64cb08",
+    "src/Test/PrefabCompositionFixture.h": "f495903374c35809fd04519dd755a8b05560dcf7e530ceb73e677d21123f4a84",
+    "src/Test/SettingsCompositionFixture.h": "2f4ee975a2a3deda5fe2d427a284c734681a1eed5d572b04264dfe5d830450df",
+    "src/Test/TextureConstructionFixture.h": "559b3591eda67612f057fa776fa35aaf5fb00f299d33ffbea3a13259f7faaccd",
+    "src/Test/TexturePublicationDriverTest.cpp": "d138f71b609ca8a6c859e30c2a0fdbc3f755c49c8035372d636b69dcc350f9f4",
+    "src/Test/WorldGenScatterBlockResolveTest.cpp": "3c611dd8d81ce13248f7f03cc71411f1e8d63618e51994de0947f98736dafbd5",
+    "src/Test/WorldGenSetsSourceEnvelopeTest.cpp": "9d1363c8ea4b13e9f289efcbc21da3114025c0947616245ca1ce74a0b16bafc1",
     "src/World/Chunks/ChunkLoadScheduler.cpp": "4ebefe9c23f05e5505b0455e7064a337aaef92cb7c7ab8904c2bb4d0499eb48c",
     "src/World/Chunks/ChunkLoadScheduler.h": "c06556200675b26c636b29ff8f0f50514f1710b41f3c103cfa04d29884a6c02f",
     "src/World/Core/BlockWorld.h": "37d1d21fed798f4a925c80b923e18e7376ab4dd36ef95c4112485778c1146c07",
@@ -581,32 +789,39 @@
     "src/World/Persistence/WorldPersistence.cpp": "dadb3a87e3847cc77eb32d7366e4501686ee64ce0c39a3a97cc8e6b90d26c564",
     "src/World/Persistence/WorldPersistence.h": "c680c282d662a77ac68264a0ac9e15b77293a8cd7e9e223bc898833a2b7e815b",
     "src/WorldGen/Core/CatalogConstructionComposition.h": "4c8db9b7c93b23ede922430fbbdcd649ad54854220c1a6c6b46756b86ef7eb0c",
+    "src/WorldGen/Core/CatalogJsonSource.h": "33e1034cd3d56186566c8a86a41b7f1ba614d14dbb47470102eb71146dd6a6d4",
     "src/WorldGen/Core/CatalogOwnerComposition.h": "266497fdab12cf9611ed36396b3f2e36a27ea83bfcfd53be2545715d8804f18f",
+    "src/WorldGen/Core/CatalogOwnerProfileBinding.h": "ac19d64bc814332318ee5a8b56e6e8d610839bce0fc30e2de53c49f0865bd49c",
     "src/WorldGen/Core/CatalogPublicationRoots.h": "374b507d5de7e9227a2ee38a2894d6443ea23a4cc84ee431987286c946fdc6b6",
     "src/WorldGen/Core/CatalogRuntimeDomain.h": "ae4b0790f2f20c6cf9edc64fa5cd4979d9ee8d9d5a95933dddb698b8b4523e75",
     "src/WorldGen/Core/CatalogStorageCensus.h": "e0b01939b6758d9ae26b3192831e3384b6e90c95ba2db1e50a851baec99e5e39",
+    "src/WorldGen/Core/CatalogThreadReads.h": "5408dfe138ae3d12b3e204a7ec6f97869526b784a99875ad441dc1d3f941a672",
     "src/WorldGen/Core/CooperativePopulateDispatch.h": "3e7d40cc0f177a01007cc5d151032a72e4a6f2785d87403f145bb0c9af78e819",
     "src/WorldGen/Core/IUChunkPopulator.h": "9a969a1b5c9a6089acc54f106a9ffee891181f455a9819020e522cd73fdadbb5",
     "src/WorldGen/Core/PipelineChunkPopulator.cpp": "96093806b4efcc3a8e43e5034b7b02d61ed9b973b5fbf3ae7e4317e39f0c3523",
+    "src/WorldGen/Core/PipelineSettingsKey.h": "205232e9186e9487e29976d6a6d68d759c8f40092191ecc56e8cc082dd7f3ce5",
+    "src/WorldGen/Core/PrefabConstructionComposition.h": "34472a086adf3dd4165e3746d3e7576eb33437b3786f21ab8e887fbafe82775c",
+    "src/WorldGen/Core/RuntimeSettingsText.h": "1ec3255d471dbef1c4d3b1b3920d5ffd2e2ac415a0417001fe4ca150116db758",
+    "src/WorldGen/Core/SettingsTextBudget.h": "9071c345ee2fecc026fa0de3e19313704afc2042665d9aa47c76fe9f362ccbab",
     "src/WorldGen/Core/SourceInputStorageCensus.h": "c74e42aa5d50a7629562ddff54b65843e2667ac8d2a37344f9de9d9d600648a9",
+    "src/WorldGen/Core/TextureConstructionComposition.h": "18a35226b1a0810c1e65ee0bc907138b68e99db7cbe67c18b3b39c7f0096d6f1",
+    "src/WorldGen/Core/TexturePublicationSourceEnvelope.h": "2d8ef22b386549a82f0c5d33ca1b60dd8f8c7f5846f4211a0172f639faaa4c7a",
     "src/WorldGen/Core/WorldGenContentPin.cpp": "4f1ee9ead67b4ee32772ff52db34f9215170f1fc3f5c110384bce6ddaca36133",
     "src/WorldGen/Core/WorldGenContentPin.h": "078eb68b00d45160b03c1f863a77265561c7462b37feb80faabfe45eb825b170",
     "src/WorldGen/Core/WorldGenPack.h": "90d5dfa131b90ddb9c9b37aa76c7a6316312793942918cea8254fd40d89bd457",
     "src/WorldGen/Core/WorldGenRefs.h": "c6607038d631783be1a83aa93f5f664426227acdc81a2487c03e6c129da5b16d",
+    "src/WorldGen/Core/WorldGenSetsSourceEnvelope.h": "60f5c1cf3ec72c99a179af0700a67d981c3361c7d0c4519afa34fe64e6e342e3",
     "src/WorldGen/Features/ObjectFeatureConfig.h": "b1a90688f72ed37393f58f5356856829d4fe03adb6a2b232677b446de26a9b64",
     "src/WorldGen/Sampling/BiomeSampler.cpp": "e7c810fa45f21401a8f04f70d031fec8a1fd9f159edbdb6a9e7ed3f9341d3b15",
-    "src/WorldGen/Sampling/BiomeTypes.h": "821bb7b8497a793daff32d09245b7f40b8857ea8d5fc50410d3e8774919d3e4a"
+    "src/WorldGen/Sampling/BiomeTypes.h": "821bb7b8497a793daff32d09245b7f40b8857ea8d5fc50410d3e8774919d3e4a",
+    "src/WorldGen/Sampling/ColumnSample.cpp": "23f2bf1c2df1fe6fe0c4262691a36cabe4cd638103eb0ce0ab9c60c92c2918ee"
   },
-  "remaining_order": [
-    {
-      "id": "COMP01",
-      "result": "COMP01 remains OPEN only for final finite input/profile bindings,not another audit: (1)bind each existing G/T/RQ/R/P owner row to the checked source cardinalities using GT01 constructor/pool profiles and RQ01 actual positive completion capacities,coop3W tails,backend/save/caller counts,including primary/TLS pipeline source-input copies and registry-name histories;(2)join the unchanged C05 settings/WorldGenSets,managed DOM/retirement arena,prefab/library and CPU/GPU texture source/retained schedules with those counts under explicit live-version input maxima,with shared payload/decoder terms once;the new five-phase returned-resource fixture and generic1238-unit example alone do not prove this full binding;(3)issue final C06/E11 supplied-default-profile certificate after those bindings/controls pass,then continue E12. Unknown external world/thread/callback/escaped histories and capacity0 without another source count bound must stay UNSUPPORTED,not0. E12 weak/coallocated shells,allocator/upstream/CRT/glog/locale/exception/stack/TLS/numeric caches/OS/driver/GPU/process and original full native/performance/memory matrix OPEN. S4.02 then S4.03..06/S5/S6 still OPEN;23/42 and ecology S6.05 unchanged;full S0..S6 preserved."
-    }
-  ],
-  "remaining": "COMP01 remains OPEN only for final finite input/profile bindings,not another audit: (1)bind each existing G/T/RQ/R/P owner row to the checked source cardinalities using GT01 constructor/pool profiles and RQ01 actual positive completion capacities,coop3W tails,backend/save/caller counts,including primary/TLS pipeline source-input copies and registry-name histories;(2)join the unchanged C05 settings/WorldGenSets,managed DOM/retirement arena,prefab/library and CPU/GPU texture source/retained schedules with those counts under explicit live-version input maxima,with shared payload/decoder terms once;the new five-phase returned-resource fixture and generic1238-unit example alone do not prove this full binding;(3)issue final C06/E11 supplied-default-profile certificate after those bindings/controls pass,then continue E12. Unknown external world/thread/callback/escaped histories and capacity0 without another source count bound must stay UNSUPPORTED,not0. E12 weak/coallocated shells,allocator/upstream/CRT/glog/locale/exception/stack/TLS/numeric caches/OS/driver/GPU/process and original full native/performance/memory matrix OPEN. S4.02 then S4.03..06/S5/S6 still OPEN;23/42 and ecology S6.05 unchanged;full S0..S6 preserved.",
+  "remaining_order": [],
+  "remaining": "Next E12 within S4.02 LIMIT.Q09:finish the existing finite platform/runtime list,starting with the already source-attributed glog LogStream constructor refusal retention (two16-byte MSVC stream allocations survive worker/logger shutdown;see S4_02_C05_PREFAB_COMPOSITION_CERTIFICATE and s4-prefab-composition-source-trace.json). Reuse exact source/dependency evidence before a new repro,fix the actual owner/adapter or explicitly bound a valid retained runtime cache,then address shared/weak coallocated shells,allocator/upstream/CRT/locale/exception/stack/TLS/numeric cache/window/OS/driver/GPU terms with supplied world/thread/backend/callback domains. Join requested producer/catalog/input terms without adding STBI32 prefixes or candidate shared blocks twice. Source-profile proof is not an implemented global asset/process quota;unknown external caller/world/thread/version/callback domains remain UNSUPPORTED. Whole-process matched workloads,RSS/high-water/frame/performance/memory and original full native matrix remain required under S6.06/S6.05;local startup-only smoke stays UNTESTED overall. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged,ecology S6.05 mismatch preserved;full S0..S6 retained,no audit restart or reduced acceptance.",
   "runtime_domain_certificate": "S4_02_C06_GT01_RUNTIME_DOMAIN_CERTIFICATE_2026_11_26.json",
   "runtime_source_profiles": "S4_02_C06_GT01_SOURCE_PROFILES_2026_11_26.json",
   "queue_owner_certificate": "S4_02_C06_RQ01_QUEUE_OWNERS_CERTIFICATE_2026_11_26.json",
   "queue_source_profiles": "S4_02_C06_RQ01_SOURCE_COUNTS_2026_11_26.json",
-  "unified_composition_certificate": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json"
+  "unified_composition_certificate": "S4_02_C06_COMP01_UNIFIED_COMPOSITION_CERTIFICATE_2026_11_26.json",
+  "final_profile_binding_certificate": "S4_02_C06_FINAL_PROFILE_BINDINGS_CERTIFICATE_2026_11_26.json"
 }

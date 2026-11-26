@@ -1,4 +1,5 @@
 #pragma once
+#include "Test/CatalogBoundProfileFixture.h"
 #include "App/Platform/Log.h"
 #include "Test/OrdinaryNewObservation.h"
 #include "World/Objects/ObjectLibrary.h"
@@ -122,7 +123,7 @@ template<class Operation>inline observation::Counts ObserveWorker(Operation oper
     counts=observation::State;
   });worker.join();return counts;
 }
-inline int Run(const char *path)
+inline int Run(const char *path,bool owner_binding=false)
 {
   const auto previousTerminate=std::set_terminate([]{const auto &s=observation::State;std::fprintf(stderr,"prefab terminate route=%d prefix=%zu attempts=%zu refusals=%zu live=%zu blocks=%zu active=%d\n",CurrentRoute,CurrentPrefix,s.attempts,s.refusals,s.live,s.blocks,int(s.active));std::fflush(stderr);std::_Exit(86);});
   CubatariumSetSuppressErrorDialogs(true);const auto input=Prepare();auto defs=std::make_shared<UBlockDefinitionStorage>();Define(*defs,101);UBlockRegistry registry(nullptr,defs);
@@ -136,12 +137,15 @@ inline int Run(const char *path)
   {observation::Scope scope(CheckEpoch());library=std::make_shared<UObjectLibrary>();library->LoadMerged(input.oldRoot,{},registry);}
   escaped[0]=library->GetShared("item");escaped[3]=library->GetShared("stable");const auto original=Payload(*escaped[0]);
   const auto census=[&](){detail::CatalogStorageInspector out;out.Library(library);for(const auto &v:escaped)out.Prefab(v);return out.Result;};
+  catalog_bound_profile_fixture::Profile profile(BoundRetainedCatalogRequests(census()));
   const auto phase=[&](const char *name,const CatalogCandidateEnvelope &source,auto operation){
     const auto entry=BoundRetainedCatalogRequests(census());const auto bound=ComposeCatalogConstruction(entry,source.requested_heap_upper,source.supported,source.overflow);
+    const auto ownerBound=profile.Phase(entry,source.requested_heap_upper,source.supported,source.overflow);
     const auto observed=observation::State.live;observation::State.peak=observed;observation::State.active=true;
     operation();observation::State.active=false;const auto peak=observation::State.peak;
-    const bool ok=bound.supported && !bound.overflow && observed<=entry.requested_heap_upper && peak<=bound.requested_heap_upper;
-    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"peak",peak},{"upper",bound.requested_heap_upper}});
+    const bool ok=bound.supported && !bound.overflow && observed<=entry.requested_heap_upper && peak<=bound.requested_heap_upper &&
+      (!owner_binding || (ownerBound.supported && !ownerBound.overflow && peak<=ownerBound.requested_heap_upper));
+    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"peak",peak},{"upper",bound.requested_heap_upper},{"owner_profile_upper",ownerBound.requested_heap_upper}});
   };
   Define(*defs,201,false);registry.Reload();const auto rebindBound=BoundPrefabRebindSource(InspectPrefabRebindSource(*library));
   phase("rebind_current_library",rebindBound,[&]{library->RebindBlockIds(registry);});escaped[1]=library->GetShared("item");
@@ -157,6 +161,7 @@ inline int Run(const char *path)
   // Inspectors own weak controls;retire them before clearing the selected graph.
   single={};many={};if(!dedup || retainedObserved>retained.requested_heap_upper)++failures;
   report["retained"]={{"observed",retainedObserved},{"upper",retained.requested_heap_upper},{"alias64_deduplicated",dedup}};
+  if(owner_binding){auto checks=profile.Controls(retained);if(!checks["pass"].get<bool>())++failures;report["owner_profile_binding"]=checks;}
   escaped={};library.reset();const bool retired=!observation::State.live && !observation::State.blocks;if(!retired)++failures;
   report["graph_final_zero"]=retired;
   if(!retired){report["remaining_bytes"]=observation::State.live;report["status"]="FAIL";if(path){std::ofstream out(path);out<<report.dump(2)<<'\n';}return 1;}

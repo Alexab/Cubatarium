@@ -3,6 +3,7 @@
 #include "Test/StbiAllocationFixture.h"
 #include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "Test/CatalogOwnerCompositionControls.h"
+#include "Test/CatalogBoundProfileFixture.h"
 
 namespace catalog_composition_fixture
 {
@@ -84,11 +85,13 @@ inline int Run(const char *path,bool owner_composition=false)
   };
   const auto census=[&](){CatalogRuntimeDomain out;visit(out,owner_composition);return out.Catalogs();};
   auto sourceRoot=BoundRetainedCatalogRequests(census());const auto ownerCounts=BoundCatalogOwnerSource(OwnerCountProfile());
+  catalog_bound_profile_fixture::Profile profile(sourceRoot);
   const auto phase=[&](const char *name,size_t additional,bool supported,bool overflow,auto operation){
     const auto entryCensus=census();const auto entry=BoundRetainedCatalogRequests(entryCensus);const auto bound=ComposeCatalogConstruction(entry,additional,supported,overflow);
     detail::CandidateAdd(sourceRoot.requested_heap_upper,additional,sourceRoot.overflow);
     sourceRoot.supported=sourceRoot.supported && supported;sourceRoot.overflow=sourceRoot.overflow || overflow;
     const auto countBound=ComposeCatalogOwnerSource(ownerCounts,sourceRoot,entry,additional,supported,overflow);
+    const auto ownerBound=profile.Phase(entry,additional,supported,overflow);
     const auto entryObserved=observation::State.live+GetStbiProcessAllocationSnapshot().live_request_bytes;
     const auto retainedDecoder=GetStbiProcessAllocationSnapshot().live_request_bytes;
     auto decoder=std::make_shared<UStbiAllocationLedger>();bool completed=false;
@@ -97,9 +100,10 @@ inline int Run(const char *path,bool owner_composition=false)
     const auto ordinaryPeak=observation::State.peak,newDecodePeak=decoder->GetSnapshot().peak_admitted_request_bytes;
     const auto componentEnvelope=ordinaryPeak+retainedDecoder+newDecodePeak;
     const bool ok=completed && bound.supported && !bound.overflow && entryCensus.decoder_request_bytes==retainedDecoder && entryObserved<=entry.requested_heap_upper && componentEnvelope<=bound.requested_heap_upper &&
-      (!owner_composition || (countBound.supported && !countBound.overflow && componentEnvelope<=countBound.requested_heap_upper));
+      (!owner_composition || (countBound.supported && !countBound.overflow && componentEnvelope<=countBound.requested_heap_upper &&
+        ownerBound.supported && !ownerBound.overflow && componentEnvelope<=ownerBound.requested_heap_upper));
     if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",entryObserved},{"entry_upper",entry.requested_heap_upper},{"retained_decoder",retainedDecoder},
-        {"ordinary_peak",ordinaryPeak},{"new_decoder_peak",newDecodePeak},{"observed_component_envelope",componentEnvelope},{"composed_upper",bound.requested_heap_upper},{"owner_count_source_upper",countBound.requested_heap_upper}});
+        {"ordinary_peak",ordinaryPeak},{"new_decoder_peak",newDecodePeak},{"observed_component_envelope",componentEnvelope},{"composed_upper",bound.requested_heap_upper},{"owner_count_source_upper",countBound.requested_heap_upper},{"owner_profile_upper",ownerBound.requested_heap_upper}});
   };
   phase("whole_pack_directory",packBound.combined_additional_upper,packBound.supported,packBound.overflow,[&]{const bool result=UWorldGenPack::LoadFromDirectory(newPath);snapshots[1]=CaptureWorldGenContentSnapshot();return result;});
   const auto mergeDomain=ReadMergeSourceDomain(afterPacks,*merge,cache,16);const auto mergeBound=BoundMergeSource(mergeDomain);
@@ -130,6 +134,7 @@ inline int Run(const char *path,bool owner_composition=false)
     const bool roots=all.Objects(CatalogObjectKind::Blocks)==3 && missing.Objects(CatalogObjectKind::Blocks)==2 &&
       all.known_storage_bytes>missing.known_storage_bytes && alias_dedup && returnedMesh.InputCatalog->ById.at(8).Hardness==31;
     auto controls=OwnerControls(sourceRoot,retainedBound);if(!roots || !controls["pass"].get<bool>())++failures;
+    auto boundChecks=profile.Controls(retainedBound);if(!boundChecks["pass"].get<bool>())++failures;report["owner_profile_binding"]=boundChecks;
     report["owner_composition"]={{"controls",controls},{"pass",roots},{"union_catalogs",all.Objects(CatalogObjectKind::Blocks)},
       {"omitted_returned_catalogs",missing.Objects(CatalogObjectKind::Blocks)},{"union_known_bytes",all.known_storage_bytes},
       {"omitted_known_bytes",missing.known_storage_bytes},{"alias64_cross_domain_deduplicated",alias_dedup},

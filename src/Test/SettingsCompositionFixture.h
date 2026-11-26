@@ -1,4 +1,6 @@
 #pragma once
+#include "Test/CatalogBoundProfileFixture.h"
+#include <sstream>
 #include "WorldGen/Core/CatalogConstructionComposition.h"
 #include "WorldGen/Core/WorldGenSetsSourceEnvelope.h"
 #include "WorldGen/Core/SourceInputStorageCensus.h"
@@ -34,7 +36,7 @@ inline bool FeatureValue(const std::shared_ptr<const ObjectFeatureConfig> &value
       value->Vegetation[0].Mode==ObjectFeatureRuleMode::ProceduralTree && value->Vegetation[0].ObjectName=="tree_shared" &&
       value->Vegetation[0].Tree.TrunkBlock==std::string(old?8193:5001,old?'o':'n') && value->GroundCover[0].ObjectName==(old?"ground_old":"ground_new");
 }
-inline int Run(const char *path)
+inline int Run(const char *path,bool owner_binding=false)
 {
   const auto root=fs::path("build/desktop-msvc/s4-settings-composition-fixtures");
   for(bool old:{true,false}){const auto dir=root/(old?"old":"new");
@@ -50,26 +52,32 @@ inline int Run(const char *path)
   UObjectFeatureConfigStorage::LoadFromFile(root/"old/features.json");UWorldGenRefs::LoadFromFile(root/"old/refs.json");(void)reset();
   Json authored={{"schema_version",1},{"objects",{{"vegetation",{{"world",{{"entries",Json::array({{{"mode","object"},{"object","tree_shared"},{"spacing",37},{"weight",7},{"chance_per_column",13},{"biomes",Json::array({"custom_biome"})},{"sub_biomes",Json::array({"woodland"})}}})}}}}}}},{"ignored","spare_input"}};
   std::optional<Json> document;std::optional<WorldGenSets> parsed,defaults;std::optional<ObjectFeatureConfig> resolved;
+  std::optional<CatalogJsonDocument> managed;std::istringstream managedInput(R"({"managed":{"nested":[[{"value":"arena"}]]}})");
   std::optional<ResourcePackManifest> oldManifest,currentManifest;std::string error;
   std::array<WorldGenContentSnapshot,4> snapshots{};std::shared_ptr<UBlockDefinitionStorage> definitions;std::array<std::shared_ptr<const BlockDefinitionCatalog>,2> blocks{};
   Json report={{"schema","settings-file-construction-composition.v1"},{"phases",Json::array()}};size_t failures=0;
   {observation::Scope scope;document.emplace(authored);(*document)["ignored"].get_ref<std::string&>().reserve(256*1024);parsed.emplace();defaults.emplace();
     if(!UObjectFeatureConfigStorage::LoadFromFile(root/"old/features.json") || !UWorldGenRefs::LoadFromFile(root/"old/refs.json"))return 1;
     snapshots[0].Features=UObjectFeatureConfigStorage::GetSnapshot();snapshots[0].Refs=UWorldGenRefs::GetSnapshot();
-    oldManifest=UResourcePack::LoadManifest(root/"old");definitions=std::make_shared<UBlockDefinitionStorage>();definitions->Load((root/"old/definitions").string());blocks[0]=definitions->GetCatalogSnapshot();}
+    oldManifest=UResourcePack::LoadManifest(root/"old");definitions=std::make_shared<UBlockDefinitionStorage>();definitions->Load((root/"old/definitions").string());blocks[0]=definitions->GetCatalogSnapshot();
+    if(owner_binding)managed.emplace(ParseCatalogSourceDocument(managedInput,CatalogJsonKind::Features));}
   snapshots[1]=snapshots[0];blocks[1]=blocks[0];
   const auto inputCensus=[&]{const WorldGenSets *sets[]={parsed?&*parsed:nullptr,defaults?&*defaults:nullptr,parsed?&*parsed:nullptr};
-    const Json *docs[]={document?&*document:nullptr,document?&document->at("objects"):nullptr,document?&*document:nullptr};return MeasureSourceInputStorage(sets,3,docs,3);};
+    const Json *docs[]={document?&*document:nullptr,document?&document->at("objects"):nullptr,document?&*document:nullptr,
+      managed?static_cast<const Json*>(&*managed):nullptr,managed?&managed->at("managed"):nullptr};return MeasureSourceInputStorage(sets,3,docs,5);};
   const auto census=[&]{snapshots[2]={};if(resolved)snapshots[2].Features=std::shared_ptr<const ObjectFeatureConfig>(std::shared_ptr<const ObjectFeatureConfig>{},&*resolved);
     snapshots[3]={};snapshots[3].Features=UObjectFeatureConfigStorage::GetThreadReadSnapshot();CatalogResourceRoots roots;roots.block_storage=definitions;
     const auto c=MeasureCatalogStorage(snapshots.data(),snapshots.size(),blocks.data(),blocks.size(),{},roots);auto entry=BoundRetainedCatalogRequests(c);
-    const auto inputs=inputCensus();detail::CandidateAdd(entry.requested_heap_upper,inputs.RequestedHeapComponents(),entry.overflow);entry.overflow=entry.overflow || inputs.overflow;
+    const auto inputs=inputCensus();entry=JoinCatalogOwnerInputs(entry,inputs,managed?managed->RetirementRequestedBytes():0);
     detail::CatalogStorageInspector extra;if(oldManifest)extra.Manifest(*oldManifest);if(currentManifest)extra.Manifest(*currentManifest);extra.Text(error);
     detail::CandidateAdd(entry.requested_heap_upper,detail::MergeCensusUpper(extra.Result,entry.overflow),entry.overflow);return entry;};
+  catalog_bound_profile_fixture::Profile profile(census());
   const auto phase=[&](const char *name,const auto &source,auto operation){const auto entry=census();const auto bound=ComposeCatalogConstruction(entry,source.requested_heap_upper,source.supported,source.overflow);
+    const auto ownerBound=profile.Phase(entry,source.requested_heap_upper,source.supported,source.overflow);
     const auto entryObserved=observation::State.live;observation::State.peak=observation::State.live;observation::State.active=true;const bool completed=operation();observation::State.active=false;
-    const auto peak=observation::State.peak;const bool ok=completed && bound.supported && !bound.overflow && entryObserved<=entry.requested_heap_upper && peak<=bound.requested_heap_upper;
-    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",entryObserved},{"entry_upper",entry.requested_heap_upper},{"peak",peak},{"upper",bound.requested_heap_upper}});};
+    const auto peak=observation::State.peak;const bool ok=completed && bound.supported && !bound.overflow && entryObserved<=entry.requested_heap_upper && peak<=bound.requested_heap_upper &&
+      (!owner_binding || (ownerBound.supported && !ownerBound.overflow && peak<=ownerBound.requested_heap_upper));
+    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",entryObserved},{"entry_upper",entry.requested_heap_upper},{"peak",peak},{"upper",bound.requested_heap_upper},{"owner_profile_upper",ownerBound.requested_heap_upper}});};
   phase("feature_file_publication",BoundCatalogFileSource(FileDomain(root/"new/features.json",CatalogCandidateKind::Features)),[&]{const bool result=UObjectFeatureConfigStorage::LoadFromFile(root/"new/features.json");snapshots[1].Features=UObjectFeatureConfigStorage::GetSnapshot();return result;});
   phase("refs_file_publication",BoundCatalogFileSource(FileDomain(root/"new/refs.json",CatalogCandidateKind::Refs)),[&]{const bool result=UWorldGenRefs::LoadFromFile(root/"new/refs.json");snapshots[1].Refs=UWorldGenRefs::GetSnapshot();return result;});
   phase("manifest_file_result",BoundCatalogFileSource(FileDomain(root/"new/pack.json",CatalogCandidateKind::Manifest,(root/"new").native().size())),[&]{currentManifest=UResourcePack::LoadManifest(root/"new");return bool(currentManifest);});
@@ -88,12 +96,17 @@ inline int Run(const char *path)
       resolved->Vegetation.size()==1 && resolved->GroundCover.size()==1 && resolved->Decoration.size()==1 && resolved->Structures.size()==1 &&
       r.Mode==ObjectFeatureRuleMode::ProceduralTree && r.Tree.TrunkBlock==std::string(5001,'n') && r.Spacing==37 && r.Weight==7 && r.BiomeKeys==std::vector<std::string>{"custom_biome"};
   if(!values)++failures;
-  const auto input=inputCensus();const WorldGenSets *uniqueSets[]={&*parsed,&*defaults};const Json *uniqueDoc[]={&*document};const auto unique=MeasureSourceInputStorage(uniqueSets,2,uniqueDoc,1);
+  const auto input=inputCensus();const WorldGenSets *uniqueSets[]={&*parsed,&*defaults};const Json *uniqueDoc[]={&*document,managed?static_cast<const Json*>(&*managed):nullptr};const auto unique=MeasureSourceInputStorage(uniqueSets,2,uniqueDoc,2);
   const bool inputDedup=input.RequestedHeapComponents()==unique.RequestedHeapComponents();const auto entry=census();
   if(!inputDedup || observation::State.live>entry.requested_heap_upper)++failures;
   report["retained"]={{"observed",observation::State.live},{"upper",entry.requested_heap_upper},{"input_heap",input.RequestedHeapComponents()},{"input_alias_deduplicated",inputDedup},{"ignored_spare_capacity",(*document)["ignored"].get_ref<const std::string&>().capacity()}};
   report["old_current_oracles"]=values;
-  snapshots={};blocks={};definitions.reset();document.reset();parsed.reset();defaults.reset();resolved.reset();oldManifest.reset();currentManifest.reset();std::string{}.swap(error);
+  if(owner_binding){auto checks=profile.Controls(entry);const auto arena=managed->RetirementRequestedBytes();
+    const auto overflowArena=JoinCatalogOwnerInputs(entry,input,SIZE_MAX);
+    const bool missingArena=!JoinCatalogOwnerInputs(entry,input,arena,false).supported;
+    checks["managed_arena_requests"]=arena;checks["arena_overflow_rejected"]=overflowArena.overflow;checks["unknown_arena_profile_rejected"]=missingArena;
+    const bool ok=checks["pass"].get<bool>() && arena>0 && overflowArena.overflow && missingArena;if(!ok)++failures;checks["pass"]=ok;report["owner_profile_binding"]=checks;}
+  snapshots={};blocks={};definitions.reset();document.reset();managed.reset();parsed.reset();defaults.reset();resolved.reset();oldManifest.reset();currentManifest.reset();std::string{}.swap(error);
   if(!reset())return 1;const bool graphZero=!observation::State.live && !observation::State.blocks;if(!graphZero)++failures;report["graph_final_zero"]=graphZero;
   if(!graphZero){report["remaining_live"]=observation::State.live;report["status"]="FAIL";if(path){std::ofstream out(path);out<<report.dump(2)<<'\n';}return 1;}
   // Real file boundaries,including path/log/publication work and exact retries.

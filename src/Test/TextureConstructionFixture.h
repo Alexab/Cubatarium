@@ -1,4 +1,5 @@
 #pragma once
+#include "Test/CatalogBoundProfileFixture.h"
 #include "Test/OrdinaryNewObservation.h"
 #include "WorldGen/Core/CatalogConstructionComposition.h"
 #include "WorldGen/Core/TextureConstructionComposition.h"
@@ -87,7 +88,7 @@ inline CatalogCandidateEnvelope RegistrationBound(const Inputs &in)
 {size_t count=0,width=in.registration.native().size();for(const auto &p:fs::directory_iterator(in.registration)){++count;width=std::max(width,p.path().native().size());}return BoundLegacyBaseDirectorySource(count,width);}
 inline bool Descriptor(const std::optional<LegacyCubeDescriptor> &v,const Inputs &in)
 {return v && v->Name==std::string(101,'n') && v->Id==548 && v->Textures==in.mixed;}
-inline int Run(const char *path)
+inline int Run(const char *path,bool owner_binding=false)
 {
   auto in=Prepare();Json report={{"schema","texture-source-construction-composition.v1"},{"atlas_cases",Json::array()},{"phases",Json::array()}};size_t failures=0,prefixes=0,decoderPrefixes=0;
   const auto registrationBound=RegistrationBound(in);auto target=std::make_unique<UTextureBaseStorage>();target->RegisterPixels("kept",{1,1,{3,4,5,6}});target->RegisterPixels("file",{1,1,{7,8,9,10}});
@@ -165,13 +166,16 @@ inline int Run(const char *path)
   auto oldLedger=std::make_shared<UStbiAllocationLedger>();
   {observation::Scope scope;UStbiAllocationScope active(oldLedger);bases=std::make_shared<UTextureBaseStorage>(*in.bases);cubes=std::make_shared<UTextureCubeStorage>(bases);oldBatch=std::make_unique<UTextureCubeStorage::AtlasDecodeBatch>();oldAtlas=cubes->BuildCubeAtlasPixels("graph",in.mixed,0,*oldBatch);}
   const auto census=[&](){detail::CatalogStorageInspector out;out.TextureCubes(cubes);out.TextureBases(bases);out.AtlasBatch(oldBatch.get());out.AtlasBatch(newBatch.get());out.AtlasPixels(&oldAtlas);out.AtlasPixels(&currentAtlas);out.AtlasPixels(&returnedAgain);if(descriptor)out.LegacyCube(&*descriptor);return out.Result;};
+  catalog_bound_profile_fixture::Profile profile(BoundRetainedCatalogRequests(census()));
   const auto phase=[&](const char *name,const CatalogCandidateEnvelope &source,auto operation){
     const auto counted=census();const auto entry=BoundRetainedCatalogRequests(counted);const auto upper=ComposeCatalogConstruction(entry,source.requested_heap_upper,source.supported,source.overflow);
+    const auto ownerBound=profile.Phase(entry,source.requested_heap_upper,source.supported,source.overflow);
     const auto held=GetStbiProcessAllocationSnapshot().live_request_bytes;const auto observed=observation::State.live+held;auto ledger=std::make_shared<UStbiAllocationLedger>();const auto attempts=observation::State.attempts;
     observation::State.peak=observation::State.live;observation::State.active=true;{UStbiAllocationScope active(ledger);operation();}observation::State.active=false;
     const auto decoded=ledger->GetSnapshot();const auto components=observation::State.peak+held+decoded.peak_admitted_request_bytes;
-    const bool ok=upper.supported && !upper.overflow && counted.decoder_request_bytes==held && observed<=entry.requested_heap_upper && components<=upper.requested_heap_upper;
-    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"retained_decoder",held},{"new_decoder_peak",decoded.peak_admitted_request_bytes},{"new_decoder_attempts",decoded.allocation_attempts},{"ordinary_peak",observation::State.peak},{"ordinary_attempts",observation::State.attempts-attempts},{"observed_components",components},{"upper",upper.requested_heap_upper}});
+    const bool ok=upper.supported && !upper.overflow && counted.decoder_request_bytes==held && observed<=entry.requested_heap_upper && components<=upper.requested_heap_upper &&
+      (!owner_binding || (ownerBound.supported && !ownerBound.overflow && components<=ownerBound.requested_heap_upper));
+    if(!ok)++failures;report["phases"].push_back({{"name",name},{"pass",ok},{"entry_observed",observed},{"entry_upper",entry.requested_heap_upper},{"retained_decoder",held},{"new_decoder_peak",decoded.peak_admitted_request_bytes},{"new_decoder_attempts",decoded.allocation_attempts},{"ordinary_peak",observation::State.peak},{"ordinary_attempts",observation::State.attempts-attempts},{"observed_components",components},{"upper",upper.requested_heap_upper},{"owner_profile_upper",ownerBound.requested_heap_upper}});
   };
   phase("legacy_registration",registrationBound,[&]{bases->Load(in.registrationPath);});
   phase("legacy_descriptor_file",descriptorBound,[&]{descriptor=LoadLegacyCubeDescriptorFile(in.descriptorPath);});
@@ -188,6 +192,7 @@ inline int Run(const char *path)
     for(int i=0;i<64;++i){many.AtlasBatch(oldBatch.get());many.AtlasPixels(&oldAtlas);if(descriptor)many.LegacyCube(&*descriptor);}return one.Result.known_storage_bytes==many.Result.known_storage_bytes && one.Result.decoder_request_bytes==many.Result.decoder_request_bytes && one.Result.shared_owners==many.Result.shared_owners;};
   const bool dedup=aliasCheck();graph=graph && dedup && observed<=retained.requested_heap_upper && counted.decoder_request_bytes==held;
   report["retained"]={{"observed",observed},{"upper",retained.requested_heap_upper},{"decoder_requests_once",held},{"decoder_allocations",counted.decoder_allocations},{"alias64_deduplicated",dedup}};
+  if(owner_binding){auto checks=profile.Controls(retained);if(!checks["pass"].get<bool>())++failures;report["owner_profile_binding"]=checks;}
   std::thread release([owner=std::move(oldBatch)]()mutable{owner.reset();});release.join();const bool crossThread=oldLedger->GetSnapshot().live_request_bytes==0 && Matches(oldAtlas,in,in.mixed,2,2,1);
   graph=graph && crossThread;if(!graph)++failures;report["old_current_returned_oracles"]=graph;report["escaped_batch_cross_thread_retirement"]=crossThread;
   descriptor.reset();oldAtlas={};currentAtlas={};returnedAgain={};newBatch.reset();cubes.reset();current.bases.reset();bases.reset();

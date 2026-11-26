@@ -2943,6 +2943,17 @@ add_test(NAME catalog_owner_composition_test
     COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --catalog-owner-composition
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-owner-composition.json)
 set_tests_properties(catalog_owner_composition_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
+add_test(NAME catalog_settings_owner_binding_test
+    COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --settings-owner-binding
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-settings-owner-binding.json)
+add_test(NAME catalog_cpu_texture_owner_binding_test
+    COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --texture-owner-binding
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-cpu-texture-owner-binding.json)
+add_test(NAME catalog_prefab_owner_binding_test
+    COMMAND $<TARGET_FILE:worldgen_sets_source_envelope_test> --prefab-owner-binding
+        ${CMAKE_CURRENT_BINARY_DIR}/catalog-prefab-owner-binding.json)
+set_tests_properties(catalog_settings_owner_binding_test catalog_cpu_texture_owner_binding_test catalog_prefab_owner_binding_test
+    PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
 
 cubatarium_add_test(NAME fluid_tuning_defaults_test
     SOURCES
@@ -3897,5 +3908,8 @@ if(NOT ANDROID AND TARGET glfw AND TARGET GLEW::GLEW)
     target_compile_definitions(texture_publication_driver_test PRIVATE GLEW_STATIC)
   endif()
   add_test(NAME texture_publication_driver_test COMMAND $<TARGET_FILE:texture_publication_driver_test>)
+  add_test(NAME catalog_gpu_texture_owner_binding_test COMMAND $<TARGET_FILE:texture_publication_driver_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/catalog-gpu-texture-owner-binding.json)
+  set_tests_properties(catalog_gpu_texture_owner_binding_test PROPERTIES LABELS "gpu;integration;catalog" SKIP_RETURN_CODE 77 TIMEOUT 120)
   set_tests_properties(texture_publication_driver_test PROPERTIES LABELS "gpu;integration;texture;memory" SKIP_RETURN_CODE 77 TIMEOUT 120)
 endif()
