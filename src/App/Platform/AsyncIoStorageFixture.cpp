@@ -3,6 +3,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Memory/RootStorageSource.h"
+#include "Core/Memory/WindowsCrtFileTables.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
@@ -121,7 +122,6 @@ struct AsyncIoStorageProbe
 #if defined(_WIN32) && defined(_MSC_VER) && defined(_M_X64)
     // Default buffering of a regular binary file in the pinned x64 UCRT.
     constexpr size_t buffer_bytes = 4096;
-    constexpr size_t file_slot_bytes = 88;
     using File = std::unique_ptr<FILE, decltype(&std::fclose)>;
     const auto path = root / "stdio.bin";
     const auto open = [&](const wchar_t *mode) {
@@ -166,9 +166,11 @@ struct AsyncIoStorageProbe
             "ordinary binary streams acquire the expected default CRT buffer on first use");
     const auto slot_limit = _getmaxstdio();
     Require(slot_limit > 0, "read current CRT stream slot limit");
+    const auto file_tables = BoundWindowsCrtFileTables(slot_limit);
     return {{"supported", true}, {"cold_write", cold_write}, {"touched_write", touched_write},
             {"cold_read", cold_read}, {"touched_read", touched_read},
-            {"file_slot_bytes_from_source", file_slot_bytes}, {"slot_limit", slot_limit},
+            {"file_slot_bytes_from_source", file_tables.fileSlotBytes}, {"slot_limit", slot_limit},
+            {"file_table_profile_supported", file_tables.supported},
             {"crt_heap_total_observed", false}};
 #else
     return {{"supported", false}};

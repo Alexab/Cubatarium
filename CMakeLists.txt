@@ -98,6 +98,12 @@ endif()
 # every build by the cubatarium_version target (see cmake/GenerateVersionHeader.cmake).
 set(CUBATARIUM_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
 file(MAKE_DIRECTORY "${CUBATARIUM_GENERATED_DIR}")
+set(CUBATARIUM_CRT_FILE_TABLE_PROFILE 0)
+if(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION STREQUAL "10.0.26100.0")
+    set(CUBATARIUM_CRT_FILE_TABLE_PROFILE 1)
+endif()
+file(GENERATE OUTPUT "${CUBATARIUM_GENERATED_DIR}/WindowsCrtFileTableProfile.h"
+    CONTENT "#pragma once\n#define CUBATARIUM_CRT_FILE_TABLE_PROFILE ${CUBATARIUM_CRT_FILE_TABLE_PROFILE}\n")
 set(_cubatarium_version_args
     -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
     -DTEMPLATE=${CMAKE_SOURCE_DIR}/src/Version.h.in

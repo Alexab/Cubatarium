@@ -23,6 +23,7 @@
 #include "Core/Memory/EngineThreadStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Memory/VisualLoaderSource.h"
+#include "Core/Memory/WindowsCrtFileTables.h"
 #include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Core/Creature.h"
@@ -387,6 +388,18 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"owned_array_bytes_per_stream", VisualModelInputFile::BufferBytes},
       {"inline_file_owner_bytes", sizeof(VisualModelInputFile)},
       {"additional_counters_inline_bytes", sizeof(fileBuffers)}, {"whole_runtime_complete", false}};
+  const auto crtFiles = InspectWindowsCrtFileTables();
+  report["crt_file_tables"] = {
+      {"schema", "windows-crt-file-tables.v1"}, {"status", crtFiles.supported ? "PASS" : "UNSUPPORTED"},
+      {"stream_slots", crtFiles.streamSlots}, {"file_slot_bytes", crtFiles.fileSlotBytes},
+      {"stream_pointer_table_bytes", crtFiles.streamPointerTableBytes},
+      {"dynamic_file_slots_upper", crtFiles.dynamicFileSlotsUpper},
+      {"descriptor_blocks", crtFiles.descriptorBlocks}, {"descriptors_per_block", crtFiles.descriptorsPerBlock},
+      {"descriptor_bytes", crtFiles.descriptorBytes}, {"descriptor_backing_upper", crtFiles.descriptorBackingUpper},
+      {"table_statics_bytes", crtFiles.staticsBytes}, {"current_requested_heap_upper", crtFiles.currentRequestedHeapUpper},
+      {"resize_pointer_tables_upper", crtFiles.resizePointerTablesUpper}, {"requested_heap_upper", crtFiles.requestedHeapUpper},
+      {"process_handles", crtFiles.processHandles}, {"process_handles_observed", crtFiles.processHandlesObserved},
+      {"whole_runtime_complete", false}};
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {

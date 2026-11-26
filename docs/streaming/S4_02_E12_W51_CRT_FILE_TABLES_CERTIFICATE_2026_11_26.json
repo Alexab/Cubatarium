@@ -1,0 +1,280 @@
+{
+  "schema": "s4-e12-w51-crt-file-tables.v1",
+  "status": "SCOPED_CRT_FILE_TABLES_PASS_E12_OPEN",
+  "baseline_commit": "15c4b50fce680e83bba1602c693ccf6383b139bf",
+  "prior_certificate": "S4_02_E12_W50_ITEM_SCENE_TRAVERSAL_CERTIFICATE_2026_11_26.json",
+  "summary": "W51 bounds the requested pointer tables, retained FILE records and lowio blocks for one linked x64 static Windows CRT. The bound includes stdio pointer-table overlap on resize and separately accounts named static cells. The installed SDK layouts, offsets and capacities match the compiled Release profile. Two waves of 70 simultaneous readers reuse closed FILE slots and CRT descriptors. All 46 Release regression groups and the scoped native startup and I/O checks pass. The native menu and in-game reports record process handle counts as observations.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W51. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. Next complete filesystem-internal conversion/canonicalization, directory iterator lifetime, kernel handle/object memory and remaining platform accounting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "scope": "Requested payload and named static fields of one linked UCRT instance",
+  "unaccounted_by_this_bound": [
+    "Stream data buffers and name/conversion temporaries",
+    "CRT heap overhead, per-thread and locale data",
+    "Kernel file objects and handle table backing",
+    "Foreign CRT instances and total process memory"
+  ],
+  "sdk_layout_proof": {
+    "schema": "windows-crt-file-table-sdk-layout.v1",
+    "status": "PASS",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "compile": [
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+      "/nologo",
+      "/c",
+      "/MT",
+      "/O2",
+      "/DNDEBUG",
+      "/std:c++17",
+      "/EHsc",
+      "/IC:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared",
+      "/IC:\\Projects\\Cubatarium\\src",
+      "/IC:\\Projects\\Cubatarium\\build\\desktop-msvc\\generated",
+      "/FoC:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-files-layout.obj",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-files-layout.cpp"
+    ],
+    "verified_field_offsets": 16,
+    "verified_layouts": [
+      "__crt_stdio_stream_data",
+      "__crt_lowio_handle_data"
+    ],
+    "inputs_and_outputs": {
+      "stdio_h": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal_stdio.h",
+        "sha256": "3705612666b5a9c19441517fd75ea47f69f99f17ea68179c316d1c248c72694b"
+      },
+      "lowio_h": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal_lowio.h",
+        "sha256": "1465b3388c22524a779c19dcd709eeff116993d21a0068e639281181ddb2a751"
+      },
+      "stdio_public_h": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt\\stdio.h",
+        "sha256": "06cbab3a501306fdd9176a00a83e5bb92ea4d7863cfd666355743527cf99edc6"
+      },
+      "file_cpp": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\stdio\\_file.cpp",
+        "sha256": "f0c0a4c188be0ca3319a3b2d5e60ae4baa85d52ced7501e6baaae43afd1d7574"
+      },
+      "stream_cpp": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\stdio\\stream.cpp",
+        "sha256": "1b5950dacaf769492911e0138682281663ae26febba129d26df96742e3fe3e02"
+      },
+      "setmaxf_cpp": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\stdio\\setmaxf.cpp",
+        "sha256": "6bfdb4dc37b49237a55b7dbd10a4ca84a45472f18f7a870c5cf141acf5332c21"
+      },
+      "osfinfo_cpp": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\lowio\\osfinfo.cpp",
+        "sha256": "f424d71aa9cbfe005eeb0384ca9b1b9e7f5e9df3b2a0adf378e3f135d1826de2"
+      },
+      "ioinit_cpp": {
+        "path": "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\lowio\\ioinit.cpp",
+        "sha256": "9cc35f857e078d59ce764e57d0f881a3e317042d0cecad2e38650330957dddf2"
+      },
+      "layout_proof": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-files-layout.cpp",
+        "sha256": "373262bbc7ad6e01baaf4f86341baf662bd504ee329ffb8b6d3cd8d71094aaab"
+      },
+      "compiled_object": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-files-layout.obj",
+        "sha256": "3c2929d37e932ef142a22de24a28515b31272ca7d43c24dfa6f4ee306a711ca0"
+      },
+      "compiler_log": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-files-layout.log",
+        "sha256": "25819a5912e567f9c40db401f27a8f988fb26a225d3dfb73d4c9c91a661bc3b1"
+      },
+      "model": {
+        "path": "C:\\Projects\\Cubatarium\\src\\Core\\Memory\\WindowsCrtFileTables.h",
+        "sha256": "757adab2d5b36257736582f31d0654ffff487532535800bc279f2cddefb0643f"
+      },
+      "build_profile": {
+        "path": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\generated\\WindowsCrtFileTableProfile.h",
+        "sha256": "184f034e09204e01d900a6a3f2f87624acd046f8206cc0b88ad0e91b61a301b7"
+      }
+    }
+  },
+  "desktop_linked_runtime_libraries": {
+    "LIBUCRT.LIB": {
+      "path": "C:\\PROGRAM FILES (X86)\\WINDOWS KITS\\10\\LIB\\10.0.26100.0\\UCRT\\X64\\LIBUCRT.LIB",
+      "sha256": "c3a20426b5142bfd0848468a3b95c47440759f0391ef2764e5020672811803cb"
+    },
+    "LIBCMT.LIB": {
+      "path": "C:\\PROGRAM FILES\\MICROSOFT VISUAL STUDIO\\18\\COMMUNITY\\VC\\TOOLS\\MSVC\\14.51.36231\\LIB\\X64\\LIBCMT.LIB",
+      "sha256": "b0d63342d47be1f3f5c2a5f7ee1bea1f1e81ace5adfc3ca68282a863d7c47d27"
+    }
+  },
+  "release_crt_wave_fixture": {
+    "current_requested_heap_upper": 638712,
+    "descriptor_bytes": 72,
+    "descriptor_first": 3,
+    "descriptor_last": 72,
+    "descriptors_reused": true,
+    "file_slot_bytes": 88,
+    "file_slots_reused": true,
+    "handles_distinct": true,
+    "process_handles_after": 69,
+    "process_handles_before": 69,
+    "process_handles_open": [
+      139,
+      139
+    ],
+    "requested_heap_upper": 1441528,
+    "stream_slots": 512,
+    "streams_per_wave": 70,
+    "supported": true,
+    "table_statics_bytes": 1380
+  },
+  "release_stdio": {
+    "cold_read": 0,
+    "cold_write": 0,
+    "crt_heap_total_observed": false,
+    "file_slot_bytes_from_source": 88,
+    "file_table_profile_supported": true,
+    "slot_limit": 512,
+    "supported": true,
+    "touched_read": 4096,
+    "touched_write": 4096
+  },
+  "native_crt_tables": {
+    "menu": {
+      "current_requested_heap_upper": 638712,
+      "descriptor_backing_upper": 589824,
+      "descriptor_blocks": 128,
+      "descriptor_bytes": 72,
+      "descriptors_per_block": 64,
+      "dynamic_file_slots_upper": 44792,
+      "file_slot_bytes": 88,
+      "process_handles": 337,
+      "process_handles_observed": true,
+      "requested_heap_upper": 1441528,
+      "resize_pointer_tables_upper": 131072,
+      "schema": "windows-crt-file-tables.v1",
+      "status": "PASS",
+      "stream_pointer_table_bytes": 4096,
+      "stream_slots": 512,
+      "table_statics_bytes": 1380,
+      "whole_runtime_complete": false
+    },
+    "in-game": {
+      "current_requested_heap_upper": 638712,
+      "descriptor_backing_upper": 589824,
+      "descriptor_blocks": 128,
+      "descriptor_bytes": 72,
+      "descriptors_per_block": 64,
+      "dynamic_file_slots_upper": 44792,
+      "file_slot_bytes": 88,
+      "process_handles": 356,
+      "process_handles_observed": true,
+      "requested_heap_upper": 1441528,
+      "resize_pointer_tables_upper": 131072,
+      "schema": "windows-crt-file-tables.v1",
+      "status": "PASS",
+      "stream_pointer_table_bytes": 4096,
+      "stream_slots": 512,
+      "table_statics_bytes": 1380,
+      "whole_runtime_complete": false
+    }
+  },
+  "native_stdio": {
+    "cold_read": 0,
+    "cold_write": 0,
+    "crt_heap_total_observed": false,
+    "file_slot_bytes_from_source": 88,
+    "file_table_profile_supported": true,
+    "slot_limit": 512,
+    "supported": true,
+    "touched_read": 4096,
+    "touched_write": 4096
+  },
+  "native_startup_aggregate": "UNTESTED",
+  "native_startup_components": {
+    "runtime": "PASS",
+    "startup": "PASS",
+    "observation": "PASS",
+    "build_provenance": "PASS"
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "943bac8a862ed42ad979016fbb00f8f86bcc39b1fda62884527dc33cf55b74fe",
+  "source_sha256_raw": {
+    "CMakeLists.txt": "d05a1328dc9fbf5bd12ad402442324fc0f3b3eae975b865aba8aeb1e4b85e7ff",
+    "src/App/Platform/AsyncIoStorageFixture.cpp": "1abd6e4c48e85c683c2f603f6b49b9e1e00be34c0bd502f51e6d43b96ce445da",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "87ac66e520991b6a118d1262f61dd35ab11287154c010b5a730940c61c3e93e8",
+    "src/Core/Memory/WindowsCrtFileTables.h": "757adab2d5b36257736582f31d0654ffff487532535800bc279f2cddefb0643f",
+    "src/Test/AsyncIoStorageTest.cpp": "c48a1fbb5b9b946c052ae8e4026f8e2915bccb7e53bde5af931eb4d0dd3196ee"
+  },
+  "desktop_exe_sha256": "7505780dfab3f91a588f221b58f03316b4b55d8928c5edcb7e67913d4346bd86",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-crt-files-provenance.json": "2ad3ab487e4c3da6d9909e50d41d54b4ebe01e752d65a2a310af43b9e9343206",
+    "build/desktop-msvc/s4-crt-files-frozen-source.json": "112d0f6b1a499d13c94ff2d5125d1aebccc29172efaf7d0ba2d5ae81f6c57e81",
+    "build/desktop-msvc/s4-crt-files-regressions.json": "7243d5dd7906858c4d968f0fe80fa52fd5f26c205e92c8c159594cca466612b3",
+    "build/desktop-msvc/s4-crt-files-io-owners.json": "78dba249a05930ad3c9add919fc9af9f162363150394cc71afa77dab5a474be8",
+    "build/desktop-msvc/s4-crt-files-layout.json": "9c7cd173635661e8b1e36e19c2f229f005ca90c35c38fe33b2c24654bc8314a5",
+    "build/desktop-msvc/Cubatarium.dir/Release/Cubatarium.tlog/link.read.1.tlog": "1dda1e7c0207a7b93772b48dc5fcd3df1ce1f88fde4d2829a2aca80412cf65cb",
+    "build/desktop-msvc/s4-crt-files-native/smoke-verdict.json": "6cf9e6612bd6a5371118d2d1cf80c09e2dd06d7fb0f9b6f7fc04416de9bda1c5",
+    "build/desktop-msvc/s4-crt-files-native/flight_sim_report.json": "0c4a08e291aa2e8ed7898ea1ff2e78dcc07876f048c014c310fc10ddcf2ccab3",
+    "build/desktop-msvc/s4-crt-files-native/terrain-save-probe/report.json": "7f968a9a9cccd777870dae7ae0a7f7a6cb6f6d6a0a46dd77eb553f874e36e613",
+    "build/desktop-msvc/s4-crt-files-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-crt-files-native/owner-domain/flight-menu.json": "1a9b99276b13e898ec040990934db917d94c156c2697fadc6c4e296d1443ad55",
+    "build/desktop-msvc/s4-crt-files-native/owner-domain/flight-in-game.json": "23e28c71ec5025823a755a1765c87fddf2b56a896e15bfd2849cc4e7a4075a30"
+  }
+}

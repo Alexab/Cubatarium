@@ -1,13 +1,111 @@
 #include "Core/Jobs/JobThreadPool.h"
+#include "Core/Memory/WindowsCrtFileTables.h"
 #include "Test/AsyncIoStorageFixture.h"
 #include "Test/IoCodecAllocationFixture.h"
+#include <algorithm>
+#include <array>
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <nlohmann/json.hpp>
+#include <vector>
+#ifdef _WIN32
+#include <io.h>
+#endif
 
 namespace
 {
+nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
+{
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_M_X64)
+  using cutum::BoundWindowsCrtFileTables;
+  using cutum::InspectWindowsCrtFileTables;
+  using cutum::io_codec_fixture::Require;
+  const auto before = InspectWindowsCrtFileTables();
+  if (!before.supported)
+    return {{"supported", false}};
+
+  constexpr int standard_streams = 3;
+  constexpr int max_descriptors = 8192;
+  static constexpr size_t opened_per_wave = 70;
+  const auto minimum = BoundWindowsCrtFileTables(standard_streams);
+  const auto maximum = BoundWindowsCrtFileTables(max_descriptors);
+  Require(!BoundWindowsCrtFileTables(standard_streams - 1).supported &&
+              !BoundWindowsCrtFileTables(max_descriptors + 1).supported &&
+              minimum.supported && !minimum.dynamicFileSlotsUpper &&
+              maximum.supported && maximum.descriptorBlocks * maximum.descriptorsPerBlock == max_descriptors &&
+              maximum.requestedHeapUpper == maximum.currentRequestedHeapUpper + maximum.streamPointerTableBytes &&
+              before.requestedHeapUpper == maximum.requestedHeapUpper &&
+              before.streamSlots >= standard_streams + opened_per_wave,
+          "CRT table bounds cover the valid limits and overlapping stdio pointer tables");
+
+  using File = std::unique_ptr<FILE, decltype(&std::fclose)>;
+  struct Wave
+  {
+    std::array<uintptr_t, opened_per_wave> streams{};
+    std::array<int, opened_per_wave> descriptors{};
+    size_t process_handles{};
+  };
+  const auto observe = [&] {
+    std::vector<File> readers;
+    readers.reserve(opened_per_wave);
+    std::array<intptr_t, opened_per_wave> os_handles{};
+    Wave wave;
+    for (size_t i = 0; i < opened_per_wave; ++i)
+    {
+      FILE *handle = nullptr;
+      const auto error = _wfopen_s(&handle, path.c_str(), L"rb");
+      readers.emplace_back(handle, &std::fclose);
+      Require(!error && handle, "open independent binary CRT readers");
+      wave.streams[i] = reinterpret_cast<uintptr_t>(handle);
+      const int fd = _fileno(handle);
+      Require(fd >= 0 && fd < max_descriptors, "CRT descriptor lies within lowio bounds");
+      wave.descriptors[i] = fd;
+      os_handles[i] = _get_osfhandle(fd);
+      Require(GetFileType(reinterpret_cast<HANDLE>(os_handles[i])) == FILE_TYPE_DISK,
+              "CRT descriptor maps to the open disk file");
+    }
+    const auto sort_and_check_distinct = [](auto &values) {
+      std::sort(values.begin(), values.end());
+      Require(std::adjacent_find(values.begin(), values.end()) == values.end(),
+              "concurrent readers own distinct FILE slots, descriptors and Windows handles");
+    };
+    sort_and_check_distinct(wave.streams);
+    sort_and_check_distinct(wave.descriptors);
+    sort_and_check_distinct(os_handles);
+    const auto live = InspectWindowsCrtFileTables();
+    Require(live.streamSlots == before.streamSlots && live.processHandlesObserved &&
+                live.processHandles >= opened_per_wave,
+            "observe process handle count with concurrent readers and unchanged stream limit");
+    wave.process_handles = live.processHandles;
+    for (auto &reader : readers)
+      Require(!std::fclose(reader.release()), "close an independent CRT reader");
+    return wave;
+  };
+  const auto first = observe();
+  const auto second = observe();
+  const auto after = InspectWindowsCrtFileTables();
+  Require(first.streams == second.streams && first.descriptors == second.descriptors,
+          "CRT reuses closed FILE slots and descriptor indices across waves");
+  Require(before.processHandlesObserved && after.processHandlesObserved &&
+              first.descriptors.front() / before.descriptorsPerBlock !=
+                  first.descriptors.back() / before.descriptorsPerBlock,
+          "observe process handle counts and readers spanning lowio blocks");
+  return {{"supported", true}, {"streams_per_wave", opened_per_wave},
+          {"descriptor_first", first.descriptors.front()}, {"descriptor_last", first.descriptors.back()},
+          {"file_slots_reused", true}, {"descriptors_reused", true}, {"handles_distinct", true},
+          {"file_slot_bytes", before.fileSlotBytes}, {"descriptor_bytes", before.descriptorBytes},
+          {"stream_slots", before.streamSlots}, {"current_requested_heap_upper", before.currentRequestedHeapUpper},
+          {"requested_heap_upper", before.requestedHeapUpper}, {"table_statics_bytes", before.staticsBytes},
+          {"process_handles_before", before.processHandles}, {"process_handles_after", after.processHandles},
+          {"process_handles_open", {first.process_handles, second.process_handles}}};
+#else
+  (void)path;
+  return {{"supported", false}};
+#endif
+}
+
 nlohmann::json CheckWorkerLaunchAllocations()
 {
   using cutum::UJobThreadPool;
@@ -65,6 +163,7 @@ int main(int argc, char **argv)
     const auto streams = cutum::io_codec_fixture::CheckFileStreams(folder + "-streams");
     const auto launch = CheckWorkerLaunchAllocations();
     auto result = cutum::RunAsyncIoStorageProbe(folder);
+    result["crt_file_tables"] = CheckCrtFileTables(std::filesystem::path(folder) / "stdio.bin");
     result["ordinary_codec"] = codec;
     result["ordinary_disk_index"] = disk;
     result["ordinary_failed_parse"] = malformed;
