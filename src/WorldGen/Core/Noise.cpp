@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <unordered_map>
+#include <limits>
 
 namespace cutum
 {
@@ -175,6 +176,13 @@ std::array<int, 512> PermutationForSeedUncached(uint32_t Seed)
   return perm;
 }
 
+using PermutationCache=std::unordered_map<uint32_t,std::array<int,512>>;
+PermutationCache &GetPermutationCache()
+{
+  static thread_local PermutationCache cache;
+  return cache;
+}
+
 const std::array<int, 512> &PermutationForSeed(uint32_t Seed)
 {
   // Per-thread map keyed by seed. World generation derives one noise seed per
@@ -183,13 +191,13 @@ const std::array<int, 512> &PermutationForSeed(uint32_t Seed)
   // missed on almost every call and rebuilt the 512-entry permutation each
   // time (~40% of column generation in a sampling profile). Seeds per world
   // are few; entries are node-based so references stay valid on rehash.
-  static thread_local std::unordered_map<uint32_t, std::array<int, 512>> cache;
+  auto &cache=GetPermutationCache();
   const auto it = cache.find(Seed);
   if (it != cache.end())
   {
     return it->second;
   }
-  if (cache.size() >= 2048)
+  if (cache.size() >= NoisePermutationCacheEntryLimit)
   {
     cache.clear(); // runaway seed set (e.g. per-chunk seeds): start over
   }
@@ -199,6 +207,31 @@ const std::array<int, 512> &PermutationForSeed(uint32_t Seed)
 }
 
 } // namespace
+
+NoisePermutationCacheStorage GetNoisePermutationCacheStorage()
+{
+  const auto &cache=GetPermutationCache();
+  NoisePermutationCacheStorage out;out.entries=cache.size();out.buckets=cache.bucket_count();
+  out.map_inline=sizeof(PermutationCache);out.value_bytes=sizeof(PermutationCache::value_type);
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  using Node=std::_List_node<PermutationCache::value_type,void*>;
+  out.node_bytes=sizeof(Node);out.bucket_slots_upper=NoisePermutationCacheEntryLimit;
+  // Current private map uses default load factor1. MSVC grows small tables by8
+  // below512 buckets,then to a power of2 of required buckets. At2048 entries
+  // the largest bucket vector is2048;clear keeps that high-water vector.
+  out.supported=cache.max_load_factor()==1.0f && out.entries<=NoisePermutationCacheEntryLimit &&
+    out.buckets<=out.bucket_slots_upper;
+  const auto bucket_request=[](size_t n){auto bytes=n*2*sizeof(PermutationCache::iterator);
+    return bytes+(bytes>=4096?39:0);};
+  static_assert(sizeof(PermutationCache::iterator)==sizeof(void*));
+  out.retained_requests=(out.entries+1)*sizeof(Node)+bucket_request(out.buckets);
+  out.retained_upper=(NoisePermutationCacheEntryLimit+1)*sizeof(Node)+bucket_request(out.bucket_slots_upper);
+  // Additional old bucket allocation during rehash. Nodes/sentinel are not
+  // copied;operator[] may own one candidate node within the2048 entry bound.
+  out.peak_upper=out.retained_upper+bucket_request(out.bucket_slots_upper);
+#endif
+  return out;
+}
 
 std::array<int, 512> BuildNoisePermutationForSeed(uint32_t seed)
 {

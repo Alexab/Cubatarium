@@ -1,4 +1,4 @@
-# Local lifetime-only change to BSD-licensed upstream glog v0.7.1.
+# Local lifetime cleanup and allocation-free source layout query for glog0.7.1.
 # Keep the original source copyright/license;the archive is SHA256 pinned.
 set(_file "${SOURCE_DIR}/src/logging.cc")
 file(READ "${_file}" _source)
@@ -81,6 +81,31 @@ LogSeverity LogMessage::severity() const noexcept]=])
     message(FATAL_ERROR "glog lifetime patch anchors did not match")
   endif()
   file(WRITE "${_file}" "${_source}")
+endif()
+file(READ "${_file}" _source)
+string(FIND "${_source}" "CubatariumGlogMessageSourceLayout" _has_layout)
+if(_has_layout EQUAL -1)
+  file(APPEND "${_file}" [=[
+
+// Cubatarium:compiled source sizes only;no owner,counter,TLS or allocation.
+extern "C" bool CubatariumGlogMessageSourceLayout(size_t *out,size_t count) noexcept {
+  if(!out || count!=8)return false;
+  using namespace google;
+  using Data=google::logging::internal::LogMessageData;
+  out[0]=sizeof(Data);out[1]=alignof(Data);
+#ifdef GLOG_THREAD_LOCAL_STORAGE
+  out[2]=sizeof(thread_msg_data);out[3]=sizeof(thread_data_available);
+#else
+  out[2]=0;out[3]=0;
+#endif
+  out[4]=sizeof(fatal_msg_data_exclusive)+sizeof(fatal_msg_data_shared);
+  out[5]=sizeof(Data::message_text_);out[6]=sizeof(LogMessage::LogStream);
+  out[7]=sizeof(log_mutex)+sizeof(fatal_msg_lock)+sizeof(crash_reason)+
+    sizeof(fatal_msg_exclusive)+sizeof(stop_writing)+sizeof(exit_on_dfatal)+
+    sizeof(fatal_time)+sizeof(fatal_message)+sizeof(LogSeverityNames)+NUM_SEVERITIES*sizeof(int64);
+  return true;
+}
+]=])
 endif()
 file(SHA256 "${_file}" _patched_hash)
 if(DEFINED EXPECTED_PATCH_HASH AND NOT _patched_hash STREQUAL EXPECTED_PATCH_HASH)

@@ -2,9 +2,20 @@
 
 #include <array>
 #include <cstdint>
+#include <cstddef>
 
 namespace cutum
 {
+inline constexpr size_t NoisePermutationCacheEntryLimit=2048;
+struct NoisePermutationCacheStorage
+{
+  size_t entries{},buckets{},map_inline{},value_bytes{},node_bytes{},bucket_slots_upper{};
+  size_t retained_requests{},retained_upper{},peak_upper{};
+  bool supported{},overflow{};
+};
+// Calling-thread diagnostic after a real noise call. It may initialize the
+// same empty map on a cold thread;it adds no cache/history/observer owner.
+NoisePermutationCacheStorage GetNoisePermutationCacheStorage();
 
 float HashNoise2D(int x, int z, uint32_t Seed);
 int LegacyHeightAt(int x, int z, uint32_t Seed, int baseY, int MaxHeight);

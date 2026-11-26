@@ -2112,12 +2112,15 @@ cubatarium_add_test(NAME async_relight_lifecycle_test
 
 if(CUBATARIUM_MSVC_DESKTOP)
   cubatarium_add_test(NAME log_allocation_lifecycle_test
-      SOURCES src/App/Platform/Log.cpp src/App/Platform/WorkerJobKind.cpp src/Test/LogAllocationLifecycleTest.cpp
+      SOURCES src/App/Platform/Log.cpp src/App/Platform/WorkerJobKind.cpp src/WorldGen/Core/Noise.cpp src/Test/LogAllocationLifecycleTest.cpp
       LIBRARIES glog::glog nlohmann_json::nlohmann_json
       WIN32_LIBRARIES dbghelp)
   add_test(NAME log_allocation_lifecycle_test COMMAND $<TARGET_FILE:log_allocation_lifecycle_test>
       ${CMAKE_CURRENT_BINARY_DIR}/log-allocation-lifecycle.json)
   set_tests_properties(log_allocation_lifecycle_test PROPERTIES LABELS "integration;memory;logging" TIMEOUT 120)
+  add_test(NAME log_runtime_source_test COMMAND $<TARGET_FILE:log_allocation_lifecycle_test>
+      --source-profile ${CMAKE_CURRENT_BINARY_DIR}/log-runtime-source.json)
+  set_tests_properties(log_runtime_source_test PROPERTIES LABELS "integration;memory;logging" TIMEOUT 120)
 endif()
 add_test(NAME async_relight_lifecycle_test
     COMMAND $<TARGET_FILE:async_relight_lifecycle_test>)
@@ -2759,6 +2762,14 @@ cubatarium_add_test(NAME noise_permutation_cache_test
     SOURCES
         src/WorldGen/Core/Noise.cpp
         src/Test/NoisePermutationCacheTest.cpp)
+if(CUBATARIUM_MSVC_DESKTOP)
+  cubatarium_add_test(NAME noise_storage_source_test
+      SOURCES src/WorldGen/Core/Noise.cpp src/Test/NoiseStorageSourceTest.cpp
+      LIBRARIES nlohmann_json::nlohmann_json)
+  add_test(NAME noise_storage_source_test COMMAND $<TARGET_FILE:noise_storage_source_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/noise-storage-source.json)
+  set_tests_properties(noise_storage_source_test PROPERTIES LABELS "integration;memory;noise" TIMEOUT 120)
+endif()
 
 cubatarium_add_test(NAME chunk_buffer_capture_test
     SOURCES
