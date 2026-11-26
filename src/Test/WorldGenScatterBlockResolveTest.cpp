@@ -471,9 +471,11 @@ static void TestResourceCatalogCensus()
 #include "Test/CatalogCompositionFixture.h"
 #include "Test/SettingsCompositionFixture.h"
 #include "Test/TextureConstructionFixture.h"
+#include "Test/PipelineWeakShellFixture.h"
 
 int main(int argc,char **argv)
 {
+  if(argc>1 && std::string(argv[1])=="--pipeline-weak-shells")return pipeline_weak_shell_fixture::Run(argc>2?argv[2]:nullptr);
   if(argc>1 && std::string(argv[1])=="--catalog-owner-composition")return catalog_composition_fixture::Run(argc>2?argv[2]:nullptr,true);
   if(argc>1 && std::string(argv[1])=="--settings-owner-binding")return settings_composition_fixture::Run(argc>2?argv[2]:nullptr,true);
   if(argc>1 && std::string(argv[1])=="--texture-owner-binding")return texture_construction_fixture::Run(argc>2?argv[2]:nullptr,true);

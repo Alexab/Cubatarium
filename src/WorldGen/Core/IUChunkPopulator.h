@@ -6,6 +6,7 @@
 #include "WorldGen/Core/ProceduralSettings.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/WorldGenStageId.h"
+#include "WorldGen/Core/PipelineOwnerKey.h"
 #include <array>
 #include <cstdint>
 #include <functional>
@@ -123,9 +124,10 @@ struct ChunkPopulateDiagnostics
     size_t retained_config_text_capacity_bytes{0};
     uint64_t pipeline_builds{0};
     size_t pipeline_settings_key_inline_bytes{0},pipeline_owner_key_inline_bytes{0};
+    PipelineWeakShellCensus pipeline_weak_shells;
   };
   // Calling-thread diagnostic only; no cross-worker traversal.
-  static ThreadScratchSnapshot GetThreadScratchSnapshot();
+  static ThreadScratchSnapshot GetThreadScratchSnapshot(bool default_owner_profile=false);
   static void Record(const ChunkPopulateTiming &timing, bool discarded = false);
   static ChunkPopulateTiming GetLast();
   static ChunkPopulateSummary GetSummary();

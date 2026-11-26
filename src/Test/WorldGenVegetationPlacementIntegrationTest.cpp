@@ -2914,6 +2914,14 @@ int main(int argc, char **argv)
     (void)second.Populate(retired);retired.content={};retired_pack.reset();
     FluidTest::Expect(weak_pack.expired() && weak_biomes.expired() && weak_features.expired() && weak_refs.expired(),kTestName,
         "idle TLS identity keeps only weak catalog owners, so payloads retire after last request/pin");
+    const auto retired_shells=cutum::ChunkPopulateDiagnostics::GetThreadScratchSnapshot(true).pipeline_weak_shells;
+    const auto shell_layout=cutum::GetPipelineWeakShellLayout();
+    if(shell_layout.supported)FluidTest::Expect(retired_shells.supported && retired_shells.occupied_slots==6 &&
+        retired_shells.distinct_owners==6 && retired_shells.expired_owners==4 &&
+        retired_shells.expired_request_upper==shell_layout.requests[2]+shell_layout.requests[3]+shell_layout.requests[4]+shell_layout.requests[5],
+        kTestName,"actual idle TLS key reports four expired coallocations without retaining catalog payloads or charging two live controls again");
+    std::cout<<"pipeline_expired_weak_owners="<<retired_shells.expired_owners
+        <<" requested_shell_upper="<<retired_shells.expired_request_upper<<std::endl;
     (void)second.Populate(request);
     auto pressure=request;pressure.settings.Seed^=1;
     pressure.settings.SeedText=std::string(64*1024,'s');pressure.settings.WorldGenPresetId=std::string(64*1024,'r');

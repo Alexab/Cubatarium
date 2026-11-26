@@ -1,5 +1,6 @@
 #pragma once
 #include "WorldGen/Core/CatalogConstructionComposition.h"
+#include "WorldGen/Core/PipelineOwnerKey.h"
 
 namespace cutum
 {
@@ -62,5 +63,16 @@ inline CatalogCandidateEnvelope ComposeCatalogOwnerSource(const CatalogOwnerSour
   else out.requested_heap_upper=owners.catalog_root_slots*per_root.requested_heap_upper;
   if(actual_union.requested_heap_upper>out.requested_heap_upper)out.supported=false;
   detail::CandidateAdd(out.requested_heap_upper,new_source_requests,out.overflow);return out;
+}
+// Only expired weak blocks are additional to the E11 live requested graph.
+// The source maximum allows six expired slots per supplied participating TLS;
+// this is not an observed all-thread census or a complete E12/process bound.
+inline CatalogCandidateEnvelope JoinCatalogPipelineWeakShells(CatalogCandidateEnvelope retained,
+    const CatalogOwnerSourceEnvelope &owners,bool default_owner_profile)
+{
+  const auto weak=BoundPipelineWeakShells(owners.thread_upper,owners.supported,default_owner_profile);
+  retained.supported=retained.supported && weak.supported;
+  retained.overflow=retained.overflow || owners.overflow || weak.overflow;
+  detail::CandidateAdd(retained.requested_heap_upper,weak.requested_upper,retained.overflow);return retained;
 }
 } // namespace cutum

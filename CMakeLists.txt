@@ -2957,6 +2957,12 @@ add_test(NAME catalog_owner_composition_test
     COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --catalog-owner-composition
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-owner-composition.json)
 set_tests_properties(catalog_owner_composition_test PROPERTIES LABELS "integration;catalog" TIMEOUT 120)
+if(CUBATARIUM_MSVC_DESKTOP)
+  add_test(NAME pipeline_weak_shell_test
+      COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --pipeline-weak-shells
+          ${CMAKE_CURRENT_BINARY_DIR}/pipeline-weak-shell.json)
+  set_tests_properties(pipeline_weak_shell_test PROPERTIES LABELS "integration;memory;catalog" TIMEOUT 120)
+endif()
 add_test(NAME catalog_settings_owner_binding_test
     COMMAND $<TARGET_FILE:worldgen_scatter_block_resolve_test> --settings-owner-binding
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-settings-owner-binding.json)

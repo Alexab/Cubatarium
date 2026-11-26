@@ -36,6 +36,8 @@ struct Profile
   }
   Json Controls(RetainedCatalogEnvelope actual)const {
     const auto full=Binding();const auto valid=BindCatalogOwnerProfiles(counts,full,actual,0);
+    const auto with_weak=JoinCatalogPipelineWeakShells(valid,counts,true);
+    const auto weak=BoundPipelineWeakShells(counts.thread_upper,counts.supported,true);
     auto row=full;row.covered_rows&=~(uint64_t{1}<<static_cast<size_t>(CatalogOwnerRow::P01));
     auto family=full;family.supplied_families&=~(uint64_t{1}<<static_cast<size_t>(CatalogInputFamily::ManagedFiles));
     auto history=full;history.runtime_history_known=false;
@@ -46,10 +48,13 @@ struct Profile
     const bool controls=valid.supported && !valid.overflow && !BindCatalogOwnerProfiles(counts,row,actual,0).supported &&
       !BindCatalogOwnerProfiles(counts,family,actual,0).supported && !BindCatalogOwnerProfiles(counts,history,actual,0).supported &&
       !BindCatalogOwnerProfiles(counts,unsupported,actual,0).supported && BindCatalogOwnerProfiles(counts,huge,actual,0).overflow &&
-      sourceTextOverflow && full.runtime_text_copies==458 && full.registry_name_threads==63;
+      sourceTextOverflow && full.runtime_text_copies==458 && full.registry_name_threads==63 &&
+      with_weak.supported && !with_weak.overflow && with_weak.requested_heap_upper==valid.requested_heap_upper+weak.requested_upper &&
+      !JoinCatalogPipelineWeakShells(valid,counts,false).supported;
     return {{"pass",controls},{"covered_owner_rows",full.covered_rows},{"supplied_input_families",full.supplied_families},
       {"root_count_upper",counts.catalog_root_slots},{"runtime_text_copies",full.runtime_text_copies},{"registry_name_threads",full.registry_name_threads},
       {"per_version_source_history_upper",versions.requested_heap_upper},{"retained_bound",valid.requested_heap_upper},
+      {"pipeline_expired_weak_source_upper",weak.requested_upper},{"retained_plus_expired_weak_bound",with_weak.requested_heap_upper},
       {"missing_row_family_history_and_unsupported_model_rejected",controls},{"text_count_byte_overflow_rejected",BindCatalogOwnerProfiles(counts,huge,actual,0).overflow},{"runtime_source_copy_count_overflow_rejected",sourceTextOverflow}};
   }
 };

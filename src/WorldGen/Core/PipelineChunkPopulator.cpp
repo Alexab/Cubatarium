@@ -15,6 +15,7 @@
 #include "WorldGen/Core/SettingsTextBudget.h"
 #include "WorldGen/Core/PopulationScratchBudget.h"
 #include "WorldGen/Core/PipelineSettingsKey.h"
+#include "WorldGen/Core/PipelineOwnerKey.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -169,30 +170,6 @@ void RefreshThreadLocalPipelineContext(UObjectLibrary *prefabs,
   ctx.WorldgenOwnerPackId = ownerPackId;
   ctx.ResolveBlockIds();
 }
-
-struct PipelineOwnerKey
-{
-  std::weak_ptr<const void> registry;
-  std::weak_ptr<const BlockDefinitionCatalog> definitions;
-  std::weak_ptr<const WorldGenPack> pack;
-  std::weak_ptr<const UBiomeDefinitionRegistry> biomes;
-  std::weak_ptr<const ObjectFeatureConfig> features;
-  std::weak_ptr<const WorldGenRefsCatalog> refs;
-  UObjectLibrary *objects{nullptr};
-
-  template<class T> static bool Same(const std::weak_ptr<T> &previous,const std::shared_ptr<T> &current) {
-    return !previous.owner_before(current) && !current.owner_before(previous) && previous.lock().get()==current.get();
-  }
-  bool Matches(const UBlockRegistry &block_registry,UObjectLibrary *prefabs,const WorldGenContentSnapshot &content) const {
-    return objects==prefabs && Same(registry,block_registry.GetLifetimeIdentity()) &&
-        Same(definitions,block_registry.GetDefinitionsCatalogSnapshot()) && Same(pack,content.Pack) &&
-        Same(biomes,content.Biomes) && Same(features,content.Features) && Same(refs,content.Refs);
-  }
-  void Assign(const UBlockRegistry &block_registry,UObjectLibrary *prefabs,const WorldGenContentSnapshot &content) {
-    registry=block_registry.GetLifetimeIdentity();definitions=block_registry.GetDefinitionsCatalogSnapshot();
-    pack=content.Pack;biomes=content.Biomes;features=content.Features;refs=content.Refs;objects=prefabs;
-  }
-};
 
 struct ThreadLocalPipelineState
 {
@@ -541,7 +518,7 @@ static void LogChunkPopulation(const Request &request, const Timing &timing,
   (void)s_last_log_ms;
 }
 
-ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot()
+ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot(bool default_owner_profile)
 {
   auto &tls=GetThreadLocalPipeline();
   auto *composable=dynamic_cast<UComposableWorldGenerator *>(tls.pipeline.get());
@@ -559,7 +536,7 @@ ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThr
   }
   return {tls.world.GetChunkManager().GetResidentChunkCount(),
       composable && composable->GetChunkCoarseCache()!=nullptr,seed_text_bytes,config_text_bytes,
-      tls.builds,sizeof(tls.key),sizeof(tls.owners)};
+      tls.builds,sizeof(tls.key),sizeof(tls.owners),tls.owners.InspectWeakShells(default_owner_profile)};
 }
 
 ChunkPopulateResult
