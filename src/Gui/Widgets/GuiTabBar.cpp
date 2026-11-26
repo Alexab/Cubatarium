@@ -69,7 +69,7 @@ void UGuiTabBar::Draw(UGuiRenderer &renderer)
   {
     return;
   }
-  const int tabW = Bounds.W / static_cast<int>(Labels.size());
+    const int tabW = std::max(1, Bounds.W / static_cast<int>(Labels.size()));
   for (size_t i = 0; i < Labels.size(); ++i)
   {
     GuiRect tabRect{Bounds.X + static_cast<int>(i) * tabW, Bounds.Y, tabW,
@@ -114,7 +114,7 @@ bool UGuiTabBar::OnMouseDown(const GuiMouseEvent &event)
   {
     return false;
   }
-  const int tabW = Bounds.W / static_cast<int>(Labels.size());
+  const int tabW = std::max(1, Bounds.W / static_cast<int>(Labels.size()));
   const int index = (event.X - Bounds.X) / tabW;
   if (index >= 0 && index < static_cast<int>(Labels.size()))
   {

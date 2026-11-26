@@ -11,6 +11,7 @@
 #include "Test/PlayerWindowStorageFixture.h"
 #include "Test/CharacterPageStorageFixture.h"
 #include "Test/PaletteGridStorageFixture.h"
+#include "Test/PaletteShellStorageFixture.h"
 #include "Test/IconLifecycleFixture.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -476,6 +477,7 @@ int main(int argc,char **argv){
     report["player_window_storage"]=CheckPlayerWindowRequests();
     report["character_page_storage"]=character_page_fixture::Run();
     report["palette_grid_storage"]=CheckPaletteGridRequests();
+    report["palette_shell_storage"]=palette_shell_fixture::Run();
     report["icon_lifecycle"]=icon_lifecycle_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}

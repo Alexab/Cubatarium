@@ -7,12 +7,14 @@
 #include "Gui/Widgets/GuiPanel.h"
 #include "Gui/Widgets/GuiPreviewViewport.h"
 
-#include "Render/GlIncludes.h"
+#include "Render/Textures/GlTextureOwner.h"
+#include <new>
 
 namespace
 {
 
 constexpr float kPreviewWalkTimeScale = 0.8f;
+constexpr double kPreviewInterval = 1.0 / 30.0;
 
 bool IsAnimatedCreaturePreviewKind(cutum::ContentKind kind)
 {
@@ -31,6 +33,7 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
 {
   auto panel = std::make_unique<UGuiPanel>(theme);
   panel->SetDrawBackground(true);
+  panel->ReserveChildren(5);
   Root = std::move(panel);
   PanelShell = Root.get();
 
@@ -71,6 +74,7 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
   PanelShell->AddChild(std::move(viewport));
   PanelShell->AddChild(std::move(hint));
   PanelShell->AddChild(std::move(changeBtn));
+  SyncVisibility();
 }
 
 std::unique_ptr<UGuiPanel> UContentPreviewDock::ReleasePanel()
@@ -91,21 +95,26 @@ void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
                                        const std::string &displayName)
 {
   const bool changed = Kind != kind || EntryId != id;
+  auto nextId = id;
+  if (id.empty())
+    TitleLabel->SetText("Preview");
+  else
+    TitleLabel->SetText(displayName);
   Kind = kind;
-  EntryId = id;
-  DisplayName = displayName;
-  HasSelection = !id.empty();
+  EntryId.swap(nextId);
+  HasSelection = !EntryId.empty();
   if (changed)
   {
     Yaw = 45.0f;
     Pitch = 32.0f;
     PreviewAnimTime = 0.f;
-    if (Viewport)
-      Viewport->SetAngles(Yaw, Pitch);
+    Viewport->SetAngles(Yaw, Pitch);
+    Viewport->SetPreviewTexture(0);
   }
-  if (TitleLabel)
+  if (!HasSelection && PreviewTexture)
   {
-    TitleLabel->SetText(HasSelection ? displayName : "Preview");
+    UGlTextureOwner retired(PreviewTexture);
+    PreviewTexture = 0;
   }
   MarkRenderDirty();
   SyncVisibility();
@@ -114,38 +123,39 @@ void UContentPreviewDock::SetSelection(ContentKind kind, const std::string &id,
 
 void UContentPreviewDock::ClearSelection()
 {
-  if (PreviewTexture != 0)
-  {
-    glDeleteTextures(1, &PreviewTexture);
-    PreviewTexture = 0;
-  }
-  if (Viewport)
-  {
-    Viewport->SetPreviewTexture(0);
-  }
   SetSelection(Kind, "", "");
-  HasSelection = false;
-  SyncVisibility();
 }
 
 void UContentPreviewDock::SetOnChange(std::function<void()> handler,
                                       const std::string &buttonLabel)
 {
-  OnChange = std::move(handler);
   if (ChangeButton)
   {
     ChangeButton->SetLabel(buttonLabel);
-    ChangeButton->SetVisible(static_cast<bool>(OnChange));
+    ChangeButton->SetVisible(static_cast<bool>(handler));
   }
+  OnChange = std::move(handler);
 }
 
 void UContentPreviewDock::MarkRenderDirty()
 {
   RenderDirty = true;
+  RenderRetryPending = false;
   RenderThrottle = 0.0;
 }
 
-void UContentPreviewDock::RenderIfDirty() { RenderPreviewIfNeeded(); }
+void UContentPreviewDock::RenderIfDirty() try
+{
+  if (!RenderDirty || (RenderRetryPending && RenderThrottle < kPreviewInterval))
+    return;
+  RenderThrottle = 0.0;
+  RenderPreviewIfNeeded();
+}
+catch (const std::bad_alloc &)
+{
+  // Keep the request dirty until the renderer can publish the replacement.
+  RenderRetryPending = true;
+}
 
 void UContentPreviewDock::SyncVisibility()
 {
@@ -174,15 +184,18 @@ void UContentPreviewDock::RenderPreviewIfNeeded()
   }
   const int size = std::max(128, std::min(RenderSize, 512));
   const bool animateWalk = IsAnimatedCreaturePreviewKind(Kind);
-  if (PreviewTexture != 0)
+  UGlTextureOwner replacement(Renderer->RenderUnique(Kind, EntryId, size, Yaw, Pitch,
+                                                      PreviewAnimTime, animateWalk));
+  if (!replacement.Get())
   {
-    glDeleteTextures(1, &PreviewTexture);
-    PreviewTexture = 0;
+    RenderRetryPending = true;
+    return;
   }
-  PreviewTexture = Renderer->RenderUnique(Kind, EntryId, size, Yaw, Pitch,
-                                          PreviewAnimTime, animateWalk);
+  UGlTextureOwner retired(PreviewTexture);
+  PreviewTexture = replacement.Release();
   Viewport->SetPreviewTexture(PreviewTexture);
   RenderDirty = false;
+  RenderRetryPending = false;
 }
 
 void UContentPreviewDock::Relayout(const GuiRect &bounds)
@@ -253,11 +266,8 @@ void UContentPreviewDock::Update(double dt)
   }
 
   RenderThrottle += dt;
-  if (RenderDirty && RenderThrottle >= 1.0 / 30.0)
-  {
-    RenderPreviewIfNeeded();
-    RenderThrottle = 0.0;
-  }
+  if (RenderDirty && RenderThrottle >= kPreviewInterval)
+    RenderIfDirty();
 }
 
 } // namespace cutum

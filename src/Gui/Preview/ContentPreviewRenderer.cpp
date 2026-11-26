@@ -12,7 +12,7 @@
 #include "World/Objects/ObjectLibrary.h"
 #include "Gui/Preview/ItemPreviewRenderer.h"
 
-#include "Render/GlIncludes.h"
+#include "Render/Textures/GlTextureOwner.h"
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -108,48 +108,46 @@ bool UContentPreviewRenderer::EnsureFboSize(int size)
     return true;
   }
 
-  if (DepthRbo != 0)
+  UGlStateScope state(static_cast<GlStateMask>(GlStateBit::ViewportFb));
+  GLuint nextFbo = 0, nextColor = 0, nextDepth = 0;
+  glGenFramebuffers(1, &nextFbo);
+  glGenTextures(1, &nextColor);
+  glGenRenderbuffers(1, &nextDepth);
+  bool complete = false;
+  if (nextFbo && nextColor && nextDepth)
   {
-    glDeleteRenderbuffers(1, &DepthRbo);
-    DepthRbo = 0;
-  }
-  if (ColorTex != 0)
-  {
-    glDeleteTextures(1, &ColorTex);
-    ColorTex = 0;
-  }
-  if (Fbo != 0)
-  {
-    glDeleteFramebuffers(1, &Fbo);
-    Fbo = 0;
-  }
-
-  glGenFramebuffers(1, &Fbo);
-  glGenTextures(1, &ColorTex);
-  glBindTexture(GL_TEXTURE_2D, ColorTex);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, nextColor);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
                  GL_UNSIGNED_BYTE, nullptr);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindFramebuffer(GL_FRAMEBUFFER, nextFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                           nextColor, 0);
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
-  glDrawBuffer(GL_COLOR_ATTACHMENT0);
-  glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
 #endif
-
-  glGenRenderbuffers(1, &DepthRbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, DepthRbo);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped,
-                        clamped);
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, DepthRbo);
-
-  const bool complete =
-      glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  FboSize = complete ? clamped : 0;
+    GLint previousRenderbuffer = 0;
+    glGetIntegerv(GL_RENDERBUFFER_BINDING, &previousRenderbuffer);
+    glBindRenderbuffer(GL_RENDERBUFFER, nextDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, clamped, clamped);
+    glBindRenderbuffer(GL_RENDERBUFFER, GLuint(previousRenderbuffer));
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
+                              GL_RENDERBUFFER, nextDepth);
+    complete = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+  }
+  if (complete)
+  {
+    std::swap(Fbo, nextFbo);
+    std::swap(ColorTex, nextColor);
+    std::swap(DepthRbo, nextDepth);
+    FboSize = clamped;
+  }
+  glDeleteFramebuffers(1, &nextFbo);
+  glDeleteTextures(1, &nextColor);
+  glDeleteRenderbuffers(1, &nextDepth);
   return complete;
 }
 
@@ -311,39 +309,34 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     return 0;
   }
 
-  if (!EnsureFboSize(size) || FboSize <= 0)
-  {
+  UGlStateScope glState(kGlMaskIconFbo | GlStateBit::DepthMask);
+  if (!EnsureFboSize(size))
     return 0;
-  }
 
-  const int clamped = std::max(64, std::min(FboSize, 512));
-  GLuint tex = 0;
-  glGenTextures(1, &tex);
-  glBindTexture(GL_TEXTURE_2D, tex);
+  const int clamped = FboSize;
+  GLuint name = 0;
+  glGenTextures(1, &name);
+  UGlTextureOwner texture(name);
+  if (!texture.Get())
+    return 0;
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, texture.Get());
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, clamped, clamped, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  UGlStateScope glState(kGlMaskIconFbo);
-
-  glBindFramebuffer(GL_FRAMEBUFFER, Fbo);
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         tex, 0);
-  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-  {
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glDeleteTextures(1, &tex);
+  UGlIconColorAttachment attachment(Fbo, texture.Get(), ColorTex);
+  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
-  }
 
   glViewport(0, 0, clamped, clamped);
   glEnable(GL_DEPTH_TEST);
   glDepthMask(GL_TRUE);
   glDisable(GL_CULL_FACE);
-  glClearColor(0.12f, 0.12f, 0.14f, 1.0f);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  const GLfloat background[]{0.12f, 0.12f, 0.14f, 1.0f};
+  glClearBufferfv(GL_COLOR, 0, background);
+  glClear(GL_DEPTH_BUFFER_BIT);
 
   if (kind == ContentKind::Object)
   {
@@ -351,9 +344,6 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
         Objects ? Objects->Get(id) : nullptr;
     if (!object || object->voxels.empty() || !Shader)
     {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glDeleteTextures(1, &tex);
       return 0;
     }
     const ObjectPreviewFit fit = FitWorldObjectPreview(*object);
@@ -395,25 +385,16 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
   {
     if (!BlockDefs || id.empty() || !Shader)
     {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glDeleteTextures(1, &tex);
       return 0;
     }
     const BlockDefinition *def = BlockDefs->GetByName(id);
     if (!def || def->Id == BLOCK_AIR)
     {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glDeleteTextures(1, &tex);
       return 0;
     }
     const GLuint blockTex = GetBlockTexture(def->Id);
     if (blockTex == 0)
     {
-      glBindFramebuffer(GL_FRAMEBUFFER, 0);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glDeleteTextures(1, &tex);
       return 0;
     }
 
@@ -440,11 +421,7 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     Shader->Unuse();
   }
 
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                         ColorTex, 0);
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  return tex;
+  return texture.Release();
 }
 
 GLuint UContentPreviewRenderer::RenderObject(const std::string &objectName,

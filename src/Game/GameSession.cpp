@@ -85,6 +85,25 @@ const std::string &ControlledDisplayName(const UWorld &world, const UCreature &c
   return creature.GetTypeId();
 }
 
+InventoryEntryKind CatalogEntryKind(ContentKind kind)
+{
+  switch (kind)
+  {
+  case ContentKind::Block: return InventoryEntryKind::Block;
+  case ContentKind::Object: return InventoryEntryKind::Object;
+  case ContentKind::UCreature: return InventoryEntryKind::UCreature;
+  case ContentKind::Skin: return InventoryEntryKind::Skin;
+  case ContentKind::Item: return InventoryEntryKind::Item;
+  }
+  return InventoryEntryRef{}.kind;
+}
+
+bool IsOwnedCatalogSlot(const HotbarSlot &slot, InventoryEntryKind kind,
+                        const std::string &id)
+{
+  return !slot.empty && !slot.entry.empty && slot.entry.kind == kind && slot.entry.Id == id;
+}
+
 } // namespace
 
 UGameSession::UGameSession(UApplication *application,
@@ -838,36 +857,38 @@ size_t UGameSession::GetInventorySignature() const
   return signature;
 }
 
+bool UGameSession::HasEntries(ContentKind tab, const std::string &groupId,
+                              InventoryMode mode) const
+{
+  const auto &entries = ContentCatalog.GetEntriesView(tab, groupId);
+  if (mode == InventoryMode::Creative || tab == ContentKind::UCreature || tab == ContentKind::Skin)
+    return !entries.empty();
+  const auto *inventory = GetControlledInventory(static_cast<const UWorld *>(World.get()));
+  if (!inventory)
+    return false;
+  const auto kind = CatalogEntryKind(tab);
+  for (const auto &entry : entries)
+    for (const auto &row : inventory->GetHotbars())
+      for (const auto &slot : row.slots)
+        if (IsOwnedCatalogSlot(slot, kind, entry.Id))
+          return true;
+  return false;
+}
+
 std::vector<InventoryEntryView>
 UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
                          InventoryMode mode) const
 {
   std::vector<InventoryEntryView> result;
-  auto entries = ContentCatalog.GetEntries(tab, groupId);
+  const auto &entries = ContentCatalog.GetEntriesView(tab, groupId);
+  const auto kind = CatalogEntryKind(tab);
   const UCreatureInventory *creatureInv = GetControlledInventory(World.get());
   const std::map<std::string, int> *inv =
       creatureInv ? &creatureInv->GetStorage() : nullptr;
   for (const auto &e : entries)
   {
     InventoryEntryRef ref;
-    switch (tab)
-    {
-    case ContentKind::Block:
-      ref.kind = InventoryEntryKind::Block;
-      break;
-    case ContentKind::Object:
-      ref.kind = InventoryEntryKind::Object;
-      break;
-    case ContentKind::UCreature:
-      ref.kind = InventoryEntryKind::UCreature;
-      break;
-    case ContentKind::Skin:
-      ref.kind = InventoryEntryKind::Skin;
-      break;
-    case ContentKind::Item:
-      ref.kind = InventoryEntryKind::Item;
-      break;
-    }
+    ref.kind = kind;
     ref.Id = e.Id;
     ref.empty = false;
     if (tab == ContentKind::UCreature || tab == ContentKind::Skin)
@@ -881,8 +902,7 @@ UGameSession::GetEntries(ContentKind tab, const std::string &groupId,
     {
       for (const auto &row : creatureInv->GetHotbars())
         for (const auto &slot : row.slots)
-          if (!slot.empty && !slot.entry.empty && slot.entry.kind == ref.kind &&
-              slot.entry.Id == e.Id)
+          if (IsOwnedCatalogSlot(slot, kind, e.Id))
             result.push_back({slot.entry, e.displayName});
       continue;
     }

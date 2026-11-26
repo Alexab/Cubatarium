@@ -15,6 +15,18 @@ struct PaletteGridSourceProbe
 {
   static void Rebuild(UCreativePaletteScreen &palette) { palette.RebuildGrid(); }
   static void Append(UCreativePaletteScreen &palette) { palette.AppendGridSlotsChunk(); }
+  static void SyncTypes(UCreativePaletteScreen &palette) { palette.SyncTypeTabs(); }
+  static UGuiTabBar &Types(UCreativePaletteScreen &palette) { return *palette.SubTabs; }
+  static UGuiScrollView &Scroll(UCreativePaletteScreen &palette) { return *palette.Scroll; }
+  static UContentPreviewDock &Dock(UCreativePaletteScreen &palette) { return *palette.PreviewDock; }
+  static UGuiSlot &StripSlot(UCreativePaletteScreen &palette, size_t slot)
+  {
+    return *palette.HotbarStripSlots[slot];
+  }
+  static const std::string &ActiveType(const UCreativePaletteScreen &palette)
+  {
+    return palette.ActiveTypeId;
+  }
   static UGuiSlot &First(UCreativePaletteScreen &palette)
   {
     return static_cast<UGuiSlot &>(*palette.GridChildren().front());

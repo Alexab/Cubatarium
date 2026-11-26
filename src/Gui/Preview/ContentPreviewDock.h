@@ -26,6 +26,7 @@ public:
   ~UContentPreviewDock();
 
   std::unique_ptr<UGuiPanel> ReleasePanel();
+  const UGuiPanel *GetPanel() const { return PanelShell; }
 
   void SetSelection(ContentKind kind, const std::string &id,
                     const std::string &displayName);
@@ -55,9 +56,9 @@ private:
 
   ContentKind Kind{ContentKind::Block};
   std::string EntryId;
-  std::string DisplayName;
   bool HasSelection{false};
   bool RenderDirty{true};
+  bool RenderRetryPending{false};
   float Yaw{45.0f};
   float Pitch{32.0f};
   int RenderSize{256};

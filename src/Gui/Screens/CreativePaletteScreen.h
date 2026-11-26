@@ -6,6 +6,7 @@
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
+#include <array>
 #include <memory>
 #include <string>
 #include <utility>
@@ -106,12 +107,14 @@ private:
   void RelayoutPanel();
   void LayoutGridInScroll();
   void SyncPreviewDock();
-  void EnsureHotbarStrip();
+  UGuiPanel *BuildHotbarStrip(UGuiPanel &root, const GuiTheme &theme,
+                             std::array<UGuiSlot *, 10> &slots);
   void LayoutHotbarStrip();
   void SyncHotbarStrip();
   void SetListingBackpack(bool backpack);
   void RefreshListingPolicy();
   void SyncTypeTabs();
+  void SelectTypeTab(int tab);
   InventoryMode CurrentListingMode() const;
 
   enum class PaletteListing
@@ -145,7 +148,7 @@ private:
   size_t GridRegisteredIcons{0};
   size_t GridIconCursor{0};
   size_t GridCacheCursor{0};
-  std::vector<UGuiSlot *> HotbarStripSlots;
+  std::array<UGuiSlot *, 10> HotbarStripSlots{};
   int PointerX{-1};
   int PointerY{-1};
   bool PointerPressed{false};
@@ -161,7 +164,6 @@ private:
   bool Visible{false};
   bool Built{false};
   bool Hosted{false};
-  bool HotbarStripBuilt{false};
   // Per-frame type-tab cache (see SyncTypeTabs): emptiness of the catalog
   // groups is only recomputed when the inventory signature changes.
   bool TypeTabsCacheValid{false};
@@ -169,8 +171,6 @@ private:
   ContentKind TypeTabKind{ContentKind::Block};
   InventoryMode TypeTabMode{InventoryMode::Creative};
   std::vector<std::string> TypeTabTypes;
-  std::vector<std::string> TypeTabLabels;
-  std::vector<bool> TypeTabEnabled;
 };
 
 } // namespace cutum

@@ -21,6 +21,8 @@ public:
   void SetTabEnabled(std::vector<bool> enabled);
   void SetTabEnabled(size_t index, bool enabled);
   int GetActiveTab() const { return ActiveTab; }
+  const std::vector<std::string> &GetTabLabels() const { return Labels; }
+  const std::vector<bool> &GetEnabledTabs() const { return Enabled; }
   void SetActiveTab(int tab);
   void SetOnTabChanged(std::function<void(int)> handler);
 

@@ -95,6 +95,8 @@ public:
   std::vector<InventoryEntryView> GetEntries(ContentKind tab,
                                              const std::string &groupId,
                                              InventoryMode mode) const;
+  bool HasEntries(ContentKind tab, const std::string &groupId,
+                  InventoryMode mode) const;
   /// Cheap change signature of the controlled creature's storage, for
   /// per-frame UI caches (e.g. owned-group emptiness). 0 when no creature.
   size_t GetInventorySignature() const;

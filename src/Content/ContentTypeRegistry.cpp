@@ -383,6 +383,12 @@ std::vector<CatalogEntry>
 UContentTypeRegistry::GetEntries(ContentKind kind,
                                  const std::string &typeId) const
 {
+  return GetEntriesView(kind, typeId);
+}
+
+const std::vector<CatalogEntry> &
+UContentTypeRegistry::GetEntriesView(ContentKind kind, const std::string &typeId) const
+{
   const std::unordered_map<std::string, std::vector<CatalogEntry>> *map =
       &BlockEntries;
   if (kind == ContentKind::Object)
@@ -411,7 +417,8 @@ UContentTypeRegistry::GetEntries(ContentKind kind,
   {
     return misc->second;
   }
-  return {};
+  static const std::vector<CatalogEntry> empty;
+  return empty;
 }
 
 } // namespace cutum

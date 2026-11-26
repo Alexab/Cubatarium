@@ -29,6 +29,8 @@ public:
   std::string GetTypeDisplayName(const std::string &typeId) const override;
   std::vector<CatalogEntry>
   GetEntries(ContentKind kind, const std::string &typeId) const override;
+  const std::vector<CatalogEntry> &GetEntriesView(ContentKind kind,
+                                                 const std::string &typeId) const;
 
 private:
   void EnsureDefaultTypes();
