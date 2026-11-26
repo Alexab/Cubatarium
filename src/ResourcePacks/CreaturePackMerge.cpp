@@ -13,13 +13,26 @@
 namespace cutum
 {
 
-void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
+bool ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
                                UCreatureTextureStorage &textures,
                                USkinDefinitionStorage *skins,
                                const std::filesystem::path &baseCreaturesRoot,
                                const std::filesystem::path &baseSkinsRoot,
                                const std::vector<ResourcePackManifest> &packs)
 {
+  std::vector<std::filesystem::path> overlays;
+  overlays.reserve(packs.size());
+  for (const auto &pack : packs)
+    overlays.push_back(pack.Root);
+  UCreatureTextureStorage candidate;
+  struct RetireTextures
+  {
+    UCreatureTextureStorage &Storage;
+    ~RetireTextures() { Storage.Clear(); }
+  } retire{candidate};
+  if (!candidate.LoadFromCreatureAndSkinRoots(baseCreaturesRoot.string(), baseSkinsRoot.string(), overlays))
+    return false;
+
   // Invalidate before parsing: rigid parts are read into definitions during
   // Load, and retained B/G visuals must observe the same content generation.
   CreatureRigidModelCache::Instance().Clear();
@@ -52,21 +65,8 @@ void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
     }
   }
 
-  textures.LoadFromCreatureAndSkinRoots(baseCreaturesRoot.string(),
-                                        baseSkinsRoot.string());
-  for (const auto &pack : packs)
-  {
-    const std::filesystem::path creaturesDir = pack.Root / "creatures";
-    if (std::filesystem::exists(creaturesDir))
-    {
-      textures.MergeCreatureRoot(creaturesDir.string());
-    }
-    const std::filesystem::path skinsDir = pack.Root / "skins";
-    if (std::filesystem::exists(skinsDir))
-    {
-      textures.MergeSkinRoot(skinsDir.string());
-    }
-  }
+  textures.SwapContents(candidate);
+  return true;
 }
 
 } // namespace cutum

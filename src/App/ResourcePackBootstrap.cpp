@@ -508,12 +508,12 @@ void UResourcePackBootstrap::ReloadCreatureCatalog(
   {
     return;
   }
-  ApplyCreaturePackOverlays(
+  if (ApplyCreaturePackOverlays(
       *defs, *core.CreatureTextureStorageInstance,
       core.WorldInstance->GetSkinDefinitionStorage().get(),
       CreatureModelsRoot(core.WorkDir) / "creatures", CreatureModelsRoot(core.WorkDir) / "skins",
-      packs);
-  core.WorldInstance->OnCreatureCatalogChanged();
+      packs))
+    core.WorldInstance->OnCreatureCatalogChanged();
 }
 
 void UResourcePackBootstrap::ApplyResourcePacksAfterWorldDataLoaded(UCore &core)

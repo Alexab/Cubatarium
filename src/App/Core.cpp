@@ -578,8 +578,8 @@ void UCore::LoadConfig(const std::string &config_file_name)
     WorldInstance->SetSkinDefinitionStorage(skinDefinitions);
     StallStageMark("LoadConfig.skin-defs");
 
-    CreatureTextureStorageInstance =
-        std::make_shared<UCreatureTextureStorage>();
+    if (!CreatureTextureStorageInstance)
+      CreatureTextureStorageInstance = UCreatureTextureStorage::Create();
     CreatureTextureStorageInstance->LoadFromCreatureAndSkinRoots(
         (creatureModels / "creatures").string(),
         (creatureModels / "skins").string());

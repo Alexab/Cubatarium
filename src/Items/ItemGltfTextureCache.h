@@ -1,6 +1,7 @@
 #ifndef ITEM_GLTF_TEXTURE_CACHE_H
 #define ITEM_GLTF_TEXTURE_CACHE_H
 
+#include "Render/Textures/VisualTexture.h"
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -19,6 +20,8 @@ class ItemGltfTextureCache
 {
 public:
   static ItemGltfTextureCache &Instance();
+  static void ClearForContextShutdown();
+  static VisualTextureStorage InspectCurrentStorage();
 
   /// Absolute glTF path: inventory and worn variants can share a folder.
   GLuint Get(const std::filesystem::path &modelGltfAbs,
@@ -43,16 +46,23 @@ public:
   MemoryStats InspectMemory(bool itemsOnly = false);
 
 private:
-  ItemGltfTextureCache() = default;
+  ItemGltfTextureCache();
+  ~ItemGltfTextureCache();
 
-  void EnsureLoaded(const std::filesystem::path &modelGltfAbs);
+  struct ModelTextures
+  {
+    std::unordered_map<std::string, size_t> Aliases;
+    std::vector<VisualTexture> Images;
+    void RetireUnreferencedImages();
+  };
+  static bool ReadModelImages(const std::filesystem::path &gltfPath, ModelTextures &out);
+  static bool IndexImageDirectory(const std::filesystem::path &dir, ModelTextures &out);
 
   std::mutex Mu;
   /// Key: normalized full glTF path. Material tables belong to a model.
-  std::unordered_map<std::string, std::unordered_map<std::string, GLuint>>
-      ByModel;
-  std::unordered_map<std::string, GLuint> LinearAlbedo;
-  std::unordered_map<std::string, GLuint> LinearAliases;
+  std::unordered_map<std::string, ModelTextures> ByModel;
+  std::unordered_map<std::string, VisualTexture> LinearAlbedo;
+  std::unordered_map<std::string, const VisualTexture *> LinearAliases;
   LookupStats LookupCounters;
 };
 

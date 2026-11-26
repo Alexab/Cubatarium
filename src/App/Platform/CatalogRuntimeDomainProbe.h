@@ -25,8 +25,11 @@
 #include "Creatures/Influence/StatusEffectCatalog.h"
 #include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
 #include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Items/ItemGltfTextureCache.h"
 #include "Items/ItemRenderAsset.h"
+#include "Render/Textures/VisualTextureUpload.h"
 #include "Test/GuiContextStorageFixture.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
@@ -302,6 +305,24 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
           {"skeletal", creatureGpu.skeletal}, {"skinned", creatureGpu.skinned},
           {"vertex_bytes", creatureGpu.vertexBytes}, {"index_bytes", creatureGpu.indexBytes}}},
       {"whole_runtime_complete", false}};
+  const auto textureFields = [](const VisualTextureStorage &textures) -> Json
+  {
+    return {{"present", textures.present}, {"supported", textures.supported},
+            {"inline_bytes", textures.inlineBytes}, {"control_bytes", textures.controlBytes}, {"table_bytes", textures.tableBytes},
+            {"images", textures.images}, {"aliases", textures.aliases}, {"rgba_bytes", textures.rgbaBytes},
+            {"models", textures.models}, {"linear_images", textures.linearImages}, {"linear_aliases", textures.linearAliases}};
+  };
+  const auto creatureTextures = core.GetCreatureTextureStorage();
+  const auto itemTextures = ItemGltfTextureCache::InspectCurrentStorage();
+  const auto creatureSource = creatureTextures ? creatureTextures->InspectOwnedStorage() : VisualTextureStorage{};
+  const auto geometryTextures = launcher.geometry ? launcher.geometry->GetCreatureTextureStorage() : nullptr;
+  const bool geometryShares = creatureTextures && geometryTextures == creatureTextures &&
+      !geometryTextures.owner_before(creatureTextures) && !creatureTextures.owner_before(geometryTextures);
+  report["shared_texture_source_storage"] = {
+      {"schema", "shared-texture-source-storage.v1"},
+      {"status", itemTextures.supported && creatureSource.supported && geometryShares ? "PASS" : "UNSUPPORTED"},
+      {"geometry_shares_creature_storage", geometryShares}, {"upload_probe_thread_bytes", UVisualTextureUploadProbeScope::ThreadInlineBytes()},
+      {"creature", textureFields(creatureSource)}, {"items", textureFields(itemTextures)}, {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

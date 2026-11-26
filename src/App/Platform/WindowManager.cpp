@@ -11,6 +11,7 @@
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
+#include "Creatures/Visual/CreatureTextureStorage.h"
 #include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
@@ -21,6 +22,7 @@
 #include "Game/WorldGameMode.h"
 #include "Gui/Core/GuiMetrics.h"
 #include "Gui/Interfaces/IUInventoryViewModel.h"
+#include "Items/ItemGltfTextureCache.h"
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
@@ -2040,6 +2042,13 @@ void UWindowManager::Shutdown()
   Geometries.reset();
   Views.reset();
   World.reset();
+  if (Window && glfwGetCurrentContext() == Window)
+  {
+    if (Core)
+      if (const auto textures = Core->GetCreatureTextureStorage())
+        textures->Clear();
+    ItemGltfTextureCache::ClearForContextShutdown();
+  }
   Core.reset();
 
   if (Window)

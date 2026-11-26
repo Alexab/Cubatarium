@@ -12,7 +12,7 @@ class UCreatureDefinitionStorage;
 class UCreatureTextureStorage;
 class USkinDefinitionStorage;
 
-void ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
+bool ApplyCreaturePackOverlays(UCreatureDefinitionStorage &defs,
                                UCreatureTextureStorage &textures,
                                USkinDefinitionStorage *skins,
                                const std::filesystem::path &baseCreaturesRoot,
