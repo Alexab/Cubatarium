@@ -39,6 +39,9 @@ public:
   // Calling thread's native stack allocation. Committed bytes are a point
   // sample, not maximum stack usage or a process-memory measurement.
   static StackStorageSnapshot GetCurrentThreadStackStorage();
+  // Ordinary C++ request carried by one MSVC std::thread until its entry
+  // returns. Zero means the launch implementation has no supported profile.
+  static size_t GetWorkerLaunchRequestBytes() noexcept;
   WorkerStorageSnapshot GetWorkerStorageSnapshot() const
   {
     std::lock_guard<std::mutex> lock(QueueMutex);
@@ -98,6 +101,11 @@ public:
   }
 
 private:
+  struct WorkerEntry
+  {
+    UJobThreadPool *owner;
+    void operator()() const { owner->WorkerLoop(); }
+  };
   void WorkerLoop();
 
   std::vector<std::thread> Workers;

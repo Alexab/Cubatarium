@@ -3,16 +3,21 @@
 #include <cstddef>
 #include <cstdlib>
 #include <new>
-// Isolated single-thread fixture: actual production resolver, ordinary new
-// requests only. Inputs/report allocations are outside each observed epoch.
+#include <mutex>
+// Isolated fixture for ordinary new requests. Existing single-thread tests
+// read State directly. Concurrent fixtures use Snapshot and join all workers
+// before ending an observed epoch.
 namespace observation
 {
 struct Counts {size_t epoch{},live{},blocks{},peak{},attempts{},refusals{},max_request{},fail_after{SIZE_MAX},max_single{SIZE_MAX};bool active{};};
 inline Counts State;
+inline std::mutex StateMutex;
+inline Counts Snapshot() { std::lock_guard lock(StateMutex); return State; }
 struct alignas(std::max_align_t) Header {size_t bytes,epoch;};
 constexpr size_t Prefix=(sizeof(Header)+15)/16*16;
 void *Allocate(size_t bytes) {
   if(bytes>SIZE_MAX-Prefix) throw std::bad_alloc{};
+  std::lock_guard lock(StateMutex);
   const size_t epoch=State.active?State.epoch:0;
   if(epoch) {
     State.max_request=std::max(State.max_request,bytes);
@@ -29,15 +34,19 @@ void Free(void *pointer) noexcept {
   if(!pointer) return;
   auto *memory=static_cast<unsigned char *>(pointer)-Prefix;
   const auto h=*reinterpret_cast<const Header *>(memory);std::free(memory);
-  if(h.epoch && h.epoch==State.epoch) {State.live-=h.bytes;--State.blocks;}
+  if(h.epoch) {
+    std::lock_guard lock(StateMutex);
+    if(h.epoch==State.epoch) {State.live-=h.bytes;--State.blocks;}
+  }
 }
 struct Scope {
   Scope(size_t failure=SIZE_MAX,size_t maxSingle=SIZE_MAX) {
+    std::lock_guard lock(StateMutex);
     if(State.active || State.live || State.blocks) std::abort();
     const size_t epoch=State.epoch+1;State={};State.epoch=epoch;State.active=true;
     State.fail_after=failure;State.max_single=maxSingle;
   }
-  ~Scope(){State.active=false;}
+  ~Scope(){std::lock_guard lock(StateMutex);State.active=false;}
 };
 }
 void *operator new(size_t n){return observation::Allocate(n);}

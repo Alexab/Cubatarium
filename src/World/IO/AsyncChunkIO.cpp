@@ -1216,8 +1216,22 @@ private:
       UnknownJob();
   }
 
+  void Borrow(AsyncIoBorrowedRoot &root, const void *object, const void *lifetime = nullptr)
+  {
+    const auto address = reinterpret_cast<uintptr_t>(object);
+    const auto identity = reinterpret_cast<uintptr_t>(lifetime);
+    if (!root.references)
+    {
+      root.object = address;
+      root.lifetime = identity;
+    }
+    root.mixed |= root.object != address || root.lifetime != identity;
+    Add(root.references, 1);
+  }
+
   void Capture(const Io::LoadJob &job)
   {
+    Borrow(Result.registry_root, &job.registry, job.registry.GetLifetimeIdentity().get());
     Text(Result.queued_backing, job.filePath);
     Text(Result.queued_backing, job.worldFolder);
     Shared(job.cancellation);
@@ -1242,10 +1256,12 @@ private:
   }
   void Capture(const Io::IndexWarmupJob &job)
   {
+    Borrow(Result.storage_root, &job.storage);
     Text(Result.queued_backing, job.worldFolder);
   }
   void Capture(const Io::CleanupJob &job)
   {
+    Borrow(Result.storage_root, &job.storage);
     Text(Result.queued_backing, job.worldFolder);
     Text(Result.queued_backing, job.cleanupOperation);
     if (job.cleanup.target<Io::RemoveSlices>())
@@ -1350,6 +1366,18 @@ AsyncIoStorage UAsyncChunkIO::InspectRetainedIo(AsyncIoStorageIdentity *scratch,
   return result;
 }
 
+AsyncIoRootBinding UAsyncChunkIO::InspectBorrowedIoRoots(const AllocatorSourcePhase &phase,
+                                                        const UChunkStorageService &storage,
+                                                        const UBlockRegistry &registry) const
+{
+  if (!phase.IsOpen() || !phase.epoch)
+    return {};
+  return {reinterpret_cast<uintptr_t>(this), reinterpret_cast<uintptr_t>(&storage),
+          reinterpret_cast<uintptr_t>(&registry),
+          reinterpret_cast<uintptr_t>(registry.GetLifetimeIdentity().get()),
+          phase.epoch, storage.InspectDiskIndexStorage()};
+}
+
 template<class Job>
 void UAsyncChunkIO::ObserveWorker(const Job &job, AsyncIoJobKind kind, AsyncIoWorkerStage stage,
                                  uint64_t key, const AsyncIoWorkerLocals &locals) const noexcept
@@ -1360,7 +1388,8 @@ void UAsyncChunkIO::ObserveWorker(const Job &job, AsyncIoJobKind kind, AsyncIoWo
 }
 
 AsyncIoExecutionStorage JoinAsyncIoWorkers(
-    const AllocatorSourcePhase &phase, const AsyncIoStorage &queues,
+    const AllocatorSourcePhase &phase, const AsyncIoRootBinding &roots,
+    const AsyncIoStorage &queues,
     const AsyncIoStorageIdentity *queue_shared, size_t queue_shared_count,
     const AsyncIoWorkerSample *const *workers, size_t worker_count,
     AsyncIoStorageIdentity *scratch, size_t scratch_count) noexcept
@@ -1368,6 +1397,8 @@ AsyncIoExecutionStorage JoinAsyncIoWorkers(
   AsyncIoExecutionStorage result;
   if (!phase.IsOpen() || !phase.epoch || !phase.participants ||
       queues.epoch != phase.epoch || !queues.io || !queues.retained_supported ||
+      roots.epoch != phase.epoch || roots.io != queues.io ||
+      !roots.storage || !roots.registry || !roots.registry_lifetime ||
       !workers || worker_count != phase.participants || worker_count != queues.active ||
       queue_shared_count != queues.shared_blocks || (queue_shared_count && !queue_shared) ||
       !scratch)
@@ -1421,8 +1452,21 @@ AsyncIoExecutionStorage JoinAsyncIoWorkers(
     if (bytes != expected)
       result.supported = false;
   };
+  const auto borrow = [&](size_t &total, const AsyncIoBorrowedRoot &root, size_t expected,
+                          uintptr_t object, uintptr_t lifetime) {
+    if (root.mixed || root.references != expected ||
+        root.object != (expected ? object : 0) || root.lifetime != (expected ? lifetime : 0))
+      result.supported = false;
+    add(total, root.references);
+  };
   add(result.local_backing, queues.warmup_requested);
   shared(queue_shared, queue_shared_count, queues.shared_bytes);
+  const auto queued = [&](AsyncIoJobKind kind) { return queues.queued[static_cast<size_t>(kind)]; };
+  size_t queued_storage = queued(AsyncIoJobKind::Warmup);
+  add(queued_storage, queued(AsyncIoJobKind::Cleanup));
+  borrow(result.storage_references, queues.storage_root, queued_storage, roots.storage, 0);
+  borrow(result.registry_references, queues.registry_root, queued(AsyncIoJobKind::Load),
+         roots.registry, roots.registry_lifetime);
   for (size_t i = 0; i < worker_count; ++i)
   {
     const auto *sample = workers[i];
@@ -1447,10 +1491,20 @@ AsyncIoExecutionStorage JoinAsyncIoWorkers(
     add(result.captured_backing, sample->sources.queued_backing);
     add(result.local_backing, sample->sources.completed_backing);
     shared(sample->shared.data(), sample->sources.shared_blocks, sample->sources.shared_bytes);
+    borrow(result.storage_references, sample->sources.storage_root,
+           sample->kind == AsyncIoJobKind::Warmup || sample->kind == AsyncIoJobKind::Cleanup,
+           roots.storage, 0);
+    borrow(result.registry_references, sample->sources.registry_root,
+           sample->kind == AsyncIoJobKind::Load, roots.registry, roots.registry_lifetime);
+  }
+  if (result.storage_references)
+  {
+    result.disk_index_requested = roots.disk_index.requested;
+    result.supported &= roots.disk_index.supported;
   }
   size_t total = 0;
   for (const auto bytes : {result.callable_bytes, result.captured_backing,
-                           result.local_backing, result.shared_bytes})
+                           result.local_backing, result.shared_bytes, result.disk_index_requested})
     add(total, bytes);
   if (!phase.IsOpen() || result.participants != worker_count)
     result.supported = false;

@@ -3,6 +3,7 @@
 #include "Core/Jobs/JobThreadBudget.h"
 #include <algorithm>
 #include <thread>
+#include <tuple>
 #if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -12,6 +13,16 @@
 
 namespace cutum
 {
+
+size_t UJobThreadPool::GetWorkerLaunchRequestBytes() noexcept
+{
+#if defined(_WIN64) && defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  // The pinned STL _Start allocates tuple<decay_t<Callable>> via make_unique.
+  return sizeof(std::tuple<WorkerEntry>);
+#else
+  return 0;
+#endif
+}
 
 UJobThreadPool::StackStorageSnapshot UJobThreadPool::GetCurrentThreadStackStorage()
 {
@@ -48,7 +59,7 @@ UJobThreadPool::UJobThreadPool(std::size_t threadCount,
   Workers.reserve(threadCount);
   try {
     for (std::size_t i = 0; i < threadCount; ++i)
-      Workers.emplace_back([this] { WorkerLoop(); });
+      Workers.emplace_back(WorkerEntry{this});
   } catch(...) {
     // A partially constructed pool has no destructor. Retire already-started
     // workers before vector<thread> unwinds or referenced members disappear.

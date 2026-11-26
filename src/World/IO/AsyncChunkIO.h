@@ -128,14 +128,17 @@ private:
     return ChunkIoWorkerBudget();
   }
 
+  static bool HasBackgroundIoBudget()
+  {
+    return std::thread::hardware_concurrency() > ChunkIoWorkerBudget() + 1;
+  }
+
   static std::unique_ptr<UJobThreadPool> CreateBackgroundIoPool()
   {
-    const std::size_t load_workers = ChunkIoWorkerBudget();
-    const std::size_t hardware_workers = std::thread::hardware_concurrency();
     // Preserve the full load budget and add one save/index worker only when
     // at least one logical processor remains available for the rest of the
     // application and operating system.
-    if (hardware_workers <= load_workers + 1)
+    if (!HasBackgroundIoBudget())
     {
       return {};
     }
@@ -146,6 +149,9 @@ public:
   AsyncIoStorage InspectRetainedIo(AsyncIoStorageIdentity *scratch,
                                    size_t scratch_count,
                                    const AllocatorSourcePhase *phase = nullptr) const;
+  AsyncIoRootBinding InspectBorrowedIoRoots(const AllocatorSourcePhase &phase,
+                                           const UChunkStorageService &storage,
+                                           const UBlockRegistry &registry) const;
   template<class Inspector> void InspectJobPools(Inspector &out) const {
     out.Pool("io-load",LoadPool,4);
     if(BackgroundIoPool)out.Pool("io-background",*BackgroundIoPool,1);

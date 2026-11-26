@@ -10,6 +10,20 @@ struct AllocatorSourcePhase;
 enum class AsyncIoJobKind : size_t { Load, Save, Receipts, Flags, Warmup, Cleanup, Count };
 enum class AsyncIoWorkerStage { Entered, ReadBytes, Decoded, Encoded, BeforePublish, Finished, Cancelled, Codec };
 
+struct AsyncIoBorrowedRoot
+{
+  uintptr_t object{}, lifetime{};
+  size_t references{};
+  bool mixed{};
+};
+
+struct AsyncIoRootBinding
+{
+  uintptr_t io{}, storage{}, registry{}, registry_lifetime{};
+  uint64_t epoch{};
+  IoDiskIndexStorage disk_index;
+};
+
 struct AsyncIoStorage
 {
   uintptr_t io{};
@@ -20,6 +34,7 @@ struct AsyncIoStorage
   size_t callable_bytes{}, queued_backing{}, completed_backing{}, shared_bytes{};
   size_t shared_blocks{}, shared_aliases{}, unknown_jobs{}, active{};
   size_t warmup_keys{}, warmup_requested{};
+  AsyncIoBorrowedRoot storage_root, registry_root;
   bool supported{}, retained_supported{}, overflow{}, scratch_exhausted{};
 };
 
@@ -60,14 +75,17 @@ struct AsyncIoExecutionStorage
 {
   size_t participants{}, callable_bytes{}, captured_backing{}, local_backing{};
   size_t shared_bytes{}, shared_blocks{}, shared_aliases{};
+  size_t storage_references{}, registry_references{}, disk_index_requested{};
   bool supported{}, overflow{};
 };
 
 // The caller holds participating workers at their samples until the join and
 // closes the phase before allowing them to continue. The resulting totals
-// cover explicit job storage, not stacks, codec-private scratch or other owners.
+// cover explicit job storage. The supplied world roots stay alive throughout
+// the phase. Disk-index backing is reported separately from job-owned bytes.
 AsyncIoExecutionStorage JoinAsyncIoWorkers(
-    const AllocatorSourcePhase &phase, const AsyncIoStorage &queues,
+    const AllocatorSourcePhase &phase, const AsyncIoRootBinding &roots,
+    const AsyncIoStorage &queues,
     const AsyncIoStorageIdentity *queue_shared, size_t queue_shared_count,
     const AsyncIoWorkerSample *const *workers, size_t worker_count,
     AsyncIoStorageIdentity *scratch, size_t scratch_count) noexcept;
