@@ -25,6 +25,7 @@
 #include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
+#include "Core/Memory/WindowsProcessMemory.h"
 #include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Core/Creature.h"
@@ -420,6 +421,18 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"resize_pointer_tables_upper", crtFiles.resizePointerTablesUpper}, {"requested_heap_upper", crtFiles.requestedHeapUpper},
       {"process_handles", crtFiles.processHandles}, {"process_handles_observed", crtFiles.processHandlesObserved},
       {"whole_runtime_complete", false}};
+  const auto memory = ReadWindowsProcessMemory();
+  report["windows_process_resources"] = {
+      {"schema", "windows-process-resources.v1"},
+      {"status", memory.observed && crtFiles.processHandlesObserved ? "PASS" : "UNSUPPORTED"},
+      {"handles", crtFiles.processHandles}, {"handles_observed", crtFiles.processHandlesObserved},
+      {"memory_observed", memory.observed}, {"working_set_bytes", memory.workingSet},
+      {"peak_working_set_bytes", memory.peakWorkingSet}, {"private_commit_bytes", memory.privateCommit},
+      {"peak_private_commit_bytes", memory.peakPrivateCommit},
+      {"paged_pool_quota_bytes", memory.pagedPoolQuota}, {"peak_paged_pool_quota_bytes", memory.peakPagedPoolQuota},
+      {"nonpaged_pool_quota_bytes", memory.nonpagedPoolQuota},
+      {"peak_nonpaged_pool_quota_bytes", memory.peakNonpagedPoolQuota},
+      {"per_object_charge_observed", false}, {"whole_runtime_complete", false}};
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {

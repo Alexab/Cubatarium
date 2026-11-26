@@ -2,6 +2,7 @@
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "Test/AsyncIoStorageFixture.h"
 #include "Test/IoCodecAllocationFixture.h"
+#include "Test/WindowsIoResourceFixture.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -163,7 +164,9 @@ int main(int argc, char **argv)
     const auto streams = cutum::io_codec_fixture::CheckFileStreams(folder + "-streams");
     const auto launch = CheckWorkerLaunchAllocations();
     auto result = cutum::RunAsyncIoStorageProbe(folder);
-    result["crt_file_tables"] = CheckCrtFileTables(std::filesystem::path(folder) / "stdio.bin");
+    const auto stdio = std::filesystem::path(folder) / "stdio.bin";
+    result["crt_file_tables"] = CheckCrtFileTables(stdio);
+    result["windows_io_resources"] = cutum::windows_io_resource_fixture::Run(stdio);
     result["ordinary_codec"] = codec;
     result["ordinary_disk_index"] = disk;
     result["ordinary_failed_parse"] = malformed;

@@ -36,7 +36,7 @@
 
 // Psapi depends on the Win32 types declared above. Keep this SDK include group
 // separate.
-#include <psapi.h>
+#include "Core/Memory/WindowsProcessMemory.h"
 #pragma comment(lib, "psapi.lib")
 #else
 #include <unistd.h>
@@ -2193,15 +2193,11 @@ FrameNumbers Compute(UWorld &world, double swap_wait_ms, double frame_wall_ms,
   if (s.FramesSinceMemSample >= 30)
   {
 #ifdef _WIN32
-    PROCESS_MEMORY_COUNTERS_EX pmc{};
-    pmc.cb = sizeof(pmc);
-    if (GetProcessMemoryInfo(GetCurrentProcess(),
-                             reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc),
-                             sizeof(pmc)))
+    const auto memory = ReadWindowsProcessMemory();
+    if (memory.observed)
     {
-      s.LastRssMb = static_cast<double>(pmc.WorkingSetSize) / (1024.0 * 1024.0);
-      s.LastPrivateMb =
-          static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+      s.LastRssMb = static_cast<double>(memory.workingSet) / (1024.0 * 1024.0);
+      s.LastPrivateMb = static_cast<double>(memory.privateCommit) / (1024.0 * 1024.0);
     }
 #endif
     s.FramesSinceMemSample = 0;

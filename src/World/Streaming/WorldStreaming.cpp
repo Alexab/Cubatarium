@@ -84,7 +84,7 @@
 #include <windows.h>
 
 // Psapi requires the Win32 declarations from the preceding SDK include group.
-#include <psapi.h>
+#include "Core/Memory/WindowsProcessMemory.h"
 #endif
 
 namespace cutum
@@ -6665,14 +6665,11 @@ void UWorldStreaming::UpdateStreaming(
       if (fallback_private_mb <= 0.0 ||
           StreamingFrameCounter - fallback_sample_frame >= 30)
       {
-        PROCESS_MEMORY_COUNTERS_EX pmc{};
-        pmc.cb = sizeof(pmc);
-        if (GetProcessMemoryInfo(
-                GetCurrentProcess(),
-                reinterpret_cast<PROCESS_MEMORY_COUNTERS *>(&pmc), sizeof(pmc)))
+        const auto memory = ReadWindowsProcessMemory();
+        if (memory.observed)
         {
           fallback_private_mb =
-              static_cast<double>(pmc.PrivateUsage) / (1024.0 * 1024.0);
+              static_cast<double>(memory.privateCommit) / (1024.0 * 1024.0);
           fallback_sample_frame = StreamingFrameCounter;
         }
       }
