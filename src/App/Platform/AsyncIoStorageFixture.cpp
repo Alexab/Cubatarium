@@ -1,6 +1,7 @@
 #include "Test/AsyncIoStorageFixture.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Memory/RootStorageSource.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
@@ -11,6 +12,68 @@ namespace cutum
 {
 struct AsyncIoStorageProbe
 {
+  struct WorkerTrace
+  {
+    std::mutex mutex;
+    std::vector<AsyncIoWorkerSample> records = std::vector<AsyncIoWorkerSample>(96);
+    std::array<const AsyncIoWorkerSample *, 8> parked{};
+    size_t used{}, parked_count{};
+    std::atomic<bool> released{false}, timed_out{false};
+    bool pause{false}, overflow{false};
+    std::atomic<bool> *cancel_on_decode{};
+
+    static void Sample(void *context, const AsyncIoWorkerSample &sample) noexcept
+    {
+      auto &trace = *static_cast<WorkerTrace *>(context);
+      if (trace.cancel_on_decode && sample.stage == AsyncIoWorkerStage::Decoded)
+        trace.cancel_on_decode->store(true);
+      const bool park = trace.pause &&
+          ((sample.kind == AsyncIoJobKind::Load && sample.stage == AsyncIoWorkerStage::Decoded) ||
+           (sample.kind == AsyncIoJobKind::Flags && sample.stage == AsyncIoWorkerStage::Encoded));
+      {
+        std::lock_guard lock(trace.mutex);
+        if (trace.used == trace.records.size() ||
+            (park && trace.parked_count == trace.parked.size()))
+        {
+          trace.overflow = true;
+          return;
+        }
+        auto &record = trace.records[trace.used++];
+        record = sample;
+        if (park)
+          trace.parked[trace.parked_count++] = &record;
+      }
+      if (!park)
+        return;
+      const auto deadline = Clock::now() + std::chrono::seconds(8);
+      while (!trace.released.load() && Clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      if (!trace.released.load())
+        trace.timed_out.store(true);
+    }
+
+    const AsyncIoWorkerSample *Find(AsyncIoJobKind kind, AsyncIoWorkerStage stage,
+                                    uint64_t key) const
+    {
+      for (size_t i = 0; i < used; ++i)
+        if (records[i].kind == kind && records[i].stage == stage && records[i].key == key)
+          return &records[i];
+      return nullptr;
+    }
+  };
+
+  using Clock = std::chrono::steady_clock;
+  struct ReleaseWorkers
+  {
+    AllocatorSourcePhase &phase;
+    WorkerTrace &trace;
+    ~ReleaseWorkers()
+    {
+      phase.Close();
+      trace.released.store(true);
+    }
+  };
+
   struct Gate
   {
     std::atomic<size_t> entered{0};
@@ -66,6 +129,168 @@ struct AsyncIoStorageProbe
             {"unknown_jobs", s.unknown_jobs}};
   }
 
+  static nlohmann::json CheckWorkerTrace(const WorkerTrace &trace)
+  {
+    using Kind = AsyncIoJobKind;
+    using Stage = AsyncIoWorkerStage;
+    std::array<size_t, static_cast<size_t>(Kind::Count)> entered{};
+    for (size_t i = 0; i < trace.used; ++i)
+    {
+      const auto &sample = trace.records[i];
+      Require(sample.sources.retained_supported, "actual worker storage profile supported at checkpoint");
+      if (sample.stage == Stage::Entered)
+        ++entered[static_cast<size_t>(sample.kind)];
+    }
+    Require(!trace.overflow && !trace.timed_out.load() &&
+                entered == std::array<size_t, 6>{2, 1, 2, 1, 1, 2},
+            "all six actual I/O producers run on their worker");
+    auto *raw = trace.Find(Kind::Load, Stage::ReadBytes, 100);
+    auto *decoded = trace.Find(Kind::Load, Stage::Decoded, 100);
+    auto *read_publish = trace.Find(Kind::Load, Stage::BeforePublish, 100);
+    Require(raw && decoded && read_publish && raw->input_bytes && !raw->decoded_bytes &&
+                decoded->input_bytes == raw->input_bytes && decoded->decoded_bytes &&
+                !read_publish->input_bytes && read_publish->decoded_bytes == decoded->decoded_bytes,
+            "raw and decoded backing overlap before the raw input retires");
+    auto *save = trace.Find(Kind::Save, Stage::Encoded, 200);
+    auto *save_publish = trace.Find(Kind::Save, Stage::BeforePublish, 200);
+    auto *flags_entered = trace.Find(Kind::Flags, Stage::Entered, 300);
+    auto *flags_encoded = trace.Find(Kind::Flags, Stage::Encoded, 300);
+    Require(save && save->encoded_bytes && save->path_bytes && save_publish &&
+                save_publish->encoded_bytes == save->encoded_bytes && flags_entered &&
+                flags_encoded && flags_encoded->encoded_bytes && flags_encoded->path_bytes &&
+                flags_entered->sources.queued_backing >=
+                    flags_encoded->sources.queued_backing + 600 * sizeof(glm::ivec2),
+            "actual save and flags serialization sources and vector transfer");
+    Require(trace.Find(Kind::Warmup, Stage::Finished, 0) &&
+                trace.Find(Kind::Receipts, Stage::BeforePublish, 202) &&
+                trace.Find(Kind::Cleanup, Stage::BeforePublish, 203) &&
+                trace.Find(Kind::Cleanup, Stage::BeforePublish, 0),
+            "index, receipts and both cleanup paths reach their worker terminal checkpoint");
+    return {{"entered", entered}, {"read_input", raw->input_bytes},
+            {"decoded_backing", decoded->decoded_bytes}, {"binary_encoded", save->encoded_bytes},
+            {"flags_encoded", flags_encoded->encoded_bytes}, {"samples", trace.used}};
+  }
+
+  static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,
+                                             UChunkStorageService &storage, UBlockRegistry &registry)
+  {
+    using Stage = AsyncIoWorkerStage;
+    const auto participants = ComputeWorkerThreadCount(JobPoolKind::ChunkIo) + 1;
+    AllocatorSourcePhase phase(NewRootStorageEpoch(), participants);
+    WorkerTrace trace;
+    trace.pause = true;
+    const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
+    UAsyncChunkIO io;
+    ReleaseWorkers release{phase, trace};
+    io.WorkerProbe = &probe;
+    auto cancellation = std::make_shared<std::atomic<bool>>(false);
+    std::weak_ptr<std::atomic<bool>> weak = cancellation;
+    // One extra read remains pending while every load worker holds the same
+    // cancellation control. This crosses the actual pool ownership boundary.
+    for (size_t i = 0; i < participants; ++i)
+      io.RequestLoad(coord, storage, registry, folder, {coord, 2}, cancellation, 600 + i);
+    io.RequestSaveColumnLightFlags(folder, 700, {{0, 0}}, "join-execution");
+    const auto deadline = Clock::now() + std::chrono::seconds(5);
+    for (;;)
+    {
+      {
+        std::lock_guard lock(trace.mutex);
+        if (trace.parked_count == participants)
+          break;
+      }
+      Require(Clock::now() < deadline, "I/O execution participants park before the deadline");
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    std::array<AsyncIoStorageIdentity, 32> queue_shared{}, scratch{};
+    const auto queues = io.InspectRetainedIo(queue_shared.data(), queue_shared.size(), &phase);
+    const auto join = [&](const AllocatorSourcePhase &source_phase, const auto &list, size_t count) {
+      return JoinAsyncIoWorkers(source_phase, queues, queue_shared.data(), queues.shared_blocks,
+                                list.data(), count, scratch.data(), scratch.size());
+    };
+    const auto joined = join(phase, trace.parked, participants);
+    Require(queues.retained_supported && queues.active == participants &&
+                queues.queued[0] == 1 && queues.shared_blocks == 1 &&
+                joined.supported && joined.participants == participants &&
+                joined.shared_blocks == 1 && joined.shared_aliases == participants - 1 &&
+                joined.shared_bytes == queues.shared_bytes && joined.local_backing,
+            "joined active and pending allocations count shared cancellation once");
+    Require(!join(phase, trace.parked, participants - 1).supported, "missing worker rejects");
+    auto altered = trace.parked;
+    altered[0] = altered[1];
+    Require(!join(phase, altered, participants).supported, "duplicate worker rejects");
+    auto conflict = *trace.parked[0];
+    if (!conflict.sources.shared_blocks)
+      conflict = *trace.parked[1];
+    Require(conflict.sources.shared_blocks == 1, "sample supplies shared cancellation");
+    auto conflict_list = trace.parked;
+    for (size_t i = 0; i < participants; ++i)
+      if (conflict_list[i]->job == conflict.job)
+        conflict_list[i] = &conflict;
+    ++conflict.shared[0].backing;
+    ++conflict.sources.shared_bytes;
+    Require(!join(phase, conflict_list, participants).supported, "shared size disagreement rejects");
+    AllocatorSourcePhase foreign(NewRootStorageEpoch(), participants);
+    Require(!join(foreign, trace.parked, participants).supported, "foreign phase epoch rejects");
+    phase.Close();
+    Require(!join(phase, trace.parked, participants).supported, "closed phase rejects");
+    trace.released.store(true);
+    cancellation.reset();
+    Require(io.WaitIdleFor(std::chrono::seconds(6)) &&
+                io.WaitForColumnLightFlagsSaveIdleFor(std::chrono::seconds(6)) &&
+                !trace.timed_out.load(), "coherent I/O execution completes before deadline");
+    const auto completed = Inspect(io);
+    Require(completed.supported && completed.completed[0] == participants &&
+                completed.completed[2] == 1 && completed.shared_bytes == joined.shared_bytes,
+            "the same cancellation control survives queue publication");
+    auto reads = io.DrainLoads();
+    Require(!weak.expired() && Inspect(io).shared_bytes == 0, "returned owners leave the I/O census");
+    reads.clear();
+    Require(weak.expired(), "all joined source owners retire");
+    return {{"participants", participants}, {"shared_bytes", joined.shared_bytes},
+            {"shared_aliases", joined.shared_aliases}, {"callable_bytes", joined.callable_bytes},
+            {"local_backing", joined.local_backing}, {"negative_controls", true}};
+  }
+
+  static nlohmann::json CheckJsonAndCancellation(const std::string &folder, UBlockWorld &world,
+                                                UBlockRegistry &registry)
+  {
+    using Kind = AsyncIoJobKind;
+    using Stage = AsyncIoWorkerStage;
+    AllocatorSourcePhase phase(NewRootStorageEpoch(), 1);
+    WorkerTrace trace;
+    auto cancellation = std::make_shared<std::atomic<bool>>(false);
+    std::weak_ptr<std::atomic<bool>> weak = cancellation;
+    trace.cancel_on_decode = cancellation.get();
+    const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
+    UChunkStorageService storage({ChunkWriteFormat::Json, false});
+    UAsyncChunkIO io;
+    ReleaseWorkers release{phase, trace};
+    io.WorkerProbe = &probe;
+    const glm::ivec3 coord{2, 0, 0};
+    world.SetBlock({2 * CHUNK_SIZE + 3, 2, 3}, 8);
+    io.RequestSave(coord, storage, folder, world, registry, {coord, 1}, 800);
+    Require(io.WaitIdleFor(std::chrono::seconds(6)), "JSON save finishes");
+    const auto saves = io.DrainSaves();
+    Require(saves.size() == 1 && saves[0].success && saves[0].format == ChunkDiskFormat::Json,
+            "real JSON save publishes");
+    io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 801);
+    Require(io.WaitIdleFor(std::chrono::seconds(6)) && io.CompletedLoadsEmpty(),
+            "active cancellation suppresses result publication");
+    auto *save = trace.Find(Kind::Save, Stage::Encoded, 800);
+    auto *decoded = trace.Find(Kind::Load, Stage::Decoded, 801);
+    auto *cancelled = trace.Find(Kind::Load, Stage::Cancelled, 801);
+    Require(save && save->encoded_bytes && decoded && decoded->input_bytes &&
+                decoded->decoded_bytes && cancelled && !cancelled->input_bytes &&
+                cancelled->decoded_bytes == decoded->decoded_bytes &&
+                !trace.Find(Kind::Load, Stage::BeforePublish, 801),
+            "active cancellation retires decoded source without publication");
+    cancellation.reset();
+    Require(weak.expired() && Inspect(io).shared_blocks == 0 && !trace.overflow,
+            "cancelled source leaves no retained I/O owner");
+    return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
+            {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true}};
+  }
+
   static nlohmann::json Run(const std::filesystem::path &root)
   {
     namespace fs = std::filesystem;
@@ -85,8 +310,12 @@ struct AsyncIoStorageProbe
     auto snapshot = world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
     Require(snapshot && storage.SaveChunk(coord, *snapshot, folder, registry), "I/O fixture saves baseline slice");
 
+    AllocatorSourcePhase worker_phase(NewRootStorageEpoch(), 1);
+    WorkerTrace worker_trace;
+    const AsyncIoWorkerProbe worker_probe{worker_phase, &worker_trace, WorkerTrace::Sample};
     Gate gate;
     UAsyncChunkIO io;
+    io.WorkerProbe = &worker_probe;
     // Release before pool destruction on every exit from the fixture.
     struct Release { Gate &gate; ~Release() { gate.released.store(true); } } release{gate};
     const auto parked = Park(io, gate, true);
@@ -129,6 +358,8 @@ struct AsyncIoStorageProbe
                 io.WaitForColumnLightFlagsSaveIdleFor(std::chrono::seconds(8)),
             "I/O fixture runs and publishes before deadline");
     const auto completed = Inspect(io);
+    worker_phase.Close();
+    const auto worker_stages = CheckWorkerTrace(worker_trace);
     Require(completed.supported && completed.completed == std::array<size_t, 3>{2, 5, 1} &&
                 completed.completed_backing && completed.shared_blocks == 1 &&
                 completed.shared_aliases == 1 && completed.callable_bytes == 0,
@@ -191,6 +422,9 @@ struct AsyncIoStorageProbe
             {"drained", Describe(drained)}, {"fallback", Describe(fallback_queued)},
             {"unknown_scratch_controls", true}, {"returned_owner_retired", true},
             {"cancelled_pending_retired", true}, {"normal_shutdown_drained", true},
+            {"worker_stages", worker_stages},
+            {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
+            {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"active_worker_storage_complete", false}};
   }
 };

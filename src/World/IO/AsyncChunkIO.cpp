@@ -97,6 +97,21 @@ void LogColumnLightFlagsSaveResult(
 }
 } // namespace
 
+struct AsyncIoWorkerLocals
+{
+  const AsyncChunkLoadResult *load{};
+  const AsyncChunkSaveRequest *save{};
+  const AsyncColumnLightFlagsSaveResult *flags{};
+  const std::vector<uint8_t> *encoded_bytes{};
+  const std::string *encoded_text{}, *temporary_name{}, *diagnostic{};
+  const std::filesystem::path *target_path{}, *temporary_path{};
+
+  AsyncIoWorkerLocals() = default;
+  explicit AsyncIoWorkerLocals(const AsyncChunkLoadResult &value) : load(&value) {}
+  explicit AsyncIoWorkerLocals(const AsyncChunkSaveRequest &value) : save(&value) {}
+  explicit AsyncIoWorkerLocals(const AsyncColumnLightFlagsSaveResult &value) : flags(&value) {}
+};
+
 struct UAsyncChunkIO::SaveFlagsJob
 {
   UAsyncChunkIO *owner;
@@ -111,6 +126,7 @@ struct UAsyncChunkIO::SaveFlagsJob
 
 void UAsyncChunkIO::SaveFlagsJob::operator()()
 {
+  owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::Entered, revision, {});
   const auto worker_started = std::chrono::steady_clock::now();
   AsyncColumnLightFlagsSaveResult result;
   result.worldFolder = worldFolder;
@@ -127,6 +143,14 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
     const std::filesystem::path target =
         std::filesystem::path(worldFolder) / "column_light.json";
     const std::filesystem::path temp = target.string() + ".tmp";
+    if (owner->WorkerProbe)
+    {
+      AsyncIoWorkerLocals locals(result);
+      locals.encoded_text = &encoded;
+      locals.target_path = &target;
+      locals.temporary_path = &temp;
+      owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::Encoded, revision, locals);
+    }
     std::error_code ec;
     std::filesystem::create_directories(target.parent_path(), ec);
     if (ec)
@@ -205,6 +229,8 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
   const uint64_t result_revision = result.revision;
   double publish_wait_ms = 0.0;
   double publish_held_ms = 0.0;
+  owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::BeforePublish, revision,
+                       AsyncIoWorkerLocals(result));
   owner->CompletedColumnLightFlagsSaves.Push(std::move(result),
                                        &publish_wait_ms,
                                        &publish_held_ms);
@@ -232,6 +258,7 @@ void UAsyncChunkIO::RequestSaveColumnLightFlags(
 
 struct UAsyncChunkIO::IndexWarmupJob
 {
+  UAsyncChunkIO *owner;
   UChunkStorageService &storage;
   std::string worldFolder;
 
@@ -239,7 +266,11 @@ struct UAsyncChunkIO::IndexWarmupJob
 };
 
 void UAsyncChunkIO::IndexWarmupJob::operator()() const
-{ storage.PrepareHighestChunkSliceIndex(worldFolder); }
+{
+  owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Entered, 0, {});
+  storage.PrepareHighestChunkSliceIndex(worldFolder);
+  owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Finished, 0, {});
+}
 
 void UAsyncChunkIO::RequestDiskIndexWarmup(
     UChunkStorageService &storage, const std::string &worldFolder)
@@ -249,7 +280,7 @@ void UAsyncChunkIO::RequestDiskIndexWarmup(
   {
     return;
   }
-  EnqueueBackgroundIo(IndexWarmupJob{storage, worldFolder});
+  EnqueueBackgroundIo(IndexWarmupJob{this, storage, worldFolder});
 }
 
 struct UAsyncChunkIO::LoadJob
@@ -276,6 +307,7 @@ struct UAsyncChunkIO::LoadJob
 
 void UAsyncChunkIO::LoadJob::operator()() const
 {
+  owner->ObserveWorker(*this, AsyncIoJobKind::Load, AsyncIoWorkerStage::Entered, demandId, {});
   const auto is_cancelled = [&]()
   {
     return cancellation &&
@@ -283,9 +315,17 @@ void UAsyncChunkIO::LoadJob::operator()() const
   };
   if (is_cancelled())
   {
+    owner->ObserveWorker(*this, AsyncIoJobKind::Load, AsyncIoWorkerStage::Cancelled, demandId, {});
     return;
   }
   AsyncChunkLoadResult result;
+  const auto observe = [&](AsyncIoWorkerStage stage) {
+    owner->ObserveWorker(*this, AsyncIoJobKind::Load, stage, demandId, AsyncIoWorkerLocals(result));
+  };
+  const auto publish = [&] {
+    observe(AsyncIoWorkerStage::BeforePublish);
+    owner->PushCompletedLoad(std::move(result));
+  };
   result.coord = coord;
   result.demandId = demandId;
   result.token = token;
@@ -302,10 +342,13 @@ void UAsyncChunkIO::LoadJob::operator()() const
         worker_storage.ReadColumnLight(worldFolder, coord);
   }
   if (is_cancelled())
+  {
+    observe(AsyncIoWorkerStage::Cancelled);
     return;
+  }
   if (format == ChunkDiskFormat::Absent)
   {
-    owner->PushCompletedLoad(std::move(result));
+    publish();
     return;
   }
   const auto open_started = result.workerStartedAt;
@@ -321,13 +364,14 @@ void UAsyncChunkIO::LoadJob::operator()() const
   {
     if (is_cancelled())
     {
+      observe(AsyncIoWorkerStage::Cancelled);
       return;
     }
     if (trace_io)
     {
       result.workerFinishedAt = std::chrono::steady_clock::now();
     }
-    owner->PushCompletedLoad(std::move(result));
+    publish();
     if (is_cancelled())
     {
       owner->NoteLoadCancellation();
@@ -336,6 +380,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
   }
   if (is_cancelled())
   {
+    observe(AsyncIoWorkerStage::Cancelled);
     return;
   }
   const auto read_started =
@@ -343,6 +388,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
                : std::chrono::steady_clock::time_point{};
   result.payload.assign(std::istreambuf_iterator<char>(file),
                         std::istreambuf_iterator<char>());
+  observe(AsyncIoWorkerStage::ReadBytes);
   if (trace_io)
   {
     result.fileReadMs = std::chrono::duration<double, std::milli>(
@@ -352,6 +398,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
   }
   if (is_cancelled())
   {
+    observe(AsyncIoWorkerStage::Cancelled);
     owner->NoteLoadCancellation();
     return;
   }
@@ -382,6 +429,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
                               std::chrono::steady_clock::now() -
                               deserialize_started)
                               .count();
+    observe(AsyncIoWorkerStage::Decoded);
     std::vector<uint8_t>().swap(result.payload);
   }
   if (read_probe_gate && read_probe_gate->demandId == demandId)
@@ -400,6 +448,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
   }
   if (is_cancelled())
   {
+    observe(AsyncIoWorkerStage::Cancelled);
     owner->NoteLoadCancellation();
     return;
   }
@@ -407,7 +456,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
   {
     result.workerFinishedAt = std::chrono::steady_clock::now();
   }
-  owner->PushCompletedLoad(std::move(result));
+  publish();
   if (is_cancelled())
   {
     owner->NoteLoadCancellation();
@@ -483,6 +532,7 @@ struct UAsyncChunkIO::SaveReceiptsJob
 
 void UAsyncChunkIO::SaveReceiptsJob::operator()() const
 {
+  owner->ObserveWorker(*this, AsyncIoJobKind::Receipts, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
   done.saveBatchId = saveBatchId;
   done.coord = done.groundCoord = column;
@@ -505,6 +555,8 @@ void UAsyncChunkIO::SaveReceiptsJob::operator()() const
   {
     done.error = error.what();
   }
+  owner->ObserveWorker(*this, AsyncIoJobKind::Receipts, AsyncIoWorkerStage::BeforePublish, saveBatchId,
+                       AsyncIoWorkerLocals(done));
   owner->CompletedSaves.Push(std::move(done));
 }
 
@@ -534,16 +586,22 @@ struct UAsyncChunkIO::SaveJob
 
 void UAsyncChunkIO::SaveJob::operator()() const
 {
+  owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
   done.saveBatchId = saveBatchId;
   done.coord = coord;
   done.groundCoord = ground;
   done.worldFolder = worldFolder;
-  const auto finish = [io = owner, &done](const std::string &error = {})
+  const auto finish = [this, &done](const std::string &error = {},
+                                    AsyncIoWorkerLocals locals = {})
   {
     done.success = error.empty();
     done.error = error;
-    io->CompletedSaves.Push(std::move(done));
+    locals.save = &done;
+    locals.diagnostic = &error;
+    owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::BeforePublish,
+                         saveBatchId, locals);
+    owner->CompletedSaves.Push(std::move(done));
   };
 
   try
@@ -572,21 +630,25 @@ void UAsyncChunkIO::SaveJob::operator()() const
     done.format = serialized.format;
     done.filePath = worker_storage.ChunkFilePath(
         worldFolder, coord, serialized.format);
+    AsyncIoWorkerLocals locals(done);
+    locals.encoded_bytes = &serialized.bytes;
 
     std::error_code ec;
     std::filesystem::create_directories(
         std::filesystem::path(done.filePath).parent_path(), ec);
     if (ec)
     {
-      finish("create_directories: " + ec.message());
+      finish("create_directories: " + ec.message(), locals);
       return;
     }
     const std::string tempPath = done.filePath + ".tmp";
+    locals.temporary_name = &tempPath;
+    owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Encoded, saveBatchId, locals);
     {
       std::ofstream file(tempPath, std::ios::binary);
       if (!file.is_open())
       {
-        finish("open_temp_failed");
+        finish("open_temp_failed", locals);
         return;
       }
       file.write(reinterpret_cast<const char *>(serialized.bytes.data()),
@@ -596,7 +658,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
       {
         std::error_code cleanup_ec;
         std::filesystem::remove(tempPath, cleanup_ec);
-        finish("write_temp_failed");
+        finish("write_temp_failed", locals);
         return;
       }
     }
@@ -604,6 +666,8 @@ void UAsyncChunkIO::SaveJob::operator()() const
 #ifdef _WIN32
     const std::filesystem::path targetPath(done.filePath);
     const std::filesystem::path temporaryPath(tempPath);
+    locals.target_path = &targetPath;
+    locals.temporary_path = &temporaryPath;
     if (!MoveFileExW(temporaryPath.c_str(), targetPath.c_str(),
                      MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
       ec = std::error_code(GetLastError(), std::system_category());
@@ -614,7 +678,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
     {
       std::error_code cleanup_ec;
       std::filesystem::remove(tempPath, cleanup_ec);
-      finish("replace_failed: " + ec.message());
+      finish("replace_failed: " + ec.message(), locals);
       return;
     }
 
@@ -627,7 +691,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
       std::error_code cleanup_ec;
       std::filesystem::remove(legacy_json, cleanup_ec);
     }
-    finish();
+    finish({}, locals);
   }
   catch (const std::exception &e)
   {
@@ -774,6 +838,7 @@ struct UAsyncChunkIO::CleanupJob
 
 void UAsyncChunkIO::CleanupJob::operator()()
 {
+  owner->ObserveWorker(*this, AsyncIoJobKind::Cleanup, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
   done.saveBatchId = saveBatchId;
   done.coord = resultCoord;
@@ -800,6 +865,8 @@ void UAsyncChunkIO::CleanupJob::operator()()
   done.cleanupMs = std::chrono::duration<double, std::milli>(
                        std::chrono::steady_clock::now() - started)
                        .count();
+  owner->ObserveWorker(*this, AsyncIoJobKind::Cleanup, AsyncIoWorkerStage::BeforePublish, saveBatchId,
+                       AsyncIoWorkerLocals(done));
   owner->CompletedSaves.Push(std::move(done));
 }
 
@@ -826,6 +893,7 @@ struct AsyncIoStorageInspector
                                    size_t scratch_count)
       : Owner(io), Scratch(scratch), ScratchCount(scratch ? scratch_count : 0)
   {
+    Result.io = reinterpret_cast<uintptr_t>(&Owner);
     Result.retained_supported = RootOwnerRepresentationSupported;
   }
 
@@ -846,6 +914,46 @@ struct AsyncIoStorageInspector
     });
     Result.supported = Result.retained_supported && Result.active == 0;
     return Result;
+  }
+
+  template<class Job>
+  static void Observe(const Io &io, const AsyncIoWorkerProbe &probe, const Job &job,
+                      AsyncIoJobKind kind, AsyncIoWorkerStage stage, uint64_t key,
+                      const AsyncIoWorkerLocals &locals) noexcept
+  {
+    AsyncIoWorkerSample sample;
+    sample.job = reinterpret_cast<uintptr_t>(&job);
+    sample.thread = std::this_thread::get_id();
+    sample.kind = kind;
+    sample.stage = stage;
+    sample.key = key;
+    AsyncIoStorageInspector inspector(io, sample.shared.data(), sample.shared.size());
+    inspector.Result.epoch = probe.phase.epoch;
+    const std::function<void()> empty;
+    inspector.Result.callable_bytes = KnownCallbackRequestBytes<Job>(empty);
+    inspector.Capture(job);
+    if (locals.load)
+      inspector.LoadResult(*locals.load, &sample.input_bytes, &sample.decoded_bytes);
+    if (locals.save)
+      inspector.SaveResult(*locals.save);
+    if (locals.flags)
+      inspector.FlagsResult(*locals.flags);
+    if (locals.diagnostic)
+      inspector.Text(inspector.Result.completed_backing, *locals.diagnostic);
+    if (locals.encoded_bytes)
+      inspector.Buffer(sample.encoded_bytes, locals.encoded_bytes->capacity(), sizeof(uint8_t));
+    if (locals.encoded_text)
+      inspector.Text(sample.encoded_bytes, *locals.encoded_text);
+    if (locals.temporary_name)
+      inspector.Text(sample.path_bytes, *locals.temporary_name);
+    if (locals.target_path)
+      inspector.Text(sample.path_bytes, locals.target_path->native());
+    if (locals.temporary_path)
+      inspector.Text(sample.path_bytes, locals.temporary_path->native());
+    inspector.Add(inspector.Result.completed_backing, sample.encoded_bytes);
+    inspector.Add(inspector.Result.completed_backing, sample.path_bytes);
+    sample.sources = inspector.Result;
+    probe.sample(probe.context, sample);
   }
 
 private:
@@ -874,9 +982,20 @@ private:
     Add(sum, request);
   }
 
-  void Text(size_t &sum, const std::string &text)
+  template<class Char> void Text(size_t &sum, const std::basic_string<Char> &text)
   {
-    Buffer(sum, NameStorageExternalBytes(text), 1);
+    const auto address = reinterpret_cast<uintptr_t>(text.data());
+    const auto object = reinterpret_cast<uintptr_t>(&text);
+    if (address < object || address - object >= sizeof(text))
+      Buffer(sum, text.capacity() + 1, sizeof(Char));
+  }
+
+  void AttachSharedBacking(size_t bytes)
+  {
+    // Called immediately after admitting the owning control, before visiting
+    // any of its separate child controls.
+    Scratch[Used - 1].backing = bytes;
+    Add(Result.shared_bytes, bytes);
   }
 
   bool NewSharedAllocation(uintptr_t address, size_t bytes)
@@ -935,13 +1054,17 @@ private:
   {
     if (!Shared(column))
       return;
-    Buffer(Result.shared_bytes, column->capacity(), sizeof(PersistedColumnLight::value_type));
+    size_t column_backing = 0;
+    Buffer(column_backing, column->capacity(), sizeof(PersistedColumnLight::value_type));
+    AttachSharedBacking(column_backing);
     for (const auto &section : *column)
     {
       if (!Shared(section))
         continue;
-      Text(Result.shared_bytes, section->signature);
-      Buffer(Result.shared_bytes, section->inputs.capacity(), sizeof(PersistedSectionLight::Input));
+      size_t section_backing = 0;
+      Text(section_backing, section->signature);
+      Buffer(section_backing, section->inputs.capacity(), sizeof(PersistedSectionLight::Input));
+      AttachSharedBacking(section_backing);
     }
   }
 
@@ -959,7 +1082,7 @@ private:
       {
         if (NewSharedAllocation(words[1], sizeof(Control)))
         {
-          Add(Result.shared_bytes, sizeof(UChunk));
+          AttachSharedBacking(sizeof(UChunk));
           const auto &field = chunk->Light.field;
           if (Shared(field))
           {
@@ -994,44 +1117,94 @@ private:
     if (!RootOwnerRepresentationSupported)
       return;
     if (const auto *job = Target<Io::LoadJob>(fn, AsyncIoJobKind::Load))
-    {
-      Text(Result.queued_backing, job->filePath);
-      Text(Result.queued_backing, job->worldFolder);
-      Shared(job->cancellation);
-      Shared(job->read_probe_gate);
-    }
+      Capture(*job);
     else if (const auto *job = Target<Io::SaveJob>(fn, AsyncIoJobKind::Save))
-    {
-      Text(Result.queued_backing, job->worldFolder);
-      Snapshot(job->snapshot);
-      Shared(job->probe_gate);
-    }
+      Capture(*job);
     else if (const auto *job = Target<Io::SaveReceiptsJob>(fn, AsyncIoJobKind::Receipts))
-    {
-      Text(Result.queued_backing, job->worldFolder);
-      Receipts(job->receipts);
-    }
+      Capture(*job);
     else if (const auto *job = Target<Io::SaveFlagsJob>(fn, AsyncIoJobKind::Flags))
-    {
-      Text(Result.queued_backing, job->worldFolder);
-      Text(Result.queued_backing, job->lightSignature);
-      Buffer(Result.queued_backing, job->completeColumns.capacity(), sizeof(glm::ivec2));
-    }
+      Capture(*job);
     else if (const auto *job = Target<Io::IndexWarmupJob>(fn, AsyncIoJobKind::Warmup))
-      Text(Result.queued_backing, job->worldFolder);
+      Capture(*job);
     else if (const auto *job = Target<Io::CleanupJob>(fn, AsyncIoJobKind::Cleanup))
-    {
-      Text(Result.queued_backing, job->worldFolder);
-      Text(Result.queued_backing, job->cleanupOperation);
-      if (job->cleanup.target<Io::RemoveSlices>())
-        Add(Result.callable_bytes, KnownCallbackRequestBytes<Io::RemoveSlices>(job->cleanup));
-      else if (job->cleanup.target<Io::RemoveColumn>())
-        Add(Result.callable_bytes, KnownCallbackRequestBytes<Io::RemoveColumn>(job->cleanup));
-      else
-        UnknownJob();
-    }
+      Capture(*job);
     else
       UnknownJob();
+  }
+
+  void Capture(const Io::LoadJob &job)
+  {
+    Text(Result.queued_backing, job.filePath);
+    Text(Result.queued_backing, job.worldFolder);
+    Shared(job.cancellation);
+    Shared(job.read_probe_gate);
+  }
+  void Capture(const Io::SaveJob &job)
+  {
+    Text(Result.queued_backing, job.worldFolder);
+    Snapshot(job.snapshot);
+    Shared(job.probe_gate);
+  }
+  void Capture(const Io::SaveReceiptsJob &job)
+  {
+    Text(Result.queued_backing, job.worldFolder);
+    Receipts(job.receipts);
+  }
+  void Capture(const Io::SaveFlagsJob &job)
+  {
+    Text(Result.queued_backing, job.worldFolder);
+    Text(Result.queued_backing, job.lightSignature);
+    Buffer(Result.queued_backing, job.completeColumns.capacity(), sizeof(glm::ivec2));
+  }
+  void Capture(const Io::IndexWarmupJob &job)
+  {
+    Text(Result.queued_backing, job.worldFolder);
+  }
+  void Capture(const Io::CleanupJob &job)
+  {
+    Text(Result.queued_backing, job.worldFolder);
+    Text(Result.queued_backing, job.cleanupOperation);
+    if (job.cleanup.target<Io::RemoveSlices>())
+      Add(Result.callable_bytes, KnownCallbackRequestBytes<Io::RemoveSlices>(job.cleanup));
+    else if (job.cleanup.target<Io::RemoveColumn>())
+      Add(Result.callable_bytes, KnownCallbackRequestBytes<Io::RemoveColumn>(job.cleanup));
+    else
+      UnknownJob();
+  }
+
+  void LoadResult(const AsyncChunkLoadResult &value, size_t *input = nullptr,
+                  size_t *decoded = nullptr)
+  {
+    size_t input_backing = 0, decoded_backing = 0;
+    Buffer(input_backing, value.payload.capacity(), sizeof(uint8_t));
+    Shared(value.cancellation);
+    Receipts(value.columnLight);
+    if (value.decodedBuffer)
+    {
+      Add(decoded_backing, sizeof(UChunkBuffer));
+      Add(decoded_backing, value.decodedBuffer->GetOwnedAllocationBytes());
+      const auto &payload = value.decodedBuffer->Payload;
+      if (payload && (payload->Budget.budget || payload->Budget.job))
+        Result.retained_supported = false;
+    }
+    if (input)
+      *input = input_backing;
+    if (decoded)
+      *decoded = decoded_backing;
+    Add(Result.completed_backing, input_backing);
+    Add(Result.completed_backing, decoded_backing);
+  }
+
+  void SaveResult(const AsyncChunkSaveRequest &value)
+  {
+    for (const auto *text : {&value.worldFolder, &value.filePath, &value.cleanupOperation, &value.error})
+      Text(Result.completed_backing, *text);
+  }
+
+  void FlagsResult(const AsyncColumnLightFlagsSaveResult &value)
+  {
+    Text(Result.completed_backing, value.worldFolder);
+    Text(Result.completed_backing, value.error);
   }
 
   void UnknownJob()
@@ -1065,25 +1238,13 @@ private:
       Shared(Owner.SaveWriteProbeGate);
       Shared(Owner.LoadReadProbeGate);
       Completed(0, Owner.CompletedLoads, [&](const AsyncChunkLoadResult &value) {
-        Buffer(Result.completed_backing, value.payload.capacity(), sizeof(uint8_t));
-        Shared(value.cancellation);
-        Receipts(value.columnLight);
-        if (value.decodedBuffer)
-        {
-          Add(Result.completed_backing, sizeof(UChunkBuffer));
-          Add(Result.completed_backing, value.decodedBuffer->GetOwnedAllocationBytes());
-          const auto &payload = value.decodedBuffer->Payload;
-          if (payload && (payload->Budget.budget || payload->Budget.job))
-            Result.retained_supported = false;
-        }
+        LoadResult(value);
       });
       Completed(1, Owner.CompletedSaves, [&](const AsyncChunkSaveRequest &value) {
-        for (const auto *text : {&value.worldFolder, &value.filePath, &value.cleanupOperation, &value.error})
-          Text(Result.completed_backing, *text);
+        SaveResult(value);
       });
       Completed(2, Owner.CompletedColumnLightFlagsSaves, [&](const AsyncColumnLightFlagsSaveResult &value) {
-        Text(Result.completed_backing, value.worldFolder);
-        Text(Result.completed_backing, value.error);
+        FlagsResult(value);
       });
     });
   }
@@ -1096,9 +1257,119 @@ private:
 };
 
 AsyncIoStorage UAsyncChunkIO::InspectRetainedIo(AsyncIoStorageIdentity *scratch,
-                                               size_t scratch_count) const
+                                               size_t scratch_count,
+                                               const AllocatorSourcePhase *phase) const
 {
-  return AsyncIoStorageInspector(*this, scratch, scratch_count).Inspect();
+  auto result = AsyncIoStorageInspector(*this, scratch, scratch_count).Inspect();
+  if (phase && phase->IsOpen())
+    result.epoch = phase->epoch;
+  return result;
+}
+
+template<class Job>
+void UAsyncChunkIO::ObserveWorker(const Job &job, AsyncIoJobKind kind, AsyncIoWorkerStage stage,
+                                 uint64_t key, const AsyncIoWorkerLocals &locals) const noexcept
+{
+  const auto *probe = WorkerProbe;
+  if (probe && probe->sample && probe->phase.IsOpen() && probe->phase.epoch)
+    AsyncIoStorageInspector::Observe(*this, *probe, job, kind, stage, key, locals);
+}
+
+AsyncIoExecutionStorage JoinAsyncIoWorkers(
+    const AllocatorSourcePhase &phase, const AsyncIoStorage &queues,
+    const AsyncIoStorageIdentity *queue_shared, size_t queue_shared_count,
+    const AsyncIoWorkerSample *const *workers, size_t worker_count,
+    AsyncIoStorageIdentity *scratch, size_t scratch_count) noexcept
+{
+  AsyncIoExecutionStorage result;
+  if (!phase.IsOpen() || !phase.epoch || !phase.participants ||
+      queues.epoch != phase.epoch || !queues.io || !queues.retained_supported ||
+      !workers || worker_count != phase.participants || worker_count != queues.active ||
+      queue_shared_count != queues.shared_blocks || (queue_shared_count && !queue_shared) ||
+      !scratch)
+    return result;
+
+  result.supported = true;
+  result.callable_bytes = queues.callable_bytes;
+  result.captured_backing = queues.queued_backing;
+  result.local_backing = queues.completed_backing;
+  const auto add = [&](size_t &total, size_t amount) {
+    if (amount > SIZE_MAX - total)
+    {
+      result.overflow = true;
+      result.supported = false;
+      total = SIZE_MAX;
+    }
+    else
+      total += amount;
+  };
+  const auto shared = [&](const AsyncIoStorageIdentity *nodes, size_t count, size_t expected) {
+    size_t bytes = 0;
+    for (size_t i = 0; i < count; ++i)
+    {
+      const auto &node = nodes[i];
+      if (!node.allocation || !node.bytes)
+      {
+        result.supported = false;
+        continue;
+      }
+      add(bytes, node.bytes);
+      add(bytes, node.backing);
+      const auto *end = scratch + result.shared_blocks;
+      const auto *match = std::find_if(scratch, scratch + result.shared_blocks,
+          [&](const auto &seen) { return seen.allocation == node.allocation; });
+      if (match != end)
+      {
+        if (match->bytes != node.bytes || match->backing != node.backing)
+          result.supported = false;
+        ++result.shared_aliases;
+        continue;
+      }
+      if (result.shared_blocks == scratch_count)
+      {
+        result.supported = false;
+        continue;
+      }
+      scratch[result.shared_blocks++] = node;
+      add(result.shared_bytes, node.bytes);
+      add(result.shared_bytes, node.backing);
+    }
+    if (bytes != expected)
+      result.supported = false;
+  };
+  shared(queue_shared, queue_shared_count, queues.shared_bytes);
+  for (size_t i = 0; i < worker_count; ++i)
+  {
+    const auto *sample = workers[i];
+    if (!sample || sample->sources.io != queues.io || sample->sources.epoch != phase.epoch ||
+        !sample->sources.retained_supported || !sample->job || sample->thread == std::thread::id{} ||
+        sample->kind >= AsyncIoJobKind::Count || sample->sources.shared_blocks > sample->shared.size())
+    {
+      result.supported = false;
+      continue;
+    }
+    bool duplicate = false;
+    for (size_t j = 0; j < i; ++j)
+      if (workers[j] && (workers[j]->job == sample->job || workers[j]->thread == sample->thread))
+        duplicate = true;
+    if (duplicate)
+    {
+      result.supported = false;
+      continue;
+    }
+    ++result.participants;
+    add(result.callable_bytes, sample->sources.callable_bytes);
+    add(result.captured_backing, sample->sources.queued_backing);
+    add(result.local_backing, sample->sources.completed_backing);
+    shared(sample->shared.data(), sample->sources.shared_blocks, sample->sources.shared_bytes);
+  }
+  size_t total = 0;
+  for (const auto bytes : {result.callable_bytes, result.captured_backing,
+                           result.local_backing, result.shared_bytes})
+    add(total, bytes);
+  if (!phase.IsOpen() || result.participants != worker_count)
+    result.supported = false;
+  return result;
 }
 
 std::vector<AsyncChunkLoadResult> UAsyncChunkIO::DrainLoads()

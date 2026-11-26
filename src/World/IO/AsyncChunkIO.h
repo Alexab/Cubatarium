@@ -23,6 +23,7 @@
 
 namespace cutum
 {
+struct AsyncIoWorkerLocals;
 
 class UCore;
 class UBlockRegistry;
@@ -113,6 +114,10 @@ private:
   friend struct AsyncIoStorageInspector;
   std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
   std::shared_ptr<AsyncLoadReadProbeGate> LoadReadProbeGate;
+  const AsyncIoWorkerProbe *WorkerProbe{nullptr};
+  template<class Job>
+  void ObserveWorker(const Job &job, AsyncIoJobKind kind, AsyncIoWorkerStage stage,
+                     uint64_t key, const AsyncIoWorkerLocals &locals) const noexcept;
   static std::size_t ChunkIoWorkerBudget()
   {
     return ComputeWorkerThreadCount(JobPoolKind::ChunkIo);
@@ -139,7 +144,8 @@ private:
 
 public:
   AsyncIoStorage InspectRetainedIo(AsyncIoStorageIdentity *scratch,
-                                   size_t scratch_count) const;
+                                   size_t scratch_count,
+                                   const AllocatorSourcePhase *phase = nullptr) const;
   template<class Inspector> void InspectJobPools(Inspector &out) const {
     out.Pool("io-load",LoadPool,4);
     if(BackgroundIoPool)out.Pool("io-background",*BackgroundIoPool,1);
