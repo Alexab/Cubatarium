@@ -53,6 +53,8 @@ private:
   friend class UMainMenuScreen;
   friend class UDeathScreen;
   friend class UAnvilScreen;
+  friend class UWorldGenPaletteScreen;
+  friend class UContentPreviewDock;
   glm::vec4 StateColor() const;
 
   const GuiTheme *Theme;

@@ -34,6 +34,8 @@ protected:
   friend class UDeathScreen;
   friend class UAnvilScreen;
   friend class UPlayerWindowScreen;
+  friend class UWorldGenPaletteScreen;
+  friend class UContentPreviewDock;
   const GuiTheme *Theme;
   bool DrawBackground{true};
   int StackSpacing{6};

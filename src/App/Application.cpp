@@ -707,6 +707,23 @@ PaletteGridStorage UApplication::InspectPaletteGridStorage() const noexcept
   return out;
 }
 
+WorldGenPaletteStorage UApplication::InspectWorldGenPaletteStorage() const noexcept
+{
+  if (WorldGenScreen && GuiContext && GameSession)
+  {
+    auto out = WorldGenScreen->InspectOwnedStorage(*GuiContext, World.get(),
+        &GameSession->GetContentCatalog(), IconSource.get(), ContentPreviewRenderer.get());
+    out.bindingsMatch &= out.visible == WorldGenOpen;
+    out.supported &= out.bindingsMatch;
+    return out;
+  }
+  WorldGenPaletteStorage out;
+  out.present = bool(WorldGenScreen);
+  out.bindingsMatch = !out.present && !WorldGenOpen;
+  out.supported = out.bindingsMatch;
+  return out;
+}
+
 void UApplication::SetHotbarCountSetting(int count)
 {
   Ui.HotbarCount = std::clamp(count, 1, 4);
@@ -1295,13 +1312,18 @@ void UApplication::ShowInGameHud()
   CharacterSheetScreen = std::move(character);
   PaletteScreen = std::move(palette);
 
-  WorldGenScreen = std::make_unique<UWorldGenPaletteScreen>(
-      World.get(), &GameSession->GetContentCatalog(), icons, preview);
-  WorldGenScreen->OnAttach(*GuiContext);
-  WorldGenScreen->Build(*GuiContext);
-  WorldGenScreen->SetVisible(false);
-
+  BuildWorldGenOverlay();
   GuiContext->SetScreen(nullptr);
+}
+
+void UApplication::BuildWorldGenOverlay()
+{
+  auto screen = std::make_unique<UWorldGenPaletteScreen>(World.get(),
+      &GameSession->GetContentCatalog(), IconSource.get(), ContentPreviewRenderer.get());
+  screen->OnAttach(*GuiContext);
+  screen->Build(*GuiContext);
+  CloseWorldGenScreen();
+  WorldGenScreen = std::move(screen);
 }
 
 void UApplication::BuildDeathOverlay()

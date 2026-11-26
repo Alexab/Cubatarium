@@ -43,6 +43,7 @@ private:
   friend class UDeathScreen;
   friend class UAnvilScreen;
   friend class UWorldGenPaletteScreen;
+  friend class UContentPreviewDock;
   const GuiTheme *Theme;
   std::string Text;
   GuiTextAlign TextAlign{GuiTextAlign::Left};

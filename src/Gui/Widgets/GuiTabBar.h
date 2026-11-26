@@ -33,6 +33,7 @@ public:
 
 private:
   friend class UPlayerWindowScreen;
+  friend class UWorldGenPaletteScreen;
   const GuiTheme *Theme;
   std::vector<std::string> Labels;
   std::vector<bool> Enabled;

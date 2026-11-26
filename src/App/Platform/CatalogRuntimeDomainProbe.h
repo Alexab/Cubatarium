@@ -182,6 +182,18 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   report["death_screen_storage"]=DeathScreenStorageJson(application.InspectDeathScreenStorage());
   report["player_window_storage"]=PlayerWindowStorageJson(application.InspectPlayerWindowStorage());
   report["palette_grid_storage"]=PaletteGridStorageJson(application.InspectPaletteGridStorage());
+  const auto worldgen_palette = application.InspectWorldGenPaletteStorage();
+  report["worldgen_palette_storage"] = {
+      {"schema", "worldgen-palette-owner.v1"},
+      {"status", worldgen_palette.supported ? "PASS" : "UNSUPPORTED"},
+      {"present", worldgen_palette.present}, {"visible", worldgen_palette.visible},
+      {"bindings_match", worldgen_palette.bindingsMatch}, {"widgets", worldgen_palette.widgets},
+      {"screen_bytes", worldgen_palette.screenBytes}, {"widget_bytes", worldgen_palette.widgetBytes},
+      {"children_bytes", worldgen_palette.childrenBytes}, {"tab_bytes", worldgen_palette.tabBytes},
+      {"text_bytes", worldgen_palette.textBytes}, {"callback_bytes", worldgen_palette.callbackBytes},
+      {"preview_bytes", worldgen_palette.previewBytes}, {"content_grid_bytes", worldgen_palette.grid.contentBytes},
+      {"picker_grid_bytes", worldgen_palette.grid.pickerBytes}, {"requested", worldgen_palette.totalBytes},
+      {"preview_texture_present", worldgen_palette.previewTexturePresent}, {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

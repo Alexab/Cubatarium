@@ -29,6 +29,7 @@ public:
   bool OnMouseMove(const GuiMouseEvent &event) override;
 
 private:
+  friend class UContentPreviewDock;
   const GuiTheme *Theme;
   GLuint PreviewTexture{0};
   bool Dragging{false};

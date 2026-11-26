@@ -82,6 +82,7 @@ public:
 
 private:
   friend class UInGameHudScreen;
+  friend class UWorldGenPaletteScreen;
   void NotifyMetricsChanged();
   void UnbindScreenInput();
   void BindScreenInput();

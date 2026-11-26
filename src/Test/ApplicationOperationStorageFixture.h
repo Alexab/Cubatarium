@@ -52,6 +52,16 @@ struct ApplicationOperationSourceProbe {
     return *app.WorldGenScreen;
   }
   static void CloseWorldGen(UApplication &app) { app.CloseWorldGenScreen(); }
+  static UWorldGenPaletteScreen &BuildOwnedWorldGen(UApplication &app)
+  {
+    app.BuildWorldGenOverlay();
+    return *app.WorldGenScreen;
+  }
+  static void RetireWorldGen(UApplication &app)
+  {
+    app.CloseWorldGenScreen();
+    app.WorldGenScreen.reset();
+  }
   static bool IsInGame(const UApplication &app) { return app.State == AppState::InGame; }
   static void RetireDeath(UApplication &app) { app.DeathScreen.reset(); }
   static void DetachProgress(UApplication &app)

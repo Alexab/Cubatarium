@@ -1,5 +1,7 @@
 #include "Gui/Preview/ContentPreviewDock.h"
 
+#include "Core/Memory/CallbackStorageSource.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Core/GuiTheme.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
 #include "Gui/Widgets/GuiButton.h"
@@ -27,6 +29,27 @@ bool IsAnimatedCreaturePreviewKind(cutum::ContentKind kind)
 namespace cutum
 {
 
+struct UContentPreviewDock::RotateAction
+{
+  UContentPreviewDock *owner;
+  void operator()(float yaw, float pitch) const
+  {
+    owner->Yaw = yaw;
+    owner->Pitch = pitch;
+    owner->MarkRenderDirty();
+  }
+};
+
+struct UContentPreviewDock::ChangeAction
+{
+  UContentPreviewDock *owner;
+  void operator()() const
+  {
+    if (owner->OnChange)
+      owner->OnChange();
+  }
+};
+
 UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
                                          UContentPreviewRenderer *renderer)
     : Theme(theme), Renderer(renderer)
@@ -46,27 +69,14 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
   auto viewport = std::make_unique<UGuiPreviewViewport>(theme);
   Viewport = viewport.get();
   viewport->SetAngles(Yaw, Pitch);
-  viewport->SetOnRotationChanged(
-      [this](float yaw, float pitch)
-      {
-        Yaw = yaw;
-        Pitch = pitch;
-        MarkRenderDirty();
-      });
+  viewport->SetOnRotationChanged(RotateAction{this});
 
   auto hint = std::make_unique<UGuiLabel>(theme, "Drag to rotate");
   HintLabel = hint.get();
 
   auto changeBtn = std::make_unique<UGuiButton>(theme, "Change...");
   changeBtn->SetVisible(false);
-  changeBtn->SetOnClick(
-      [this]()
-      {
-        if (OnChange)
-        {
-          OnChange();
-        }
-      });
+  changeBtn->SetOnClick(ChangeAction{this});
   ChangeButton = changeBtn.get();
 
   PanelShell->AddChild(std::move(title));
@@ -80,6 +90,52 @@ UContentPreviewDock::UContentPreviewDock(const GuiTheme *theme,
 std::unique_ptr<UGuiPanel> UContentPreviewDock::ReleasePanel()
 {
   return std::move(Root);
+}
+
+ContentPreviewDockStorage UContentPreviewDock::InspectHostedStorage(
+    const GuiTheme &theme, const UContentPreviewRenderer *renderer,
+    const UGuiWidget &panel) const noexcept
+{
+  ContentPreviewDockStorage out;
+  if (Root || &panel != PanelShell || typeid(panel) != typeid(UGuiPanel) ||
+      Theme != &theme || Renderer != renderer || PanelShell->Theme != &theme)
+    return out;
+
+  const auto &children = panel.GetChildren();
+  const auto matches = [&](std::size_t index, const auto *alias)
+  {
+    using Widget = std::remove_cv_t<std::remove_pointer_t<decltype(alias)>>;
+    const auto *child = children[index].get();
+    return child && child == alias && typeid(*child) == typeid(Widget) &&
+           alias->Theme == &theme && child->GetChildren().empty();
+  };
+  if (children.size() != 5 || !matches(0, TitleLabel) || !matches(1, PlaceholderLabel) ||
+      !matches(2, Viewport) || !matches(3, HintLabel) || !matches(4, ChangeButton) ||
+      ChangeButton->IsVisible() != bool(OnChange) ||
+      (Viewport->PreviewTexture && Viewport->PreviewTexture != PreviewTexture))
+    return out;
+
+  const bool profile = StlSourceStorage::SupportedProfile();
+  const auto rotate = InspectKnownOwnerCallback<RotateAction>(Viewport->OnRotationChanged, this, profile);
+  const auto change = InspectKnownOwnerCallback<ChangeAction>(ChangeButton->OnClick, this, profile);
+  StlSourceStorage storage;
+  storage.Add(sizeof(*this) + sizeof(UGuiPanel) + 3 * sizeof(UGuiLabel) +
+              sizeof(UGuiPreviewViewport) + sizeof(UGuiButton));
+  storage.Buffer(children.capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  for (const auto &child : children)
+    storage.Buffer(child->GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  for (const auto *label : {TitleLabel, PlaceholderLabel, HintLabel})
+    storage.Text(label->GetText());
+  storage.Text(ChangeButton->GetLabel());
+  storage.Text(EntryId);
+  storage.Add(rotate.requests);
+  storage.Add(change.requests);
+  out.requested = storage.bytes.requested;
+  out.widgets = 1 + children.size();
+  out.texturePresent = PreviewTexture != 0;
+  out.supported = storage.bytes.supported && rotate.present && rotate.supported &&
+                  change.present && change.supported;
+  return out;
 }
 
 UContentPreviewDock::~UContentPreviewDock()

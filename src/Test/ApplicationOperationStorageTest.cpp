@@ -487,6 +487,7 @@ int main(int argc,char **argv){
     report["crafting_storage"]=crafting_storage_fixture::Run();
     report["anvil_storage"]=anvil_storage_fixture::Run();
     report["worldgen_palette_storage"]=worldgen_palette_storage_fixture::Run();
+    report["worldgen_palette_owner"]=worldgen_palette_storage_fixture::RunOwnerCensus();
     std::ofstream file(argc>1?argv[1]:"application-operation-storage.json");file<<report.dump(2)<<'\n';require(bool(file),"application operation report write");std::cout<<report.dump()<<'\n';return 0;
   }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
 }

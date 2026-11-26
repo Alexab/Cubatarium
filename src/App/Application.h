@@ -182,6 +182,7 @@ public:
   DeathScreenStorage InspectDeathScreenStorage() const noexcept;
   PlayerWindowStorage InspectPlayerWindowStorage() const noexcept;
   PaletteGridStorage InspectPaletteGridStorage() const noexcept;
+  WorldGenPaletteStorage InspectWorldGenPaletteStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;
@@ -256,6 +257,7 @@ private:
   void RefreshCreatureCatalog();
   void ShowInGameHud();
   void BuildDeathOverlay();
+  void BuildWorldGenOverlay();
   void CloseCraftingScreen();
   void CloseAnvilScreen();
   void CloseWorldGenScreen();

@@ -1,5 +1,6 @@
 #include "Gui/Screens/WorldGenPaletteScreen.h"
 
+#include "Core/Memory/CallbackStorageSource.h"
 #include "Core/Memory/StlSourceStorage.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
@@ -64,9 +65,51 @@ const char *DefaultBlockForTerrainSlot(const std::string &slotName)
 
 struct UWorldGenPaletteScreen::SlotAction
 {
-  UWorldGenPaletteScreen *Screen;
+  UWorldGenPaletteScreen *owner;
   const GridSlot *Slot;
-  void operator()() const { Screen->ActivateSlot(*Slot); }
+  void operator()() const { owner->ActivateSlot(*Slot); }
+};
+
+struct UWorldGenPaletteScreen::GridLayoutAction
+{
+  UWorldGenPaletteScreen *owner;
+  void operator()(UGuiScrollView &view) const { owner->LayoutIconGrid(view); }
+};
+
+template<void (UWorldGenPaletteScreen::*Action)()>
+struct UWorldGenPaletteScreen::ButtonAction
+{
+  UWorldGenPaletteScreen *owner;
+  void operator()() const { (owner->*Action)(); }
+};
+
+struct UWorldGenPaletteScreen::TabAction
+{
+  enum class Bar { Main, Pool, Section };
+  UWorldGenPaletteScreen *owner;
+  Bar bar;
+
+  void operator()(int tab) const
+  {
+    switch (bar)
+    {
+    case Bar::Main:
+      owner->MainTabs->SetActiveTab(owner->ActiveTab);
+      owner->RequestedTab = tab;
+      break;
+    case Bar::Pool:
+      owner->ObjectPoolTabs->SetActiveTab(owner->ObjectPoolTab);
+      owner->RequestedPoolTab = tab;
+      owner->RequestedSectionTab = 0;
+      break;
+    case Bar::Section:
+      owner->SectionTabs->SetActiveTab(owner->SectionTab);
+      owner->RequestedPoolTab = owner->ObjectPoolTab;
+      owner->RequestedSectionTab = tab;
+      break;
+    }
+    owner->ContentDirty = true;
+  }
 };
 
 class UWorldGenPaletteScreen::GridSlot final : public UGuiSlot
@@ -141,47 +184,29 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
 
   auto mainTabs = std::make_unique<UGuiTabBar>(theme);
   mainTabs->SetTabs({"Objects", "Terrain", "Ores"});
-  mainTabs->SetOnTabChanged(
-      [this](int tab)
-      {
-        MainTabs->SetActiveTab(ActiveTab);
-        RequestedTab = tab;
-        ContentDirty = true;
-      });
+  mainTabs->SetActiveTab(ActiveTab);
+  mainTabs->SetOnTabChanged(TabAction{this, TabAction::Bar::Main});
 
   auto poolTabs = std::make_unique<UGuiTabBar>(theme);
   poolTabs->SetTabs(
       {kObjectPoolLabels[0], kObjectPoolLabels[1], kObjectPoolLabels[2],
        kObjectPoolLabels[3]});
-  poolTabs->SetOnTabChanged(
-      [this](int tab)
-      {
-        ObjectPoolTabs->SetActiveTab(ObjectPoolTab);
-        RequestedPoolTab = tab;
-        RequestedSectionTab = 0;
-        ContentDirty = true;
-      });
+  poolTabs->SetActiveTab(ObjectPoolTab);
+  poolTabs->SetOnTabChanged(TabAction{this, TabAction::Bar::Pool});
 
   auto sectionTabs = std::make_unique<UGuiTabBar>(theme);
-  sectionTabs->SetOnTabChanged(
-      [this](int tab)
-      {
-        SectionTabs->SetActiveTab(SectionTab);
-        RequestedPoolTab = ObjectPoolTab;
-        RequestedSectionTab = tab;
-        ContentDirty = true;
-      });
+  sectionTabs->SetOnTabChanged(TabAction{this, TabAction::Bar::Section});
 
-  const auto layoutGrid = [this](UGuiScrollView &view) { LayoutIconGrid(view); };
+  const GridLayoutAction layoutGrid{this};
   auto scroll = std::make_unique<UGuiScrollView>(theme);
   scroll->SetAfterScrollLayout(layoutGrid);
 
   auto addBtn = std::make_unique<UGuiButton>(theme, "+ Add object");
-  addBtn->SetOnClick([this]() { OpenObjectPicker(); });
+  addBtn->SetOnClick(ButtonAction<&UWorldGenPaletteScreen::OpenObjectPicker>{this});
 
   auto resetBtn =
       std::make_unique<UGuiButton>(theme, "Reset section to defaults");
-  resetBtn->SetOnClick([this]() { OnResetSection(); });
+  resetBtn->SetOnClick(ButtonAction<&UWorldGenPaletteScreen::OnResetSection>{this});
 
   auto tooltip = std::make_unique<UGuiLabel>(theme, "");
   tooltip->SetVisible(false);
@@ -192,7 +217,7 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
   pickerPanel->SetZOrder(kPickerZOrder);
   auto pickerTitle = std::make_unique<UGuiLabel>(theme, "Pick item");
   auto pickerClose = std::make_unique<UGuiButton>(theme, "Close");
-  pickerClose->SetOnClick([this]() { ClosePicker(); });
+  pickerClose->SetOnClick(ButtonAction<&UWorldGenPaletteScreen::ClosePicker>{this});
   auto pickerScroll = std::make_unique<UGuiScrollView>(theme);
   pickerScroll->SetAfterScrollLayout(layoutGrid);
   auto preview = std::make_unique<UContentPreviewDock>(theme, PreviewRenderer);
@@ -558,8 +583,7 @@ void UWorldGenPaletteScreen::SyncPreviewDock()
     {
       PreviewDock->ClearSelection();
     }
-    PreviewDock->SetOnChange(
-        [this]() { OpenTerrainPicker(SelectedTerrainSlot); });
+    PreviewDock->SetOnChange(ButtonAction<&UWorldGenPaletteScreen::OpenTerrainPicker>{this});
     return;
   }
   if (ActiveTab == 2 && !SelectedOreSlot.empty() && World)
@@ -569,19 +593,8 @@ void UWorldGenPaletteScreen::SyncPreviewDock()
         ContentKind::Block, blockId,
         DisplayNameForId(ContentKind::Block, blockId,
                          CollectCatalogEntries(ContentKind::Block)));
-    PreviewDock->SetOnChange(
-        [this]()
-        {
-          if (!World || SelectedOreSlot.empty())
-          {
-            return;
-          }
-          WorldGenOreSlot &ore = World->GetWorldGenSets().Ores[SelectedOreSlot];
-          ore.Enabled = !ore.Enabled;
-          SaveSets();
-          ContentDirty = true;
-        },
-        "Toggle enabled");
+    PreviewDock->SetOnChange(ButtonAction<&UWorldGenPaletteScreen::ToggleOre>{this},
+                             "Toggle enabled");
     return;
   }
   PreviewDock->SetOnChange(nullptr);
@@ -803,13 +816,23 @@ void UWorldGenPaletteScreen::OpenObjectPicker()
   PickerDirty = true;
 }
 
-void UWorldGenPaletteScreen::OpenTerrainPicker(const std::string &slotName)
+void UWorldGenPaletteScreen::OpenTerrainPicker()
 {
-  if (ActiveTab != 1 || slotName.empty())
+  if (ActiveTab != 1 || SelectedTerrainSlot.empty())
     return;
-  RequestedTerrainSlot = slotName;
+  RequestedTerrainSlot = SelectedTerrainSlot;
   RequestedPicker = PickerMode::TerrainSlot;
   PickerDirty = true;
+}
+
+void UWorldGenPaletteScreen::ToggleOre()
+{
+  if (ActiveTab != 2 || !World || SelectedOreSlot.empty())
+    return;
+  auto &ore = World->GetWorldGenSets().Ores[SelectedOreSlot];
+  ore.Enabled = !ore.Enabled;
+  SaveSets();
+  ContentDirty = true;
 }
 
 void UWorldGenPaletteScreen::PublishPicker()
@@ -943,15 +966,21 @@ WorldGenPaletteGridStorage UWorldGenPaletteScreen::InspectGridStorage() const no
     storage.Buffer(children.capacity(), sizeof(children.front()));
     for (const auto &child : children)
     {
+      if (!child)
+      {
+        storage.bytes.supported = false;
+        continue;
+      }
       if (const auto *row = dynamic_cast<const GridSlot *>(child.get()))
       {
+        const auto source = InspectKnownOwnerCallback<SlotAction>(row->OnClick, this, storage.bytes.supported);
         const auto *action = row->OnClick.target<SlotAction>();
-        if (!action || action->Screen != this || action->Slot != row ||
+        if (!source.supported || !action || action->Slot != row ||
             row->PickerRow != picker || row->Theme != Theme ||
             row->OnActivate || row->OnBeginDrag || !row->GetChildren().empty())
           storage.bytes.supported = false;
-        static_assert(sizeof(SlotAction) <= 2 * sizeof(void *));
         storage.Add(sizeof(GridSlot));
+        storage.Add(source.requests);
         storage.Text(row->Id);
         storage.Text(row->Tooltip);
         storage.Text(row->TerrainSlot);
@@ -987,6 +1016,143 @@ WorldGenPaletteGridStorage UWorldGenPaletteScreen::InspectGridStorage() const no
   out.pickerTitleBytes = title.bytes.requested;
   out.supported = content.supported && picker.supported && tabs.bytes.supported &&
                   title.bytes.supported;
+  return out;
+}
+
+WorldGenPaletteStorage UWorldGenPaletteScreen::InspectOwnedStorage(
+    const UGuiContext &context, const UWorld *world, const IUContentCatalog *catalog,
+    const IUGuiIconSource *icons, const UContentPreviewRenderer *preview) const noexcept
+{
+  WorldGenPaletteStorage out;
+  out.present = true;
+  out.visible = Visible;
+  const auto *theme = &context.GetTheme();
+  if (typeid(*this) != typeid(UWorldGenPaletteScreen) || !Built ||
+      Context != &context || Theme != theme || Metrics.Theme != theme ||
+      !Renderer || Renderer != context.Renderer.get() || !world || World != world ||
+      !catalog || Catalog != catalog || Icons != icons || PreviewRenderer != preview ||
+      !Root || Root.get() != RootShell || typeid(*Root) != typeid(UGuiPanel) ||
+      RootShell->Theme != theme || Root->IsVisible() != Visible || !PreviewDock)
+    return out;
+
+  const auto matches = [theme](const auto &child, const auto *alias)
+  {
+    using Widget = std::remove_cv_t<std::remove_pointer_t<decltype(alias)>>;
+    return child && child.get() == alias && typeid(*child) == typeid(Widget) &&
+           alias->Theme == theme;
+  };
+  const auto &outer = Root->GetChildren();
+  if (outer.size() != 2 || !matches(outer[0], Panel) || !outer[1])
+    return out;
+  const auto &main = Panel->GetChildren();
+  if (main.size() != 9 || !matches(main[0], BannerLabel) || !matches(main[1], MainTabs) ||
+      !matches(main[2], ObjectPoolTabs) || !matches(main[3], SectionTabs) ||
+      !matches(main[4], ContentScroll) || !matches(main[5], AddButton) ||
+      !matches(main[6], ResetButton) || !matches(main[7], TooltipLabel) ||
+      !matches(main[8], PickerPanel))
+    return out;
+  const auto &picker = PickerPanel->GetChildren();
+  if (picker.size() != 3 || !matches(picker[0], PickerTitleLabel) ||
+      !matches(picker[1], PickerCloseButton) || !matches(picker[2], PickerScroll) ||
+      PickerPanel->IsVisible() != (Picker != PickerMode::None) ||
+      ContentScroll->Content().Theme != theme || PickerScroll->Content().Theme != theme)
+    return out;
+  for (std::size_t i = 0; i + 1 < main.size(); ++i)
+    if (!main[i]->GetChildren().empty())
+      return out;
+  for (const auto &child : picker)
+    if (!child->GetChildren().empty())
+      return out;
+
+  const auto dock = PreviewDock->InspectHostedStorage(*theme, preview, *outer[1]);
+  out.grid = InspectGridStorage();
+  if (!dock.supported || !out.grid.supported)
+    return out;
+
+  const bool profile = StlSourceStorage::SupportedProfile();
+  StlSourceStorage children, tabs, text, callbacks, total;
+  bool actionsKnown = true;
+  const auto requiredAction = [&](const CallbackStorageSnapshot &snapshot)
+  {
+    actionsKnown &= snapshot.present && snapshot.supported;
+    callbacks.Add(snapshot.requests);
+  };
+  for (const auto *scroll : {ContentScroll, PickerScroll})
+    requiredAction(InspectKnownOwnerCallback<GridLayoutAction>(scroll->AfterScrollLayout, this, profile));
+  const auto tabAction = [&](const UGuiTabBar &bar, TabAction::Bar role)
+  {
+    const auto *action = bar.OnTabChanged.target<TabAction>();
+    actionsKnown &= action && action->bar == role;
+    requiredAction(InspectKnownOwnerCallback<TabAction>(bar.OnTabChanged, this, profile));
+  };
+  tabAction(*MainTabs, TabAction::Bar::Main);
+  tabAction(*ObjectPoolTabs, TabAction::Bar::Pool);
+  tabAction(*SectionTabs, TabAction::Bar::Section);
+  requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::OpenObjectPicker>>(
+      AddButton->OnClick, this, profile));
+  requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::OnResetSection>>(
+      ResetButton->OnClick, this, profile));
+  requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::ClosePicker>>(
+      PickerCloseButton->OnClick, this, profile));
+  const auto &change = PreviewDock->OnChange;
+  if (change)
+  {
+    using TerrainAction = ButtonAction<&UWorldGenPaletteScreen::OpenTerrainPicker>;
+    using OreAction = ButtonAction<&UWorldGenPaletteScreen::ToggleOre>;
+    if (change.target<TerrainAction>())
+      requiredAction(InspectKnownOwnerCallback<TerrainAction>(change, this, profile));
+    else
+      requiredAction(InspectKnownOwnerCallback<OreAction>(change, this, profile));
+  }
+  if (!actionsKnown)
+    return out;
+
+  const auto countChildren = [&](const UGuiWidget &widget)
+  {
+    children.Buffer(widget.GetChildren().capacity(), sizeof(std::unique_ptr<UGuiWidget>));
+  };
+  countChildren(*Root);
+  countChildren(*Panel);
+  for (const auto &child : main)
+    countChildren(*child);
+  for (const auto &child : picker)
+    countChildren(*child);
+  for (const auto *bar : {MainTabs, ObjectPoolTabs})
+  {
+    tabs.Buffer(bar->GetTabLabels().capacity(), sizeof(std::string));
+    tabs.Buffer(bar->GetEnabledTabs().capacity() / CHAR_BIT, 1);
+    for (const auto &label : bar->GetTabLabels())
+      tabs.Text(label);
+  }
+  tabs.Add(out.grid.sectionTabBytes);
+  for (const auto *label : {BannerLabel, TooltipLabel})
+    text.Text(label->GetText());
+  for (const auto *button : {AddButton, ResetButton, PickerCloseButton})
+    text.Text(button->GetLabel());
+  for (const auto *value : {&SelectedEntryId, &SelectedTerrainSlot, &SelectedOreSlot,
+                            &PickerTerrainSlot, &RequestedTerrainSlot})
+    text.Text(*value);
+  text.Add(out.grid.pickerTitleBytes);
+
+  out.bindingsMatch = true;
+  out.screenBytes = sizeof(*this);
+  out.widgetBytes = 3 * sizeof(UGuiPanel) + 3 * sizeof(UGuiLabel) + 3 * sizeof(UGuiButton) +
+                    3 * sizeof(UGuiTabBar) + 2 * sizeof(UGuiScrollView);
+  out.widgets = 2 + main.size() + picker.size() + dock.widgets +
+                ContentScroll->Content().GetChildren().size() + PickerScroll->Content().GetChildren().size();
+  out.childrenBytes = children.bytes.requested;
+  out.tabBytes = tabs.bytes.requested;
+  out.textBytes = text.bytes.requested;
+  out.callbackBytes = callbacks.bytes.requested;
+  out.previewBytes = dock.requested;
+  out.previewTexturePresent = dock.texturePresent;
+  for (const auto bytes : {out.screenBytes, out.widgetBytes, out.childrenBytes, out.tabBytes,
+                          out.textBytes, out.callbackBytes, out.previewBytes,
+                          out.grid.contentBytes, out.grid.pickerBytes})
+    total.Add(bytes);
+  out.totalBytes = total.bytes.requested;
+  out.supported = total.bytes.supported && children.bytes.supported && tabs.bytes.supported &&
+                  text.bytes.supported && callbacks.bytes.supported;
   return out;
 }
 

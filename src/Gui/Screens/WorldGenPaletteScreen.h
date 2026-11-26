@@ -35,6 +35,14 @@ struct WorldGenPaletteGridStorage
   bool supported{false};
 };
 
+struct WorldGenPaletteStorage
+{
+  WorldGenPaletteGridStorage grid;
+  std::size_t screenBytes{}, widgetBytes{}, childrenBytes{}, tabBytes{}, textBytes{};
+  std::size_t callbackBytes{}, previewBytes{}, totalBytes{}, widgets{};
+  bool present{}, visible{}, bindingsMatch{}, previewTexturePresent{}, supported{};
+};
+
 class UWorldGenPaletteScreen : public UGuiScreenBase
 {
 public:
@@ -54,11 +62,17 @@ public:
   void SetPointerPressed(bool pressed);
   void RenderPreview();
   WorldGenPaletteGridStorage InspectGridStorage() const noexcept;
+  WorldGenPaletteStorage InspectOwnedStorage(
+      const UGuiContext &context, const UWorld *world, const IUContentCatalog *catalog,
+      const IUGuiIconSource *icons, const UContentPreviewRenderer *preview) const noexcept;
 
 private:
   friend struct WorldGenPaletteStorageProbe;
   class GridSlot;
   struct SlotAction;
+  struct TabAction;
+  struct GridLayoutAction;
+  template<void (UWorldGenPaletteScreen::*Action)()> struct ButtonAction;
   enum class PickerMode
   {
     None,
@@ -71,7 +85,8 @@ private:
   void PublishPicker();
   void ClosePicker();
   void OpenObjectPicker();
-  void OpenTerrainPicker(const std::string &slotName);
+  void OpenTerrainPicker();
+  void ToggleOre();
   void OnPickerPick(const std::string &id);
   void SaveSets();
   void OnResetSection();

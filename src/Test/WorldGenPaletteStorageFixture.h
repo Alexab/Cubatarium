@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Blocks/BlockDefinitionStorage.h"
+#include "Game/GameSession.h"
 #include "Gui/Preview/ContentPreviewDock.h"
 #include "Gui/Widgets/GuiButton.h"
 #include "Gui/Widgets/GuiLabel.h"
@@ -298,6 +300,137 @@ inline Json Run()
   return {{"status", "PASS"}, {"prefixes", prefixes}, {"captured_row_once", true},
           {"cancelled_release", true}, {"refusal_keeps_scroll", true},
           {"terrain_slot_binding", true}, {"ore_slot_binding", true}};
+}
+
+inline Json RunOwnerCensus()
+{
+  using AppProbe = ApplicationOperationSourceProbe;
+  auto world = std::make_shared<UWorld>(std::make_shared<UTextureCubeStorage>(nullptr), nullptr);
+  WorldGenObjectEntry entry;
+  entry.ObjectName = ObjectId;
+  world->GetWorldGenSets().VegetationSections[Section].Entries.push_back(std::move(entry));
+  UApplication app(nullptr, world, nullptr, nullptr, nullptr, nullptr, nullptr);
+  auto &context = app.GetGui();
+  Require(context.Initialize(std::make_shared<UShaderManager>(), {}), "initialize owner census GUI");
+  AppProbe::SetGameState(app);
+  auto &catalog = app.GetGameSession().GetContentCatalog();
+  UBlockDefinitionStorage definitions;
+  BlockDefinition block;
+  block.Id = 234;
+  block.Name = BlockId;
+  definitions.ReplaceAll({{block.Id, block}}, {{block.Name, block.Id}});
+  catalog.IndexBlocks(definitions);
+
+  const auto absent = app.InspectWorldGenPaletteStorage();
+  Require(absent.supported && absent.bindingsMatch && !absent.present && !absent.totalBytes,
+          "application has no charge before building the WorldGen owner");
+  const auto inspect = [&]()
+  {
+    const size_t attempts = observation::State.attempts;
+    const auto value = app.InspectWorldGenPaletteStorage();
+    Require(value.supported && value.present && value.bindingsMatch &&
+                value.totalBytes == observation::State.live &&
+                value.totalBytes == value.screenBytes + value.widgetBytes + value.childrenBytes +
+                    value.tabBytes + value.textBytes + value.callbackBytes + value.previewBytes +
+                    value.grid.contentBytes + value.grid.pickerBytes &&
+                observation::State.attempts == attempts,
+            "application census equals independent live requests, without allocation or overlap");
+    return value;
+  };
+
+  WorldGenPaletteStorage cold, opened, hidden;
+  size_t buildRequests = 0;
+  {
+    observation::Scope observed;
+    auto &screen = AppProbe::BuildOwnedWorldGen(app);
+    buildRequests = observation::State.attempts;
+    cold = inspect();
+    Require(buildRequests && !cold.visible && cold.widgets == 20 && !cold.grid.contentBytes &&
+                !cold.grid.pickerBytes && cold.previewBytes && !cold.previewTexturePresent,
+            "cold WorldGen census includes one hosted preview and two empty grids");
+    Require(app.RouteKey(GLFW_KEY_G, GLFW_PRESS, 0), "open application-owned palette");
+    screen.Update(0);
+    const auto objects = inspect();
+    Require(objects.visible && objects.widgets == 21 && objects.grid.sectionTabBytes &&
+                objects.grid.contentBytes && objects.totalBytes > cold.totalBytes,
+            "open WorldGen census counts the retained object row and section backing");
+
+    auto terrain = Point(Probe::Tabs(screen));
+    terrain.X += Probe::Tabs(screen).GetBounds().W / 3;
+    Require(app.RouteMouseButton(0, true, terrain.X, terrain.Y) &&
+                app.RouteMouseButton(0, false, terrain.X, terrain.Y), "switch owner fixture to terrain");
+    screen.Update(0);
+    Click(app, *Rows(Probe::Content(screen)).front(), "select surface in owner fixture");
+    screen.Update(0);
+    const auto &preview = Probe::Preview(screen);
+    auto &change = *preview.GetChildren().back();
+    Require(change.IsVisible(), "terrain Change action is installed in the hosted preview");
+    Click(app, change, "open terrain picker in owner fixture");
+    screen.Update(0);
+    opened = inspect();
+    Require(opened.visible && opened.widgets == 26 && opened.grid.pickerBytes &&
+                opened.grid.pickerTitleBytes && opened.previewBytes > cold.previewBytes &&
+                Rows(Probe::Picker(screen)).front()->GetBounds().W > 0,
+            "application census includes preview metadata and the published resource picker");
+
+    AppProbe::CloseWorldGen(app);
+    screen.Update(0);
+    hidden = inspect();
+    Require(!hidden.visible && !hidden.grid.pickerBytes && hidden.widgets == 25 &&
+                hidden.totalBytes < opened.totalBytes,
+            "closed owner retires picker rows but reports its actual retained storage");
+    AppProbe::RetireWorldGen(app);
+    Require(!observation::State.live && !observation::State.blocks,
+            "destroying the application overlay retires the complete measured subtree");
+  }
+
+  for (size_t cutoff = 0; cutoff <= buildRequests; ++cutoff)
+  {
+    auto &prior = AppProbe::BuildOwnedWorldGen(app);
+    Require(app.RouteKey(GLFW_KEY_G, GLFW_PRESS, 0), "open overlay before replacement");
+    prior.Update(0);
+    const auto *priorRoot = prior.GetRoot();
+    const auto press = Point(Probe::Add(prior));
+    Require(app.RouteMouseButton(0, true, press.X, press.Y) && Probe::Capture(prior),
+            "application captures the currently published button");
+    observation::Scope observed(cutoff);
+    UWorldGenPaletteScreen *replacement = nullptr;
+    try { replacement = &AppProbe::BuildOwnedWorldGen(app); }
+    catch (const std::bad_alloc &) {}
+    observation::State.fail_after = SIZE_MAX;
+    if (cutoff < buildRequests)
+    {
+      const auto active = app.InspectWorldGenPaletteStorage();
+      Require(!replacement && observation::State.refusals && !observation::State.live &&
+                  active.supported && active.visible && prior.GetRoot() == priorRoot && Probe::Capture(prior),
+              "failed owner construction preserves the previous visible root and capture");
+      replacement = &AppProbe::BuildOwnedWorldGen(app);
+    }
+    Require(replacement && replacement->GetRoot() != priorRoot && !Probe::Capture(*replacement) &&
+                !inspect().visible, "replacement publishes one closed owner and clears the old capture");
+    app.RouteMouseButton(0, false, press.X, press.Y);
+    replacement->Update(0);
+    Require(!Probe::PickerVisible(*replacement), "release after replacement does not invoke the old action");
+    AppProbe::RetireWorldGen(app);
+    Require(!observation::State.live && !observation::State.blocks,
+            "replacement storage retires on every tested path");
+  }
+
+  auto &screen = AppProbe::BuildOwnedWorldGen(app);
+  Catalog foreign;
+  Require(!screen.InspectOwnedStorage(context, world.get(), &foreign, nullptr, nullptr).supported,
+          "unknown borrowed catalog rejects the owner join");
+  bool invoked = false;
+  Probe::Add(screen).SetOnClick([&] { invoked = true; });
+  Require(!app.InspectWorldGenPaletteStorage().supported && !invoked,
+          "unknown live callback is rejected without invocation");
+  AppProbe::RetireWorldGen(app);
+  return {{"status", "PASS"}, {"cold_bytes", cold.totalBytes}, {"cold_widgets", cold.widgets},
+          {"opened_bytes", opened.totalBytes}, {"opened_widgets", opened.widgets},
+          {"hidden_bytes", hidden.totalBytes}, {"preview_bytes", opened.previewBytes},
+          {"replacement_refusals", buildRequests}, {"no_allocation_census", true},
+          {"replacement_retires_capture", true}, {"foreign_catalog_rejected", true},
+          {"unknown_action_rejected", true}, {"retired", true}};
 }
 } // namespace worldgen_palette_storage_fixture
 } // namespace cutum

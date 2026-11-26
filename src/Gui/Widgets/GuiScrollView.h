@@ -61,6 +61,7 @@ public:
   void CollectFocusables(std::vector<UGuiWidget *> &out) override;
 
 private:
+  friend class UWorldGenPaletteScreen;
   bool HandleKeyScroll(const GuiKeyEvent &event);
   GuiRect ViewportRect() const;
   GuiRect ScrollbarTrackRect() const;

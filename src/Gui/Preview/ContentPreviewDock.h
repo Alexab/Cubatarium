@@ -3,6 +3,7 @@
 
 #include "Gui/Core/GuiTypes.h"
 #include "Gui/Interfaces/IUContentCatalog.h"
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <string>
@@ -17,7 +18,14 @@ class UGuiButton;
 class UGuiLabel;
 class UGuiPanel;
 class UGuiPreviewViewport;
+class UGuiWidget;
 struct GuiTheme;
+
+struct ContentPreviewDockStorage
+{
+  std::size_t requested{}, widgets{};
+  bool texturePresent{}, supported{};
+};
 
 class UContentPreviewDock
 {
@@ -40,6 +48,12 @@ public:
   GuiRect GetViewportBounds() const;
 
 private:
+  friend class UWorldGenPaletteScreen;
+  struct RotateAction;
+  struct ChangeAction;
+  ContentPreviewDockStorage InspectHostedStorage(
+      const GuiTheme &theme, const UContentPreviewRenderer *renderer,
+      const UGuiWidget &panel) const noexcept;
   void LayoutContents(const GuiRect &bounds);
   void MarkRenderDirty();
   void RenderPreviewIfNeeded();
