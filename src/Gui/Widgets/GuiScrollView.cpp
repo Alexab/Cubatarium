@@ -202,13 +202,8 @@ void UGuiScrollView::LayoutContent(int spacing, int Padding)
     return;
   }
 
-  std::vector<UGuiWidget *> kids;
-  for (const auto &child : ContentPanel.GetChildren())
-  {
-    kids.push_back(child.get());
-  }
-  ScrollContentHeight = UGuiLayout::StackVerticalMeasure({0, 0, vpW, 100000}, spacing,
-                                                   Padding, kids);
+  const auto &kids = ContentPanel.GetChildren();
+  ScrollContentHeight = UGuiLayout::StackVerticalMeasure(spacing, Padding, kids);
 
   ContentPanel.SetBounds({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight});
   UGuiLayout::StackVertical({vp.X, vp.Y - ScrollY, vpW, ScrollContentHeight}, spacing,

@@ -35,7 +35,7 @@
 #include <sstream>
 #include <stdexcept>
 
-#include "Render/GlIncludes.h"
+#include "Render/Textures/GlTextureOwner.h"
 
 namespace cutum
 {
@@ -82,80 +82,70 @@ std::string UCharacterSheetScreen::FormatBar(const char *name, float cur,
 
 void UCharacterSheetScreen::SetVisible(bool visible)
 {
-  if (!visible && Search)
-    Search->SetFocused(false);
+  if (!visible && Widgets.Search)
+    Widgets.Search->SetFocused(false);
   if (!visible)
     if (auto *session = dynamic_cast<UGameSession *>(Stats))
       session->CancelDrag();
   if (visible != Visible)
-  {
     EditingAppearance = Section == 3;
-    if (!DraftInitialized)
-      ResetAppearanceDraft();
-  }
   Visible = visible;
   if (Root)
-  {
     Root->SetVisible(visible);
-  }
-  if (!Visible)
-  {
-    // UX U4: keep the preview texture across opens - it was deleted and
-    // re-rendered (full creature visual construction) on every open.
-  }
-  else if (Visible && Built)
-  {
+  if (Visible)
     RefreshLabels();
-  }
 }
 
 GuiRect UCharacterSheetScreen::GetMainSlotBounds() const
 {
-  return ToolSlots.empty() ? GuiRect{} : ToolSlots[0]->GetBounds();
+  return Widgets.ToolSlots[0] ? Widgets.ToolSlots[0]->GetBounds() : GuiRect{};
 }
 GuiRect UCharacterSheetScreen::GetDropButtonBounds() const
 {
-  return DropButton ? DropButton->GetBounds() : GuiRect{};
+  return Widgets.DropButton ? Widgets.DropButton->GetBounds() : GuiRect{};
 }
 GuiRect UCharacterSheetScreen::GetDeleteButtonBounds() const
 {
-  return DeleteButton ? DeleteButton->GetBounds() : GuiRect{};
+  return Widgets.DeleteButton ? Widgets.DeleteButton->GetBounds() : GuiRect{};
 }
 void UCharacterSheetScreen::Toggle() { SetVisible(!Visible); }
 
 bool UCharacterSheetScreen::IsSearchFocused() const
 {
-  return Search && Search->IsFocused();
+  return Widgets.Search && Widgets.Search->IsFocused();
 }
 bool UCharacterSheetScreen::RouteTextKey(const GuiKeyEvent &e)
 {
-  return IsSearchFocused() ? Search->OnKey(e) : false;
+  return IsSearchFocused() ? Widgets.Search->OnKey(e) : false;
 }
 bool UCharacterSheetScreen::RouteTextChar(const GuiCharEvent &e)
 {
-  return IsSearchFocused() ? Search->OnChar(e) : false;
+  return IsSearchFocused() ? Widgets.Search->OnChar(e) : false;
 }
-void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
+void UCharacterSheetScreen::BuildEquipmentPanel(PageWidgets &page, UGuiPanel &body,
                                                 const GuiTheme &theme)
 {
   // Paper-doll panel (preview + equipment).
   {
     auto doll = std::make_unique<UGuiPanel>(&theme);
-    DollPanel = doll.get();
-    DollPanel->SetDrawBackground(true);
+    doll->ReserveChildren(2 + page.ArmorSlots.size() + page.ToolSlots.size());
+    page.DollPanel = doll.get();
+    page.DollPanel->SetDrawBackground(true);
 
     auto eqHead = std::make_unique<UGuiLabel>(&theme, "Equipment");
-    EquipmentHeader = eqHead.get();
-    DollPanel->AddChild(std::move(eqHead));
+    page.EquipmentHeader = eqHead.get();
+    page.DollPanel->AddChild(std::move(eqHead));
 
     auto preview = std::make_unique<UGuiPreviewViewport>(&theme);
-    PreviewViewport = preview.get();
-    PreviewViewport->SetOnRotationChanged([this](float /*yaw*/, float /*pitch*/)
-                                          { RenderCharacterPreview(); });
-    DollPanel->AddChild(std::move(preview));
+    page.PreviewViewport = preview.get();
+    page.PreviewViewport->SetOnRotationChanged([this](float, float)
+    {
+      if (Stats)
+        try { RenderCharacterPreview(Stats->GetCharacterStatsSnapshot()); }
+        catch (const std::bad_alloc &) { /* Retry on the next refresh. */ }
+    });
+    page.DollPanel->AddChild(std::move(preview));
 
-    ArmorSlots.clear();
-    ToolSlots.clear();
     const char *armorNames[4] = {"Head", "Chest", "Legs", "Feet"};
     for (int i = 0; i < 4; ++i)
     {
@@ -215,8 +205,8 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
             }
             RefreshLabels();
           });
-      ArmorSlots.push_back(slot.get());
-      DollPanel->AddChild(std::move(slot));
+      page.ArmorSlots[i] = slot.get();
+      page.DollPanel->AddChild(std::move(slot));
     }
     for (int i = 0; i < 2; ++i)
     {
@@ -272,9 +262,8 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
               auto *session = dynamic_cast<UGameSession *>(Stats);
               if (!session)
                 return;
-              const auto snapshot = session->GetCharacterStatsSnapshot();
-              const auto index = snapshot.activeRow * 10 +
-                                 session->GetSelectedSlot(snapshot.activeRow);
+              const auto row = session->GetActiveHotbarRow();
+              const auto index = row * 10 + session->GetSelectedSlot(row);
               session->InventoryClick(index,
                                       event.Button == GuiMouseButton::Right,
                                       (event.Mods & GuiKey::ModShift) != 0,
@@ -338,8 +327,8 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
               }
               RefreshLabels();
             });
-      ToolSlots.push_back(slot.get());
-      DollPanel->AddChild(std::move(slot));
+      page.ToolSlots[i] = slot.get();
+      page.DollPanel->AddChild(std::move(slot));
     }
 
     body.AddChild(std::move(doll));
@@ -349,43 +338,41 @@ void UCharacterSheetScreen::BuildEquipmentPanel(UGuiPanel &body,
 void UCharacterSheetScreen::Build(UGuiContext &ctx)
 {
   const GuiTheme &theme = ctx.GetTheme();
-  int w = ctx.GetRenderer().GetWindowWidth();
-  int h = ctx.GetRenderer().GetWindowHeight();
-  if (w > 0)
-  {
-    ViewportW = w;
-  }
-  if (h > 0)
-  {
-    ViewportH = h;
-  }
+  const int rendererW = ctx.GetRenderer().GetWindowWidth();
+  const int rendererH = ctx.GetRenderer().GetWindowHeight();
+  const int width = Root || rendererW <= 0 ? ViewportW : rendererW;
+  const int height = Root || rendererH <= 0 ? ViewportH : rendererH;
+  PageWidgets page;
 
   auto root = std::make_unique<UGuiPanel>(&theme);
   root->SetDrawBackground(false);
-  root->SetBounds({0, 0, ViewportW, ViewportH});
+  root->SetVisible(Visible);
+  root->ReserveChildren(2);
 
   auto window = std::make_unique<UGuiWindow>(&theme, "Player");
-  Window = window.get();
+  window->ReserveChildren(1);
+  page.Window = window.get();
 
   auto body = std::make_unique<UGuiPanel>(&theme);
-  BodyPanel = body.get();
+  page.BodyPanel = body.get();
   body->SetDrawBackground(false);
+  body->ReserveChildren(14);
 
   auto meta = std::make_unique<UGuiLabel>(&theme, "");
-  TitleMeta = meta.get();
+  page.TitleMeta = meta.get();
   body->AddChild(std::move(meta));
 
   auto mode = std::make_unique<UGuiLabel>(&theme, "");
-  ModeLabel = mode.get();
-  ModeLabel->SetUseSecondaryColor(true);
+  page.ModeLabel = mode.get();
+  page.ModeLabel->SetUseSecondaryColor(true);
   body->AddChild(std::move(mode));
 
   auto tabs = std::make_unique<UGuiTabBar>(&theme);
-  Sections = tabs.get();
-  Sections->SetTabs(
+  page.Sections = tabs.get();
+  page.Sections->SetTabs(
       {"Backpack", "Equipment", "Status", "Appearance", "Catalog"});
-  Sections->SetActiveTab(Section);
-  Sections->SetOnTabChanged(
+  page.Sections->SetActiveTab(Section);
+  page.Sections->SetOnTabChanged(
       [this](int section)
       {
         if (section == 4)
@@ -398,13 +385,13 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
       });
   body->AddChild(std::move(tabs));
   auto search = std::make_unique<UGuiTextInput>(&theme);
-  Search = search.get();
-  Search->SetClipboard(ctx.GetClipboard());
-  Search->SetOnEdited([this] { RefreshLabels(); });
+  page.Search = search.get();
+  page.Search->SetClipboard(ctx.GetClipboard());
+  page.Search->SetOnEdited([this] { RefreshLabels(); });
   body->AddChild(std::move(search));
   auto sort = std::make_unique<UGuiButton>(&theme, "Sort");
-  SortButton = sort.get();
-  SortButton->SetOnClick(
+  page.SortButton = sort.get();
+  page.SortButton->SetOnClick(
       [this]
       {
         if (RecoveryMode)
@@ -418,8 +405,8 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
       });
   body->AddChild(std::move(sort));
   auto drop = std::make_unique<UGuiButton>(&theme, "Drop");
-  DropButton = drop.get();
-  DropButton->SetOnClick(
+  page.DropButton = drop.get();
+  page.DropButton->SetOnClick(
       [this]
       {
         if (auto *session = dynamic_cast<UGameSession *>(Stats))
@@ -428,7 +415,7 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
       });
   body->AddChild(std::move(drop));
   auto remove = std::make_unique<UGuiButton>(&theme, "Clear template");
-  DeleteButton = remove.get();
+  page.DeleteButton = remove.get();
   remove->SetOnClick(
       [this]
       {
@@ -438,8 +425,8 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
       });
   body->AddChild(std::move(remove));
   auto recovery = std::make_unique<UGuiButton>(&theme, "Recover");
-  RecoveryButton = recovery.get();
-  RecoveryButton->SetOnClick(
+  page.RecoveryButton = recovery.get();
+  page.RecoveryButton->SetOnClick(
       [this]
       {
         RecoveryMode = !RecoveryMode;
@@ -451,18 +438,19 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
   body->AddChild(std::move(recovery));
   auto hint = std::make_unique<UGuiLabel>(
       &theme, "Click: move | Right: split/place 1 | Shift: quick | Ctrl: pin");
-  InventoryHint = hint.get();
+  page.InventoryHint = hint.get();
   body->AddChild(std::move(hint));
   auto toggle = std::make_unique<UGuiButton>(&theme, "Appearance");
-  AppearanceToggle = toggle.get();
+  page.AppearanceToggle = toggle.get();
   toggle->SetOnClick([this] { SetSection(EditingAppearance ? 1 : 3); });
   body->AddChild(std::move(toggle));
   auto customization = std::make_unique<UGuiPanel>(&theme);
-  AppearancePanel = customization.get();
+  customization->ReserveChildren(page.AppearanceButtons.size());
+  page.AppearancePanel = customization.get();
   for (int row = 0; row < 6; ++row)
   {
     auto button = std::make_unique<UGuiButton>(&theme, "");
-    AppearanceButtons.push_back(button.get());
+    page.AppearanceButtons[row] = button.get();
     button->SetOnClick(
         [this, row]
         {
@@ -490,24 +478,23 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
             return;
           if (row >= 4)
           {
+            DraftInitialized = false;
             SetSection(1);
-            ResetAppearanceDraft();
-            Relayout();
+            return;
           }
-          RefreshAppearanceControls();
           RefreshLabels();
         });
     customization->AddChild(std::move(button));
   }
   body->AddChild(std::move(customization));
 
-  BuildEquipmentPanel(*body, theme);
+  BuildEquipmentPanel(page, *body, theme);
 
   {
     auto bag = std::make_unique<UGuiPanel>(&theme);
-    BagPanel = bag.get();
-    BagPanel->SetDrawBackground(true);
-    BagSlots.clear();
+    bag->ReserveChildren(page.BagSlots.size());
+    page.BagPanel = bag.get();
+    page.BagPanel->SetDrawBackground(true);
     for (size_t i = 0; i < 40; ++i)
     {
       auto slot = std::make_unique<UGuiSlot>(&theme);
@@ -544,8 +531,8 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
                                           event.Button == GuiMouseButton::Left);
             RefreshLabels();
           });
-      BagSlots.push_back(slot.get());
-      BagPanel->AddChild(std::move(slot));
+      page.BagSlots[i] = slot.get();
+      page.BagPanel->AddChild(std::move(slot));
     }
     body->AddChild(std::move(bag));
   }
@@ -553,33 +540,32 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
   // Stats panel (vitals + attributes).
   {
     auto scroll = std::make_unique<UGuiScrollView>(&theme);
-    StatsScroll = scroll.get();
+    page.StatsScroll = scroll.get();
     auto *stats = &scroll->Content();
-    StatsPanel = stats;
-    StatsPanel->SetDrawBackground(true);
+    page.StatsPanel = stats;
+    page.StatsPanel->SetDrawBackground(true);
+    page.StatsPanel->ReserveChildren(FixedStatusRows);
 
     auto vitHead = std::make_unique<UGuiLabel>(&theme, "Vitals");
-    VitalsHeader = vitHead.get();
-    StatsPanel->AddChild(std::move(vitHead));
+    page.VitalsHeader = vitHead.get();
+    page.StatsPanel->AddChild(std::move(vitHead));
 
-    VitalLabels.clear();
     for (int i = 0; i < 7; ++i)
     {
       auto lab = std::make_unique<UGuiLabel>(&theme, "");
-      VitalLabels.push_back(lab.get());
-      StatsPanel->AddChild(std::move(lab));
+      page.VitalLabels[i] = lab.get();
+      page.StatsPanel->AddChild(std::move(lab));
     }
 
     auto attrHead = std::make_unique<UGuiLabel>(&theme, "Attributes");
-    AttrsHeader = attrHead.get();
-    StatsPanel->AddChild(std::move(attrHead));
+    page.AttrsHeader = attrHead.get();
+    page.StatsPanel->AddChild(std::move(attrHead));
 
-    AttrLabels.clear();
     for (int i = 0; i < 7; ++i)
     {
       auto lab = std::make_unique<UGuiLabel>(&theme, "");
-      AttrLabels.push_back(lab.get());
-      StatsPanel->AddChild(std::move(lab));
+      page.AttrLabels[i] = lab.get();
+      page.StatsPanel->AddChild(std::move(lab));
     }
 
     body->AddChild(std::move(scroll));
@@ -588,42 +574,62 @@ void UCharacterSheetScreen::Build(UGuiContext &ctx)
   window->AddChild(std::move(body));
   root->AddChild(std::move(window));
   auto tooltip = std::make_unique<UGuiLabel>(&theme, "");
-  Tooltip = tooltip.get();
+  page.Tooltip = tooltip.get();
   tooltip->SetVisible(false);
   tooltip->SetZOrder(1000);
   root->AddChild(std::move(tooltip));
+  if (Root)
+  {
+    page.Search->SetText(Widgets.Search->GetText());
+    page.TitleMeta->SetText(Widgets.TitleMeta->GetText());
+    page.ModeLabel->SetText(Widgets.ModeLabel->GetText());
+    for (size_t i = 0; i < page.VitalLabels.size(); ++i)
+      page.VitalLabels[i]->SetText(Widgets.VitalLabels[i]->GetText());
+    for (size_t i = 0; i < page.AttrLabels.size(); ++i)
+      page.AttrLabels[i]->SetText(Widgets.AttrLabels[i]->GetText());
+    page.PreviewViewport->SetAngles(Widgets.PreviewViewport->GetYaw(),
+                                    Widgets.PreviewViewport->GetPitch());
+    const auto &rows = Widgets.StatsPanel->GetChildren();
+    page.StatsPanel->ReserveChildren(rows.size());
+    for (size_t i = FixedStatusRows; i < rows.size(); ++i)
+      page.StatsPanel->AddChild(std::make_unique<UGuiLabel>(
+          &theme, static_cast<const UGuiLabel &>(*rows[i]).GetText()));
+  }
+  page.Sections->SetTabEnabled(4, Stats && Stats->GetWorldGameMode() == WorldGameMode::Creative);
+  page.PreviewViewport->SetPreviewTexture(PreviewTexture);
+  Relayout(page, *root, width, height);
+  if (Root)
+    page.StatsScroll->SetScrollY(Widgets.StatsScroll->GetScrollY());
+
+  Widgets = page;
   Root = std::move(root);
-  Built = true;
-  Relayout();
-  RefreshLabels();
-  SetVisible(false);
+  ViewportW = width;
+  ViewportH = height;
 }
 
 void UCharacterSheetScreen::SetSection(int section)
 {
   Section = std::clamp(section, 0, 3);
   EditingAppearance = Section == 3;
-  if (Sections && Sections->GetActiveTab() != Section)
-    Sections->SetActiveTab(Section);
-  if (Search)
-    Search->SetFocused(false);
+  if (Widgets.Sections && Widgets.Sections->GetActiveTab() != Section)
+    Widgets.Sections->SetActiveTab(Section);
+  if (Widgets.Search)
+    Widgets.Search->SetFocused(false);
   if (auto *session = dynamic_cast<UGameSession *>(Stats))
     session->CancelDrag();
-  if (!DraftInitialized)
-    ResetAppearanceDraft();
   Relayout();
   RefreshLabels();
 }
 bool UCharacterSheetScreen::IsEditingText() const
 {
-  return Search && Search->IsFocused();
+  return Widgets.Search && Widgets.Search->IsFocused();
 }
 bool UCharacterSheetScreen::PickBackpackSlot(int x, int y, size_t &slot) const
 {
-  if (!Visible || Section > 1 || RecoveryMode)
+  if (!Root || !Visible || Section > 1 || RecoveryMode)
     return false;
-  for (size_t i = 0; i < BagSlots.size(); ++i)
-    if (BagSlots[i]->IsVisible() && BagSlots[i]->GetBounds().Contains(x, y))
+  for (size_t i = 0; i < Widgets.BagSlots.size(); ++i)
+    if (Widgets.BagSlots[i]->IsVisible() && Widgets.BagSlots[i]->GetBounds().Contains(x, y))
     {
       slot = i;
       return true;
@@ -632,102 +638,105 @@ bool UCharacterSheetScreen::PickBackpackSlot(int x, int y, size_t &slot) const
 }
 void UCharacterSheetScreen::Relayout()
 {
-  if (!Root || !Window)
-    return;
-  Root->SetBounds({0, 0, ViewportW, ViewportH});
+  if (Root)
+    Relayout(Widgets, *Root, ViewportW, ViewportH);
+}
+
+void UCharacterSheetScreen::Relayout(PageWidgets &page, UGuiWidget &root,
+                                     int width, int height)
+{
+  root.SetBounds({0, 0, width, height});
   const int pad = Scaled(8), line = Scaled(24), tabH = Scaled(32);
-  const int w = std::max(300, std::min(ViewportW - pad * 2, Scaled(1080)));
-  const int h = std::max(300, std::min(ViewportH - pad * 2, Scaled(660)));
-  Window->SetBounds({(ViewportW - w) / 2, (ViewportH - h) / 2, w, h});
-  auto c = Window->GetClientArea();
-  BodyPanel->SetBounds(c);
-  WideLayout = c.W >= Scaled(740);
-  TitleMeta->SetBounds({c.X + pad, c.Y + pad, c.W - pad * 2, line});
-  AppearanceToggle->SetVisible(true);
-  AppearanceToggle->SetBounds(
+  const int w = std::max(300, std::min(width - pad * 2, Scaled(1080)));
+  const int h = std::max(300, std::min(height - pad * 2, Scaled(660)));
+  page.Window->SetBounds({(width - w) / 2, (height - h) / 2, w, h});
+  auto c = page.Window->GetClientArea();
+  page.BodyPanel->SetBounds(c);
+  const bool wideLayout = c.W >= Scaled(740);
+  page.TitleMeta->SetBounds({c.X + pad, c.Y + pad, c.W - pad * 2, line});
+  page.AppearanceToggle->SetVisible(true);
+  page.AppearanceToggle->SetBounds(
       {c.X + c.W - Scaled(135), c.Y + pad, Scaled(125), line});
-  TitleMeta->SetBounds({c.X + pad, c.Y + pad, c.W - Scaled(155), line});
-  ModeLabel->SetBounds({c.X + pad, c.Y + pad + line, c.W - pad * 2, line});
-  Sections->SetBounds({c.X + pad, c.Y + pad + line * 2, c.W - pad * 2, tabH});
+  page.TitleMeta->SetBounds({c.X + pad, c.Y + pad, c.W - Scaled(155), line});
+  page.ModeLabel->SetBounds({c.X + pad, c.Y + pad + line, c.W - pad * 2, line});
+  page.Sections->SetBounds({c.X + pad, c.Y + pad + line * 2, c.W - pad * 2, tabH});
   const auto shared = PlayerWindowLayout::Compute(
-      ViewportW, ViewportH, Metrics, GetContentOffsetX(), GetContentOffsetY());
+      width, height, Metrics, GetContentOffsetX(), GetContentOffsetY());
   if (Hosted)
   {
-    Window->SetChromeVisible(false);
-    Window->SetBounds(shared.Body);
-    BodyPanel->SetBounds(shared.Body);
-    TitleMeta->SetVisible(false);
-    ModeLabel->SetVisible(false);
-    Sections->SetVisible(false);
-    AppearanceToggle->SetVisible(false);
+    page.Window->SetChromeVisible(false);
+    page.Window->SetBounds(shared.Body);
+    page.BodyPanel->SetBounds(shared.Body);
+    page.TitleMeta->SetVisible(false);
+    page.ModeLabel->SetVisible(false);
+    page.Sections->SetVisible(false);
+    page.AppearanceToggle->SetVisible(false);
   }
   const int top = Hosted ? shared.Body.Y : c.Y + pad + line * 2 + tabH + pad;
   const int contentH =
       Hosted ? shared.Body.H : std::max(100, c.Y + c.H - top - pad);
   const int dollW = Hosted ? shared.Preview.W
-                           : ((WideLayout || Section == 1 || Section == 3)
+                           : ((wideLayout || Section == 1 || Section == 3)
                                   ? std::min(Scaled(320), c.W / 3)
                                   : 0);
   const int mainX = Hosted ? shared.Content.X
                            : c.X + pad + (dollW ? dollW + pad : 0),
             mainW = Hosted ? shared.Content.W
                            : c.W - pad * 2 - (dollW ? dollW + pad : 0);
-  DollPanel->SetVisible(dollW > 0 || Section == 3);
-  DollPanel->SetBounds(
+  page.DollPanel->SetVisible(dollW > 0 || Section == 3);
+  page.DollPanel->SetBounds(
       Hosted ? shared.Preview
              : GuiRect{c.X + pad, top, dollW ? dollW : c.W / 3, contentH});
   const bool bagVisible = Section < 2;
-  BagPanel->SetVisible(bagVisible);
-  Search->SetVisible(bagVisible);
-  SortButton->SetVisible(bagVisible);
-  RecoveryButton->SetVisible(bagVisible);
-  DropButton->SetVisible(bagVisible);
-  InventoryHint->SetVisible(bagVisible && mainW >= Scaled(650));
-  Search->SetBounds(
+  page.BagPanel->SetVisible(bagVisible);
+  page.Search->SetVisible(bagVisible);
+  page.SortButton->SetVisible(bagVisible);
+  page.RecoveryButton->SetVisible(bagVisible);
+  page.DropButton->SetVisible(bagVisible);
+  page.InventoryHint->SetVisible(bagVisible && mainW >= Scaled(650));
+  page.Search->SetBounds(
       {mainX, top, std::max(40, mainW - Scaled(190)), line + pad});
-  SortButton->SetBounds(
+  page.SortButton->SetBounds(
       {mainX + mainW - Scaled(182), top, Scaled(65), line + pad});
-  RecoveryButton->SetBounds(
+  page.RecoveryButton->SetBounds(
       {mainX + mainW - Scaled(110), top, Scaled(110), line + pad});
-  DropButton->SetBounds({mainX + mainW - Scaled(75),
+  page.DropButton->SetBounds({mainX + mainW - Scaled(75),
                          top + contentH - line - pad, Scaled(75), line + pad});
-  auto dropBounds = DropButton->GetBounds();
-  DeleteButton->SetBounds(
+  auto dropBounds = page.DropButton->GetBounds();
+  page.DeleteButton->SetBounds(
       {dropBounds.X - Scaled(150), dropBounds.Y, Scaled(145), dropBounds.H});
-  DeleteButton->SetVisible(bagVisible && Stats &&
+  page.DeleteButton->SetVisible(bagVisible && Stats &&
                            Stats->GetWorldGameMode() == WorldGameMode::Creative);
   const int gridTop = top + line + pad * 2;
   const int slot =
       std::max(20, std::min((mainW - pad) / 10 - pad / 2,
                             (contentH - (line + pad) * 2 - pad * 4) / 4 - pad));
-  BagPanel->SetBounds({mainX, gridTop, mainW, 4 * (slot + pad)});
+  page.BagPanel->SetBounds({mainX, gridTop, mainW, 4 * (slot + pad)});
   for (size_t i = 0; i < 40; ++i)
-    BagSlots[i]->SetBounds({mainX + pad / 2 + int(i % 10) * (slot + pad / 2),
+    page.BagSlots[i]->SetBounds({mainX + pad / 2 + int(i % 10) * (slot + pad / 2),
                             gridTop + pad / 2 + int(i / 10) * (slot + pad),
                             slot, slot});
-  InventoryHint->SetBounds({mainX, top + contentH - line - pad,
+  page.InventoryHint->SetBounds({mainX, top + contentH - line - pad,
                             std::max(40, mainW - Scaled(235)), line * 2});
-  StatsScroll->SetVisible(Section == 2);
-  StatsScroll->SetBounds({mainX, top, mainW, contentH});
+  page.StatsScroll->SetVisible(Section == 2);
+  page.StatsScroll->SetBounds({mainX, top, mainW, contentH});
   auto labelHeight = [&](UGuiLabel *label)
   {
     auto b = label->GetBounds();
     b.H = line;
     label->SetBounds(b);
   };
-  labelHeight(VitalsHeader);
-  labelHeight(AttrsHeader);
-  for (auto *label : VitalLabels)
+  labelHeight(page.VitalsHeader);
+  labelHeight(page.AttrsHeader);
+  for (auto *label : page.VitalLabels)
     labelHeight(label);
-  for (auto *label : AttrLabels)
+  for (auto *label : page.AttrLabels)
     labelHeight(label);
-  for (auto *label : EffectLabels)
-    labelHeight(label);
-  StatsScroll->LayoutContent(pad / 2, pad);
-  AppearancePanel->SetBounds({mainX, top, mainW, contentH});
-  AppearancePanel->SetVisible(EditingAppearance);
-  for (size_t i = 0; i < AppearanceButtons.size(); ++i)
-    AppearanceButtons[i]->SetBounds({mainX + pad,
+  page.StatsScroll->LayoutContent(pad / 2, pad);
+  page.AppearancePanel->SetBounds({mainX, top, mainW, contentH});
+  page.AppearancePanel->SetVisible(EditingAppearance);
+  for (size_t i = 0; i < page.AppearanceButtons.size(); ++i)
+    page.AppearanceButtons[i]->SetBounds({mainX + pad,
                                      top + pad + int(i) * (line + pad),
                                      mainW - pad * 2, line + pad / 2});
   const int left = Hosted ? shared.Preview.X : c.X + pad,
@@ -739,12 +748,12 @@ void UCharacterSheetScreen::Relayout()
       std::max(48, std::min({dw - eqSlot * 2 - pad * 4, Scaled(180),
                              contentH - line - eqSlot * 3 - pad * 5}));
   const int px = left + (dw - preview) / 2, py = top + line + eqSlot + pad * 2;
-  PreviewViewport->SetBounds({px, py, preview, preview});
+  page.PreviewViewport->SetBounds({px, py, preview, preview});
   if (EditingAppearance)
-    PreviewViewport->SetBounds({left + pad, top + line, dw - pad * 2,
+    page.PreviewViewport->SetBounds({left + pad, top + line, dw - pad * 2,
                                 std::min(contentH - line, dw * 2)});
-  EquipmentHeader->SetBounds({left + pad, top + pad, dw - pad * 2, line});
-  EquipmentHeader->SetVisible(!EditingAppearance);
+  page.EquipmentHeader->SetBounds({left + pad, top + pad, dw - pad * 2, line});
+  page.EquipmentHeader->SetVisible(!EditingAppearance);
   const std::array<GuiRect, 4> armor{
       {{px + (preview - eqSlot) / 2, py - eqSlot - pad, eqSlot, eqSlot},
        {px - eqSlot - pad, py + (preview - eqSlot) / 2, eqSlot, eqSlot},
@@ -752,24 +761,24 @@ void UCharacterSheetScreen::Relayout()
        {px + (preview - eqSlot) / 2, py + preview + pad, eqSlot, eqSlot}}};
   for (size_t i = 0; i < 4; ++i)
   {
-    ArmorSlots[i]->SetBounds(armor[i]);
-    ArmorSlots[i]->SetVisible(!EditingAppearance);
+    page.ArmorSlots[i]->SetBounds(armor[i]);
+    page.ArmorSlots[i]->SetVisible(!EditingAppearance);
   }
   for (size_t i = 0; i < 2; ++i)
   {
-    ToolSlots[i]->SetBounds({left + pad + int(i) * (dw / 2),
+    page.ToolSlots[i]->SetBounds({left + pad + int(i) * (dw / 2),
                              py + preview + eqSlot + pad * 3, eqSlot, eqSlot});
-    ToolSlots[i]->SetVisible(!EditingAppearance);
+    page.ToolSlots[i]->SetVisible(!EditingAppearance);
   }
 }
 
 bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
 {
-  if (EditingAppearance || !DollPanel->IsVisible())
+  if (EditingAppearance || !Widgets.DollPanel->IsVisible())
     return false;
-  for (size_t i = 0; i < ArmorSlots.size(); ++i)
+  for (size_t i = 0; i < Widgets.ArmorSlots.size(); ++i)
   {
-    if (ArmorSlots[i] && PointInBounds(x, y, ArmorSlots[i]->GetBounds()))
+    if (Widgets.ArmorSlots[i] && PointInBounds(x, y, Widgets.ArmorSlots[i]->GetBounds()))
     {
       outSlot = i;
       return true;
@@ -780,42 +789,41 @@ bool UCharacterSheetScreen::PickArmorSlot(int x, int y, size_t &outSlot) const
 
 bool UCharacterSheetScreen::PickMainSlot(int x, int y) const
 {
-  if (EditingAppearance || !DollPanel->IsVisible())
+  if (EditingAppearance || !Widgets.DollPanel->IsVisible())
     return false;
-  if (ToolSlots.empty() || !ToolSlots[0])
+  if (!Widgets.ToolSlots[0])
   {
     return false;
   }
-  return PointInBounds(x, y, ToolSlots[0]->GetBounds());
+  return PointInBounds(x, y, Widgets.ToolSlots[0]->GetBounds());
 }
 
 bool UCharacterSheetScreen::PickOffhandSlot(int x, int y) const
 {
-  if (EditingAppearance || !DollPanel->IsVisible())
+  if (EditingAppearance || !Widgets.DollPanel->IsVisible())
     return false;
-  if (ToolSlots.size() < 2 || !ToolSlots[1])
+  if (!Widgets.ToolSlots[1])
   {
     return false;
   }
-  return PointInBounds(x, y, ToolSlots[1]->GetBounds());
+  return PointInBounds(x, y, Widgets.ToolSlots[1]->GetBounds());
 }
 
 bool UCharacterSheetScreen::PickDoll(int x, int y) const
 {
-  return PreviewViewport && PointInBounds(x, y, PreviewViewport->GetBounds());
+  return Widgets.PreviewViewport && PointInBounds(x, y, Widgets.PreviewViewport->GetBounds());
 }
 
-void UCharacterSheetScreen::RefreshLabels()
+void UCharacterSheetScreen::RefreshLabels() try
 {
-  if (!Stats || !Built)
-  {
+  if (!Stats || !Root)
     return;
-  }
   const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
+  auto draftBase = snap.humanAppearance.Key() + "|" + snap.skinId;
   if (!DraftInitialized || DraftOwnerId != snap.OwnerId ||
-      DraftBase != snap.humanAppearance.Key() + "|" + snap.skinId)
-    ResetAppearanceDraft();
-  if (TitleMeta)
+      DraftBase != draftBase)
+    ResetAppearanceDraft(snap, std::move(draftBase));
+  if (Widgets.TitleMeta)
   {
     std::ostringstream oss;
     oss << (snap.valid ? snap.displayName : "(none)");
@@ -827,14 +835,14 @@ void UCharacterSheetScreen::RefreshLabels()
     {
       oss << " (" << snap.typeId << ")";
     }
-    TitleMeta->SetText(oss.str());
+    Widgets.TitleMeta->SetText(oss.str());
   }
-  Sections->SetTabEnabled(4, snap.gameMode == WorldGameMode::Creative);
-  if (ModeLabel)
+  Widgets.Sections->SetTabEnabled(4, snap.gameMode == WorldGameMode::Creative);
+  if (Widgets.ModeLabel)
   {
     if (snap.gameMode == WorldGameMode::Creative)
     {
-      ModeLabel->SetText(
+      Widgets.ModeLabel->SetText(
           "Creative: instant mining + loot; no wear; vitals frozen");
     }
     else
@@ -842,26 +850,26 @@ void UCharacterSheetScreen::RefreshLabels()
       char buf[96];
       std::snprintf(buf, sizeof(buf), "Mode: Survival / %s",
                     WorldDifficultyToString(snap.difficulty));
-      ModeLabel->SetText(buf);
+      Widgets.ModeLabel->SetText(buf);
     }
   }
-  if (VitalLabels.size() >= 7 && snap.valid)
+  if (snap.valid)
   {
     const auto &v = snap.vitals;
-    VitalLabels[0]->SetText(FormatBar("Health", v.health, v.maxHealth));
-    VitalLabels[1]->SetText(FormatBar("Satiety", v.satiety, v.maxSatiety));
-    VitalLabels[2]->SetText(FormatBar("Thirst", v.thirst, v.maxThirst));
-    VitalLabels[3]->SetText(FormatBar("Fatigue", v.fatigue, v.maxFatigue));
-    VitalLabels[4]->SetText(FormatBar("Breath", v.breath, v.maxBreath));
+    Widgets.VitalLabels[0]->SetText(FormatBar("Health", v.health, v.maxHealth));
+    Widgets.VitalLabels[1]->SetText(FormatBar("Satiety", v.satiety, v.maxSatiety));
+    Widgets.VitalLabels[2]->SetText(FormatBar("Thirst", v.thirst, v.maxThirst));
+    Widgets.VitalLabels[3]->SetText(FormatBar("Fatigue", v.fatigue, v.maxFatigue));
+    Widgets.VitalLabels[4]->SetText(FormatBar("Breath", v.breath, v.maxBreath));
     char wounds[64];
     std::snprintf(wounds, sizeof(wounds), "Fatal wounds: %d / %d",
                   v.fatalWounds, v.maxFatalWounds);
-    VitalLabels[5]->SetText(wounds);
+    Widgets.VitalLabels[5]->SetText(wounds);
     char armor[48];
     std::snprintf(armor, sizeof(armor), "Armor: %.0f", v.armor);
-    VitalLabels[6]->SetText(armor);
+    Widgets.VitalLabels[6]->SetText(armor);
   }
-  if (AttrLabels.size() >= 7 && snap.valid)
+  if (snap.valid)
   {
     const auto &a = snap.attributes;
     auto setAttr = [](UGuiLabel *lab, const char *name, int value)
@@ -870,48 +878,48 @@ void UCharacterSheetScreen::RefreshLabels()
       std::snprintf(buf, sizeof(buf), "%s: %d", name, value);
       lab->SetText(buf);
     };
-    setAttr(AttrLabels[0], "Strength", a.strength);
-    setAttr(AttrLabels[1], "Agility", a.agility);
-    setAttr(AttrLabels[2], "Endurance", a.endurance);
-    setAttr(AttrLabels[3], "Accuracy", a.accuracy);
-    setAttr(AttrLabels[4], "Intelligence", a.intelligence);
-    setAttr(AttrLabels[5], "Luck", a.luck);
-    setAttr(AttrLabels[6], "Perception", a.perception);
+    setAttr(Widgets.AttrLabels[0], "Strength", a.strength);
+    setAttr(Widgets.AttrLabels[1], "Agility", a.agility);
+    setAttr(Widgets.AttrLabels[2], "Endurance", a.endurance);
+    setAttr(Widgets.AttrLabels[3], "Accuracy", a.accuracy);
+    setAttr(Widgets.AttrLabels[4], "Intelligence", a.intelligence);
+    setAttr(Widgets.AttrLabels[5], "Luck", a.luck);
+    setAttr(Widgets.AttrLabels[6], "Perception", a.perception);
   }
 
   if (Icons)
   {
-    for (int i = 0; i < 4 && i < static_cast<int>(ArmorSlots.size()); ++i)
+    for (size_t i = 0; i < Widgets.ArmorSlots.size(); ++i)
     {
       const auto &s = snap.equippedArmor[i];
-      if (ArmorSlots[i] && !s.itemId.empty())
+      if (Widgets.ArmorSlots[i] && !s.itemId.empty())
       {
-        ArmorSlots[i]->SetIconTexture(Icons->GetItemIconTexture(s.itemId));
-        ArmorSlots[i]->SetWearProgress(s.wear);
-        ArmorSlots[i]->SetBroken(s.broken);
-        ArmorSlots[i]->SetDimmed(false);
+        Widgets.ArmorSlots[i]->SetIconTexture(Icons->GetItemIconTexture(s.itemId));
+        Widgets.ArmorSlots[i]->SetWearProgress(s.wear);
+        Widgets.ArmorSlots[i]->SetBroken(s.broken);
+        Widgets.ArmorSlots[i]->SetDimmed(false);
       }
-      else if (ArmorSlots[i])
+      else if (Widgets.ArmorSlots[i])
       {
-        ArmorSlots[i]->SetIconTexture(0);
-        ArmorSlots[i]->SetWearProgress(0.f);
-        ArmorSlots[i]->SetBroken(false);
-        ArmorSlots[i]->SetDimmed(false);
+        Widgets.ArmorSlots[i]->SetIconTexture(0);
+        Widgets.ArmorSlots[i]->SetWearProgress(0.f);
+        Widgets.ArmorSlots[i]->SetBroken(false);
+        Widgets.ArmorSlots[i]->SetDimmed(false);
       }
     }
 
-    for (int i = 0; i < 2 && i < static_cast<int>(ToolSlots.size()); ++i)
+    for (size_t i = 0; i < Widgets.ToolSlots.size(); ++i)
     {
       const auto &s = snap.equippedTools[i];
-      if (ToolSlots[i])
+      if (Widgets.ToolSlots[i])
       {
         const auto &active = snap.slots[snap.activeRow * 10 + snap.activeSlot];
-        ToolSlots[i]->SetCountHint(i == 0 && !active.empty &&
+        Widgets.ToolSlots[i]->SetCountHint(i == 0 && !active.empty &&
                                            !active.IsCatalogReference()
                                        ? std::to_string(active.count)
                                        : "");
       }
-      if (ToolSlots[i] && !s.itemId.empty())
+      if (Widgets.ToolSlots[i] && !s.itemId.empty())
       {
         GLuint tex = s.isBlock ? Icons->GetBlockIconTexture(s.itemId)
                                : Icons->GetItemIconTexture(s.itemId);
@@ -925,22 +933,22 @@ void UCharacterSheetScreen::RefreshLabels()
               if (entry)
                 tex = Icons->GetEntryIcon(*entry);
             }
-        ToolSlots[i]->SetIconTexture(tex);
-        ToolSlots[i]->SetWearProgress(s.wear);
-        ToolSlots[i]->SetBroken(s.broken);
-        ToolSlots[i]->SetDimmed(false);
+        Widgets.ToolSlots[i]->SetIconTexture(tex);
+        Widgets.ToolSlots[i]->SetWearProgress(s.wear);
+        Widgets.ToolSlots[i]->SetBroken(s.broken);
+        Widgets.ToolSlots[i]->SetDimmed(false);
       }
-      else if (ToolSlots[i])
+      else if (Widgets.ToolSlots[i])
       {
-        ToolSlots[i]->SetIconTexture(0);
-        ToolSlots[i]->SetWearProgress(0.f);
-        ToolSlots[i]->SetBroken(false);
-        ToolSlots[i]->SetDimmed(false);
+        Widgets.ToolSlots[i]->SetIconTexture(0);
+        Widgets.ToolSlots[i]->SetWearProgress(0.f);
+        Widgets.ToolSlots[i]->SetBroken(false);
+        Widgets.ToolSlots[i]->SetDimmed(false);
       }
     }
-    const std::string_view query = Search ? std::string_view(Search->GetText()) : std::string_view{};
+    const std::string_view query = Widgets.Search ? std::string_view(Widgets.Search->GetText()) : std::string_view{};
     const auto folded = [](unsigned char c) { return c == '_' ? ' ' : std::tolower(c); };
-    for (size_t i = 0; i < BagSlots.size(); ++i)
+    for (size_t i = 0; i < Widgets.BagSlots.size(); ++i)
     {
       const InventoryEntryRef empty;
       const auto &entry = RecoveryMode
@@ -948,7 +956,7 @@ void UCharacterSheetScreen::RefreshLabels()
                                      ? snap.recovery[RecoveryOffset + i]
                                      : empty)
                               : snap.slots[i];
-      auto *slot = BagSlots[i];
+      auto *slot = Widgets.BagSlots[i];
       const auto tex = Icons->GetEntryIcon(entry);
       if (RecoveryMode)
         slot->SetLabel(entry.Id);
@@ -969,57 +977,81 @@ void UCharacterSheetScreen::RefreshLabels()
       slot->SetVisible(true);
     }
   }
-  if (RecoveryButton)
+  if (Widgets.RecoveryButton)
   {
-    RecoveryButton->SetLabel(
+    Widgets.RecoveryButton->SetLabel(
         RecoveryMode
             ? "Back to bag"
             : "Recover (" + std::to_string(snap.recovery.size()) + ")");
-    RecoveryButton->SetEnabled(RecoveryMode || !snap.recovery.empty());
-    SortButton->SetLabel(RecoveryMode ? "Next" : "Sort");
-    DropButton->SetEnabled(!RecoveryMode);
-    InventoryHint->SetText(
+    Widgets.RecoveryButton->SetEnabled(RecoveryMode || !snap.recovery.empty());
+    Widgets.SortButton->SetLabel(RecoveryMode ? "Next" : "Sort");
+    Widgets.DropButton->SetEnabled(!RecoveryMode);
+    Widgets.InventoryHint->SetText(
         RecoveryMode
             ? "Recovery: click to withdraw.\nUnknown definitions stay safe "
               "until restored."
             : "Click: move | Right: split/place 1 | Shift: quick | Ctrl: pin");
   }
-  EffectLabels.reserve(snap.effects.size() + 1);
-  while (EffectLabels.size() < snap.effects.size() + 1)
-  {
-    auto label = std::make_unique<UGuiLabel>(&Context->GetTheme(), "");
-    EffectLabels.push_back(static_cast<UGuiLabel *>(StatsPanel->AddChild(std::move(label))));
-  }
-  for (size_t i = 0; i < EffectLabels.size(); ++i)
-  {
-    auto *label = EffectLabels[i];
-    label->SetVisible(i <= snap.effects.size());
-    if (i == 0)
-      label->SetText("Movement x" + std::to_string(snap.movementMultiplier) +
-                     " | Fleshy damage: " +
-                     std::to_string(snap.protection.Get("fleshy")) + "%");
-    else if (i - 1 < snap.effects.size())
-    {
-      const auto &effect = snap.effects[i - 1];
-      label->SetText(effect.DefId + " x" + std::to_string(effect.Stacks) +
-                     "  " +
-                     std::to_string(int(std::ceil(effect.RemainingSec))) + "s");
-    }
-  }
+  RefreshStatusRows(snap);
   Relayout();
   RefreshTooltip(snap);
-  PreviewValid = snap.valid && !snap.typeId.empty();
-  PreviewTypeId = snap.typeId;
-  PreviewSkinId = EditingAppearance ? DraftSkin : snap.skinId;
-  RefreshAppearanceControls();
-  RenderCharacterPreview();
+  RefreshAppearanceControls(snap.typeId == "human");
+  RenderCharacterPreview(snap);
+}
+catch (const std::bad_alloc &)
+{
+  // The visible page can retry the refresh on the next update.
+}
+
+void UCharacterSheetScreen::RefreshStatusRows(const CharacterStatsSnapshot &snap)
+{
+  auto &children = Widgets.StatsPanel->Children;
+  const size_t count = FixedStatusRows + 1 + snap.effects.size();
+  std::vector<std::pair<size_t, std::unique_ptr<UGuiLabel>>> changed;
+  const auto stage = [&](size_t index, std::string text)
+  {
+    if (index < children.size() &&
+        static_cast<const UGuiLabel &>(*children[index]).GetText() == text)
+      return;
+    auto label = std::make_unique<UGuiLabel>(&Context->GetTheme(), std::move(text));
+    label->UpdateLayout(Widgets.StatsPanel->GetBounds());
+    changed.emplace_back(index, std::move(label));
+  };
+  stage(FixedStatusRows,
+        "Movement x" + std::to_string(snap.movementMultiplier) +
+            " | Fleshy damage: " + std::to_string(snap.protection.Get("fleshy")) + "%");
+  for (size_t i = 0; i < snap.effects.size(); ++i)
+  {
+    const auto &effect = snap.effects[i];
+    stage(FixedStatusRows + 1 + i,
+          effect.DefId + " x" + std::to_string(effect.Stacks) + "  " +
+              std::to_string(int(std::ceil(effect.RemainingSec))) + "s");
+  }
+
+  if (count < children.size())
+  {
+    std::vector<std::unique_ptr<UGuiWidget>> smaller;
+    smaller.reserve(count);
+    for (size_t i = 0; i < count; ++i)
+      smaller.push_back(std::move(children[i]));
+    children.swap(smaller);
+  }
+  else
+    children.reserve(count);
+  for (auto &[index, row] : changed)
+  {
+    if (index < children.size())
+      children[index] = std::move(row);
+    else
+      children.push_back(std::move(row));
+  }
 }
 
 void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
 {
-  if (Tooltip)
+  if (Widgets.Tooltip)
   {
-    Tooltip->SetVisible(false);
+    Widgets.Tooltip->SetVisible(false);
     InventoryEntryRef hover;
     bool found = false;
     size_t index;
@@ -1027,8 +1059,8 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
     {
       if (!RecoveryMode)
         return false;
-      for (size_t i = 0; i < BagSlots.size(); ++i)
-        if (BagSlots[i]->GetBounds().Contains(PointerX, PointerY))
+      for (size_t i = 0; i < Widgets.BagSlots.size(); ++i)
+        if (Widgets.BagSlots[i]->GetBounds().Contains(PointerX, PointerY))
         {
           index = i;
           return true;
@@ -1045,16 +1077,16 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
     }
     auto *session = dynamic_cast<UGameSession *>(Stats);
     auto world = session ? session->GetWorld() : nullptr;
-    if (!found && DollPanel->IsVisible() && world)
+    if (!found && Widgets.DollPanel->IsVisible() && world)
       if (auto *actor = world->GetControlledCreature())
       {
-        for (size_t i = 0; i < ArmorSlots.size(); ++i)
-          if (ArmorSlots[i]->GetBounds().Contains(PointerX, PointerY))
+        for (size_t i = 0; i < Widgets.ArmorSlots.size(); ++i)
+          if (Widgets.ArmorSlots[i]->GetBounds().Contains(PointerX, PointerY))
           {
             hover = actor->GetInventory().GetEquippedArmor(i);
             found = !hover.empty;
           }
-        if (ToolSlots[0]->GetBounds().Contains(PointerX, PointerY))
+        if (Widgets.ToolSlots[0]->GetBounds().Contains(PointerX, PointerY))
         {
           auto *active = actor->GetInventory().GetActiveEntryRef();
           if (active)
@@ -1063,7 +1095,7 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
             found = !hover.empty;
           }
         }
-        if (ToolSlots[1]->GetBounds().Contains(PointerX, PointerY))
+        if (Widgets.ToolSlots[1]->GetBounds().Contains(PointerX, PointerY))
         {
           hover = actor->GetInventory().GetEquippedOffhand();
           found = !hover.empty;
@@ -1131,7 +1163,7 @@ void UCharacterSheetScreen::RefreshTooltip(const CharacterStatsSnapshot &snap)
         tooltipArea.H -= Context->GetTheme().TitleBarHeight;
       }
       LayoutTooltipNearPointer(
-          *Tooltip, text, PointerX, PointerY, tooltipArea, Context->GetTheme(),
+          *Widgets.Tooltip, text, PointerX, PointerY, tooltipArea, Context->GetTheme(),
           MeasureTooltipTextWidth(text, Context->GetTheme(),
                                   &Context->GetRenderer()));
     }
@@ -1169,21 +1201,21 @@ void UCharacterSheetScreen::RunInventoryQa(const std::string &path)
         };
         if (section < 2)
         {
-          for (auto *slot : BagSlots)
+          for (auto *slot : Widgets.BagSlots)
             test(slot);
-          test(Search);
-          test(SortButton);
-          test(DropButton);
+          test(Widgets.Search);
+          test(Widgets.SortButton);
+          test(Widgets.DropButton);
         }
         if (section == 1)
         {
-          for (auto *slot : ArmorSlots)
+          for (auto *slot : Widgets.ArmorSlots)
             test(slot);
-          for (auto *slot : ToolSlots)
+          for (auto *slot : Widgets.ToolSlots)
             test(slot);
         }
         if (section == 3)
-          for (auto *button : AppearanceButtons)
+          for (auto *button : Widgets.AppearanceButtons)
             test(button);
         report["layouts"].push_back({{"width", size.first},
                                      {"height", size.second},
@@ -1207,20 +1239,20 @@ void UCharacterSheetScreen::RunInventoryQa(const std::string &path)
       inventory.SetActiveSlot(2, 1);
       SetSection(1);
       RefreshLabels();
-      auto bounds = ToolSlots[0]->GetBounds();
+      auto bounds = Widgets.ToolSlots[0]->GetBounds();
       GuiMouseEvent event;
       event.X = bounds.X + bounds.W / 2;
       event.Y = bounds.Y + bounds.H / 2;
-      ToolSlots[0]->OnMouseDown(event);
+      Widgets.ToolSlots[0]->OnMouseDown(event);
       event.X += 32;
-      ToolSlots[0]->OnMouseMove(event);
+      Widgets.ToolSlots[0]->OnMouseMove(event);
       activeRowHandDrag = session->IsDragging() &&
                           session->GetDrag().source.bar == 2 &&
                           session->GetDrag().source.slot == 1 &&
                           session->GetDrag().entry.instanceId ==
                               inventory.GetSlot(21).instanceId;
       session->CancelDrag();
-      ToolSlots[0]->ClearPressState();
+      Widgets.ToolSlots[0]->ClearPressState();
       inventory.SetActiveSlot(oldBar, oldSlot);
     }
   report["active_row_hand_drag"] = activeRowHandDrag;
@@ -1240,12 +1272,12 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   if (Hosted)
     SetSection(3);
   else
-    AppearanceToggle->Activate();
-  AppearanceButtons[0]->Activate();
-  AppearanceButtons[1]->Activate();
-  AppearanceButtons[2]->Activate();
-  AppearanceButtons[2]->Activate();
-  AppearanceButtons[3]->Activate();
+    Widgets.AppearanceToggle->Activate();
+  Widgets.AppearanceButtons[0]->Activate();
+  Widgets.AppearanceButtons[1]->Activate();
+  Widgets.AppearanceButtons[2]->Activate();
+  Widgets.AppearanceButtons[2]->Activate();
+  Widgets.AppearanceButtons[3]->Activate();
   const auto desired = DraftAppearance;
   const auto outfit = DraftSkin;
   const bool draftIsolated =
@@ -1253,7 +1285,7 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
           original.humanAppearance.Key() &&
       Stats->GetCharacterStatsSnapshot().skinId == original.skinId;
   const bool previewWorks = PreviewTexture != 0;
-  AppearanceButtons[4]->Activate();
+  Widgets.AppearanceButtons[4]->Activate();
   auto applied = Stats->GetCharacterStatsSnapshot();
   const bool appliedOk = applied.humanAppearance.Key() == desired.Key() &&
                          applied.skinId == outfit;
@@ -1277,9 +1309,9 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   if (Hosted)
     SetSection(3);
   else
-    AppearanceToggle->Activate();
-  AppearanceButtons[2]->Activate();
-  AppearanceButtons[5]->Activate();
+    Widgets.AppearanceToggle->Activate();
+  Widgets.AppearanceButtons[2]->Activate();
+  Widgets.AppearanceButtons[5]->Activate();
   const bool cancelled =
       Stats->GetCharacterStatsSnapshot().humanAppearance.Key() ==
           desired.Key() &&
@@ -1288,13 +1320,13 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   if (Hosted)
     SetSection(3);
   else
-    AppearanceToggle->Activate();
+    Widgets.AppearanceToggle->Activate();
   for (auto size :
        std::array<std::pair<int, int>, 2>{{{1280, 720}, {640, 480}}})
   {
     OnViewportChanged(size.first, size.second);
     bool valid = true;
-    for (auto *b : AppearanceButtons)
+    for (auto *b : Widgets.AppearanceButtons)
     {
       const auto rect = b->GetBounds();
       valid =
@@ -1309,16 +1341,16 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
   const bool restored =
       Stats->ApplyHumanAppearance(original.humanAppearance, original.skinId);
   EditingAppearance = false;
-  ResetAppearanceDraft();
+  DraftInitialized = false;
   OnViewportChanged(1280, 720);
   RefreshLabels();
   if (Hosted)
     SetSection(3);
   else
-    AppearanceToggle->Activate();
-  AppearanceButtons[0]->Activate();
-  AppearanceButtons[2]->Activate();
-  AppearanceButtons[2]->Activate();
+    Widgets.AppearanceToggle->Activate();
+  Widgets.AppearanceButtons[0]->Activate();
+  Widgets.AppearanceButtons[2]->Activate();
+  Widgets.AppearanceButtons[2]->Activate();
   bool passed = draftIsolated && previewWorks && appliedOk && cancelled &&
                 restored && userSaved;
   for (const auto &layout : layouts)
@@ -1338,33 +1370,28 @@ void UCharacterSheetScreen::RunAppearanceQa(const std::string &reportPath)
     throw std::runtime_error("Appearance UI QA failed");
 }
 
-void UCharacterSheetScreen::ResetAppearanceDraft()
+void UCharacterSheetScreen::ResetAppearanceDraft(const CharacterStatsSnapshot &snap,
+                                                  std::string base)
 {
-  DraftInitialized = true;
-  if (!Stats)
-    return;
-  const auto snap = Stats->GetCharacterStatsSnapshot();
+  auto appearance = snap.humanAppearance;
+  auto skin = snap.skinId;
+  DraftAppearance = std::move(appearance);
+  DraftSkin.swap(skin);
+  DraftBase.swap(base);
   DraftOwnerId = snap.OwnerId;
-  DraftBase = snap.humanAppearance.Key() + "|" + snap.skinId;
-  DraftAppearance = snap.humanAppearance;
-  DraftSkin = snap.skinId;
+  DraftInitialized = true;
 }
-void UCharacterSheetScreen::RefreshAppearanceControls()
+void UCharacterSheetScreen::RefreshAppearanceControls(bool human)
 {
-  if (!Stats || !AppearanceToggle)
-    return;
-  const bool human = Stats->GetCharacterStatsSnapshot().typeId == "human";
-  AppearanceToggle->SetVisible(!Hosted && human);
+  Widgets.AppearanceToggle->SetVisible(!Hosted && human);
   if (!human && EditingAppearance)
   {
     EditingAppearance = false;
     Relayout();
   }
-  if (AppearanceButtons.size() != 6)
-    return;
-  AppearanceButtons[0]->SetLabel(
+  Widgets.AppearanceButtons[0]->SetLabel(
       DraftAppearance.bodyVariant == "female" ? "Body: female" : "Body: male");
-  AppearanceButtons[1]->SetLabel(DraftSkin == "human_guard" ? "Outfit: guard"
+  Widgets.AppearanceButtons[1]->SetLabel(DraftSkin == "human_guard" ? "Outfit: guard"
                                  : DraftSkin == "human_adventurer"
                                      ? "Outfit: traveler"
                                      : "Outfit: default");
@@ -1374,43 +1401,33 @@ void UCharacterSheetScreen::RefreshAppearanceControls()
                                           "Ginger"};
   for (size_t i = 0; i < hair.size(); ++i)
     if (DraftAppearance.hairstyleId == HumanAppearance::Hairstyles[i])
-      AppearanceButtons[2]->SetLabel(std::string("Hairstyle: ") + hair[i]);
+      Widgets.AppearanceButtons[2]->SetLabel(std::string("Hairstyle: ") + hair[i]);
   for (size_t i = 0; i < color.size(); ++i)
     if (DraftAppearance.hairColorId == HumanAppearance::Colors[i])
-      AppearanceButtons[3]->SetLabel(std::string("Hair color: ") + color[i]);
-  AppearanceButtons[4]->SetLabel("Apply");
-  AppearanceButtons[5]->SetLabel("Cancel");
+      Widgets.AppearanceButtons[3]->SetLabel(std::string("Hair color: ") + color[i]);
+  Widgets.AppearanceButtons[4]->SetLabel("Apply");
+  Widgets.AppearanceButtons[5]->SetLabel("Cancel");
 }
 
-void UCharacterSheetScreen::RenderCharacterPreview()
+void UCharacterSheetScreen::RenderCharacterPreview(const CharacterStatsSnapshot &snap)
 {
-  if (!PreviewViewport)
+  if (!Widgets.PreviewViewport)
   {
     return;
   }
-  if (!CreaturePreview || !PreviewValid)
+  if (!CreaturePreview || !snap.valid || snap.typeId.empty())
   {
     if (PreviewTexture != 0)
     {
       glDeleteTextures(1, &PreviewTexture);
       PreviewTexture = 0;
     }
-    PreviewViewport->SetPreviewTexture(0);
+    Widgets.PreviewViewport->SetPreviewTexture(0);
     return;
   }
 
-  const GuiRect b = PreviewViewport->GetBounds();
+  const GuiRect b = Widgets.PreviewViewport->GetBounds();
   const int size = std::max(64, std::min(b.W, b.H));
-  if (size <= 0 || PreviewTypeId.empty())
-  {
-    if (PreviewTexture != 0)
-    {
-      glDeleteTextures(1, &PreviewTexture);
-      PreviewTexture = 0;
-    }
-    PreviewViewport->SetPreviewTexture(0);
-    return;
-  }
 
   std::array<WornArmorPreviewSlot, kWornArmorSlotCount> armorSlots{};
   std::string armorKey;
@@ -1418,33 +1435,23 @@ void UCharacterSheetScreen::RenderCharacterPreview()
   std::string offId;
   std::string wieldKey;
   ItemVisualInputs mainInputs, offInputs;
-  if (Stats)
+  for (size_t i = 0; i < kWornArmorSlotCount; ++i)
   {
-    const CharacterStatsSnapshot snap = Stats->GetCharacterStatsSnapshot();
-    for (size_t i = 0; i < kWornArmorSlotCount; ++i)
-    {
-      const auto &s = snap.equippedArmor[i];
-      if (!s.itemId.empty() && !s.broken)
-      {
-        armorSlots[i].ItemId = s.itemId;
-      }
-      armorKey += s.itemId;
-      armorKey.push_back('|');
-      armorKey += s.broken ? '1' : '0';
-      armorKey.push_back(';');
-    }
-    const auto &main = snap.equippedTools[0];
-    const auto &off = snap.equippedTools[1];
-    if (!main.itemId.empty() && !main.broken && !main.isBlock)
-    {
-      mainId = main.itemId;
-    }
-    if (!off.itemId.empty() && !off.broken && !off.isBlock)
-    {
-      offId = off.itemId;
-    }
-    wieldKey = mainId + "|" + offId;
+    const auto &s = snap.equippedArmor[i];
+    if (!s.itemId.empty() && !s.broken)
+      armorSlots[i].ItemId = s.itemId;
+    armorKey += s.itemId;
+    armorKey.push_back('|');
+    armorKey += s.broken ? '1' : '0';
+    armorKey.push_back(';');
   }
+  const auto &main = snap.equippedTools[0];
+  const auto &off = snap.equippedTools[1];
+  if (!main.itemId.empty() && !main.broken && !main.isBlock)
+    mainId = main.itemId;
+  if (!off.itemId.empty() && !off.broken && !off.isBlock)
+    offId = off.itemId;
+  wieldKey = mainId + "|" + offId;
 
   if (auto *session = dynamic_cast<UGameSession *>(Stats))
     if (auto world = session->GetWorld())
@@ -1460,15 +1467,15 @@ void UCharacterSheetScreen::RenderCharacterPreview()
       }
   wieldKey +=
       "|revision=" + std::to_string(UItemDefinitionStorage::ContentRevision());
-  const float yaw = PreviewViewport->GetYaw();
-  const float pitch = PreviewViewport->GetPitch();
-  const auto look = EditingAppearance
-                        ? DraftAppearance
-                        : Stats->GetCharacterStatsSnapshot().humanAppearance;
+  const float yaw = Widgets.PreviewViewport->GetYaw();
+  const float pitch = Widgets.PreviewViewport->GetPitch();
+  const auto &look = EditingAppearance ? DraftAppearance : snap.humanAppearance;
+  const auto &skinId = EditingAppearance ? DraftSkin : snap.skinId;
+  auto appearanceKey = look.Key();
   const bool sameCache =
-      look.Key() == LastCachedAppearance && PreviewTexture != 0 &&
-      size == LastPreviewSize && PreviewTypeId == LastCachedTypeId &&
-      PreviewSkinId == LastCachedSkinId && armorKey == LastCachedArmorKey &&
+      appearanceKey == LastCachedAppearance && PreviewTexture != 0 &&
+      size == LastPreviewSize && snap.typeId == LastCachedTypeId &&
+      skinId == LastCachedSkinId && armorKey == LastCachedArmorKey &&
       wieldKey == LastCachedWieldKey &&
       std::abs(yaw - LastPreviewYaw) < 0.01f &&
       std::abs(pitch - LastPreviewPitch) < 0.01f;
@@ -1477,37 +1484,38 @@ void UCharacterSheetScreen::RenderCharacterPreview()
     return;
   }
 
-  const GLuint tex = CreaturePreview->RenderToUniqueTexture(
-      PreviewTypeId, PreviewSkinId, size, yaw, pitch, 0.f, false, &armorSlots,
+  auto typeKey = snap.typeId;
+  auto skinKey = skinId;
+  UGlTextureOwner texture(CreaturePreview->RenderToUniqueTexture(
+      typeKey, skinKey, size, yaw, pitch, 0.f, false, &armorSlots,
       mainId.empty() ? nullptr : &mainId, offId.empty() ? nullptr : &offId,
-      &look, &mainInputs, &offInputs);
-  if (tex == 0)
-  {
+      &look, &mainInputs, &offInputs));
+  if (!texture.Get())
     return;
-  }
 
-  if (PreviewTexture != 0)
-  {
-    glDeleteTextures(1, &PreviewTexture);
-  }
-  PreviewTexture = tex;
-  PreviewViewport->SetPreviewTexture(PreviewTexture);
+  UGlTextureOwner retired(PreviewTexture);
+  PreviewTexture = texture.Release();
+  Widgets.PreviewViewport->SetPreviewTexture(PreviewTexture);
   LastPreviewYaw = yaw;
   LastPreviewPitch = pitch;
   LastPreviewSize = size;
-  LastCachedTypeId = PreviewTypeId;
-  LastCachedSkinId = PreviewSkinId;
-  LastCachedAppearance = look.Key();
-  LastCachedArmorKey = armorKey;
-  LastCachedWieldKey = wieldKey;
+  LastCachedTypeId.swap(typeKey);
+  LastCachedSkinId.swap(skinKey);
+  LastCachedAppearance.swap(appearanceKey);
+  LastCachedArmorKey.swap(armorKey);
+  LastCachedWieldKey.swap(wieldKey);
 }
 
 void UCharacterSheetScreen::Update(double /*dt*/)
 {
   if (Visible)
   {
-    if (Icons && Icons->PendingItemIcons())
-      Icons->WarmupItemIcons(3);
+    try
+    {
+      if (Icons && Icons->PendingItemIcons())
+        Icons->WarmupItemIcons(3);
+    }
+    catch (const std::bad_alloc &) { /* The icon queue retains the current request. */ }
     RefreshLabels();
   }
 }
@@ -1520,27 +1528,27 @@ void UCharacterSheetScreen::OnViewportChanged(int width, int height)
 
 std::string UCharacterSheetScreen::GetSectionStateKey() const
 {
-  return (Search ? Search->GetText() : "") + "|" +
+  return (Widgets.Search ? Widgets.Search->GetText() : "") + "|" +
          std::to_string(RecoveryMode) + "|" + std::to_string(RecoveryOffset) +
-         "|" + std::to_string(StatsScroll->GetScrollY()) + "|" +
+         "|" + std::to_string(Widgets.StatsScroll->GetScrollY()) + "|" +
          DraftAppearance.Key() + "|" + DraftSkin + "|" +
-         std::to_string(PreviewViewport->GetYaw()) + "|" +
-         std::to_string(PreviewViewport->GetPitch());
+         std::to_string(Widgets.PreviewViewport->GetYaw()) + "|" +
+         std::to_string(Widgets.PreviewViewport->GetPitch());
 }
 GuiRect UCharacterSheetScreen::GetSearchBounds() const
 {
-  return Search->GetBounds();
+  return Widgets.Search->GetBounds();
 }
 GuiRect UCharacterSheetScreen::GetRecoveryButtonBounds() const
 {
-  return RecoveryButton->GetBounds();
+  return Widgets.RecoveryButton->GetBounds();
 }
 GuiRect UCharacterSheetScreen::GetBackpackSlotBounds(size_t index) const
 {
-  return index < BagSlots.size() ? BagSlots[index]->GetBounds() : GuiRect{};
+  return Root && index < Widgets.BagSlots.size() ? Widgets.BagSlots[index]->GetBounds() : GuiRect{};
 }
 GLuint UCharacterSheetScreen::GetBackpackIconTexture(size_t index) const
 {
-  return index < BagSlots.size() ? BagSlots[index]->GetIconTexture() : 0;
+  return Root && index < Widgets.BagSlots.size() ? Widgets.BagSlots[index]->GetIconTexture() : 0;
 }
 } // namespace cutum

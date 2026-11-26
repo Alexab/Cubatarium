@@ -19,50 +19,58 @@ namespace cutum
 class UPlayerSectionHost : public UGuiWidget
 {
 public:
-  UGuiWidget *Page{nullptr};
+  UGuiScreenBase *Page{nullptr};
+  UGuiWidget *GetPageRoot() const { return Page ? Page->GetRoot() : nullptr; }
   void Draw(UGuiRenderer &r) override
   {
-    if (Page)
-      Page->Draw(r);
+    if (auto *root = GetPageRoot())
+      root->Draw(r);
   }
   UGuiWidget *HitTest(int x, int y) override
   {
-    return Page && Bounds.Contains(x, y) ? Page->HitTest(x, y) : nullptr;
+    auto *root = GetPageRoot();
+    return root && Bounds.Contains(x, y) ? root->HitTest(x, y) : nullptr;
   }
   UGuiWidget *HitTestFocusable(int x, int y) override
   {
-    return Page && Bounds.Contains(x, y) ? Page->HitTestFocusable(x, y)
+    auto *root = GetPageRoot();
+    return root && Bounds.Contains(x, y) ? root->HitTestFocusable(x, y)
                                          : nullptr;
   }
   bool ScrollAtPoint(int x, int y, const GuiScrollEvent &e) override
   {
-    return Page && Bounds.Contains(x, y) && Page->ScrollAtPoint(x, y, e);
+    auto *root = GetPageRoot();
+    return root && Bounds.Contains(x, y) && root->ScrollAtPoint(x, y, e);
   }
   void CollectFocusables(std::vector<UGuiWidget *> &out) override
   {
-    if (Page)
-      Page->CollectFocusables(out);
+    if (auto *root = GetPageRoot())
+      root->CollectFocusables(out);
   }
   bool OnMouseDown(const GuiMouseEvent &event) override
   {
-    return Page && Bounds.Contains(event.X, event.Y) &&
-           Page->OnMouseDown(event);
+    auto *root = GetPageRoot();
+    return root && Bounds.Contains(event.X, event.Y) && root->OnMouseDown(event);
   }
   bool OnMouseUp(const GuiMouseEvent &event) override
   {
-    return Page && Page->OnMouseUp(event);
+    auto *root = GetPageRoot();
+    return root && root->OnMouseUp(event);
   }
   bool OnMouseMove(const GuiMouseEvent &event) override
   {
-    return Page && Page->OnMouseMove(event);
+    auto *root = GetPageRoot();
+    return root && root->OnMouseMove(event);
   }
   bool OnKey(const GuiKeyEvent &event) override
   {
-    return Page && Page->OnKey(event);
+    auto *root = GetPageRoot();
+    return root && root->OnKey(event);
   }
   bool OnChar(const GuiCharEvent &event) override
   {
-    return Page && Page->OnChar(event);
+    auto *root = GetPageRoot();
+    return root && root->OnChar(event);
   }
 };
 namespace
@@ -157,7 +165,7 @@ void UPlayerWindowScreen::Build(UGuiContext &ctx)
     if (Character->GetSection() != Section)
       Character->SetSection(Section);
   }
-  nextHost->Page = Section == 4 ? Catalog->GetRoot() : Character->GetRoot();
+  nextHost->Page = Section == 4 ? static_cast<UGuiScreenBase *>(Catalog) : Character;
   nextTabs->SetTabEnabled(1, Session->GetWorldGameMode() == WorldGameMode::Creative);
   nextTabs->SetActiveTab(TabForSection(Section));
 
@@ -191,12 +199,13 @@ PlayerWindowStorage UPlayerWindowScreen::InspectOwnedStorage(
       typeid(*outer[0]) != typeid(UGuiWindow) || Window->Theme != theme)
     return out;
   const auto &children = Window->GetChildren();
-  const auto *expectedPage = Section == 4 ? catalog->GetRoot() : character->GetRoot();
+  const auto *expectedPage = Section == 4 ? static_cast<const UGuiScreenBase *>(catalog) : character;
   if (children.size() != 2 + Slots.size() || !children[0] || children[0].get() != Tabs ||
       typeid(*children[0]) != typeid(UGuiTabBar) || Tabs->Theme != theme ||
       Tabs->Labels.size() != Sections.size() || Tabs->Enabled.size() != Sections.size() ||
       Tabs->GetActiveTab() != TabForSection(Section) || !children[1] || children[1].get() != Host ||
-      typeid(*children[1]) != typeid(UPlayerSectionHost) || !expectedPage || Host->Page != expectedPage ||
+      typeid(*children[1]) != typeid(UPlayerSectionHost) || Host->Page != expectedPage ||
+      !expectedPage->GetRoot() ||
       !Tabs->GetChildren().empty() || !Host->GetChildren().empty())
     return out;
   for (size_t i = 0; i < Slots.size(); ++i)
@@ -300,12 +309,13 @@ void UPlayerWindowScreen::SelectSection(int section)
 {
   const bool allowed = Session->GetWorldGameMode() == WorldGameMode::Creative;
   const int next = section == 4 && !allowed ? 0 : std::clamp(section, 0, 4);
-  auto *selectedRoot = next == 4 ? Catalog->GetRoot() : Character->GetRoot();
+  auto *selectedPage = next == 4 ? static_cast<UGuiScreenBase *>(Catalog) : Character;
+  auto *selectedRoot = selectedPage->GetRoot();
   if (!Host || !selectedRoot)
     return;
   if (next != 4 && Character->GetSection() != next)
     Character->SetSection(next);
-  if (Host->Page != selectedRoot || !selectedRoot->IsVisible())
+  if (Host->Page != selectedPage || !selectedRoot->IsVisible())
   {
     if (next == 4)
     {
@@ -318,7 +328,7 @@ void UPlayerWindowScreen::SelectSection(int section)
       Catalog->SetVisible(false);
     }
   }
-  Host->Page = selectedRoot;
+  Host->Page = selectedPage;
   Section = next;
   Tabs->SetTabEnabled(1, allowed);
   Tabs->SetActiveTab(TabForSection(Section));

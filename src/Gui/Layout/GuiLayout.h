@@ -2,6 +2,7 @@
 
 #include "Gui/Core/GuiTypes.h"
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace cutum
@@ -59,10 +60,14 @@ class UGuiLayout
 public:
   static void StackVertical(const GuiRect &clientArea, int spacing, int Padding,
                             const std::vector<UGuiWidget *> &children);
+  static void StackVertical(const GuiRect &clientArea, int spacing, int Padding,
+                            const std::vector<std::unique_ptr<UGuiWidget>> &children);
   /// Returns total height used (including Padding).
   static int StackVerticalMeasure(const GuiRect &clientArea, int spacing,
                                   int Padding,
                                   const std::vector<UGuiWidget *> &children);
+  static int StackVerticalMeasure(int spacing, int Padding,
+                                  const std::vector<std::unique_ptr<UGuiWidget>> &children);
   static void StackHorizontal(const GuiRect &clientArea, int spacing,
                               int Padding,
                               const std::vector<UGuiWidget *> &children);

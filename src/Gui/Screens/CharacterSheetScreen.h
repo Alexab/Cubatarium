@@ -4,10 +4,10 @@
 #include "Creatures/Core/HumanAppearance.h"
 #include "Gui/Core/GuiScreenBase.h"
 #include "Gui/Core/GuiTypes.h"
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <vector>
 
 typedef unsigned int GLuint;
 
@@ -84,56 +84,51 @@ public:
   bool PickDoll(int x, int y) const;
 
 private:
+  struct PageWidgets
+  {
+    UGuiWindow *Window{};
+    UGuiTabBar *Sections{};
+    UGuiTextInput *Search{};
+    UGuiButton *SortButton{}, *RecoveryButton{}, *DropButton{}, *DeleteButton{};
+    UGuiLabel *InventoryHint{}, *Tooltip{};
+    UGuiScrollView *StatsScroll{};
+    UGuiPanel *BodyPanel{}, *DollPanel{}, *StatsPanel{}, *BagPanel{}, *AppearancePanel{};
+    UGuiLabel *EquipmentHeader{}, *VitalsHeader{}, *AttrsHeader{}, *TitleMeta{}, *ModeLabel{};
+    UGuiPreviewViewport *PreviewViewport{};
+    UGuiButton *AppearanceToggle{};
+    std::array<UGuiSlot *, 4> ArmorSlots{};
+    std::array<UGuiSlot *, 2> ToolSlots{};
+    std::array<UGuiSlot *, 40> BagSlots{};
+    std::array<UGuiButton *, 6> AppearanceButtons{};
+    std::array<UGuiLabel *, 7> VitalLabels{}, AttrLabels{};
+  };
+
+  static constexpr size_t FixedStatusRows = 16;
   void Relayout();
-  void BuildEquipmentPanel(UGuiPanel &body, const GuiTheme &theme);
+  void Relayout(PageWidgets &page, UGuiWidget &root, int width, int height);
+  void BuildEquipmentPanel(PageWidgets &page, UGuiPanel &body, const GuiTheme &theme);
   void RefreshLabels();
+  void RefreshStatusRows(const CharacterStatsSnapshot &snap);
   void RefreshTooltip(const CharacterStatsSnapshot &snap);
-  void RenderCharacterPreview();
+  void RenderCharacterPreview(const CharacterStatsSnapshot &snap);
   static std::string FormatBar(const char *name, float cur, float max);
 
   IUCharacterStatsViewModel *Stats{nullptr};
   UCreaturePreviewRenderer *CreaturePreview{nullptr};
   IUGuiIconSource *Icons{nullptr};
-  UGuiWindow *Window{nullptr};
+  PageWidgets Widgets;
 
   int Section{1};
   bool RecoveryMode{false};
   size_t RecoveryOffset{0};
-  UGuiTabBar *Sections{nullptr};
-  UGuiTextInput *Search{nullptr};
-  UGuiButton *SortButton{nullptr}, *RecoveryButton{nullptr},
-      *DropButton{nullptr}, *DeleteButton{nullptr};
-  UGuiLabel *InventoryHint{nullptr};
-  UGuiLabel *Tooltip{nullptr};
   int PointerX{-1}, PointerY{-1};
-  UGuiScrollView *StatsScroll{nullptr};
-  std::vector<UGuiLabel *> EffectLabels;
-  UGuiPanel *BodyPanel{nullptr};
-  UGuiPanel *DollPanel{nullptr};
-  UGuiPanel *StatsPanel{nullptr};
-  UGuiLabel *EquipmentHeader{nullptr};
-  UGuiLabel *VitalsHeader{nullptr};
-  UGuiLabel *AttrsHeader{nullptr};
-
-  UGuiPreviewViewport *PreviewViewport{nullptr};
-  std::vector<UGuiSlot *> ArmorSlots;
-  std::vector<UGuiSlot *> ToolSlots;
-  UGuiPanel *BagPanel{nullptr};
-  std::vector<UGuiSlot *> BagSlots;
-  UGuiPanel *AppearancePanel{nullptr};
-  UGuiButton *AppearanceToggle{nullptr};
-  std::vector<UGuiButton *> AppearanceButtons;
   bool EditingAppearance{false};
   HumanAppearance DraftAppearance;
   std::string DraftSkin;
   std::string LastCachedAppearance;
-  void ResetAppearanceDraft();
-  void RefreshAppearanceControls();
-  bool WideLayout{true};
+  void ResetAppearanceDraft(const CharacterStatsSnapshot &snap, std::string base);
+  void RefreshAppearanceControls(bool human);
   GLuint PreviewTexture{0};
-  bool PreviewValid{false};
-  std::string PreviewTypeId;
-  std::string PreviewSkinId;
   float LastPreviewYaw{0.f};
   float LastPreviewPitch{0.f};
   int LastPreviewSize{0};
@@ -141,12 +136,7 @@ private:
   std::string LastCachedSkinId;
   std::string LastCachedArmorKey;
   std::string LastCachedWieldKey;
-  UGuiLabel *TitleMeta{nullptr};
-  UGuiLabel *ModeLabel{nullptr};
-  std::vector<UGuiLabel *> VitalLabels;
-  std::vector<UGuiLabel *> AttrLabels;
   bool Visible{false};
-  bool Built{false};
   bool Hosted{false};
   bool DraftInitialized{false};
   uint64_t DraftOwnerId{0};

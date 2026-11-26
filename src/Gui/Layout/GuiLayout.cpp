@@ -131,16 +131,17 @@ GridPlacementData BuildGridPlacementData(const GuiRect &clientArea,
   return d;
 }
 
-} // namespace
+UGuiWidget *StackChild(UGuiWidget *child) { return child; }
+UGuiWidget *StackChild(const std::unique_ptr<UGuiWidget> &child) { return child.get(); }
 
-int UGuiLayout::StackVerticalMeasure(const GuiRect &clientArea, int spacing,
-                                     int Padding,
-                                     const std::vector<UGuiWidget *> &children)
+template <typename Children>
+int MeasureStack(int spacing, int Padding, const Children &children)
 {
   int total = Padding * 2;
   bool first = true;
-  for (UGuiWidget *child : children)
+  for (const auto &entry : children)
   {
+    const auto *child = StackChild(entry);
     if (!child || !child->IsVisible())
     {
       continue;
@@ -155,13 +156,14 @@ int UGuiLayout::StackVerticalMeasure(const GuiRect &clientArea, int spacing,
   return total;
 }
 
-void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing,
-                               int Padding,
-                               const std::vector<UGuiWidget *> &children)
+template <typename Children>
+void PlaceStack(const GuiRect &clientArea, int spacing, int Padding,
+                const Children &children)
 {
   GuiRect cursor = ClientWithPadding(clientArea, Padding);
-  for (UGuiWidget *child : children)
+  for (const auto &entry : children)
   {
+    auto *child = StackChild(entry);
     if (!child || !child->IsVisible())
     {
       continue;
@@ -170,6 +172,32 @@ void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing,
     child->SetBounds({cursor.X, cursor.Y, cursor.W, childH});
     cursor.Y += childH + spacing;
   }
+}
+
+} // namespace
+
+int UGuiLayout::StackVerticalMeasure(const GuiRect &, int spacing, int Padding,
+                                    const std::vector<UGuiWidget *> &children)
+{
+  return MeasureStack(spacing, Padding, children);
+}
+
+int UGuiLayout::StackVerticalMeasure(int spacing, int Padding,
+                                    const std::vector<std::unique_ptr<UGuiWidget>> &children)
+{
+  return MeasureStack(spacing, Padding, children);
+}
+
+void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing, int Padding,
+                               const std::vector<UGuiWidget *> &children)
+{
+  PlaceStack(clientArea, spacing, Padding, children);
+}
+
+void UGuiLayout::StackVertical(const GuiRect &clientArea, int spacing, int Padding,
+                               const std::vector<std::unique_ptr<UGuiWidget>> &children)
+{
+  PlaceStack(clientArea, spacing, Padding, children);
 }
 
 void UGuiLayout::StackHorizontal(const GuiRect &clientArea, int spacing,
