@@ -1,0 +1,244 @@
+{
+  "schema": "s4-e12-w55-windows-crt-threads.v1",
+  "status": "SCOPED_CRT_THREAD_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "a9dae705aecd611c9ca9cf7348a2aebcfa18d68a",
+  "prior_certificate": "S4_02_E12_W54_NATIVE_THREAD_STACKS_CERTIFICATE_2026_11_26.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W55 joins the static UCRT base PTD, worker VCRuntime PTD, _beginthreadex parameter and three time scratch allocations to registered primary thread scopes. The compiler verifies widths against the installed runtime sources, and the Release fixture observes both workers' exact live requests and all twelve heap blocks retiring after join. The main VCRuntime record is image-static. The executable TLS template is read from the loaded image and independently matched with both Release PE files. The diagnostic native menu, in-game and post-loop scopes retain separate source totals. All 46 Release regression groups and scoped native startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W55. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale/other scratch and loader TLS backing, extra modules, fibers and driver owners. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Requested payload under one linked x64 static CRT profile and static TLS template of the executable",
+  "scope_notes": [
+    "One primary FLS state per registered native thread in this linked CRT profile",
+    "Separate terms for active worker launch context and image-static main VCRuntime",
+    "Executable TLS template already includes its engine TLS inline cells"
+  ],
+  "remaining_measurements": [
+    "Pending or retiring thread launch contexts outside registration",
+    "Locale and other scratch reachable through CRT records",
+    "Loader TLS backing and extra modules/fibers",
+    "Kernel thread and driver memory",
+    "Full process composition and matched performance matrix"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/heapapi/nf-heapapi-heapsize",
+    "https://learn.microsoft.com/cpp/c-runtime-library/reference/beginthread-beginthreadex",
+    "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format"
+  ],
+  "compiled_layout": {
+    "status": "PASS",
+    "profile": {
+      "sdk": "10.0.26100.0",
+      "msvc": "14.51.36231"
+    },
+    "layout": {
+      "ucrt_ptd": 968,
+      "vcrt_ptd": 128,
+      "launch_parameter": 40,
+      "errno_offset": 32,
+      "context_offset": 960,
+      "time_tm": 36,
+      "msvc_full_version": 195136260
+    },
+    "exact_source_sha256": {
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\inc\\corecrt_internal.h": "bad095a8a91e6cb55d7e28083ccb9db5ffbfa53d18668b9448acff284985e936",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\crt\\src\\vcruntime\\vcruntime_internal.h": "321832ff67f889ebab622fdeea5744d6650266efd0476af468296d941f0728ce",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\crt\\src\\vcruntime\\internal_shared.h": "e4fafa942177aabe0cd8069b1bf1cd74d84a8064a5b01eb4a834f5a47ac4fada",
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\internal\\per_thread_data.cpp": "8468964268ff34390eeb32807e55ab963b4bae300c137c56c828a59cc8a5b164",
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\startup\\thread.cpp": "3cff42d063e539a8e786f5365161231ca3dc7381c544cdae4aaa99111002c441",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\crt\\src\\vcruntime\\per_thread_data.cpp": "9a3e101c56b39c654687c8fe519a3fbd7da1b9d090c634b61383b360184a3439",
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\heap\\heap_handle.cpp": "19d2a56dfd178bf236109102b99e2abda1319e10dd08065cb2affee4422092aa",
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\time\\gmtime.cpp": "f523c5391ff5574da0007be649336dde6c08e6ddf9311d07c66b539b11c5fade",
+      "C:\\Program Files (x86)\\Windows Kits\\10\\Source\\10.0.26100.0\\ucrt\\time\\asctime.cpp": "96ba1e7c8d5bdae6a18526fceda71eaef0679a16eca4d78a72ce166b403860cc",
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.exe": "30f37436f450e2ffeaab1ab002c224ac294e9062a26937862184a8aeab04019d",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.cpp": "7609873663fabdb00415a2813f2d5c1ac5d453a69ce4c979c8509c82c564326a",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.log": "8e1f19fe3b76eb51db38096e22e4900c8741b7c3a0d98c1def014e7828d2ad76"
+    },
+    "command": [
+      "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\bin\\Hostx64\\x64\\cl.exe",
+      "/nologo",
+      "/MT",
+      "/O2",
+      "/DNDEBUG",
+      "/std:c++17",
+      "/EHsc",
+      "/IC:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\ucrt",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\um",
+      "/IC:\\Program Files (x86)\\Windows Kits\\10\\Include\\10.0.26100.0\\shared",
+      "/FoC:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.obj",
+      "/FeC:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.exe",
+      "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-crt-threads-layout.cpp",
+      "/link",
+      "/LIBPATH:C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\lib\\x64",
+      "/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\ucrt\\x64",
+      "/LIBPATH:C:\\Program Files (x86)\\Windows Kits\\10\\Lib\\10.0.26100.0\\um\\x64"
+    ]
+  },
+  "linked_runtime_libraries": {
+    "LIBUCRT.LIB": {
+      "path": "C:\\PROGRAM FILES (X86)\\WINDOWS KITS\\10\\LIB\\10.0.26100.0\\UCRT\\X64\\LIBUCRT.LIB",
+      "sha256": "c3a20426b5142bfd0848468a3b95c47440759f0391ef2764e5020672811803cb"
+    },
+    "LIBVCRUNTIME.LIB": {
+      "path": "C:\\PROGRAM FILES\\MICROSOFT VISUAL STUDIO\\18\\COMMUNITY\\VC\\TOOLS\\MSVC\\14.51.36231\\LIB\\X64\\LIBVCRUNTIME.LIB",
+      "sha256": "2d8c0eae0b8df5f7e6a2ae9b52cdaa2812d7253a1254fa02d25de60720c48486"
+    }
+  },
+  "fixture": {
+    "asctime_request": 26,
+    "exe_tls_raw_per_thread": 31352,
+    "exe_tls_zero_fill_per_thread": 0,
+    "first_exception_initialized_vcrt": [
+      true,
+      true
+    ],
+    "gmtime_request": 36,
+    "launch_parameter_request": 40,
+    "main_vcrt_is_static": true,
+    "remaining_heap_blocks_after_join": 0,
+    "status": "PASS",
+    "tls_initialization_isolated": true,
+    "ucrt_ptd_request": 968,
+    "vcrt_worker_ptd_request": 128,
+    "verified_live_heap_blocks": 12,
+    "wasctime_request": 52,
+    "workers": 2
+  },
+  "fixture_pe_tls": {
+    "raw_per_thread": 31352,
+    "zero_fill_per_thread": 0,
+    "exe_sha256": "cd09cab170d65f366e6551f76140256253a995f764e3c6b4da214905a7bca353"
+  },
+  "desktop_pe_tls": {
+    "raw_per_thread": 34728,
+    "zero_fill_per_thread": 0,
+    "exe_sha256": "5391091c39c90c96e080ee838c082889e14da42b7982b474ef1d06a8b1cf4326"
+  },
+  "native": {
+    "menu": {
+      "exe_tls_raw_per_thread": 34728,
+      "exe_tls_template_payload": 382008,
+      "exe_tls_zero_fill_per_thread": 0,
+      "launch_parameter_requested_upper": 400,
+      "main_vcrt_static_bytes": 128,
+      "primary_scopes": 11,
+      "schema": "windows-crt-thread-storage.v1",
+      "status": "PASS",
+      "time_scratch_requested_upper": 1254,
+      "ucrt_ptd_requested_upper": 10648,
+      "vcrt_worker_ptd_requested_upper": 1280,
+      "whole_runtime_complete": false,
+      "worker_scopes": 10
+    },
+    "in-game": {
+      "exe_tls_raw_per_thread": 34728,
+      "exe_tls_template_payload": 798744,
+      "exe_tls_zero_fill_per_thread": 0,
+      "launch_parameter_requested_upper": 880,
+      "main_vcrt_static_bytes": 128,
+      "primary_scopes": 23,
+      "schema": "windows-crt-thread-storage.v1",
+      "status": "PASS",
+      "time_scratch_requested_upper": 2622,
+      "ucrt_ptd_requested_upper": 22264,
+      "vcrt_worker_ptd_requested_upper": 2816,
+      "whole_runtime_complete": false,
+      "worker_scopes": 22
+    },
+    "after-loop": {
+      "exe_tls_raw_per_thread": 34728,
+      "exe_tls_template_payload": 764016,
+      "exe_tls_zero_fill_per_thread": 0,
+      "launch_parameter_requested_upper": 840,
+      "main_vcrt_static_bytes": 128,
+      "primary_scopes": 22,
+      "schema": "windows-crt-thread-storage.v1",
+      "status": "PASS",
+      "time_scratch_requested_upper": 2508,
+      "ucrt_ptd_requested_upper": 21296,
+      "vcrt_worker_ptd_requested_upper": 2688,
+      "whole_runtime_complete": false,
+      "worker_scopes": 21
+    }
+  },
+  "native_startup_aggregate": "UNTESTED",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "d946fb9f4fb7c67dcd8c88e71b7467e9fc7d9b881ac092dc0b620b7b2596e3b5",
+  "source_sha256_raw": {
+    "src/Core/Memory/WindowsCrtThreadStorage.h": "95c96eb3ded27a15c8a506232f3e4f3dedfedb33495318e564378fac71e7919d",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "93d81e9795f9e047035f9b2e36c46c6b754fa25eed02d9856b8311ca11d6cdc6",
+    "src/Test/WindowsCrtThreadFixture.h": "6f4c066439ad67f69c47d83614a31ebcec2d63b4d71d81737c42efc244821d45",
+    "src/Test/AsyncIoStorageTest.cpp": "b4227c1417e12463cb61c69bf6d08e306fe911c95894903e87c063850ed091c3"
+  },
+  "desktop_exe_sha256": "5391091c39c90c96e080ee838c082889e14da42b7982b474ef1d06a8b1cf4326",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-crt-threads-provenance.json": "73fd3358d95d82cd0eaa7f22e7d7c63acb3e7c483561370e2b47f08d291ddad3",
+    "build/desktop-msvc/s4-crt-threads-frozen-source.json": "b50e6433064305059b155c67cd52370626fb491bd1007ac02f6b5417b37349e9",
+    "build/desktop-msvc/s4-crt-threads-layout.json": "7a888d7b6e11cb304c9c59a2aa50a796931b7278fa9e2f1476f7fd0928c8a737",
+    "build/desktop-msvc/Cubatarium.dir/Release/Cubatarium.tlog/link.read.1.tlog": "1dda1e7c0207a7b93772b48dc5fcd3df1ce1f88fde4d2829a2aca80412cf65cb",
+    "build/desktop-msvc/s4-crt-threads-regressions.json": "a9bed0d34246121eff6c634bf29a6a3d9b749661c012909f0ee3dde4d6465250",
+    "build/desktop-msvc/s4-crt-threads-io-owners.json": "f3b4e4c85113e5fbbaa7101f4d7bd2a00223cbc3b1c686aa26614580b11316f5",
+    "build/desktop-msvc/s4-crt-threads-native/smoke-verdict.json": "a4a7b82687f2fa82ebb0048fdd9da7740e3c466bdf8951487d69fffa05d0c0dd",
+    "build/desktop-msvc/s4-crt-threads-native/flight_sim_report.json": "1f9eb49071197a3d249bd31990d8bbe5ef624444bfcd82a87b5c7f55a06aaeab",
+    "build/desktop-msvc/s4-crt-threads-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-crt-threads-native/owner-domain/flight-menu.json": "05ed6b5a24968044d74447dd7b3db860ae0558e779acdfaa5bd733994cae7f3c",
+    "build/desktop-msvc/s4-crt-threads-native/owner-domain/flight-in-game.json": "02df6eff47c9799abfc258adfd5e8e1c01c1e25f9e1564fa800e2fb1a3b13063"
+  }
+}

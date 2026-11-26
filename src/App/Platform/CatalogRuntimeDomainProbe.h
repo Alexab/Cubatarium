@@ -25,6 +25,7 @@
 #include "Core/Memory/VisualFilesystemSource.h"
 #include "Core/Memory/VisualLoaderSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
+#include "Core/Memory/WindowsCrtThreadStorage.h"
 #include "Core/Memory/WindowsProcessMemory.h"
 #include "Core/Memory/NativeThreadStack.h"
 #include "Items/ItemSceneCursor.h"
@@ -102,6 +103,8 @@ inline nlohmann::json DescribeNativeThreadStacks()
         {"reserved_bytes", row.reserved}, {"peak_reserved_bytes", row.peakReserved},
         {"committed_bytes", row.committed}, {"guard_bytes", row.guard}};
   }
+  const auto mainScopes = stacks.rows[static_cast<size_t>(NativeThreadKind::Main)].active;
+  const auto crt = BoundWindowsCrtThreadStorage(stacks.registered, mainScopes);
   return {
       {"schema", "native-thread-stacks.v1"},
       {"status", stacks.processThreadsObserved && stacks.registered && sampled == stacks.registered ? "PASS" : "UNSUPPORTED"},
@@ -110,7 +113,16 @@ inline nlohmann::json DescribeNativeThreadStacks()
       {"unregistered_process_threads", stacks.processThreads - stacks.matched},
       {"sampled_stacks", sampled}, {"reserved_bytes", reserved}, {"committed_bytes", committed},
       {"owners", std::move(owners)}, {"scope_inline_bytes", sizeof(NativeThreadStackOwner)},
-      {"row_counters_inline_bytes", sizeof(stacks.rows)}, {"whole_runtime_complete", false}};
+      {"row_counters_inline_bytes", sizeof(stacks.rows)},
+      {"linked_crt_thread_storage", {
+          {"schema", "windows-crt-thread-storage.v1"}, {"status", crt.supported ? "PASS" : "UNSUPPORTED"},
+          {"primary_scopes", crt.primaryScopes}, {"worker_scopes", crt.workerScopes},
+          {"ucrt_ptd_requested_upper", crt.ucrtPtdUpper}, {"vcrt_worker_ptd_requested_upper", crt.workerVcrtPtdUpper},
+          {"launch_parameter_requested_upper", crt.launchParameterUpper},
+          {"time_scratch_requested_upper", crt.timeScratchUpper}, {"main_vcrt_static_bytes", crt.mainVcrtStaticBytes},
+          {"exe_tls_raw_per_thread", crt.tlsRawPerThread}, {"exe_tls_zero_fill_per_thread", crt.tlsZeroFillPerThread},
+          {"exe_tls_template_payload", crt.tlsTemplatePayload}, {"whole_runtime_complete", false}}},
+      {"whole_runtime_complete", false}};
 }
 
 inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &application,
