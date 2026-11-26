@@ -59,9 +59,11 @@ void UScreenNavigator::ShowMainMenu()
   Application->PaletteOpen = false;
   Application->FreeCursor = false;
   auto menu = std::make_unique<UMainMenuScreen>(Application->GameSession.get());
-  Application->MainMenuScreen = menu.get();
+  auto *incoming = menu.get();
+  Application->MainMenuScreen = nullptr;
   Application->MenuSubview = MenuSubview::Main;
   Application->GuiContext->SetScreen(std::move(menu));
+  Application->MainMenuScreen = incoming;
   Application->SyncCursorVisibility();
 }
 

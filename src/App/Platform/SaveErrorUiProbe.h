@@ -223,18 +223,18 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
     application.Update(0.0);
     capture("save-failure-640.png", 640, 480);
     report["progress_storage_failure"] = progress_storage();
-    std::function<UGuiButton *(UGuiWidget *)> find_retry =
-        [&](UGuiWidget *widget) -> UGuiButton *
+    std::function<UGuiButton *(UGuiWidget *, const char *)> find_button =
+        [&](UGuiWidget *widget, const char *label) -> UGuiButton *
     {
       if (auto *button = dynamic_cast<UGuiButton *>(widget);
-          button && button->GetLabel() == "Retry save")
+          button && button->GetLabel() == label)
         return button;
       for (const auto &child : widget->GetChildren())
-        if (auto *found = find_retry(child.get()))
+        if (auto *found = find_button(child.get(), label))
           return found;
       return nullptr;
     };
-    auto *retry = find_retry(application.GuiContext->GetScreen()->GetRoot());
+    auto *retry = find_button(application.GuiContext->GetScreen()->GetRoot(), "Retry save");
     require(retry && retry->IsVisible() && retry->IsEnabled(),
             "save UI exposes retry button");
     require(fs::remove(blocker / "owned-blocker") && fs::remove(blocker),
@@ -270,6 +270,37 @@ inline void RunSaveErrorUiProbe(UApplication &application, UCore &core)
                 !dynamic_cast<const UWorldProgressScreen *>(application.GuiContext->GetScreen()),
             "successful retry retires the active progress screen");
     report["progress_storage_retired"] = true;
+    auto &gui = *application.GuiContext;
+    const auto paused = application.InspectMainMenuStorage();
+    require(paused.supported && paused.present && paused.resume, "paused menu after save retry");
+    report["main_menu_storage_paused"] = MainMenuStorageJson(paused);
+    gui.NotifyViewport(1280, 720);
+    const auto click_label = [&](const char *label)
+    {
+      auto *button = find_button(gui.GetScreen()->GetRoot(), label);
+      require(button && button->IsEnabled() && button->IsVisible(), "native main menu button is active");
+      const auto &rect = button->GetBounds();
+      GuiMouseEvent event;
+      event.X = rect.X + rect.W / 2;
+      event.Y = rect.Y + rect.H / 2;
+      event.Pressed = true;
+      require(gui.RouteMouseDown(event), "native menu captures button press");
+      event.Pressed = false;
+      require(gui.RouteMouseUp(event), "native menu consumes button release");
+    };
+    click_label("Quit");
+    const auto modal = application.InspectMainMenuStorage();
+    require(modal.supported && modal.quit_dialog && modal.requested == paused.requested,
+            "native quit confirmation reuses the paused menu ownership");
+    report["main_menu_storage_quit_dialog"] = MainMenuStorageJson(modal);
+    click_label("No");
+    require(!application.InspectMainMenuStorage().quit_dialog && !application.QuitRequested,
+            "native menu cancels quit");
+    click_label("Resume");
+    const auto resumed = application.InspectMainMenuStorage();
+    require(resumed.supported && !resumed.present && application.State == AppState::InGame,
+            "native resume detaches and retires the menu and its application alias");
+    report["main_menu_storage_resumed"] = MainMenuStorageJson(resumed);
     application.State = AppState::InGame;
     application.ShowFatalSaveFailure(
         "The save disk is full. Your latest changes remain in memory. "

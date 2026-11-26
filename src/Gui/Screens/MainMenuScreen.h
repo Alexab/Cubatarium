@@ -14,6 +14,13 @@ class UGuiLabel;
 class UGuiPanel;
 struct GuiTheme;
 
+struct MainMenuStorage
+{
+  size_t screen_bytes{}, widgets{}, widget_bytes{}, children_bytes{}, button_index_bytes{}, text_bytes{};
+  size_t callbacks{}, callback_bytes{}, requested{};
+  bool present{}, resume{}, quit_dialog{}, bindings_match{}, supported{};
+};
+
 class UMainMenuScreen : public UGuiScreenBase
 {
 public:
@@ -25,8 +32,13 @@ public:
 
   bool IsQuitConfirmationVisible() const { return QuitDialogVisible; }
   void ShowQuitConfirmation(bool visible);
+  MainMenuStorage InspectOwnedStorage(const UGuiContext &context,
+                                       const IUGuiGameActions *actions) const noexcept;
 
 private:
+  struct PrimaryAction;
+  template<void (IUGuiGameActions::*Invoke)()> struct MenuAction;
+  template<bool Visible> struct QuitDialogAction;
   void Relayout();
   void RelayoutQuitDialog();
 

@@ -432,6 +432,7 @@ void UApplication::RequestEnterGame()
     return;
   }
 
+  MainMenuScreen = nullptr;
   GuiContext->SetScreen(nullptr);
   State = AppState::InGame;
   EnterInGameInputState();
@@ -626,6 +627,25 @@ void UApplication::ShowMainMenu()
 {
   PendingFirstWorldPaint = false;
   ScreenNav.ShowMainMenu();
+}
+
+MainMenuStorage UApplication::InspectMainMenuStorage() const noexcept
+{
+  if (!GuiContext)
+    return {};
+  const auto *screen = dynamic_cast<const UMainMenuScreen *>(GuiContext->GetScreen());
+  if (screen != MainMenuScreen)
+  {
+    MainMenuStorage result;
+    result.present = screen || MainMenuScreen;
+    return result;
+  }
+  if (screen)
+    return screen->InspectOwnedStorage(*GuiContext, GameSession.get());
+  MainMenuStorage result;
+  result.bindings_match = true;
+  result.supported = true;
+  return result;
 }
 
 void UApplication::SetHotbarCountSetting(int count)
@@ -1040,6 +1060,7 @@ void UApplication::CloseCreativePalette()
 void UApplication::ShowInGameHud()
 {
   ProgressScreen = nullptr;
+  MainMenuScreen = nullptr;
 #ifndef __ANDROID__
   if (Window && !Clipboard)
   {

@@ -103,13 +103,13 @@ bool UGuiButton::OnMouseUp(const GuiMouseEvent &event)
   }
   const bool inside = Bounds.Contains(event.X, event.Y);
   const bool wasPressed = PressedInside;
-  if (wasPressed && event.Button == GuiMouseButton::Left && OnClick && !Dragged)
-  {
-    OnClick();
-  }
+  const bool activate = wasPressed && event.Button == GuiMouseButton::Left && OnClick && !Dragged;
   PressedInside = false;
   Dragged = false;
   State = inside ? GuiButtonState::Hovered : GuiButtonState::Normal;
+  // Navigation callbacks can destroy this button with its screen.
+  if (activate)
+    OnClick();
   return wasPressed || inside;
 }
 

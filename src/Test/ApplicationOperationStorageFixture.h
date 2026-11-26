@@ -20,6 +20,17 @@ struct ApplicationOperationSourceProbe {
     app.ProgressScreen = nullptr;
     app.GetGui().SetScreen(nullptr);
   }
+  static void SetMenuSession(UApplication &app, bool resume)
+  {
+    app.State = AppState::MainMenu;
+    app.WorldSessionActive = resume;
+  }
+  static void ShowMain(UApplication &app) { app.ShowMainMenu(); }
+  static void DetachMain(UApplication &app)
+  {
+    app.MainMenuScreen = nullptr;
+    app.GetGui().SetScreen(nullptr);
+  }
   static std::function<void()> TakePending(UApplication &app){return std::move(app.PendingMenuAction);}
 };
 inline WorldRunnerRequest ApplicationOperationFixtureRequest(int variant){

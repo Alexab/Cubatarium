@@ -176,6 +176,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"wrappers_already_in_member_storage",operations.Wrappers()},{"additional",operations.Additional()},{"total",operations.Total()},{"whole_runtime_complete",false},
     {"scope","Six known application actions and actual owned operation runner/request;function backing overlaps member_callback_storage. Captured backing and runner are additional. UI shells,outer widget callbacks,I/O/external job scopes and process remain separate."}};
   report["gui_context_storage"]=GuiContextStorageJson(application.GetGui().InspectOwnedStorage());
+  report["main_menu_storage"]=MainMenuStorageJson(application.InspectMainMenuStorage());
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

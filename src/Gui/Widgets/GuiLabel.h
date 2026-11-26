@@ -38,6 +38,7 @@ public:
 
 private:
   friend class UWorldProgressScreen;
+  friend class UMainMenuScreen;
   const GuiTheme *Theme;
   std::string Text;
   GuiTextAlign TextAlign{GuiTextAlign::Left};

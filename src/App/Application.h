@@ -61,6 +61,7 @@ class UCreaturePreviewRenderer;
 class UFpViewmodelRenderer;
 enum class FpSwingKind : uint8_t;
 class UMainMenuScreen;
+struct MainMenuStorage;
 class UItemLabScreen;
 class UWorldResourcePacksScreen;
 
@@ -175,6 +176,7 @@ public:
   bool HasWorldSession() const { return WorldSessionActive; }
   UGuiContext &GetGui() { return *GuiContext; }
   const UGuiContext &GetGui() const { return *GuiContext; }
+  MainMenuStorage InspectMainMenuStorage() const noexcept;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

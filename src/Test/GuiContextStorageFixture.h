@@ -3,6 +3,7 @@
 #include "App/Platform/GlfwKeyCompat.h"
 #include "Gui/Core/GuiContext.h"
 #include "Gui/Core/GuiRenderer.h"
+#include "Gui/Screens/MainMenuScreen.h"
 #include "Gui/Screens/WorldProgressScreen.h"
 #include "Render/Engine/ShaderManager.h"
 #include <nlohmann/json.hpp>
@@ -30,6 +31,16 @@ inline nlohmann::json WorldProgressStorageJson(const WorldProgressScreenStorage 
           {"children_bytes", s.children_bytes}, {"text_bytes", s.text_bytes},
           {"callback_present", s.callback_present}, {"callback_supported", s.callback_supported},
           {"callback_bytes", s.callback_bytes}, {"requested", s.requested}};
+}
+
+inline nlohmann::json MainMenuStorageJson(const MainMenuStorage &s)
+{
+  return {{"status", s.supported ? "PASS" : "UNSUPPORTED"}, {"bindings_match", s.bindings_match},
+          {"present", s.present}, {"resume", s.resume}, {"quit_dialog", s.quit_dialog},
+          {"screen_bytes", s.screen_bytes}, {"widgets", s.widgets}, {"widget_bytes", s.widget_bytes},
+          {"children_bytes", s.children_bytes}, {"button_index_bytes", s.button_index_bytes},
+          {"text_bytes", s.text_bytes}, {"callbacks", s.callbacks}, {"callback_bytes", s.callback_bytes},
+          {"requested", s.requested}};
 }
 
 namespace gui_context_fixture
