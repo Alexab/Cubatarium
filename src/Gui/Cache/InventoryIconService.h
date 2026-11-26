@@ -14,6 +14,13 @@ typedef unsigned int GLuint;
 namespace cutum
 {
 
+struct InventoryIconStorage
+{
+  size_t serviceBytes{}, serviceRequest{}, readbackStateBytes{}, pathBytes{}, manifestBytes{}, jobBytes{}, cpuBytes{};
+  size_t entries{}, jobs{}, packBufferBytes{}, aliases{};
+  bool present{}, initialized{}, dirty{}, factoryOwner{}, bindingsMatch{}, supported{};
+};
+
 class UInventoryIconService
 {
 public:
@@ -29,6 +36,8 @@ public:
 
   UInventoryIconService();
   ~UInventoryIconService();
+  static std::shared_ptr<UInventoryIconService> Create();
+  InventoryIconStorage InspectOwnedStorage() const noexcept;
   bool Initialize(const std::filesystem::path &cacheRoot = {});
   static std::string BuildCacheKey(const std::string &kind,
                                    const std::string &entityId,
@@ -73,17 +82,19 @@ private:
     std::string File;
     int Size{0};
   };
+  using ManifestEntries = std::unordered_map<std::string, Entry>;
 
   std::filesystem::path CacheRoot;
   std::filesystem::path ManifestPath;
-  std::unordered_map<std::string, Entry> Entries;
+  ManifestEntries Entries;
   mutable Stats Metrics;
 
   static std::string SanitizeFileToken(const std::string &raw);
 
-  bool LoadManifest();
+  static bool LoadManifest(const std::filesystem::path &path, ManifestEntries &entries, bool &versionMismatch);
   bool SaveManifest() const;
-  mutable bool ManifestDirty{false};
+  bool ManifestDirty{false};
+  bool FactoryOwner{false};
   bool ReadPngRgba(const std::filesystem::path &path, int expectedSize,
                    std::vector<unsigned char> &pixels, int &outSize) const;
   bool WritePngRgba(const std::filesystem::path &path, int size,

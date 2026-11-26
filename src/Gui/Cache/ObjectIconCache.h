@@ -67,6 +67,7 @@ public:
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
   {out.Library(Objects);out.TextureCubes(Textures);out.BlockStorage(BlockDefs,"object-icons");}
 private:
+  friend class UGuiIconSource;
   std::string BuildObjectFingerprint(const std::string &objectName) const;
   std::string BuildBlockFingerprint(const std::string &blockName) const;
   GLuint RenderObjectIcon(const std::string &objectName);

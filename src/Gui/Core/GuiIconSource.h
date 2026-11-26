@@ -46,6 +46,7 @@ public:
   ObjectIconStorage InspectObjectIconStorage(const UObjectLibrary *objects,
       const UTextureCubeStorage *textures, const UBlockDefinitionStorage *blocks,
       const UShaderManager *shaders) const noexcept;
+  InventoryIconStorage InspectInventoryIconStorage() const noexcept;
   template<class Inspector> void InspectCatalogDomain(Inspector &out) const
   {out.TextureCubes(Textures);out.ObjectIcon(ObjectCache.get());}
 

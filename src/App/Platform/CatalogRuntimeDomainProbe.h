@@ -221,6 +221,16 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"target_texels", icons.targetTexels}, {"depth_samples", icons.depthSamples}, {"cached_texels", icons.cachedTexels},
       {"atlas_fallback", icons.atlasFallback}, {"shader_present", icons.shaderPresent},
       {"icon_service_present", icons.servicePresent}, {"whole_runtime_complete", false}};
+  const auto diskIcons = application.InspectInventoryIconStorage();
+  report["inventory_icon_service_storage"] = {
+      {"schema", "inventory-icon-service-owner.v1"}, {"status", diskIcons.supported ? "PASS" : "UNSUPPORTED"},
+      {"present", diskIcons.present}, {"initialized", diskIcons.initialized}, {"dirty", diskIcons.dirty},
+      {"bindings_match", diskIcons.bindingsMatch}, {"factory_owner", diskIcons.factoryOwner}, {"aliases", diskIcons.aliases},
+      {"service_bytes", diskIcons.serviceBytes}, {"service_request", diskIcons.serviceRequest},
+      {"readback_state_bytes", diskIcons.readbackStateBytes}, {"path_bytes", diskIcons.pathBytes},
+      {"manifest_bytes", diskIcons.manifestBytes}, {"job_bytes", diskIcons.jobBytes}, {"cpu_bytes", diskIcons.cpuBytes},
+      {"entries", diskIcons.entries}, {"jobs", diskIcons.jobs}, {"pack_buffer_bytes", diskIcons.packBufferBytes},
+      {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied
   // diagnostic worlds separately. It never replaces the active world.

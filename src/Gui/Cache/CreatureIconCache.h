@@ -35,6 +35,7 @@ public:
   void RebuildWarmupList();
 
 private:
+  friend class UGuiIconSource;
   GLuint GetOrCreateSpeciesIcon(const std::string &speciesId);
   GLuint GetOrCreateSkinIcon(const std::string &skinId);
   std::string BuildSpeciesFingerprint(const std::string &speciesId) const;

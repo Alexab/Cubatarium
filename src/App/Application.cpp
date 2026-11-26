@@ -321,7 +321,7 @@ void UApplication::Startup(const std::string &configPath)
       }
     }
 
-    auto iconService = std::make_shared<UInventoryIconService>();
+    auto iconService = UInventoryIconService::Create();
     if (!iconService->Initialize())
     {
       iconService.reset();
@@ -747,6 +747,15 @@ ObjectIconStorage UApplication::InspectObjectIconStorage() const noexcept
   ObjectIconStorage out;
   out.bindingsMatch = !IconSource;
   out.supported = out.bindingsMatch;
+  return out;
+}
+
+InventoryIconStorage UApplication::InspectInventoryIconStorage() const noexcept
+{
+  if (IconSource)
+    return IconSource->InspectInventoryIconStorage();
+  InventoryIconStorage out;
+  out.bindingsMatch = out.supported = true;
   return out;
 }
 

@@ -40,6 +40,7 @@ public:
   size_t PendingWarmupCount() const { return Warmup.Size(); }
 
 private:
+  friend class UGuiIconSource;
   static constexpr int kIconSize = 64;
   /// Content identity of model, dependencies, shaders and icon presentation.
   std::string FingerprintFor(const std::string &itemId) const;

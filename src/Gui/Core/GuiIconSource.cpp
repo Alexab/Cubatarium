@@ -1,5 +1,6 @@
 #include "Gui/Core/GuiIconSource.h"
 #include "Render/Textures/TextureCube.h"
+#include <array>
 
 namespace cutum
 {
@@ -159,6 +160,40 @@ ObjectIconStorage UGuiIconSource::InspectObjectIconStorage(const UObjectLibrary 
     out.cpuBytes = total.bytes.requested;
     out.supported = total.bytes.supported;
   }
+  return out;
+}
+
+InventoryIconStorage UGuiIconSource::InspectInventoryIconStorage() const noexcept
+{
+  const std::array<const std::shared_ptr<UInventoryIconService> *, 3> routes{
+      ObjectCache ? &ObjectCache->IconService : nullptr,
+      CreatureCache ? &CreatureCache->IconService : nullptr,
+      ItemCache ? &ItemCache->IconService : nullptr};
+  const std::shared_ptr<UInventoryIconService> *owner = nullptr;
+  size_t aliases = 0;
+  bool consistent = true;
+  for (const auto *route : routes)
+  {
+    if (!route)
+      continue;
+    if (!owner)
+      owner = route;
+    consistent &= owner->get() == route->get() && !owner->owner_before(*route) && !route->owner_before(*owner);
+    aliases += bool(*route);
+  }
+  InventoryIconStorage out;
+  out.present = aliases != 0;
+  out.aliases = aliases;
+  if (!consistent)
+    return out;
+  if (out.present)
+  {
+    out = (*owner)->InspectOwnedStorage();
+    out.aliases = aliases;
+    out.supported &= out.factoryOwner;
+    return out;
+  }
+  out.bindingsMatch = out.supported = true;
   return out;
 }
 

@@ -1,12 +1,13 @@
 #include "Gui/Cache/InventoryIconService.h"
 
 #include "App/Platform/IUPlatformPaths.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Render/GlIncludes.h"
 #include "Render/Textures/GlTextureOwner.h"
 #include "ThirdParty/stb_image.h"
 #include "ThirdParty/stb_image_write.h"
 #include <cstring>
-#include <deque>
+#include <list>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <sstream>
@@ -73,7 +74,7 @@ struct UInventoryIconService::ReadbackState
         glDeleteBuffers(1, &Buffer);
     }
   };
-  std::deque<Pending> Jobs;
+  std::list<Pending> Jobs;
 };
 
 UInventoryIconService::UInventoryIconService()
@@ -82,6 +83,59 @@ UInventoryIconService::UInventoryIconService()
 }
 
 UInventoryIconService::~UInventoryIconService() = default;
+
+std::shared_ptr<UInventoryIconService> UInventoryIconService::Create()
+{
+  auto service = std::make_shared<UInventoryIconService>();
+  service->FactoryOwner = true;
+  return service;
+}
+
+InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
+{
+  InventoryIconStorage out;
+  out.present = true;
+  out.initialized = !CacheRoot.empty() && !ManifestPath.empty();
+  out.dirty = ManifestDirty;
+  out.factoryOwner = FactoryOwner;
+  out.serviceBytes = sizeof(*this);
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+  if (FactoryOwner)
+    out.serviceRequest = sizeof(std::_Ref_count_obj2<UInventoryIconService>);
+#endif
+  out.readbackStateBytes = sizeof(ReadbackState);
+  StlSourceStorage paths, table, jobs, total;
+  paths.Text(CacheRoot.native());
+  paths.Text(ManifestPath.native());
+  table.Hash(Entries);
+  for (const auto &[key, entry] : Entries)
+  {
+    table.Text(key);
+    table.Text(entry.Fingerprint);
+    table.Text(entry.File);
+  }
+  jobs.List(Readbacks->Jobs);
+  for (const auto &job : Readbacks->Jobs)
+  {
+    jobs.Text(job.Key);
+    jobs.Text(job.Fingerprint);
+    jobs.Text(job.File);
+  }
+  out.pathBytes = paths.bytes.requested;
+  out.manifestBytes = table.bytes.requested;
+  out.jobBytes = jobs.bytes.requested;
+  out.entries = Entries.size();
+  const auto readback = InspectReadbackStorage();
+  out.jobs = readback.jobs;
+  out.packBufferBytes = readback.buffer_bytes;
+  for (auto bytes : {out.serviceRequest, out.readbackStateBytes, out.pathBytes, out.manifestBytes, out.jobBytes})
+    total.Add(bytes);
+  out.cpuBytes = total.bytes.requested;
+  out.bindingsMatch = CacheRoot.empty() == ManifestPath.empty();
+  out.supported = out.bindingsMatch && readback.supported && total.bytes.supported &&
+                  paths.bytes.supported && table.bytes.supported && jobs.bytes.supported;
+  return out;
+}
 
 void UInventoryIconService::CancelPendingItemReadbacks() noexcept
 {
@@ -139,7 +193,7 @@ void UInventoryIconService::DrainReadbacks()
     }
     if (!pixels.empty() && WritePngRgba(CacheRoot / job.File, job.Size, pixels))
     {
-      Entries[job.Key] = Entry{job.Fingerprint, job.File, job.Size};
+      Entries.insert_or_assign(job.Key, Entry{job.Fingerprint, job.File, job.Size});
       ManifestDirty = true;
       ++Metrics.RenderStores;
     }
@@ -151,22 +205,36 @@ void UInventoryIconService::DrainReadbacks()
 
 bool UInventoryIconService::Initialize(const std::filesystem::path &cacheRoot)
 {
-  if (!cacheRoot.empty())
+  auto root = cacheRoot;
+  if (root.empty())
   {
-    CacheRoot = cacheRoot;
+    if (auto *paths = IUPlatformPaths::TryGet())
+      root = paths->ResolveWritable("cache/icons");
+    else
+      root = std::filesystem::current_path() / "cache" / "icons";
   }
-  else if (auto *paths = IUPlatformPaths::TryGet())
-  {
-    CacheRoot = paths->ResolveWritable("cache/icons");
-  }
-  else
-  {
-    CacheRoot = std::filesystem::current_path() / "cache" / "icons";
-  }
-  ManifestPath = CacheRoot / "manifest.json";
+  auto manifest = root / "manifest.json";
   std::error_code ec;
-  std::filesystem::create_directories(CacheRoot, ec);
-  return LoadManifest();
+  std::filesystem::create_directories(root, ec);
+  if (ec)
+    return false;
+  const bool sameRoot = manifest == ManifestPath;
+  if (ManifestDirty && sameRoot && !SaveManifest())
+    return false;
+
+  ManifestEntries entries;
+  bool versionMismatch = false;
+  if (!LoadManifest(manifest, entries, versionMismatch) ||
+      (ManifestDirty && !sameRoot && !SaveManifest()))
+    return false;
+
+  CancelPendingItemReadbacks();
+  CacheRoot.swap(root);
+  ManifestPath.swap(manifest);
+  Entries.swap(entries);
+  ManifestDirty = false;
+  Metrics.ManifestVersionMismatches += versionMismatch;
+  return true;
 }
 
 std::string UInventoryIconService::BuildCacheKey(const std::string &kind,
@@ -214,58 +282,57 @@ std::string UInventoryIconService::HashFingerprint(const std::string &value)
   return oss.str();
 }
 
-bool UInventoryIconService::LoadManifest()
+bool UInventoryIconService::LoadManifest(const std::filesystem::path &path,
+                                         ManifestEntries &entries, bool &versionMismatch)
 {
-  Entries.clear();
-  if (!std::filesystem::exists(ManifestPath))
+  std::error_code ec;
+  if (!std::filesystem::exists(path, ec))
   {
-    return true;
+    return !ec;
   }
-  std::ifstream in(ManifestPath, std::ios::binary);
+  std::ifstream in(path, std::ios::binary);
   if (!in)
   {
     return false;
   }
-  nlohmann::json doc;
   try
   {
+    nlohmann::json doc;
     in >> doc;
+    if (!doc.contains("entries") || !doc["entries"].is_object())
+      return true;
+    if (doc.value("version", 1) != kManifestVersion)
+    {
+      versionMismatch = true;
+      return true;
+    }
+    for (const auto &[key, entry] : doc["entries"].items())
+    {
+      if (!entry.is_object())
+        continue;
+      Entry data;
+      data.Fingerprint = entry.value("fingerprint", "");
+      data.File = entry.value("file", "");
+      data.Size = entry.value("size", 0);
+      if (!data.Fingerprint.empty() && !data.File.empty() && data.Size > 0)
+      {
+        const std::filesystem::path file(data.File);
+        if (!file.has_root_path() && file == file.filename() && file.extension() == ".png")
+          entries.emplace(key, std::move(data));
+      }
+    }
   }
-  catch (...)
+  catch (const nlohmann::json::exception &)
   {
     return false;
-  }
-  if (!doc.contains("entries") || !doc["entries"].is_object())
-  {
-    return true;
-  }
-  const int version = doc.value("version", 1);
-  if (version != kManifestVersion)
-  {
-    ++Metrics.ManifestVersionMismatches;
-    return true;
-  }
-  for (auto it = doc["entries"].begin(); it != doc["entries"].end(); ++it)
-  {
-    const auto &entry = it.value();
-    if (!entry.is_object())
-    {
-      continue;
-    }
-    Entry data;
-    data.Fingerprint = entry.value("fingerprint", "");
-    data.File = entry.value("file", "");
-    data.Size = entry.value("size", 0);
-    if (!data.Fingerprint.empty() && !data.File.empty() && data.Size > 0)
-    {
-      Entries[it.key()] = data;
-    }
   }
   return true;
 }
 
 bool UInventoryIconService::SaveManifest() const
 {
+  if (ManifestPath.empty())
+    return false;
   nlohmann::json doc;
   doc["version"] = kManifestVersion;
   nlohmann::json entries = nlohmann::json::object();
@@ -275,14 +342,24 @@ bool UInventoryIconService::SaveManifest() const
                     {"file", entry.File},
                     {"size", entry.Size}};
   }
-  doc["entries"] = entries;
-  std::ofstream out(ManifestPath, std::ios::binary | std::ios::trunc);
+  doc["entries"] = std::move(entries);
+  const auto payload = doc.dump(2);
+  auto temporary = ManifestPath;
+  temporary += ".tmp";
+  std::ofstream out(temporary, std::ios::binary | std::ios::trunc);
   if (!out)
-  {
     return false;
+  out << payload;
+  out.close();
+  std::error_code ec;
+  if (out)
+  {
+    std::filesystem::rename(temporary, ManifestPath, ec);
+    if (!ec)
+      return true;
   }
-  out << doc.dump(2);
-  return true;
+  std::filesystem::remove(temporary, ec);
+  return false;
 }
 
 bool UInventoryIconService::ReadPngRgba(const std::filesystem::path &path,
@@ -432,7 +509,7 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
                                              const std::string &fingerprint,
                                              int size, GLuint texture)
 {
-  if (texture == 0 || size <= 0 || fingerprint.empty() || entityId.empty() ||
+  if (CacheRoot.empty() || texture == 0 || size <= 0 || fingerprint.empty() || entityId.empty() ||
       kind.empty())
   {
     return false;
@@ -504,7 +581,7 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   {
     return false;
   }
-  Entries[key] = Entry{fingerprint, fileName, size};
+  Entries.insert_or_assign(key, Entry{fingerprint, fileName, size});
   // UX R2: O(n) manifest rewrites per icon batch made icon generation
   // quadratic; serialize once per FlushManifest instead.
   ManifestDirty = true;
@@ -529,7 +606,7 @@ void UInventoryIconService::InvalidateAll()
   ManifestDirty = false;
   Entries.clear();
   std::error_code ec;
-  if (std::filesystem::exists(CacheRoot))
+  if (!CacheRoot.empty() && std::filesystem::exists(CacheRoot))
   {
     for (const auto &entry : std::filesystem::directory_iterator(CacheRoot))
     {
@@ -538,7 +615,8 @@ void UInventoryIconService::InvalidateAll()
         continue;
       }
       const std::filesystem::path path = entry.path();
-      if (path.extension() == ".png" || path.filename() == "manifest.json")
+      if (path.extension() == ".png" || path.filename() == "manifest.json" ||
+          path.filename() == "manifest.json.tmp")
       {
         std::filesystem::remove(path, ec);
       }
@@ -554,21 +632,21 @@ void UInventoryIconService::InvalidateKind(const std::string &kind)
   }
   if (kind == "item")
     CancelPendingItemReadbacks();
-  std::vector<std::string> eraseKeys;
-  for (const auto &[key, entry] : Entries)
+  for (auto entry = Entries.begin(); entry != Entries.end();)
   {
-    if (key.rfind(kind + ":", 0) == 0)
+    const auto &key = entry->first;
+    if (key.size() > kind.size() && key[kind.size()] == ':' && key.compare(0, kind.size(), kind) == 0)
     {
       std::error_code ec;
-      std::filesystem::remove(CacheRoot / entry.File, ec);
-      eraseKeys.push_back(key);
+      std::filesystem::remove(CacheRoot / entry->second.File, ec);
+      ManifestDirty = true;
+      entry = Entries.erase(entry);
     }
+    else
+      ++entry;
   }
-  for (const std::string &key : eraseKeys)
-  {
-    Entries.erase(key);
-  }
-  SaveManifest();
+  if (ManifestDirty && SaveManifest())
+    ManifestDirty = false;
 }
 
 } // namespace cutum
