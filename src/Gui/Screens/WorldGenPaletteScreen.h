@@ -5,6 +5,7 @@
 #include "Gui/Interfaces/IUContentCatalog.h"
 #include "Gui/Interfaces/IUGuiIconSource.h"
 #include "WorldGen/Core/WorldGenSets.h"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -22,9 +23,17 @@ class UGuiPanel;
 class UGuiLabel;
 class UGuiButton;
 class UGuiScrollView;
-class UGuiSlot;
 class UGuiRenderer;
 struct GuiTheme;
+
+struct WorldGenPaletteGridStorage
+{
+  std::size_t contentBytes{0};
+  std::size_t pickerBytes{0};
+  std::size_t sectionTabBytes{0};
+  std::size_t pickerTitleBytes{0};
+  bool supported{false};
+};
 
 class UWorldGenPaletteScreen : public UGuiScreenBase
 {
@@ -44,8 +53,12 @@ public:
   void SetPointerPosition(int x, int y);
   void SetPointerPressed(bool pressed);
   void RenderPreview();
+  WorldGenPaletteGridStorage InspectGridStorage() const noexcept;
 
 private:
+  friend struct WorldGenPaletteStorageProbe;
+  class GridSlot;
+  struct SlotAction;
   enum class PickerMode
   {
     None,
@@ -55,35 +68,28 @@ private:
 
   void RelayoutPanel();
   void RebuildMainContent();
-  void RebuildPicker();
+  void PublishPicker();
   void ClosePicker();
   void OpenObjectPicker();
   void OpenTerrainPicker(const std::string &slotName);
   void OnPickerPick(const std::string &id);
   void SaveSets();
   void OnResetSection();
-  void EnsureActiveSection();
-  std::vector<std::string> SectionKeysForPool() const;
-  std::unordered_map<std::string, WorldGenObjectSection> *ActiveObjectPool();
+  std::unordered_map<std::string, WorldGenObjectSection> *ObjectPool(int tab) const;
 
   void UpdateTooltip();
-  void LayoutContentIconGrid();
-  void LayoutPickerIconGrid();
+  void LayoutIconGrid(UGuiScrollView &scroll);
   std::vector<CatalogEntry> CollectCatalogEntries(ContentKind kind) const;
-  std::string DisplayNameForId(ContentKind kind, const std::string &id) const;
+  std::string DisplayNameForId(ContentKind kind, const std::string &id,
+                               const std::vector<CatalogEntry> &entries) const;
   GLuint IconForEntry(ContentKind kind, const std::string &id) const;
-  void AddPickerSlot(const CatalogEntry &entry, ContentKind kind);
+  void ActivateSlot(const GridSlot &slot);
   void SelectEntry(ContentKind kind, const std::string &id,
-                   const std::string &displayName,
-                   const std::string &terrainSlot = "",
-                   const std::string &oreSlot = "");
+                   const std::string &terrainSlot, const std::string &oreSlot);
   std::string StoredTerrainBlock(const std::string &slotName) const;
   std::string EffectiveTerrainBlock(const std::string &slotName) const;
-  std::string TerrainSlotTooltip(const std::string &slotName) const;
-  std::string OreSlotTooltip(const std::string &oreSlot, bool enabled) const;
   void SyncPreviewDock();
   void ApplySlotSelection();
-  std::string LabelAt(size_t index, bool picker) const;
 
   UWorld *World{nullptr};
   IUContentCatalog *Catalog{nullptr};
@@ -106,22 +112,19 @@ private:
   UGuiLabel *TooltipLabel{nullptr};
   UGuiRenderer *Renderer{nullptr};
   const GuiTheme *Theme{nullptr};
-  std::vector<UGuiSlot *> ContentSlots;
-  std::vector<std::string> ContentSlotLabels;
-  std::vector<std::string> ContentSlotHints;
-  std::vector<ContentKind> ContentSlotKinds;
-  std::vector<std::string> ContentSlotIds;
-  std::vector<std::string> ContentSlotTerrainSlots;
-  std::vector<UGuiSlot *> PickerSlots;
-  std::vector<std::string> PickerSlotLabels;
   int PointerX{-1};
   int PointerY{-1};
   bool PointerPressed{false};
   int ActiveTab{0};
   int ObjectPoolTab{0};
   int SectionTab{0};
+  int RequestedTab{0};
+  int RequestedPoolTab{0};
+  int RequestedSectionTab{0};
   PickerMode Picker{PickerMode::None};
+  PickerMode RequestedPicker{PickerMode::None};
   std::string PickerTerrainSlot;
+  std::string RequestedTerrainSlot;
   std::string SelectedEntryId;
   ContentKind SelectedKind{ContentKind::Object};
   std::string SelectedTerrainSlot;
@@ -129,6 +132,8 @@ private:
   bool Visible{false};
   bool Built{false};
   bool ContentDirty{true};
+  bool PickerDirty{false};
+  bool PreviewDirty{false};
 };
 
 } // namespace cutum

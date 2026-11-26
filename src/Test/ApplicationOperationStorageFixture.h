@@ -5,6 +5,7 @@
 #include "Core/Memory/RootStorageSource.h"
 #include "Gui/Screens/NewWorldScreen.h"
 #include "Gui/Screens/LoadWorldScreen.h"
+#include "Gui/Screens/WorldGenPaletteScreen.h"
 #include <nlohmann/json.hpp>
 namespace cutum {
 struct ApplicationOperationSourceProbe {
@@ -39,6 +40,18 @@ struct ApplicationOperationSourceProbe {
     app.AnvilScreen = std::move(screen);
     return *app.AnvilScreen;
   }
+  static UWorldGenPaletteScreen &OpenWorldGen(UApplication &app, IUContentCatalog &catalog)
+  {
+    app.CloseWorldGenScreen();
+    auto screen = std::make_unique<UWorldGenPaletteScreen>(app.World.get(), &catalog, nullptr, nullptr);
+    screen->OnAttach(app.GetGui());
+    screen->Build(app.GetGui());
+    app.WorldGenScreen = std::move(screen);
+    app.WorldGenOpen = true;
+    app.WorldGenScreen->SetVisible(true);
+    return *app.WorldGenScreen;
+  }
+  static void CloseWorldGen(UApplication &app) { app.CloseWorldGenScreen(); }
   static bool IsInGame(const UApplication &app) { return app.State == AppState::InGame; }
   static void RetireDeath(UApplication &app) { app.DeathScreen.reset(); }
   static void DetachProgress(UApplication &app)

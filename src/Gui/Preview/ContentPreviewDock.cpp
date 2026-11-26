@@ -132,7 +132,12 @@ void UContentPreviewDock::SetOnChange(std::function<void()> handler,
   if (ChangeButton)
   {
     ChangeButton->SetLabel(buttonLabel);
-    ChangeButton->SetVisible(static_cast<bool>(handler));
+    const bool show = static_cast<bool>(handler);
+    if (ChangeButton->IsVisible() != show)
+    {
+      ChangeButton->SetVisible(show);
+      LayoutContents(PanelShell->GetBounds());
+    }
   }
   OnChange = std::move(handler);
 }
@@ -209,6 +214,11 @@ void UContentPreviewDock::Relayout(const GuiRect &bounds)
       previous.W == bounds.W && previous.H == bounds.H)
     return;
   PanelShell->SetBounds(bounds);
+  LayoutContents(bounds);
+}
+
+void UContentPreviewDock::LayoutContents(const GuiRect &bounds)
+{
   RenderSize = std::max(128, std::min(bounds.W, bounds.H) - Theme->Padding * 4);
 
   const int pad = Theme->Padding;

@@ -40,6 +40,7 @@ public:
   GuiRect GetViewportBounds() const;
 
 private:
+  void LayoutContents(const GuiRect &bounds);
   void MarkRenderDirty();
   void RenderPreviewIfNeeded();
   void SyncVisibility();

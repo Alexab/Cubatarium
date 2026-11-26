@@ -42,6 +42,7 @@ private:
   friend class UInGameHudScreen;
   friend class UDeathScreen;
   friend class UAnvilScreen;
+  friend class UWorldGenPaletteScreen;
   const GuiTheme *Theme;
   std::string Text;
   GuiTextAlign TextAlign{GuiTextAlign::Left};

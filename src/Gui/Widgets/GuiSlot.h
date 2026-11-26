@@ -65,6 +65,7 @@ private:
   friend class UCreativePaletteScreen;
   friend class UCraftingScreen;
   friend class UAnvilScreen;
+  friend class UWorldGenPaletteScreen;
   int SlotSizePx() const;
   int DragThresholdPx() const;
 

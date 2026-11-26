@@ -344,9 +344,14 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
 
     if (!app.ConsoleOpen && KeyNameIs(app.Ui.WorldGenKey, key))
     {
-      app.WorldGenOpen = !app.WorldGenOpen;
       if (app.WorldGenOpen)
       {
+        app.CloseWorldGenScreen();
+        app.GuiContext->ClearInputState();
+      }
+      else if (app.WorldGenScreen)
+      {
+        app.WorldGenOpen = true;
         app.PaletteOpen = false;
         app.CharacterSheetOpen = false;
         if (app.PaletteScreen)
@@ -357,14 +362,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
         {
           app.CharacterSheetScreen->SetVisible(false);
         }
-      }
-      else
-      {
-        app.GuiContext->ClearInputState();
-      }
-      if (app.WorldGenScreen)
-      {
-        app.WorldGenScreen->SetVisible(app.WorldGenOpen);
+        app.WorldGenScreen->SetVisible(true);
       }
       app.SyncCursorVisibility();
       return true;
@@ -375,14 +373,10 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       if (app.CharacterSheetOpen)
       {
         app.PaletteOpen = false;
-        app.WorldGenOpen = false;
+        app.CloseWorldGenScreen();
         if (app.PaletteScreen)
         {
           app.PaletteScreen->SetVisible(false);
-        }
-        if (app.WorldGenScreen)
-        {
-          app.WorldGenScreen->SetVisible(false);
         }
       }
       else
@@ -552,12 +546,6 @@ bool UInputRouter::RouteMouseButton(UApplication &app, int button, bool pressed,
   {
     app.PaletteScreen->SetPointerPressed(pressed);
   }
-  if (app.WorldGenOpen && app.WorldGenScreen &&
-      event.Button == GuiMouseButton::Left)
-  {
-    app.WorldGenScreen->SetPointerPressed(pressed);
-  }
-
   if (app.State == AppState::InGame && pressed &&
       event.Button == GuiMouseButton::Middle && !app.ConsoleOpen &&
       !app.PaletteOpen && !app.CharacterSheetOpen && !app.CraftingOpen &&

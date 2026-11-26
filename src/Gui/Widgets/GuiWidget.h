@@ -81,6 +81,7 @@ protected:
   friend class UCharacterSheetScreen;
   friend class UCraftingScreen;
   friend class UCreativePaletteScreen;
+  friend class UWorldGenPaletteScreen;
   GuiRect Bounds{0, 0, 100, 32};
   bool Visible{true};
   bool Enabled{true};

@@ -1629,15 +1629,11 @@ void UApplication::EnterInGameInputState()
   ConsoleOpen = false;
   SuppressConsoleToggleChar = false;
   PaletteOpen = false;
-  WorldGenOpen = false;
+  CloseWorldGenScreen();
   CharacterSheetOpen = false;
   CloseCraftingScreen();
   CloseAnvilScreen();
   FreeCursor = false;
-  if (WorldGenScreen)
-  {
-    WorldGenScreen->SetVisible(false);
-  }
   if (PaletteScreen)
   {
     if (std::find(OverlayCaptures.begin(), OverlayCaptures.end(), OverlayPointerCapture::Palette) != OverlayCaptures.end())
@@ -1713,11 +1709,9 @@ void UApplication::OpenPlayerWindow(int section)
     PlayerWindowScreen->SelectSection(catalog ? 4 : std::clamp(section, 0, 3));
   PaletteOpen = catalog;
   CharacterSheetOpen = !catalog;
-  WorldGenOpen = false;
+  CloseWorldGenScreen();
   CloseCraftingScreen();
   CloseAnvilScreen();
-  if (WorldGenScreen)
-    WorldGenScreen->SetVisible(false);
   SyncCursorVisibility();
 }
 UGuiWidget *UApplication::GetPlayerWindowRoot()
@@ -1839,11 +1833,15 @@ void UApplication::FinishInventoryPointerGesture(const GuiMouseEvent &event)
   }
 
   const bool wasCrafting = OverlayCaptures[pointerIndex] == OverlayPointerCapture::Crafting;
+  const bool wasWorldGen = OverlayCaptures[pointerIndex] == OverlayPointerCapture::WorldGen;
   OverlayCaptures[pointerIndex] = OverlayPointerCapture::None;
+  OverlayPressedWidget = nullptr;
   if (CraftingScreen && wasCrafting)
     CraftingScreen->SetPointerPressed(std::find(OverlayCaptures.begin(), OverlayCaptures.end(),
         OverlayPointerCapture::Crafting) != OverlayCaptures.end());
-  OverlayPressedWidget = nullptr;
+  if (WorldGenScreen && wasWorldGen)
+    WorldGenScreen->SetPointerPressed(std::find(OverlayCaptures.begin(), OverlayCaptures.end(),
+        OverlayPointerCapture::WorldGen) != OverlayCaptures.end());
 }
 
 bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
@@ -1910,10 +1908,11 @@ bool UApplication::TryRouteInGameOverlay(const GuiMouseEvent &event,
         return true;
       }
     }
-    if (WorldGenOpen)
+    if (WorldGenOpen && WorldGenScreen)
     {
       if (UGuiWidget *hit = routeRootDown(WorldGenScreen->GetRoot()))
       {
+        WorldGenScreen->SetPointerPressed(true);
         OverlayCaptures[pointerIndex] = OverlayPointerCapture::WorldGen;
         OverlayPressedWidget = hit;
         return true;
@@ -2176,13 +2175,15 @@ void UApplication::EndFpUseVisual()
   }
 }
 
-void UApplication::CancelButtonOverlayCapture(OverlayPointerCapture capture)
+void UApplication::CancelOverlayCapture(OverlayPointerCapture capture)
 {
   const auto captured = std::find(OverlayCaptures.begin(), OverlayCaptures.end(), capture);
   if (captured != OverlayCaptures.end())
   {
     if (auto *button = dynamic_cast<UGuiButton *>(OverlayPressedWidget))
       button->ClearPressState();
+    if (auto *slot = dynamic_cast<UGuiSlot *>(OverlayPressedWidget))
+      slot->ClearPressState();
     OverlayPressedWidget = nullptr;
     std::replace(captured, OverlayCaptures.end(), capture, OverlayPointerCapture::None);
   }
@@ -2191,7 +2192,7 @@ void UApplication::CancelButtonOverlayCapture(OverlayPointerCapture capture)
 void UApplication::CloseCraftingScreen()
 {
   CraftingOpen = false;
-  CancelButtonOverlayCapture(OverlayPointerCapture::Crafting);
+  CancelOverlayCapture(OverlayPointerCapture::Crafting);
   if (CraftingScreen)
     CraftingScreen->SetVisible(false);
 }
@@ -2199,9 +2200,20 @@ void UApplication::CloseCraftingScreen()
 void UApplication::CloseAnvilScreen()
 {
   AnvilOpen = false;
-  CancelButtonOverlayCapture(OverlayPointerCapture::Anvil);
+  CancelOverlayCapture(OverlayPointerCapture::Anvil);
   if (AnvilScreen)
     AnvilScreen->SetVisible(false);
+}
+
+void UApplication::CloseWorldGenScreen()
+{
+  WorldGenOpen = false;
+  CancelOverlayCapture(OverlayPointerCapture::WorldGen);
+  if (WorldGenScreen)
+  {
+    WorldGenScreen->SetPointerPressed(false);
+    WorldGenScreen->SetVisible(false);
+  }
 }
 
 void UApplication::OpenCraftingScreen()
@@ -2214,15 +2226,11 @@ void UApplication::OpenCraftingScreen()
   CraftingOpen = true;
   CloseAnvilScreen();
   PaletteOpen = false;
-  WorldGenOpen = false;
+  CloseWorldGenScreen();
   CharacterSheetOpen = false;
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);
-  }
-  if (WorldGenScreen)
-  {
-    WorldGenScreen->SetVisible(false);
   }
   if (CharacterSheetScreen)
   {
@@ -2242,15 +2250,11 @@ void UApplication::OpenAnvilScreen()
   AnvilOpen = true;
   CloseCraftingScreen();
   PaletteOpen = false;
-  WorldGenOpen = false;
+  CloseWorldGenScreen();
   CharacterSheetOpen = false;
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);
-  }
-  if (WorldGenScreen)
-  {
-    WorldGenScreen->SetVisible(false);
   }
   if (CharacterSheetScreen)
   {
