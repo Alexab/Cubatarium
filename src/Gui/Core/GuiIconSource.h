@@ -54,6 +54,7 @@ public:
   InventoryIconStorage InspectInventoryIconStorage() const noexcept;
   void InspectRenderImages(class RenderImageCensus &out) const;
   void InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const;
+  void InspectIconReadbackGpuBuffers(TerrainGpuBufferCensus &out) const;
   static CreatureItemIconStorage InspectCreatureItemIconStorage(const UGuiIconSource *source,
       const UContentPreviewRenderer *content, const std::shared_ptr<UCreaturePreviewRenderer> &creaturePreview,
       const UCreatureDefinitionStorage *species, const USkinDefinitionStorage *skins,

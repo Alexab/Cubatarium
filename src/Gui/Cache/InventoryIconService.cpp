@@ -5,6 +5,7 @@
 #include "Core/Memory/StbiAllocation.h"
 #include "Gui/Cache/InventoryIconPng.h"
 #include "Render/GlIncludes.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/Textures/GlTextureOwner.h"
 #include "ThirdParty/stb_image.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
@@ -24,6 +25,24 @@ namespace
 constexpr int kManifestVersion = 2;
 constexpr size_t kMaxReadbacks = 256;
 constexpr int kMaxReadbackSize = 512;
+constexpr size_t kPackBytesUpper = kMaxReadbacks * kMaxReadbackSize * kMaxReadbackSize * 4;
+
+bool TextureMatchesIconExtent(GLuint texture, int size) noexcept
+{
+  if (!glIsTexture(texture))
+    return false;
+  GLint previous{}, binding{}, width{}, height{};
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &previous);
+  glBindTexture(GL_TEXTURE_2D, texture);
+  glGetIntegerv(GL_TEXTURE_BINDING_2D, &binding);
+  if (static_cast<GLuint>(binding) == texture)
+  {
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+    glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+  }
+  glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(previous));
+  return glGetError() == GL_NO_ERROR && width == size && height == size;
+}
 
 template<class Table> NameStorageEnvelope ManifestTableStorage(const Table &entries) noexcept
 {
@@ -205,6 +224,9 @@ InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
   const auto readback = InspectReadbackStorage();
   out.jobs = readback.jobs;
   out.packBufferBytes = readback.buffer_bytes;
+  out.jobLimit = kMaxReadbacks;
+  out.readbackSideLimit = kMaxReadbackSize;
+  out.packBufferBytesUpper = kPackBytesUpper;
   for (auto bytes : {out.serviceRequest, out.readbackStateBytes, out.pathBytes, out.manifestBytes, out.jobBytes})
     total.Add(bytes);
   out.cpuBytes = total.bytes.requested;
@@ -212,6 +234,12 @@ InventoryIconStorage UInventoryIconService::InspectOwnedStorage() const noexcept
   out.supported = out.bindingsMatch && readback.supported && total.bytes.supported &&
                   paths.bytes.supported && table.supported && jobs.bytes.supported;
   return out;
+}
+
+void UInventoryIconService::InspectReadbackGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  for (const auto &job : Readbacks->Jobs)
+    out.Add(TerrainGpuBufferRole::InventoryIconReadback, job.Buffer);
 }
 
 void UInventoryIconService::CancelPendingItemReadbacks() noexcept
@@ -489,7 +517,8 @@ bool UInventoryIconService::WritePngRgba(
 bool UInventoryIconService::CaptureTexturePixels(
     GLuint texture, int size, std::vector<unsigned char> &pixels) const
 {
-  if (texture == 0 || size <= 0)
+  if (texture == 0 || size <= 0 ||
+      static_cast<size_t>(size) > pixels.max_size() / 4 / static_cast<size_t>(size))
   {
     return false;
   }
@@ -508,7 +537,7 @@ bool UInventoryIconService::CaptureTexturePixels(
     return false;
   }
   glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
-  return true;
+  return glGetError() == GL_NO_ERROR;
 }
 
 GLuint UInventoryIconService::CreateTextureFromPixels(int size, const unsigned char *pixels) const
@@ -603,13 +632,15 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
   {
     return false;
   }
+  if (kind == "item" && (Readbacks->Jobs.size() >= kMaxReadbacks || size > kMaxReadbackSize))
+    return false;
+  if (!TextureMatchesIconExtent(texture, size))
+    return false;
   if (kind == "item")
   {
     // Bounded optional cache work: the visible in-memory icon is unaffected if
     // persistence cannot be queued. No gameplay resources are held here.
     auto &jobs = Readbacks->Jobs;
-    if (jobs.size() >= kMaxReadbacks || size > kMaxReadbackSize)
-      return false;
     auto file = SanitizeFileToken(kind + "_" + entityId + "_" + variantId) + "_" +
                 HashFingerprint(fingerprint) + ".png";
     auto &job = jobs.emplace_back(BuildCacheKey(kind, entityId, variantId), fingerprint,
@@ -647,6 +678,11 @@ bool UInventoryIconService::StoreIconTexture(const std::string &kind,
       return false;
     }
     glReadPixels(0, 0, size, size, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    if (glGetError() != GL_NO_ERROR)
+    {
+      jobs.pop_back();
+      return false;
+    }
     job.Fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     if (!job.Fence)
     {

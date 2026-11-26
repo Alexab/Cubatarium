@@ -3,6 +3,7 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Gui/Preview/ContentPreviewRenderer.h"
+#include "Render/Engine/RenderImageStorageReport.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Textures/GlTextureOwner.h"
@@ -104,23 +105,36 @@ inline GLuint Attachment(GLenum point)
 
 struct RefuseFramebuffer
 {
-  explicit RefuseFramebuffer(bool refuse = true)
+  explicit RefuseFramebuffer(bool refuse = true, std::array<GLuint, 2> previous = {})
   {
     Original = __glewCheckFramebufferStatus;
     Observed = {};
     Refuse = refuse;
+    Previous = previous;
+    Extents = {};
     __glewCheckFramebufferStatus = Check;
   }
   ~RefuseFramebuffer() { __glewCheckFramebufferStatus = Original; }
   inline static std::array<GLuint, 3> Observed{};
+  inline static RenderImageSnapshot Extents{};
 
 private:
   inline static PFNGLCHECKFRAMEBUFFERSTATUSPROC Original{};
   inline static bool Refuse{};
+  inline static std::array<GLuint, 2> Previous{};
   static GLenum GLAPIENTRY Check(GLenum target)
   {
     Observed = {GLuint(Binding(GL_DRAW_FRAMEBUFFER_BINDING)), Attachment(GL_COLOR_ATTACHMENT0),
                 Attachment(GL_DEPTH_ATTACHMENT)};
+    if (Previous[0])
+    {
+      RenderImageCensus images;
+      images.Add(RenderImageRole::ContentColor, GL_TEXTURE_2D, Previous[0]);
+      images.Add(RenderImageRole::ContentDepth, GL_RENDERBUFFER, Previous[1]);
+      images.Add(RenderImageRole::ContentColor, GL_TEXTURE_2D, Observed[1]);
+      images.Add(RenderImageRole::ContentDepth, GL_RENDERBUFFER, Observed[2]);
+      Extents = images.Read();
+    }
     return Refuse ? GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT : Original(target);
   }
 };
@@ -274,27 +288,39 @@ inline Json Run(const std::filesystem::path &reportPath)
   CheckTarget(inspect(renderer), 64);
 
   {
-    RefuseFramebuffer refuse;
+    RefuseFramebuffer refuse(true, {small.colorTexture, small.depthBuffer});
     Require(!renderer.Render(ContentKind::Block, blockName, 256, 45.f, 32.f), "refuse larger shared target");
   }
   const auto refused = RefuseFramebuffer::Observed;
+  const auto refusedPeak = RefuseFramebuffer::Extents;
+  Require(refusedPeak.images.size() == 4 && !refusedPeak.failedQueries && refusedPeak.logicalBytes == 487424,
+          "real old and proposed color and depth stores coexist at resize rejection");
   Require(refused[0] && refused[1] && refused[2] && refused[0] != small.framebuffer &&
               !glIsFramebuffer(refused[0]) && !glIsTexture(refused[1]) && !glIsRenderbuffer(refused[2]) &&
               inspect(renderer).framebuffer == small.framebuffer && ReadCallerState() == caller,
           "refused resize retires candidates and preserves the previous target and caller state");
   CheckTarget(inspect(renderer), 64);
-  Require(renderer.Render(ContentKind::Object, objectName, 1024, 45.f, 32.f) != 0,
-          "shared object draw retries growth at the maximum size");
+  {
+    RefuseFramebuffer observe(false, {small.colorTexture, small.depthBuffer});
+    Require(renderer.Render(ContentKind::Object, objectName, 1024, 45.f, 32.f) != 0,
+            "shared object draw retries growth at the maximum size");
+  }
+  const auto growthPeak = RefuseFramebuffer::Extents;
+  Require(growthPeak.images.size() == 4 && !growthPeak.failedQueries && growthPeak.logicalBytes == 1863680,
+          "successful growth measures both pairs at the real completeness check");
   const auto large = inspect(renderer);
   CheckTarget(large, 512);
   Require(TargetIsRetired(small) && glIsTexture(unique64.Get()) && ReadCallerState() == caller,
           "growth retires only the previous shared target");
 
   {
-    RefuseFramebuffer refuse;
+    RefuseFramebuffer refuse(true, {large.colorTexture, large.depthBuffer});
     Require(!renderer.RenderUnique(ContentKind::Block, blockName, 512, 45.f, 32.f), "refuse temporary unique output");
   }
   const auto refusedOwned = RefuseFramebuffer::Observed;
+  const auto uniquePeak = RefuseFramebuffer::Extents;
+  Require(uniquePeak.images.size() == 3 && uniquePeak.references == 4 && !uniquePeak.failedQueries &&
+              uniquePeak.logicalBytes == 2883584, "temporary color shares the old depth store exactly once");
   Require(refusedOwned[0] == large.framebuffer && refusedOwned[1] && refusedOwned[1] != large.colorTexture &&
               !glIsTexture(refusedOwned[1]) && refusedOwned[2] == large.depthBuffer && ReadCallerState() == caller,
           "refused temporary image retires its texture and preserves the shared target");
@@ -335,6 +361,9 @@ inline Json Run(const std::filesystem::path &reportPath)
           {"index_bytes", mesh.indexBytes}, {"target_sizes", {64, 512, 128}}, {"depth_bits", 24},
           {"mesh_refusal_retried", true}, {"resize_refusal_preserves_target", true},
           {"temporary_texture_refusal_retired", true}, {"both_render_paths_restore_caller", true},
+          {"target_gpu_overlap", {{"refused_resize", DescribeRenderImages(refusedPeak)},
+                                  {"successful_resize", DescribeRenderImages(growthPeak)},
+                                  {"temporary_color", DescribeRenderImages(uniquePeak)}}},
           {"normal_retirement_and_borrowed_sources", true}};
 }
 } // namespace cutum::shared_content_preview_fixture

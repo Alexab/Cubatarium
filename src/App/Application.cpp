@@ -796,6 +796,12 @@ void UApplication::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const
     lab->InspectGpuBuffers(out);
 }
 
+void UApplication::InspectIconReadbackGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (IconSource)
+    IconSource->InspectIconReadbackGpuBuffers(out);
+}
+
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const
 {
   if (CreaturePreviewRenderer)

@@ -811,12 +811,13 @@ UItemPreviewRenderer::RenderToUniqueTexture(const std::string &itemId, int size,
   if (!tex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, tex);
-  AllocatePreviewColor(clamped);
+  if (!AllocatePreviewColor(clamped))
+    return 0;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlIconColorAttachment attachment(Target.Framebuffer, tex, Target.Color);
-  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  if (!attachment.Ready() || glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
 
   glViewport(0, 0, clamped, clamped);
@@ -946,7 +947,8 @@ GLuint UItemPreviewRenderer::ResolveIconTexture(GLuint source, int size)
   if (!result)
     return 0;
   glBindTexture(GL_TEXTURE_2D, result);
-  AllocatePreviewColor(size, GL_RGBA8);
+  if (!AllocatePreviewColor(size, GL_RGBA8))
+    return 0;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -956,7 +958,7 @@ GLuint UItemPreviewRenderer::ResolveIconTexture(GLuint source, int size)
   if (!IconResolveFbo)
     return 0;
   UGlIconColorAttachment attachment(IconResolveFbo, result, 0);
-  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  if (!attachment.Ready() || glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
   glViewport(0, 0, size, size);
   glDisable(GL_SCISSOR_TEST);

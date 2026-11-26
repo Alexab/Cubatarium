@@ -35,6 +35,25 @@ struct PlatformFixture
   }
 };
 
+struct RefuseDepthStore
+{
+  RefuseDepthStore()
+  {
+    Original = __glewRenderbufferStorage;
+    Observed = 0;
+    __glewRenderbufferStorage = Allocate;
+  }
+  ~RefuseDepthStore() { __glewRenderbufferStorage = Original; }
+  inline static GLuint Observed{};
+private:
+  inline static PFNGLRENDERBUFFERSTORAGEPROC Original{};
+  static void GLAPIENTRY Allocate(GLenum target, GLenum format, GLsizei, GLsizei height)
+  {
+    Observed = static_cast<GLuint>(shared_content_preview_fixture::Binding(GL_RENDERBUFFER_BINDING));
+    Original(target, format, -1, height);
+  }
+};
+
 inline void CheckStagedTarget(const PreviewRendererStorage &before, const PreviewRendererStorage &after)
 {
   Require(after.supported && before.framebuffer == after.framebuffer && before.colorTexture == after.colorTexture &&
@@ -193,6 +212,51 @@ inline Json Run(const std::filesystem::path &report)
   CheckStagedTarget(creatureBefore, creatureStorage());
   Require(ReadCallerState() == caller, "refused creature target preserves caller bindings");
 
+  const auto checkPersistentDepth = [&] {
+    UGlStateScope scope(static_cast<GlStateMask>(GlStateBit::ViewportFb));
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, creatureBefore.framebuffer);
+    Require(shared_content_preview_fixture::Attachment(GL_COLOR_ATTACHMENT0) == creatureBefore.colorTexture &&
+            shared_content_preview_fixture::Attachment(GL_DEPTH_ATTACHMENT) == creatureBefore.depthBuffer,
+            "temporary output leaves the original preview attachments in place");
+    const auto previous = shared_content_preview_fixture::Binding(GL_RENDERBUFFER_BINDING);
+    glBindRenderbuffer(GL_RENDERBUFFER, creatureBefore.depthBuffer);
+    GLint width{}, height{};
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH, &width);
+    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT, &height);
+    glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(previous));
+    Require(width == 256 && height == 256, "the actual original depth store stays at its original extent");
+  };
+  {
+    RefuseDepthStore refuse;
+    Require(!creature->CreateSolidColorTexture(128, .1f, .3f, .6f, 1.f), "reject real invalid temporary depth allocation");
+  }
+  const auto failedDepth = RefuseDepthStore::Observed;
+  Require(failedDepth && failedDepth != creatureBefore.depthBuffer && !glIsRenderbuffer(failedDepth) &&
+              ReadCallerState() == caller, "failed depth allocation retires its name without touching the original");
+  checkPersistentDepth();
+  const std::array<GLuint, 2> retained{creatureBefore.colorTexture, creatureBefore.depthBuffer};
+  {
+    RefuseFramebuffer refuse(true, retained);
+    Require(!creature->CreateSolidColorTexture(128, .1f, .3f, .6f, 1.f), "reject complete temporary attachments at publication");
+  }
+  const auto failedAttachments = RefuseFramebuffer::Observed;
+  const auto failedPeak = RefuseFramebuffer::Extents;
+  Require(failedPeak.images.size() == 4 && !failedPeak.failedQueries && failedPeak.logicalBytes == 573440 &&
+              failedAttachments[0] == creatureBefore.framebuffer && failedAttachments[2] != creatureBefore.depthBuffer &&
+              !glIsRenderbuffer(failedAttachments[2]) && !glIsTexture(failedAttachments[1]) && ReadCallerState() == caller,
+          "both attachment pairs coexist before rejection and only the candidate pair retires");
+  checkPersistentDepth();
+  UGlTextureOwner solid;
+  {
+    RefuseFramebuffer observe(false, retained);
+    solid = UGlTextureOwner(creature->CreateSolidColorTexture(128, .1f, .3f, .6f, 1.f));
+  }
+  const auto successfulPeak = RefuseFramebuffer::Extents;
+  Require(solid.Get() && glIsTexture(solid.Get()) && successfulPeak.logicalBytes == failedPeak.logicalBytes &&
+              !glIsRenderbuffer(RefuseFramebuffer::Observed[2]) && ReadCallerState() == caller,
+          "retry returns the rendered color and retires its temporary depth");
+  checkPersistentDepth();
+
   UGlTextureOwner modelIcon(item->RenderToUniqueTexture(itemId, 128, 45.f, 20.f, MakeItemVisualInputs(&filled)));
   const auto uploaded = itemStorage();
   Require(modelIcon.Get() && uploaded.targetTexels == 128 * 128 && uploaded.colorTexture != itemBefore.colorTexture &&
@@ -245,7 +309,9 @@ inline Json Run(const std::filesystem::path &report)
           {"published_cpu_bytes", publishedBytes}, {"state_refusals", attempts},
           {"fallback_colors", lastItem.fallbackColorTexels}, {"item_surface_vertex_bytes", uploaded.surface.vertexBytes},
           {"item_surface_index_bytes", uploaded.surface.indexBytes}, {"staged_targets", true},
-          {"retired_failed_upload", true}, {"borrowed_skin_preserved", true}};
+          {"retired_failed_upload", true}, {"borrowed_skin_preserved", true},
+          {"temporary_depth", {{"rejected", DescribeRenderImages(failedPeak)},
+                               {"retry", DescribeRenderImages(successfulPeak)}, {"original_preserved", true}}}};
 }
 
 } // namespace cutum::creature_item_icon_fixture

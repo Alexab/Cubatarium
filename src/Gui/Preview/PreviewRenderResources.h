@@ -8,7 +8,7 @@
 namespace cutum
 {
 
-inline void AllocatePreviewColor(int size, GLint format = GL_RGBA)
+inline bool AllocatePreviewColor(int size, GLint format = GL_RGBA)
 {
   GLint unpack = 0;
   glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &unpack);
@@ -16,8 +16,10 @@ inline void AllocatePreviewColor(int size, GLint format = GL_RGBA)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
   glTexImage2D(GL_TEXTURE_2D, 0, format, size, size, 0, GL_RGBA,
                GL_UNSIGNED_BYTE, nullptr);
+  const bool allocated = glGetError() == GL_NO_ERROR;
   if (unpack)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GLuint(unpack));
+  return allocated;
 }
 
 struct PreviewRenderTarget
@@ -37,7 +39,8 @@ struct PreviewRenderTarget
     if (!next.Framebuffer || !next.Color || !next.Depth)
       return false;
     glBindTexture(GL_TEXTURE_2D, next.Color);
-    AllocatePreviewColor(size);
+    if (!AllocatePreviewColor(size))
+      return false;
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glBindFramebuffer(GL_FRAMEBUFFER, next.Framebuffer);
@@ -50,7 +53,10 @@ struct PreviewRenderTarget
     glGetIntegerv(GL_RENDERBUFFER_BINDING, &previous);
     glBindRenderbuffer(GL_RENDERBUFFER, next.Depth);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size, size);
+    const bool depthAllocated = glGetError() == GL_NO_ERROR;
     glBindRenderbuffer(GL_RENDERBUFFER, GLuint(previous));
+    if (!depthAllocated)
+      return false;
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, next.Depth);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
       return false;

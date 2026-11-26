@@ -100,40 +100,47 @@ class UGlIconColorAttachment
 public:
   UGlIconColorAttachment(GLuint framebuffer, GLuint texture, GLuint original,
                         GLuint depth = 0, int size = 0, int originalSize = 0)
-      : Framebuffer(framebuffer), Original(original),
-        Depth(size != originalSize && originalSize > 0 ? depth : 0),
-        OriginalSize(originalSize)
+      : Framebuffer(framebuffer), Original(original), OriginalDepth(depth)
   {
+    if (depth && size != originalSize)
+    {
+      glGenRenderbuffers(1, &TemporaryDepth);
+      if (!TemporaryDepth)
+        return;
+      GLint previous{};
+      glGetIntegerv(GL_RENDERBUFFER_BINDING, &previous);
+      glBindRenderbuffer(GL_RENDERBUFFER, TemporaryDepth);
+      glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size, size);
+      const bool allocated = glGetError() == GL_NO_ERROR;
+      glBindRenderbuffer(GL_RENDERBUFFER, static_cast<GLuint>(previous));
+      if (!allocated)
+        return;
+    }
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Framebuffer);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-    if (Depth)
-    {
-      glGetIntegerv(GL_RENDERBUFFER_BINDING, &Renderbuffer);
-      ResizeDepth(size);
-      glBindRenderbuffer(GL_RENDERBUFFER, GLuint(Renderbuffer));
-    }
+    if (TemporaryDepth)
+      glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, TemporaryDepth);
+    Attached = true;
+    ReadyToDraw = glGetError() == GL_NO_ERROR;
   }
   UGlIconColorAttachment(const UGlIconColorAttachment &) = delete;
   UGlIconColorAttachment &operator=(const UGlIconColorAttachment &) = delete;
+  bool Ready() const noexcept { return ReadyToDraw; }
   ~UGlIconColorAttachment()
   {
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Framebuffer);
-    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Original, 0);
-    if (Depth)
+    if (Attached)
     {
-      ResizeDepth(OriginalSize);
-      glBindRenderbuffer(GL_RENDERBUFFER, GLuint(Renderbuffer));
+      glBindFramebuffer(GL_DRAW_FRAMEBUFFER, Framebuffer);
+      glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Original, 0);
+      if (TemporaryDepth)
+        glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, OriginalDepth);
     }
+    if (TemporaryDepth)
+      glDeleteRenderbuffers(1, &TemporaryDepth);
   }
 
 private:
-  void ResizeDepth(int size) const
-  {
-    glBindRenderbuffer(GL_RENDERBUFFER, Depth);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, size, size);
-  }
-  GLuint Framebuffer{}, Original{}, Depth{};
-  int OriginalSize{};
-  GLint Renderbuffer{};
+  GLuint Framebuffer{}, Original{}, OriginalDepth{}, TemporaryDepth{};
+  bool Attached{}, ReadyToDraw{};
 };
 }

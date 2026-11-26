@@ -288,12 +288,13 @@ GLuint UContentPreviewRenderer::RenderUnique(ContentKind kind,
     return 0;
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, texture.Get());
-  AllocatePreviewColor(clamped);
+  if (!AllocatePreviewColor(clamped))
+    return 0;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlIconColorAttachment attachment(Target.Framebuffer, texture.Get(), Target.Color);
-  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  if (!attachment.Ready() || glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
 
   BeginPreviewDraw(clamped);

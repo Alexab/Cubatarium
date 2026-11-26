@@ -16,7 +16,7 @@ enum class TerrainGpuBufferRole
   PackedReadback, MdiScratch, OverlayQuad, GuiColored, GuiTextured, TextVertices,
   PreviewCubeVertices, PreviewCubeIndices, PreviewScratchVertices, PreviewScratchIndices,
   PreviewSurfaceVertices, PreviewSurfaceIndices, PreviewOverlay, PreviewViewmodelVertices,
-  PreviewViewmodelIndices, Count
+  PreviewViewmodelIndices, InventoryIconReadback, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
@@ -25,7 +25,7 @@ inline constexpr std::array TerrainGpuBufferRoleNames{
     "packed_readback", "mdi_scratch", "overlay_quad", "gui_colored", "gui_textured", "text_vertices",
     "preview_cube_vertices", "preview_cube_indices", "preview_scratch_vertices", "preview_scratch_indices",
     "preview_surface_vertices", "preview_surface_indices", "preview_overlay", "preview_viewmodel_vertices",
-    "preview_viewmodel_indices"};
+    "preview_viewmodel_indices", "inventory_icon_readback"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
 static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint32_t>::digits);
 

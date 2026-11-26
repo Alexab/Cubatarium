@@ -66,6 +66,15 @@ void UGuiIconSource::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const
     ItemCache->ItemPreview->InspectGpuBuffers(out);
 }
 
+void UGuiIconSource::InspectIconReadbackGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  for (const auto *service : {ObjectCache ? ObjectCache->IconService.get() : nullptr,
+                             CreatureCache ? CreatureCache->IconService.get() : nullptr,
+                             ItemCache ? ItemCache->IconService.get() : nullptr})
+    if (service)
+      service->InspectReadbackGpuBuffers(out);
+}
+
 GLuint UGuiIconSource::GetBlockIconTexture(const std::string &blockName)
 {
   if (!ObjectCache)

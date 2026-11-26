@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Gui/Core/GuiIconSource.h"
+#include "Render/Engine/TerrainGpuBufferReport.h"
 #include "Test/IconLifecycleFixture.h"
 #include <fstream>
 #include <iterator>
@@ -20,6 +21,112 @@ inline std::string ReadFile(const std::filesystem::path &path)
   return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 }
 
+struct RejectMappedPackRead
+{
+  RejectMappedPackRead()
+  {
+    Original = __glewBufferData;
+    Buffer = 0;
+    Mapped = false;
+    __glewBufferData = Allocate;
+  }
+  ~RejectMappedPackRead() { __glewBufferData = Original; }
+  inline static GLuint Buffer{};
+  inline static bool Mapped{};
+private:
+  inline static PFNGLBUFFERDATAPROC Original{};
+  static void GLAPIENTRY Allocate(GLenum target, GLsizeiptr bytes, const void *data, GLenum usage)
+  {
+    Original(target, bytes, data, usage);
+    if (target == GL_PIXEL_PACK_BUFFER && bytes > 0)
+    {
+      GLint current{};
+      glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &current);
+      Buffer = static_cast<GLuint>(current);
+      Mapped = glMapBufferRange(target, 0, bytes, GL_MAP_READ_BIT) != nullptr;
+    }
+  }
+};
+
+inline Json CheckReadbackGpu(const std::filesystem::path &root, GLuint sourceTexture)
+{
+  constexpr int side = icon_lifecycle_fixture::Size;
+  auto service = UInventoryIconService::Create();
+  Require(service->Initialize(root), "initialize a separate GPU readback fixture");
+  const auto initial = service->InspectOwnedStorage();
+  Require(initial.jobLimit == 256 && initial.readbackSideLimit == 512 &&
+              initial.packBufferBytesUpper == 268435456, "the admission bounds match the icon queue and extent limits");
+  const auto store = [&](std::string id, int size, GLuint image) {
+    return service->StoreIconTexture("item", id, "", "readback-fixture", size, image);
+  };
+  const auto census = [&] {
+    TerrainGpuBufferCensus out;
+    service->InspectReadbackGpuBuffers(out);
+    return out;
+  };
+  const auto state = icon_lifecycle_fixture::ReadBindings();
+  {
+    RejectMappedPackRead refuse;
+    Require(!store("refused", side, sourceTexture) && RejectMappedPackRead::Mapped,
+            "the real GL read into a mapped pack buffer is rejected");
+  }
+  Require(RejectMappedPackRead::Buffer && !glIsBuffer(RejectMappedPackRead::Buffer) &&
+              !service->InspectOwnedStorage().jobs && icon_lifecycle_fixture::ReadBindings() == state &&
+              glGetError() == GL_NO_ERROR, "failed read retires its store and restores caller pack state");
+  Require(!store("wrong-extent", side + 1, sourceTexture) &&
+              !service->StoreIconTexture("block", "wrong-extent", "", "readback-fixture", side - 1, sourceTexture) &&
+              !service->InspectOwnedStorage().entries, "both read routes reject a texture extent mismatch");
+
+  UGlTextureOwner large;
+  {
+    UGlStateScope glScope(kGlMaskIconFbo);
+    GLuint name{};
+    glGenTextures(1, &name);
+    large = UGlTextureOwner(name);
+    glBindTexture(GL_TEXTURE_2D, name);
+    const UGlPixelUnpackScope unpack;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  }
+  Require(store("large", 512, large.Get()), "admit the largest supported single pack store");
+  for (size_t i = 1; i < initial.jobLimit; ++i)
+    Require(store("queued-" + std::to_string(i), side, sourceTexture), "admit every supported pack job slot");
+  const auto fullCensus = census();
+  const auto full = fullCensus.Read();
+  const auto source = service->InspectOwnedStorage();
+  Require(full.total.objects == 256 && full.total.bytes == 1309696 && !full.failedQueries &&
+              source.jobs == full.total.objects && source.packBufferBytes == full.total.bytes &&
+              !store("overflow", side, sourceTexture) && census().Read().total.bytes == full.total.bytes &&
+              icon_lifecycle_fixture::ReadBindings() == state, "queue saturation confirms measured live bytes and rejects one more store");
+  service->CancelPendingItemReadbacks();
+  const auto cancelled = fullCensus.Read();
+  Require(!census().Read().references && cancelled.namesWithoutObject == 256 &&
+              !cancelled.total.bytes && glIsTexture(large.Get()), "cancellation retires all pack stores and keeps source textures alive");
+
+  for (const char *id : {"retry-a", "retry-b", "retry-c"})
+    Require(store(id, side, sourceTexture), "valid readback retries on the same service");
+  const auto retryCensus = census();
+  const auto queued = retryCensus.Read();
+  glFinish();
+  service->FlushManifest();
+  const auto batch = census().Read();
+  Require(queued.total.objects == 3 && queued.total.bytes == 3072 &&
+              batch.total.objects == 1 && batch.total.bytes == 1024 &&
+              retryCensus.Read().namesWithoutObject == 2, "one flush retires exactly two completed stores");
+  service->FlushManifest();
+  const auto retired = retryCensus.Read();
+  const auto manifest = Json::parse(ReadFile(root / "manifest.json"));
+  Require(retired.namesWithoutObject == 3 && !census().Read().references &&
+              manifest.at("entries").size() == 3 && service->GetStats().RenderStores == 3 &&
+              icon_lifecycle_fixture::ReadBindings() == state && glGetError() == GL_NO_ERROR,
+          "successful batches persist exactly the retried icons and release the final pack store");
+
+  return {{"status", "PASS"}, {"job_limit", initial.jobLimit}, {"side_limit", initial.readbackSideLimit},
+          {"logical_bytes_upper", initial.packBufferBytesUpper}, {"full", DescribeIconReadbackGpuBuffers(full)},
+          {"cancelled_names", cancelled.namesWithoutObject}, {"retry", DescribeIconReadbackGpuBuffers(queued)},
+          {"after_first_flush", DescribeIconReadbackGpuBuffers(batch)}, {"retired_names", retired.namesWithoutObject},
+          {"invalid_read_and_extent_rejected", true}, {"persisted", manifest.at("entries").size()}};
+}
+
 inline Json Run(const std::filesystem::path &report)
 {
   auto fixture = report;
@@ -31,6 +138,7 @@ inline Json Run(const std::filesystem::path &report)
   const auto manifest = originalRoot / "manifest.json";
   const auto temporary = originalRoot / "manifest.json.tmp";
   auto texture = icon_lifecycle_fixture::MakeTexture();
+  const auto gpu = CheckReadbackGpu(fixture / "gpu-readback", texture.Get());
   constexpr int size = icon_lifecycle_fixture::Size;
   const std::string longId(59, 'q'), fingerprint(63, 'f');
   const auto queue = [&](UInventoryIconService &service, const std::string &id)
@@ -159,6 +267,11 @@ inline Json Run(const std::filesystem::path &report)
   Require(joined.supported && joined.aliases == 3 && joined.cpuBytes == inspect(*service).cpuBytes,
           "object, creature and item cache routes charge their common service once");
   Require(queue(*service, longId), "queue final jobs under the shared service owner");
+  TerrainGpuBufferCensus sharedGpu;
+  aliases->InspectIconReadbackGpuBuffers(sharedGpu);
+  const auto joinedGpu = sharedGpu.Read();
+  Require(joinedGpu.total.objects == 1 && joinedGpu.references == 3 && joinedGpu.total.bytes == size_t(size) * size * 4,
+          "the three cache routes share one measured pack store");
   const auto finalBuffer = service->InspectReadbackStorage().first_buffer;
   std::weak_ptr<UInventoryIconService> lifetime = service;
   service.reset();
@@ -171,6 +284,7 @@ inline Json Run(const std::filesystem::path &report)
           {"service_request", cold.serviceRequest}, {"pending_job_bytes", busy.jobBytes - idle.jobBytes},
           {"pack_buffer_bytes", busy.packBufferBytes}, {"reloaded_manifest_bytes", loaded.manifestBytes},
           {"shared_aliases", joined.aliases}, {"selective_invalidation", true}, {"root_replacement", true},
-          {"manifest_replacement_retry", true}, {"retired_last_owner", true}};
+          {"manifest_replacement_retry", true}, {"retired_last_owner", true},
+          {"gpu_readback", gpu}, {"shared_gpu_readback", DescribeIconReadbackGpuBuffers(joinedGpu)}};
 }
 } // namespace cutum::inventory_icon_storage_fixture

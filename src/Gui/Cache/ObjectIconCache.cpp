@@ -268,12 +268,13 @@ GLuint UObjectIconCache::RenderObjectIcon(const std::string &objectName)
   if (!iconTex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
-  AllocatePreviewColor(kIconSize);
+  if (!AllocatePreviewColor(kIconSize))
+    return 0;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlIconColorAttachment attachment(Target.Framebuffer, iconTex, Target.Color);
-  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  if (!attachment.Ready() || glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
   BeginIconDraw(kIconSize);
 
@@ -330,12 +331,13 @@ GLuint UObjectIconCache::RenderBlockIcon(BlockId blockId)
   if (!iconTex)
     return 0;
   glBindTexture(GL_TEXTURE_2D, iconTex);
-  AllocatePreviewColor(kIconSize);
+  if (!AllocatePreviewColor(kIconSize))
+    return 0;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   UGlIconColorAttachment attachment(Target.Framebuffer, iconTex, Target.Color);
-  if (glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+  if (!attachment.Ready() || glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
     return 0;
   BeginIconDraw(kIconSize);
 

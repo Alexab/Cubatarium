@@ -18,6 +18,7 @@ struct InventoryIconStorage
 {
   size_t serviceBytes{}, serviceRequest{}, readbackStateBytes{}, pathBytes{}, manifestBytes{}, jobBytes{}, cpuBytes{};
   size_t entries{}, jobs{}, packBufferBytes{}, aliases{};
+  size_t jobLimit{}, readbackSideLimit{}, packBufferBytesUpper{};
   bool present{}, initialized{}, dirty{}, factoryOwner{}, bindingsMatch{}, supported{};
 };
 
@@ -53,6 +54,7 @@ public:
   ~UInventoryIconService();
   static std::shared_ptr<UInventoryIconService> Create();
   InventoryIconStorage InspectOwnedStorage() const noexcept;
+  void InspectReadbackGpuBuffers(class TerrainGpuBufferCensus &out) const;
   bool Initialize(const std::filesystem::path &cacheRoot = {}, const InventoryIconIoProbe *probe = nullptr);
   static std::string BuildCacheKey(const std::string &kind,
                                    const std::string &entityId,

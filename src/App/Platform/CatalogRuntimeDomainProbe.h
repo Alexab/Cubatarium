@@ -324,6 +324,8 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"readback_state_bytes", diskIcons.readbackStateBytes}, {"path_bytes", diskIcons.pathBytes},
       {"manifest_bytes", diskIcons.manifestBytes}, {"job_bytes", diskIcons.jobBytes}, {"cpu_bytes", diskIcons.cpuBytes},
       {"entries", diskIcons.entries}, {"jobs", diskIcons.jobs}, {"pack_buffer_bytes", diskIcons.packBufferBytes},
+      {"job_limit", diskIcons.jobLimit}, {"readback_side_limit", diskIcons.readbackSideLimit},
+      {"pack_buffer_bytes_upper", diskIcons.packBufferBytesUpper},
       {"whole_runtime_complete", false}};
   const auto entityIcons = application.InspectCreatureItemIconStorage();
   const auto iconTable = [](const IconTextureTableStorage &table) -> nlohmann::json
@@ -528,6 +530,9 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   TerrainGpuBufferCensus previewBuffers;
   application.InspectPreviewGpuBuffers(previewBuffers);
   report["preview_gpu_buffers"] = DescribePreviewGpuBuffers(previewBuffers.Read());
+  TerrainGpuBufferCensus iconReadbacks;
+  application.InspectIconReadbackGpuBuffers(iconReadbacks);
+  report["icon_readback_gpu_buffers"] = DescribeIconReadbackGpuBuffers(iconReadbacks.Read());
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());

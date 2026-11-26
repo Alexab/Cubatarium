@@ -42,6 +42,12 @@ inline nlohmann::json DescribePreviewGpuBuffers(const TerrainGpuBufferSnapshot &
 {
   return DescribeGpuBufferRoles(snapshot, "preview-gpu-buffers.v1",
                                 static_cast<std::size_t>(TerrainGpuBufferRole::PreviewCubeVertices),
-                                snapshot.roles.size());
+                                static_cast<std::size_t>(TerrainGpuBufferRole::InventoryIconReadback));
+}
+
+inline nlohmann::json DescribeIconReadbackGpuBuffers(const TerrainGpuBufferSnapshot &snapshot)
+{
+  return DescribeGpuBufferRoles(snapshot, "icon-readback-gpu-buffers.v1",
+                                static_cast<std::size_t>(TerrainGpuBufferRole::InventoryIconReadback), snapshot.roles.size());
 }
 } // namespace cutum
