@@ -515,6 +515,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   report["native_thread_stacks"] = DescribeNativeThreadStacks();
   TerrainGpuBufferCensus terrainBuffers;
   TerrainGpuBufferCensus actorBuffers;
+  TerrainGpuBufferCensus geometryBuffers;
   RenderImageCensus renderImages;
   if (launcher.cubes)
     launcher.cubes->InspectRenderImages(renderImages);
@@ -524,6 +525,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   {
     geometry->InspectTerrainGpuBuffers(terrainBuffers);
     geometry->InspectActorGpuBuffers(actorBuffers);
+    geometry->InspectGeometryGpuBuffers(geometryBuffers);
     geometry->InspectRenderImages(renderImages);
   }
   for (const auto *world : out.member_worlds)
@@ -542,6 +544,9 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   InspectCreatureBonePaletteGpu(actorBuffers);
   application.InspectActorGpuBuffers(actorBuffers);
   report["actor_gpu_buffers"] = DescribeActorGpuBuffers(actorBuffers.Read());
+  report["geometry_gpu_buffers"] = DescribeGeometryGpuBuffers(geometryBuffers.Read());
+  report["selected_gpu_buffers"] = DescribeSelectedGpuBuffers(
+      {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers});
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(driverMemory);

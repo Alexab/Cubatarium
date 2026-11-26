@@ -110,6 +110,21 @@ namespace cutum
 
 namespace
 {
+struct RestoreGeometryBindings
+{
+  GLint vao{}, array{};
+  RestoreGeometryBindings()
+  {
+    glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &vao);
+    glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &array);
+  }
+  ~RestoreGeometryBindings()
+  {
+    glBindVertexArray(static_cast<GLuint>(vao));
+    glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(array));
+  }
+};
+
 // PERF holes: the fluid surface map reference for the probe diagnostics.
 // Set once per frame by the engine before the probe capture walks.
 const UFluidSurfaceMap *g_probe_fluid_map = nullptr;
@@ -4407,6 +4422,10 @@ UGeometryEngine::~UGeometryEngine()
   InfluenceFx.DestroyGpuResources();
   DestroyPreviewBuffers();
   DestroyOutlineBuffers();
+  if (crosshairVAO)
+    glDeleteVertexArrays(1, &crosshairVAO);
+  if (crosshairVBO)
+    glDeleteBuffers(1, &crosshairVBO);
   CreatureDraw_.DestroyBuffers();
   CreatureMeshGpuCache::Instance().DestroyAll();
   OverlayQuad.Reset();
@@ -4539,6 +4558,22 @@ void UGeometryEngine::InspectTerrainGpuBuffers(TerrainGpuBufferCensus &out) cons
     mdi->InspectGpuBuffers(out);
 }
 
+void UGeometryEngine::InspectGeometryGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  out.Add(Role::GeometryCubeVertices, cubeVBO);
+  out.Add(Role::GeometryCubeIndices, cubeEBO);
+  out.Add(Role::GeometryCubeInstances, instanceVBO);
+  out.Add(Role::GeometryFaceVertices, faceVBO);
+  out.Add(Role::GeometryFaceIndices, faceEBO);
+  out.Add(Role::GeometryFaceInstances, instanceBlockVBO);
+  out.Add(Role::GeometryPreviewVertices, previewVBO);
+  out.Add(Role::GeometryPreviewIndices, previewEBO);
+  out.Add(Role::GeometryOutlineVertices, outlineVBO);
+  out.Add(Role::GeometryOutlineIndices, outlineEBO);
+  out.Add(Role::GeometryCrosshairVertices, crosshairVBO);
+}
+
 void UGeometryEngine::InspectRenderImages(RenderImageCensus &out) const
 {
   if (TextureCubeStorageInstance)
@@ -4586,7 +4621,6 @@ bool UGeometryEngine::InitEngine()
 
   BlockBatchesValid = false;
 
-  // Initialize preview buffers
   InitPreviewBuffers();
 
   if (!CreatureDraw_.InitBuffers(*shaderManager))
@@ -5547,24 +5581,23 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
     std::cout << "DrawBatch: Drawing " << batch.ModelMatrices.size()
               << " instances" << std::endl;
 
-  glBindTexture(GL_TEXTURE_2D, batch.textureID);
-
-  std::vector<glm::mat4> instanceMVPs;
   auto camera = WorldInstance->GetCurrentUserCamera();
   if (!camera)
     return;
 
-  instanceMVPs.reserve(batch.ModelMatrices.size());
-  for (const auto &model : batch.ModelMatrices)
+  struct BlockDrawInstance
   {
-    instanceMVPs.push_back(camera->GetProjection() * camera->GetViewMatrix() *
-                           model);
-  }
-
-  const bool isBlockBatch = !batch.ModelMatrices.empty();
-  const bool drawFaceQuads =
-      isBlockBatch && Render.UseFaceQuadDraw() &&
-      batch.faceIndices.size() == batch.ModelMatrices.size();
+    glm::mat4 model;
+    float faceIndex;
+    float pad[3];
+  };
+  static_assert(sizeof(BlockDrawInstance) == sizeof(glm::mat4) + 4 * sizeof(float));
+  const auto count = batch.ModelMatrices.size();
+  const bool drawFaceQuads = Render.UseFaceQuadDraw() && batch.faceIndices.size() == count;
+  const auto stride = drawFaceQuads ? sizeof(BlockDrawInstance) : sizeof(glm::mat4);
+  if (count > static_cast<size_t>(std::numeric_limits<GLsizei>::max()) ||
+      count > static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()) / stride)
+    return;
   const GLsizei indexCount = drawFaceQuads ? 6 : 36;
   GLuint vao = drawFaceQuads ? faceVAO : cubeVAO;
 
@@ -5588,6 +5621,8 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
     return;
   }
 
+  const RestoreGeometryBindings restore;
+  glBindTexture(GL_TEXTURE_2D, batch.textureID);
   activeShader->Use();
   activeShader->SetInt("texture0", 0);
   if (drawFaceQuads && batch.blockTypeId != 0 && TextureCubeStorageInstance)
@@ -5596,49 +5631,34 @@ void UGeometryEngine::DrawBatch(const RenderBatch &batch,
                          TextureCubeStorageInstance->GetTextures());
   }
 
+  const auto vp = camera->GetProjection() * camera->GetViewMatrix();
+  const auto bytes = static_cast<GLsizeiptr>(count * stride);
   if (drawFaceQuads)
   {
-    struct BlockDrawInstance
-    {
-      glm::mat4 model;
-      float faceIndex;
-      float pad[3];
-    };
     std::vector<BlockDrawInstance> blockInstances;
-    blockInstances.reserve(batch.ModelMatrices.size());
-    const glm::mat4 vp = camera->GetProjection() * camera->GetViewMatrix();
+    blockInstances.reserve(count);
     activeShader->SetMat4("uVP", vp);
-    for (size_t i = 0; i < batch.ModelMatrices.size(); ++i)
-    {
-      BlockDrawInstance inst;
-      inst.model = batch.ModelMatrices[i];
-      inst.faceIndex = batch.faceIndices[i];
-      inst.pad[0] = inst.pad[1] = inst.pad[2] = 0.0f;
-      blockInstances.push_back(inst);
-    }
+    for (size_t i = 0; i < count; ++i)
+      blockInstances.push_back({batch.ModelMatrices[i], batch.faceIndices[i], {}});
     glBindBuffer(GL_ARRAY_BUFFER, instanceBlockVBO);
-    glBufferData(GL_ARRAY_BUFFER,
-                 blockInstances.size() * sizeof(BlockDrawInstance),
-                 blockInstances.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, bytes, blockInstances.data(), GL_DYNAMIC_DRAW);
   }
   else
   {
+    std::vector<glm::mat4> instanceMVPs;
+    instanceMVPs.reserve(count);
+    for (const auto &model : batch.ModelMatrices)
+      instanceMVPs.push_back(vp * model);
     glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
-    glBufferData(GL_ARRAY_BUFFER, instanceMVPs.size() * sizeof(glm::mat4),
-                 instanceMVPs.data(), GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, bytes, instanceMVPs.data(), GL_DYNAMIC_DRAW);
   }
 
-  glBindVertexArray(vao);
-  const GLsizei instanceCount =
-      drawFaceQuads ? static_cast<GLsizei>(batch.ModelMatrices.size())
-                    : static_cast<GLsizei>(instanceMVPs.size());
-  if (instanceCount > 0)
+  if (glGetError() == GL_NO_ERROR)
   {
+    glBindVertexArray(vao);
     glDrawElementsInstanced(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0,
-                            instanceCount);
+                            static_cast<GLsizei>(count));
   }
-  glBindVertexArray(0);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   activeShader->Unuse();
 }
@@ -9113,55 +9133,51 @@ void UGeometryEngine::RenderCrosshair(int width_size, int height_size)
   const float lineThickness = 2.0f;
   const float halfThick = lineThickness * 0.5f;
 
-  const float horizontalLine[] = {
+  const float vertices[] = {
       centerX - crosshairSize, centerY - halfThick,     centerX + crosshairSize,
       centerY - halfThick,     centerX - crosshairSize, centerY + halfThick,
       centerX + crosshairSize, centerY + halfThick,
-  };
-
-  const float verticalLine[] = {
       centerX - halfThick,     centerY - crosshairSize, centerX + halfThick,
       centerY - crosshairSize, centerX - halfThick,     centerY + crosshairSize,
       centerX + halfThick,     centerY + crosshairSize,
   };
 
-  // Create VAO and VBO for horizontal line
-  GLuint horizontalVAO, horizontalVBO;
-  glGenVertexArrays(1, &horizontalVAO);
-  glGenBuffers(1, &horizontalVBO);
-
-  glBindVertexArray(horizontalVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, horizontalVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(horizontalLine), horizontalLine,
-               GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-
-  // Draw horizontal line
+  const RestoreGeometryBindings restore;
+  if (!crosshairVAO)
+  {
+    glGenVertexArrays(1, &crosshairVAO);
+    glGenBuffers(1, &crosshairVBO);
+    if (crosshairVAO && crosshairVBO)
+    {
+      glBindVertexArray(crosshairVAO);
+      glBindBuffer(GL_ARRAY_BUFFER, crosshairVBO);
+      glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+      glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+      glEnableVertexAttribArray(0);
+    }
+    const auto error = glGetError();
+    if (!crosshairVAO || !crosshairVBO || error != GL_NO_ERROR)
+    {
+      glDeleteVertexArrays(1, &crosshairVAO);
+      glDeleteBuffers(1, &crosshairVBO);
+      crosshairVAO = crosshairVBO = 0;
+      uiShader->Unuse();
+      return;
+    }
+  }
+  else
+  {
+    glBindVertexArray(crosshairVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, crosshairVBO);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+    if (glGetError() != GL_NO_ERROR)
+    {
+      uiShader->Unuse();
+      return;
+    }
+  }
   glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-  // Create VAO and VBO for Vertical line
-  GLuint verticalVAO, verticalVBO;
-  glGenVertexArrays(1, &verticalVAO);
-  glGenBuffers(1, &verticalVBO);
-
-  glBindVertexArray(verticalVAO);
-  glBindBuffer(GL_ARRAY_BUFFER, verticalVBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(verticalLine), verticalLine,
-               GL_STATIC_DRAW);
-
-  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
-
-  // Draw Vertical line
-  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-  // Очищаем ресурсы
-  glDeleteVertexArrays(1, &horizontalVAO);
-  glDeleteBuffers(1, &horizontalVBO);
-  glDeleteVertexArrays(1, &verticalVAO);
-  glDeleteBuffers(1, &verticalVBO);
+  glDrawArrays(GL_TRIANGLE_STRIP, 4, 4);
 
   // Отключаем шейдер
   uiShader->Unuse();
@@ -9292,8 +9308,11 @@ void UGeometryEngine::RenderHotbarLabels(int width_size, int height_size)
   }
 }
 
-void UGeometryEngine::InitPreviewBuffers()
+bool UGeometryEngine::InitPreviewBuffers()
 {
+  if (previewVAO)
+    return true;
+  const RestoreGeometryBindings restore;
   // Create a simple cube for preview (smaller scale)
   float scale = 0.3f; // Smaller cube for preview
   float cube_shift = 1.0f / 6.0f;
@@ -9336,6 +9355,11 @@ void UGeometryEngine::InitPreviewBuffers()
   glGenVertexArrays(1, &previewVAO);
   glGenBuffers(1, &previewVBO);
   glGenBuffers(1, &previewEBO);
+  if (!previewVAO || !previewVBO || !previewEBO)
+  {
+    DestroyPreviewBuffers();
+    return false;
+  }
 
   glBindVertexArray(previewVAO);
   glBindBuffer(GL_ARRAY_BUFFER, previewVBO);
@@ -9352,8 +9376,11 @@ void UGeometryEngine::InitPreviewBuffers()
                         (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
-  glBindVertexArray(0);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyPreviewBuffers();
+    return false;
+  }
 
   // Load a default texture for preview (prefer "stone", else first available)
   if (TextureCubeStorageInstance)
@@ -9375,6 +9402,7 @@ void UGeometryEngine::InitPreviewBuffers()
     }
     previewTexture = texId;
   }
+  return true;
 }
 
 void UGeometryEngine::DestroyPreviewBuffers()
@@ -9399,7 +9427,7 @@ void UGeometryEngine::DestroyPreviewBuffers()
 
 void UGeometryEngine::RenderActiveObjectPreview(int width_size, int height_size)
 {
-  if (!defaultShader || !defaultShader->IsValid() || !previewVAO)
+  if (!defaultShader || !defaultShader->IsValid() || !InitPreviewBuffers())
     return;
 
   // Save current state
@@ -9484,6 +9512,7 @@ bool UGeometryEngine::InitCubeBuffers()
 {
   if (cubeVAO != 0)
     return true;
+  const RestoreGeometryBindings restore;
 
   float cube_shift = 1.0f / 6.0f;
   const float vertices[] = {
@@ -9526,6 +9555,11 @@ bool UGeometryEngine::InitCubeBuffers()
   glGenBuffers(1, &cubeVBO);
   glGenBuffers(1, &cubeEBO);
   glGenBuffers(1, &instanceVBO);
+  if (!cubeVAO || !cubeVBO || !cubeEBO || !instanceVBO)
+  {
+    DestroyCubeBuffers();
+    return false;
+  }
 
   glBindVertexArray(cubeVAO);
   glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
@@ -9554,16 +9588,19 @@ bool UGeometryEngine::InitCubeBuffers()
     glVertexAttribDivisor(2 + i, 1);
   }
 
-  glBindVertexArray(0);
-  return cubeVAO != 0;
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyCubeBuffers();
+    return false;
+  }
+  return true;
 }
 
 bool UGeometryEngine::InitFaceQuadBuffers()
 {
   if (faceVAO != 0)
-  {
-    DestroyFaceQuadBuffers();
-  }
+    return true;
+  const RestoreGeometryBindings restore;
 
   const float vertices[] = {
       0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
@@ -9575,6 +9612,11 @@ bool UGeometryEngine::InitFaceQuadBuffers()
   glGenBuffers(1, &faceVBO);
   glGenBuffers(1, &faceEBO);
   glGenBuffers(1, &instanceBlockVBO);
+  if (!faceVAO || !faceVBO || !faceEBO || !instanceBlockVBO)
+  {
+    DestroyFaceQuadBuffers();
+    return false;
+  }
 
   glBindVertexArray(faceVAO);
   glBindBuffer(GL_ARRAY_BUFFER, faceVBO);
@@ -9605,8 +9647,12 @@ bool UGeometryEngine::InitFaceQuadBuffers()
   glEnableVertexAttribArray(6);
   glVertexAttribDivisor(6, 1);
 
-  glBindVertexArray(0);
-  return faceVAO != 0;
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyFaceQuadBuffers();
+    return false;
+  }
+  return true;
 }
 
 void UGeometryEngine::DestroyFaceQuadBuffers()
@@ -9655,6 +9701,11 @@ void UGeometryEngine::DestroyCubeBuffers()
     glDeleteVertexArrays(1, &cubeVAO);
     cubeVAO = 0;
   }
+  if (cubeDrawVAO)
+  {
+    glDeleteVertexArrays(1, &cubeDrawVAO);
+    cubeDrawVAO = 0;
+  }
 }
 
 bool UGeometryEngine::InitOutlineBuffers()
@@ -9663,6 +9714,7 @@ bool UGeometryEngine::InitOutlineBuffers()
   {
     return true;
   }
+  const RestoreGeometryBindings restore;
 
   constexpr float half = 0.5f + 0.005f;
   const float vertices[] = {
@@ -9678,6 +9730,11 @@ bool UGeometryEngine::InitOutlineBuffers()
   glGenVertexArrays(1, &outlineVAO);
   glGenBuffers(1, &outlineVBO);
   glGenBuffers(1, &outlineEBO);
+  if (!outlineVAO || !outlineVBO || !outlineEBO)
+  {
+    DestroyOutlineBuffers();
+    return false;
+  }
 
   glBindVertexArray(outlineVAO);
   glBindBuffer(GL_ARRAY_BUFFER, outlineVBO);
@@ -9689,8 +9746,12 @@ bool UGeometryEngine::InitOutlineBuffers()
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
-  glBindVertexArray(0);
-  return outlineVAO != 0;
+  if (glGetError() != GL_NO_ERROR)
+  {
+    DestroyOutlineBuffers();
+    return false;
+  }
+  return true;
 }
 
 void UGeometryEngine::DestroyOutlineBuffers()

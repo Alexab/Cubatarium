@@ -3384,6 +3384,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           application->InspectActorGpuBuffers(actorBuffers);
           report << "  \"actor_gpu_buffers_after_loop\": "
                  << DescribeActorGpuBuffers(actorBuffers.Read()).dump() << ",\n";
+          TerrainGpuBufferCensus geometryBuffers;
+          geometry_engine->InspectGeometryGpuBuffers(geometryBuffers);
+          report << "  \"geometry_gpu_buffers_after_loop\": "
+                 << DescribeGeometryGpuBuffers(geometryBuffers.Read()).dump() << ",\n";
+          report << "  \"selected_gpu_buffers_after_loop\": " << DescribeSelectedGpuBuffers(
+              {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers}).dump() << ",\n";
           RenderImageCensus renderImages;
           if (texture_cube_instance)
             texture_cube_instance->InspectRenderImages(renderImages);

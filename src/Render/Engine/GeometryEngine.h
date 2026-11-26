@@ -120,6 +120,7 @@ public:
   }
   void InspectTerrainGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectActorGpuBuffers(class TerrainGpuBufferCensus &out) const { CreatureDraw_.InspectGpuBuffers(out); }
+  void InspectGeometryGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectRenderImages(class RenderImageCensus &out) const;
   MemberCallbackStorageSnapshot InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known) const noexcept;
   const UWorld *GetWorldForStorage() const noexcept {return WorldInstance.get();}
@@ -219,6 +220,7 @@ public:
 private:
   auto MakeStoredPackedSwitchCallback();
   friend struct CallbackRootSourceProbe;
+  friend struct GeometryGpuStorageProbe;
 
   bool DiagnosticPixelProbePending_{false};
   // Static cube geometry (one VAO/VBO/EBO reused for all cubes)
@@ -256,6 +258,7 @@ private:
   GLuint previewVAO = 0, previewVBO = 0, previewEBO = 0; // Preview cube buffers
   GLuint previewTexture = 0;                             // Preview texture
   GLuint outlineVAO = 0, outlineVBO = 0, outlineEBO = 0;
+  GLuint crosshairVAO = 0, crosshairVBO = 0;
   bool EnsureCubeDrawVAO();
   bool InitOutlineBuffers();
   void DestroyOutlineBuffers();
@@ -295,7 +298,7 @@ private:
   // UI helpers
   void RenderActiveObjectPreview(int width_size, int height_size);
   void RenderHotbarLabels(int width_size, int height_size);
-  void InitPreviewBuffers();
+  bool InitPreviewBuffers();
   void DestroyPreviewBuffers();
 
   std::shared_ptr<UShaderManager> shaderManager; // Replace QOpenGLShaderProgram

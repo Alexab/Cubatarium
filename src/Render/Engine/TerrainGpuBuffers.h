@@ -21,7 +21,11 @@ enum class TerrainGpuBufferRole
   CreatureSkinnedVertices, CreatureSkinnedIndices, CreaturePalette,
   WorldHeldSurfaceVertices, WorldHeldSurfaceIndices, ActorViewmodelVertices, ActorViewmodelIndices,
   ViewmodelSurfaceVertices, ViewmodelSurfaceIndices, EquipmentScratchVertices, EquipmentScratchIndices,
-  ViewmodelScratchVertices, ViewmodelScratchIndices, Count
+  ViewmodelScratchVertices, ViewmodelScratchIndices,
+  GeometryCubeVertices, GeometryCubeIndices, GeometryCubeInstances,
+  GeometryFaceVertices, GeometryFaceIndices, GeometryFaceInstances,
+  GeometryPreviewVertices, GeometryPreviewIndices, GeometryOutlineVertices, GeometryOutlineIndices,
+  GeometryCrosshairVertices, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
@@ -35,7 +39,11 @@ inline constexpr std::array TerrainGpuBufferRoleNames{
     "creature_skinned_vertices", "creature_skinned_indices", "creature_palette",
     "world_held_surface_vertices", "world_held_surface_indices", "actor_viewmodel_vertices", "actor_viewmodel_indices",
     "viewmodel_surface_vertices", "viewmodel_surface_indices", "equipment_scratch_vertices", "equipment_scratch_indices",
-    "viewmodel_scratch_vertices", "viewmodel_scratch_indices"};
+    "viewmodel_scratch_vertices", "viewmodel_scratch_indices",
+    "geometry_cube_vertices", "geometry_cube_indices", "geometry_cube_instances",
+    "geometry_face_vertices", "geometry_face_indices", "geometry_face_instances",
+    "geometry_preview_vertices", "geometry_preview_indices", "geometry_outline_vertices", "geometry_outline_indices",
+    "geometry_crosshair_vertices"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
 static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint64_t>::digits);
 
@@ -65,6 +73,13 @@ public:
       return;
     Names[name] |= std::uint64_t{1} << static_cast<std::size_t>(role);
     ++References;
+  }
+
+  void Include(const TerrainGpuBufferCensus &group)
+  {
+    for (const auto &[name, roles] : group.Names)
+      Names[name] |= roles;
+    References += group.References;
   }
 
   TerrainGpuBufferSnapshot Read() const

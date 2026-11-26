@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Render/Engine/TerrainGpuBuffers.h"
+#include <initializer_list>
 #include <nlohmann/json.hpp>
 #include <utility>
 
@@ -55,6 +56,22 @@ inline nlohmann::json DescribeIconReadbackGpuBuffers(const TerrainGpuBufferSnaps
 inline nlohmann::json DescribeActorGpuBuffers(const TerrainGpuBufferSnapshot &snapshot)
 {
   return DescribeGpuBufferRoles(snapshot, "actor-gpu-buffers.v1",
-                                static_cast<std::size_t>(TerrainGpuBufferRole::CreaturePartVertices), snapshot.roles.size());
+                                static_cast<std::size_t>(TerrainGpuBufferRole::CreaturePartVertices),
+                                static_cast<std::size_t>(TerrainGpuBufferRole::GeometryCubeVertices));
+}
+
+inline nlohmann::json DescribeGeometryGpuBuffers(const TerrainGpuBufferSnapshot &snapshot)
+{
+  return DescribeGpuBufferRoles(snapshot, "geometry-gpu-buffers.v1",
+                                static_cast<std::size_t>(TerrainGpuBufferRole::GeometryCubeVertices), snapshot.roles.size());
+}
+
+inline nlohmann::json DescribeSelectedGpuBuffers(std::initializer_list<const TerrainGpuBufferCensus *> groups)
+{
+  TerrainGpuBufferCensus joined;
+  for (const auto *group : groups)
+    joined.Include(*group);
+  const auto snapshot = joined.Read();
+  return DescribeGpuBufferRoles(snapshot, "selected-gpu-buffers.v1", 0, snapshot.roles.size());
 }
 } // namespace cutum
