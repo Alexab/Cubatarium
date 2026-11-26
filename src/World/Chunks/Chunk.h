@@ -119,6 +119,7 @@ public:
   }
 
 private:
+  friend struct AsyncIoStorageInspector;
   friend class AllocatorOwnerCensus;
   friend class UBlockWorld;
   friend class UChunkManager;

@@ -71,6 +71,17 @@ public:
     std::lock_guard<std::mutex> lock(QueueMutex);
     return JobThreadPoolSnapshot{Jobs.size(), ActiveJobs, Workers.size()};
   }
+  // The visitor may read queued closures, which cannot move until it returns.
+  // It must not submit work or otherwise reenter this pool.
+  template<class Visit, class Finish>
+  void InspectPendingJobs(Visit &&visit, Finish &&finish) const
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    for (const auto &job : Jobs)
+      visit(job.run);
+    finish(JobThreadPoolSnapshot{Jobs.size(), ActiveJobs, Workers.size()},
+           QueueMemory.GetSnapshot().live_bytes);
+  }
   // Queue node/map allocations only. Serialized with all deque mutations;
   // callable payloads, workers and upstream allocator overhead are separate.
   UAllocationCountingResource::Snapshot GetQueueAllocationSnapshot() const
@@ -115,6 +126,14 @@ public:
   {
     std::lock_guard<std::mutex> lock(Mutex);
     for(size_t i=0;i<Count;++i)visit(Items[(Head+i)%Items.size()]);
+  }
+  template<class Capacity, class Visit>
+  void InspectStorage(Capacity &&capacity, Visit &&visit) const
+  {
+    std::lock_guard<std::mutex> lock(Mutex);
+    capacity(Items.capacity());
+    for (size_t i = 0; i < Count; ++i)
+      visit(Items[(Head + i) % Items.size()]);
   }
   struct StorageSnapshot { size_t count{0},slots{0},bytes{0}; };
   StorageSnapshot GetStorageSnapshot() const

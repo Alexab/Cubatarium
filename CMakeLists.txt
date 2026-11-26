@@ -608,6 +608,7 @@ set(SOURCES
     src/Gui/Screens/WorldProgressScreen.cpp
     src/App/Platform/AppRunner.cpp
     src/App/Platform/StreamingSchedulerReinitProbe.cpp
+    src/App/Platform/AsyncIoStorageFixture.cpp
     src/App/ApplicationOperationStorage.cpp
     src/App/StoredApplicationActions.cpp
     src/App/Diagnostics/DiagnosticFlightController.cpp
@@ -3228,7 +3229,7 @@ add_test(NAME engine_thread_storage_test COMMAND $<TARGET_FILE:engine_thread_sto
     ${CMAKE_CURRENT_BINARY_DIR}/engine-thread-storage.json)
 set_tests_properties(engine_thread_storage_test PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
 if(TARGET CubatariumCompileConfig)
-  foreach(_storage_spec IN ITEMS "world_owned_storage_test|WorldOwnedStorageTest|world-owned-storage" "member_callback_storage_test|MemberCallbackStorageTest|member-callback-storage" "root_storage_source_test|RootStorageSourceTest|root-storage-source" "application_operation_storage_test|ApplicationOperationStorageTest|application-operation-storage")
+  foreach(_storage_spec IN ITEMS "world_owned_storage_test|WorldOwnedStorageTest|world-owned-storage" "member_callback_storage_test|MemberCallbackStorageTest|member-callback-storage" "root_storage_source_test|RootStorageSourceTest|root-storage-source" "application_operation_storage_test|ApplicationOperationStorageTest|application-operation-storage" "async_io_storage_test|AsyncIoStorageTest|async-io-storage")
     string(REPLACE "|" ";" _storage_fields "${_storage_spec}")
     list(GET _storage_fields 0 _storage_target)
     list(GET _storage_fields 1 _storage_source)

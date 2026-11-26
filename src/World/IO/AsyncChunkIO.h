@@ -5,6 +5,7 @@
 #include "World/Chunks/ChunkBuffer.h"
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/IO/ChunkStorageTypes.h"
+#include "World/IO/AsyncIoStorage.h"
 #include "World/IO/ReadyDataAdmission.h"
 #include "World/Lighting/PersistedSectionLightTypes.h"
 #include <algorithm>
@@ -108,6 +109,8 @@ class UAsyncChunkIO
 {
 private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
+  friend struct AsyncIoStorageProbe;
+  friend struct AsyncIoStorageInspector;
   std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
   std::shared_ptr<AsyncLoadReadProbeGate> LoadReadProbeGate;
   static std::size_t ChunkIoWorkerBudget()
@@ -135,6 +138,8 @@ private:
   }
 
 public:
+  AsyncIoStorage InspectRetainedIo(AsyncIoStorageIdentity *scratch,
+                                   size_t scratch_count) const;
   template<class Inspector> void InspectJobPools(Inspector &out) const {
     out.Pool("io-load",LoadPool,4);
     if(BackgroundIoPool)out.Pool("io-background",*BackgroundIoPool,1);
@@ -304,6 +309,14 @@ public:
   }
 
 private:
+  struct LoadJob;
+  struct SaveJob;
+  struct SaveReceiptsJob;
+  struct SaveFlagsJob;
+  struct IndexWarmupJob;
+  struct CleanupJob;
+  struct RemoveSlices;
+  struct RemoveColumn;
   using StorageCleanupJob = std::function<bool(
       UChunkStorageService &, const std::string &, std::string &)>;
 

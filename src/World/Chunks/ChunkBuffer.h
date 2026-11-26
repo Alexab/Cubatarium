@@ -82,6 +82,7 @@ public:
   }
 
 private:
+  friend struct AsyncIoStorageInspector;
   friend class UBinaryChunkSerializer;
   friend class AllocatorOwnerCensus;
   friend class UJsonChunkSerializer;

@@ -46,6 +46,7 @@
 #include "Test/AllocatorOwnerGraphFixture.h"
 #include "Test/AllocatorWorkerThreadFixture.h"
 #include "Test/AllocatorReturnedControlsFixture.h"
+#include "Test/AsyncIoStorageFixture.h"
 #include "App/Platform/StreamingSchedulerReinitProbe.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
@@ -144,6 +145,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     report["allocator_worker_threads"]=RunAllocatorWorkerThreadProbe();
     report["allocator_returned_controls"]=RunAllocatorReturnedControlsProbe();
     report.update(RunStreamingSchedulerReinitProbe());
+    report["async_io_storage"] = RunAsyncIoStorageProbe(root / "async-io-storage");
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
     const auto feature_candidate=BoundCatalogCandidateSource(CatalogCandidateKind::Features,{});

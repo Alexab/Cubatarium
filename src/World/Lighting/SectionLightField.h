@@ -68,6 +68,7 @@ public:
   {for(const auto &proof:LightProofs)out.RelightResult(proof.input);}
 
 private:
+  friend struct AsyncIoStorageInspector;
   friend class UBlockWorld;
   friend class UChunk;
   friend class UChunkManager;
