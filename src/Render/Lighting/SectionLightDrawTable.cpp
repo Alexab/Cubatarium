@@ -1,4 +1,5 @@
 #include "Render/Lighting/SectionLightDrawTable.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 
 namespace cutum
@@ -94,5 +95,12 @@ void SectionLightDrawTable::Reset()
 unsigned SectionLightDrawTable::Buffer() const
 {
   return Live < 0 ? 0 : Stores[Live].buffer;
+}
+
+void SectionLightDrawTable::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  for (int i = 0; i < 2; ++i)
+    out.Add(i == Live ? Role::LightRowsCurrent : Role::LightRowsAlternate, Stores[i].buffer);
 }
 } // namespace cutum

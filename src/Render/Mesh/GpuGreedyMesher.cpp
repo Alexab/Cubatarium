@@ -1,5 +1,6 @@
 #include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Backend/RenderBackendCaps.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/FaceMaskComputeSource.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
@@ -62,52 +63,16 @@ UGpuGreedyMesher::~UGpuGreedyMesher()
   {
     glDeleteBuffers(1, &State->MaskSsbo);
   }
-  GpuGreedyEmitState &e = State->Emit;
-  if (e.MaskProgram)
-  {
-    glDeleteProgram(e.MaskProgram);
-  }
-  if (e.GreedyProgram)
-  {
-    glDeleteProgram(e.GreedyProgram);
-  }
-  if (e.EmitProgram)
-  {
-    glDeleteProgram(e.EmitProgram);
-  }
-  if (e.OccSsbo)
-  {
-    glDeleteBuffers(1, &e.OccSsbo);
-  }
-  if (e.MaskSsbo)
-  {
-    glDeleteBuffers(1, &e.MaskSsbo);
-  }
-  if (e.BlocksSsbo)
-  {
-    glDeleteBuffers(1, &e.BlocksSsbo);
-  }
-  if (e.LightsSsbo)
-  {
-    glDeleteBuffers(1, &e.LightsSsbo);
-  }
-  if (e.RectsSsbo)
-  {
-    glDeleteBuffers(1, &e.RectsSsbo);
-  }
-  if (e.CountersSsbo)
-  {
-    glDeleteBuffers(1, &e.CountersSsbo);
-  }
-  if (e.VertSsbo)
-  {
-    glDeleteBuffers(1, &e.VertSsbo);
-  }
-  if (e.IndexSsbo)
-  {
-    glDeleteBuffers(1, &e.IndexSsbo);
-  }
 #endif
+  DestroyGpuOpaqueEmit(State->Emit);
+}
+
+void UGpuGreedyMesher::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  const auto role = TerrainGpuBufferRole::GreedyCompute;
+  out.Add(role, State->OccSsbo);
+  out.Add(role, State->MaskSsbo);
+  InspectGpuOpaqueEmitBuffers(State->Emit, role, out);
 }
 
 bool UGpuGreedyMesher::EnsureCompute()

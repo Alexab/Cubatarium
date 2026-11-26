@@ -117,6 +117,7 @@ public:
     GreedyGpuOpaque.InspectCatalogRoots(out);GreedyGpuCutout.InspectCatalogRoots(out);
     GreedyGpuTransparent.InspectCatalogRoots(out);CrossGpuPass.InspectCatalogRoots(out);
   }
+  void InspectTerrainGpuBuffers(class TerrainGpuBufferCensus &out) const;
   MemberCallbackStorageSnapshot InspectStoredLightCallbacks(UWorld &world,const AllocatorSourcePhase &phase,bool known) const noexcept;
   const UWorld *GetWorldForStorage() const noexcept {return WorldInstance.get();}
   const std::shared_ptr<UWorld> &GetWorldRootForStorage() const noexcept {return WorldInstance;}

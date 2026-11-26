@@ -23,10 +23,17 @@ struct BlockDefinitionCatalog;
 class UGpuMeshPipeline
 {
 public:
+  UGpuMeshPipeline() = default;
+  ~UGpuMeshPipeline();
+  UGpuMeshPipeline(const UGpuMeshPipeline &) = delete;
+  UGpuMeshPipeline &operator=(const UGpuMeshPipeline &) = delete;
+
   static constexpr uint32_t kDefaultMaxSlots = 2048;
   static constexpr int kReadbackRing = 8;
 
   bool Init(uint32_t max_slots = kDefaultMaxSlots);
+  // Release storage on the owning render context. Windows rejects a request
+  // from a different current context, where numeric GL names can collide.
   void Shutdown();
   bool IsReady() const { return Ready; }
 
@@ -132,6 +139,7 @@ public:
 
   UGpuMeshSlotAllocator &GetAllocator() { return Allocator; }
   const UGpuMeshSlotAllocator &GetAllocator() const { return Allocator; }
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
 private:
   bool RunComputePasses(const ChunkMeshSnapshot &snapshot,
@@ -162,6 +170,9 @@ private:
                                   GLsync *inout_fence, uint64_t timeout_ns);
 
   bool Ready{false};
+#if defined(_WIN32) && !defined(CUBATARIUM_GLES)
+  const void *OwningContext{};
+#endif
   GpuGreedyEmitState EmitState;
   UGpuMeshSlotAllocator Allocator;
 

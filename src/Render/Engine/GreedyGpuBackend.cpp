@@ -1,6 +1,7 @@
 #include "Render/Engine/GreedyGpuBackend.h"
 #include "Render/Mesh/ChunkMeshCache.h"
 #include "Render/Engine/GreedyVertexPool.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/Camera/Frustum.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/GlIncludes.h"
@@ -13,6 +14,25 @@
 
 namespace cutum
 {
+
+void GreedyGpuPassCache::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  out.Add(Role::GreedyPool, VertexPool.VertexBuffer());
+  out.Add(Role::GreedyPool, VertexPool.IndexBuffer());
+  for (const auto &batch : batches)
+  {
+    // Pooled batches resolve their shared storage through the current pool.
+    if (!batch.pooled)
+    {
+      out.Add(Role::GreedyBatch, batch.vbo);
+      out.Add(Role::GreedyBatch, batch.ebo);
+    }
+  }
+  for (const auto name : {IndirectCmdsBuffer, BatchSphereSsbo, CullAabbMaxSsbo, CullVisSsbo})
+    out.Add(Role::GreedyDraw, name);
+  LightDrawTable.InspectGpuBuffers(out);
+}
 
 namespace
 {

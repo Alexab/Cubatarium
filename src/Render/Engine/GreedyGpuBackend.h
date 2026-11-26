@@ -117,6 +117,7 @@ struct PublicationDelta
 
 struct GreedyGpuPassCache
 {
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   template<class Inspector> void InspectCatalogRoots(Inspector &out) const
   {for(const auto &batch:batches)out.DrawBatch(batch);}
   SectionLightDrawTable LightDrawTable;

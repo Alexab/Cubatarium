@@ -1,4 +1,5 @@
 #include "Render/Mesh/GpuMeshPipeline.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/Mesh/PackedQuad.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
@@ -9,6 +10,9 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace cutum
 {
@@ -319,20 +323,30 @@ void main() {
 
 } // namespace
 
+UGpuMeshPipeline::~UGpuMeshPipeline() { Shutdown(); }
+
 bool UGpuMeshPipeline::Init(uint32_t max_slots)
 {
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
   (void)max_slots;
   return false;
 #else
+#if defined(_WIN32)
+  const auto current = wglGetCurrentContext();
+  if (!current || (OwningContext && OwningContext != current))
+    return false;
+  OwningContext = current;
+#endif
   if (!EnsureGpuOpaqueEmit(EmitState) || EmitState.PackedEmitProgram == 0)
   {
     LOG(WARNING) << "[GpuMeshPipeline] compute programs failed to compile";
+    Shutdown();
     return false;
   }
   if (!Allocator.Init(max_slots))
   {
     LOG(WARNING) << "[GpuMeshPipeline] slot allocator init failed";
+    Shutdown();
     return false;
   }
 
@@ -378,6 +392,22 @@ bool UGpuMeshPipeline::Init(uint32_t max_slots)
 #endif
 }
 
+void UGpuMeshPipeline::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  out.Add(Role::PackedPool, Allocator.GetQuadSsbo());
+  out.Add(Role::PackedPool, Allocator.GetIndirectBuffer());
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  InspectGpuOpaqueEmitBuffers(EmitState, Role::PackedCompute, out);
+  for (const auto name : {SortCountsSsbo, SortOffsetsSsbo, SortScratchSsbo})
+    out.Add(Role::PackedCompute, name);
+  for (const auto name : ReadbackPbos)
+    out.Add(Role::PackedReadback, name);
+  for (const auto name : RectsHoldSsbo)
+    out.Add(Role::PackedReadback, name);
+#endif
+}
+
 void UGpuMeshPipeline::ShutdownGpuSort()
 {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
@@ -411,9 +441,15 @@ void UGpuMeshPipeline::ShutdownGpuSort()
 
 void UGpuMeshPipeline::Shutdown()
 {
+#if defined(_WIN32) && !defined(CUBATARIUM_GLES)
+  if (OwningContext && OwningContext != wglGetCurrentContext())
+    return;
+  OwningContext = nullptr;
+#endif
   Allocator.Shutdown();
   ShutdownGpuSort();
   DestroyReadbackPbo();
+  DestroyGpuOpaqueEmit(EmitState);
   Ready = false;
 }
 
@@ -486,6 +522,7 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
   ReadbackGenerations_.fill(0);
 #if defined(__ANDROID__) || defined(CUBATARIUM_GLES)
 #else
+  bool boundForUnmap = false;
   for (int i = 0; i < kReadbackRing; ++i)
   {
     if (ReadbackPbos[i])
@@ -493,6 +530,7 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
       if (ReadbackMapped[i])
       {
         glBindBuffer(GL_COPY_WRITE_BUFFER, ReadbackPbos[i]);
+        boundForUnmap = true;
         glUnmapBuffer(GL_COPY_WRITE_BUFFER);
         ReadbackMapped[i] = nullptr;
       }
@@ -506,7 +544,8 @@ void UGpuMeshPipeline::DestroyReadbackPbo()
     }
     ReadbackInUse[i] = false;
   }
-  glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+  if (boundForUnmap)
+    glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
 #endif
 }
 

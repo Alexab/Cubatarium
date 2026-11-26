@@ -25,6 +25,7 @@ public:
   void SignalDrawComplete();
   void Reset();
   unsigned Buffer() const;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   uint64_t UploadCount() const { return Uploads; }
 
 private:

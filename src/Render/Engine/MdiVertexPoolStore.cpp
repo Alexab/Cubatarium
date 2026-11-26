@@ -1,4 +1,5 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/Backend/GpuHotPathFallback.h"
 #include "Render/Camera/GpuPassRefreshPolicy.h"
 #include "Render/GlIncludes.h"
@@ -15,6 +16,15 @@
 
 namespace cutum
 {
+void UMdiVertexPoolStore::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  for (const auto name : {IndirectBuffer, CullFrustumUbo, CullStatsSsbo, MappedVbo})
+    out.Add(Role::MdiScratch, name);
+  for (const auto name : CullStatsAsync_.Staging)
+    out.Add(Role::MdiScratch, name);
+}
+
 namespace
 {
 

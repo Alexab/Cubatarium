@@ -25,6 +25,7 @@ public:
 
   bool SupportsMultiDrawIndirect() const override { return true; }
   bool SupportsDrawLightRows() const override;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   uint64_t LastSubmitDrawCmds() const override { return LastDrawCmds; }
 

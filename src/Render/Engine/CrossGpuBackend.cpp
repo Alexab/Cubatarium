@@ -1,4 +1,5 @@
 #include "Render/Engine/CrossGpuBackend.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/CrossInstanceBatch.h"
 #include "Render/Mesh/CrossMeshEmitter.h"
@@ -355,6 +356,20 @@ bool UCrossGpuBackend::RefreshPass(
   cache.meshRevision = candidate_mesh_rev;
   cache.cullRevision = candidate_cull_rev;
   return true;
+}
+
+void UCrossGpuBackend::InspectGpuBuffers(const CrossGpuPassCache &cache, TerrainGpuBufferCensus &out) const
+{
+  using Role = TerrainGpuBufferRole;
+  for (const auto &mesh : Templates)
+  {
+    out.Add(Role::CrossTemplate, mesh.vbo);
+    out.Add(Role::CrossTemplate, mesh.ebo);
+  }
+  for (const auto &batch : cache.batches)
+    out.Add(Role::CrossCurrent, batch.instanceVbo);
+  for (const auto &batch : Staging.batches)
+    out.Add(Role::CrossStaging, batch.instanceVbo);
 }
 
 void UCrossGpuBackend::DestroyPass(CrossGpuPassCache &cache)

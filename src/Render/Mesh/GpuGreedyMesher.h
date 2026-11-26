@@ -22,6 +22,7 @@ public:
   ~UGpuGreedyMesher() override;
 
   const char *BackendName() const override { return "gpu_greedy"; }
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
 
   std::vector<GreedyQuad>
   BuildChunkMesh(const UBlockWorld &world, glm::ivec3 chunk_coord,

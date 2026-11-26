@@ -53,6 +53,7 @@ public:
                    const std::vector<uint8_t> &instance_selection = {});
   void DestroyPass(CrossGpuPassCache &cache);
   void DestroyAll(CrossGpuPassCache &cache);
+  void InspectGpuBuffers(const CrossGpuPassCache &cache, class TerrainGpuBufferCensus &out) const;
   /// GLES3 has no base-instance draw. Shift all instance attributes together,
   /// submit this contiguous artifact range, and restore the VAO's zero base.
   bool DrawRange(const CrossGpuBatch &batch, size_t first, size_t count);

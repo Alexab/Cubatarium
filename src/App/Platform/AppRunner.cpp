@@ -3360,6 +3360,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         if (native_thread_stack_detail::Enabled())
         {
           report << "  \"native_thread_stacks_after_loop\": " << DescribeNativeThreadStacks().dump() << ",\n";
+          TerrainGpuBufferCensus terrainBuffers;
+          geometry_engine->InspectTerrainGpuBuffers(terrainBuffers);
+          InspectWorldPackedBuffers(*world, terrainBuffers);
+          report << "  \"terrain_gpu_buffers_after_loop\": "
+                 << DescribeTerrainGpuBuffers(terrainBuffers.Read()).dump() << ",\n";
           report << "  \"windows_gpu_memory_after_loop\": "
                  << DescribeWindowsGpuMemory(ReadWindowsGpuMemory()).dump() << ",\n";
         }

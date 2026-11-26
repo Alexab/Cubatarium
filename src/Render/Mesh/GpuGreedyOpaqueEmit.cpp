@@ -1,4 +1,5 @@
 #include "Render/Mesh/GpuGreedyOpaqueEmit.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Mesh/FaceMaskComputeSource.h"
 #include "Render/Mesh/GpuGreedyFaceExtract.h"
@@ -291,6 +292,34 @@ void PackHalfWords(const uint16_t *values, size_t count,
 #endif
 
 } // namespace
+
+void DestroyGpuOpaqueEmit(GpuGreedyEmitState &state)
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  for (const auto name : {state.MaskProgram, state.GreedyProgram, state.EmitProgram, state.PackedEmitProgram})
+    if (name)
+      glDeleteProgram(name);
+  for (const auto name : {state.OccSsbo, state.MaskSsbo, state.BlocksSsbo, state.LightsSsbo, state.RectsSsbo,
+                          state.CountersSsbo, state.VertSsbo, state.IndexSsbo, state.PackedQuadSsbo})
+    if (name)
+      glDeleteBuffers(1, &name);
+#endif
+  state = {};
+}
+
+void InspectGpuOpaqueEmitBuffers(const GpuGreedyEmitState &state, TerrainGpuBufferRole role,
+                                 TerrainGpuBufferCensus &out)
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  for (const auto name : {state.OccSsbo, state.MaskSsbo, state.BlocksSsbo, state.LightsSsbo, state.RectsSsbo,
+                          state.CountersSsbo, state.VertSsbo, state.IndexSsbo, state.PackedQuadSsbo})
+    out.Add(role, name);
+#else
+  (void)state;
+  (void)role;
+  (void)out;
+#endif
+}
 
 bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state)
 {

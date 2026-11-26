@@ -1,0 +1,1148 @@
+{
+  "schema": "s4-e12-w59-terrain-gpu-buffers.v1",
+  "status": "SCOPED_TERRAIN_GPU_BUFFER_PASS_E12_OPEN",
+  "baseline_commit": "4ce29acb99163eff140a8ce704b3625d4473b06c",
+  "prior_certificate": "S4_02_E12_W58_WINDOWS_GPU_MEMORY_CERTIFICATE_2026_11_26.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W59 observes logical bytes of selected terrain buffer owners from GL_BUFFER_SIZE, deduplicating buffer names within the current context. It joins Greedy arenas, draw metadata and compute, Cross current and staging stores and templates, both light-row stores, and packed allocation, readback and compute backing. The fixture verifies a queued read of the Cross predecessor, exact dual light-row and packed slot extents, copy binding and GL error preservation, and no recreation of a retired name. Packed shutdown now releases emit buffers and programs, cleans partial state on initialization failure, and runs on owner destruction. The Windows guard preserves the owner if its context is not current. Full and Flat native reports pair logical GL bytes with WDDM observations. The 46 Release regressions and the two driver lifecycle checks pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W59. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. Measure the remaining GL objects, including section light atlas and metadata textures and render targets. Resolve the overlay element buffer generated in InitOverlayBuffers and missing from DestroyOverlayBuffers. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Logical GL buffer-store extents of the selected live world and render-context owners",
+  "composition_rule": "Use the distinct GL name union within the current context. WDDM and PSAPI remain separate observations. Physical residency, orphaned stores still in use by the driver, and allocator overhead have independent lifetimes.",
+  "remaining_measurements": [
+    "Section light and shader textures, framebuffers, overlays and other render owners",
+    "Driver-retained and unloaded objects and full process composition across contexts",
+    "Native, performance and memory matrix, driver and TLS gaps from earlier checkpoints"
+  ],
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetBufferParameter.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glIsBuffer.xml"
+  ],
+  "fixture": {
+    "aliased": {
+      "failed_queries": 0,
+      "logical_bytes": 36,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 3,
+      "roles": {
+        "cross_current": {
+          "logical_bytes": 36,
+          "objects": 1
+        },
+        "cross_staging": {
+          "logical_bytes": 36,
+          "objects": 1
+        },
+        "cross_template": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_batch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_draw": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_alternate": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_current": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "mdi_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_readback": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "terrain_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "terrain-gpu-buffers.v1",
+      "shared_across_roles": 1,
+      "status": "PASS",
+      "unique_objects": 1,
+      "whole_runtime_complete": false
+    },
+    "copy_bindings_preserved": true,
+    "existing_gl_error_preserved": true,
+    "first": {
+      "failed_queries": 0,
+      "logical_bytes": 75752164,
+      "names_without_object": 5,
+      "overflow": false,
+      "references": 37,
+      "roles": {
+        "cross_current": {
+          "logical_bytes": 36,
+          "objects": 1
+        },
+        "cross_staging": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "cross_template": {
+          "logical_bytes": 368,
+          "objects": 2
+        },
+        "greedy_batch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_draw": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_pool": {
+          "logical_bytes": 67108864,
+          "objects": 2
+        },
+        "light_rows_alternate": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_current": {
+          "logical_bytes": 16,
+          "objects": 1
+        },
+        "mdi_scratch": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "packed_compute": {
+          "logical_bytes": 3760136,
+          "objects": 7
+        },
+        "packed_pool": {
+          "logical_bytes": 32808,
+          "objects": 2
+        },
+        "packed_readback": {
+          "logical_bytes": 4849792,
+          "objects": 16
+        },
+        "terrain_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "terrain-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 32,
+      "whole_runtime_complete": false
+    },
+    "held": {
+      "failed_queries": 0,
+      "logical_bytes": 75753348,
+      "names_without_object": 5,
+      "overflow": false,
+      "references": 39,
+      "roles": {
+        "cross_current": {
+          "logical_bytes": 1152,
+          "objects": 1
+        },
+        "cross_staging": {
+          "logical_bytes": 36,
+          "objects": 1
+        },
+        "cross_template": {
+          "logical_bytes": 368,
+          "objects": 2
+        },
+        "greedy_batch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_draw": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_pool": {
+          "logical_bytes": 67108864,
+          "objects": 2
+        },
+        "light_rows_alternate": {
+          "logical_bytes": 16,
+          "objects": 1
+        },
+        "light_rows_current": {
+          "logical_bytes": 32,
+          "objects": 1
+        },
+        "mdi_scratch": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "packed_compute": {
+          "logical_bytes": 3760136,
+          "objects": 7
+        },
+        "packed_pool": {
+          "logical_bytes": 32808,
+          "objects": 2
+        },
+        "packed_readback": {
+          "logical_bytes": 4849792,
+          "objects": 16
+        },
+        "terrain_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "terrain-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 34,
+      "whole_runtime_complete": false
+    },
+    "packed_destructor_retired": true,
+    "packed_pool_expected": 32808,
+    "packed_readback_expected": 4849792,
+    "queued_predecessor_read_verified": true,
+    "retired": {
+      "failed_queries": 0,
+      "logical_bytes": 0,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 0,
+      "roles": {
+        "cross_current": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "cross_staging": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "cross_template": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_batch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_draw": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_alternate": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_current": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "mdi_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_readback": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "terrain_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "terrain-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 0,
+      "whole_runtime_complete": false
+    },
+    "schema": "terrain-gpu-buffer-lifecycle.v1",
+    "stale": {
+      "failed_queries": 0,
+      "logical_bytes": 0,
+      "names_without_object": 1,
+      "overflow": false,
+      "references": 3,
+      "roles": {
+        "cross_current": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "cross_staging": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "cross_template": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_batch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_draw": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "greedy_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_alternate": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "light_rows_current": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "mdi_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_compute": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_pool": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "packed_readback": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "terrain_scratch": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "terrain-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 0,
+      "whole_runtime_complete": false
+    },
+    "status": "PASS",
+    "wrong_context_shutdown_preserves_owner": true
+  },
+  "native": {
+    "flat": {
+      "stages": {
+        "menu": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "cross_staging": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "cross_template": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "mdi_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_readback": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 69017600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 234250240,
+            "working_set_bytes": 194486272
+          }
+        },
+        "in-game": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 134330080,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 28,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 109224,
+                "objects": 14
+              },
+              "cross_staging": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "cross_template": {
+                "logical_bytes": 3128,
+                "objects": 8
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_pool": {
+                "logical_bytes": 134217728,
+                "objects": 4
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "mdi_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_readback": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 2
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 28,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 250236928
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 984592384,
+            "working_set_bytes": 424001536
+          }
+        },
+        "after-loop": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 134446144,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 42,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 112644,
+                "objects": 14
+              },
+              "cross_staging": {
+                "logical_bytes": 112644,
+                "objects": 14
+              },
+              "cross_template": {
+                "logical_bytes": 3128,
+                "objects": 8
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_pool": {
+                "logical_bytes": 134217728,
+                "objects": 4
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "mdi_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_readback": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 2
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 42,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 274354176
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ]
+        }
+      },
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 874
+    },
+    "full": {
+      "stages": {
+        "menu": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "cross_staging": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "cross_template": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_rows_current": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "mdi_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_pool": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "packed_readback": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 69017600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 244981760,
+            "working_set_bytes": 201859072
+          }
+        },
+        "in-game": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 176594548,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 53,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 828,
+                "objects": 1
+              },
+              "cross_staging": {
+                "logical_bytes": 828,
+                "objects": 1
+              },
+              "cross_template": {
+                "logical_bytes": 736,
+                "objects": 2
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 72576,
+                "objects": 8
+              },
+              "greedy_pool": {
+                "logical_bytes": 134217728,
+                "objects": 4
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 19744,
+                "objects": 1
+              },
+              "light_rows_current": {
+                "logical_bytes": 20736,
+                "objects": 2
+              },
+              "mdi_scratch": {
+                "logical_bytes": 132,
+                "objects": 2
+              },
+              "packed_compute": {
+                "logical_bytes": 3816056,
+                "objects": 12
+              },
+              "packed_pool": {
+                "logical_bytes": 33595392,
+                "objects": 2
+              },
+              "packed_readback": {
+                "logical_bytes": 4849792,
+                "objects": 16
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 2
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 53,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 362967040
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ],
+          "psapi": {
+            "private_commit_bytes": 1355010048,
+            "working_set_bytes": 686989312
+          }
+        },
+        "after-loop": {
+          "terrain_buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 176604500,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 54,
+            "roles": {
+              "cross_current": {
+                "logical_bytes": 828,
+                "objects": 1
+              },
+              "cross_staging": {
+                "logical_bytes": 828,
+                "objects": 1
+              },
+              "cross_template": {
+                "logical_bytes": 736,
+                "objects": 2
+              },
+              "greedy_batch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_compute": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "greedy_draw": {
+                "logical_bytes": 78288,
+                "objects": 8
+              },
+              "greedy_pool": {
+                "logical_bytes": 134217728,
+                "objects": 4
+              },
+              "light_rows_alternate": {
+                "logical_bytes": 22352,
+                "objects": 2
+              },
+              "light_rows_current": {
+                "logical_bytes": 22368,
+                "objects": 2
+              },
+              "mdi_scratch": {
+                "logical_bytes": 132,
+                "objects": 2
+              },
+              "packed_compute": {
+                "logical_bytes": 3816056,
+                "objects": 12
+              },
+              "packed_pool": {
+                "logical_bytes": 33595392,
+                "objects": 2
+              },
+              "packed_readback": {
+                "logical_bytes": 4849792,
+                "objects": 16
+              },
+              "terrain_scratch": {
+                "logical_bytes": 0,
+                "objects": 2
+              }
+            },
+            "schema": "terrain-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 54,
+            "whole_runtime_complete": false
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": false,
+              "current_usage_bytes": 401764352
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": false,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "software_device": true,
+              "current_usage_bytes": 0
+            }
+          ]
+        }
+      },
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 523
+    }
+  },
+  "fixture_exe_sha256": "f182d2013bfea545f4095b956d993d03d3ae9aa7b58451b5b5cfcf7e66fbed52",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "7a9addda06cf8292d1013ece355ff082a7edf14ebe736832ea410f901c10d19e",
+  "source_sha256_raw": {
+    "src/Render/Engine/TerrainGpuBuffers.h": "fa04b89883c215830afd37c0471346f3003deeaeb386cfb3010c36d492689ca5",
+    "src/Render/Engine/TerrainGpuBufferReport.h": "2c885627df67b7e8ef0b9172c9086de61fd45ecd04505dfa2587cf9c86039307",
+    "src/Render/Engine/GreedyGpuBackend.cpp": "04e259a5677da7572ecf109da29be831c71c5e01fd31c4addd585172dfc78456",
+    "src/Render/Engine/GreedyGpuBackend.h": "59bc156fd6fa3f2dfebb6e1ec907af6cd68ec4c54c22e3e9195f815e5ebc62cf",
+    "src/Render/Engine/CrossGpuBackend.cpp": "aac9345b78af7bccf9449ba71710b9e262455e0f4a7afa27e3148adfd7f262de",
+    "src/Render/Engine/CrossGpuBackend.h": "0e9a7e129fd0667f7589196c67a0fee2d8dfa6e1fb6fd1a5548a2ce4263c0605",
+    "src/Render/Engine/GeometryEngine.cpp": "54446656e2985a9453049f60ed235f71f4f79136c4644b756e98ae1ab46c1ed4",
+    "src/Render/Engine/GeometryEngine.h": "2c60f5ff5de4e1fb2ec6cd79727f44e9cd91efbad5b665e5a7b3612d247eb485",
+    "src/Render/Engine/MdiVertexPoolStore.cpp": "b03b6bb143a0b0d7aa99860c58b6bae462bf1b0d88827898737dc96bb9293c0a",
+    "src/Render/Engine/MdiVertexPoolStore.h": "90aa76ffc9eb27b0b2d0051599566b4e89c28fce96a0986c6156ddb98869a181",
+    "src/Render/Lighting/SectionLightDrawTable.cpp": "712dd8be802976c6338d38dd3a71f53e34a9ce11b71b411bc74b315c5972d9f0",
+    "src/Render/Lighting/SectionLightDrawTable.h": "7d8d72f65b8784937708c8ed64d51cd30f4493f81e75b8536bb3236134150885",
+    "src/Render/Mesh/GpuMeshPipeline.cpp": "9b7815c0566e5d325e6b098ec004986ca193308b20166698aadf03e9259d6815",
+    "src/Render/Mesh/GpuMeshPipeline.h": "9ab4ffee0c56ac193b4093cf8572563e48be1b5e7475908f4daeaed2edefa490",
+    "src/Render/Mesh/GpuGreedyMesher.cpp": "d1ac412713ca2e3e28c24efeee19919ae5aecb2bbe65398c7ea950b8d6c9d1a4",
+    "src/Render/Mesh/GpuGreedyMesher.h": "19e7f4065bcc58544e4fb11de5aaede1f214f5e5a3e47953dfee6f77939a974b",
+    "src/Render/Mesh/GpuGreedyOpaqueEmit.cpp": "298fbc9287046c0ad9da987009d9b32ff0ab3868faf889801824a4404f3a5a7d",
+    "src/Render/Mesh/GpuGreedyOpaqueEmit.h": "d1d84fe22bdf88754237cb319a443082dbc592ec2a382405c5205d0d97652d65",
+    "src/App/Platform/AppRunner.cpp": "f631b0f1580aabd65a1bd677ba0b40e87d3b11b3dbbffa852f36d377f275240d",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "cb96fb9f712968a46177a3f17d30b706e9005b0780cc6113965cb669d4089152",
+    "src/Test/DecorMeshIntegrationTest.cpp": "1dd30de242b05efaa1f13fe58061307f116a134362496b23cfb9d1e40f72a410"
+  },
+  "desktop_exe_sha256": "2d6159084a1514b23057becc3178d926ec8cd2e96b26071b75b0de014ad71172",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-terrain-gpu-provenance.json": "b136d3645888de7c07638716862f723f77fc66ad7c44d67809f5cbc97536a25c",
+    "build/desktop-msvc/s4-terrain-gpu-frozen-source.json": "f799b7d3d954217414690a2df86b998244c1fa1e971a422a60f178a0a0d23cdf",
+    "build/desktop-msvc/s4-terrain-gpu-regressions.json": "74293f396f8f964068eb48cbf0ff9fda066cf3c0e2f87660a3adcbec51b7434d",
+    "build/desktop-msvc/s4-terrain-gpu-final-fixture.json": "2412277c6f9a174bd0f4c7f14efb1fdde371b96ff149348244cf94aae17f77c9",
+    "build/desktop-msvc/s4-terrain-gpu-packed-lifecycle.log": "606ed855336ba4d16c1ebef3a031e4c8766a4aee8c6576c452ddde9708be0672",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/owner-domain/flight-menu.json": "9179acef74e9e6d28dbb784160c59d0f6b0e481fc42330f27fbdc0fb902a2829",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/owner-domain/flight-in-game.json": "b3bb2479e9b41bb560d5761be83aa8e80e14c58f7e6b31b229f40d7b56d3aec8",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/smoke-verdict.json": "412108959238b37fdd7b813752fcebc4ccf2452235a6b3218481ec2973e07a80",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/flight_sim_report.json": "5a8c82aaf74a2a55c81cf1b8bd906e1dc3c782aafab25de833afb58369bad75c",
+    "build/desktop-msvc/s4-terrain-gpu-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-terrain-gpu-full-r2-native/owner-domain/flight-menu.json": "2e194df0bddc0c84f7322d15be9749c5629b9c44b596185aaaa85d48a7280e09",
+    "build/desktop-msvc/s4-terrain-gpu-full-r2-native/owner-domain/flight-in-game.json": "34ba14ce20bead24a5c72a4f6dba42f7f7081765d2d87fe03e081061b013501d",
+    "build/desktop-msvc/s4-terrain-gpu-full-r2-native/smoke-verdict.json": "65d1ac17cd2508d4f5f1385f15a458ce851a24ab9bab21fd30e0369d35fc75e9",
+    "build/desktop-msvc/s4-terrain-gpu-full-r2-native/flight_sim_report.json": "c267759dabed314ec37200707774caa2a22e513fe5fb716ef7b11be5b400865b",
+    "build/desktop-msvc/s4-terrain-gpu-full-r2-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

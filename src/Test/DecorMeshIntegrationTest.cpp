@@ -9,6 +9,7 @@
 #include "Render/Engine/CrossGpuBackend.h"
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/TerrainGpuBufferReport.h"
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include "Render/Lighting/SectionLightDrawTable.h"
@@ -47,6 +48,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <tuple>
@@ -8962,6 +8964,160 @@ static void TestCatalogPublicationRoots(const char *report_path,bool gpu)
   std::ofstream output(report_path);output<<report.dump(2)<<'\n';Expect(bool(output),"catalog root report writes");std::cout<<report.dump()<<'\n';
 }
 
+#if defined(SECTION_LIGHT_BINDING_DRIVER)
+static void TestTerrainGpuBuffers(const char *path)
+{
+  using namespace cutum;
+  using Role = TerrainGpuBufferRole;
+  const auto size = [](const TerrainGpuBufferSnapshot &snapshot, Role role) -> const TerrainGpuBufferSize & {
+    return snapshot.roles[static_cast<std::size_t>(role)];
+  };
+  UGreedyGpuBackend greedy;
+  GreedyGpuPassCache greedyPass;
+  GreedyMeshBatch triangle;
+  triangle.blockId = kStone;
+  triangle.vertices.resize(3);
+  triangle.indices = {0, 1, 2};
+  greedy.RefreshPass(greedyPass, {triangle, triangle}, 1, 1, 1);
+  Expect(greedyPass.batches.size() == 2 && greedyPass.batches[0].pooled && greedyPass.batches[1].pooled &&
+             greedyPass.batches[0].vbo == greedyPass.batches[1].vbo &&
+             greedyPass.batches[0].ebo == greedyPass.batches[1].ebo,
+         "two real Greedy batches alias the same vertex and index arena");
+
+  UGpuMeshPipeline packed;
+  Expect(packed.Init(2), "create packed slot and readback buffers with the real GL driver");
+  std::optional<UMdiVertexPoolStore> mdi(std::in_place);
+  constexpr size_t mappedBytes = 144;
+  const MeshGpuBucketHandle bucket{1, true};
+  auto *mapped = mdi->MapBucket(bucket, mappedBytes);
+  Expect(mapped != nullptr, "obtain the MDI transfer backing");
+  std::memset(mapped, 0x2c, mappedBytes);
+  mdi->UnmapBucket(bucket);
+  mdi->FlipBucketOwnership(bucket);
+
+  UCrossGpuBackend cross;
+  CrossGpuPassCache crossPass;
+  CrossInstanceBatch grass;
+  grass.blockId = kTallGrass;
+  grass.instances.resize(1);
+  grass.instances.front().center = {4.f, 2.f, 1.f};
+  Expect(cross.RefreshPass(crossPass, {grass}, 1, 1, 1, 1), "publish the predecessor Cross buffer");
+  const auto oldCross = crossPass.batches.front().instanceVbo;
+  const auto oldCrossCapacity = crossPass.batches.front().instanceCapacityBytes;
+  const auto sample = [&] {
+    TerrainGpuBufferCensus census;
+    greedyPass.InspectGpuBuffers(census);
+    cross.InspectGpuBuffers(crossPass, census);
+    packed.InspectGpuBuffers(census);
+    if (mdi)
+      mdi->InspectGpuBuffers(census);
+    return census.Read();
+  };
+
+  constexpr size_t bytesPerRow = sizeof(SectionLightDrawTable::Words);
+  Expect(greedyPass.LightDrawTable.Prepare({{1, 2, 3, 4}}), "publish the first light draw table");
+  const auto previousRows = greedyPass.LightDrawTable.Buffer();
+  const auto first = sample();
+  Expect(first.contextAvailable && !first.failedQueries && size(first, Role::CrossStaging).objects == 0 &&
+             size(first, Role::LightRowsAlternate).objects == 0,
+         "observe the first set of GPU stores before any predecessor is held");
+
+  GLuint copy{};
+  glGenBuffers(1, &copy);
+  glBindBuffer(GL_COPY_WRITE_BUFFER, copy);
+  glBufferData(GL_COPY_WRITE_BUFFER, sizeof(glm::vec3), nullptr, GL_STREAM_READ);
+  glBindBuffer(GL_COPY_READ_BUFFER, oldCross);
+  glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 0, 0, sizeof(glm::vec3));
+  greedyPass.LightDrawTable.SignalDrawComplete();
+  const auto instance = grass.instances.front();
+  grass.instances.resize(32, instance);
+  Expect(cross.RefreshPass(crossPass, {grass}, 2, 2, 2, 2), "publish a Cross successor while preserving predecessor storage");
+  Expect(greedyPass.LightDrawTable.Prepare({{4, 3, 2, 1}, {1, 2, 3, 4}}),
+         "publish light rows into the alternate physical buffer");
+  const auto held = sample();
+  GLint readBinding{}, writeBinding{};
+  glGetIntegerv(GL_COPY_READ_BUFFER_BINDING, &readBinding);
+  glGetIntegerv(GL_COPY_WRITE_BUFFER_BINDING, &writeBinding);
+  glm::vec3 predecessor{};
+  glGetBufferSubData(GL_COPY_WRITE_BUFFER, 0, sizeof(predecessor), &predecessor);
+  Expect(static_cast<GLuint>(readBinding) == oldCross && static_cast<GLuint>(writeBinding) == copy &&
+             predecessor == glm::vec3(4.f, 2.f, 1.f),
+         "the observer preserves both copy targets and an already-submitted predecessor read");
+  const auto expectedPacked = 2 * (UGpuMeshSlotAllocator::kBytesPerSlot + sizeof(DrawIndirectCmd));
+  const auto expectedReadback = UGpuMeshPipeline::kReadbackRing *
+      (16 + UGpuMeshSlotAllocator::kBytesPerSlot + kGpuRectsSsboBytes);
+  const auto newCross = crossPass.batches.front().instanceVbo;
+  const auto newRows = greedyPass.LightDrawTable.Buffer();
+  Expect(held.contextAvailable && !held.failedQueries && !held.overflow &&
+             size(held, Role::GreedyPool).objects == 2 &&
+             size(held, Role::GreedyPool).bytes == greedyPass.VertexPool.CapacityBytes() &&
+             size(held, Role::GreedyBatch).objects == 0 &&
+             size(held, Role::CrossCurrent).objects == 1 && size(held, Role::CrossStaging).objects == 1 &&
+             size(held, Role::CrossCurrent).bytes == crossPass.batches.front().instanceCapacityBytes &&
+             size(held, Role::CrossStaging).bytes == oldCrossCapacity && newCross != oldCross &&
+             size(held, Role::LightRowsCurrent).bytes == 2 * bytesPerRow &&
+             size(held, Role::LightRowsAlternate).bytes == bytesPerRow && newRows != previousRows &&
+             size(held, Role::PackedPool).bytes == expectedPacked && size(held, Role::PackedReadback).bytes == expectedReadback &&
+             size(held, Role::MdiScratch).bytes == mappedBytes,
+         "measure distinct Greedy, Cross, light-row, packed-slot, readback and MDI backing from the driver");
+
+  TerrainGpuBufferCensus alias;
+  alias.Add(Role::CrossStaging, oldCross);
+  alias.Add(Role::CrossStaging, oldCross);
+  alias.Add(Role::CrossCurrent, oldCross);
+  glBindBuffer(GL_TEXTURE_2D, 0);
+  const auto aliased = alias.Read();
+  Expect(aliased.total.objects == 1 && aliased.total.bytes == oldCrossCapacity && aliased.references == 3 &&
+             aliased.sharedAcrossRoles == 1 && glGetError() == GL_INVALID_ENUM,
+         "deduplicate equal GL names across routes without consuming an existing GL error");
+  glBindBuffer(GL_COPY_READ_BUFFER, 0);
+  glDeleteBuffers(1, &copy);
+  const auto packedName = packed.GetAllocator().GetQuadSsbo();
+  const auto poolName = greedyPass.VertexPool.VertexBuffer();
+  bool wrongContextPreserved = false;
+#ifdef _WIN32
+  auto *owner = glfwGetCurrentContext();
+  glfwMakeContextCurrent(nullptr);
+  packed.Shutdown();
+  wrongContextPreserved = packed.IsReady();
+  glfwMakeContextCurrent(owner);
+  Expect(wrongContextPreserved && glIsBuffer(packedName),
+         "packed shutdown with no current context preserves the active owner");
+#endif
+  cross.DestroyAll(crossPass);
+  greedy.DestroyPass(greedyPass);
+  packed.Shutdown();
+  mdi.reset();
+  const auto retired = sample();
+  const auto stale = alias.Read();
+  Expect(retired.contextAvailable && !retired.references && !retired.total.objects && !retired.total.bytes &&
+             stale.namesWithoutObject == 1 && stale.total.objects == 0 &&
+             !glIsBuffer(oldCross) && !glIsBuffer(newCross) && !glIsBuffer(previousRows) &&
+             !glIsBuffer(newRows) && !glIsBuffer(packedName) && !glIsBuffer(poolName) && glGetError() == GL_NO_ERROR,
+         "release the actual store owners and never recreate a deleted name during observation");
+  GLuint destructorBuffer{};
+  {
+    UGpuMeshPipeline shortLived;
+    Expect(shortLived.Init(2), "initialize a second packed owner after shutdown");
+    destructorBuffer = shortLived.GetAllocator().GetQuadSsbo();
+    Expect(glIsBuffer(destructorBuffer), "a scoped packed owner holds real GL backing");
+  }
+  Expect(!glIsBuffer(destructorBuffer) && glGetError() == GL_NO_ERROR,
+         "a packed owner releases GL storage on destruction in its owning context");
+
+  const nlohmann::json report{{"status", "PASS"}, {"schema", "terrain-gpu-buffer-lifecycle.v1"},
+      {"first", DescribeTerrainGpuBuffers(first)}, {"held", DescribeTerrainGpuBuffers(held)},
+      {"aliased", DescribeTerrainGpuBuffers(aliased)}, {"retired", DescribeTerrainGpuBuffers(retired)},
+      {"stale", DescribeTerrainGpuBuffers(stale)}, {"packed_pool_expected", expectedPacked},
+      {"packed_readback_expected", expectedReadback}, {"queued_predecessor_read_verified", true},
+      {"copy_bindings_preserved", true}, {"existing_gl_error_preserved", true},
+      {"wrong_context_shutdown_preserves_owner", wrongContextPreserved}, {"packed_destructor_retired", true}};
+  std::ofstream out(path);
+  out << report.dump(2) << '\n';
+  Expect(static_cast<bool>(out), "write the terrain GPU buffer lifecycle result");
+}
+#endif
+
 int main(int argc, char **argv)
 {
   if(argc==3 && std::string(argv[1])=="--catalog-queue-owners"){
@@ -8992,7 +9148,9 @@ int main(int argc, char **argv)
       std::string(argv[1]) == "--gpu-geometry-light-lifecycle-driver";
   const bool catalog_roots_driver=argc==3 && std::string(argv[1])=="--catalog-publication-roots-driver";
   const bool gpu_memory_driver = argc == 3 && std::string(argv[1]) == "--windows-gpu-memory";
+  const bool terrain_buffers_driver = argc == 3 && std::string(argv[1]) == "--terrain-gpu-buffers";
   if (catalog_roots_driver || visibility_driver || gles_cross_driver || packed_lifecycle_driver || gpu_memory_driver ||
+      terrain_buffers_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
     const auto cold_gpu_memory = gpu_memory_driver ? cutum::ReadWindowsGpuMemory() : cutum::WindowsGpuMemory{};
@@ -9005,7 +9163,7 @@ int main(int argc, char **argv)
                    gles_context ? GLFW_OPENGL_ES_API : GLFW_OPENGL_API);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,
                    (visibility_driver && !gles_visibility_driver) ||
-                           packed_lifecycle_driver
+                           packed_lifecycle_driver || terrain_buffers_driver
                        ? 4
                        : 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, gles_context ? 1 : 3);
@@ -9039,6 +9197,13 @@ int main(int argc, char **argv)
     }
     std::cout << "GPU: " << glGetString(GL_RENDERER)
               << " GL: " << glGetString(GL_VERSION) << '\n';
+    if (terrain_buffers_driver)
+    {
+      TestTerrainGpuBuffers(argv[2]);
+      glfwDestroyWindow(window);
+      glfwTerminate();
+      return 0;
+    }
 #if CUTUM_WINDOWS_GPU_MEMORY_API
     if (gpu_memory_driver)
       return cutum::windows_gpu_memory_fixture::Run(window, argv[2], cold_gpu_memory);

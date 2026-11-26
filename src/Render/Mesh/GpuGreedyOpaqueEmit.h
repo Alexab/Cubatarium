@@ -12,6 +12,8 @@ namespace cutum
 {
 
 struct BlockDefinitionCatalog;
+class TerrainGpuBufferCensus;
+enum class TerrainGpuBufferRole;
 
 /// Max greedy rects written by compute; Rects SSBO / per-slot hold size.
 inline constexpr uint32_t kMaxGpuRects = 16384u;
@@ -38,8 +40,10 @@ struct GpuGreedyEmitState
   bool InitAttempted{false};
 };
 
-struct GpuGreedyEmitState;
 bool EnsureGpuOpaqueEmit(GpuGreedyEmitState &state);
+void DestroyGpuOpaqueEmit(GpuGreedyEmitState &state);
+void InspectGpuOpaqueEmitBuffers(const GpuGreedyEmitState &state,
+                                 TerrainGpuBufferRole role, TerrainGpuBufferCensus &out);
 
 /// GPF1: mask → greedy-rect → vertex/index emit on GPU (desktop GL only).
 /// When catalog is non-null, eligibility/occupancy use the pinned catalog (Q4).

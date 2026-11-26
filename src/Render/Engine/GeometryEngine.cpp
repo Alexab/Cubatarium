@@ -41,9 +41,11 @@
 #include "Render/Engine/MdiVertexPoolStore.h"
 #include "Render/Engine/RgbReferenceMaterialCapture.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Lighting/BoundSectionLightProbe.h"
 #include "Render/Mesh/GpuFluidColumnScan.h"
+#include "Render/Mesh/GpuGreedyMesher.h"
 #include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Mesh/GpuMeshSlotAllocator.h"
 #include "Render/Mesh/GreedyMeshBatch.h"
@@ -4517,6 +4519,20 @@ IUMeshGpuStore &UGeometryEngine::MeshStore()
 {
   EnsureRenderBackendsBound();
   return *RenderBackends.Store;
+}
+
+void UGeometryEngine::InspectTerrainGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::TerrainScratch, greedyMeshVBO);
+  out.Add(TerrainGpuBufferRole::TerrainScratch, greedyMeshEBO);
+  GreedyGpuOpaque.InspectGpuBuffers(out);
+  GreedyGpuCutout.InspectGpuBuffers(out);
+  GreedyGpuTransparent.InspectGpuBuffers(out);
+  CrossGpuBackend.InspectGpuBuffers(CrossGpuPass, out);
+  if (const auto *greedy = dynamic_cast<const UGpuGreedyMesher *>(RenderBackends.Mesher.get()))
+    greedy->InspectGpuBuffers(out);
+  if (const auto *mdi = dynamic_cast<const UMdiVertexPoolStore *>(RenderBackends.Store.get()))
+    mdi->InspectGpuBuffers(out);
 }
 
 bool UGeometryEngine::InitEngine()
