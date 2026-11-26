@@ -2,6 +2,7 @@
 #include "Core/Memory/VisualLoaderSource.h"
 
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -15,14 +16,14 @@ namespace
 
 constexpr float kBoneSkeletonUnitsPerBlock = 16.f;
 
-glm::vec3 ReadSkeletalVec3Blocks(const nlohmann::json &arr, const glm::vec3 &fb)
+glm::vec3 ReadSkeletalVec3Blocks(const nlohmann::json &object, const char *key,
+                                 const glm::vec3 &fallback)
 {
-  if (!arr.is_array() || arr.size() < 3)
-  {
-    return fb;
-  }
-  return BoneSkeletonUnitsToBlocks(glm::vec3(arr[0].get<float>(), arr[1].get<float>(),
-                                        arr[2].get<float>()));
+  const auto arr = object.find(key);
+  if (arr == object.end() || !arr->is_array() || arr->size() < 3)
+    return fallback;
+  return BoneSkeletonUnitsToBlocks(glm::vec3((*arr)[0].get<float>(),
+      (*arr)[1].get<float>(), (*arr)[2].get<float>()));
 }
 
 glm::ivec2 ReadUvPixels(const nlohmann::json &arr)
@@ -39,8 +40,7 @@ BoneSkeletonCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
 {
   BoneSkeletonCubeDef cube;
   cube.originBlocks =
-      ReadSkeletalVec3Blocks(cubeJson.value("origin", nlohmann::json::array()),
-                            cube.originBlocks);
+      ReadSkeletalVec3Blocks(cubeJson, "origin", cube.originBlocks);
   if (cubeJson.contains("size") && cubeJson["size"].is_array() &&
       cubeJson["size"].size() >= 3)
   {
@@ -52,11 +52,11 @@ BoneSkeletonCubeDef ReadCube(const nlohmann::json &cubeJson, bool boneMirror)
   if (cubeJson.contains("pivot"))
   {
     cube.pivotBlocks =
-        ReadSkeletalVec3Blocks(cubeJson.value("pivot", nlohmann::json::array()),
-                              cube.pivotBlocks);
+        ReadSkeletalVec3Blocks(cubeJson, "pivot", cube.pivotBlocks);
     cube.hasPivot = true;
   }
-  cube.uvPixels = ReadUvPixels(cubeJson.value("uv", nlohmann::json::array()));
+  if (const auto uv = cubeJson.find("uv"); uv != cubeJson.end())
+    cube.uvPixels = ReadUvPixels(*uv);
   if (cubeJson.contains("rotation"))
   {
     const auto &rot = cubeJson["rotation"];
@@ -78,8 +78,7 @@ BoneSkeletonBoneDef ReadBone(const nlohmann::json &boneJson)
   bone.name = boneJson.value("name", "");
   bone.parent = boneJson.value("parent", "");
   bone.pivotBlocks =
-      ReadSkeletalVec3Blocks(boneJson.value("pivot", nlohmann::json::array()),
-                            bone.pivotBlocks);
+      ReadSkeletalVec3Blocks(boneJson, "pivot", bone.pivotBlocks);
   if (boneJson.contains("bind_pose_rotation"))
   {
     const auto &rot = boneJson["bind_pose_rotation"];
@@ -103,15 +102,13 @@ BoneSkeletonBoneDef ReadBone(const nlohmann::json &boneJson)
           glm::vec3(rot[0].get<float>(), rot[1].get<float>(), rot[2].get<float>());
     }
   }
-  if (boneJson.contains("cubes") && boneJson["cubes"].is_array())
+  if (const auto cubes = boneJson.find("cubes"); cubes != boneJson.end() && cubes->is_array())
   {
-    for (const auto &cubeJson : boneJson["cubes"])
-    {
+    bone.cubes.reserve(std::count_if(cubes->begin(), cubes->end(),
+                                     [](const auto &entry) { return entry.is_object(); }));
+    for (const auto &cubeJson : *cubes)
       if (cubeJson.is_object())
-      {
         bone.cubes.push_back(ReadCube(cubeJson, bone.mirror));
-      }
-    }
   }
   return bone;
 }
@@ -123,6 +120,25 @@ void FinalizeBoneIndices(CreatureBoneSkeletonGeometry &geometry)
   {
     geometry.boneIndexByName[geometry.bones[i].name] = i;
   }
+}
+
+void ReadBones(const nlohmann::json &bones, CreatureBoneSkeletonGeometry &out)
+{
+  out.bones.reserve(std::count_if(bones.begin(), bones.end(), [](const auto &entry)
+  {
+    const auto name = entry.find("name");
+    return name != entry.end() && name->is_string() &&
+           !name->template get_ref<const std::string &>().empty();
+  }));
+  for (const auto &entry : bones)
+  {
+    if (!entry.is_object())
+      continue;
+    auto bone = ReadBone(entry);
+    if (!bone.name.empty())
+      out.bones.push_back(std::move(bone));
+  }
+  FinalizeBoneIndices(out);
 }
 
 bool ParseGeometryObject(const nlohmann::json &geoObj,
@@ -156,20 +172,7 @@ bool ParseGeometryObject(const nlohmann::json &geoObj,
   {
     return false;
   }
-  out.bones.clear();
-  for (const auto &boneJson : geoObj["bones"])
-  {
-    if (!boneJson.is_object())
-    {
-      continue;
-    }
-    BoneSkeletonBoneDef bone = ReadBone(boneJson);
-    if (!bone.name.empty())
-    {
-      out.bones.push_back(std::move(bone));
-    }
-  }
-  FinalizeBoneIndices(out);
+  ReadBones(geoObj["bones"], out);
   return !out.bones.empty();
 }
 
@@ -240,18 +243,7 @@ CreatureBoneSkeletonLoader::LoadFromFile(const std::string &path,
         parsed.visibleBoundsHeightBlocks = geometry.visibleBoundsHeightBlocks;
         if (entry.contains("bones") && entry["bones"].is_array())
         {
-          for (const auto &boneJson : entry["bones"])
-          {
-            if (boneJson.is_object())
-            {
-              BoneSkeletonBoneDef bone = ReadBone(boneJson);
-              if (!bone.name.empty())
-              {
-                parsed.bones.push_back(std::move(bone));
-              }
-            }
-          }
-          FinalizeBoneIndices(parsed);
+          ReadBones(entry["bones"], parsed);
           if (!parsed.bones.empty())
           {
             source.Success();

@@ -1,15 +1,22 @@
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 
+#include "Core/Memory/VisualAssetStorage.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonModelSpace.h"
 #include "Creatures/Visual/CreatureMeshGpuHash.h"
 #include "Creatures/Visual/CreaturePartMeshData.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <mutex>
 
 namespace cutum
 {
 
 namespace
 {
+
+constexpr size_t kCubeFloatCount = 24 * 5;
+constexpr size_t kCubeIndexCount = 6 * 6;
+std::mutex SkeletonBuildMutex;
+SkeletonMeshBuildSnapshot SkeletonBuilds;
 
 struct FaceUvPixels
 {
@@ -108,16 +115,6 @@ void AppendFace(float *outPosUv, int &idx, int faceIndex, float u0, float v0,
   }
 }
 
-void PushFaceIndices(std::vector<unsigned int> &indices, unsigned int vertBase)
-{
-  indices.push_back(vertBase + 0);
-  indices.push_back(vertBase + 1);
-  indices.push_back(vertBase + 2);
-  indices.push_back(vertBase + 2);
-  indices.push_back(vertBase + 1);
-  indices.push_back(vertBase + 3);
-}
-
 glm::vec3 RenderSizeBlocks(const glm::vec3 &logicalSize)
 {
   glm::vec3 render = logicalSize;
@@ -208,8 +205,10 @@ BoneSkeletonCubeMeshBuilder::BuildCubeMesh(const BoneSkeletonCubeDef &cube,
   const float tw = static_cast<float>(textureSize.x);
   const float th = static_cast<float>(textureSize.y);
 
-  float posUv[24 * 5];
+  float posUv[kCubeFloatCount];
+  unsigned int indices[kCubeIndexCount];
   int idx = 0;
+  size_t indexCount = 0;
   unsigned int vertBase = 0;
   for (int face = 0; face < 6; ++face)
   {
@@ -225,10 +224,12 @@ BoneSkeletonCubeMeshBuilder::BuildCubeMesh(const BoneSkeletonCubeDef &cube,
     const float nu1 = (static_cast<float>(px.u1) - kUvInsetPx) / tw;
     const float nv1 = (static_cast<float>(px.v1) - kUvInsetPx) / th;
     AppendFace(posUv, idx, face, nu0, nv0, nu1, nv1, mirrorUv);
-    PushFaceIndices(mesh.indices, vertBase);
+    for (const unsigned corner : {0u, 1u, 2u, 2u, 1u, 3u})
+      indices[indexCount++] = vertBase + corner;
     vertBase += 4;
   }
   mesh.interleavedPosUv.assign(posUv, posUv + idx);
+  mesh.indices.assign(indices, indices + indexCount);
 
   BoneSkeletonCubeDef cubeForMatrix = cube;
   if (cube.inflateBlocks > 0.f)
@@ -242,24 +243,94 @@ BoneSkeletonCubeMeshBuilder::BuildCubeMesh(const BoneSkeletonCubeDef &cube,
   return mesh;
 }
 
+namespace
+{
+
+void BuildBoneMeshes(CreatureBoneSkeletonMeshAsset &asset)
+{
+  const auto &geometry = asset.geometry;
+  asset.boneMeshes.reserve(geometry.bones.size());
+  for (const BoneSkeletonBoneDef &bone : geometry.bones)
+  {
+    auto &boneMesh = asset.boneMeshes.emplace_back();
+    boneMesh.boneName = bone.name;
+    boneMesh.cubes.reserve(bone.cubes.size());
+    for (const BoneSkeletonCubeDef &cube : bone.cubes)
+    {
+      const bool mirrorUv = bone.mirror || cube.mirror;
+      boneMesh.cubes.push_back(
+          BoneSkeletonCubeMeshBuilder::BuildCubeMesh(cube, bone.pivotBlocks,
+                                                     geometry.textureSize, mirrorUv));
+    }
+  }
+}
+
+} // namespace
+
+void MeasureSkeletonMeshes(const CreatureBoneSkeletonMeshAsset &asset,
+                           StlSourceStorage &out) noexcept
+{
+  out.Buffer(asset.boneMeshes.capacity(), sizeof(BoneSkeletonBoneMeshCpu));
+  for (const auto &bone : asset.boneMeshes)
+  {
+    out.Text(bone.boneName);
+    out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeMeshCpu));
+    for (const auto &cube : bone.cubes)
+    {
+      out.Buffer(cube.interleavedPosUv.capacity(), sizeof(float));
+      out.Buffer(cube.indices.capacity(), sizeof(unsigned));
+    }
+  }
+}
+
+SkeletonMeshBuildSnapshot GetSkeletonMeshBuildSnapshot()
+{
+  const std::lock_guard lock(SkeletonBuildMutex);
+  return SkeletonBuilds;
+}
+
 CreatureBoneSkeletonMeshAsset
 BoneSkeletonCubeMeshBuilder::BuildMeshAsset(const CreatureBoneSkeletonGeometry &geometry)
 {
   CreatureBoneSkeletonMeshAsset asset;
   asset.geometry = geometry;
-  asset.boneMeshes.reserve(geometry.bones.size());
-  for (const BoneSkeletonBoneDef &bone : geometry.bones)
-  {
-    BoneSkeletonBoneMeshCpu boneMesh;
-    boneMesh.boneName = bone.name;
-    for (const BoneSkeletonCubeDef &cube : bone.cubes)
-    {
-      const bool mirrorUv = bone.mirror || cube.mirror;
-      boneMesh.cubes.push_back(
-          BuildCubeMesh(cube, bone.pivotBlocks, geometry.textureSize, mirrorUv));
-    }
-    asset.boneMeshes.push_back(std::move(boneMesh));
-  }
+  BuildBoneMeshes(asset);
+  return asset;
+}
+
+std::shared_ptr<const CreatureBoneSkeletonMeshAsset>
+BoneSkeletonCubeMeshBuilder::BuildSharedMeshAsset(CreatureBoneSkeletonGeometry &&geometry,
+                                                   SkeletonMeshBuildStorage *storage)
+{
+  auto asset = std::make_shared<CreatureBoneSkeletonMeshAsset>();
+  StlSourceStorage control, index, meshes, total;
+  AddVisualAssetControl<CreatureBoneSkeletonMeshAsset>(control);
+  index.Hash(asset->geometry.boneIndexByName);
+  // The pinned STL swaps the equal-allocator hash storage into the output.
+  // The caller's moved-from definition now owns the empty index backing.
+  asset->geometry = std::move(geometry);
+  BuildBoneMeshes(*asset);
+  MeasureSkeletonMeshes(*asset, meshes);
+  for (const auto bytes : {control.bytes.requested, index.bytes.requested, meshes.bytes.requested})
+    total.Add(bytes);
+  SkeletonMeshBuildStorage sample;
+  sample.controlBytes = control.bytes.requested;
+  sample.emptyIndexBytes = index.bytes.requested;
+  sample.meshBytes = meshes.bytes.requested;
+  sample.requestedBytes = total.bytes.requested;
+  sample.bones = asset->boneMeshes.size();
+  for (const auto &bone : asset->boneMeshes)
+    sample.cubes += bone.cubes.size();
+  sample.explicitScratchBytes = kCubeFloatCount * sizeof(float) + kCubeIndexCount * sizeof(unsigned);
+  sample.supported = control.bytes.supported && index.bytes.supported &&
+      meshes.bytes.supported && total.bytes.supported;
+  if (storage)
+    *storage = sample;
+  const std::lock_guard lock(SkeletonBuildMutex);
+  ++SkeletonBuilds.completed;
+  SkeletonBuilds.unsupported += !sample.supported;
+  if (sample.requestedBytes > SkeletonBuilds.largest.requestedBytes)
+    SkeletonBuilds.largest = sample;
   return asset;
 }
 

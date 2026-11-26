@@ -438,15 +438,16 @@ CreatureGltfLoader::LoadFromFile(const std::string &gltfPath)
             primJson["attributes"].value("TEXCOORD_0", -1);
         const int jointsAcc = primJson["attributes"].value("JOINTS_0", -1);
         const int weightsAcc = primJson["attributes"].value("WEIGHTS_0", -1);
-        const std::vector<float> positions =
-            ReadFloatAccessor(gltf, bins, posAcc);
-        const std::vector<float> uvs = ReadFloatAccessor(gltf, bins, uvAcc);
-        const int idxAcc = primJson.value("indices", -1);
-        source.Scratch(positions, uvs);
-        BuildInterleavedMesh(prim.mesh, positions, uvs);
-        prim.mesh.indices = ReadIndexAccessor(gltf, bins, idxAcc);
+        {
+          const auto positions = ReadFloatAccessor(gltf, bins, posAcc);
+          const auto uvs = ReadFloatAccessor(gltf, bins, uvAcc);
+          source.Scratch(positions, uvs);
+          BuildInterleavedMesh(prim.mesh, positions, uvs);
+        }
+        const auto vertices = prim.mesh.interleavedPosUv.size() / 5;
+        prim.mesh.indices = ReadIndexAccessor(gltf, bins, primJson.value("indices", -1));
         if (std::any_of(prim.mesh.indices.begin(), prim.mesh.indices.end(),
-                        [&](unsigned index) { return index >= positions.size() / 3; }))
+                        [vertices](unsigned index) { return index >= vertices; }))
           continue;
         prim.jointIndices = ReadU8Accessor(gltf, bins, jointsAcc);
         prim.jointWeights = ReadFloatAccessor(gltf, bins, weightsAcc);

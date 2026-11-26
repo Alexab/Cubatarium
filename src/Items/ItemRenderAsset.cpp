@@ -3,10 +3,10 @@
 #include "Core/Memory/VisualLoaderSource.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <fstream>
-#include <functional>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <limits>
@@ -151,6 +151,33 @@ struct Reader
   }
 };
 
+template<size_t N>
+std::array<float, N> ReadFloatArray(const Json &object, const char *key,
+                                   std::array<float, N> result, const char *reason)
+{
+  const auto values = object.find(key);
+  if (values == object.end())
+    return result;
+  Require(values->is_array() && values->size() == N, reason);
+  for (size_t i = 0; i < N; ++i)
+  {
+    const float value = (*values)[i].get<float>();
+    Require(std::isfinite(value), reason);
+    result[i] = value;
+  }
+  return result;
+}
+
+const Json *ItemExtras(const Json &gltf)
+{
+  Require(gltf.is_object(), "expected a glTF document");
+  const auto extras = gltf.find("extras");
+  if (extras == gltf.end())
+    return nullptr;
+  Require(extras->is_object(), "item extras must be an object");
+  return &*extras;
+}
+
 glm::mat4 LocalMatrix(const Json &node)
 {
   if (node.contains("matrix"))
@@ -158,24 +185,17 @@ glm::mat4 LocalMatrix(const Json &node)
     Require(!node.contains("translation") && !node.contains("rotation") &&
                 !node.contains("scale"),
             "matrix and TRS cannot coexist");
-    const auto values = node.at("matrix").get<std::vector<float>>();
-    Require(values.size() == 16, "matrix must contain 16 values");
+    const auto values = ReadFloatArray<16>(node, "matrix", {},
+                                          "matrix must contain 16 finite values");
     glm::mat4 result(1.f);
     for (size_t i = 0; i < 16; ++i)
-    {
-      Require(std::isfinite(values[i]), "non-finite node matrix");
       result[int(i / 4)][int(i % 4)] = values[i];
-    }
     Require(std::abs(glm::determinant(result)) > 1e-8f, "singular node matrix");
     return result;
   }
-  const auto t = node.value("translation", std::vector<float>{0, 0, 0});
-  const auto s = node.value("scale", std::vector<float>{1, 1, 1});
-  const auto r = node.value("rotation", std::vector<float>{0, 0, 0, 1});
-  Require(t.size() == 3 && s.size() == 3 && r.size() == 4, "invalid node TRS");
-  for (const auto &values : {t, s, r})
-    for (float v : values)
-      Require(std::isfinite(v), "non-finite node TRS");
+  const auto t = ReadFloatArray<3>(node, "translation", {}, "invalid node translation");
+  const auto s = ReadFloatArray<3>(node, "scale", {1, 1, 1}, "invalid node scale");
+  const auto r = ReadFloatArray<4>(node, "rotation", {0, 0, 0, 1}, "invalid node rotation");
   const glm::quat rotation(r[3], r[0], r[1], r[2]);
   Require(std::abs(glm::length(rotation) - 1.f) < 1e-3f && s[0] > 0 &&
               s[1] > 0 && s[2] > 0,
@@ -344,8 +364,9 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
   reader.Data = std::move(data);
   const auto &g = reader.Data;
   Require(g.at("asset").at("version") == "2.0", "expected glTF 2.0");
+  const auto requiredExtensions = g.find("extensionsRequired");
   Require(!g.contains("skins") && !g.contains("animations") &&
-              g.value("extensionsRequired", Json::array()).empty(),
+              (requiredExtensions == g.end() || requiredExtensions->empty()),
           "skins, animation clips and required extensions are unsupported");
   const auto &buffers = g.at("buffers");
   reader.Buffers.reserve(buffers.size());
@@ -358,20 +379,17 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
     reader.Buffers.push_back(std::move(*bytes));
   }
   auto asset = std::make_shared<ItemRenderAsset>();
-  const auto presentation =
-      g.value("extras", Json::object()).value("presentation", Json::object());
+  const auto *extras = ItemExtras(g);
+  const auto *presentation = extras && extras->contains("presentation") ?
+      &extras->at("presentation") : nullptr;
+  Require(!presentation || presentation->is_object(), "item presentation must be an object");
   auto readVector = [&](const char *key, glm::vec3 &result)
   {
-    if (!presentation.contains(key))
+    if (!presentation || !presentation->contains(key))
       return false;
-    const auto values = presentation.at(key).get<std::vector<float>>();
-    Require(values.size() == 3,
-            "presentation vector requires three components");
-    for (size_t i = 0; i < 3; ++i)
-    {
-      Require(std::isfinite(values[i]), "non-finite presentation vector");
-      result[int(i)] = values[i];
-    }
+    const auto values = ReadFloatArray<3>(*presentation, key, {},
+                                          "presentation vector requires three finite components");
+    result = glm::vec3(values[0], values[1], values[2]);
     return true;
   };
   asset->Grip.HasRightGrip = readVector("right_grip", asset->Grip.RightGrip);
@@ -395,17 +413,21 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
       readVector("carry_left_grip", asset->Grip.CarryLeftGrip);
   readVector("fp_aim_euler_deg", asset->Grip.FpAimEulerDeg);
   readVector("tp_aim_euler_deg", asset->Grip.TpAimEulerDeg);
-  asset->Grip.SupportGripNode =
-      presentation.value("support_grip_node", std::string());
-  asset->Grip.TpScale = presentation.value("tp_scale", 1.f);
+  if (presentation)
+  {
+    asset->Grip.SupportGripNode = presentation->value("support_grip_node", std::string());
+    asset->Grip.TpScale = presentation->value("tp_scale", 1.f);
+    asset->Grip.FpScale = presentation->value("fp_scale", 1.f);
+  }
   Require(std::isfinite(asset->Grip.TpScale) && asset->Grip.TpScale >= .1f &&
               asset->Grip.TpScale <= 3.f,
           "invalid TP presentation scale");
-  asset->Grip.FpScale = presentation.value("fp_scale", 1.f);
   Require(std::isfinite(asset->Grip.FpScale) && asset->Grip.FpScale >= .1f &&
               asset->Grip.FpScale <= 3.f,
           "invalid FP presentation scale");
-  for (const auto &m : g.at("materials"))
+  const auto &materials = g.at("materials");
+  asset->Materials.reserve(materials.size());
+  for (const auto &m : materials)
   {
     Require(!m.value("doubleSided", false) &&
                 m.value("alphaMode", "OPAQUE") == "OPAQUE" &&
@@ -420,9 +442,8 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
     material.Name = m.value("name", "");
     material.Metallic = pbr.value("metallicFactor", 1.f);
     material.Roughness = pbr.value("roughnessFactor", 1.f);
-    const auto emissive =
-        m.value("emissiveFactor", std::vector<float>{0, 0, 0});
-    Require(emissive.size() == 3, "emissive factor requires RGB");
+    const auto emissive = ReadFloatArray<3>(m, "emissiveFactor", {},
+                                             "emissive factor requires finite RGB");
     for (int i = 0; i < 3; ++i)
     {
       Require(std::isfinite(emissive[size_t(i)]) && emissive[size_t(i)] >= 0 &&
@@ -430,9 +451,8 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
               "emissive factors must be in 0..1");
       material.Emissive[i] = emissive[size_t(i)];
     }
-    const auto color =
-        pbr.value("baseColorFactor", std::vector<float>{1, 1, 1, 1});
-    Require(color.size() == 4, "base color requires RGBA");
+    const auto color = ReadFloatArray<4>(pbr, "baseColorFactor", {1, 1, 1, 1},
+                                         "base color requires finite RGBA");
     for (size_t i = 0; i < 4; ++i)
     {
       Require(std::isfinite(color[i]) && color[i] >= 0 && color[i] <= 1,
@@ -454,18 +474,19 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
   asset->Low = glm::vec3(std::numeric_limits<float>::max());
   asset->High = -asset->Low;
   std::vector<bool> visited(g.at("nodes").size(), false);
-  std::function<void(size_t, const glm::mat4 &, int)> visit;
-  visit = [&](size_t index, const glm::mat4 &parent, int parentIndex)
+  const auto visit = [&](const auto &self, size_t index, const glm::mat4 &parent,
+                         int parentIndex) -> void
   {
     Require(index < visited.size() && !visited[index],
             "cyclic or shared scene node");
     visited[index] = true;
     const auto &node = g.at("nodes").at(index);
     Require(!node.contains("skin"), "skinned item nodes are unsupported");
-    const glm::mat4 matrix = parent * LocalMatrix(node);
+    const glm::mat4 local = LocalMatrix(node);
+    const glm::mat4 matrix = parent * local;
     const size_t nodeIndex = asset->Nodes.size();
     asset->Nodes.push_back(
-        {node.value("name", ""), matrix, LocalMatrix(node), parentIndex});
+        {node.value("name", ""), matrix, local, parentIndex});
     if (node.contains("mesh"))
       for (const auto &p :
            g.at("meshes").at(node.at("mesh").get<size_t>()).at("primitives"))
@@ -485,9 +506,7 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
           normals = reader.Read(attrs.at("NORMAL"), "VEC3");
         else
         {
-          Require(legacyPreviewNormals &&
-                      g.value("extras", Json::object())
-                              .value("design_version", 0) != 3,
+          Require(legacyPreviewNormals && (!extras || extras->value("design_version", 0) != 3),
                   "item requires authored normals");
           std::vector<glm::vec3> sums(positions.size() / 3, glm::vec3(0));
           auto point = [&](size_t i)
@@ -504,6 +523,7 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
             sums[b] += n;
             sums[c] += n;
           }
+          normals.reserve(positions.size());
           for (const auto &n : sums)
           {
             Require(glm::length(n) > 1e-8f,
@@ -525,6 +545,8 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
         primitive.Material = p.at("material");
         Require(primitive.Material < asset->Materials.size(),
                 "invalid material index");
+        primitive.Vertices.reserve((positions.size() / 3) * 8);
+        primitive.Indices.reserve(indices.size());
         for (size_t i = 0; i < positions.size() / 3; ++i)
         {
           const glm::vec3 point(positions[i * 3], positions[i * 3 + 1],
@@ -543,22 +565,17 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
                                      float(uv[i * 2]), float(uv[i * 2 + 1]),
                                      normal.x, normal.y, normal.z});
         }
-        Require(indices.size() % 3 == 0, "triangle indices must be triples");
         for (double value : indices)
-        {
-          Require(value >= 0 && value < positions.size() / 3 &&
-                      std::floor(value) == value,
-                  "index outside vertex buffer");
           primitive.Indices.push_back(unsigned(value));
-        }
         asset->Primitives.push_back(std::move(primitive));
       }
-    for (const auto &child : node.value("children", Json::array()))
-      visit(child.get<size_t>(), matrix, int(nodeIndex));
+    if (const auto children = node.find("children"); children != node.end())
+      for (const auto &child : *children)
+        self(self, child.template get<size_t>(), matrix, int(nodeIndex));
   };
   for (const auto &index :
        g.at("scenes").at(g.value("scene", size_t(0))).at("nodes"))
-    visit(index.get<size_t>(), glm::mat4(1), -1);
+    visit(visit, index.get<size_t>(), glm::mat4(1), -1);
   Require(!asset->Primitives.empty(), "scene contains no geometry");
   if (!asset->Grip.SupportGripNode.empty())
   {
@@ -569,12 +586,10 @@ DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument dat
             "support grip references missing node");
     asset->Grip.SupportGripIndex = size_t(found - asset->Nodes.begin());
   }
-  ReadVisualBindings(
-      g.value("extras", Json::object()).value("visual_bindings", Json::array()),
-      *asset);
-  ReadWearSections(
-      g.value("extras", Json::object()).value("wear_sections", Json::array()),
-      *asset);
+  if (extras && extras->contains("visual_bindings"))
+    ReadVisualBindings(extras->at("visual_bindings"), *asset);
+  if (extras && extras->contains("wear_sections"))
+    ReadWearSections(extras->at("wear_sections"), *asset);
   reader.Data = CatalogJsonDocument{};
   decltype(reader.Buffers){}.swap(reader.Buffers);
   const auto visible =
@@ -647,7 +662,8 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     return nullptr;
   auto data = source.ReadDocument(in, CatalogJsonKind::ItemSurface);
   std::shared_ptr<const ItemRenderAsset> asset;
-  if (data.value("extras", Json::object()).value("design_version", 0) == 3)
+  const auto *extras = ItemExtras(data);
+  if (extras && extras->value("design_version", 0) == 3)
     asset = DecodeItemRenderAsset(path, std::move(data), false, source);
   const auto inserted = Assets.emplace(key, std::move(asset)).first;
   try

@@ -46,17 +46,7 @@ void MeasureVisualPayload(const CreatureBoneSkeletonMeshAsset &asset, StlSourceS
   out.Hash(geometry.boneIndexByName);
   for (const auto &bone : geometry.boneIndexByName)
     out.Text(bone.first);
-  out.Buffer(asset.boneMeshes.capacity(), sizeof(BoneSkeletonBoneMeshCpu));
-  for (const auto &bone : asset.boneMeshes)
-  {
-    out.Text(bone.boneName);
-    out.Buffer(bone.cubes.capacity(), sizeof(BoneSkeletonCubeMeshCpu));
-    for (const auto &cube : bone.cubes)
-    {
-      out.Buffer(cube.interleavedPosUv.capacity(), sizeof(float));
-      out.Buffer(cube.indices.capacity(), sizeof(unsigned));
-    }
-  }
+  MeasureSkeletonMeshes(asset, out);
 }
 
 VisualAssetStorage CreatureBoneSkeletonCache::InspectOwnedStorage(VisualAssetCensus *census) const
@@ -96,16 +86,16 @@ CreatureBoneSkeletonCache::Load(const std::string &speciesId,
     cache.erase(it);
   }
 
-  const auto geometry =
+  auto geometry =
       CreatureBoneSkeletonLoader::LoadFromFile(geoPath.string(), geometryId);
   if (!geometry)
   {
     failedKeys.insert(cacheKey);
     return nullptr;
   }
-  auto asset = std::make_shared<CreatureBoneSkeletonMeshAsset>(
-      BoneSkeletonCubeMeshBuilder::BuildMeshAsset(*geometry));
-  cache[cacheKey] = asset;
+  auto asset = BoneSkeletonCubeMeshBuilder::BuildSharedMeshAsset(std::move(*geometry));
+  geometry.reset();
+  cache.emplace(cacheKey, asset);
   return asset;
 }
 

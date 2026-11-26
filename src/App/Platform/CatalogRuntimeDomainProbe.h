@@ -23,6 +23,7 @@
 #include "Core/Memory/EngineThreadStorage.h"
 #include "Core/Memory/VisualAssetCensus.h"
 #include "Core/Memory/VisualLoaderSource.h"
+#include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Definition/CreatureDefinitionStorage.h"
 #include "Creatures/Diagnostics/CreatureQaFootProbe.h"
@@ -368,6 +369,19 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"schema", "visual-loader-sources.v1"},
       {"status", visualFilesSupported ? "PASS" : "UNSUPPORTED"},
       {"loaders", std::move(loaderRows)}, {"counters_inline_bytes", sizeof(visualFiles) + sizeof(std::mutex)},
+      {"whole_runtime_complete", false}};
+  const auto skeletonBuilds = GetSkeletonMeshBuildSnapshot();
+  const auto &skeleton = skeletonBuilds.largest;
+  report["skeleton_mesh_construction"] = {
+      {"schema", "skeleton-mesh-construction.v1"},
+      {"status", StlSourceStorage::SupportedProfile() && !skeletonBuilds.unsupported ?
+          "PASS" : "UNSUPPORTED"},
+      {"completed", skeletonBuilds.completed}, {"unsupported", skeletonBuilds.unsupported},
+      {"largest", {{"new_requested", skeleton.requestedBytes}, {"mesh_requested", skeleton.meshBytes},
+                   {"control_requested", skeleton.controlBytes}, {"empty_index_requested", skeleton.emptyIndexBytes},
+                   {"explicit_cube_arrays", skeleton.explicitScratchBytes}, {"bones", skeleton.bones},
+                   {"cubes", skeleton.cubes}}},
+      {"counters_inline_bytes", sizeof(skeletonBuilds) + sizeof(std::mutex)},
       {"whole_runtime_complete", false}};
   const auto creatureGpu = CreatureMeshGpuCache::Instance().InspectOwnedStorage();
   report["shared_visual_source_storage"] = {

@@ -1,0 +1,942 @@
+{
+  "schema": "s4-e12-w48-model-build-storage.v1",
+  "status": "SCOPED_VISUAL_MODEL_BUILD_PASS_E12_OPEN",
+  "baseline_commit": "103e727e5a307c678396a64c38c09395ba8cfda3",
+  "prior_certificate": "S4_02_E12_W47_VISUAL_LOADER_SOURCES_CERTIFICATE_2026_11_26.json",
+  "summary": "W48 transfers the parsed skeletal geometry to its shared mesh allocation and retires the moved-from index before cache publication. Cube vertices and indices use fixed local arrays and exact output requests. The successful new-request bound and every refusal prefix match the independent allocator fixture for the native human model. Item assembly borrows JSON fields, uses fixed arrays for small numeric attributes and gives vertex/index output one reserved extent. glTF position and UV scratch retires before index/joint/weight decoding. Live desktop reports record the skeletal construction terms. All 46 Release regression groups, 14 related tests, startup, resource reload and inventory/appearance checks pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W48. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. Next account path conversion/canonicalization and file-buffer/CRT layers. Finish the remaining item traversal depth, transient candidate ownership, native stack, driver and diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "rigid_fixture": {
+    "control_bytes": 40,
+    "detached_bytes": 320,
+    "payload_bytes": 280,
+    "publication_refusal_index": 83,
+    "status": "PASS",
+    "table_bytes": 432
+  },
+  "native_rigid_model_storage": {
+    "menu": {
+      "aliases": 0,
+      "control_bytes": 120,
+      "cpu_bytes": 4168,
+      "expired": 0,
+      "inline_bytes": 96,
+      "live": 3,
+      "negative": 0,
+      "payload_bytes": 3360,
+      "supported": true,
+      "table_bytes": 688
+    },
+    "in-game": {
+      "aliases": 0,
+      "control_bytes": 120,
+      "cpu_bytes": 4168,
+      "expired": 0,
+      "inline_bytes": 96,
+      "live": 3,
+      "negative": 0,
+      "payload_bytes": 3360,
+      "supported": true,
+      "table_bytes": 688
+    }
+  },
+  "retained_visual_fixture": {
+    "asset_bytes": 4440,
+    "external_factory_reported": true,
+    "observer_bytes": 952,
+    "queue_bytes": 1296,
+    "real_cache_reload_composed": true,
+    "status": "PASS"
+  },
+  "native_retained_visuals": {
+    "menu": {
+      "assets": {
+        "bones": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "gltf": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "item_draw": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "items": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "legacy_parts": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "palette": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "rigid": {
+          "cached": 3,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 3,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 3,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 3
+          },
+          "shared": 3
+        }
+      },
+      "legacy_inline_bytes": 480,
+      "legacy_table_bytes": 0,
+      "nonowning_meshes": 0,
+      "observer_bytes": 544,
+      "observer_inline_bytes": 80,
+      "queue_bytes": 0,
+      "schema": "retained-visual-asset-storage.v1",
+      "status": "PASS",
+      "unmeasured_references": 0,
+      "whole_runtime_complete": false
+    },
+    "in-game": {
+      "assets": {
+        "bones": {
+          "cached": 1,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 1,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 9,
+            "viewmodel": 0,
+            "world": 3
+          },
+          "shared": 1
+        },
+        "gltf": {
+          "cached": 4,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 4,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 6,
+            "viewmodel": 0,
+            "world": 10
+          },
+          "shared": 4
+        },
+        "item_draw": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "items": {
+          "cached": 2,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 2,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 1,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 1
+        },
+        "legacy_parts": {
+          "cached": 0,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 0
+          },
+          "shared": 0
+        },
+        "palette": {
+          "cached": 0,
+          "detached": 6,
+          "detached_control_bytes": 240,
+          "detached_payload_bytes": 7936,
+          "references": {
+            "cache": 0,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 0,
+            "queue": 6,
+            "viewmodel": 0,
+            "world": 6
+          },
+          "shared": 0
+        },
+        "rigid": {
+          "cached": 3,
+          "detached": 0,
+          "detached_control_bytes": 0,
+          "detached_payload_bytes": 0,
+          "references": {
+            "cache": 3,
+            "diagnostic": 0,
+            "equipment": 0,
+            "preview": 3,
+            "queue": 0,
+            "viewmodel": 0,
+            "world": 3
+          },
+          "shared": 3
+        }
+      },
+      "legacy_inline_bytes": 480,
+      "legacy_table_bytes": 0,
+      "nonowning_meshes": 0,
+      "observer_bytes": 2312,
+      "observer_inline_bytes": 80,
+      "queue_bytes": 6087,
+      "schema": "retained-visual-asset-storage.v1",
+      "status": "PASS",
+      "unmeasured_references": 0,
+      "whole_runtime_complete": false
+    }
+  },
+  "loader_fixture": {
+    "constructors_checked": 4,
+    "extent_type_checked": true,
+    "glTF_view_range_checked": true,
+    "gltf_binary_bytes": 1048576,
+    "gltf_binary_requested": 1048615,
+    "gltf_peak_requested": 1053071,
+    "gltf_returned_requested": 736,
+    "index_range_checked": true,
+    "item_peak_requested": 75000,
+    "item_returned_requested": 17463,
+    "legacy_json_prefix": true,
+    "status": "PASS"
+  },
+  "native_loader_sources": {
+    "menu": {
+      "counters_inline_bytes": 528,
+      "loaders": {
+        "gltf": {
+          "active": 0,
+          "attempts": 0,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 0,
+          "documents": 0,
+          "json_bytes_max": 0,
+          "json_heap_upper_max": 0,
+          "path_units_max": 0,
+          "peak_active": 0,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "item": {
+          "active": 0,
+          "attempts": 0,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 0,
+          "documents": 0,
+          "json_bytes_max": 0,
+          "json_heap_upper_max": 0,
+          "path_units_max": 0,
+          "peak_active": 0,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "rigid": {
+          "active": 0,
+          "attempts": 6,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 6,
+          "documents": 6,
+          "json_bytes_max": 2402,
+          "json_heap_upper_max": 46370,
+          "path_units_max": 79,
+          "peak_active": 1,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "skeleton": {
+          "active": 0,
+          "attempts": 0,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 0,
+          "documents": 0,
+          "json_bytes_max": 0,
+          "json_heap_upper_max": 0,
+          "path_units_max": 0,
+          "peak_active": 0,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        }
+      },
+      "schema": "visual-loader-sources.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "in-game": {
+      "counters_inline_bytes": 528,
+      "loaders": {
+        "gltf": {
+          "active": 0,
+          "attempts": 4,
+          "binary_backing_max": 92375,
+          "binary_bytes_max": 92312,
+          "binary_reads": 4,
+          "completed": 4,
+          "documents": 4,
+          "json_bytes_max": 71234,
+          "json_heap_upper_max": 1373128,
+          "path_units_max": 67,
+          "peak_active": 1,
+          "scratch_backing_max": 17838,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "item": {
+          "active": 0,
+          "attempts": 2,
+          "binary_backing_max": 19423,
+          "binary_bytes_max": 19360,
+          "binary_reads": 2,
+          "completed": 2,
+          "documents": 2,
+          "json_bytes_max": 9830,
+          "json_heap_upper_max": 181914,
+          "path_units_max": 61,
+          "peak_active": 1,
+          "scratch_backing_max": 13646,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "rigid": {
+          "active": 0,
+          "attempts": 6,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 6,
+          "documents": 6,
+          "json_bytes_max": 2402,
+          "json_heap_upper_max": 46370,
+          "path_units_max": 79,
+          "peak_active": 1,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "skeleton": {
+          "active": 0,
+          "attempts": 2,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 2,
+          "documents": 2,
+          "json_bytes_max": 9895,
+          "json_heap_upper_max": 166224,
+          "path_units_max": 80,
+          "peak_active": 1,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        }
+      },
+      "schema": "visual-loader-sources.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "input-world": {
+      "counters_inline_bytes": 528,
+      "loaders": {
+        "gltf": {
+          "active": 0,
+          "attempts": 2,
+          "binary_backing_max": 34559,
+          "binary_bytes_max": 34496,
+          "binary_reads": 2,
+          "completed": 2,
+          "documents": 2,
+          "json_bytes_max": 28522,
+          "json_heap_upper_max": 551730,
+          "path_units_max": 64,
+          "peak_active": 1,
+          "scratch_backing_max": 8199,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "item": {
+          "active": 0,
+          "attempts": 0,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 0,
+          "documents": 0,
+          "json_bytes_max": 0,
+          "json_heap_upper_max": 0,
+          "path_units_max": 0,
+          "peak_active": 0,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "rigid": {
+          "active": 0,
+          "attempts": 6,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 6,
+          "documents": 6,
+          "json_bytes_max": 2402,
+          "json_heap_upper_max": 46370,
+          "path_units_max": 79,
+          "peak_active": 1,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        },
+        "skeleton": {
+          "active": 0,
+          "attempts": 2,
+          "binary_backing_max": 0,
+          "binary_bytes_max": 0,
+          "binary_reads": 0,
+          "completed": 2,
+          "documents": 2,
+          "json_bytes_max": 9895,
+          "json_heap_upper_max": 166224,
+          "path_units_max": 80,
+          "peak_active": 1,
+          "scratch_backing_max": 0,
+          "unclosed_documents": 0,
+          "unsupported_samples": 0
+        }
+      },
+      "schema": "visual-loader-sources.v1",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    }
+  },
+  "skinned_models_checked": 35,
+  "skeleton_mesh_fixture": {
+    "bones": 10,
+    "borrowed_peak_requested": 8648,
+    "control_requested": 200,
+    "cubes": 6,
+    "empty_index_requested": 184,
+    "explicit_cube_arrays": 624,
+    "mesh_requested": 5312,
+    "moved_peak_requested": 5696,
+    "refusal_prefixes": 22,
+    "status": "PASS"
+  },
+  "native_skeleton_mesh_build": {
+    "menu": {
+      "completed": 0,
+      "counters_inline_bytes": 160,
+      "largest": {
+        "bones": 0,
+        "control_requested": 0,
+        "cubes": 0,
+        "empty_index_requested": 0,
+        "explicit_cube_arrays": 0,
+        "mesh_requested": 0,
+        "new_requested": 0
+      },
+      "schema": "skeleton-mesh-construction.v1",
+      "status": "PASS",
+      "unsupported": 0,
+      "whole_runtime_complete": false
+    },
+    "in-game": {
+      "completed": 2,
+      "counters_inline_bytes": 160,
+      "largest": {
+        "bones": 20,
+        "control_requested": 200,
+        "cubes": 21,
+        "empty_index_requested": 184,
+        "explicit_cube_arrays": 624,
+        "mesh_requested": 17752,
+        "new_requested": 18136
+      },
+      "schema": "skeleton-mesh-construction.v1",
+      "status": "PASS",
+      "unsupported": 0,
+      "whole_runtime_complete": false
+    },
+    "input-world": {
+      "completed": 2,
+      "counters_inline_bytes": 160,
+      "largest": {
+        "bones": 20,
+        "control_requested": 200,
+        "cubes": 21,
+        "empty_index_requested": 184,
+        "explicit_cube_arrays": 624,
+        "mesh_requested": 17752,
+        "new_requested": 18136
+      },
+      "schema": "skeleton-mesh-construction.v1",
+      "status": "PASS",
+      "unsupported": 0,
+      "whole_runtime_complete": false
+    }
+  },
+  "retained_payload_comparison": {
+    "item_payload_bytes": {
+      "baseline": 20543,
+      "current": 16983
+    },
+    "skeleton_payload_bytes": {
+      "baseline": 8792,
+      "current": 8648
+    }
+  },
+  "native_input_visuals": {
+    "assets": {
+      "bones": {
+        "cached": 1,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 1,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 36,
+          "viewmodel": 0,
+          "world": 4
+        },
+        "shared": 1
+      },
+      "gltf": {
+        "cached": 2,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 2,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 2,
+          "viewmodel": 0,
+          "world": 4
+        },
+        "shared": 2
+      },
+      "item_draw": {
+        "cached": 0,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 0,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 0,
+          "viewmodel": 0,
+          "world": 0
+        },
+        "shared": 0
+      },
+      "items": {
+        "cached": 0,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 0,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 0,
+          "viewmodel": 0,
+          "world": 0
+        },
+        "shared": 0
+      },
+      "legacy_parts": {
+        "cached": 0,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 0,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 0,
+          "viewmodel": 0,
+          "world": 0
+        },
+        "shared": 0
+      },
+      "palette": {
+        "cached": 0,
+        "detached": 2,
+        "detached_control_bytes": 80,
+        "detached_payload_bytes": 2304,
+        "references": {
+          "cache": 0,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 0,
+          "queue": 2,
+          "viewmodel": 0,
+          "world": 2
+        },
+        "shared": 0
+      },
+      "rigid": {
+        "cached": 3,
+        "detached": 0,
+        "detached_control_bytes": 0,
+        "detached_payload_bytes": 0,
+        "references": {
+          "cache": 3,
+          "diagnostic": 0,
+          "equipment": 0,
+          "preview": 3,
+          "queue": 0,
+          "viewmodel": 0,
+          "world": 3
+        },
+        "shared": 3
+      }
+    },
+    "legacy_inline_bytes": 480,
+    "legacy_table_bytes": 0,
+    "nonowning_meshes": 7,
+    "observer_bytes": 1224,
+    "observer_inline_bytes": 80,
+    "queue_bytes": 13647,
+    "schema": "retained-visual-asset-storage.v1",
+    "status": "PASS",
+    "unmeasured_references": 0,
+    "whole_runtime_complete": false
+  },
+  "native_composed_cpu": {
+    "menu": {
+      "cache_bytes": 5400,
+      "detached_bytes": 0,
+      "queue_bytes": 0,
+      "private_cache_table_bytes": 0,
+      "selected_requested_bytes": 5400
+    },
+    "in-game": {
+      "cache_bytes": 427680,
+      "detached_bytes": 8176,
+      "queue_bytes": 6087,
+      "private_cache_table_bytes": 0,
+      "selected_requested_bytes": 441943
+    },
+    "input-world": {
+      "cache_bytes": 78522,
+      "detached_bytes": 2384,
+      "queue_bytes": 13647,
+      "private_cache_table_bytes": 0,
+      "selected_requested_bytes": 94553
+    }
+  },
+  "native_warmed_legacy_cache": false,
+  "native_reload": {
+    "resources": 61,
+    "texture_stages": 12,
+    "rigid_recovery": [
+      {
+        "before_width": 0.5625,
+        "changed_fixture": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-model-build-reload-native\\creature-previews\\resource_reload_fixture\\rigid_changes\\rigid_demo_walker\\changed_model.json",
+        "changed_geometry": true,
+        "changed_hash": 1489498344864572935,
+        "changed_width": 0.6328125,
+        "fresh_hash": 1489498344864572935,
+        "id": "rigid_demo_walker",
+        "original_hash": 8819350695256384905,
+        "passed": true,
+        "placeholder_draws": 1,
+        "placeholder_parts_empty": true,
+        "predecessor_retained": true,
+        "recovered_hash": 8819350695256384905,
+        "restored_hash": 8819350695256384905,
+        "shared_parts": true
+      },
+      {
+        "before_width": 0.125,
+        "changed_fixture": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-model-build-reload-native\\creature-previews\\resource_reload_fixture\\rigid_changes\\rigid_demo_flyer\\changed_model.json",
+        "changed_geometry": true,
+        "changed_hash": 1984910584389827097,
+        "changed_width": 0.140625,
+        "fresh_hash": 1984910584389827097,
+        "id": "rigid_demo_flyer",
+        "original_hash": 16217520126047008041,
+        "passed": true,
+        "placeholder_draws": 1,
+        "placeholder_parts_empty": true,
+        "predecessor_retained": true,
+        "recovered_hash": 16217520126047008041,
+        "restored_hash": 16217520126047008041,
+        "shared_parts": true
+      },
+      {
+        "before_width": 0.5,
+        "changed_fixture": "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-model-build-reload-native\\creature-previews\\resource_reload_fixture\\rigid_changes\\rigid_demo_swimmer\\changed_model.json",
+        "changed_geometry": true,
+        "changed_hash": 9109141453313712562,
+        "changed_width": 0.5625,
+        "fresh_hash": 9109141453313712562,
+        "id": "rigid_demo_swimmer",
+        "original_hash": 48966400125710370,
+        "passed": true,
+        "placeholder_draws": 1,
+        "placeholder_parts_empty": true,
+        "predecessor_retained": true,
+        "recovered_hash": 48966400125710370,
+        "restored_hash": 48966400125710370,
+        "shared_parts": true
+      }
+    ],
+    "mesh_stages": 5,
+    "mesh_models_per_stage": 52,
+    "diagnostic_relocations": 0,
+    "source_world_restored": true
+  },
+  "native_startup_aggregate": "UNTESTED",
+  "native_input": {
+    "schema": "icon-codecs-native-input.v1",
+    "smoke_exit": 2,
+    "smoke_status": "UNTESTED",
+    "world_source_sha256": "a5c7c5bd3920702f6bc2b298ece80406b3056ab0ee90031b743961eee241043b",
+    "world_source_preserved": true,
+    "layout_cases": 72,
+    "checks": 10,
+    "passed": true,
+    "appearance_cases": 2,
+    "appearance_sha256": "e39f65dcb7892cd0cecbad393fb18855d124edae8fa275890922a907efda347d",
+    "icon_checks": 209,
+    "icons_sha256": "5475e1302d802cdacefb20e9eeb0d783f95d9ac2dbd8add446823a4f35b4e98d",
+    "config_bytes_restored": true,
+    "report_sha256": "ee12f4229fe3b56639c38aed5c54daa1636af21397f823fc3f0cf37e13a8d6df"
+  },
+  "dependent_release_tests": [
+    "creature_appearance_test",
+    "creature_influence_channels_test",
+    "inventory_mode_test",
+    "item_survival_hooks_test",
+    "inventory_icon_fingerprint_test",
+    "inventory_transactions_test",
+    "recipe_registry_test",
+    "item_render_asset_test",
+    "creature_draw_clip_bounds_test",
+    "catalog_json_source_envelope_test",
+    "creature_model_integrity_test",
+    "creature_draw_queue_test",
+    "creature_gltf_loader_test",
+    "creature_bone_skeleton_loader_test"
+  ],
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "eb56e7cd833fe198b26ee20c48d8c109aabea8c1ea9bb1a413824ed041bb2aac",
+  "source_sha256_raw": {
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "379d271b1bdeb771b5028fba1db9c21d7b2ace6ca69899e7c32604765567b2da",
+    "src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.cpp": "daf2d42178628e8d9d83766f8bd45dfeee8e3df4944f0ed624a61c1c830181b1",
+    "src/Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h": "095baf25676766dceaf7c7cd4acc75831a473cc325b5a0a6d2d6c0a842a6c2ad",
+    "src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.cpp": "72424cf85f46463111f6612c7c4c61e1f79623b9d1586e9e35dd2b20b989f2fd",
+    "src/Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonLoader.cpp": "9868d247e445944cf38427efa06e326ef6d46803651cdfb568a3554baa04fb13",
+    "src/Creatures/Visual/Gltf/CreatureGltfLoader.cpp": "eac203289d3a01a2d9661bbfe5de9766853d84c1471eb019fa0991c90576b53a",
+    "src/Items/ItemRenderAsset.cpp": "811819d15617bc3db69c10197c0b2639935f5061751bf8e3ba7fe98a5f89cc6e",
+    "src/Test/ApplicationOperationStorageTest.cpp": "787871c3f26492832c64ca85fcf5283228266466094c9af9408dc96a4d8e46aa",
+    "src/Test/VisualLoaderSourceFixture.h": "b6ec1c042c88e381437032c3fc6f4af7bd9e5445d72cf1374ba318717a1c34ea"
+  },
+  "desktop_exe_sha256": "8ac416e938b15a174efc5f79055e23c3ce6de0b89bfb38df7d025a93afbbf4f6",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-model-build-provenance.json": "60c2f09c3c669b6e68622ab2de0a81b2246bfe51c00f5c5ec9bbc4d3648bb703",
+    "build/desktop-msvc/s4-model-build-regressions.json": "a93c08c330485dc94986d825f5487593938ddbb4a7118aa53a06f8540b31584a",
+    "build/desktop-msvc/s4-model-build-dependent.log": "834ec84afd95510c8f55c2743da621d27046a6f789eda14b4a1e4d5277476e23",
+    "build/desktop-msvc/s4-model-build-skinned.log": "11f73fef27068ff414192256a6e6592b93a750cb8e554b4d7ab4e3a1936634ac",
+    "build/desktop-msvc/s4-model-build-skeleton.log": "462186b8d6918ac6a8981b6acf3917aee2a87714235b8ecf8caade5e791a18b0",
+    "build/desktop-msvc/s4-model-build-skeleton-run.json": "25fcf22edf828d6c1c46f5affbde7f9e123943e86fc7b14cdffeeedcb23874eb",
+    "build/desktop-msvc/s4-model-build-application-ops.json": "47fb659ef1a9c5777beca8dd1cf7337d393b174963e839700014959853b5f6a9",
+    "build/desktop-msvc/s4-model-build-native/smoke-verdict.json": "96dacdbbe78df43aafaee21acfd4248ca88d2f5bf02115eb836b7032b3ebf966",
+    "build/desktop-msvc/s4-model-build-native/flight_sim_report.json": "060b0877b8511c92ea7d92ad41e0d9fe31b1279c7562b1cbdad324e4d26cb019",
+    "build/desktop-msvc/s4-model-build-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-model-build-reload-native/reload-launch.json": "b35e20fce11fab5e50d71057f2d8b32198b2529217007aac965b3b94f51b46b9",
+    "build/desktop-msvc/s4-model-build-reload-native/flight_sim_report.json": "900c536ea3dd7c17ab35ae12e4bf34825d873321ecc9d7246b98a493bff32630",
+    "build/desktop-msvc/s4-model-build-reload-native/creature-previews/resource_reload_probe.json": "9415758c163cfef6268f82f5a5dc69fae4b52ba70abae782ef0e2ebc10ec8a33",
+    "build/desktop-msvc/s4-visual-loader-reload-native/creature-previews/resource_reload_probe.json": "1e9fdb1fc6a7d39bfe96caa2d2cc0f9d8b0abdfcd4d6c40d5de99d6c851aeeb8",
+    "build/desktop-msvc/s4-model-build-input-native/input-verdict.json": "4a11da5f26c9734265f3a6687dc287d559db8c5cee67850cfa098603a2138cdc",
+    "build/desktop-msvc/s4-model-build-input-native/owner-domain/flight-in-game.json": "fa4bd35dcee18f792ab1770ec15cd75d6249cc1b32bf963f9d4e91de71f73c76",
+    "build/desktop-msvc/s4-model-build-native/owner-domain/flight-menu.json": "5f6d8aaf44d3fe4854cf155696ce8ed7ac66a7c2ded4e7674c82d3f9f2d5ddb0",
+    "build/desktop-msvc/s4-model-build-native/owner-domain/flight-in-game.json": "75b04a550e716d05201114e7641983d2b15673535623d85e5bf77aa5aaf378ce"
+  }
+}
