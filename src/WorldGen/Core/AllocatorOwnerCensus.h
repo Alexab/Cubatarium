@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Memory/AllocatorOwnerSource.h"
+#include "Core/Memory/AllocatorSourcePacket.h"
 #include "WorldGen/Core/PopulationScratchBudget.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include <vector>
@@ -26,6 +27,7 @@ public:
   };
   explicit AllocatorOwnerCensus(size_t reserve=0){Rows.reserve(reserve);}
   static bool WaitSchedulerIdle(UChunkLoadScheduler &scheduler,std::chrono::milliseconds timeout){return scheduler.Pool.WaitIdleFor(timeout);}
+  static void EnqueueSchedulerWorkerView(UChunkLoadScheduler &scheduler,std::function<void()> visit){scheduler.Pool.Enqueue(std::move(visit));}
   void Clear(){Rows.clear();Unknown=Aliases=0;Overflow=false;}
   void Resource(const std::shared_ptr<UConcurrentAllocationCountingResource> &slot){
     if(!Observe(slot,Kind::Resource,NormalBytes<UConcurrentAllocationCountingResource>(),false))return;
@@ -60,7 +62,25 @@ public:
   }
   void Buffer(const UChunkBuffer &buffer){if(buffer.Payload)Context(buffer.Payload->Budget);}
   void StbiOutput(const void *pointer){if(pointer)Ledger(detail::StbiHeader(pointer)->Owner);}
-  void CallingThread(){Resource(ActiveScopedSharedResource);Ledger(detail::ActiveStbiLedger);Context(ActiveBufferBudget);}
+  void CallingThread(){
+    const auto &source=ActiveBufferBudgetJobSource;
+    if(ActiveBufferBudget.job){
+      if(source.profile==BufferJobSourceProfile::Default)DefaultJob(ActiveBufferBudget.job);
+      else if(source.profile==BufferJobSourceProfile::Counted && source.origin)CountedJob(ActiveBufferBudget.job,*source.origin,source.requests_covered);
+      else UnknownOwner();
+      if(source.scheduler_settings_slot){
+        if(source.profile==BufferJobSourceProfile::Counted)Settings(*static_cast<const std::shared_ptr<const UChunkLoadScheduler::OwnedSettings>*>(source.scheduler_settings_slot));
+        else UnknownOwner();
+      }
+    }
+    Resource(ActiveScopedSharedResource);Ledger(detail::ActiveStbiLedger);Context(ActiveBufferBudget);
+  }
+  void CallingThreadScratch(const UPopulationScratchBudget &scratch,const UChunkManager &manager){
+    if(&scratch.Manager!=&manager || scratch.Context.job.owner_before(ActiveBufferBudget.job) ||
+        ActiveBufferBudget.job.owner_before(scratch.Context.job) || scratch.Context.budget.owner_before(ActiveBufferBudget.budget) ||
+        ActiveBufferBudget.budget.owner_before(scratch.Context.budget)){UnknownOwner();return;}
+    Resource(scratch.Metadata);Resource(scratch.Fields);Context(scratch.Context);Manager(manager,&scratch.Fields,true,true);
+  }
   void Scratch(const UPopulationScratchBudget &scratch,const std::shared_ptr<UConcurrentAllocationCountingResource> &job_origin){
     CountedJob(scratch.Context.job,job_origin,true);Resource(scratch.Metadata);Resource(scratch.Fields);Context(scratch.Context);
   }
@@ -89,32 +109,54 @@ public:
     for(const auto &entry:manager.Chunks)field(entry.second->Light.field);
     for(const auto &chunk:manager.FreeList)if(chunk)field(chunk->Light.field);
   }
-  void Scheduler(const UChunkLoadScheduler &scheduler){
+  void Scheduler(const UChunkLoadScheduler &scheduler){SchedulerImpl(scheduler,0);}
+  // All active workers are paused in the supplied source phase. Their own
+  // packets must accompany this main-thread view before accepting the union.
+  void SchedulerAtWorkerBarrier(const UChunkLoadScheduler &scheduler,size_t worker_views){SchedulerImpl(scheduler,worker_views);}
+  static std::array<size_t,KindCount> RequestWidths(){
+    const auto base=GetAllocatorOwnerLayout();std::array<size_t,KindCount> out{};
+    for(size_t i=0;i<base.requests.size();++i)out[i]=base.requests[i];
+    out[7]=NormalBytes<UChunkLoadScheduler::SettingsBudgetState>();out[8]=NormalBytes<std::atomic<size_t>>();
+    out[9]=NormalBytes<UChunkLoadScheduler::OwnedSettings>();out[10]=CountedBytes<UChunkLoadScheduler::ResultSlotGuard>();return out;
+  }
+  void ExportInto(AllocatorSourcePacket &packet,const AllocatorSourcePhase &phase,size_t participant,bool complete_domain)const{
+    static_assert(KindCount==AllocatorSourceKinds);packet.nodes.clear();packet.epoch=phase.epoch;packet.participant=participant;
+    packet.thread=std::this_thread::get_id();packet.widths=RequestWidths();packet.supported=Result(complete_domain).supported && phase.IsOpen();
+    for(const auto &row:Rows){
+      const auto owner=row.owner.read(row.owner.slot).lock();
+      const auto origin=row.origin.slot?row.origin.read(row.origin.slot).lock():std::shared_ptr<const void>{};
+      if(!owner || (row.origin.slot && !origin)){packet.supported=false;continue;}
+      packet.nodes.push_back({reinterpret_cast<uintptr_t>(owner.get()),reinterpret_cast<uintptr_t>(origin.get()),static_cast<size_t>(row.kind),row.bytes,row.covered});
+    }
+  }
+private:
+  void Settings(const std::shared_ptr<const UChunkLoadScheduler::OwnedSettings> &slot){
+    if(Observe(slot,Kind::SettingsValue,NormalBytes<UChunkLoadScheduler::OwnedSettings>(),false) && slot)
+      Observe(slot->reservation.budget,Kind::SettingsBudget,NormalBytes<UChunkLoadScheduler::SettingsBudgetState>(),false);
+  }
+  void SchedulerImpl(const UChunkLoadScheduler &scheduler,size_t worker_views){
     // Establish the stable source boundary before acquiring completion or
     // resource locks. A worker without its own view must not be traversed.
     const auto pool=scheduler.Pool.GetSnapshot();
-    if(pool.active || pool.pending){UnknownOwner();return;}
+    if(pool.pending || pool.active!=worker_views){UnknownOwner();return;}
     Resource(scheduler.ControlMemory);Observe(scheduler.BufferBudget,Kind::Budget,NormalBytes<UBufferAllocationBudget>(),false);
     Observe(scheduler.SettingsBudget,Kind::SettingsBudget,NormalBytes<UChunkLoadScheduler::SettingsBudgetState>(),false);
     Observe(scheduler.RetainedResults,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>(),false);
-    const auto settings=[&](const auto &slot){
-      if(Observe(slot,Kind::SettingsValue,NormalBytes<UChunkLoadScheduler::OwnedSettings>(),false) && slot)
-        Observe(slot->reservation.budget,Kind::SettingsBudget,NormalBytes<UChunkLoadScheduler::SettingsBudgetState>(),false);
-    };
-    for(const auto &entry:scheduler.Queue)settings(entry.settings);
-    for(const auto &entry:scheduler.QueuedRequests)settings(entry.second.settings);
+    for(const auto &entry:scheduler.Queue)Settings(entry.settings);
+    for(const auto &entry:scheduler.QueuedRequests)Settings(entry.second.settings);
     scheduler.Completed.InspectValues([&](const auto &pending){
       Counted(pending.resultSlot,Kind::ResultGuard,scheduler.ControlMemory,true);
       if(pending.resultSlot)Observe(pending.resultSlot->count,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>(),false);
-      if(pending.bufferRetry)settings(pending.bufferRetry->settings);
+      if(pending.bufferRetry)Settings(pending.bufferRetry->settings);
       if(pending.result.buffer.Payload){
         CountedJob(pending.result.buffer.Payload->Budget.job,scheduler.ControlMemory,true);Buffer(pending.result.buffer);
       }
     });
     // Active/pending closures and caller-held Tick batches need their own
     // stable owner-thread views;an idle queue snapshot cannot certify them.
-    if(scheduler.GetRetainedGenerationResultCount()!=static_cast<size_t>(scheduler.GetCompletedReadyCount()))UnknownOwner();
+    if(scheduler.GetRetainedGenerationResultCount()!=static_cast<size_t>(scheduler.GetCompletedReadyCount())+worker_views)UnknownOwner();
   }
+public:
   Snapshot Result(bool complete_source_domain)const{
     Snapshot out;out.unknown=Unknown;out.aliases=Aliases;out.overflow=Overflow;
     out.supported=GetAllocatorOwnerLayout().supported && complete_source_domain && !Unknown && !Overflow;

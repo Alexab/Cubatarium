@@ -17,6 +17,7 @@
 #include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "WorldGen/Core/CatalogConstructionComposition.h"
 #include "WorldGen/Core/AllocatorOwnerCensus.h"
+#include "WorldGen/Core/PipelineAllocatorThreadView.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
 #include <fstream>
@@ -63,7 +64,8 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   out.World(launcher.world.get());out.Geometry(launcher.geometry.get());
   out.BlockStorage(launcher.blocks,"launcher");out.TextureBases(launcher.bases);out.TextureCubes(launcher.cubes);out.Library(launcher.objects);
   const auto content=CaptureWorldGenContentSnapshot();out.Content(content);out.CallingThread();out.ActiveDirectory();
-  out.AllocationOwners.CallingThread();const auto allocation_owners=out.AllocationOwners.Result(true);
+  const auto pipeline_allocator_view=InspectPipelineCallingThreadAllocators(out.AllocationOwners);
+  const auto allocation_owners=out.AllocationOwners.Result(true);
   const auto census=out.Catalogs();Json pools=Json::array(),roles=Json::array();
   const auto retained=BoundRetainedCatalogRequests(census);
   bool active_roles_current=true;
@@ -92,6 +94,7 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
     {"covered",allocation_owners.covered},{"weak_only",allocation_owners.weak_only},
     {"additional_requests",allocation_owners.additional_requests},{"covered_requests",allocation_owners.covered_requests},
     {"unknown",allocation_owners.unknown},{"aliases",allocation_owners.aliases},{"overflow",allocation_owners.overflow},
+    {"calling_pipeline_initialized",pipeline_allocator_view.initialized},{"calling_pipeline_builds",pipeline_allocator_view.builds},
     {"whole_runtime_complete",false},
     {"scope","Actual supplied E11 worlds/managers/free-list/schedulers/completed-buffer and direct calling-thread allocator slots;ordinary main-world field source profile. Active worker/caller/TLS scratch/weak-only external source views and total process coverage remain separate. Inspector owns no strong/weak source mirrors."}};
   // An actual second UWorld verifies that the traversal counts supplied

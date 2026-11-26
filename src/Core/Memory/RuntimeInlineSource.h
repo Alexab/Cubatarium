@@ -7,7 +7,7 @@ namespace cutum
 {
 enum class RuntimeInlineCell {LogAdapter,Population,StbiProcess,JsonProcess,StallFlag,
   Pipeline,PopulationClock,Readers,BlockProfiles,MergeName,ActiveBudget,ActiveShared,
-  ActiveStbi,StbiFailure,JsonShape,Pin,WorkerRole,Features,StageClock,EnvironmentVector,Count};
+  ActiveStbi,StbiFailure,JsonShape,Pin,WorkerRole,Features,StageClock,EnvironmentVector,ActiveBudgetSource,PopulationObserver,Count};
 struct PipelineRuntimeInlineLayout
 {
   size_t whole{},global{},clocks{};

@@ -7,6 +7,7 @@
 #include "Core/StallTimer.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include "WorldGen/Core/CatalogThreadReads.h"
+#include "WorldGen/Core/PopulationAllocatorObserver.h"
 #include <atomic>
 
 namespace cutum
@@ -36,6 +37,8 @@ inline RuntimeInlineLayout GetRuntimeCoreInlineLayout() noexcept
   out.Set(RuntimeInlineCell::Features,GetFeatureRuntimeInlineBytes());
   out.Set(RuntimeInlineCell::StageClock,sizeof(std::chrono::steady_clock::time_point));
   out.Set(RuntimeInlineCell::EnvironmentVector,EnvironmentFlagCacheInlineBytes());
+  out.Set(RuntimeInlineCell::ActiveBudgetSource,sizeof(ActiveBufferBudgetJobSource));
+  out.Set(RuntimeInlineCell::PopulationObserver,PopulationAllocatorObserverInlineBytes());
   return out;
 }
 } // namespace cutum

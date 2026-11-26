@@ -62,6 +62,6 @@ int main(int argc,char **argv)
     {"e11_readers_once",reader_once},{"unknown_missing_zero_overcoverage_overflow_controls",controls},
     {"source_os_threads",8},{"e11_reader_threads",1},{"base_named_static",61403},{"base_named_tls",243016},
     {"additional_static",valid.additional_static},{"additional_tls",valid.additional_tls},{"joined_named_inline",valid.joined_named_inline},
-    {"scope","Compiled20 core named fixed/TLS rows;whole pipeline parent once and explicit E11 overlap. No dynamic contents,compiler guards/TLS alignment/loader,renderer/window TLS,logger destinations/CRT/GPU/process or full S6 matrix verdict."}};
+    {"scope","Compiled core named fixed/TLS rows (see widths);whole optional pipeline holder once and explicit E11 overlap. No dynamic contents,compiler guards/TLS alignment/loader,renderer/window TLS,logger destinations/CRT/GPU/process or full S6 matrix verdict."}};
   std::ofstream out(argc>1?argv[1]:"runtime-inline-source.json");out<<report.dump(2)<<'\n';std::cout<<report.dump()<<'\n';return out&&pass?0:1;
 }

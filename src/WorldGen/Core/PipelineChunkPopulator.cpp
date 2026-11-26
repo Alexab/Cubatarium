@@ -14,6 +14,9 @@
 #include "WorldGen/Core/RuntimeSettingsText.h"
 #include "WorldGen/Core/SettingsTextBudget.h"
 #include "WorldGen/Core/PopulationScratchBudget.h"
+#include "WorldGen/Core/AllocatorOwnerCensus.h"
+#include "WorldGen/Core/PipelineAllocatorThreadView.h"
+#include "WorldGen/Core/PopulationAllocatorObserver.h"
 #include "WorldGen/Core/PipelineSettingsKey.h"
 #include "WorldGen/Core/PipelineOwnerKey.h"
 #include "Core/Memory/RuntimeInlineSource.h"
@@ -181,10 +184,14 @@ struct ThreadLocalPipelineState
   std::unique_ptr<IUWorldGenPipeline> pipeline;
 };
 
+std::optional<ThreadLocalPipelineState> &GetThreadLocalPipelineHolder()
+{
+  thread_local std::optional<ThreadLocalPipelineState> holder;
+  return holder;
+}
 ThreadLocalPipelineState &GetThreadLocalPipeline()
 {
-  thread_local ThreadLocalPipelineState state;
-  return state;
+  auto &holder=GetThreadLocalPipelineHolder();if(!holder)holder.emplace();return *holder;
 }
 
 IUWorldGenPipeline *
@@ -521,10 +528,24 @@ static void LogChunkPopulation(const Request &request, const Timing &timing,
 
 PipelineRuntimeInlineLayout GetPipelineRuntimeInlineLayout() noexcept
 {
-  return {sizeof(ThreadLocalPipelineState),sizeof(gPopulateDiagMutex)+sizeof(gLastPopulateTiming)+sizeof(gPopulateSamples)+sizeof(gPopulateSummary),
+  return {sizeof(std::optional<ThreadLocalPipelineState>),sizeof(gPopulateDiagMutex)+sizeof(gLastPopulateTiming)+sizeof(gPopulateSamples)+sizeof(gPopulateSummary),
     sizeof(double)+sizeof(std::chrono::steady_clock::time_point),
     {sizeof(ThreadLocalPipelineState::key),sizeof(ThreadLocalPipelineState::owners),sizeof(ThreadLocalPipelineState::builds),
       sizeof(ThreadLocalPipelineState::world),sizeof(ThreadLocalPipelineState::pipeline)}};
+}
+
+PipelineAllocatorThreadView InspectPipelineCallingThreadAllocators(AllocatorOwnerCensus &out,
+    const UPopulationScratchBudget *active_scratch)
+{
+  auto &holder=GetThreadLocalPipelineHolder();out.CallingThread();
+  PipelineAllocatorThreadView view;view.tls_holder_bytes=sizeof(holder);
+  if(!holder){if(active_scratch)out.UnknownOwner();return view;}
+  view.initialized=true;view.pipeline_present=bool(holder->pipeline);view.builds=holder->builds;
+  const auto &manager=holder->world.GetChunkManager();view.resident_fields=manager.GetSectionLightFieldCount();
+  if(active_scratch)out.CallingThreadScratch(*active_scratch,manager);
+  else if(view.resident_fields || manager.GetResidentChunkCount() || manager.GetFreeListSize())out.UnknownOwner();
+  else out.Manager(manager,nullptr,true,true);
+  return view;
 }
 
 ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot(bool default_owner_profile)
@@ -714,6 +735,7 @@ UPipelineChunkPopulator::Populate(const ChunkPopulateRequest &request)
     timing.terrainMs = fill_ms;
   }
 
+  InspectPopulationAllocatorView({request,genWorld,scratch_budget,result.buffer});
   if (cancelled || (request.shouldCancel && request.shouldCancel()))
   {
     result.discarded = true;

@@ -1,0 +1,1184 @@
+{
+  "schema": "s4-e12-w07-allocator-workers.v1",
+  "status": "SCOPED_OWNER_THREAD_PHASES_AND_COHORT_UNION_PASS_E12_OPEN",
+  "summary": "E12 W07 actual owner-thread pipeline allocator views/source-phase union PASS. Passive query uses optional TLS holder and constructs no scratch world on fresh thread;current holder1968 includes old1960 state+8 discriminator/alignment. Compiled inline provider now reports22 rows,including borrowed job origin/settings descriptor24 and observer pointer8; whole holder once,old332/104/8/1504/8 children once,E11 reader160 overlap preserved. Eight-thread supplied example adds 40 bytes per thread versus prior profile,joined574982,not observed process/RSS. Scope descriptor points into live worker callable and owns no resource/settings;normal/exception nesting restores it before callable retirement. Actual production observer runs on its owner thread after terrain generation;only plain identity/width/origin/coverage/thread/epoch packets cross barriers. One open coherent epoch/all distinct participants required;missing worker,wrong epoch/profile/domain, closed phase and64 packet aliases controls PASS. No foreign TLS traversal or persistent owner/weak registration mirror. Actual full generation pool has4 workers on this host,normal/token cancellation/budget unwind+serial exact retries PASS. Active union:9 resources,4 diagnostic ledgers,one budget,4 jobs,4 fields,one settings state/counter and4 distinct settings blocks;5056 additional+20384 covered requests. Four settings allocations follow real per-request source semantics;shared budget/controller/state deduplicate across workers. Actual opaque control base4160 and decoder payload+prefix256 are recorded separately,not added twice. Post-population before job scope exit:3168 additional+160 covered;fields/decoder retired. After complete task scope and callable retirement,own-thread probe jobs confirm descriptor/observer/budget/STBI roots cleared;only4 reusable manager resources plus scheduler roots remain,1440 additional/0 covered. All work/result/control and buffer credit debt0 at terminal outcomes. The isolated unit additionally requires global work-slot0. Native global slots include the concurrently active gameplay pool and are recorded separately;local control0 proves cohort guard retirement. Initial native reports preserve the rejected global-zero fixture assumption with correct source views;no application counter is reset. Four fresh queries plus post-task queries under persistent ordinary-new refusal allocate0 in Release unit;native has no ordinary-new instrumentation and verifies same source graph/profile. Prior29 plus new full-pool worker group form30 Release groups PASS,full decor/STBI conversions/noise golden unchanged, two publication GL readbacks PASS. Frozen desktop/native worker graph and22-row layout parity,runtime/startup/owner/direct save/UI/provenance and8 texture GL readbacks PASS;config restored. Main-thread native E11 subreport also inspects passive pipeline manager without initialization;whole_runtime_complete remains false,aggregate startup-only UNTESTED. Selected cohort scheduler/worker allocator paths exclude target-world storage,pipeline object/cache contents,catalogs,diagnostic vector allocations,CRT/upstream/stack/GPU/process and other pools/external/detached histories.",
+  "remaining": "Continue existing S4.02 LIMIT.Q09 E12 after W01..W07 without audit restart or reopening C01..C06/E11. Finish detached/escaped/caller-held Tick/completion controls and source-history coverage,then combine all actual E11 world/pool/input domains using coherent owner-thread phases;W07 accepts one complete live generation-pool allocator cohort and passive TLS managers,not all runtime pools/OS threads. Uninitialized optional holders allocate no world; initialized idle pipeline object/cache/string contents remain next finite source card. Environment flag/name and merge-name backing histories,render/world/window TLS and nonallocator callbacks remain. Unknown/mixed allocator origins, expired packet identities without source history,missing participants or closed phases remain UNSUPPORTED. Current TLS whole holder1968 contains old state1960+8 once;job source24+observer8 are separate named cells. E11 reader160, W02 raw/noise TLS,W01 expired weak shells,STBI32 prefixes and covered field/control requests charged once. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "budget_source_inline": 24,
+    "cases": [
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": true,
+        "global_work_slots_active": 4,
+        "global_work_slots_after": 0,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 0,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      },
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": true,
+        "global_work_slots_active": 4,
+        "global_work_slots_after": 0,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 1,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      },
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": true,
+        "global_work_slots_active": 4,
+        "global_work_slots_after": 0,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 2,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      }
+    ],
+    "fresh_no_world_initialization_queries": 4,
+    "observer_inline": 8,
+    "ordinary_refusal_available": true,
+    "pipeline_holder_inline": 1968,
+    "schema": "allocator-worker-threads.v1",
+    "scope": "Real pipeline full-pool owner-thread snapshots;only plain identity packets cross the barrier. One open source phase required. Opaque control requests and decoder request base recorded separately;no whole process/CRT/GPU/full S6 verdict.",
+    "source_widths": [
+      264,
+      208,
+      48,
+      24,
+      40,
+      5040,
+      5056,
+      48,
+      24,
+      432,
+      48
+    ],
+    "status": "PASS",
+    "workers": 4
+  },
+  "native_workers": {
+    "budget_source_inline": 24,
+    "cases": [
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": false,
+        "global_work_slots_active": 5,
+        "global_work_slots_after": 1,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 0,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      },
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": false,
+        "global_work_slots_active": 5,
+        "global_work_slots_after": 1,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 1,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      },
+      {
+        "active_additional": 5056,
+        "active_blocks": [
+          9,
+          4,
+          1,
+          0,
+          4,
+          0,
+          4,
+          1,
+          1,
+          4,
+          0
+        ],
+        "active_control_base": 4160,
+        "active_covered": [
+          0,
+          0,
+          0,
+          0,
+          4,
+          0,
+          4,
+          0,
+          0,
+          0,
+          0
+        ],
+        "active_covered_requests": 20384,
+        "active_decoder_request_base": 256,
+        "all_idle_scopes_restored": true,
+        "closed_phase_rejected": true,
+        "debt0": true,
+        "exclusive_work_slot_domain": false,
+        "global_work_slots_active": 5,
+        "global_work_slots_after": 0,
+        "idle_additional": 3168,
+        "idle_blocks": [
+          5,
+          0,
+          1,
+          0,
+          4,
+          0,
+          0,
+          1,
+          1,
+          4,
+          0
+        ],
+        "idle_covered_requests": 160,
+        "idle_decoder_request_base": 0,
+        "missing_epoch_profile_domain_alias_controls": true,
+        "mode": 2,
+        "outcomes_correct": true,
+        "participant_count": 5,
+        "passive_query_ok": true,
+        "post_task_additional": 1440,
+        "post_task_blocks": [
+          5,
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0
+        ],
+        "post_task_covered_requests": 0,
+        "post_task_sources_clear": true,
+        "workers": 4
+      }
+    ],
+    "fresh_no_world_initialization_queries": 4,
+    "observer_inline": 8,
+    "ordinary_refusal_available": false,
+    "pipeline_holder_inline": 1968,
+    "schema": "allocator-worker-threads.v1",
+    "scope": "Real pipeline full-pool owner-thread snapshots;only plain identity packets cross the barrier. One open source phase required. Opaque control requests and decoder request base recorded separately;no whole process/CRT/GPU/full S6 verdict.",
+    "source_widths": [
+      264,
+      208,
+      48,
+      24,
+      40,
+      5040,
+      5056,
+      48,
+      24,
+      432,
+      48
+    ],
+    "status": "PASS",
+    "workers": 4
+  },
+  "native_unit_source_parity": true,
+  "inline": {
+    "additional_static": 248795,
+    "additional_tls": 21768,
+    "allocation_free_under_persistent_refusal": true,
+    "base_named_static": 61403,
+    "base_named_tls": 243016,
+    "e11_reader_threads": 1,
+    "e11_readers_once": true,
+    "joined_named_inline": 574982,
+    "no_owner_pin_counter_changes": true,
+    "pipeline_children": [
+      332,
+      104,
+      8,
+      1504,
+      8
+    ],
+    "pipeline_whole": 1968,
+    "population_clocks": 16,
+    "population_globals": 248240,
+    "present": 4194303,
+    "schema": "runtime-inline-source.v1",
+    "scope": "Compiled core named fixed/TLS rows (see widths);whole optional pipeline holder once and explicit E11 overlap. No dynamic contents,compiler guards/TLS alignment/loader,renderer/window TLS,logger destinations/CRT/GPU/process or full S6 matrix verdict.",
+    "source_os_threads": 8,
+    "status": "PASS",
+    "unknown_missing_zero_overcoverage_overflow_controls": true,
+    "whole_parent_once": true,
+    "widths": [
+      82,
+      248240,
+      192,
+      280,
+      1,
+      1968,
+      16,
+      160,
+      108,
+      32,
+      32,
+      16,
+      16,
+      8,
+      80,
+      8,
+      8,
+      225,
+      8,
+      24,
+      24,
+      8
+    ]
+  },
+  "native_selected_menu": {
+    "additional_requests": 264,
+    "aliases": 1,
+    "blocks": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "calling_pipeline_builds": 0,
+    "calling_pipeline_initialized": false,
+    "covered": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "covered_requests": 0,
+    "overflow": false,
+    "schema": "allocator-owner-selected-runtime.v1",
+    "scope": "Actual supplied E11 worlds/managers/free-list/schedulers/completed-buffer and direct calling-thread allocator slots;ordinary main-world field source profile. Active worker/caller/TLS scratch/weak-only external source views and total process coverage remain separate. Inspector owns no strong/weak source mirrors.",
+    "status": "PASS",
+    "unknown": 0,
+    "weak_only": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "whole_runtime_complete": false
+  },
+  "native_selected_game": {
+    "additional_requests": 4944888,
+    "aliases": 998,
+    "blocks": [
+      2,
+      0,
+      1,
+      0,
+      4,
+      981,
+      0,
+      1,
+      1,
+      0,
+      4
+    ],
+    "calling_pipeline_builds": 0,
+    "calling_pipeline_initialized": false,
+    "covered": [
+      0,
+      0,
+      0,
+      0,
+      4,
+      0,
+      0,
+      0,
+      0,
+      0,
+      4
+    ],
+    "covered_requests": 352,
+    "overflow": false,
+    "schema": "allocator-owner-selected-runtime.v1",
+    "scope": "Actual supplied E11 worlds/managers/free-list/schedulers/completed-buffer and direct calling-thread allocator slots;ordinary main-world field source profile. Active worker/caller/TLS scratch/weak-only external source views and total process coverage remain separate. Inspector owns no strong/weak source mirrors.",
+    "status": "PASS",
+    "unknown": 0,
+    "weak_only": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "whole_runtime_complete": false
+  },
+  "unit_runs": [
+    {
+      "name": "worker-threads",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--allocator-workers",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-worker-threads.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.14187070005573332,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-worker-threads.log"
+    },
+    {
+      "name": "owner-census",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\allocator_owner_source_test.exe",
+        "--census",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-owner-census.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.015622800216078758,
+      "exe_sha256": "0275178a67915e8c4b51da32706e125a9b8f689398e70837e8476e29e8ae019c",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-owner-census.log"
+    },
+    {
+      "name": "owner-graph",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--allocator-graph",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-owner-graph.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01099950005300343,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-owner-graph.log"
+    },
+    {
+      "name": "allocator-owner",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\allocator_owner_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-allocator-owner.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.009804599918425083,
+      "exe_sha256": "0275178a67915e8c4b51da32706e125a9b8f689398e70837e8476e29e8ae019c",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-allocator-owner.log"
+    },
+    {
+      "name": "control-refusal",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--control-refusal",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-control-refusal.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.012017600005492568,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-control-refusal.log"
+    },
+    {
+      "name": "job-admission",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\job_admission_lifetime_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.016255900030955672,
+      "exe_sha256": "29ff3414a5a4d09093f8318974be0fcb28910bf4f5d94373bea04edd113ff525",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-job-admission.log"
+    },
+    {
+      "name": "field-ownership",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\section_light_field_ownership_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.016192400129511952,
+      "exe_sha256": "f2660be4c2e9ea36220312c358aef5ee8c01cb2b744682140388273ae9df8010",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-field-ownership.log"
+    },
+    {
+      "name": "stbi-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--all",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-stbi-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.23155690007843077,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-stbi-source.log"
+    },
+    {
+      "name": "stbi-conversion-range",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\stbi_source_envelope_test.exe",
+        "--conversion-range",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-stbi-conversion-range.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.009928700048476458,
+      "exe_sha256": "94bf454014c9055b61d9831f6545005e0189caa5e6cb4dc053a1d5b7d51cca23",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-stbi-conversion-range.log"
+    },
+    {
+      "name": "glog-resources",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--resources",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-glog-resources.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.02089080004952848,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-glog-resources.log"
+    },
+    {
+      "name": "runtime-inline",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\runtime_inline_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-runtime-inline.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.015778900124132633,
+      "exe_sha256": "3c7732073e82b0959a25bf82e18b1eac87052b0d480d44d14affd6c57f642e3e",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-runtime-inline.log"
+    },
+    {
+      "name": "noise-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_storage_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-noise-storage.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.0532712999265641,
+      "exe_sha256": "30b9a1e681370c90c0a65972f7ba4aff560bc00b9803df996b00e11c8fc0abdf",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-noise-storage.log"
+    },
+    {
+      "name": "noise-legacy",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_permutation_cache_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.014639100059866905,
+      "exe_sha256": "e353496aaef48c911157894dff64dba29796364fb2972c93f02d8c79b664cc1a",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-noise-legacy.log"
+    },
+    {
+      "name": "glog-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--source-profile",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-glog-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.01648030010983348,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-glog-source.log"
+    },
+    {
+      "name": "weak-shell",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--pipeline-weak-shells",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-weak-shell.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.028151800157502294,
+      "exe_sha256": "c769f69c0cd4ce82125f1ab553f8cfe41fe3e501a18ac217977f4667cf74c767",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-weak-shell.log"
+    },
+    {
+      "name": "actual-tls",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "seconds": 0.13833740004338324,
+      "exe_sha256": "7baa772e5dbccd59bab5e1940f1f3ddeced23d5399ed99b45b196070e50aa2c0",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-actual-tls.log"
+    },
+    {
+      "name": "logger",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-logger.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.025431400164961815,
+      "exe_sha256": "48c29be36668e85612cc8d70c480a198805d147b61f71ba01cbcf5d4f665dbe6",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-logger.log"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-pack.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.9091877001337707,
+      "exe_sha256": "c769f69c0cd4ce82125f1ab553f8cfe41fe3e501a18ac217977f4667cf74c767",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-pack.log"
+    },
+    {
+      "name": "settings",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-settings.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.21353970002382994,
+      "exe_sha256": "c769f69c0cd4ce82125f1ab553f8cfe41fe3e501a18ac217977f4667cf74c767",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-settings.log"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-prefab.json"
+      ],
+      "returncode": 0,
+      "seconds": 1.8243084999267012,
+      "exe_sha256": "be3e71b368d464caf5e2274139c9d505c72b88caaf83c188bbf3e33a6631429b",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-prefab.log"
+    },
+    {
+      "name": "cpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-cpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.06865629996173084,
+      "exe_sha256": "c769f69c0cd4ce82125f1ab553f8cfe41fe3e501a18ac217977f4667cf74c767",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-cpu-texture.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.013777399901300669,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-runtime-domain.log"
+    },
+    {
+      "name": "worker",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-worker.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.12039230018854141,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-worker.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.011365399928763509,
+      "exe_sha256": "543c5d4c6e546cfc7b16a58a977653d1d927d5a8e7dd02c666e190f014501277",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-cooperative.log"
+    },
+    {
+      "name": "mesh-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-mesh-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.08708570012822747,
+      "exe_sha256": "6de87c5bf57e3ebac220aab25b64efcff64b4f18da91d465daa6be10e7639364",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-mesh-queues.log"
+    },
+    {
+      "name": "relight-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-relight-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.018578700022771955,
+      "exe_sha256": "baed2bd103d4cc6216c7a9cb494ca1d90d067689a96f54662feb5183d78e1db8",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-relight-queues.log"
+    },
+    {
+      "name": "relight-lifecycle",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.015177099965512753,
+      "exe_sha256": "baed2bd103d4cc6216c7a9cb494ca1d90d067689a96f54662feb5183d78e1db8",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-relight-lifecycle.log"
+    },
+    {
+      "name": "publication-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-publication-cpu.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.07540220022201538,
+      "exe_sha256": "6de87c5bf57e3ebac220aab25b64efcff64b4f18da91d465daa6be10e7639364",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-publication-cpu.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-allocator-workers-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.225578400073573,
+      "exe_sha256": "6de87c5bf57e3ebac220aab25b64efcff64b4f18da91d465daa6be10e7639364",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-publication-gl.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 3.8254106000531465,
+      "exe_sha256": "6de87c5bf57e3ebac220aab25b64efcff64b4f18da91d465daa6be10e7639364",
+      "log": "build\\desktop-msvc\\s4-allocator-workers-regression-decor-full.log"
+    }
+  ],
+  "source_sha256_raw": {
+    "CMakeLists.txt": "0aad45d9618dfb4260822c7e5e7340e30e826c7b3973274066924f731797eb71",
+    "src/Core/Memory/BufferAllocationBudget.h": "13860a867aa6a0c152b0b769e01fc2bd2a7c931e8039fcb1615b9e1e1cc54ccb",
+    "src/Core/Memory/RuntimeInlineSource.h": "524ff00585eaa0da39c91bae92feb9d60216c6513279632018e72e8fa9e3a210",
+    "src/Core/Memory/AllocatorSourcePacket.h": "5cdf4bb3311b7a9566503b639e3b2154e8d5f85942fdd89e30b40474b1bd1b36",
+    "src/World/Chunks/ChunkLoadScheduler.cpp": "f3d33b274a6cc2f1758f50bba26f2d9d48751f01f9cfb2a85920766a66e3e04a",
+    "src/WorldGen/Core/AllocatorOwnerCensus.h": "c923ffc4c1575d9150a46c4da9d11b3082e0edf64d52a51419318b9a81871f47",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "dbcc8354c41e5090e9d0453f1f6860887ce5d7d09ab3f3e54443d591faee5e23",
+    "src/WorldGen/Core/PipelineAllocatorThreadView.h": "af72a4a0523c8b46589bc01721fd3204da22a0868678305cb651ee3795733622",
+    "src/WorldGen/Core/PopulationAllocatorObserver.h": "2381f718b1ea02886c4b51b395a828f791c2d17871bbfb300aa47e143353b5db",
+    "src/WorldGen/Core/RuntimeCoreInlineLayout.h": "04d83f06892832554f4b37e0ece7d30cae3d9557a6301a4d5cea2bd140e7c3cb",
+    "src/Test/AllocatorWorkerThreadFixture.h": "1967de3d681046ddc7bb057bf0b1d204c8551c535f3097760ba18b01f4859e6d",
+    "src/Test/CatalogWorkerRetirementTest.cpp": "787fc19545901865a84796f23e069e8d24a0381a9cd2e6a879d5a80f6da53351",
+    "src/Test/RuntimeInlineSourceTest.cpp": "204efac6e868325d55a2fcba5691355bc08365348792fa7432230711a85c06fe",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "3664b2558c8e9c2c615043c6157d381afc4b5606700cb2227060e2b5e5ae5710",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "020fb9aec89de804175b35d4e7609708cd35299054b6143d6b41747f53118b9d"
+  },
+  "frozen_source_sha256": "ef31c4a4652d4fe390f3de4872db096b85ceead3f13c99e4b130371b91107c37",
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\type_vec3.hpp": "d9be575fe520dcbb068188144e0bba0a4197aefe142b42f8fc8496c328875649",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\setup.hpp": "78c7278cc214b6ce75c5648f5afc65dd36488bf65abfd6aac8171b0439e98a10",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\vec3.hpp": "d97ddb71ad02da39a4ac96670d4fe792264a8ec2e19477f60d7c245ae1a301b4",
+    "C:/Projects/Cubatarium/build/desktop-msvc/_deps/cubatarium_glog-build/Release/glog.lib": "9cfd622423f45874057b8b5c7460c7ee75ec5abbcf8fdca96d93259f6dc26a1a",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\base\\commandlineflags.h": "258d5b9aaa581a8fce458610e043388e4a4a79467989f4887dee7fcba5f0cc9d",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\_deps\\cubatarium_glog-src\\src\\flags.cc": "60a30c5b166f4729b6244fdb1b6484f2377707fcbe324d5dfe5199efb97f51a0"
+  },
+  "glog_identity_receipt": "build/desktop-msvc/s4-glog-resources-source-identity.json",
+  "provenance": "build/desktop-msvc/s4-allocator-workers-provenance3.json",
+  "desktop_exe_sha256": "ec4bdbcf55fc63ffe59815ec03f7b7e6ffec2685a66267a46b51d911819d376a",
+  "initial_native_domain_observation": {
+    "allocator_owner_graph": {
+      "active_worker_view_missing_rejected": true,
+      "aliases64_deduplicated": true,
+      "applied_additional": 10728,
+      "applied_blocks": [
+        2,
+        0,
+        1,
+        0,
+        0,
+        2,
+        0,
+        1,
+        1,
+        0,
+        0
+      ],
+      "completed_additional": 10728,
+      "completed_blocks": [
+        2,
+        0,
+        1,
+        0,
+        1,
+        2,
+        0,
+        1,
+        1,
+        0,
+        1
+      ],
+      "completed_covered": 88,
+      "free_list_and_air_fields": 2,
+      "job_and_result_retired": true,
+      "moved_from_allocator_resource_counted": true,
+      "queued_additional": 11160,
+      "queued_blocks": [
+        2,
+        0,
+        1,
+        0,
+        0,
+        2,
+        0,
+        1,
+        1,
+        1,
+        0
+      ],
+      "schema": "allocator-owner-graph.v1",
+      "scope": "Actual stable manager/free-list/queued/completed/buffer/scheduler source graph. Active worker and foreign/caller/TLS escapes require separate complete source views.",
+      "scratch_additional": 840,
+      "scratch_blocks": [
+        3,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "scratch_covered": 5096,
+      "scratch_credit_unchanged_by_query": true,
+      "scratch_retired": true,
+      "settings_owner_deduplicated": true,
+      "status": "PASS"
+    },
+    "cases": [],
+    "error": "allocator worker source view: {\"active_blocks\":[9,4,1,0,4,0,4,1,1,4,0],\"active_supported\":true,\"allocator_worker_mode\":0,\"debt0\":false,\"idle_blocks\":[5,0,1,0,4,0,0,1,1,4,0],\"idle_clean\":true,\"idle_supported\":true,\"main_packet\":true,\"outcomes\":true,\"passive\":true,\"worker_packets\":[true,true,true,true]}",
+    "schema": "terrain-save-failure-native.v1",
+    "scope": "Actual isolated UWorld cooperative saves, Core full-save facade and WorldOperationRunner; no application menu/error rendering or autosave scheduler acceptance",
+    "status": "FAIL"
+  },
+  "initial_native_exe_sha256": "16c93ddfb3e97e195f678dd6d0c4299877c5936cbe3c11552ba027a5952730dc",
+  "initial_native_exe": "build/desktop-msvc/s4-allocator-workers-native2-before.exe",
+  "native": {
+    "artifact": "build/desktop-msvc/s4-allocator-workers-native3",
+    "runtime": "PASS",
+    "startup": "PASS",
+    "catalog_owner_domain": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "provenance": "PASS",
+    "texture_GL_readbacks": 8,
+    "publication_GL_readbacks": 2,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  },
+  "acceptance_boundary": [
+    "Plain identity packets are valid only while every producer source stays stable in one open,unique epoch. Close before release;no late address-identity reuse acceptance.",
+    "Actual factory source profiles exclude arbitrary aliasing/custom allocation origins. Expired weak controls need separate source identities;export without a live identity is unsupported.",
+    "Post-population view precedes budget-job scope exit;separate post-task visitor verifies TLS restoration after scope/callable retirement. Diagnostics run on the actual owning workers.",
+    "Pre-reserved source walks/exports are checked under ordinary-new refusal in unit only;joining packets/vector scratch may allocate and has separate temporary diagnostic storage.",
+    "Global work-slot zero is an isolated-unit assertion. Native records concurrent gameplay slots independently and requires cohort control/result/buffer retirement;whole global domain acceptance remains OPEN.",
+    "Selected scheduler+worker source cohort only,not target-world/pipeline object/cache payloads/all pools/OS threads/CRT/GPU/process or full S6 matrix. Native aggregate remains UNTESTED."
+  ]
+}

@@ -543,7 +543,8 @@ bool UChunkLoadScheduler::ScheduleWorker(
             generation_start_cap_per_frame;
         try {
           UBufferBudgetScope budget_scope({buffer_budget,std::allocate_shared<BufferBudgetJob>(
-              USharedCountingAllocator<BufferBudgetJob>{control_memory})});
+              USharedCountingAllocator<BufferBudgetJob>{control_memory})},
+              {&control_memory,&worker_input.owner,BufferJobSourceProfile::Counted,true});
           pending.result = Populator.Populate(populateRequest);
         } catch(const UBufferBudgetExceeded &) {
           pending.result.coord=populateRequest.chunkCoord;

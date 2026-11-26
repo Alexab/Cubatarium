@@ -64,6 +64,17 @@ struct BufferBudgetContext
   std::shared_ptr<UBufferAllocationBudget> budget;
   std::shared_ptr<BufferBudgetJob> job;
 };
+class UConcurrentAllocationCountingResource;
+enum class BufferJobSourceProfile:uint8_t {Unknown,Default,Counted};
+// Borrowed owner-thread source slots. The enclosing scope/callable outlives
+// this descriptor;it never adds an allocator or settings owner.
+struct BufferBudgetJobSource {
+  const std::shared_ptr<UConcurrentAllocationCountingResource> *origin{};
+  const void *scheduler_settings_slot{};
+  BufferJobSourceProfile profile{BufferJobSourceProfile::Unknown};
+  bool requests_covered{};
+};
+inline thread_local BufferBudgetJobSource ActiveBufferBudgetJobSource;
 // Named forms of the population resource callbacks keep their concrete
 // storage and retained budget/job ownership available to the source model.
 struct BufferBudgetReserveCallback {
@@ -78,13 +89,15 @@ inline thread_local BufferBudgetContext ActiveBufferBudget;
 class UBufferBudgetScope
 {
 public:
-  explicit UBufferBudgetScope(BufferBudgetContext context) : Previous(std::move(ActiveBufferBudget))
-  { ActiveBufferBudget=std::move(context); }
-  ~UBufferBudgetScope() { ActiveBufferBudget=std::move(Previous); }
+  explicit UBufferBudgetScope(BufferBudgetContext context,BufferBudgetJobSource source={})
+      : Previous(std::move(ActiveBufferBudget)),PreviousSource(ActiveBufferBudgetJobSource)
+  { ActiveBufferBudget=std::move(context);ActiveBufferBudgetJobSource=source; }
+  ~UBufferBudgetScope() { ActiveBufferBudget=std::move(Previous);ActiveBufferBudgetJobSource=PreviousSource; }
   UBufferBudgetScope(const UBufferBudgetScope &)=delete;
   UBufferBudgetScope &operator=(const UBufferBudgetScope &)=delete;
 private:
   BufferBudgetContext Previous;
+  BufferBudgetJobSource PreviousSource;
 };
 
 // Each buffer reserves node/bucket credit in bounded chunks to avoid a shared
