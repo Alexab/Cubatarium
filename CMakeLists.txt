@@ -138,7 +138,11 @@ if(NOT ANDROID)
     find_package(GLEW REQUIRED)
     find_package(Freetype REQUIRED)
     find_package(nlohmann_json REQUIRED)
-    find_package(glog CONFIG REQUIRED)
+    if(CUBATARIUM_MSVC_DESKTOP)
+        include(cmake/CubatariumGlog.cmake)
+    else()
+        find_package(glog CONFIG REQUIRED)
+    endif()
     # vcpkg glog exports /Zc:__cplusplus for MSVC ABI; clang++ (GNU driver) rejects it.
     if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
        AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
@@ -2105,6 +2109,16 @@ cubatarium_add_test(NAME async_relight_lifecycle_test
         src/Test/AsyncRelightLifecycleTest.cpp
     DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
     LIBRARIES glm::glm nlohmann_json::nlohmann_json)
+
+if(CUBATARIUM_MSVC_DESKTOP)
+  cubatarium_add_test(NAME log_allocation_lifecycle_test
+      SOURCES src/App/Platform/Log.cpp src/App/Platform/WorkerJobKind.cpp src/Test/LogAllocationLifecycleTest.cpp
+      LIBRARIES glog::glog nlohmann_json::nlohmann_json
+      WIN32_LIBRARIES dbghelp)
+  add_test(NAME log_allocation_lifecycle_test COMMAND $<TARGET_FILE:log_allocation_lifecycle_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/log-allocation-lifecycle.json)
+  set_tests_properties(log_allocation_lifecycle_test PROPERTIES LABELS "integration;memory;logging" TIMEOUT 120)
+endif()
 add_test(NAME async_relight_lifecycle_test
     COMMAND $<TARGET_FILE:async_relight_lifecycle_test>)
 set_tests_properties(async_relight_lifecycle_test PROPERTIES TIMEOUT 20)
