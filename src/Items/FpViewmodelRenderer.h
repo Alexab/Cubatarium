@@ -110,6 +110,7 @@ public:
 
   bool Initialize();
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectPreviewGpuBuffers(class TerrainGpuBufferCensus &out) const;
   static void InspectLegacyVisualAssets(VisualAssetCensus &census);
   void Shutdown();
 

@@ -35,6 +35,7 @@ public:
   bool BlocksGameInput() const override { return true; }
   void InspectVisualAssets(VisualAssetCensus &census) const;
   void InspectRenderImages(class RenderImageCensus &out) const;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   bool WantsClose() const { return CloseRequested; }
   void SelectItem(const std::string &id);
   void SetMode(int mode);

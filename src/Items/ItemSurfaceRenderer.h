@@ -65,6 +65,7 @@ public:
   bool Initialize(UShaderManager &manager);
   void Clear();
   ItemSurfaceRendererStorage InspectOwnedStorage() const noexcept;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
   void InspectVisualAssets(VisualAssetCensus &census, VisualAssetOwner owner) const;
   /// Number of nonempty primitive draw calls actually issued.
   size_t Draw(const std::shared_ptr<const ItemRenderAsset> &asset,

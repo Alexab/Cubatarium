@@ -42,6 +42,8 @@ public:
   ~UItemLabSceneRenderer();
   void Invalidate();
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectRenderImages(class RenderImageCensus &out) const;
   size_t DrawCount() const { return LastDrawCount; }
   bool SourceMatches() const { return LastSourceMatches; }
   bool BowSupportContact() const { return LastBowSupportContact; }

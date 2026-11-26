@@ -2,6 +2,7 @@
 #include "Core/Memory/VisualAssetCensus.h"
 
 #include "Items/ItemGltfTextureCache.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Core/Memory/StlSourceStorage.h"
 #include "Render/Engine/ShaderManager.h"
 #include "Render/GlIncludes.h"
@@ -47,6 +48,15 @@ void ItemSurfaceRenderer::InspectVisualAssets(VisualAssetCensus &census, VisualA
 {
   for (const auto &entry : Geometry)
     census.Add(entry.second.Asset, owner);
+}
+
+void ItemSurfaceRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  for (const auto &entry : Geometry)
+  {
+    out.Add(TerrainGpuBufferRole::PreviewSurfaceVertices, entry.second.GeometryBuffer.Vbo);
+    out.Add(TerrainGpuBufferRole::PreviewSurfaceIndices, entry.second.GeometryBuffer.Ebo);
+  }
 }
 
 ItemSurfaceRendererStorage ItemSurfaceRenderer::InspectOwnedStorage() const noexcept

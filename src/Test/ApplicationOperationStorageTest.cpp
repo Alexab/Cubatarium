@@ -6,6 +6,7 @@
 #include "Test/ApplicationOperationStorageFixture.h"
 #include "Test/GuiContextStorageFixture.h"
 #include "Test/GuiGpuStorageFixture.h"
+#include "Test/PreviewGpuStorageFixture.h"
 #include "Test/MainMenuStorageFixture.h"
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
@@ -502,6 +503,7 @@ int main(int argc,char **argv){
     report["worldgen_palette_owner"]=worldgen_palette_storage_fixture::RunOwnerCensus();
     report["worldgen_palette_compact"]=worldgen_palette_storage_fixture::RunCompactLayout();
     report["content_preview_owner"]=shared_content_preview_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
+    report["preview_gpu_storage"]=preview_gpu_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["object_icon_owner"]=object_icon_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["inventory_icon_service_owner"]=inventory_icon_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
     report["inventory_icon_codec_owner"]=inventory_icon_codec_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");

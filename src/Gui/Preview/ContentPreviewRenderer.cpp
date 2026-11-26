@@ -97,6 +97,15 @@ void UContentPreviewRenderer::InspectRenderImages(RenderImageCensus &out) const
     ItemPreview->InspectRenderImages(out);
 }
 
+void UContentPreviewRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  Cube.InspectGpuBuffers(out);
+  if (Creatures)
+    Creatures->InspectGpuBuffers(out);
+  if (ItemPreview)
+    ItemPreview->InspectGpuBuffers(out);
+}
+
 ContentPreviewRendererStorage UContentPreviewRenderer::InspectOwnedStorage(
     const UObjectLibrary *objects, const UTextureCubeStorage *textures,
     const UBlockDefinitionStorage *blocks, const UShaderManager *shaders,

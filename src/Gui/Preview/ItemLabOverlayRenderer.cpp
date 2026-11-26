@@ -1,11 +1,13 @@
 #include "Gui/Preview/ItemLabOverlayRenderer.h"
 #include "Items/ItemGltfTextureCache.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include <cmath>
 #include <cstddef>
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 #include <set>
 #include <stdexcept>
 
@@ -23,6 +25,12 @@ UItemLabOverlayRenderer::UItemLabOverlayRenderer(UShaderManager &shaders)
   glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous);
   glGenVertexArrays(1, &Vao);
   glGenBuffers(1, &Vbo);
+  if (!Vao || !Vbo)
+  {
+    glDeleteVertexArrays(1, &Vao);
+    glDeleteBuffers(1, &Vbo);
+    throw std::runtime_error("Cannot allocate Item Lab diagnostics buffers");
+  }
   glBindVertexArray(Vao);
   glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   const size_t offsets[] = {offsetof(Vertex, Position), offsetof(Vertex, Color),
@@ -38,15 +46,22 @@ UItemLabOverlayRenderer::UItemLabOverlayRenderer(UShaderManager &shaders)
 }
 UItemLabOverlayRenderer::~UItemLabOverlayRenderer()
 {
-  glDeleteBuffers(1, &Vbo);
   glDeleteVertexArrays(1, &Vao);
+  glDeleteBuffers(1, &Vbo);
 }
-void UItemLabOverlayRenderer::Draw(const std::vector<Vertex> &vertices,
+void UItemLabOverlayRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::PreviewOverlay, Vbo);
+}
+bool UItemLabOverlayRenderer::Draw(const std::vector<Vertex> &vertices,
                                    unsigned mode, const glm::mat4 &matrix,
                                    unsigned texture)
 {
   if (vertices.empty())
-    return;
+    return true;
+  if (vertices.size() > static_cast<size_t>(std::numeric_limits<GLsizei>::max()) ||
+      vertices.size() > static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()) / sizeof(Vertex))
+    return false;
   GLint previous = 0;
   glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous);
   glDisable(GL_DEPTH_TEST);
@@ -62,17 +77,20 @@ void UItemLabOverlayRenderer::Draw(const std::vector<Vertex> &vertices,
   glBindBuffer(GL_ARRAY_BUFFER, Vbo);
   glBufferData(GL_ARRAY_BUFFER, GLsizeiptr(vertices.size() * sizeof(Vertex)),
                vertices.data(), GL_STREAM_DRAW);
-  glDrawArrays(mode, 0, GLsizei(vertices.size()));
+  const bool uploaded = glGetError() == GL_NO_ERROR;
+  if (uploaded)
+    glDrawArrays(mode, 0, GLsizei(vertices.size()));
   glBindBuffer(GL_ARRAY_BUFFER, unsigned(previous));
+  return uploaded;
 }
-void UItemLabOverlayRenderer::Lines(const std::vector<ItemLabLineVertex> &lines,
+bool UItemLabOverlayRenderer::Lines(const std::vector<ItemLabLineVertex> &lines,
                                     const glm::mat4 &matrix)
 {
   std::vector<Vertex> vertices;
   vertices.reserve(lines.size());
   for (const auto &line : lines)
     vertices.push_back({line.Position, line.Color, {0, 0}});
-  Draw(vertices, GL_LINES, matrix);
+  return Draw(vertices, GL_LINES, matrix);
 }
 size_t UItemLabOverlayRenderer::DrawContacts(const ItemRenderAsset &asset,
                                              const ItemVisualState &state,
@@ -81,8 +99,7 @@ size_t UItemLabOverlayRenderer::DrawContacts(const ItemRenderAsset &asset,
 {
   UGlStateScope scope(kGlMaskIconFbo);
   const auto lines = ItemLabContactLines(asset, state, physicalSize);
-  Lines(lines, mvp);
-  return lines.size();
+  return Lines(lines, mvp) ? lines.size() : 0;
 }
 size_t UItemLabOverlayRenderer::DrawUvTiles(const ItemRenderAsset &asset)
 {
@@ -132,9 +149,11 @@ size_t UItemLabOverlayRenderer::DrawUvTiles(const ItemRenderAsset &asset)
     for (const auto &uv : {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1),
                            glm::vec2(0, 0), glm::vec2(1, 1), glm::vec2(0, 1)})
       quad.push_back({{uv, 0}, {1, 1, 1, 1}, uv});
-    Draw(quad, GL_TRIANGLES, matrix, texture);
+    if (!Draw(quad, GL_TRIANGLES, matrix, texture))
+      return 0;
     const auto lines = ItemLabUvLines(asset, path);
-    Lines(lines, matrix);
+    if (!Lines(lines, matrix))
+      return 0;
     lineVertices += lines.size();
     ++tile;
   }

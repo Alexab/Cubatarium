@@ -39,6 +39,7 @@
 #include "Pose/BoneSkeleton/BoneSkeletonPoseEngine.h"
 #include "Pose/CreaturePosePresenterRegistry.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/RenderImageStorage.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "Render/Textures/GlTextureOwner.h"
@@ -123,6 +124,20 @@ void UCreaturePreviewRenderer::InspectVisualAssets(VisualAssetCensus &census) co
     census.Add(entry.second.asset, VisualAssetOwner::Preview);
   if (ItemRenderer)
     ItemRenderer->InspectVisualAssets(census, VisualAssetOwner::Preview);
+}
+
+void UCreaturePreviewRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  for (const auto *mesh : {&Cube, &HeadCube, &BodyCube, &RigidHeadCube})
+    mesh->InspectGpuBuffers(out);
+  if (ItemRenderer)
+    ItemRenderer->InspectGpuBuffers(out);
+}
+
+void UCreaturePreviewRenderer::InspectRenderImages(RenderImageCensus &out) const
+{
+  out.Add(RenderImageRole::CreaturePreviewColor, GL_TEXTURE_2D, Target.Color);
+  out.Add(RenderImageRole::CreaturePreviewDepth, GL_RENDERBUFFER, Target.Depth);
 }
 
 PreviewRendererStorage UCreaturePreviewRenderer::InspectOwnedStorage(

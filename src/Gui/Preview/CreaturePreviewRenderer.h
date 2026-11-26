@@ -28,6 +28,7 @@ class USkinDefinitionStorage;
 class UCreatureTextureStorage;
 class UShaderManager;
 class ItemSurfaceRenderer;
+class RenderImageCensus;
 class IUCreatureVisual;
 struct ItemDrawRequest;
 struct ItemVisualInputs;
@@ -49,6 +50,8 @@ public:
       std::shared_ptr<UCreatureTextureStorage> textures,
       std::shared_ptr<UShaderManager> shaderManager);
   void InspectVisualAssets(VisualAssetCensus &census) const;
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const;
+  void InspectRenderImages(RenderImageCensus &out) const;
   PreviewRendererStorage InspectOwnedStorage(const UCreatureDefinitionStorage *species,
       const USkinDefinitionStorage *skins, const UCreatureTextureStorage *textures,
       const UShaderManager *shaders) const noexcept;

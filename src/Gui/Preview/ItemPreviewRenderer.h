@@ -39,6 +39,7 @@ public:
       std::shared_ptr<UShaderManager> shaders);
   void InspectVisualAssets(VisualAssetCensus &census) const;
   void InspectRenderImages(class RenderImageCensus &out) const;
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const;
   PreviewRendererStorage InspectOwnedStorage(const UItemDefinitionStorage *items,
       const UShaderManager *shaders) const noexcept;
 

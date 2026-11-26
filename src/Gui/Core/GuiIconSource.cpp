@@ -45,6 +45,8 @@ void UGuiIconSource::InspectRenderImages(RenderImageCensus &out) const
   {
     textures(CreatureCache->SpeciesCache, Role::CreatureIcon);
     textures(CreatureCache->SkinCache, Role::SkinIcon);
+    if (CreatureCache->Preview)
+      CreatureCache->Preview->InspectRenderImages(out);
   }
   if (ItemCache)
   {
@@ -52,6 +54,16 @@ void UGuiIconSource::InspectRenderImages(RenderImageCensus &out) const
     if (ItemCache->ItemPreview)
       ItemCache->ItemPreview->InspectRenderImages(out);
   }
+}
+
+void UGuiIconSource::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (ObjectCache)
+    ObjectCache->Cube.InspectGpuBuffers(out);
+  if (CreatureCache && CreatureCache->Preview)
+    CreatureCache->Preview->InspectGpuBuffers(out);
+  if (ItemCache && ItemCache->ItemPreview)
+    ItemCache->ItemPreview->InspectGpuBuffers(out);
 }
 
 GLuint UGuiIconSource::GetBlockIconTexture(const std::string &blockName)

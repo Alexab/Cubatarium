@@ -1,0 +1,940 @@
+{
+  "schema": "s4-e12-w64-preview-gpu-storage.v1",
+  "status": "SCOPED_PREVIEW_GPU_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "e662d1f1f94ab2e56090d4635580e8e0d602f7ee",
+  "prior_certificate": "S4_02_E12_W63_GUI_GPU_STORAGE_CERTIFICATE_2026_11_27.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W64 observes shared content, item, creature and object-icon cube buffers, legacy item scratch buffers, authored item surfaces, and Item Lab overlay and viewmodel buffers. Multiple application and icon references to shared draws count one set of GL names. The existing terrain and GUI reports keep their prior roles. A real driver fixture measures legacy scratch growth and shrinking, verifies that a rejected same-size transfer skips drawing from the old store, and retries the same input. The overlay rejects a failed upload, and short-lived VAO and buffer ownership retires with the screen. The native Item Lab opens through the application, draws a published item and its contacts, then retires every captured local buffer and image. All 46 Release groups and scoped Flat and Full startup pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W64. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. Next, quantify simultaneous old and candidate color and depth stores during PreviewRenderTarget resize, the temporary unique color attachment, and the inventory icon pixel-pack buffers while live. Measure candidate, rollback and retirement checkpoints against the existing target and readback fixtures. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Selected live desktop GL preview buffer stores and target images, including the native Item Lab lifetime",
+  "composition_rule": "Count logical buffer stores and image levels once per live name and namespace. Candidate image overlap, pixel-pack buffer publication overlap, driver-held retired stores, and whole-process composition remain open.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix"
+  ],
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glBufferData.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetBufferParameter.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glDeleteBuffers.xml"
+  ],
+  "preview_fixture": {
+    "caller_bindings_preserved": true,
+    "contact_vertices": 36,
+    "grown": {
+      "failed_queries": 0,
+      "logical_bytes": 728,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 24,
+          "objects": 1
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 80,
+          "objects": 1
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 4,
+      "whole_runtime_complete": false
+    },
+    "invalidated": {
+      "failed_queries": 0,
+      "logical_bytes": 624,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 2,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 2,
+      "whole_runtime_complete": false
+    },
+    "overlay_bytes": 1296,
+    "retirement_and_external_output": true,
+    "same_size_refusal_retried": true,
+    "status": "PASS",
+    "surface_bytes": [
+      11008,
+      2352
+    ],
+    "triangle": {
+      "failed_queries": 0,
+      "logical_bytes": 696,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 4,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 12,
+          "objects": 1
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 60,
+          "objects": 1
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 4,
+      "whole_runtime_complete": false
+    },
+    "with_surface": {
+      "failed_queries": 0,
+      "logical_bytes": 14056,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 6,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 12,
+          "objects": 1
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 60,
+          "objects": 1
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 2352,
+          "objects": 1
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 11008,
+          "objects": 1
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 6,
+      "whole_runtime_complete": false
+    }
+  },
+  "item_lab_native": {
+    "baseline": {
+      "failed_queries": 0,
+      "logical_bytes": 23728,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 38,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 1008,
+          "objects": 7
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 3360,
+          "objects": 7
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 3360,
+          "objects": 1
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 16000,
+          "objects": 1
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 16,
+      "whole_runtime_complete": false
+    },
+    "closed": {
+      "failed_queries": 0,
+      "logical_bytes": 23728,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 38,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 1008,
+          "objects": 7
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 3360,
+          "objects": 7
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 3360,
+          "objects": 1
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 16000,
+          "objects": 1
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 16,
+      "whole_runtime_complete": false
+    },
+    "contact_vertices": 60,
+    "contacts": {
+      "failed_queries": 0,
+      "logical_bytes": 45776,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 55,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 1728,
+          "objects": 12
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 5760,
+          "objects": 12
+        },
+        "preview_overlay": {
+          "logical_bytes": 1296,
+          "objects": 1
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 6288,
+          "objects": 3
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 30080,
+          "objects": 3
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 33,
+      "whole_runtime_complete": false
+    },
+    "lab_image_bytes": 4390912,
+    "lab_images": 6,
+    "opened": {
+      "failed_queries": 0,
+      "logical_bytes": 27472,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 51,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 1728,
+          "objects": 12
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 5760,
+          "objects": 12
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 1
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 3360,
+          "objects": 1
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 16000,
+          "objects": 1
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 29,
+      "whole_runtime_complete": false
+    },
+    "orbit": {
+      "failed_queries": 0,
+      "logical_bytes": 44480,
+      "names_without_object": 0,
+      "overflow": false,
+      "references": 55,
+      "roles": {
+        "preview_cube_indices": {
+          "logical_bytes": 1728,
+          "objects": 12
+        },
+        "preview_cube_vertices": {
+          "logical_bytes": 5760,
+          "objects": 12
+        },
+        "preview_overlay": {
+          "logical_bytes": 0,
+          "objects": 1
+        },
+        "preview_scratch_indices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_scratch_vertices": {
+          "logical_bytes": 0,
+          "objects": 0
+        },
+        "preview_surface_indices": {
+          "logical_bytes": 6288,
+          "objects": 3
+        },
+        "preview_surface_vertices": {
+          "logical_bytes": 30080,
+          "objects": 3
+        },
+        "preview_viewmodel_indices": {
+          "logical_bytes": 144,
+          "objects": 1
+        },
+        "preview_viewmodel_vertices": {
+          "logical_bytes": 480,
+          "objects": 1
+        }
+      },
+      "schema": "preview-gpu-buffers.v1",
+      "shared_across_roles": 0,
+      "status": "PASS",
+      "unique_objects": 33,
+      "whole_runtime_complete": false
+    },
+    "passed": true,
+    "retired_buffers": 17,
+    "retired_images": 6,
+    "schema": "item-lab-preview-gpu.v1"
+  },
+  "native": {
+    "flat": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 731,
+      "snapshots": {
+        "menu": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 4368,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 32,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 14,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        },
+        "in-game": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 23728,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 38,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 3360,
+                "objects": 1
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 16000,
+                "objects": 1
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 16,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        },
+        "after-loop": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 23728,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 38,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 3360,
+                "objects": 1
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 16000,
+                "objects": 1
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 16,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        }
+      }
+    },
+    "full": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 545,
+      "snapshots": {
+        "menu": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 4368,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 32,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 14,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        },
+        "in-game": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 23728,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 38,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 3360,
+                "objects": 1
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 16000,
+                "objects": 1
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 16,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        },
+        "after-loop": {
+          "buffers": {
+            "failed_queries": 0,
+            "logical_bytes": 23728,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 38,
+            "roles": {
+              "preview_cube_indices": {
+                "logical_bytes": 1008,
+                "objects": 7
+              },
+              "preview_cube_vertices": {
+                "logical_bytes": 3360,
+                "objects": 7
+              },
+              "preview_overlay": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_scratch_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_surface_indices": {
+                "logical_bytes": 3360,
+                "objects": 1
+              },
+              "preview_surface_vertices": {
+                "logical_bytes": 16000,
+                "objects": 1
+              },
+              "preview_viewmodel_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "preview_viewmodel_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "preview-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 16,
+            "whole_runtime_complete": false
+          },
+          "target_images": 6,
+          "target_logical_bytes": 946176
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "source_sha256": "6fa1e373bd7597ee72d10a8091d9d2b306063d958f1ccf9fa140499699163b52",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "6c06b0b8bcc45f2f4e4739fb0cf2c0a1082db255b5c612e501bfa5c79edcbfef",
+    "src/App/Application.h": "54c72593291d7e5bee9419d810cedc5b3e5fa4f38262e5b569851b5398db6bb9",
+    "src/App/Platform/AppRunner.cpp": "fc0fa6bd78e0ab49ef986fbb35baa070336619a1b85d977c82a7145067bd8d11",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "8ee514179e2e3dbb3cb9935d719c412a3af5c50c8e8c0b84330ba079bb125148",
+    "src/Gui/Core/GuiIconSource.cpp": "cb86559d60e2f8b65eb4dd1468dada3257b43cace3d1cd5878b1d75f17f202e5",
+    "src/Gui/Core/GuiIconSource.h": "59a90b081c211e6e32c7ce208843a2797ce121ae8e2462d4824772cd8041a3c3",
+    "src/Gui/Preview/ContentPreviewRenderer.cpp": "c8d6df9bfdbe3729950e80fb78304180d66f943486079adef379cd83bd92f8eb",
+    "src/Gui/Preview/ContentPreviewRenderer.h": "b65a28041f1e1bf08f54ee6c4dbf20f462648f491031d70ebb760a9267068609",
+    "src/Gui/Preview/CreaturePreviewRenderer.cpp": "3b1985b2e82dc06d957836aa17f46be64edce7b273049f28af2bfca2b56d8c37",
+    "src/Gui/Preview/CreaturePreviewRenderer.h": "8777d55942e567c0c443b7b790214f6a6f3f8760c876545d756c9cae73616bdb",
+    "src/Gui/Preview/ItemLabOverlayRenderer.cpp": "52f24882111186cc67738bed4290dc799a6dae99b2beb2ecbf7e7861bc016a4c",
+    "src/Gui/Preview/ItemLabOverlayRenderer.h": "0037e38cc513a7ee1986706f46c006d52f2e6092d99ec367d2a51b737e074859",
+    "src/Gui/Preview/ItemLabSceneRenderer.cpp": "5ae3e3f196e042181775fb5f82fd1b9f832fb0286be5e9def3fef3f000a17872",
+    "src/Gui/Preview/ItemLabSceneRenderer.h": "e642b965032943d673860a901594e67bfc89e809f7abce356a7cf784e0df5c12",
+    "src/Gui/Preview/ItemPreviewRenderer.cpp": "e43eee76491db600faac78bebde812d58a549c99da722df907f7d9f85e4453f9",
+    "src/Gui/Preview/ItemPreviewRenderer.h": "dd914776e7fd0204a45788aab2d98edd5a4440543ccaa7f20269c7a3a81273c5",
+    "src/Gui/Preview/PreviewRenderResources.h": "480cf239332e3b3db0d3d574d5d227e84b16f96e20018538d052732b52e4632f",
+    "src/Gui/Screens/ItemLabScreen.cpp": "fb44b4085dfe4ce518cb6081409f56aa5487ebb8ba5a97bede67894b5ab37cbf",
+    "src/Gui/Screens/ItemLabScreen.h": "40e8ee64bae4e298e3c8899d681dad492857fdab6143e84230f1c25182c51868",
+    "src/Items/FpViewmodelRenderer.cpp": "896da6f4a0c288b926ecbcd3ff5f9a64b04328ae68ec923836bad7f62c898d4f",
+    "src/Items/FpViewmodelRenderer.h": "773f8685a64138f2a6af02f7b8020c87e9d10e429cfd0002f1134d15b4d72fd5",
+    "src/Items/ItemSurfaceRenderer.cpp": "0b479a3d5dc524639c8c4e7bc9a4e2128e8616c70a58f8fcf21dc7f9411fbbd2",
+    "src/Items/ItemSurfaceRenderer.h": "fba5f36304065a47368b7fb376deb46f0c945634997504eb66fe318dd2394107",
+    "src/Render/Engine/RenderImageStorage.h": "6ecd74fe716a9661da90d1ed456bbed76c5470d3e02cfc991f23199d4971fb78",
+    "src/Render/Engine/TerrainGpuBufferReport.h": "3159576e2ff33d1e3872f5ea1065cd5fcad8a4f24ece15064ad23ef0bc88780b",
+    "src/Render/Engine/TerrainGpuBuffers.h": "a53520966bc97279b6d402bfbb1bd5d5354f1e8355afcff2b324244d6842013c",
+    "src/Test/ApplicationOperationStorageTest.cpp": "9f8954f5014e2da9d430a58dd09dcb2373e298b55cffb441de47577b36b7b40c",
+    "src/Test/Native/PreviewGpuQa.h": "94723a57653bacb05cd5f54c7daf18e8b274bfb7f1ec502be5d59165fbd1ec08",
+    "src/Test/PreviewGpuStorageFixture.h": "b0fd5021fab0aabe7a9270c15edaa771f90ca7cbc44503f533231d2030e64c61"
+  },
+  "desktop_exe_sha256": "0417d20e9db61e8352e4fc46ea72a67a1454ae0283de75199f3875b4bd8f2079",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-preview-gpu-provenance.json": "81a8466d0902bcc72cb33240afb6fb3b0034a455c02d1964c33d789319deed5d",
+    "build/desktop-msvc/s4-preview-gpu-frozen-source.json": "6dc924cff2972fee9088a2cfb71e80a9066cfdde11ff9fc1f9bf068bb22d8059",
+    "build/desktop-msvc/s4-preview-gpu-regressions.json": "d0b4ceabe0d28db8624e7eb7450d5e532f8f774253e0e8cdde571e1870609edd",
+    "build/desktop-msvc/s4-preview-gpu-focused-final.json": "f6e5414d9ae2617e4722901a4dd2d49aa2f84560b7598ecaa57fbe61f4326d90",
+    "build/desktop-msvc/s4-preview-gpu-application-ops.json": "939c7bf2fe021b5a6c29745f2b96d4244f0de67cd9e09d114a72e3e15cac3fdf",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/terrain-save-probe/report.json": "af2137b6c7819edf28ddef4921f5ca4de23fce3b4a76977365306c9616040899",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/owner-domain/flight-menu.json": "0f8958de9d0658673486900855c7afe55382c3c02778576b0e71ff742db650f1",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/owner-domain/flight-in-game.json": "b066fc671469e9059c98930259d8a130800da8d930d8cb4455c409ad73a6d63d",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/smoke-verdict.json": "1072e95dd101b0d80286161645c016fbced205511da89e4185fff6e58253f78b",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/flight_sim_report.json": "9d8db8410686b9bfae382ffaae9451bb8d2d81fcc1b6f8899fc7355c6a70a9c6",
+    "build/desktop-msvc/s4-preview-gpu-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-preview-gpu-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-preview-gpu-full-native/owner-domain/flight-menu.json": "cbc164bbfea5b9dda2eed758e18865bacb59abf49d5de65ea15a34c0aaafec63",
+    "build/desktop-msvc/s4-preview-gpu-full-native/owner-domain/flight-in-game.json": "3c343447eb2c36cec3fcfa8da9c1dfd050ffcdacb00191c70df7a6b6a9733fee",
+    "build/desktop-msvc/s4-preview-gpu-full-native/smoke-verdict.json": "1ee5d10763faedb4596766f5f7a0f9af26f6295299c13b074fc76b58fb1a0e71",
+    "build/desktop-msvc/s4-preview-gpu-full-native/flight_sim_report.json": "0c185f5dd996713e05a95546c0a006fcd9f00cee8972cceaa4f9ef995364f487",
+    "build/desktop-msvc/s4-preview-gpu-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-preview-gpu-full-native/preview-gpu-lifecycle.json": "82d6957fe9f050fbcec9bef30c01868cbfc2d21659a56e1f6a153f736bf22ae2"
+  }
+}

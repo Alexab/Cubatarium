@@ -99,6 +99,15 @@ void UItemPreviewRenderer::InspectRenderImages(RenderImageCensus &out) const
   out.Add(RenderImageRole::ItemPreviewDepth, GL_RENDERBUFFER, Target.Depth);
 }
 
+void UItemPreviewRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  Cube.InspectGpuBuffers(out);
+  out.Add(TerrainGpuBufferRole::PreviewScratchVertices, ScratchMeshVbo);
+  out.Add(TerrainGpuBufferRole::PreviewScratchIndices, ScratchMeshEbo);
+  if (SurfaceRenderer)
+    SurfaceRenderer->InspectGpuBuffers(out);
+}
+
 PreviewRendererStorage UItemPreviewRenderer::InspectOwnedStorage(const UItemDefinitionStorage *items,
     const UShaderManager *shaders) const noexcept
 {
@@ -629,6 +638,12 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
   }
 
   const GLuint fallbackTex = GetOrCreateColorTexture(itemId);
+  struct ArrayBinding
+  {
+    GLint previous{};
+    ArrayBinding() { glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &previous); }
+    ~ArrayBinding() { glBindBuffer(GL_ARRAY_BUFFER, static_cast<GLuint>(previous)); }
+  } binding;
 
   Shader->Use();
   Shader->SetInt("texture0", 0);
@@ -663,12 +678,13 @@ bool UItemPreviewRenderer::DrawGltfPath(const std::string &itemId,
     glBufferData(GL_ARRAY_BUFFER, vertexRequest, mesh.interleavedPosUv.data(), GL_STREAM_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ScratchMeshEbo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexRequest, mesh.indices.data(), GL_STREAM_DRAW);
-    GLint64 vertexBytes = 0, indexBytes = 0;
+    GLint64 vertexBytes = -1, indexBytes = -1;
     glGetBufferParameteri64v(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &vertexBytes);
     glGetBufferParameteri64v(GL_ELEMENT_ARRAY_BUFFER, GL_BUFFER_SIZE, &indexBytes);
-    ScratchVertexBytes = size_t(vertexBytes);
-    ScratchIndexBytes = size_t(indexBytes);
-    if (vertexBytes != vertexRequest || indexBytes != indexRequest)
+    ScratchVertexBytes = vertexBytes >= 0 ? static_cast<size_t>(vertexBytes) : 0;
+    ScratchIndexBytes = indexBytes >= 0 ? static_cast<size_t>(indexBytes) : 0;
+    const bool uploaded = glGetError() == GL_NO_ERROR;
+    if (!uploaded || vertexBytes != vertexRequest || indexBytes != indexRequest)
       continue;
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);

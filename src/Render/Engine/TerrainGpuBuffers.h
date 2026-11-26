@@ -13,13 +13,19 @@ enum class TerrainGpuBufferRole
 {
   TerrainScratch, GreedyPool, GreedyBatch, GreedyDraw, GreedyCompute, CrossTemplate, CrossCurrent,
   CrossStaging, LightRowsCurrent, LightRowsAlternate, PackedPool, PackedCompute,
-  PackedReadback, MdiScratch, OverlayQuad, GuiColored, GuiTextured, TextVertices, Count
+  PackedReadback, MdiScratch, OverlayQuad, GuiColored, GuiTextured, TextVertices,
+  PreviewCubeVertices, PreviewCubeIndices, PreviewScratchVertices, PreviewScratchIndices,
+  PreviewSurfaceVertices, PreviewSurfaceIndices, PreviewOverlay, PreviewViewmodelVertices,
+  PreviewViewmodelIndices, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
     "terrain_scratch", "greedy_pool", "greedy_batch", "greedy_draw", "greedy_compute", "cross_template", "cross_current",
     "cross_staging", "light_rows_current", "light_rows_alternate", "packed_pool", "packed_compute",
-    "packed_readback", "mdi_scratch", "overlay_quad", "gui_colored", "gui_textured", "text_vertices"};
+    "packed_readback", "mdi_scratch", "overlay_quad", "gui_colored", "gui_textured", "text_vertices",
+    "preview_cube_vertices", "preview_cube_indices", "preview_scratch_vertices", "preview_scratch_indices",
+    "preview_surface_vertices", "preview_surface_indices", "preview_overlay", "preview_viewmodel_vertices",
+    "preview_viewmodel_indices"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
 static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint32_t>::digits);
 

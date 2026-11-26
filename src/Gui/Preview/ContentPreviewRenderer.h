@@ -48,6 +48,7 @@ public:
   bool Initialize();
   void Shutdown();
   void InspectRenderImages(class RenderImageCensus &out) const;
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const;
   void InspectVisualAssets(VisualAssetCensus &census,
       const UCreaturePreviewRenderer *alreadyInspected) const;
   ContentPreviewRendererStorage InspectOwnedStorage(

@@ -23,6 +23,7 @@
 #include "Items/ItemVisualDefaults.h"
 #include "Items/LegacyVisualAssetCache.h"
 #include "Render/Engine/ShaderManager.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include "Render/GlIncludes.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
@@ -228,6 +229,16 @@ void UFpViewmodelRenderer::InspectVisualAssets(VisualAssetCensus &census) const
   census.Add(ArmSource, VisualAssetOwner::Viewmodel);
   if (SurfaceRenderer)
     SurfaceRenderer->InspectVisualAssets(census, VisualAssetOwner::Viewmodel);
+}
+
+void UFpViewmodelRenderer::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  out.Add(TerrainGpuBufferRole::PreviewViewmodelVertices, CubeVbo);
+  out.Add(TerrainGpuBufferRole::PreviewViewmodelIndices, CubeEbo);
+  out.Add(TerrainGpuBufferRole::PreviewViewmodelVertices, ArmSkinVbo);
+  out.Add(TerrainGpuBufferRole::PreviewViewmodelIndices, ArmSkinEbo);
+  if (SurfaceRenderer)
+    SurfaceRenderer->InspectGpuBuffers(out);
 }
 
 void UFpViewmodelRenderer::InspectLegacyVisualAssets(VisualAssetCensus &census)

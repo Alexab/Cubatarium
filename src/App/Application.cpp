@@ -12,6 +12,7 @@
 #include "Test/Native/ItemLabArtQa.h"
 #include "Test/Native/ItemLabDiagnosticsQa.h"
 #include "Test/Native/ItemLabSceneQa.h"
+#include "Test/Native/PreviewGpuQa.h"
 #include "Test/Native/ItemPerformanceQa.h"
 #include "Test/Native/ItemPresentationQa.h"
 #include "Test/Native/ItemWorldVisualQa.h"
@@ -765,10 +766,12 @@ void UApplication::InspectRenderImages(RenderImageCensus &out) const
 {
   if (TextRenderer)
     TextRenderer->InspectRenderImages(out);
+  if (CreaturePreviewRenderer)
+    CreaturePreviewRenderer->InspectRenderImages(out);
   if (ContentPreviewRenderer)
     ContentPreviewRenderer->InspectRenderImages(out);
-  if (ItemLabScreen)
-    ItemLabScreen->InspectRenderImages(out);
+  if (const auto *lab = dynamic_cast<const UItemLabScreen *>(GuiContext->GetScreen()))
+    lab->InspectRenderImages(out);
   if (IconSource)
     IconSource->InspectRenderImages(out);
   ItemGltfTextureCache::InspectRenderImages(out);
@@ -779,6 +782,18 @@ void UApplication::InspectGuiGpuBuffers(TerrainGpuBufferCensus &out) const
   GuiContext->InspectGpuBuffers(out);
   if (TextRenderer)
     TextRenderer->InspectGpuBuffers(out);
+}
+
+void UApplication::InspectPreviewGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  if (CreaturePreviewRenderer)
+    CreaturePreviewRenderer->InspectGpuBuffers(out);
+  if (ContentPreviewRenderer)
+    ContentPreviewRenderer->InspectGpuBuffers(out);
+  if (IconSource)
+    IconSource->InspectPreviewGpuBuffers(out);
+  if (const auto *lab = dynamic_cast<const UItemLabScreen *>(GuiContext->GetScreen()))
+    lab->InspectGpuBuffers(out);
 }
 
 void UApplication::InspectVisualAssets(VisualAssetCensus &census) const
@@ -2831,8 +2846,9 @@ void UApplication::ToggleItemLab()
           Core->GetTextureCubeStorage(), Core->GetCreatureTextureStorage(),
           World->GetCreatureDefinitionStorage(),
           World->GetSkinDefinitionStorage(), ShaderManager));
-  ItemLabScreen = screen.get();
+  auto *next = screen.get();
   GuiContext->SetScreen(std::move(screen));
+  ItemLabScreen = next;
   ItemLabOpen = true;
   SyncCursorVisibility();
 }
@@ -3388,6 +3404,13 @@ void UApplication::UpdateNativeItemsQa(double dt)
       output << report.dump(2) << '\n';
     }
   static bool itemLabQaDone = false;
+  static bool itemLabPreviewGpuQaDone = false;
+  if (!itemLabPreviewGpuQaDone && State == AppState::InGame && World && World->GetControlledCreature())
+    if (const char *path = std::getenv("CUBA_ITEM_LAB_PREVIEW_GPU_QA"); path && *path)
+    {
+      itemLabPreviewGpuQaDone = true;
+      RunItemLabPreviewGpuQa(*this, path);
+    }
   if (!itemLabQaDone && World && World->GetControlledCreature())
     if (const char *path = std::getenv("CUBA_ITEM_LAB_QA"))
     {

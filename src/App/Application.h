@@ -195,6 +195,7 @@ public:
   void InspectVisualAssets(VisualAssetCensus &census) const;
   void InspectRenderImages(class RenderImageCensus &out) const;
   void InspectGuiGpuBuffers(class TerrainGpuBufferCensus &out) const;
+  void InspectPreviewGpuBuffers(class TerrainGpuBufferCensus &out) const;
   UGameSession &GetGameSession() { return *GameSession; }
   bool WantsCaptureMouse() const;
   bool WantsCaptureKeyboard() const;

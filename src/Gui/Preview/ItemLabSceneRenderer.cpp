@@ -145,6 +145,19 @@ UItemLabSceneRenderer::UItemLabSceneRenderer(
     throw std::runtime_error("Cannot initialize Item Lab scenes");
 }
 UItemLabSceneRenderer::~UItemLabSceneRenderer() = default;
+void UItemLabSceneRenderer::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  Creature->InspectGpuBuffers(out);
+  Fp->InspectPreviewGpuBuffers(out);
+  Surface->InspectGpuBuffers(out);
+  Overlay->InspectGpuBuffers(out);
+}
+
+void UItemLabSceneRenderer::InspectRenderImages(RenderImageCensus &out) const
+{
+  Creature->InspectRenderImages(out);
+}
+
 void UItemLabSceneRenderer::InspectVisualAssets(VisualAssetCensus &census) const
 {
   if (Creature)

@@ -65,8 +65,17 @@ void UItemLabScreen::InspectRenderImages(RenderImageCensus &out) const
 {
   if (Preview)
     Preview->InspectRenderImages(out);
+  if (ScenesRenderer)
+    ScenesRenderer->InspectRenderImages(out);
   for (const auto name : Textures)
     out.Add(RenderImageRole::ItemLabColor, GL_TEXTURE_2D, name);
+}
+
+void UItemLabScreen::InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+{
+  Preview->InspectGpuBuffers(out);
+  if (ScenesRenderer)
+    ScenesRenderer->InspectGpuBuffers(out);
 }
 
 void UItemLabScreen::InspectVisualAssets(VisualAssetCensus &census) const

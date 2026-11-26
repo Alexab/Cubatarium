@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Engine/TerrainGpuBuffers.h"
 #include <cstddef>
 #include <utility>
 
@@ -87,6 +88,12 @@ struct PreviewCubeMesh
   PreviewCubeMesh(const PreviewCubeMesh &) = delete;
   PreviewCubeMesh &operator=(const PreviewCubeMesh &) = delete;
   ~PreviewCubeMesh() { Reset(); }
+
+  void InspectGpuBuffers(TerrainGpuBufferCensus &out) const
+  {
+    out.Add(TerrainGpuBufferRole::PreviewCubeVertices, Vbo);
+    out.Add(TerrainGpuBufferRole::PreviewCubeIndices, Ebo);
+  }
 
   bool Initialize()
   {

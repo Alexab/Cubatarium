@@ -525,6 +525,9 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   TerrainGpuBufferCensus guiBuffers;
   application.InspectGuiGpuBuffers(guiBuffers);
   report["gui_gpu_buffers"] = DescribeGuiGpuBuffers(guiBuffers.Read());
+  TerrainGpuBufferCensus previewBuffers;
+  application.InspectPreviewGpuBuffers(previewBuffers);
+  report["preview_gpu_buffers"] = DescribePreviewGpuBuffers(previewBuffers.Read());
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(ReadWindowsGpuMemory());
