@@ -49,6 +49,7 @@ public:
 
 private:
   friend class UWorldGenPaletteScreen;
+  friend struct WorldGenPaletteStorageProbe;
   struct RotateAction;
   struct ChangeAction;
   ContentPreviewDockStorage InspectHostedStorage(

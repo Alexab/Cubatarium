@@ -79,8 +79,13 @@ private:
     Object,
     TerrainSlot,
   };
+  enum class PrimaryAction { None, AddObject, ChangeBlock, ToggleOre };
 
   void RelayoutPanel();
+  bool HasPreviewPane() const;
+  PrimaryAction CurrentPrimaryAction() const;
+  void SyncPrimaryAction();
+  void ActivatePrimaryAction();
   void RebuildMainContent();
   void PublishPicker();
   void ClosePicker();
@@ -118,7 +123,7 @@ private:
   UGuiTabBar *SectionTabs{nullptr};
   UGuiLabel *BannerLabel{nullptr};
   UGuiScrollView *ContentScroll{nullptr};
-  UGuiButton *AddButton{nullptr};
+  UGuiButton *PrimaryButton{nullptr};
   UGuiButton *ResetButton{nullptr};
   UGuiPanel *PickerPanel{nullptr};
   UGuiScrollView *PickerScroll{nullptr};

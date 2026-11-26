@@ -1,0 +1,228 @@
+{
+  "schema": "s4-e12-w37-worldgen-compact.v1",
+  "status": "SCOPED_WORLDGEN_COMPACT_PASS_E12_OPEN",
+  "baseline_commit": "989f74c652dba741cab99a4d29c63fa298e4e7b6",
+  "prior_certificate": "S4_02_E12_W36_WORLDGEN_OWNER_CERTIFICATE_2026_11_26.json",
+  "summary": "W37 exposes terrain Change block and ore Toggle enabled through the existing main-panel action when the preview pane is collapsed. A layout transition cancels a captured action from the previous pane. A selected slot and open picker stay associated across a resize. The real application input router applies the test block to water and toggles iron ore once. A Release GL context confirms that collapse skips rendering, retires the owned preview texture on update, and preserves its borrowed source. Expansion rebuilds the preview for the selected terrain. The W35 and W36 allocation observations and native owner reports match their saved evidence. All 46 Release regression groups, seven related tests and scoped native checks pass. Shared renderer and icon caches, GPU and platform memory, and full S0–S6 acceptance remain open.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W37. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. Next join the shared content preview renderer and its retained framebuffer, depth, texture and mesh names to the application owner census, including size changes and normal retirement. Reuse existing temporary attachment and readback evidence. Then account remaining actual overlays, preview/icon cache backing, manifests and driver ownership. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "unit": {
+    "borrowed_texture_preserved": true,
+    "collapse_allocate0": true,
+    "open_picker_resize": true,
+    "ore_iron": true,
+    "preview_retired_and_restored": true,
+    "stale_releases_cancelled": 2,
+    "status": "PASS",
+    "terrain_water": true,
+    "viewport_cases": [
+      [
+        640,
+        480
+      ],
+      [
+        1280,
+        600
+      ],
+      [
+        1100,
+        700
+      ],
+      [
+        1099,
+        700
+      ],
+      [
+        1280,
+        699
+      ]
+    ]
+  },
+  "native_owner": {
+    "menu": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "children_bytes": 0,
+      "content_grid_bytes": 0,
+      "picker_grid_bytes": 0,
+      "present": false,
+      "preview_bytes": 0,
+      "preview_texture_present": false,
+      "requested": 0,
+      "schema": "worldgen-palette-owner.v1",
+      "screen_bytes": 0,
+      "status": "PASS",
+      "tab_bytes": 0,
+      "text_bytes": 0,
+      "visible": false,
+      "whole_runtime_complete": false,
+      "widget_bytes": 0,
+      "widgets": 0
+    },
+    "in-game": {
+      "bindings_match": true,
+      "callback_bytes": 0,
+      "children_bytes": 112,
+      "content_grid_bytes": 0,
+      "picker_grid_bytes": 0,
+      "present": true,
+      "preview_bytes": 976,
+      "preview_texture_present": false,
+      "requested": 4104,
+      "schema": "worldgen-palette-owner.v1",
+      "screen_bytes": 464,
+      "status": "PASS",
+      "tab_bytes": 232,
+      "text_bytes": 80,
+      "visible": false,
+      "whole_runtime_complete": false,
+      "widget_bytes": 2240,
+      "widgets": 20
+    }
+  },
+  "grid_rebuild_requests": 2390,
+  "grid_peak": 704725,
+  "native_appearance": {
+    "apply": true,
+    "cancel": true,
+    "draft_isolated": true,
+    "layouts": [
+      {
+        "controls_reachable": true,
+        "height": 720,
+        "width": 1280
+      },
+      {
+        "controls_reachable": true,
+        "height": 480,
+        "width": 640
+      }
+    ],
+    "original_selection_restored": true,
+    "passed": true,
+    "preview_rendered": true,
+    "user_save_serialized": true
+  },
+  "native_aggregate": "UNTESTED",
+  "native_input": {
+    "schema": "worldgen-compact-native-input.v1",
+    "smoke_exit": 2,
+    "smoke_status": "UNTESTED",
+    "world_source_sha256": "a5c7c5bd3920702f6bc2b298ece80406b3056ab0ee90031b743961eee241043b",
+    "world_source_preserved": true,
+    "layout_cases": 72,
+    "checks": 10,
+    "passed": true,
+    "appearance_cases": 2,
+    "appearance_sha256": "e39f65dcb7892cd0cecbad393fb18855d124edae8fa275890922a907efda347d",
+    "icon_checks": 209,
+    "icons_sha256": "b81cb427ca809949f78d8d2ca2995925c1f5bb4e2e29e08a9b1de7799c4b1e5d",
+    "config_bytes_restored": true,
+    "report_sha256": "ee12f4229fe3b56639c38aed5c54daa1636af21397f823fc3f0cf37e13a8d6df"
+  },
+  "native_icon_counts": {
+    "creatures": 55,
+    "items": 70,
+    "objects": 60,
+    "skins": 5
+  },
+  "native_inventory_locations": [
+    "backpack",
+    "contents-state",
+    "mixed",
+    "recovery"
+  ],
+  "dependent_release_tests": [
+    "creature_appearance_test",
+    "creature_influence_channels_test",
+    "inventory_mode_test",
+    "item_survival_hooks_test",
+    "inventory_icon_fingerprint_test",
+    "inventory_transactions_test",
+    "recipe_registry_test"
+  ],
+  "fingerprint_test": "PASS",
+  "source_sha256": "1a6e978e8c25ba7fdf018bde00ca8735f85396c31982456605c5a87e35e4e041",
+  "source_sha256_raw": {
+    "src/App/Application.cpp": "3de0cc064a6bd0179829a0d24a50579932af5441fca59bbe5c581f63e0865178",
+    "src/Gui/Preview/ContentPreviewDock.h": "bdc83f8eac1c4027a1d56852cd50a480fe6161a725f1d259e730420399149773",
+    "src/Gui/Screens/WorldGenPaletteScreen.cpp": "917bafd6cdb6b31281ef387f62f729dc4442759c09d5287fcb7a93e0c9ca2150",
+    "src/Gui/Screens/WorldGenPaletteScreen.h": "4a31879fbed5448737c18d84dae8f615e64df0ed106e6e0ae8f0f1de771b7ac6",
+    "src/Test/ApplicationOperationStorageFixture.h": "d4e94cf13ae09620bccff54509fc998ee686f30ab364a17b337f1e13366c0742",
+    "src/Test/ApplicationOperationStorageTest.cpp": "b8114f44983b6c5206d261ca270409c75ef089ae74d371a26706f57f5b6c1803",
+    "src/Test/WorldGenPaletteStorageFixture.h": "102b8cd5ed77e3042fb0d997632cc1a6b93e325aac7bb3b2073f9f21c6069784"
+  },
+  "removed_sources": [],
+  "desktop_exe_sha256": "d438b8aa2c838d6e677d2c4cd91260696d47303bcb4144d5720902e776da61be",
+  "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "config_bytes_restored": true,
+  "whole_runtime_complete": false,
+  "completed_packages": "23/42",
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-worldgen-compact-verified.json": "6bf3f922217d7ba9e489be1fdefae3e9f9229fa19de6f91c798e48f33d4b0866",
+    "build/desktop-msvc/s4-worldgen-compact-application-ops.json": "479e15d3ed2510645ca82e08ba8f22cd605fe44aec85270975f379c915f3ab6a",
+    "build/desktop-msvc/s4-worldgen-compact-regressions.json": "1b07e06c800e14ea4ad1b054a9b3dbeb6f0f9be24f72521efce4b6fee8c9dfc0",
+    "build/desktop-msvc/s4-worldgen-compact-provenance.json": "5783c4e1192610c6a123b5d0e01e5f982af8f69efe76ab8fab6b6b9f6d3224f9",
+    "build/desktop-msvc/s4-worldgen-compact-dependent.log": "89d20988e9d06f70ca4cd16897fd03c5bda670eb96c386fcdf1c4d6ece4306d8",
+    "build/desktop-msvc/s4-worldgen-compact-native/smoke-verdict.json": "81b3a04e9337d6335b4a0a734785913d11ed9ca0af01e7c226bc1d11381d20a5",
+    "build/desktop-msvc/s4-worldgen-compact-native/flight_sim_report.json": "a43ebf1892f7129c49d472b6ed086b5dd5af015e7348081dec575ed2636786d7",
+    "build/desktop-msvc/s4-worldgen-compact-native/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/input-verdict.json": "c69cb8206bdce841f99947b0c74469a9c0d2cb45908618d2dcf6b7a477b6677c",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/inventory.json.player-window.json": "ee12f4229fe3b56639c38aed5c54daa1636af21397f823fc3f0cf37e13a8d6df",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/inventory-icons.json": "b81cb427ca809949f78d8d2ca2995925c1f5bb4e2e29e08a9b1de7799c4b1e5d",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/appearance.json": "e39f65dcb7892cd0cecbad393fb18855d124edae8fa275890922a907efda347d",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/appearance.json.users.json": "530aa895b29fc709148d85b03722142d8a15e6cd469cae7f10df90ea2cbc4a47",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/smoke-verdict.json": "2a4823e994561843e0ae3f6779bdb669d50658b5cc8d3e8fd9b271d74d3f472e",
+    "build/desktop-msvc/s4-worldgen-compact-input-native/flight_sim_report.json": "84d058d124fa5e8a5efe27c146af6d8066308eb043bb7a78ef8489f46f9d931e",
+    "build/desktop-msvc/s4-worldgen-compact-native/owner-domain/flight-menu.json": "20e16dbd7086d210fabae14645d96cdc6c0290c043678e1c2e221db86c8d4545",
+    "build/desktop-msvc/s4-worldgen-compact-native/owner-domain/flight-in-game.json": "c9c921ac8067f284d97c75fc9bf49b8189a161a1eef4372e7dc48ef3b7534741"
+  }
+}

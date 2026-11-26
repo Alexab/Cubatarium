@@ -40,10 +40,11 @@ struct ApplicationOperationSourceProbe {
     app.AnvilScreen = std::move(screen);
     return *app.AnvilScreen;
   }
-  static UWorldGenPaletteScreen &OpenWorldGen(UApplication &app, IUContentCatalog &catalog)
+  static UWorldGenPaletteScreen &OpenWorldGen(UApplication &app, IUContentCatalog &catalog,
+                                               UContentPreviewRenderer *preview = nullptr)
   {
     app.CloseWorldGenScreen();
-    auto screen = std::make_unique<UWorldGenPaletteScreen>(app.World.get(), &catalog, nullptr, nullptr);
+    auto screen = std::make_unique<UWorldGenPaletteScreen>(app.World.get(), &catalog, nullptr, preview);
     screen->OnAttach(app.GetGui());
     screen->Build(app.GetGui());
     app.WorldGenScreen = std::move(screen);

@@ -4179,8 +4179,8 @@ void UApplication::RenderFrame(int width, int height, double viewDuration)
   }
   if (WorldGenOpen && WorldGenScreen && WorldGenScreen->GetRoot())
   {
-    WorldGenScreen->RenderPreview();
     notifyViewport(WorldGenScreen.get());
+    WorldGenScreen->RenderPreview();
     GuiContext->RenderOverlay(*WorldGenScreen->GetRoot(), width, height, false);
   }
 #if defined(__ANDROID__)

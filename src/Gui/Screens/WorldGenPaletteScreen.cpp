@@ -22,6 +22,7 @@
 #include <climits>
 #include <iterator>
 #include <new>
+#include <string_view>
 
 namespace cutum
 {
@@ -35,6 +36,9 @@ const char *kTerrainSlots[] = {"surface", "subsurface", "stone", "water",
                                "lava"};
 const char *kOreSlots[] = {"ore_coal", "ore_iron"};
 constexpr int kPickerZOrder = 100;
+constexpr std::string_view kAddObjectLabel = "+ Add object";
+constexpr std::string_view kChangeBlockLabel = "Change block";
+constexpr std::string_view kToggleOreLabel = "Toggle enabled";
 
 const char *DefaultBlockForTerrainSlot(const std::string &slotName)
 {
@@ -158,6 +162,7 @@ void UWorldGenPaletteScreen::SetVisible(bool visible)
     RequestedPoolTab = ObjectPoolTab;
     RequestedSectionTab = SectionTab;
     PreviewDirty = true;
+    SyncPrimaryAction();
   }
   else
   {
@@ -201,8 +206,10 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
   auto scroll = std::make_unique<UGuiScrollView>(theme);
   scroll->SetAfterScrollLayout(layoutGrid);
 
-  auto addBtn = std::make_unique<UGuiButton>(theme, "+ Add object");
-  addBtn->SetOnClick(ButtonAction<&UWorldGenPaletteScreen::OpenObjectPicker>{this});
+  auto primary = std::make_unique<UGuiButton>(theme, std::string(kAddObjectLabel));
+  primary->Label.reserve(std::max({kAddObjectLabel.size(), kChangeBlockLabel.size(),
+                                   kToggleOreLabel.size()}));
+  primary->SetOnClick(ButtonAction<&UWorldGenPaletteScreen::ActivatePrimaryAction>{this});
 
   auto resetBtn =
       std::make_unique<UGuiButton>(theme, "Reset section to defaults");
@@ -233,7 +240,7 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
   auto *const poolAlias = poolTabs.get();
   auto *const sectionAlias = sectionTabs.get();
   auto *const scrollAlias = scroll.get();
-  auto *const addAlias = addBtn.get();
+  auto *const primaryAlias = primary.get();
   auto *const resetAlias = resetBtn.get();
   auto *const tooltipAlias = tooltip.get();
   auto *const pickerAlias = pickerPanel.get();
@@ -246,7 +253,7 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
   panel->AddChild(std::move(poolTabs));
   panel->AddChild(std::move(sectionTabs));
   panel->AddChild(std::move(scroll));
-  panel->AddChild(std::move(addBtn));
+  panel->AddChild(std::move(primary));
   panel->AddChild(std::move(resetBtn));
   panel->AddChild(std::move(tooltip));
   panel->AddChild(std::move(pickerPanel));
@@ -260,7 +267,7 @@ void UWorldGenPaletteScreen::Build(UGuiContext &ctx)
   ObjectPoolTabs = poolAlias;
   SectionTabs = sectionAlias;
   ContentScroll = scrollAlias;
-  AddButton = addAlias;
+  PrimaryButton = primaryAlias;
   ResetButton = resetAlias;
   TooltipLabel = tooltipAlias;
   PickerPanel = pickerAlias;
@@ -323,8 +330,56 @@ void UWorldGenPaletteScreen::Update(double dt)
   }
   if (Visible)
   {
-    PreviewDock->Update(dt);
+    if (HasPreviewPane())
+      PreviewDock->Update(dt);
     UpdateTooltip();
+  }
+}
+
+bool UWorldGenPaletteScreen::HasPreviewPane() const
+{
+  return PreviewDock && PreviewDock->GetPanel()->IsVisible();
+}
+
+UWorldGenPaletteScreen::PrimaryAction UWorldGenPaletteScreen::CurrentPrimaryAction() const
+{
+  if (ActiveTab == 0)
+    return PrimaryAction::AddObject;
+  if (!HasPreviewPane())
+  {
+    if (ActiveTab == 1 && !SelectedTerrainSlot.empty())
+      return PrimaryAction::ChangeBlock;
+    if (ActiveTab == 2 && !SelectedOreSlot.empty())
+      return PrimaryAction::ToggleOre;
+  }
+  return PrimaryAction::None;
+}
+
+void UWorldGenPaletteScreen::SyncPrimaryAction()
+{
+  if (!PrimaryButton)
+    return;
+  const auto action = CurrentPrimaryAction();
+  PrimaryButton->SetVisible(action != PrimaryAction::None);
+  switch (action)
+  {
+  case PrimaryAction::AddObject: PrimaryButton->Label.assign(kAddObjectLabel); break;
+  case PrimaryAction::ChangeBlock: PrimaryButton->Label.assign(kChangeBlockLabel); break;
+  case PrimaryAction::ToggleOre: PrimaryButton->Label.assign(kToggleOreLabel); break;
+  case PrimaryAction::None: break;
+  }
+}
+
+void UWorldGenPaletteScreen::ActivatePrimaryAction()
+{
+  if (!Visible)
+    return;
+  switch (CurrentPrimaryAction())
+  {
+  case PrimaryAction::AddObject: OpenObjectPicker(); break;
+  case PrimaryAction::ChangeBlock: OpenTerrainPicker(); break;
+  case PrimaryAction::ToggleOre: ToggleOre(); break;
+  case PrimaryAction::None: break;
   }
 }
 
@@ -345,6 +400,15 @@ void UWorldGenPaletteScreen::RelayoutPanel()
   Panel->SetBounds(layout.main);
   if (PreviewDock)
   {
+    const bool showPreview = layout.preview.W > 0;
+    if (HasPreviewPane() != showPreview)
+    {
+      // A release from the old pane must not activate a relocated action.
+      PrimaryButton->ClearPressState();
+      PreviewDock->ChangeButton->ClearPressState();
+      PreviewDock->PanelShell->SetVisible(showPreview);
+      PreviewDirty = true;
+    }
     PreviewDock->Relayout(layout.preview);
   }
 
@@ -396,14 +460,12 @@ void UWorldGenPaletteScreen::RelayoutPanel()
     y += contentH + pad;
     ContentScroll->LayoutContent();
   }
-  if (AddButton)
+  if (PrimaryButton)
   {
-    AddButton->SetVisible(objectsTab);
-    if (AddButton->IsVisible())
-    {
-      AddButton->SetBounds({panelX + pad, y, panelW - pad * 2, buttonH});
+    SyncPrimaryAction();
+    PrimaryButton->SetBounds({panelX + pad, y, panelW - pad * 2, buttonH});
+    if (objectsTab || !HasPreviewPane())
       y += buttonH + pad / 2;
-    }
   }
   if (ResetButton)
   {
@@ -503,6 +565,7 @@ void UWorldGenPaletteScreen::SelectEntry(ContentKind kind, const std::string &id
   SelectedOreSlot.swap(nextOre);
   PreviewDirty = true;
   ApplySlotSelection();
+  SyncPrimaryAction();
 }
 
 std::string
@@ -548,7 +611,7 @@ void UWorldGenPaletteScreen::ApplySlotSelection()
 
 void UWorldGenPaletteScreen::RenderPreview()
 {
-  if (PreviewDock)
+  if (Visible && HasPreviewPane())
   {
     PreviewDock->RenderIfDirty();
   }
@@ -558,6 +621,12 @@ void UWorldGenPaletteScreen::SyncPreviewDock()
 {
   if (!PreviewDock)
   {
+    return;
+  }
+  if (!HasPreviewPane())
+  {
+    PreviewDock->SetOnChange(nullptr);
+    PreviewDock->ClearSelection();
     return;
   }
   if (ActiveTab == 1 && !SelectedTerrainSlot.empty())
@@ -1047,7 +1116,7 @@ WorldGenPaletteStorage UWorldGenPaletteScreen::InspectOwnedStorage(
   const auto &main = Panel->GetChildren();
   if (main.size() != 9 || !matches(main[0], BannerLabel) || !matches(main[1], MainTabs) ||
       !matches(main[2], ObjectPoolTabs) || !matches(main[3], SectionTabs) ||
-      !matches(main[4], ContentScroll) || !matches(main[5], AddButton) ||
+      !matches(main[4], ContentScroll) || !matches(main[5], PrimaryButton) ||
       !matches(main[6], ResetButton) || !matches(main[7], TooltipLabel) ||
       !matches(main[8], PickerPanel))
     return out;
@@ -1088,8 +1157,8 @@ WorldGenPaletteStorage UWorldGenPaletteScreen::InspectOwnedStorage(
   tabAction(*MainTabs, TabAction::Bar::Main);
   tabAction(*ObjectPoolTabs, TabAction::Bar::Pool);
   tabAction(*SectionTabs, TabAction::Bar::Section);
-  requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::OpenObjectPicker>>(
-      AddButton->OnClick, this, profile));
+  requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::ActivatePrimaryAction>>(
+      PrimaryButton->OnClick, this, profile));
   requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::OnResetSection>>(
       ResetButton->OnClick, this, profile));
   requiredAction(InspectKnownOwnerCallback<ButtonAction<&UWorldGenPaletteScreen::ClosePicker>>(
@@ -1127,7 +1196,7 @@ WorldGenPaletteStorage UWorldGenPaletteScreen::InspectOwnedStorage(
   tabs.Add(out.grid.sectionTabBytes);
   for (const auto *label : {BannerLabel, TooltipLabel})
     text.Text(label->GetText());
-  for (const auto *button : {AddButton, ResetButton, PickerCloseButton})
+  for (const auto *button : {PrimaryButton, ResetButton, PickerCloseButton})
     text.Text(button->GetLabel());
   for (const auto *value : {&SelectedEntryId, &SelectedTerrainSlot, &SelectedOreSlot,
                             &PickerTerrainSlot, &RequestedTerrainSlot})
