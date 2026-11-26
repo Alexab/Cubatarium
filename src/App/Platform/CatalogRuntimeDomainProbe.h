@@ -21,6 +21,12 @@
 #include "WorldGen/Core/PipelineAllocatorThreadView.h"
 #include "WorldGen/Core/RuntimeNameStorage.h"
 #include "Core/Memory/EngineThreadStorage.h"
+#include "Core/Memory/VisualAssetStorage.h"
+#include "Creatures/Influence/StatusEffectCatalog.h"
+#include "Creatures/Visual/BoneSkeleton/CreatureBoneSkeletonCache.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
+#include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Items/ItemRenderAsset.h"
 #include "Test/GuiContextStorageFixture.h"
 #include <nlohmann/json.hpp>
 #include <cstdlib>
@@ -270,6 +276,31 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
           {"pending", itemIcons.pending}, {"icons", iconTable(itemIcons.icons)}}},
       {"creature_preview", iconPreview(entityIcons.creaturePreview, entityIcons.creaturePreviewAliases)},
       {"item_preview", iconPreview(entityIcons.itemPreview, entityIcons.itemPreviewAliases)},
+      {"whole_runtime_complete", false}};
+  const auto status = UStatusEffectCatalog::InspectPublishedStorage();
+  report["status_catalog_storage"] = {
+      {"schema", "status-effect-catalog-owner.v1"}, {"status", status.supported ? "PASS" : "UNSUPPORTED"},
+      {"inline_bytes", status.inlineBytes}, {"table_bytes", status.tableBytes},
+      {"definitions", status.definitions}, {"published", status.published},
+      {"files_attempted", status.filesAttempted}, {"builtins_ready", status.builtinsReady}};
+  const auto modelStorage = [](const VisualAssetStorage &asset) -> nlohmann::json
+  {
+    return {{"supported", asset.supported}, {"inline_bytes", asset.inlineBytes},
+            {"cpu_bytes", asset.cpuBytes}, {"table_bytes", asset.tableBytes},
+            {"control_bytes", asset.controlBytes}, {"payload_bytes", asset.payloadBytes},
+            {"live", asset.live}, {"expired", asset.expired}, {"negative", asset.negative}, {"aliases", asset.aliases}};
+  };
+  const auto gltf = CreatureGltfCache::Instance().InspectOwnedStorage();
+  const auto bones = CreatureBoneSkeletonCache::Instance().InspectOwnedStorage();
+  const auto items = InspectItemSurfaceAssetStorage();
+  const auto creatureGpu = CreatureMeshGpuCache::Instance().InspectOwnedStorage();
+  report["shared_visual_source_storage"] = {
+      {"schema", "shared-visual-source-storage.v1"},
+      {"status", gltf.supported && bones.supported && items.supported && creatureGpu.supported ? "PASS" : "UNSUPPORTED"},
+      {"gltf", modelStorage(gltf)}, {"bones", modelStorage(bones)}, {"items", modelStorage(items)},
+      {"creature_gpu", {{"inline_bytes", creatureGpu.inlineBytes}, {"table_bytes", creatureGpu.tableBytes},
+          {"skeletal", creatureGpu.skeletal}, {"skinned", creatureGpu.skinned},
+          {"vertex_bytes", creatureGpu.vertexBytes}, {"index_bytes", creatureGpu.indexBytes}}},
       {"whole_runtime_complete", false}};
   root_phase.Close();
   // An actual second UWorld verifies that the traversal counts supplied

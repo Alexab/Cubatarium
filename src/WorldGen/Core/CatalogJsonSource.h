@@ -14,7 +14,7 @@ inline constexpr bool kCatalogJsonSourceModelSupported=true;
 #else
 inline constexpr bool kCatalogJsonSourceModelSupported=false;
 #endif
-enum class CatalogJsonKind {Pack,Refs,Features,Prefab,Definitions,Manifest,ResourceBlocks,LegacyCube,Overrides,Count};
+enum class CatalogJsonKind {Pack,Refs,Features,Prefab,Definitions,Manifest,ResourceBlocks,LegacyCube,Overrides,StatusEffects,ItemSurface,Count};
 struct CatalogJsonSourceShape
 {
   size_t bytes{},values{},objects{},arrays{},keys{},strings{},string_bytes{},max_depth{};

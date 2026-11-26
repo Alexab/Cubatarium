@@ -72,10 +72,11 @@ inline CallerState ReadCallerState()
 
 struct RefuseIndexUpload
 {
-  RefuseIndexUpload()
+  explicit RefuseIndexUpload(bool refuse = true)
   {
     Original = __glewBufferData;
     Observed = {};
+    Refuse = refuse;
     __glewBufferData = Upload;
   }
   ~RefuseIndexUpload() { __glewBufferData = Original; }
@@ -83,13 +84,14 @@ struct RefuseIndexUpload
 
 private:
   inline static PFNGLBUFFERDATAPROC Original{};
+  inline static bool Refuse{};
   static void GLAPIENTRY Upload(GLenum target, GLsizeiptr bytes, const void *data, GLenum usage)
   {
-    if (target != GL_ELEMENT_ARRAY_BUFFER)
-      Original(target, bytes, data, usage);
-    else
+    if (target == GL_ELEMENT_ARRAY_BUFFER)
       Observed = {GLuint(Binding(GL_VERTEX_ARRAY_BINDING)), GLuint(Binding(GL_ARRAY_BUFFER_BINDING)),
                   GLuint(Binding(GL_ELEMENT_ARRAY_BUFFER_BINDING))};
+    if (target != GL_ELEMENT_ARRAY_BUFFER || !Refuse)
+      Original(target, bytes, data, usage);
   }
 };
 

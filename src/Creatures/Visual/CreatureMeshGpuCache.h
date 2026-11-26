@@ -12,6 +12,12 @@ typedef unsigned int GLuint;
 namespace cutum
 {
 
+struct CreatureMeshGpuStorage
+{
+  size_t inlineBytes{}, tableBytes{}, skeletal{}, skinned{}, vertexBytes{}, indexBytes{};
+  bool supported{};
+};
+
 class CreatureMeshGpuCache
 {
 public:
@@ -21,34 +27,27 @@ public:
   GLuint GetOrCreateGltfSkinnedMeshVao(const GltfPrimitiveCpu &mesh,
                                        size_t &outIndexCount);
   void DestroyAll();
+  CreatureMeshGpuStorage InspectOwnedStorage() const;
 
 private:
   CreatureMeshGpuCache() = default;
 
-  struct SkeletalMeshGpuBuffers
+  struct MeshBuffers
   {
     GLuint vao{0};
     GLuint vbo{0};
     GLuint ebo{0};
-  };
-  struct GltfSkinnedMeshGpuBuffers
-  {
-    GLuint vao{0};
-    GLuint vbo{0};
-    GLuint ebo{0};
-    size_t indexCount{0};
+    size_t vertexBytes{}, indexCount{};
   };
 
-  std::unordered_map<size_t, SkeletalMeshGpuBuffers> SkeletalCache;
-  std::unordered_map<size_t, GltfSkinnedMeshGpuBuffers> GltfSkinnedCache;
-  std::mutex CacheMutex;
+  using MeshTable = std::unordered_map<size_t, MeshBuffers>;
+  MeshTable SkeletalCache;
+  MeshTable GltfSkinnedCache;
+  mutable std::mutex CacheMutex;
 
-  /// Called with CacheMutex held: GL object creation stays under the lock so
-  /// two threads cannot build (and leak) the same VAO.
-  void CreateSkeletalBuffersLocked(const BoneSkeletonCubeMeshCpu &mesh,
-                                   SkeletalMeshGpuBuffers &outBuffers);
-  void CreateGltfSkinnedBuffersLocked(const GltfPrimitiveCpu &mesh,
-                                      GltfSkinnedMeshGpuBuffers &outBuffers);
+  static GLuint UploadBuffers(MeshTable &table, size_t hash, const void *vertices,
+      size_t vertexBytes, const std::vector<unsigned int> &indices, bool skinned);
+  static void DeleteBuffers(const MeshBuffers &buffers) noexcept;
 };
 
 } // namespace cutum

@@ -13,6 +13,7 @@
 
 namespace cutum
 {
+struct VisualAssetStorage;
 
 class CreatureBoneSkeletonCache
 {
@@ -23,6 +24,7 @@ public:
   std::string GetCreaturesRoot() const { std::lock_guard<std::mutex> lock(mutex);return creaturesRoot; }
   uint64_t GetRevision() const { return revision.load(std::memory_order_acquire); }
   void Clear();
+  VisualAssetStorage InspectOwnedStorage() const;
 
   std::shared_ptr<const CreatureBoneSkeletonMeshAsset>
   Load(const std::string &speciesId, const std::string &geometryFile,

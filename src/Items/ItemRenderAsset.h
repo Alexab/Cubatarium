@@ -13,6 +13,7 @@
 
 namespace cutum
 {
+struct VisualAssetStorage;
 struct ItemRenderMaterial
 {
   std::string Name;
@@ -113,6 +114,7 @@ LoadItemRenderAsset(const std::filesystem::path &path,
 std::shared_ptr<const ItemRenderAsset>
 FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision = 0);
 void ClearItemSurfaceAssets();
+VisualAssetStorage InspectItemSurfaceAssetStorage();
 struct ItemAssetLookupStats
 {
   uint64_t FastHits{0}, CanonicalResolutions{0};

@@ -1,4 +1,6 @@
 #include "Items/ItemRenderAsset.h"
+#include "Core/Memory/VisualAssetStorage.h"
+#include "WorldGen/Core/CatalogJsonSource.h"
 
 #include <algorithm>
 #include <cmath>
@@ -24,6 +26,43 @@ uint64_t AssetsRevision = 0;
 std::unordered_map<std::string, std::shared_ptr<const ItemRenderAsset>> Assets;
 std::unordered_map<std::string, std::string> AssetAliases;
 ItemAssetLookupStats AssetLookupStats;
+
+void MeasureItemAsset(const ItemRenderAsset &asset, StlSourceStorage &out) noexcept
+{
+  out.Buffer(asset.Primitives.capacity(), sizeof(ItemRenderPrimitive));
+  for (const auto &primitive : asset.Primitives)
+  {
+    out.Buffer(primitive.Vertices.capacity(), sizeof(float));
+    out.Buffer(primitive.Indices.capacity(), sizeof(unsigned));
+  }
+  out.Buffer(asset.Materials.capacity(), sizeof(ItemRenderMaterial));
+  for (const auto &material : asset.Materials)
+  {
+    out.Text(material.Name);
+    out.Text(material.Albedo.native());
+  }
+  out.Buffer(asset.Nodes.capacity(), sizeof(ItemRenderNode));
+  for (const auto &node : asset.Nodes)
+    out.Text(node.Name);
+  out.Text(asset.Grip.SupportGripNode);
+  out.Buffer(asset.Bindings.capacity(), sizeof(ItemNodeBinding));
+  out.Buffer(asset.WearSections.capacity(), sizeof(ItemWearSection));
+  for (const auto &section : asset.WearSections)
+  {
+    out.Text(section.Node);
+    out.Text(section.Region);
+    out.Buffer(section.Bones.capacity(), sizeof(std::string));
+    for (const auto &bone : section.Bones)
+      out.Text(bone);
+  }
+  out.Hash(asset.StaticWearSections);
+  for (const auto &[name, section] : asset.StaticWearSections)
+  {
+    out.Text(name);
+    out.Buffer(section.Primitives.capacity(), sizeof(size_t));
+  }
+}
+
 void Require(bool condition, const char *reason)
 {
   if (!condition)
@@ -47,7 +86,7 @@ std::filesystem::path Resource(const std::filesystem::path &folder,
 
 struct Reader
 {
-  Json Data;
+  CatalogJsonDocument Data;
   std::vector<std::vector<unsigned char>> Buffers;
 
   std::vector<double> Read(size_t index, const char *type) const
@@ -295,7 +334,7 @@ void ReadWearSections(const Json &rows, ItemRenderAsset &asset)
 namespace
 {
 std::shared_ptr<ItemRenderAsset>
-DecodeItemRenderAsset(const std::filesystem::path &path, Json data,
+DecodeItemRenderAsset(const std::filesystem::path &path, CatalogJsonDocument data,
                       bool legacyPreviewNormals)
 {
   Reader reader;
@@ -561,8 +600,7 @@ LoadItemRenderAsset(const std::filesystem::path &path,
 {
   std::ifstream in(path);
   Require(bool(in), "cannot open model");
-  Json data;
-  in >> data;
+  auto data = ParseAndCloseCatalogFileJson(in, CatalogJsonKind::ItemSurface);
   return DecodeItemRenderAsset(path, std::move(data), legacyPreviewNormals);
 }
 
@@ -592,16 +630,23 @@ FindItemSurfaceAsset(const std::filesystem::path &path, uint64_t revision)
     return found->second;
   }
   std::ifstream in(path);
-  Json data;
   if (!in)
     return nullptr;
-  in >> data;
+  auto data = ParseAndCloseCatalogFileJson(in, CatalogJsonKind::ItemSurface);
   std::shared_ptr<const ItemRenderAsset> asset;
   if (data.value("extras", Json::object()).value("design_version", 0) == 3)
     asset = DecodeItemRenderAsset(path, std::move(data), false);
-  Assets.emplace(key, asset);
-  AssetAliases.emplace(spelling, key);
-  return asset;
+  const auto inserted = Assets.emplace(key, std::move(asset)).first;
+  try
+  {
+    AssetAliases.emplace(spelling, key);
+  }
+  catch (...)
+  {
+    Assets.erase(inserted);
+    throw;
+  }
+  return inserted->second;
 }
 
 glm::mat4 ApplyItemHandProfile(const glm::mat4 &root, const glm::vec3 &socket,
@@ -637,6 +682,38 @@ void ClearItemSurfaceAssets()
   std::lock_guard<std::mutex> lock(AssetMutex);
   Assets.clear();
   AssetAliases.clear();
+}
+
+VisualAssetStorage InspectItemSurfaceAssetStorage()
+{
+  std::lock_guard<std::mutex> lock(AssetMutex);
+  VisualAssetStorage out;
+  out.inlineBytes = sizeof(AssetMutex) + sizeof(AssetsRevision) + sizeof(Assets) +
+                    sizeof(AssetAliases) + sizeof(AssetLookupStats);
+  StlSourceStorage table, control, payload;
+  table.Hash(Assets);
+  table.Hash(AssetAliases);
+  for (const auto &[key, asset] : Assets)
+  {
+    table.Text(key);
+    if (asset)
+    {
+      ++out.live;
+      AddVisualAssetControl<ItemRenderAsset>(control);
+      MeasureItemAsset(*asset, payload);
+    }
+    else
+      ++out.negative;
+  }
+  for (const auto &[spelling, key] : AssetAliases)
+  {
+    table.Text(spelling);
+    table.Text(key);
+    table.bytes.supported &= Assets.find(key) != Assets.end();
+  }
+  out.aliases = AssetAliases.size();
+  FinishVisualAssetStorage(out, table, control, payload);
+  return out;
 }
 ItemAssetLookupStats GetItemAssetLookupStats()
 {

@@ -8,10 +8,19 @@
 namespace cutum
 {
 
+struct StatusEffectCatalogStorage
+{
+  size_t inlineBytes{}, tableBytes{}, definitions{};
+  bool published{}, filesAttempted{}, builtinsReady{}, supported{};
+};
+
 class UStatusEffectCatalog
 {
 public:
   static UStatusEffectCatalog &Get();
+  static UStatusEffectCatalog LoadFromDirectory(const std::string &dir);
+  static StatusEffectCatalogStorage InspectPublishedStorage() noexcept;
+  StatusEffectCatalogStorage InspectOwnedStorage() const noexcept;
 
   /// Load `models/effects/*.json` then fill any missing builtins (bleed/slow).
   void EnsureBuiltins();

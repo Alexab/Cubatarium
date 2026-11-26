@@ -66,10 +66,8 @@ struct BoneSkeletonCubeMeshCpu
   std::vector<float> interleavedPosUv;
   std::vector<unsigned int> indices;
   glm::mat4 restLocalMatrix{1.f};
-  /// Content hash for the GPU VAO cache, computed once at build time.
-  /// Mutable: the cache may lazily fill it for meshes built outside the
-  /// loaders (idempotent write of the same value).
-  mutable size_t GpuHash{0};
+  /// Content hash for the GPU VAO cache, computed by the mesh builder.
+  size_t GpuHash{0};
   /// Geometry is immutable while its GPU content key is retained. Bounds
   /// share that invalidation rule; no pointer-only cache survives a reload.
   mutable bool ClipBoundsReady{false},ClipBoundsFinite{false};

@@ -1,4 +1,5 @@
 #include "Creatures/Visual/Gltf/CreatureGltfCache.h"
+#include "Core/Memory/VisualAssetStorage.h"
 
 #include "Creatures/Visual/Gltf/CreatureGltfLoader.h"
 #include <filesystem>
@@ -28,6 +29,45 @@ void CreatureGltfCache::Clear()
   entries.clear();
   failedKeys.clear();
   revision.fetch_add(1,std::memory_order_release);
+}
+
+VisualAssetStorage CreatureGltfCache::InspectOwnedStorage() const
+{
+  std::lock_guard<std::mutex> lock(mutex);
+  return InspectWeakVisualAssets<CreatureGltfMeshAsset>(sizeof(*this), creaturesRoot, entries, failedKeys,
+      [](const CreatureGltfMeshAsset &asset, StlSourceStorage &out)
+      {
+        out.Buffer(asset.nodes.capacity(), sizeof(GltfNodeCpu));
+        for (const auto &node : asset.nodes)
+          out.Text(node.name);
+        out.Buffer(asset.skin.jointNodes.capacity(), sizeof(int));
+        out.Buffer(asset.skin.inverseBindMatrices.capacity(), sizeof(glm::mat4));
+        out.Buffer(asset.primitives.capacity(), sizeof(GltfPrimitiveCpu));
+        for (const auto &primitive : asset.primitives)
+        {
+          out.Buffer(primitive.mesh.interleavedPosUv.capacity(), sizeof(float));
+          out.Buffer(primitive.mesh.indices.capacity(), sizeof(unsigned));
+          out.Buffer(primitive.jointIndices.capacity(), sizeof(uint8_t));
+          out.Buffer(primitive.jointWeights.capacity(), sizeof(float));
+          out.Text(primitive.textureStem);
+        }
+        out.Buffer(asset.animations.capacity(), sizeof(GltfAnimationCpu));
+        for (const auto &clip : asset.animations)
+        {
+          out.Text(clip.name);
+          out.Buffer(clip.channels.capacity(), sizeof(GltfAnimationChannelCpu));
+          for (const auto &channel : clip.channels)
+          {
+            out.Text(channel.path);
+            out.Buffer(channel.keyTimes.capacity(), sizeof(float));
+            out.Buffer(channel.keyVec3.capacity(), sizeof(glm::vec3));
+            out.Buffer(channel.keyQuat.capacity(), sizeof(glm::quat));
+          }
+        }
+        out.Hash(asset.animationIndexByName);
+        for (const auto &animation : asset.animationIndexByName)
+          out.Text(animation.first);
+      });
 }
 
 std::shared_ptr<CreatureGltfMeshAsset>
