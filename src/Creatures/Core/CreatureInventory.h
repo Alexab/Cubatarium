@@ -119,14 +119,20 @@ public:
 
 private:
   friend class URecipeRegistry;
-  struct CraftingTrial {};
-  UCreatureInventory(CraftingTrial, const UCreatureInventory &source)
+  // Only the active rows participate in craft and repair transactions.
+  struct ActiveSlotsTrial {};
+  UCreatureInventory(ActiveSlotsTrial, const UCreatureInventory &source)
       : Hotbars(source.Creative ? std::vector<HotbarBar>{} : source.Hotbars),
         CreativeHotbars(source.Creative ? source.CreativeHotbars : std::vector<HotbarBar>{}),
         Items(source.Items), NextInstanceId(source.NextInstanceId),
         ActiveBarIndex(source.ActiveBarIndex), ActiveSlotIndex(source.ActiveSlotIndex),
         Creative(source.Creative)
   {
+  }
+  void CommitActiveSlots(UCreatureInventory &trial) noexcept
+  {
+    GetHotbarsMutable().swap(trial.GetHotbarsMutable());
+    NextInstanceId = trial.NextInstanceId;
   }
   std::vector<InventoryEntryRef> &RecoveryForMode()
   {

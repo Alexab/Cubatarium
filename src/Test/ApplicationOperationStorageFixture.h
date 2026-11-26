@@ -30,6 +30,15 @@ struct ApplicationOperationSourceProbe {
     app.CraftingScreen = std::move(screen);
     return *app.CraftingScreen;
   }
+  static UAnvilScreen &BuildAnvil(UApplication &app, IUGuiIconSource *icons)
+  {
+    auto screen = std::make_unique<UAnvilScreen>(app.World.get(), icons);
+    screen->OnAttach(app.GetGui());
+    screen->Build(app.GetGui());
+    app.CloseAnvilScreen();
+    app.AnvilScreen = std::move(screen);
+    return *app.AnvilScreen;
+  }
   static bool IsInGame(const UApplication &app) { return app.State == AppState::InGame; }
   static void RetireDeath(UApplication &app) { app.DeathScreen.reset(); }
   static void DetachProgress(UApplication &app)

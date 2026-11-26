@@ -244,7 +244,7 @@ bool URecipeRegistry::EvaluateBatch(const UCreatureInventory &inv, UCreatureInve
   }
   costs.resize(unique);
 
-  UCreatureInventory trial(UCreatureInventory::CraftingTrial{}, inv);
+  UCreatureInventory trial(UCreatureInventory::ActiveSlotsTrial{}, inv);
   InventoryEntryRef output;
   output.kind = trial.KindForId(recipe.Output.Id);
   output.Id = recipe.Output.Id;
@@ -262,10 +262,7 @@ bool URecipeRegistry::EvaluateBatch(const UCreatureInventory &inv, UCreatureInve
     }
   }
   if (publish)
-  {
-    publish->GetHotbarsMutable().swap(trial.GetHotbarsMutable());
-    publish->NextInstanceId = trial.NextInstanceId;
-  }
+    publish->CommitActiveSlots(trial);
   return true;
 }
 } // namespace cutum

@@ -257,6 +257,7 @@ private:
   void ShowInGameHud();
   void BuildDeathOverlay();
   void CloseCraftingScreen();
+  void CloseAnvilScreen();
   void UpdateDeathOverlay();
   void SetDeathOverlayVisible(bool visible);
   void RespawnPlayerFromDeathScreen();
@@ -325,6 +326,7 @@ private:
     Anvil,
     Death
   };
+  void CancelButtonOverlayCapture(OverlayPointerCapture capture);
   static constexpr int kMaxOverlayPointers = 10;
   std::array<OverlayPointerCapture, kMaxOverlayPointers> OverlayCaptures{};
   /// Leaf widget that received overlay mouse-down (slot owner for teardown).

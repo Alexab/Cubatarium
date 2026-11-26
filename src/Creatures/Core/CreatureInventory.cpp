@@ -738,7 +738,7 @@ bool UCreatureInventory::RepairActive(const UItemDefinitionStorage &items,
     return false;
   }
   const auto id = e->instanceId;
-  auto trial = *this;
+  UCreatureInventory trial(ActiveSlotsTrial{}, *this);
   if (!Creative)
   {
     bool paid = false;
@@ -766,7 +766,7 @@ bool UCreatureInventory::RepairActive(const UItemDefinitionStorage &items,
   }
   fixed->wear = std::max(0.f, fixed->wear - d->Repair.Amount);
   fixed->broken = fixed->wear >= 1.f;
-  *this = std::move(trial);
+  CommitActiveSlots(trial);
   reason.clear();
   return true;
 }

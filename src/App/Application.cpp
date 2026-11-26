@@ -1265,10 +1265,11 @@ void UApplication::ShowInGameHud()
   CloseCraftingScreen();
   CraftingScreen = std::move(crafting);
 
-  AnvilScreen = std::make_unique<UAnvilScreen>(World.get(), icons);
-  AnvilScreen->OnAttach(*GuiContext);
-  AnvilScreen->Build(*GuiContext);
-  AnvilScreen->SetVisible(false);
+  auto anvil = std::make_unique<UAnvilScreen>(World.get(), icons);
+  anvil->OnAttach(*GuiContext);
+  anvil->Build(*GuiContext);
+  CloseAnvilScreen();
+  AnvilScreen = std::move(anvil);
 
   BuildDeathOverlay();
 
@@ -1631,7 +1632,7 @@ void UApplication::EnterInGameInputState()
   WorldGenOpen = false;
   CharacterSheetOpen = false;
   CloseCraftingScreen();
-  AnvilOpen = false;
+  CloseAnvilScreen();
   FreeCursor = false;
   if (WorldGenScreen)
   {
@@ -1650,10 +1651,6 @@ void UApplication::EnterInGameInputState()
     }
     PaletteScreen->SetPointerPressed(false);
     PaletteScreen->SetVisible(false);
-  }
-  if (AnvilScreen)
-  {
-    AnvilScreen->SetVisible(false);
   }
   SetDeathOverlayVisible(false);
   if (CharacterSheetScreen)
@@ -1718,11 +1715,9 @@ void UApplication::OpenPlayerWindow(int section)
   CharacterSheetOpen = !catalog;
   WorldGenOpen = false;
   CloseCraftingScreen();
-  AnvilOpen = false;
+  CloseAnvilScreen();
   if (WorldGenScreen)
     WorldGenScreen->SetVisible(false);
-  if (AnvilScreen)
-    AnvilScreen->SetVisible(false);
   SyncCursorVisibility();
 }
 UGuiWidget *UApplication::GetPlayerWindowRoot()
@@ -2181,21 +2176,32 @@ void UApplication::EndFpUseVisual()
   }
 }
 
-void UApplication::CloseCraftingScreen()
+void UApplication::CancelButtonOverlayCapture(OverlayPointerCapture capture)
 {
-  CraftingOpen = false;
-  const auto captured = std::find(OverlayCaptures.begin(), OverlayCaptures.end(),
-                                  OverlayPointerCapture::Crafting);
+  const auto captured = std::find(OverlayCaptures.begin(), OverlayCaptures.end(), capture);
   if (captured != OverlayCaptures.end())
   {
     if (auto *button = dynamic_cast<UGuiButton *>(OverlayPressedWidget))
       button->ClearPressState();
     OverlayPressedWidget = nullptr;
-    std::replace(captured, OverlayCaptures.end(), OverlayPointerCapture::Crafting,
-                 OverlayPointerCapture::None);
+    std::replace(captured, OverlayCaptures.end(), capture, OverlayPointerCapture::None);
   }
+}
+
+void UApplication::CloseCraftingScreen()
+{
+  CraftingOpen = false;
+  CancelButtonOverlayCapture(OverlayPointerCapture::Crafting);
   if (CraftingScreen)
     CraftingScreen->SetVisible(false);
+}
+
+void UApplication::CloseAnvilScreen()
+{
+  AnvilOpen = false;
+  CancelButtonOverlayCapture(OverlayPointerCapture::Anvil);
+  if (AnvilScreen)
+    AnvilScreen->SetVisible(false);
 }
 
 void UApplication::OpenCraftingScreen()
@@ -2206,14 +2212,10 @@ void UApplication::OpenCraftingScreen()
   }
   CraftingScreen->SetWorld(World.get());
   CraftingOpen = true;
-  AnvilOpen = false;
+  CloseAnvilScreen();
   PaletteOpen = false;
   WorldGenOpen = false;
   CharacterSheetOpen = false;
-  if (AnvilScreen)
-  {
-    AnvilScreen->SetVisible(false);
-  }
   if (PaletteScreen)
   {
     PaletteScreen->SetVisible(false);

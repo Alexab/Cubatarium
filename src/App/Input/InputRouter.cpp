@@ -216,11 +216,7 @@ bool UInputRouter::RouteKey(UApplication &app, int key, int action, int mods)
       }
       if (app.AnvilOpen)
       {
-        app.AnvilOpen = false;
-        if (app.AnvilScreen)
-        {
-          app.AnvilScreen->SetVisible(false);
-        }
+        app.CloseAnvilScreen();
         app.GuiContext->ClearInputState();
         app.SyncCursorVisibility();
         return true;

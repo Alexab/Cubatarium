@@ -3,6 +3,8 @@
 
 #include "Gui/Core/GuiScreenBase.h"
 
+#include <cstdint>
+#include <optional>
 #include <string>
 
 namespace cutum
@@ -14,7 +16,15 @@ class UGuiPanel;
 class UGuiLabel;
 class UGuiButton;
 class UGuiSlot;
+class UItemDefinitionStorage;
 struct GuiTheme;
+
+struct AnvilScreenStorage
+{
+  size_t screenBytes{}, widgets{}, widgetBytes{}, childrenBytes{}, textBytes{},
+      callbackBytes{}, requested{};
+  bool supported{}, pending{};
+};
 
 /// Repair UI for the active hotbar item (uses item repair materials).
 class UAnvilScreen : public UGuiScreenBase
@@ -29,14 +39,25 @@ public:
 
   void SetVisible(bool visible);
   void Toggle();
-  void SetWorld(UWorld *world) { World = world; }
+  void SetWorld(UWorld *world);
 
   void OnViewportChanged(int width, int height) override;
+  AnvilScreenStorage InspectOwnedStorage(const UGuiContext &context, const UWorld *world,
+                                         const IUGuiIconSource *icons) const noexcept;
 
 private:
+  friend struct AnvilStorageProbe;
+  struct RepairAction;
+  struct RepairRequest
+  {
+    uint64_t Actor{}, Instance{};
+    size_t Row{}, Slot{};
+  };
+  enum class ItemDisplay { Initial, NoWorld, NoActor, NoItem, Item };
   void Refresh();
   void Relayout();
-  void TryRepair();
+  void RequestRepair();
+  void FinishRepair();
 
   UWorld *World{nullptr};
   IUGuiIconSource *Icons{nullptr};
@@ -49,7 +70,13 @@ private:
   UGuiButton *RepairBtn{nullptr};
   const GuiTheme *Theme{nullptr};
   bool Visible{false};
-  std::string StatusText;
+  std::optional<RepairRequest> PendingRepair;
+  ItemDisplay Display{ItemDisplay::Initial};
+  std::string DisplayedId;
+  const UItemDefinitionStorage *DisplayedDefinitions{};
+  uint64_t DisplayedRevision{};
+  float DisplayedWear{};
+  bool DisplayedBroken{};
 };
 
 } // namespace cutum
