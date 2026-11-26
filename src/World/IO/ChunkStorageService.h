@@ -85,7 +85,8 @@ public:
                              glm::ivec3 chunkCoord) const;
   /// Build the per-world directory index before terrain streaming starts.
   /// Call from a background I/O job; later lookups are constant-time.
-  void PrepareHighestChunkSliceIndex(const std::string &worldFolder) const;
+  void PrepareHighestChunkSliceIndex(const std::string &worldFolder,
+                                    const IoCodecProbe *probe = nullptr) const;
   IoDiskIndexStorage InspectDiskIndexStorage() const;
   bool RemoveChunkSliceFromDisk(const std::string &worldFolder,
                                 glm::ivec3 chunkCoord,
@@ -202,7 +203,8 @@ private:
 
   std::string HighestChunkSliceIndexKey(const std::string &worldFolder) const;
   void BuildHighestChunkSliceIndex(const std::string &worldFolder,
-                                   DiskTerrainColumnIndex &index) const;
+                                   DiskTerrainColumnIndex &index,
+                                   IoCodecStorage *directory_peak = nullptr) const;
   int ScanHighestChunkSliceOnDisk(
       const std::string &worldFolder, glm::ivec3 groundCoord,
       std::unordered_set<int> *slices = nullptr) const;

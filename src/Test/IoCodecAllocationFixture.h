@@ -4,6 +4,7 @@
 #include "Blocks/BlockRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/PersistedSectionLight.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
@@ -20,21 +21,47 @@ inline void Require(bool condition, const char *message)
 
 struct CapturedRequest
 {
+  struct WindowPeak { size_t previous{}, baseline{}, peak{}, additional{}, calls{}; };
   IoCodecStorage storage;
-  size_t observed{}, calls{};
+  std::array<IoCodecStorage, static_cast<size_t>(IoCodecKind::Count)> points{};
+  std::array<size_t, static_cast<size_t>(IoCodecKind::Count)> point_live{};
+  std::array<WindowPeak, static_cast<size_t>(IoCodecWindow::Count)> windows{};
+  size_t observed{}, calls{}, operation_peak{};
   static void Sample(void *context, const IoCodecStorage &storage) noexcept
   {
     auto &value = *static_cast<CapturedRequest *>(context);
     value.storage = storage;
     value.observed = observation::State.live;
+    const auto index = static_cast<size_t>(storage.kind);
+    value.points[index] = storage;
+    value.point_live[index] = value.observed;
     ++value.calls;
   }
+
+  static void Window(void *context, IoCodecWindow kind, bool entering) noexcept
+  {
+    auto &window = static_cast<CapturedRequest *>(context)->windows[static_cast<size_t>(kind)];
+    if (entering)
+    {
+      window.previous = observation::State.peak;
+      window.baseline = observation::State.live;
+      observation::State.peak = window.baseline;
+      return;
+    }
+    const auto peak = observation::State.peak;
+    window.peak = (std::max)(window.peak, peak);
+    window.additional = (std::max)(window.additional, peak - window.baseline);
+    observation::State.peak = (std::max)(peak, window.previous);
+    ++window.calls;
+  }
+
+  IoCodecProbe Probe() { return {this, Sample, Window}; }
 };
 
 inline nlohmann::json Describe(const CapturedRequest &capture)
 {
   return {{"scratch", capture.storage.scratch_bytes}, {"output", capture.storage.output_bytes},
-          {"ordinary_live", capture.observed}};
+          {"ordinary_live", capture.observed}, {"operation_peak", capture.operation_peak}};
 }
 
 inline void Check(const CapturedRequest &capture)
@@ -66,17 +93,18 @@ inline nlohmann::json CheckCodecs()
   for (const IUChunkSerializer *codec : std::array<const IUChunkSerializer *, 2>{&binary, &json})
   {
     CapturedRequest encode;
-    const IoCodecProbe encode_probe{&encode, CapturedRequest::Sample};
+    const auto encode_probe = encode.Probe();
     {
       observation::Scope allocations;
       { const auto bytes = codec->Serialize(coord, chunk, registry, &encode_probe); }
+      encode.operation_peak = observation::State.peak;
       Require(!observation::State.live && !observation::State.blocks, "encoded allocations retire");
     }
     Check(encode);
 
     const auto bytes = codec->Serialize(coord, chunk, registry);
     CapturedRequest decode;
-    const IoCodecProbe decode_probe{&decode, CapturedRequest::Sample};
+    const auto decode_probe = decode.Probe();
     {
       observation::Scope allocations;
       {
@@ -84,13 +112,123 @@ inline nlohmann::json CheckCodecs()
         Require(decoded.HasDecodedTerrainFrame(coord) && decoded.GetBlock({0, 0, 0}) == 2,
                 "ordinary allocation fixture decodes the original game data");
       }
+      decode.operation_peak = observation::State.peak;
       Require(!observation::State.live && !observation::State.blocks, "decoded allocations retire");
     }
     Check(decode);
+    Require(encode.operation_peak >= encode.observed && decode.operation_peak >= decode.observed,
+            "ordinary peak covers the retained checkpoint");
+    auto phases = nlohmann::json::object();
+    if (codec->GetFormat() == ChunkDiskFormat::Json)
+    {
+      const auto &parse = decode.windows[static_cast<size_t>(IoCodecWindow::JsonParse)];
+      const auto &dump = encode.windows[static_cast<size_t>(IoCodecWindow::JsonDump)];
+      Require(parse.calls == 1 && parse.additional > 0 && dump.calls == 1 && dump.additional > 0,
+              "real JSON parse and dump publish their allocation windows");
+      phases = {{"parse_peak", parse.peak}, {"parse_additional", parse.additional},
+                {"dump_peak", dump.peak}, {"dump_additional", dump.additional}};
+    }
     report.push_back({{"format", static_cast<int>(codec->GetFormat())},
-                      {"encode", Describe(encode)}, {"decode", Describe(decode)}});
+                      {"encode", Describe(encode)}, {"decode", Describe(decode)}, {"windows", phases}});
   }
   return report;
+}
+
+inline nlohmann::json CheckMalformedJson()
+{
+  UBlockRegistry registry(nullptr);
+  UJsonChunkSerializer codec;
+  const auto text = std::string{"{\"values\":["} + std::string(4096, ' ') + "0,";
+  const std::vector<uint8_t> input(text.begin(), text.end());
+  codec.Deserialize(input, {0, 0, 0}, registry);
+  CapturedRequest capture;
+  const auto probe = capture.Probe();
+  {
+    observation::Scope allocations;
+    {
+      const auto output = codec.Deserialize(input, {0, 0, 0}, registry, &probe);
+      Require(!output.HasDecodedTerrainFrame({0, 0, 0}), "malformed JSON stays rejected");
+    }
+    capture.operation_peak = observation::State.peak;
+    Require(!observation::State.live && !observation::State.blocks, "parse exception retires its requests");
+  }
+  const auto &parse = capture.windows[static_cast<size_t>(IoCodecWindow::JsonParse)];
+  Require(parse.calls == 1 && parse.additional > 0 && !capture.calls, "parse error closes its observed window");
+  return {{"peak", capture.operation_peak}, {"parse_peak", parse.peak}, {"retired", true}};
+}
+
+inline nlohmann::json CheckReceiptTemporaries()
+{
+  PersistedSectionLight receipt;
+  receipt.coord = {0, 0, 0};
+  receipt.profile = {0, 15, 7};
+  receipt.signature = "io-receipt-transient-fixture";
+  for (int x = -1; x <= 1; ++x)
+    for (int z = -1; z <= 1; ++z)
+      receipt.inputs.push_back({{x, 0, z}, 1});
+  receipt.checksum = persisted_light_detail::Checksum(receipt);
+  auto document = EncodeSectionLight(receipt);
+  const auto check = [&](bool valid) {
+    DecodeSectionLight(document); // warm C++ library support outside the observation
+    CapturedRequest capture;
+    const auto probe = capture.Probe();
+    {
+      observation::Scope allocations;
+      {
+        const auto decoded = DecodeSectionLight(document, &probe);
+        Require(bool(decoded) == valid, "receipt verdict is preserved during observation");
+      }
+      capture.operation_peak = observation::State.peak;
+      Require(!observation::State.live && !observation::State.blocks, "receipt temporaries retire");
+    }
+    Require(capture.calls == 2, "receipt validation and checksum checkpoints run");
+    for (const auto kind : {IoCodecKind::ReceiptValidation, IoCodecKind::ReceiptChecksum})
+    {
+      const auto index = static_cast<size_t>(kind);
+      const auto &sample = capture.points[index];
+      Require(sample.kind == kind && sample.supported &&
+                  sample.scratch_bytes + sample.input_bytes == capture.point_live[index],
+              "receipt temporary snapshot matches ordinary allocation observation");
+    }
+    const auto &map = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptValidate)];
+    const auto &hash = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptHash)];
+    Require(map.calls == 1 && hash.calls == 1 && map.additional > 0 && hash.additional > 0,
+            "receipt allocation windows close");
+    return nlohmann::json{{"validation_peak", map.peak}, {"checksum_peak", hash.peak},
+                          {"peak", capture.operation_peak}, {"decoded", valid}};
+  };
+  const auto valid = check(true);
+  document["checksum"] = receipt.checksum ^ UINT64_C(1);
+  return {{"valid", valid}, {"mismatched_checksum", check(false)}};
+}
+
+inline nlohmann::json CheckFileStreams(const std::filesystem::path &root)
+{
+  std::filesystem::create_directories(root);
+  const auto path = (root / "bytes.bin").string();
+  const std::vector<uint8_t> input(8192, 0x46);
+  UChunkStorageService storage;
+  Require(storage.WriteBytesAtomically(path, input), "real file write warmup");
+  { std::vector<uint8_t> output; Require(storage.ReadBytesFromFile(path, output), "real file read warmup"); }
+  size_t write_peak = 0, read_peak = 0, retained = 0;
+  {
+    observation::Scope allocations;
+    Require(storage.WriteBytesAtomically(path, input), "observed file write");
+    write_peak = observation::State.peak;
+    Require(!observation::State.live && !observation::State.blocks, "file write ordinary requests retire");
+  }
+  {
+    observation::Scope allocations;
+    {
+      std::vector<uint8_t> output;
+      Require(storage.ReadBytesFromFile(path, output) && output == input, "observed file read");
+      retained = observation::State.live;
+      read_peak = observation::State.peak;
+      Require(read_peak >= retained && retained >= input.size(), "read buffer is included in actual peak");
+    }
+    Require(!observation::State.live && !observation::State.blocks, "file read ordinary requests retire");
+  }
+  return {{"write_peak", write_peak}, {"read_peak", read_peak}, {"read_retained", retained}};
 }
 
 inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
@@ -104,18 +242,28 @@ inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
     std::ofstream(paths.ChunkFilePath(folder, {n, 0, 0}, ChunkDiskFormat::Binary)).put('0');
   paths.PrepareHighestChunkSliceIndex(folder); // warm filesystem infrastructure
   IoDiskIndexStorage cold, warmed, empty_column;
+  CapturedRequest traversal;
+  const auto probe = traversal.Probe();
+  size_t warmup_additional_peak = 0;
   {
     observation::Scope allocations;
     {
       UChunkStorageService storage;
       cold = storage.InspectDiskIndexStorage();
       const auto baseline = observation::State.live;
-      storage.PrepareHighestChunkSliceIndex(folder);
+      storage.PrepareHighestChunkSliceIndex(folder, &probe);
       warmed = storage.InspectDiskIndexStorage();
+      warmup_additional_peak = observation::State.peak - baseline;
       Require(warmed.supported && warmed.initialized == 1 && warmed.heights == 320 &&
                   warmed.columns == 320 && warmed.slices == 320 && warmed.tables == 324 &&
                   observation::State.live - baseline == warmed.requested - cold.requested,
               "real disk index heap matches default ordinary allocations");
+      Require(traversal.calls == 1 && traversal.storage.kind == IoCodecKind::DiskDirectoryEntry &&
+                  traversal.storage.supported && traversal.storage.scratch_bytes &&
+                  traversal.storage.stack_buffer_bytes &&
+                  warmup_additional_peak >= warmed.requested - cold.requested &&
+                  warmup_additional_peak >= traversal.storage.scratch_bytes,
+              "observed directory traversal sits within the measured whole warmup peak");
       const auto revision = storage.GetKnownAirEvidenceRevision();
       const auto attempts = observation::State.attempts;
       Require(storage.InspectDiskIndexStorage().requested == warmed.requested &&
@@ -136,7 +284,8 @@ inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
   }
   return {{"cold", cold.requested}, {"warmed", warmed.requested},
           {"after_removal", empty_column.requested}, {"bucket_slots", warmed.bucket_slots},
-          {"columns", warmed.columns}};
+          {"columns", warmed.columns}, {"warmup_additional_peak", warmup_additional_peak},
+          {"sampled_traversal", traversal.storage.scratch_bytes}};
 }
 } // namespace io_codec_fixture
 } // namespace cutum

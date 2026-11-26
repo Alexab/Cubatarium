@@ -77,7 +77,7 @@ SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
   data["weather_state"] = {
       {"surface_wetness", std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f)},
       {"last_update_sec", std::max(0.0, chunk.GetWeatherLastUpdateSec())}};
-  const std::string text = data.dump();
+  const auto text = RunIoCodecWindow(probe, IoCodecWindow::JsonDump, [&] { return data.dump(); });
   out.bytes.assign(text.begin(), text.end());
   if (probe)
   {
@@ -107,7 +107,7 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   try
   {
     const std::string text(bytes.begin(), bytes.end());
-    const json data = json::parse(text);
+    const auto data = RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] { return json::parse(text); });
     bool frame_valid = data.is_object() && data.contains("voxels") &&
                        data.at("voxels").is_array();
     if (data.contains("format_version"))

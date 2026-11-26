@@ -61,6 +61,26 @@ public:
 #endif
   }
 
+  template<class Table> void Tree(const Table &table) noexcept
+  {
+#if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+    using Value = typename Table::value_type;
+    static_assert(std::is_same_v<typename Table::allocator_type, std::allocator<Value>>);
+    using Node = std::_Tree_node<Value, void *>;
+    static_assert(sizeof(Node) < 4096);
+    Add(sizeof(Node));
+    if (table.size() > SIZE_MAX / sizeof(Node))
+    {
+      bytes.overflow = true;
+      bytes.supported = false;
+    }
+    else
+      Add(table.size() * sizeof(Node));
+#else
+    (void)table;
+#endif
+  }
+
   // The codec owns a tree, with no shared DOM subtrees. Use bounded recursion
   // and no diagnostic heap allocations. If depth exceeds the bound, report
   // unsupported instead of returning a purported total for a prefix.
@@ -77,15 +97,9 @@ public:
       const auto &object = value.template get_ref<const Object &>();
       Add(sizeof(Object));
 #if defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
-      using Entry = typename Object::value_type;
-      static_assert(std::is_same_v<typename Object::allocator_type, std::allocator<Entry>>);
-      using Node = std::_Tree_node<Entry, void *>;
-      static_assert(sizeof(Node) < 4096);
-      Add(sizeof(Node)); // sentinel
-      // Each node is its own allocation, regardless of aggregate size.
+      Tree(object);
       for (const auto &entry : object)
       {
-        Add(sizeof(Node));
         Text(entry.first);
         JsonTree(entry.second, depth + 1);
       }

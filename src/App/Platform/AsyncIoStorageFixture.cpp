@@ -7,6 +7,9 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include <nlohmann/json.hpp>
+#include <cstdio>
+#include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 namespace cutum
@@ -102,6 +105,65 @@ struct AsyncIoStorageProbe
       throw std::runtime_error(message);
   }
 
+  static nlohmann::json CheckNativeStdio(const std::filesystem::path &root)
+  {
+#if defined(_WIN32) && defined(_MSC_VER) && defined(_M_X64)
+    // Default buffering of a regular binary file in the pinned x64 UCRT.
+    constexpr size_t buffer_bytes = 4096;
+    constexpr size_t file_slot_bytes = 88;
+    using File = std::unique_ptr<FILE, decltype(&std::fclose)>;
+    const auto path = root / "stdio.bin";
+    const auto open = [&](const wchar_t *mode) {
+      FILE *handle = nullptr;
+      const auto error = _wfopen_s(&handle, path.c_str(), mode);
+      File stream(handle, &std::fclose);
+      Require(!error && stream, "open ordinary binary CRT stream");
+      return stream;
+    };
+    const auto extent = [buffer_bytes](FILE *stream) -> size_t {
+      char **base = nullptr, **next = nullptr;
+      int *count = nullptr;
+      Require(!_get_stream_buffer_pointers(stream, &base, &next, &count) &&
+                  base && next && count && *count >= 0,
+              "inspect CRT stream buffer state");
+      if (!*base)
+      {
+        Require(!*next && !*count, "untouched CRT stream has no buffer");
+        return 0;
+      }
+      const auto origin = reinterpret_cast<uintptr_t>(*base);
+      const auto cursor = reinterpret_cast<uintptr_t>(*next);
+      Require(cursor >= origin && cursor - origin <= buffer_bytes &&
+                  static_cast<size_t>(*count) <= buffer_bytes - (cursor - origin),
+              "CRT stream cursor and available bytes are within the default extent");
+      return cursor - origin + static_cast<size_t>(*count);
+    };
+    auto writer = open(L"wb");
+    const auto cold_write = extent(writer.get());
+    Require(std::fputc('F', writer.get()) == 'F', "first CRT buffered write");
+    const auto touched_write = extent(writer.get());
+    const std::array<char, 2 * buffer_bytes - 1> payload{};
+    Require(std::fwrite(payload.data(), 1, payload.size(), writer.get()) == payload.size(),
+            "write more than one CRT buffer");
+    Require(!std::fclose(writer.release()), "flush and close binary CRT writer");
+    auto reader = open(L"rb");
+    const auto cold_read = extent(reader.get());
+    Require(std::fgetc(reader.get()) == 'F', "first CRT buffered read");
+    const auto touched_read = extent(reader.get());
+    Require(!std::fclose(reader.release()) && !cold_write && !cold_read &&
+                touched_write == buffer_bytes && touched_read == buffer_bytes,
+            "ordinary binary streams acquire the expected default CRT buffer on first use");
+    const auto slot_limit = _getmaxstdio();
+    Require(slot_limit > 0, "read current CRT stream slot limit");
+    return {{"supported", true}, {"cold_write", cold_write}, {"touched_write", touched_write},
+            {"cold_read", cold_read}, {"touched_read", touched_read},
+            {"file_slot_bytes_from_source", file_slot_bytes}, {"slot_limit", slot_limit},
+            {"crt_heap_total_observed", false}};
+#else
+    return {{"supported", false}};
+#endif
+  }
+
   static size_t Park(UAsyncChunkIO &io, Gate &gate, bool flags)
   {
     size_t count = 0;
@@ -172,7 +234,11 @@ struct AsyncIoStorageProbe
                     flags_encoded->sources.queued_backing + 600 * sizeof(glm::ivec2),
             "actual save and flags serialization sources and vector transfer");
     const auto *index = trace.Find(Kind::Warmup, Stage::Finished, 0);
-    Require(index && index->disk_index.supported && index->disk_index.initialized == 1 &&
+    const auto *directory = trace.Find(Kind::Warmup, Stage::Codec, 0);
+    Require(directory && directory->codec.kind == IoCodecKind::DiskDirectoryEntry &&
+                directory->codec.supported && directory->codec.scratch_bytes &&
+                directory->codec.stack_buffer_bytes && !directory->sources.completed_backing &&
+                index && index->disk_index.supported && index->disk_index.initialized == 1 &&
                 index->disk_index.slices >= 1 &&
                 trace.Find(Kind::Receipts, Stage::BeforePublish, 202) &&
                 trace.Find(Kind::Cleanup, Stage::BeforePublish, 203) &&
@@ -201,6 +267,8 @@ struct AsyncIoStorageProbe
             {"receipt_write_dom", receipt_encode->scratch_bytes},
             {"receipt_write_output", receipt_write->output_bytes},
             {"disk_index_slices", index->disk_index.slices},
+            {"directory_sampled", directory->codec.scratch_bytes},
+            {"directory_inline", directory->codec.stack_buffer_bytes},
             {"disk_index_requested", index->disk_index.requested}};
   }
 
@@ -304,11 +372,18 @@ struct AsyncIoStorageProbe
     Require(io.WaitIdleFor(std::chrono::seconds(6)), "receipt read finishes");
     const auto receipt_result = io.DrainLoads();
     const auto *receipt_codec = trace.FindCodec(IoCodecKind::ReceiptRead, 799);
+    const auto *receipt_validation = trace.FindCodec(IoCodecKind::ReceiptValidation, 799);
+    const auto *receipt_checksum = trace.FindCodec(IoCodecKind::ReceiptChecksum, 799);
     Require(receipt_result.size() == 1 && receipt_result[0].columnLight &&
                 receipt_result[0].columnLight->size() == 1 && receipt_codec &&
                 receipt_codec->scratch_bytes && receipt_codec->output_bytes &&
                 receipt_codec->stack_buffer_bytes == 4096,
             "actual persisted receipt recovers after DOM and text observation");
+    for (const auto *sample : {receipt_validation, receipt_checksum})
+      Require(sample && sample->supported && sample->scratch_bytes > receipt_codec->scratch_bytes &&
+                  sample->output_bytes && sample->output_bytes < receipt_codec->output_bytes &&
+                  sample->stack_buffer_bytes == receipt_codec->stack_buffer_bytes,
+              "inner receipt allocation shares the live reader DOM, text and empty output owner");
     trace.cancel_on_decode = cancellation.get();
     const glm::ivec3 coord{2, 0, 0};
     world.SetBlock({2 * CHUNK_SIZE + 3, 2, 3}, 8);
@@ -343,6 +418,9 @@ struct AsyncIoStorageProbe
             {"json_read_scratch", json_read->scratch_bytes},
             {"receipt_read_scratch", receipt_codec->scratch_bytes},
             {"receipt_read_output", receipt_codec->output_bytes},
+            {"receipt_validation_scratch", receipt_validation->scratch_bytes},
+            {"receipt_checksum_scratch", receipt_checksum->scratch_bytes},
+            {"receipt_prefix_output", receipt_validation->output_bytes},
             {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes}};
   }
 
@@ -490,6 +568,7 @@ struct AsyncIoStorageProbe
             {"worker_stages", worker_stages},
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
+            {"native_stdio", CheckNativeStdio(root)},
             {"active_worker_storage_complete", false}};
   }
 };

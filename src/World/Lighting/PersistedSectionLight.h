@@ -4,6 +4,8 @@
 #include "World/Lighting/LightCacheCertificate.h"
 #include "World/Lighting/PersistedSectionLightTypes.h"
 #include "World/Lighting/RelightInputValidation.h"
+#include "Core/Memory/StlSourceStorage.h"
+#include "World/IO/IoCodecStorage.h"
 #include <limits>
 #include <map>
 #include <tuple>
@@ -62,13 +64,36 @@ inline nlohmann::json Payload(const PersistedSectionLight &receipt)
           {"padded_light", std::move(packed)}};
 }
 
-inline uint64_t Checksum(const PersistedSectionLight &receipt)
+inline size_t ReceiptTextAndInputs(const PersistedSectionLight &receipt,
+                                   StlSourceStorage &storage) noexcept
 {
-  // Corruption checksum, not authentication of hostile save files.
-  return HashBytes(Payload(receipt).dump());
+  storage.Text(receipt.signature);
+  storage.Buffer(receipt.inputs.capacity(), sizeof(PersistedSectionLight::Input));
+  return storage.bytes.requested;
 }
 
-inline bool CoversSamplingDomain(const PersistedSectionLight &receipt)
+inline uint64_t Checksum(const PersistedSectionLight &receipt,
+                        const IoCodecProbe *probe = nullptr)
+{
+  // Corruption checksum, not authentication of hostile save files.
+  if (!probe)
+    return HashBytes(Payload(receipt).dump());
+  return RunIoCodecWindow(probe, IoCodecWindow::ReceiptHash, [&] {
+    const auto data = Payload(receipt);
+    const auto text = data.dump();
+    StlSourceStorage scratch, input;
+    scratch.JsonTree(data);
+    scratch.Text(text);
+    const auto input_bytes = ReceiptTextAndInputs(receipt, input);
+    probe->sample(probe->context, {IoCodecKind::ReceiptChecksum, scratch.bytes.requested,
+                                  input_bytes, 0, 0,
+                                  scratch.bytes.supported && input.bytes.supported});
+    return HashBytes(text);
+  });
+}
+
+inline bool CoversSamplingDomain(const PersistedSectionLight &receipt,
+                                 const IoCodecProbe *probe = nullptr)
 {
   if (!receipt.profile.IsValid() || receipt.inputs.empty() ||
       receipt.inputs.size() > PersistedSectionLight::MaxDependencies ||
@@ -78,6 +103,15 @@ inline bool CoversSamplingDomain(const PersistedSectionLight &receipt)
   for (const auto &input : receipt.inputs)
     if (!inputs.emplace(Key(input.coord), input.content).second)
       return false;
+  if (probe)
+  {
+    StlSourceStorage scratch, input;
+    scratch.Tree(inputs);
+    const auto input_bytes = ReceiptTextAndInputs(receipt, input);
+    probe->sample(probe->context, {IoCodecKind::ReceiptValidation, scratch.bytes.requested,
+                                  input_bytes, 0, 0,
+                                  scratch.bytes.supported && input.bytes.supported});
+  }
   // Both domains are restored together: the radius-2 output's complete
   // geometry halo and all direct-sky context to the configured ceiling are
   // mandatory even if a damaged receipt removed an otherwise valid row.
@@ -137,7 +171,7 @@ inline nlohmann::json EncodeSectionLight(const PersistedSectionLight &receipt)
 }
 
 inline std::optional<PersistedSectionLight>
-DecodeSectionLight(const nlohmann::json &data)
+DecodeSectionLight(const nlohmann::json &data, const IoCodecProbe *probe = nullptr)
 {
   using namespace persisted_light_detail;
   PersistedSectionLight receipt;
@@ -194,7 +228,9 @@ DecodeSectionLight(const nlohmann::json &data)
         return std::nullopt;
       receipt.volume.cells[n] = static_cast<uint8_t>((hi << 4) | lo);
     }
-    if (!CoversSamplingDomain(receipt) || Checksum(receipt) != receipt.checksum)
+    if (!RunIoCodecWindow(probe, IoCodecWindow::ReceiptValidate,
+                          [&] { return CoversSamplingDomain(receipt, probe); }) ||
+        Checksum(receipt, probe) != receipt.checksum)
       return std::nullopt;
   }
   catch (const nlohmann::json::exception &)

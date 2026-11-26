@@ -294,7 +294,13 @@ struct UAsyncChunkIO::IndexWarmupJob
 void UAsyncChunkIO::IndexWarmupJob::operator()() const
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Entered, 0, {});
-  storage.PrepareHighestChunkSliceIndex(worldFolder);
+  WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
+      [&](const IoCodecProbe *probe) { storage.PrepareHighestChunkSliceIndex(worldFolder, probe); },
+      [&](const IoCodecStorage &codec) noexcept {
+        AsyncIoWorkerLocals locals;
+        locals.codec = &codec;
+        owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Codec, 0, locals);
+      });
   if (!owner->WorkerProbe || !owner->WorkerProbe->phase.IsOpen())
     return;
   AsyncIoWorkerLocals locals;
@@ -1017,11 +1023,16 @@ struct AsyncIoStorageInspector
     {
       sample.codec = *locals.codec;
       inspector.Result.retained_supported &= sample.codec.supported;
-      inspector.Add(inspector.Result.completed_backing, sample.codec.scratch_bytes);
-      // Read inputs are already included from locals.load. Flags encoding
-      // likewise supplies encoded_text at the outer checkpoint.
-      if (!locals.codec_output_in_outer_sample)
-        inspector.Add(inspector.Result.completed_backing, sample.codec.output_bytes);
+      // A directory scan high point was collected under the index lock and
+      // exported after the iterator retired. Only live samples join here.
+      if (sample.codec.kind != IoCodecKind::DiskDirectoryEntry)
+      {
+        inspector.Add(inspector.Result.completed_backing, sample.codec.scratch_bytes);
+        // Read inputs are already included from locals.load. Flags encoding
+        // likewise supplies encoded_text at the outer checkpoint.
+        if (!locals.codec_output_in_outer_sample)
+          inspector.Add(inspector.Result.completed_backing, sample.codec.output_bytes);
+      }
     }
     if (locals.disk_index)
       sample.disk_index = *locals.disk_index;
