@@ -9,6 +9,8 @@
 
 namespace cutum
 {
+inline constexpr size_t EnvironmentFlagCacheInlineBytes() noexcept
+{return sizeof(std::vector<std::string>);}
 
 /// Treat common textual false values as disabled for environment feature flags.
 /// In particular, setting a flag to "0" must not enable diagnostic work.
@@ -80,6 +82,7 @@ inline bool IsEnvironmentFlagEnabled(const char *name) noexcept
     bool value;
   };
   thread_local std::vector<Entry> cache;
+  static_assert(sizeof(cache)==EnvironmentFlagCacheInlineBytes());
   for (const Entry &entry : cache)
   {
     if (entry.name == name)

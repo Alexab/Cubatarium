@@ -1,5 +1,6 @@
 #include "WorldGen/Core/WorldGenContentPinTls.h"
 #include "WorldGen/Core/WorldGenContentPin.h"
+#include "Core/Memory/RuntimeInlineSource.h"
 
 namespace cutum
 {
@@ -18,5 +19,7 @@ void SetPinnedWorldGenContent(const WorldGenContentSnapshot *snapshot)
 {
   gPinnedContent = snapshot;
 }
+
+size_t GetContentPinRuntimeInlineBytes() noexcept {return sizeof(gPinnedContent);}
 
 } // namespace cutum

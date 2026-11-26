@@ -1,0 +1,714 @@
+{
+  "schema": "s4-e12-w03-core-inline-certificate.v1",
+  "status": "SCOPED_CORE_NAMED_INLINE_NATIVE_PARITY_PASS_E12_OPEN",
+  "summary": "E12 W03 core fixed/TLS overlap source profile PASS. Compiled20 named rows match actual native/default and light-registry unit configurations exactly. Private providers use sizeof only,no new owner/ledger/TLS/history;queries allocate0 under persistent ordinary-new refusal and leave active budget/shared/STBI owner counts,pin and JSON/STBI counters unchanged. Log adapter82, population globals248240,STBI ledger192,JSON global+mutex280,StallTrace flag1. Whole pipeline TLS1960 includes key332,owner key104,build counter8,world1504,unique pipeline pointer8 and4 bytes padding;children reported as overlap evidence only,never added again. Remaining named TLS rows:population clocks16,reader/name/fast shells160,block profiles108,merge-name shell32, active budget32/shared16/STBI16/failure8/JSON shape80/pin8/worker8,feature optionals225,stage clock8,environment vector24. Checked composition requires all20 nonzero source rows,known OS-thread/base/coverage domains and explicit per-row instances already included in E11/another parent. Missing/zero/unsupported rows,unknown coverage/base/thread,overcoverage and arithmetic overflow reject;whole-parent and reader overlap controls PASS. W02 eight-thread named base61403 static+243016 TLS joins additional248795 static+21448 TLS after one already-counted160-byte E11 caller shell,to574662 named bytes. This is a supplied source example,not observed native OS-thread count or RSS. All20 Release groups PASS,including W02 noise golden14369016571923994047, logger/W01/cache-owner/catalog/queue/full decor and2 actual publication GL readbacks. Fresh frozen desktop/native direct source-layout parity,runtime/startup/owner/direct save/UI/provenance plus8 texture GL readbacks PASS;config restored exactly; startup-only aggregate UNTESTED. Named widths exclude dynamic contents,TLS loader/guard/section alignment,renderer/window/world TLS and remaining logger/platform/process terms;full E12/S0..S6 acceptance remains OPEN.",
+  "remaining": "Continue existing S4.02 LIMIT.Q09 E12 after W01/W02/W03;no repeat audit or reopening accepted C01..C06/E11. Next finite logger retained-resource card:LogDestination at most4 typed instances,three owned strings each,static roots, sink-vector capacity/custom sink owners,prefix formatter,cleaner,directory list,flag/global string capacities and shutdown retirement;use actual pinned source/compiled layout and explicit path/text/callback histories. Then finish escaped/scoped shared allocator and STBI ledger/control shells,Environment flag/name and merge-name backing histories,remaining render/ world/window TLS data and heap contents from the existing lifecycle/backend source graph. W03 whole pipeline parent includes 332/104/8 children once;one160-byte caller reader shell already in E11 must not be charged again. W02 raw glog/noise TLS and W01 expired-only weak blocks stay separate;all live initialized noise-cache threads,including idle ones,and all OS threads need explicit complete counts. Cold init and historical main-thread30344 remainder stay unproved. Complete allocator/ upstream/CRT/locale/exception/stack/TLS loader/window/OS/driver/GPU terms;unknown external histories remain UNSUPPORTED. No global asset/process quota is established. Whole-process matched workloads,RSS/high-water/frame/performance/memory and original full native matrix remain required under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged; ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "rows": [
+    {
+      "index": 0,
+      "name": "Log adapter globals",
+      "width": 82,
+      "scope": "process"
+    },
+    {
+      "index": 1,
+      "name": "Population timing/ring/summary globals",
+      "width": 248240,
+      "scope": "process"
+    },
+    {
+      "index": 2,
+      "name": "STBI process ledger",
+      "width": 192,
+      "scope": "process"
+    },
+    {
+      "index": 3,
+      "name": "JSON mutex/snapshot",
+      "width": 280,
+      "scope": "process"
+    },
+    {
+      "index": 4,
+      "name": "StallTrace flag",
+      "width": 1,
+      "scope": "process"
+    },
+    {
+      "index": 5,
+      "name": "Whole pipeline TLS state",
+      "width": 1960,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 6,
+      "name": "Population clocks",
+      "width": 16,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 7,
+      "name": "Reader/name/fast-cache shells",
+      "width": 160,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 8,
+      "name": "Block physics/fluid/animation cells",
+      "width": 108,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 9,
+      "name": "Merge name shell",
+      "width": 32,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 10,
+      "name": "Active budget",
+      "width": 32,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 11,
+      "name": "Active shared resource",
+      "width": 16,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 12,
+      "name": "Active STBI ledger",
+      "width": 16,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 13,
+      "name": "STBI failure generation",
+      "width": 8,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 14,
+      "name": "JSON shape",
+      "width": 80,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 15,
+      "name": "Content pin",
+      "width": 8,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 16,
+      "name": "Worker role",
+      "width": 8,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 17,
+      "name": "Feature scatter/frame/enable optionals",
+      "width": 225,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 18,
+      "name": "Stage timestamp",
+      "width": 8,
+      "scope": "per OS thread"
+    },
+    {
+      "index": 19,
+      "name": "Environment vector shell",
+      "width": 24,
+      "scope": "per OS thread"
+    }
+  ],
+  "unit": {
+    "additional_static": 248795,
+    "additional_tls": 21448,
+    "allocation_free_under_persistent_refusal": true,
+    "base_named_static": 61403,
+    "base_named_tls": 243016,
+    "e11_reader_threads": 1,
+    "e11_readers_once": true,
+    "joined_named_inline": 574662,
+    "no_owner_pin_counter_changes": true,
+    "pipeline_children": [
+      332,
+      104,
+      8,
+      1504,
+      8
+    ],
+    "pipeline_whole": 1960,
+    "population_clocks": 16,
+    "population_globals": 248240,
+    "present": 1048575,
+    "schema": "runtime-inline-source.v1",
+    "scope": "Compiled20 core named fixed/TLS rows;whole pipeline parent once and explicit E11 overlap. No dynamic contents,compiler guards/TLS alignment/loader,renderer/window TLS,logger destinations/CRT/GPU/process or full S6 matrix verdict.",
+    "source_os_threads": 8,
+    "status": "PASS",
+    "unknown_missing_zero_overcoverage_overflow_controls": true,
+    "whole_parent_once": true,
+    "widths": [
+      82,
+      248240,
+      192,
+      280,
+      1,
+      1960,
+      16,
+      160,
+      108,
+      32,
+      32,
+      16,
+      16,
+      8,
+      80,
+      8,
+      8,
+      225,
+      8,
+      24
+    ]
+  },
+  "native_layout": {
+    "pipeline_children": [
+      332,
+      104,
+      8,
+      1504,
+      8
+    ],
+    "pipeline_whole": 1960,
+    "population_clocks": 16,
+    "population_globals": 248240,
+    "present": 1048575,
+    "schema": "runtime-inline-native.v1",
+    "scope": "Actual native compiled20 named core fixed/TLS rows only;no dynamic/loader/renderer/process bound or inferred thread count.",
+    "supported": true,
+    "widths": [
+      82,
+      248240,
+      192,
+      280,
+      1,
+      1960,
+      16,
+      160,
+      108,
+      32,
+      32,
+      16,
+      16,
+      8,
+      80,
+      8,
+      8,
+      225,
+      8,
+      24
+    ]
+  },
+  "native_unit_compiled_layout_parity": true,
+  "unit_runs": [
+    {
+      "name": "runtime-inline",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\runtime_inline_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-runtime-inline.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.011483199894428253,
+      "exe_sha256": "ddace94e3aad3ebad8382f17fe95cb4d287d2a67b98100ebde0b6b5a0d37dec5",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-runtime-inline.log"
+    },
+    {
+      "name": "noise-storage",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_storage_source_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-noise-storage.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.11224929988384247,
+      "exe_sha256": "30b9a1e681370c90c0a65972f7ba4aff560bc00b9803df996b00e11c8fc0abdf",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-noise-storage.log"
+    },
+    {
+      "name": "noise-legacy",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\noise_permutation_cache_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.08631709986366332,
+      "exe_sha256": "e353496aaef48c911157894dff64dba29796364fb2972c93f02d8c79b664cc1a",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-noise-legacy.log"
+    },
+    {
+      "name": "glog-source",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "--source-profile",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-glog-source.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.12369099981151521,
+      "exe_sha256": "8462696cda7ea0d70db21dd25e3d0cb36019a8045e027fa6641c1a1c4e39b110",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-glog-source.log"
+    },
+    {
+      "name": "weak-shell",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--pipeline-weak-shells",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-weak-shell.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.10247889999300241,
+      "exe_sha256": "a6441becdd2f47a5e6d19673f86bd21cf7dd91ab5194264684f38a661cd83f47",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-weak-shell.log"
+    },
+    {
+      "name": "actual-tls",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_vegetation_placement_integration_test.exe",
+        "--pipeline-cache-owner-only"
+      ],
+      "returncode": 0,
+      "seconds": 1.8977992001455277,
+      "exe_sha256": "fe09a7b90f592b993aa2b440543f2394b78c2e623098b1fb7e11489b305df91c",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-actual-tls.log"
+    },
+    {
+      "name": "logger",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\log_allocation_lifecycle_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-logger.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.02115229982882738,
+      "exe_sha256": "8462696cda7ea0d70db21dd25e3d0cb36019a8045e027fa6641c1a1c4e39b110",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-logger.log"
+    },
+    {
+      "name": "pack",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--catalog-owner-composition",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-pack.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.9553506998345256,
+      "exe_sha256": "a6441becdd2f47a5e6d19673f86bd21cf7dd91ab5194264684f38a661cd83f47",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-pack.log"
+    },
+    {
+      "name": "settings",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--settings-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-settings.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.24381329980678856,
+      "exe_sha256": "a6441becdd2f47a5e6d19673f86bd21cf7dd91ab5194264684f38a661cd83f47",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-settings.log"
+    },
+    {
+      "name": "prefab",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_sets_source_envelope_test.exe",
+        "--prefab-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-prefab.json"
+      ],
+      "returncode": 0,
+      "seconds": 2.181925700046122,
+      "exe_sha256": "680b431e572738a9565d15c53551c52a87ff4930f652bfc67f91602aeea3d9b0",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-prefab.log"
+    },
+    {
+      "name": "cpu-texture",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\worldgen_scatter_block_resolve_test.exe",
+        "--texture-owner-binding",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-cpu-texture.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.09792459988966584,
+      "exe_sha256": "a6441becdd2f47a5e6d19673f86bd21cf7dd91ab5194264684f38a661cd83f47",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-cpu-texture.log"
+    },
+    {
+      "name": "runtime-domain",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--runtime-domain",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-runtime-domain.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.13586500007659197,
+      "exe_sha256": "d3705647f3ff694d9f5c9d5f0f40514cdb5f09f3a57da1feb0bd2032dca8e40f",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-runtime-domain.log"
+    },
+    {
+      "name": "worker",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-worker.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.1882958000060171,
+      "exe_sha256": "d3705647f3ff694d9f5c9d5f0f40514cdb5f09f3a57da1feb0bd2032dca8e40f",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-worker.log"
+    },
+    {
+      "name": "cooperative",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\catalog_worker_retirement_test.exe",
+        "--cooperative-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-cooperative.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.011763600166887045,
+      "exe_sha256": "d3705647f3ff694d9f5c9d5f0f40514cdb5f09f3a57da1feb0bd2032dca8e40f",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-cooperative.log"
+    },
+    {
+      "name": "mesh-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-mesh-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.16724509978666902,
+      "exe_sha256": "138b6e55f3cec62bc1d3b4df2cbb6a8ca99bf55bcf265a6327f1cf16fdfddf1c",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-mesh-queues.log"
+    },
+    {
+      "name": "relight-queues",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe",
+        "--catalog-queue-owners",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-relight-queues.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.07254140009172261,
+      "exe_sha256": "0f954053ef33c2da8f427b53377819ff92b7a85e6b3107c6093bf933de763ad9",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-relight-queues.log"
+    },
+    {
+      "name": "relight-lifecycle",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\async_relight_lifecycle_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 0.01563860010355711,
+      "exe_sha256": "0f954053ef33c2da8f427b53377819ff92b7a85e6b3107c6093bf933de763ad9",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-relight-lifecycle.log"
+    },
+    {
+      "name": "publication-cpu",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-publication-cpu.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.08287769998423755,
+      "exe_sha256": "138b6e55f3cec62bc1d3b4df2cbb6a8ca99bf55bcf265a6327f1cf16fdfddf1c",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-publication-cpu.log"
+    },
+    {
+      "name": "publication-gl",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe",
+        "--catalog-publication-roots-driver",
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\s4-inline-source-publication-gl.json"
+      ],
+      "returncode": 0,
+      "seconds": 0.31159129994921386,
+      "exe_sha256": "138b6e55f3cec62bc1d3b4df2cbb6a8ca99bf55bcf265a6327f1cf16fdfddf1c",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-publication-gl.log"
+    },
+    {
+      "name": "decor-full",
+      "command": [
+        "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\Release\\decor_mesh_integration_test.exe"
+      ],
+      "returncode": 0,
+      "seconds": 4.02696459996514,
+      "exe_sha256": "138b6e55f3cec62bc1d3b4df2cbb6a8ca99bf55bcf265a6327f1cf16fdfddf1c",
+      "log": "build\\desktop-msvc\\s4-inline-source-regression-decor-full.log"
+    }
+  ],
+  "previous_message_noise_certificate": "S4_02_E12_W02_RUNTIME_SOURCE_CERTIFICATE_2026_11_26.json",
+  "glog_unchanged": "897348d0699a0fd89a4095063479bc25ec2ea66246c14c3423244392e3cb080d",
+  "source_sha256_raw": {
+    "CMakeLists.txt": "10ca34f18d9f86c767b4b158659644226d63b9c4e8a53d1c543bacd1f5669654",
+    "src/Core/Environment.h": "ab52955d21d3975d5608d1b173f121fc2f2a6ff50a0cd4ab4ef7789ca634fb8a",
+    "src/Core/Memory/RuntimeInlineSource.h": "ad13791685b7f40e5a760466284e2352a10d1eb3f47802656b4534ddce357e96",
+    "src/WorldGen/Core/RuntimeCoreInlineLayout.h": "e7e3db0669e70f2183b155213b420a8c9bdb96e6f18c49a4595271685e0ae12d",
+    "src/App/Platform/Log.cpp": "bf9141d5332dacf28f3b795404767ad6e99461ee22973c7380042b7843214f24",
+    "src/App/Platform/WorkerJobKind.cpp": "3aa501bc75684d14995dcf55237967263ffad6a1a6bad3e65a737360625dfb83",
+    "src/WorldGen/Core/WorldGenContentPinTls.cpp": "d558d1b241e178f5ff0ff4a42475f6dcd00066c6ac1daa8905cd7510c4575ddc",
+    "src/WorldGen/Core/PipelineChunkPopulator.cpp": "0a7e9ee20e4f17fb3335b04d0d31de00abc3b718db140a541d87576f9e72f588",
+    "src/WorldGen/Features/ObjectFeaturePlacer.cpp": "dd82d7e83f1f2eb30da90a4682356682cc754a811f3e2581cffa0228c8bfd628",
+    "src/Test/RuntimeInlineSourceTest.cpp": "65d87c306be63518f56595b9e608b3f019438739ecbad753864c26221469c303",
+    "src/App/Platform/TerrainSaveFailureProbe.h": "116c51dd1cc371e72621292388843742e130de43e209f462a8b506f1c05ab792"
+  },
+  "frozen_source_sha256": "7098b6ab976a4ccfe8303c021fb1822284b90e12c4eb69c5e7f3d68e7ffa5c0c",
+  "dependency_sha256": {
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json.hpp": "88d7eb42b19599cab48856576dd4ea52538df72ad7c57200c50de98bda246458",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\input_adapters.hpp": "01fa7af8fdd1ba7b1c12089bf92783f70d09a93db7564e4df70544fc85304de6",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\parser.hpp": "b4a762967b174de0c43896b465e4a7c8c92c3a8636f669debdec836050f7912a",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\json_sax.hpp": "0ed6fdb0ef91f163cca312b7ffd6e0842f12e1b8340204ab2d0c05277e0d1f18",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\input\\lexer.hpp": "a8b73e55242731375c088133f3a355af7b1bb82d6b9531678cb20560d3733c1d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\abi_macros.hpp": "cebb5441f1ce851444f47a7d8ea0446339ee499df83215ebd873c8347a191bd7",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\vector": "b254d6fc250164a9f4e71ea66e2c1e9401cb2bf8b0056550fd92135518450b51",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xstring": "ab80a6b60196246d1c8653e6d55f78e3cbaaf4207860a37cf6996cdc833eea7a",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xtree": "867a86f513afabe0258ad0cc697217b09d580179f6a3e2ce7ab9c887ac45a503",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xmemory": "0409c9668d5bae4abeeceeef3ee29353c1f4039dc5a78565acfe1cb34d442f38",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xhash": "ccb3f3efebeffb8af7a5acadb9b805c87c884b95b64b120fff22382d600fbc2d",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\list": "8e36e6df473f2b6788313afe36a90e17a4e7cf6ffbf8bedcf339e626134e521b",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\byte_container_with_subtype.hpp": "2b75a051d2f82fd95f613c70472b85a281d085f1973791c1118244099bf38942",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\fstream": "bc2581a3c62f9faacb06e7cf2d325caec8ab1668f60988e1ad1dd5a308c7a5d4",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_filebuf.hpp": "281fa0b5e253bee79ebcf55c50000ff94614a0764e6b8c3863e92e817eed9a1f",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\filesystem": "443c33b031b1a1794429227d4bcc1970524117ad8d6e3991f38ec0764ea0efd1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\memory": "8955101828fe9d46c77e214e50415bac5b1e59697e0f59bc46fa145aa1e8ae4c",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xfilesystem_abi.h": "f1b10e1d823eae8a4624ed86e247548637d957dadc2f68222bad12ca17d3ec98",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\system_error": "d6d9b5c66e9aeae9e1297ef6cc682033b5d9eaf0f199ce6a103308afd38c5f85",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\stdexcept": "e677daf8465dd4b870f420df9010ee3a17cd80fb6f6f5655f2ad3dc6d8009ae1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\__msvc_system_error_abi.hpp": "c5c46618a13ba9a8087f0db8d2d2ecdeadad7694c8bef71a2e39b72b683d14d3",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\unordered_map": "eca1b2103a93e06baf7c601afa6c049a3ddf3a50a8c6420805f88b024425ed71",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\chrono": "3b3af70f215d5f38692670dc96c589d7e5dfb27d392a83d97b7b1949b024e284",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\thread": "e56bde2e9f035c57bc8e24aa7f08393d2422d21f74090df4fea2b4d03791d730",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\condition_variable": "dca14b7020688e8f4b14dcfe6292ffe1fcc15f0490ee519d3420817eb320a55b",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\xutility": "44344065c26095b03a7228d2c733d41532ae99a56bbadf052baba64d22e39a9d",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\serializer.hpp": "4c079acb8f6936c4f787fd5706a52c77a1751dd34787a821705845698ec8540e",
+    "build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\detail\\output\\output_adapters.hpp": "3322dce8f63e69930806bd8691c2cd9ece8a76b54b34f617641329c44559bbb5",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\map": "34b79b08daba1489b8506e79a211b3412a0ca3dbd9472c5e5c9cd87b546838b1",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\optional": "3bfc80a64908f77eaba10ec9a1e2c3b0746dd65e993c8c8d636696ada184f683",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\ios": "3d0a96d6228a23c017afd63633359edbaddfce430ace5bd0b94031ade44c0186",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\streambuf": "b8bec573d0d281db12a779a161e0485d9b801fc8d7f040752909aa15cebb8478",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\nlohmann\\json_fwd.hpp": "8777a878c20a412dd04c8011c87c3d72d74e48a4dda5e52f7948e26dd2168931",
+    "C:\\Program Files\\Microsoft Visual Studio\\18\\Community\\VC\\Tools\\MSVC\\14.51.36231\\include\\functional": "f30f67efe61c56535c15e48c7ba3f983a7b2ac4be8468ff12b9235f5d613dc8c",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GL\\glew.h": "82b9b00eb98b1134f0ff41cb810a443faa12bc8aac0fa797a9fede917d6c9ba6",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\GLFW\\glfw3.h": "aa370985f6b493bbe0358a36ab49f5780a6397c0209c6d98a62143dea595b73c",
+    "C:/Projects/Cubatarium/build/desktop-msvc/_deps/cubatarium_glog-build/Release/glog.lib": "897348d0699a0fd89a4095063479bc25ec2ea66246c14c3423244392e3cb080d",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\type_vec3.hpp": "d9be575fe520dcbb068188144e0bba0a4197aefe142b42f8fc8496c328875649",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\detail\\setup.hpp": "78c7278cc214b6ce75c5648f5afc65dd36488bf65abfd6aac8171b0439e98a10",
+    "C:\\Projects\\Cubatarium\\build\\desktop-msvc\\vcpkg_installed\\x64-windows-static\\include\\glm\\vec3.hpp": "d97ddb71ad02da39a4ac96670d4fe792264a8ec2e19477f60d7c245ae1a301b4"
+  },
+  "provenance": "build/desktop-msvc/s4-inline-source-provenance.json",
+  "desktop_exe_sha256": "599ed835ac95eb8ff86ad3a38b413b7eea10107f8ea3acb248638207575efdb4",
+  "native": {
+    "artifact": "build/desktop-msvc/s4-inline-source-native",
+    "runtime": {
+      "status": "PASS",
+      "reason": "native_process",
+      "exit_code": 0
+    },
+    "startup": "PASS",
+    "provenance": "PASS",
+    "direct": "PASS",
+    "save_ui": "PASS",
+    "actual_GL_readbacks": 8,
+    "publication_unit_GL_readbacks": 2,
+    "aggregate": "UNTESTED",
+    "config_bytes_restored": true,
+    "config_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  },
+  "native_menu": {
+    "active_roles_current": true,
+    "applications": 1,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 10,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7493156,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "menu",
+    "pool_count": 2,
+    "pool_workers": 9,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 0,
+    "publication_fields": 0,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12474043,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "native_first_game": {
+    "active_roles_current": true,
+    "applications": 1,
+    "auxiliary_domain_supported": true,
+    "auxiliary_world_counted": true,
+    "block_catalogs": 2,
+    "block_roles": [
+      {
+        "current": true,
+        "role": "core"
+      },
+      {
+        "current": true,
+        "role": "world"
+      },
+      {
+        "current": true,
+        "role": "application"
+      },
+      {
+        "current": true,
+        "role": "object-icons"
+      },
+      {
+        "current": true,
+        "role": "content-preview"
+      },
+      {
+        "current": true,
+        "role": "viewmodel"
+      },
+      {
+        "current": false,
+        "role": "launcher"
+      }
+    ],
+    "block_storages": 2,
+    "calling_and_pool_thread_upper": 20,
+    "calling_thread_convenience_inline_bytes": 160,
+    "cores": 1,
+    "diagnostic_pool_count_with_auxiliary": 6,
+    "diagnostic_pool_workers_with_auxiliary": 19,
+    "diagnostic_thread_upper_with_auxiliary": 20,
+    "diagnostic_worlds_with_auxiliary": 2,
+    "entrypoint": "flight",
+    "known_catalog_bytes": 7552364,
+    "launcher_distinct_from_core": true,
+    "libraries": 1,
+    "phase": "in-game",
+    "pool_count": 6,
+    "pool_workers": 19,
+    "pools": [
+      {
+        "active": 0,
+        "kind": "mesh",
+        "pending": 0,
+        "source_worker_cap": 8,
+        "workers": 8
+      },
+      {
+        "active": 0,
+        "kind": "capture",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "stream-generation",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-load",
+        "pending": 0,
+        "source_worker_cap": 4,
+        "workers": 4
+      },
+      {
+        "active": 0,
+        "kind": "io-background",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      },
+      {
+        "active": 0,
+        "kind": "io-light-flags",
+        "pending": 0,
+        "source_worker_cap": 1,
+        "workers": 1
+      }
+    ],
+    "publication_bindings": 0,
+    "publication_catalog_handles": 652,
+    "publication_fields": 981,
+    "publication_mesh_results": 0,
+    "retained_requested_upper": 12575831,
+    "retained_upper_supported": true,
+    "schema": "catalog-runtime-domain.v1",
+    "scope": "One identity-deduplicated supplied Core/Application/launcher/UI/world resource+field/cache/completed/backend/save graph and actual member pools. Own calling-thread reads only;foreign TLS/queued callables/source histories/caller escapes/constructing components must be supplied separately. Requested-data upper,not process/CRT/stack/GPU acceptance.",
+    "status": "PASS",
+    "unknown_owners": 0,
+    "worlds": 1
+  },
+  "acceptance_boundary": [
+    "joined_named_inline is the W02 named base plus new W03 rows after E11 overlap exclusion;join it beside the compatible E11 retained-data envelope. It is not a standalone census of every named byte or a process total.",
+    "Named source widths only,not complete image/static/TLS section size or OS-thread/process enumeration.",
+    "Whole pipeline includes world/key/owner/build/pointer children once;child widths are not additional allocations.",
+    "Supplied overlap counts require actual E11/base evidence;unknown coverage cannot silently become0. The source example uses eight declared OS threads,not observed native counts.",
+    "Dynamic feature/scatter allocations stay in E10;catalog payloads/control/weak shells and decoder payload/prefixes stay in their accepted scopes.",
+    "Environment/merge-name backing histories,remaining renderer/world/window TLS,logger resources,shared/control/CRT/stack/loader/OS/GPU/process and original S6 matrix remain OPEN.",
+    "Initial build missing include was localized to the new test and corrected before the frozen20-group run;archived compile error is not production runtime evidence."
+  ]
+}

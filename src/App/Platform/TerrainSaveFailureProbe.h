@@ -40,6 +40,7 @@
 #include "WorldGen/Core/SourceInputStorageCensus.h"
 #include "WorldGen/Core/CatalogFilesystemSourceEnvelope.h"
 #include "WorldGen/Core/CatalogCandidateSourceEnvelope.h"
+#include "WorldGen/Core/RuntimeCoreInlineLayout.h"
 #include "Test/Native/TextureAtlasConstructionProbe.h"
 #include "WorldGen/Core/CatalogJsonSource.h"
 #include <filesystem>
@@ -142,6 +143,11 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         {"feature_and_diagnostic_shared_blocks",feature_candidate.shared_blocks_bytes},
         {"refs_shared_block",refs_candidate.shared_blocks_bytes},
         {"scope","Compiled coallocation terms included in per-input candidate bound;not native construction peak or process cap. Input DOM/prior pubs/platform terms separate."}};
+    const auto runtime_inline=GetRuntimeCoreInlineLayout();const auto pipeline_inline=GetPipelineRuntimeInlineLayout();
+    report["runtime_inline_source"]={{"schema","runtime-inline-native.v1"},{"widths",runtime_inline.widths},
+        {"present",runtime_inline.present},{"supported",runtime_inline.supported},{"pipeline_whole",pipeline_inline.whole},
+        {"pipeline_children",pipeline_inline.children},{"population_globals",pipeline_inline.global},{"population_clocks",pipeline_inline.clocks},
+        {"scope","Actual native compiled20 named core fixed/TLS rows only;no dynamic/loader/renderer/process bound or inferred thread count."}};
     const auto filesystem_layout=GetCatalogFilesystemLayout();
     report["filesystem_source_layout"]={{"schema","filesystem-source-layout.v1"},{"supported",filesystem_layout.supported},
         {"simple_shared_block",filesystem_layout.simple_shared_block},{"recursive_shared_block",filesystem_layout.recursive_shared_block},

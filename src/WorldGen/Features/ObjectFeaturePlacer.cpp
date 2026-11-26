@@ -1,5 +1,6 @@
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "Core/Memory/GenerationAllocator.h"
+#include "Core/Memory/RuntimeInlineSource.h"
 #include "Blocks/BlockRegistry.h"
 #include "ResourcePacks/BlockNameUtil.h"
 #include "World/Chunks/ChunkManager.h"
@@ -2380,5 +2381,8 @@ bool TryPlaceFirePatch(WorldGenContext &ctx, int x, int z, int surfaceY,
   ctx.AccumulateDirtyColumn(surfaceY, surfaceY + 2);
   return true;
 }
+
+size_t GetFeatureRuntimeInlineBytes() noexcept
+{return sizeof(ScatterChunkCounts)+sizeof(ObjectFeatureDiagnosticsEnabled)+sizeof(ObjectFeatureChunk);}
 
 } // namespace cutum

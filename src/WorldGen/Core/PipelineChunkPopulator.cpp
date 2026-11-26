@@ -16,6 +16,7 @@
 #include "WorldGen/Core/PopulationScratchBudget.h"
 #include "WorldGen/Core/PipelineSettingsKey.h"
 #include "WorldGen/Core/PipelineOwnerKey.h"
+#include "Core/Memory/RuntimeInlineSource.h"
 #include "WorldGen/Features/CaveCarver.h"
 #include "WorldGen/Features/ObjectFeaturePlacer.h"
 #include "WorldGen/Features/RavineCarver.h"
@@ -516,6 +517,14 @@ static void LogChunkPopulation(const Request &request, const Timing &timing,
     s_last_log_ms = timing.totalMs;
   }
   (void)s_last_log_ms;
+}
+
+PipelineRuntimeInlineLayout GetPipelineRuntimeInlineLayout() noexcept
+{
+  return {sizeof(ThreadLocalPipelineState),sizeof(gPopulateDiagMutex)+sizeof(gLastPopulateTiming)+sizeof(gPopulateSamples)+sizeof(gPopulateSummary),
+    sizeof(double)+sizeof(std::chrono::steady_clock::time_point),
+    {sizeof(ThreadLocalPipelineState::key),sizeof(ThreadLocalPipelineState::owners),sizeof(ThreadLocalPipelineState::builds),
+      sizeof(ThreadLocalPipelineState::world),sizeof(ThreadLocalPipelineState::pipeline)}};
 }
 
 ChunkPopulateDiagnostics::ThreadScratchSnapshot ChunkPopulateDiagnostics::GetThreadScratchSnapshot(bool default_owner_profile)

@@ -1,4 +1,5 @@
 #include "App/Platform/Log.h"
+#include "Core/Memory/RuntimeInlineSource.h"
 
 #ifndef GLOG_NO_ABBREVIATED_SEVERITIES
 #define GLOG_NO_ABBREVIATED_SEVERITIES
@@ -635,6 +636,12 @@ void CubatariumFlushLogs()
 void CubatariumSetSuppressErrorDialogs(bool suppress)
 {
   SuppressErrorDialogsFlag().store(suppress, std::memory_order_relaxed);
+}
+
+size_t GetLogAdapterRuntimeInlineBytes() noexcept
+{
+  return sizeof(decltype(LogMutex()))+sizeof(decltype(SuppressErrorDialogsFlag()))+
+    sizeof(decltype(LoggingInitializedFlag()));
 }
 
 } // namespace cutum

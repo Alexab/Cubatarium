@@ -3200,6 +3200,17 @@ cubatarium_add_test(NAME worldgen_sets_source_envelope_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
     WIN32_LIBRARIES dbghelp)
 
+if(CUBATARIUM_MSVC_DESKTOP)
+  cubatarium_add_test(NAME runtime_inline_source_test
+      SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES} src/Test/RuntimeInlineSourceTest.cpp
+      DEFINITIONS ${PHYSICS_LIGHT_REGISTRY_DEF}
+      LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog
+      WIN32_LIBRARIES dbghelp)
+  add_test(NAME runtime_inline_source_test COMMAND $<TARGET_FILE:runtime_inline_source_test>
+      ${CMAKE_CURRENT_BINARY_DIR}/runtime-inline-source.json)
+  set_tests_properties(runtime_inline_source_test PROPERTIES LABELS "integration;memory;runtime" TIMEOUT 120)
+endif()
+
 cubatarium_add_test(NAME catalog_worker_retirement_test
     SOURCES ${WORLDGEN_FLUID_CHUNK_TEST_SOURCES}
         src/Core/Jobs/JobThreadPool.cpp
