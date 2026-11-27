@@ -78,8 +78,9 @@ public:
   void QuiesceBackgroundWork(UWorld &world,
                              std::chrono::milliseconds async_io_timeout =
                                  std::chrono::milliseconds(2000));
-  /// Retire accepted terrain follow-up work when its world is discarded.
-  void RetireDeferredTerrainWorkForWorldReplace();
+  /// Cancel old generation and poll retirement without waiting on a worker.
+  /// Keep the old world and its producers owned until this returns true.
+  bool TryRetireTerrainWorkForWorldReplace();
   void PauseChunkGeneration(
       std::chrono::milliseconds worker_wait = std::chrono::milliseconds(10000));
   /// Cancel queued gen + bump tokens without waiting for in-flight populate.
@@ -163,6 +164,7 @@ private:
   std::unique_ptr<UPipelineChunkPopulator> ChunkPopulator;
   std::unique_ptr<UChunkLoadScheduler> ChunkScheduler;
   bool ChunkSchedulerReplacementPending{false};
+  bool ChunkGenerationWorldRetirementPending{false};
   bool StreamingEnabled{true};
   double FrameStreamingGenMs{0.0};
   double FrameStreamingIoMs{0.0};

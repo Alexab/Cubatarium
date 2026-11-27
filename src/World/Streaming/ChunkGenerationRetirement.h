@@ -8,11 +8,12 @@ namespace cutum {
 // explicitly cancelling replacement (for example, another background pause).
 template<class Populator>
 bool TryRetireChunkGeneration(std::unique_ptr<UChunkLoadScheduler> &scheduler,
-                             std::unique_ptr<Populator> &populator,bool &requested)
+                             std::unique_ptr<Populator> &populator, bool &requested,
+                             const char *reason = "scheduler_reinitialized")
 {
   if(scheduler){
     if(!requested){
-      scheduler->CancelAllPending(std::chrono::milliseconds(0),"scheduler_reinitialized");
+      scheduler->CancelAllPending(std::chrono::milliseconds(0), reason);
       requested=true;
     }
     if(!scheduler->WaitForWorkersIdle(std::chrono::milliseconds(0)))return false;

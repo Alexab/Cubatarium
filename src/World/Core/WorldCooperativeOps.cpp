@@ -1811,21 +1811,12 @@ void UWorldCooperativeSession::HandlePhaseInit(UWorld &world,
     world.SetWorldFolderPath(FolderPath);
     std::filesystem::create_directories(FolderPath + "/chunks");
     Save.SaveDrainIoFrames = 0;
-    // Quit path: skip DrainAsyncIo and run scan inline so we never hang
-    // between "skip → scan" and the next Tick (log stopped after skip).
     if (!ResumeStreamingAfterSave)
     {
-      CubatariumLogInfo("Save", "quit-save: inline scan after quiesce");
-      // Cancel + abandon workers before WaitIdle — populate/seal must not
-      // block Save Init (hang after "World saved.").
-      if (world.Streaming)
-      {
-        world.Streaming->CancelChunkGeneration();
-        CubatariumLogInfo("Save", "quit-save: abandon");
-        world.Streaming->AbandonWorkersForProcessExit(
-            std::chrono::milliseconds(150));
-      }
-      CubatariumLogInfo("Save", "quit-save: scanning chunks");
+      // The I/O fence is clear and generation was cancelled above. Keep the
+      // producer owned while scanning: a save can fail, or precede replacement.
+      if (world.Streaming && world.Streaming->HasStreamer())
+        world.Streaming->GetStreamer()->SetEnabled(false);
       ScanSaveChunkCoords(world);
       CurrentPhase = Phase::SaveChunks;
       Report(sink, "scan", 0.02f, "Collecting chunks...");

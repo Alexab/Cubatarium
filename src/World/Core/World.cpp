@@ -11765,20 +11765,17 @@ void UWorld::RebuildBlockMesh()
   BlockWorldReady = CachedBlockCount > 0;
 }
 
-void UWorld::AbandonTerrainForWorldReplace()
+bool UWorld::TryAbandonTerrainForWorldReplace()
 {
+  if (Streaming && !Streaming->TryRetireTerrainWorkForWorldReplace())
+    return false;
+
   if (HasActiveCooperativeOperation())
   {
     CancelCooperativeOperation();
   }
   GetColumnFlowExecutor().RetireWorld(this);
 
-  if (Streaming)
-  {
-    Streaming->RetireDeferredTerrainWorkForWorldReplace();
-    Streaming->CancelChunkGeneration();
-    Streaming->AbandonWorkersForProcessExit(std::chrono::milliseconds(150));
-  }
   if (Persistence)
   {
     (void)Persistence->AbortAsyncChunkIoFor(*this,
@@ -11815,6 +11812,7 @@ void UWorld::AbandonTerrainForWorldReplace()
   ModifiedChunks.clear();
   BlockWorldReady = false;
   CachedBlockCount = 0;
+  return true;
 }
 
 bool UWorld::IsReasonablePlayerPosition(const glm::vec3 &position) const

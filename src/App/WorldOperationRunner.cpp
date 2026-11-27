@@ -523,7 +523,8 @@ bool UWorldOperationRunner::Tick(IUProgressSink &sink, int chunkBudgetPerFrame)
 
   case Stage::PreReplaceTerrain:
     sink.Report("teardown", 0.05f, "Clearing previous world...");
-    World.AbandonTerrainForWorldReplace();
+    if (!World.TryAbandonTerrainForWorldReplace())
+      return false;
     if (Request.op == WorldRunnerOp::SaveThenLoad)
     {
       Core.PrepareLoadWorld(PendingWorldName);

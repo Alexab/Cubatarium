@@ -842,6 +842,21 @@
         "S4_02_E12_W11_NAME_STORAGE_CERTIFICATE_2026_11_26.json",
         "build/desktop-msvc/s4-name-storage-baseline.json"
       ]
+    },
+    {
+      "id": "s4-01-native-section-owner-executor-world-binding",
+      "stage": "S4.01",
+      "status": "OPEN",
+      "observed": "Full extended terrain probe stops in the historical S4.01 case at physical=false, pending_light=true and stage=Absent. Since baf2d4df7f, GetColumnJobStage reads the record only through a bound world. This test constructs a fresh local executor and calls the world-explicit Sync method without binding before its read.",
+      "source_locations": [
+        "src/App/Platform/TerrainSaveFailureProbe.h:section_owner_job_stage_checkpoint",
+        "src/World/Streaming/ColumnFlowExecutor.cpp:GetColumnJobStage"
+      ],
+      "evidence": [
+        "build/desktop-msvc/s4-generation-world-replace-full-native/terrain-save-probe/report.json",
+        "S4_02_E12_W82_WORLD_GENERATION_RETIREMENT_CERTIFICATE_2026_11_27.json"
+      ],
+      "next_action": "Bind the actual fixture world to its local reader or read the stage directly from that world record. Preserve all H2 transitions. Verify the full extended terrain probe and retain the historical failure."
     }
   ]
 }

@@ -124,6 +124,8 @@ void UWorldStreaming::RecordGpuAllocationTelemetry(UWorld &world)
 
 bool UWorldStreaming::PrepareChunkScheduler(UWorld &world)
 {
+  if (ChunkGenerationWorldRetirementPending)
+    return false;
   if(!TryRetireChunkGeneration(ChunkScheduler,ChunkPopulator,ChunkSchedulerReplacementPending))
     return false;
   if (!world.BlockRegistry)
@@ -6035,13 +6037,24 @@ UWorldStreaming::RecordRetirementResult UWorldStreaming::RetireUnownedColumnReco
   return result;
 }
 
-void UWorldStreaming::RetireDeferredTerrainWorkForWorldReplace()
+bool UWorldStreaming::TryRetireTerrainWorkForWorldReplace()
 {
+  if (Streamer)
+    Streamer->SetEnabled(false);
+  ChunkSchedulerReplacementPending = false;
+  if (!TryRetireChunkGeneration(ChunkScheduler, ChunkPopulator,
+                                ChunkGenerationWorldRetirementPending,
+                                "world_replacement"))
+    return false;
+
+  ChunkGenerationWorldRetirementPending = false;
+  SyncCoarseCacheGround = glm::ivec3(INT32_MAX, 0, INT32_MAX);
   RecordRetirementCursor.reset();
   DeferredPhysicsSeedQueue.clear();
   DeferredShoreSealQueue.clear();
   DeferredShoreSealQueued.clear();
   DeferredIntraChunkSealNeeded.clear();
+  return true;
 }
 
 void UWorldStreaming::QuiesceBackgroundWork(
@@ -6125,7 +6138,8 @@ void UWorldStreaming::PauseChunkGeneration(
 
 void UWorldStreaming::ResumeStreamerAfterQuiesce()
 {
-  if (Streamer && StreamingEnabled && !ChunkSchedulerReplacementPending)
+  if (Streamer && StreamingEnabled && !ChunkSchedulerReplacementPending &&
+      !ChunkGenerationWorldRetirementPending)
   {
     Streamer->SetEnabled(true);
   }

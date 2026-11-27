@@ -1,0 +1,144 @@
+{
+  "schema": "s4-e12-w82-world-generation-retirement.v1",
+  "status": "SCOPED_WORLD_GENERATION_RETIREMENT_PASS_E12_OPEN",
+  "baseline_commit": "d4ba4ce7f557d52f6ef925df912ecf5e03aa2e16",
+  "prior_certificate": "S4_02_E12_W81_WINDOWS_FILE_ROOTS_CERTIFICATE_2026_11_27.json",
+  "scope": "The preliminary cooperative save and world replacement keep the original generation scheduler and populator owned while an active worker still uses them. World replacement polls on later frames before clearing terrain or starting a successor. Two replacements and one failed-save recovery in one UWorld retire the old pair and commit the current Flat successor. Actual fast process-exit and whole-process memory acceptance remain open.",
+  "historical_failure": "At W81 the no-resume save and terrain retirement call the 150 ms process-exit cleanup. The active-worker branch detaches and releases both owning pointers. This is source evidence.",
+  "profiles": {
+    "flat": {
+      "frames": 985,
+      "process_exit": 0,
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "aggregate_smoke": "UNTESTED",
+      "terrain_probe": "PASS",
+      "terrain_smoke_gate": "UNTESTED",
+      "fixture": {
+        "cycles": [
+          {
+            "cycle": 0,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": false,
+            "successor_committed": true
+          },
+          {
+            "cycle": 1,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": false,
+            "successor_committed": true
+          },
+          {
+            "cycle": 2,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": true,
+            "successor_committed": true
+          }
+        ],
+        "schema": "world-generation-replacement.v1",
+        "status": "PASS"
+      },
+      "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+    },
+    "full": {
+      "frames": 672,
+      "process_exit": 0,
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "aggregate_smoke": "UNTESTED",
+      "terrain_probe": "FAIL",
+      "terrain_smoke_gate": "UNTESTED",
+      "fixture": {
+        "cycles": [
+          {
+            "cycle": 0,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": false,
+            "successor_committed": true
+          },
+          {
+            "cycle": 1,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": false,
+            "successor_committed": true
+          },
+          {
+            "cycle": 2,
+            "held_at_least_ms": 200,
+            "old_pair_retired": true,
+            "parked_polls": 14,
+            "save_failed": true,
+            "successor_committed": true
+          }
+        ],
+        "schema": "world-generation-replacement.v1",
+        "status": "PASS"
+      },
+      "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+      "terrain_probe_failure": {
+        "error": "executor retains uncertified section light debt without queue metadata",
+        "defect": "s4-01-native-section-owner-executor-world-binding",
+        "checkpoint": {
+          "pending_light": true,
+          "physical": false,
+          "stage": "Absent"
+        }
+      }
+    }
+  },
+  "release_regressions": [
+    "decor_mesh_integration_test",
+    "catalog_worker_retirement_test",
+    "normal_shutdown_test",
+    "application_operation_storage_test",
+    "async_relight_lifecycle_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "fluid_chunk_io_test"
+  ],
+  "source_sha256": "6e4d61a19700296d6643a47ae7c6626738709cc569325bb42a0f9f66450b0531",
+  "exe_sha256": "675f94c994a3575132aa48f3504fbf785e6b28796b2808c1e6132d7cf85e2b6d",
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-generation-world-replace-provenance.json": "abc7288c75444fd63203a538fe9241a881812f627395f942928752b8088fa924",
+    "build/desktop-msvc/s4-generation-world-replace-regressions.json": "8126a03f20e816783fff93a6d526ba975ec747cfebb7ef0ec63cdd534df216ae",
+    "build/desktop-msvc/s4-generation-world-replace-build.log": "1057a3ea796711e83a50598e5b6f652eb9c2b86d76b70b0d5dc9a2a0f759e185",
+    "build/desktop-msvc/s4-generation-world-replace-regression-build.log": "07561fb708c1d3426a0531ec6c02eefa8a6ab6b22f603d6542f375d0436deb86",
+    "build/desktop-msvc/s4-generation-world-replace-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-generation-world-replace-catalog_worker_retirement_test.log": "028cc4f35f0e52238f4540f196de0048a7702ee4fb8ebe6c717ffa68cd7bcb7b",
+    "build/desktop-msvc/s4-generation-world-replace-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-generation-world-replace-application_operation_storage_test.log": "c43056ed6c2c671f1daee97d81150f0070d5b9dd1a65789f43b4428db100a7e7",
+    "build/desktop-msvc/s4-generation-world-replace-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-generation-world-replace-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-generation-world-replace-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-generation-world-replace-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/route.json": "85d9d69f853bb6a1648ee8060c543e3663cae52e83abc1c199929614a91bd3a7",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/flight_sim_report.json": "d302ca3edf79a8003944522ac8b71a8632981b0b5b699d17507d4902189dc195",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/desktop-normal-shutdown.json": "3b75d99ad1bf5f3ec687059b6ffdd05c8e615699616a2040133ff888c728886c",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/legacy-gates.json": "364d4143404ea6acf1391b5b3fcb768b91ef20153d2554a0fe704cf08e9545de",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/smoke-verdict.json": "6d4e7b77189961f63da7d862affafd83caa625654fe0765954e97cd20f6d61fe",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/terrain-save-probe/report.json": "8f75cccd1b9b12d8826b7fc46852fa70ae17b341ba5cde1ec3bdbddcd3618831",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native/runner.log": "800747480950e8639a498d57dd80cde9ae838f16bccb808c5385c63ae335911b",
+    "build/desktop-msvc/s4-generation-world-replace-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-generation-world-replace-flat-native.log": "39ca14fd1e37ad9d59757c661ec28371c87d0859021b49190c088a155db810d8",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/route.json": "5cd8128e54edefdba2e2fea05e11a2aecd05f282bb20739b7bedc789e55dc80f",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/flight_sim_report.json": "9e050c2db0170ccc0f57f80208201961560df081ad7c1ac7f43bb7775784d226",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/desktop-normal-shutdown.json": "f21f4abd1c9ca6f3dd93947f218d156d479b199cc387b7eefe5d7c3067c3d0eb",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/legacy-gates.json": "1984ff0da96443524eaacc59da3f7c47d6de39cb6be215f364f82075375de64e",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/smoke-verdict.json": "44a943cf84f7bdc66abe13257249f520efef46416abc8636da568db18eb6f75a",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/terrain-save-probe/report.json": "a3422c93e060a29833ef308138acce2fc45c65fc2685d009b02a70b167619082",
+    "build/desktop-msvc/s4-generation-world-replace-full-native/runner.log": "0fbe44f4a7d1f7d2c41bc1f5009421686145ac1d073d16b0b1fe4ea79a7a7ffc",
+    "build/desktop-msvc/s4-generation-world-replace-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-generation-world-replace-full-native.log": "bb70ff7e9ee58ba2180c642dd55c53c129d15347923252a495aacd19882c3d6a"
+  },
+  "full_scope": "S4.02 and the full S0–S6 plan remain open. 23/42 packages complete."
+}

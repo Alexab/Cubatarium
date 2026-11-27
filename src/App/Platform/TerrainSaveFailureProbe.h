@@ -144,7 +144,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     report["allocator_owner_graph"]=RunAllocatorOwnerGraphProbe();
     report["allocator_worker_threads"]=RunAllocatorWorkerThreadProbe();
     report["allocator_returned_controls"]=RunAllocatorReturnedControlsProbe();
-    report.update(RunStreamingSchedulerReinitProbe());
+    report.update(RunStreamingSchedulerReinitProbe(root / "generation-replacement"));
     report["async_io_storage"] = RunAsyncIoStorageProbe(root / "async-io-storage");
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
@@ -1112,7 +1112,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           require(old_fifo.IsTerrainColumnRelightQueued({0,0}) &&
               old_fifo.GetTerrainColumnRelightQueueInfo({48,0}).deferred_far &&
               old_fifo.GetPendingPlayerRelightCount()==1,"world retirement has actual queued/deferred/player work");
-          replaced.AbandonTerrainForWorldReplace();
+          require(replaced.TryAbandonTerrainForWorldReplace(), "retire idle relight world");
           const auto old_queue=old_fifo.GetTerrainColumnRelightQueueInfo({0,0});
           const bool relight_retired=old_fifo.GetPendingTerrainColumnRelightCount()==0 &&
               old_fifo.GetPendingPlayerRelightCount()==0 && !old_queue.boundary_dependency &&
@@ -1605,7 +1605,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           streaming.DeferredShoreSealQueue.push_back(shore);
           streaming.DeferredShoreSealQueued.insert(shore);
           streaming.DeferredIntraChunkSealNeeded.insert(shore);
-          if(replace) pending_world.AbandonTerrainForWorldReplace();
+          if(replace) require(pending_world.TryAbandonTerrainForWorldReplace(), "retire idle seed world");
           else pending_world.QuiesceBackgroundWork(std::chrono::milliseconds(100));
           const bool retained=streaming.DeferredPhysicsSeedQueue==std::deque<glm::ivec3>{seed} &&
               streaming.DeferredShoreSealQueue==std::deque<glm::ivec3>{shore} &&
@@ -1722,7 +1722,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           old_streaming.DeferredShoreSealQueue={{0,0,0},{3,0,0}};
           old_streaming.DeferredShoreSealQueued={{0,0,0},{3,0,0}};
           old_streaming.DeferredIntraChunkSealNeeded={{0,0,0},{3,0,0}};
-          drain.AbandonTerrainForWorldReplace();
+          require(drain.TryAbandonTerrainForWorldReplace(), "retire idle seal world");
           require(drain.BlockWorld.CountNonAir()==0 &&
               old_streaming.DeferredPhysicsSeedQueue.empty() && old_streaming.DeferredShoreSealQueue.empty() &&
               old_streaming.DeferredShoreSealQueued.empty() && old_streaming.DeferredIntraChunkSealNeeded.empty(),
@@ -2143,7 +2143,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           if(operation==0) require(pending.CancelAsyncTerrainColumnLoadsOutsideRadius(reset,{1,400,0},0)==1,
                                   "outside radius cancels only abandoned target");
           if(operation==1) (void)pending.AbortAsyncChunkIoFor(reset,std::chrono::milliseconds(0));
-          if(operation==2) reset.AbandonTerrainForWorldReplace();
+          if(operation==2) require(reset.TryAbandonTerrainForWorldReplace(), "retire idle generation before disk reset");
           const auto prior_field=reset.BlockWorld.GetChunkManager().GetSectionLightField(prior_air);
           const bool old_retired=operation==2?
               reset.BlockWorld.CountNonAir()==0 && !prior_field &&
@@ -2362,7 +2362,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         demand.NoteFaceDebt(target,bit,0); demand.NoteFaceDebt(old_only,bit,0);
         repair.EnqueueFaceDebtRepair(target); repair.EnqueueFaceDebtRepair(old_only);
         require(repair.PendingFaceDebtRepairs_.size()==2,"replacement starts with two actual queued repair owners");
-        face_world.AbandonTerrainForWorldReplace();
+        require(face_world.TryAbandonTerrainForWorldReplace(), "retire idle face-repair world");
         // Exact production epoch ingress used at the start of TickMeshEmerge;
         // isolate it from unrelated focus scheduling and admission policies.
         repair.ResetFaceDebtEpoch(face_world);
@@ -2629,10 +2629,10 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             ColumnWorkItem retired_intent{}; retired_intent.column={3,0};
             flow.GetColumnRecords().NoteFlowIntent(retired_intent,cache.GetCaptureStore().WorldEpoch());
             auto unrelated=std::make_unique<UWorld>(nullptr,nullptr);
-            unrelated->AbandonTerrainForWorldReplace();
+            require(unrelated->TryAbandonTerrainForWorldReplace(), "retire idle unrelated world");
             const bool foreign_preserved=global.Scheduler().LiveCount()==2 && global.decide_world_==&flow;
             const auto old_inc=flow.BlockWorld.GetChunkManager().GetChunk({0,-3,0})->GetIncarnation();
-            flow.AbandonTerrainForWorldReplace();
+            require(flow.TryAbandonTerrainForWorldReplace(), "retire idle ticket world");
             const bool retired=global.Scheduler().LiveCount()==0 && global.GetColumnJobStage({3,0})==ColumnJobStage::Absent &&
                 global.relight_retry_after_frame_.empty() && global.retry_expiry_.empty() && global.decide_world_==nullptr;
             const bool world_records_retired=flow.GetColumnRecords().Size()==0 && flow.ColumnEmergeStates.empty() &&
@@ -2667,7 +2667,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           const auto baseline=empty_records.GetAllocationSnapshot();
           const auto live_records=flow.GetColumnRecords().Size();
           const auto before_memory=flow.GetColumnRecords().GetAllocationSnapshot();
-          flow.AbandonTerrainForWorldReplace();
+          require(flow.TryAbandonTerrainForWorldReplace(), "retire idle record world");
           const auto after_memory=flow.GetColumnRecords().GetAllocationSnapshot();
           const bool released=flow.GetColumnRecords().Size()==0 &&
               after_memory.live_bytes==baseline.live_bytes &&
@@ -3291,7 +3291,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
             {"remaining_retry",test.DeferredRelightRetries.Size()}};
         require(debt_visible && deferred && installed && test.DeferredRelightRetries.Empty(),
             "real world retains refused full relight and automatically installs AIR successor");
-        test.AbandonTerrainForWorldReplace();
+        require(test.TryAbandonTerrainForWorldReplace(), "retire idle relight retry world");
       });
       if(flow_only) RunTerrainProbePhase([&] {
         struct MetadataPopulator final : IUChunkPopulator {
@@ -3386,7 +3386,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         require(max_visit<=32 && orphans_gone && protected_kept && released_gone &&
             flow.Scheduler().LiveCount()==0 && fresh_intent && fresh_stage && current,
             "bounded interest retirement preserves live owners and fresh current reentry");
-        test.AbandonTerrainForWorldReplace();
+        require(test.TryAbandonTerrainForWorldReplace(), "retire idle metadata world");
       });
       if(flow_only) report["cases"].push_back({{"kind","flow_signed_publication"},{"status","PASS"}});
       else if(face_only) report["cases"].push_back({{"kind","face_repair_lifecycle"},{"status","PASS"}});
@@ -3921,7 +3921,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       world.CancelAsyncRelightWork();
       require(world.DeferredRelightRetries.Size() == 1,
               "replacement fixture contains old-world debt");
-      world.AbandonTerrainForWorldReplace();
+      require(world.TryAbandonTerrainForWorldReplace(), "retire idle relight lifecycle world");
       require(world.DeferredRelightRetries.Empty() &&
                   world.BlockWorld.GetChunkManager().GetSectionLightFieldCount() == 0,
               "world replacement retires old debt and fields");
