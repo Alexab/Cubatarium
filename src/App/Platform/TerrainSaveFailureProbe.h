@@ -578,6 +578,86 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"old_record_retired", true}, {"recovered_edit_on_disk", true}};
     });
     RunTerrainProbePhase([&] {
+      auto cases = Json::array();
+      for (const auto generator : {ProceduralGenerator::Flat, ProceduralGenerator::Heightmap,
+                                   ProceduralGenerator::Overworld})
+      {
+        auto owner = std::make_unique<UWorld>(nullptr, nullptr);
+        auto &world = *owner;
+        auto definitions = std::make_shared<UBlockDefinitionStorage>();
+        BlockDefinition bedrock, stone, grass;
+        bedrock.Name = "bedrock";
+        stone.Name = "stone";
+        grass.Name = "grass";
+        bedrock.Physics = stone.Physics = grass.Physics = BlockPhysicsProfile::Solid();
+        definitions->ReplaceAll({{7, bedrock}, {8, stone}, {9, grass}},
+                                {{"bedrock", 7}, {"stone", 8}, {"grass", 9}});
+        world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+        ProceduralSettings settings;
+        settings.Generator = generator;
+        settings.MinHeight = 0;
+        settings.MaxHeight = 15;
+        settings.BedrockTopY = 0;
+        settings.SeaLevel = 0;
+        settings.FlatSurfaceY = 3;
+        settings.FillWater = false;
+        settings.EnableCaves = false;
+        settings.AsyncChunkIo = false;
+        settings.AsyncChunkGeneration = false;
+        world.SetProceduralSettings(settings);
+        world.Streaming->InitStreamerCallbacks(world);
+        auto &streamer = *world.Streaming->GetStreamer();
+        streamer.SetKeepPrefetchMargin(0);
+        streamer.SetRenderDistance(1);
+        streamer.SetRequiredDataDomain({0, 0, 0}, 0);
+        const auto limit = streamer.GetTerrainColumnAdmissionLimit();
+        const glm::ivec3 home(-3, 0, 2);
+        const glm::ivec3 first = home * CHUNK_SIZE;
+        const auto edit = first + glm::ivec3(CHUNK_SIZE - 1, 0, CHUNK_SIZE - 1);
+        world.BlockWorld.SetBlock(edit, 9);
+        for (size_t i = 0; i < limit - 1; ++i)
+          world.BlockWorld.SetBlock({(100 + static_cast<int>(i)) * CHUNK_SIZE, 0, 0}, 8);
+        const auto &chunks = world.BlockWorld.GetChunkManager();
+        const auto previous_deadline = UFrameDeadline::Get();
+        UFrameDeadline::Get().BeginFrame(0);
+        streamer.EnsureDataColumns({home}, 1);
+        UFrameDeadline::Get() = previous_deadline;
+        const bool local = generator != ProceduralGenerator::Overworld;
+        require(chunks.GetResidentTerrainColumnCount() == limit && world.BlockWorld.GetBlock(edit) == 9 &&
+                    world.BlockWorld.GetBlock(first) == (local ? BlockId(7) : BLOCK_AIR),
+                "real local generation continues at capacity and feature-capable generation waits");
+        const auto mode = generator == ProceduralGenerator::Flat ? "Flat" : local ? "LegacyHash" : "Overworld";
+        Json row = {{"mode", mode}, {"terrain_limit", limit}, {"wrote_resident_sample", local}};
+        if (local)
+        {
+          UPipelineChunkPopulator populator(*world.BlockRegistry, nullptr, {});
+          UChunkGenerationRegistry tokens;
+          UChunkLoadScheduler scheduler(populator, tokens);
+          require(scheduler.RequestLoad(home, 1, settings), "register local generation with its real scheduler");
+          const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+          int started = 0;
+          while (!started && std::chrono::steady_clock::now() < deadline)
+          {
+            started = scheduler.StartQueuedGenerationWorkers(1);
+            if (!started)
+              std::this_thread::yield();
+          }
+          require(started == 1 && scheduler.Pool.WaitIdleFor(std::chrono::seconds(5)),
+                  "local worker produces its real buffer under the normal budget");
+          UBlockWorld output;
+          output.SetVerticalProfile(settings.GetVerticalProfile());
+          scheduler.Tick(output, 1, 0);
+          const auto &destination = output.GetChunkManager();
+          require(scheduler.IsCommitted(home) && destination.GetResidentTerrainColumnCount() == 1 &&
+                      destination.HasResidentTerrainColumn(home) && output.GetBlock(first) == 7,
+                  "real local worker output owns exactly one horizontal column");
+          row["worker_output_columns"] = destination.GetResidentTerrainColumnCount();
+        }
+        cases.push_back(std::move(row));
+      }
+      report["synchronous_generation_residency"] = {{"status", "PASS"}, {"cases", cases}};
+    });
+    RunTerrainProbePhase([&] {
       auto owner = std::make_unique<UWorld>(nullptr, nullptr);
       auto &world = *owner;
       auto definitions = std::make_shared<UBlockDefinitionStorage>();

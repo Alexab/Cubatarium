@@ -379,6 +379,8 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
 
   bool generated = false;
   int generated_this_call = 0;
+  const auto &chunks = World.GetChunkManager();
+  const auto terrain_limit = GetTerrainColumnAdmissionLimit();
 
   if (OnSetLightingRelightDeferred)
   {
@@ -390,16 +392,18 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   {
     const int lx = state.cursor % CHUNK_SIZE;
     const int lz = state.cursor / CHUNK_SIZE;
-    ++state.cursor;
     const int worldX = chunkCoord.x * CHUNK_SIZE + lx;
     const int worldZ = chunkCoord.z * CHUNK_SIZE + lz;
     if (state.onlyEmptyColumns &&
         !TerrainColumnNeedsGeneration(World, worldX, worldZ, MaxHeight,
                                       MinHeight))
     {
+      ++state.cursor;
       continue;
     }
-    OnGenerateColumn(worldX, worldZ);
+    if (!OnGenerateColumn(worldX, worldZ, chunks.GetResidentTerrainColumnCount() >= terrain_limit))
+      break;
+    ++state.cursor;
     generated = true;
     ++generated_this_call;
   }

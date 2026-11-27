@@ -107,7 +107,8 @@ public:
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
   /// Return false to refuse unload this frame (chunks stay loaded).
   using UnloadColumnFn = std::function<bool(glm::ivec3 ground, int max_cy)>;
-  using GenerateColumnFn = std::function<void(int x, int z)>;
+  /// False defers this sample without advancing its generation cursor.
+  using GenerateColumnFn = std::function<bool(int x, int z, bool terrainAtCapacity)>;
   using RequestAsyncChunkFn =
       std::function<bool(glm::ivec3, int priority, uint64_t demand_id)>;
   using IsChunkCommittedFn = std::function<bool(glm::ivec3)>;

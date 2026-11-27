@@ -94,6 +94,52 @@ static void TestBoundedAdmissionUnderSaveVeto()
   tuning.UnloadAmortizeMode = prior;
 }
 
+static void TestSynchronousGenerationResidency()
+{
+  using namespace cutum;
+  UBlockWorld world;
+  UBlockRegistry registry(nullptr);
+  UChunkStreamer streamer(world, registry, 1, 0, -33, -48);
+  streamer.SetKeepPrefetchMargin(0);
+  streamer.SetRenderDistance(1);
+  streamer.SetRequiredDataDomain({0, 0, 0}, 0);
+  const auto limit = streamer.GetTerrainColumnAdmissionLimit();
+  const glm::ivec3 home(-3, 0, 4);
+  const int base_x = home.x * CHUNK_SIZE;
+  const int base_z = home.z * CHUNK_SIZE;
+  const glm::ivec3 edit(base_x + CHUNK_SIZE - 1, -48, base_z + CHUNK_SIZE - 1);
+  world.SetBlock(edit, 9);
+  for (size_t i = 0; i < limit - 2; ++i)
+    world.SetBlock({(100 + static_cast<int>(i)) * CHUNK_SIZE, -48, 0}, 8);
+  auto &chunks = world.GetChunkManager();
+  std::vector<glm::ivec2> generated;
+  streamer.SetCallbacks(nullptr, nullptr, nullptr, [&](int x, int z, bool terrain_at_capacity) {
+    if (terrain_at_capacity)
+      return false;
+    const int index = static_cast<int>(generated.size());
+    generated.push_back({x, z});
+    world.SetBlock({x, -48, z}, 8);
+    world.SetBlock({(2 * index + 1) * CHUNK_SIZE, -48, base_z}, 8);
+    world.SetBlock({(2 * index + 2) * CHUNK_SIZE, -48, base_z}, 8);
+    return true;
+  });
+  UFrameDeadline::Get().BeginFrame(0);
+  streamer.EnsureDataColumns({home}, 1);
+  std::cout << "synchronous first batch samples=" << generated.size()
+            << " terrain=" << chunks.GetResidentTerrainColumnCount() << " limit=" << limit << '\n';
+  Expect(generated.size() == 1 && chunks.GetResidentTerrainColumnCount() == limit + 1,
+         "one synchronous sample may cross the terrain threshold before the next sample waits");
+  streamer.EnsureDataColumns({home}, 1);
+  Expect(generated.size() == 1 && world.GetBlock(edit) == 9,
+         "saturation holds generation and preserves existing terrain");
+  chunks.RemoveChunk({100, -3, 0});
+  chunks.RemoveChunk({101, -3, 0});
+  streamer.EnsureDataColumns({home}, 1);
+  Expect(generated == std::vector<glm::ivec2>{{base_x, base_z}, {base_x + 1, base_z}} &&
+             chunks.GetResidentTerrainColumnCount() == limit + 1 && world.GetBlock(edit) == 9,
+         "one freed opportunity resumes the exact signed sample without skipping it");
+}
+
 static void TestRetiredUnloadCandidate()
 {
   using namespace cutum;
@@ -325,11 +371,12 @@ static void TestAirOnlyColumnLifecycle()
            "retirement in any unload mode");
     int generated = 0, requested = 0;
     streamer.SetCallbacks(nullptr, nullptr, nullptr,
-                          [&](int x, int z)
+                          [&](int x, int z, bool)
                           {
                             if (UChunkManager::WorldToChunk({x, 0, z}) ==
                                 column)
                               ++generated;
+                            return true;
                           });
     streamer.SetAsyncGeneration(true);
     streamer.SetAsyncCallbacks(
@@ -499,6 +546,7 @@ static void TestAirOnlyColumnLifecycle()
 int main()
 {
   TestBoundedAdmissionUnderSaveVeto();
+  TestSynchronousGenerationResidency();
   TestAirOnlyColumnLifecycle();
   TestAirRetiresWithTerrainColumn();
   TestRetiredUnloadCandidate();

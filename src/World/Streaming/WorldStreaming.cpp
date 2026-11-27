@@ -825,21 +825,30 @@ auto UWorldStreaming::MakeStoredInitStreamerCallbacks1(UWorld &world)
 
 auto UWorldStreaming::MakeStoredInitStreamerCallbacks2(UWorld &world)
 {
-  return [this, &world](int x, int z)
+  return [this, &world](int x, int z, bool terrain_at_capacity) -> bool
       {
         if (!world.AllowProceduralFill || !world.WorldGen)
         {
-          return;
+          return false;
         }
-        if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
-                {FloorDiv(x, CHUNK_SIZE), 0, FloorDiv(z, CHUNK_SIZE)}))
-          return;
-        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
-        if (auto *composable =
-                dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get()))
+        const auto &chunks = world.BlockWorld.GetChunkManager();
+        const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0, FloorDiv(z, CHUNK_SIZE));
+        if (chunks.HasUnresolvedTerrainColumnRead(ground))
+          return false;
+        auto *composable = dynamic_cast<UComposableWorldGenerator *>(world.WorldGen.get());
+        if (terrain_at_capacity)
         {
-          const glm::ivec3 ground(FloorDiv(x, CHUNK_SIZE), 0,
-                                  FloorDiv(z, CHUNK_SIZE));
+          if (!composable || !chunks.HasResidentTerrainColumn(ground))
+            return false;
+          // These modes finish in GenerateColumn before the feature stages.
+          // Their terrain and fluid writes are confined to the given XZ.
+          const auto mode = composable->GetConfig().TerrainMode;
+          if (mode != ComposableTerrainMode::Flat && mode != ComposableTerrainMode::LegacyHash)
+            return false;
+        }
+        // Same CoarseHeightCache as async Populate (D: unify sampling entry).
+        if (composable)
+        {
           if (ground != SyncCoarseCacheGround)
           {
             if (SyncCoarseCacheGround.x != INT32_MAX)
@@ -861,6 +870,7 @@ auto UWorldStreaming::MakeStoredInitStreamerCallbacks2(UWorld &world)
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
+        return true;
       };
 }
 
