@@ -1252,7 +1252,9 @@ private:
           const auto &field = chunk->Light.field;
           if (Shared(field))
           {
-            Shared(field->PaddedLight);
+            if (field->PaddedLight || field->PaddedDomains ||
+                chunk->InputRevision.clock || chunk->InputRevision.geometry_clock)
+              Result.retained_supported = false;
             for (const auto &proof : field->LightProofs)
               if (proof.input || proof.owner)
                 Result.retained_supported = false;

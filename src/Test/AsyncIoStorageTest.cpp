@@ -235,6 +235,7 @@ int main(int argc, char **argv)
     const auto codec = cutum::io_codec_fixture::CheckCodecs();
     const auto json_writer = cutum::io_codec_fixture::CheckJsonWriter();
     const auto binary_writer = cutum::io_codec_fixture::CheckBinaryWriter();
+    const auto save_snapshots = cutum::io_codec_fixture::CheckTerrainSaveSnapshots();
     const auto assignment = cutum::io_codec_fixture::CheckRuntimeIdAssignment();
     const auto synthetic = cutum::io_codec_fixture::CheckSyntheticRegistry();
     const auto disk = cutum::io_codec_fixture::CheckDiskIndex(folder + "-index");
@@ -258,6 +259,7 @@ int main(int argc, char **argv)
     result["ordinary_codec"] = codec;
     result["json_writer"] = json_writer;
     result["binary_writer"] = binary_writer;
+    result["terrain_save_snapshots"] = save_snapshots;
     result["runtime_id_assignment"] = assignment;
     result["synthetic_registry"] = synthetic;
     result["ordinary_disk_index"] = disk;

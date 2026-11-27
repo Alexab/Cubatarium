@@ -240,7 +240,14 @@ std::unique_ptr<UChunk>
 UChunkManager::MakeTerrainSaveSnapshot(glm::ivec3 coord) const
 {
   if (const auto *chunk = GetChunk(coord))
-    return std::make_unique<UChunk>(*chunk);
+  {
+    auto result = std::make_unique<UChunk>(*chunk);
+    // The codecs persist the packed light plane. Leave the padded sampling
+    // volume with the live field so save queues cannot extend its lifetime.
+    result->Light.field->PaddedLight.reset();
+    result->Light.field->PaddedDomains = 0;
+    return result;
+  }
   const auto air = LoadedAirSlices.find(coord);
   if (air == LoadedAirSlices.end())
     return nullptr;

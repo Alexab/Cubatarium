@@ -6,7 +6,10 @@
 #include "Core/Memory/NameStorageSource.h"
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Chunks/Chunk.h"
+#include "World/Chunks/ChunkGenerationToken.h"
+#include "World/Core/BlockWorld.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include <fstream>
 #include <limits>
@@ -195,6 +198,92 @@ inline void Check(const CapturedRequest &capture)
       !capture.storage.output_bytes)
     throw std::runtime_error("codec checkpoint differs from independently observed ordinary requests: " +
         std::to_string(static_cast<int>(capture.storage.kind)) + " " + Describe(capture).dump());
+}
+
+inline nlohmann::json CheckTerrainSaveSnapshots()
+{
+  const glm::ivec3 coord{0, -2, 0}, air_coord{0, -3, 0};
+  const glm::ivec3 local{1, 2, 3};
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+  UBlockRegistry registry(nullptr, definitions);
+  UBlockWorld world;
+  world.SetKnownOpenSkyAbsentQuery([](glm::ivec3) { return true; });
+  world.SetBlock(coord * CHUNK_SIZE + local, 8);
+  auto &manager = world.GetChunkManager();
+  auto *live = manager.GetChunk(coord);
+  live->SetFluidLocal(local, FluidCellState::Flowing(3, true).WithKind(FluidKind::Water));
+  live->SetWeatherState(0.75f, 71.125);
+  {
+    RelightJobSpec spec;
+    spec.min_world_y = world.GetVerticalProfile().MinY;
+    spec.max_world_y = world.GetVerticalProfile().MaxY;
+    const auto light = UChunkRelightSnapshot::CaptureSections(world, spec, {coord}).Compute(registry);
+    Require(light.chunks.size() == 1 && light.chunks.front().padded_light,
+            "a real calculation supplies padded light on the source chunk");
+    live->ReplaceComputedLightVolume(*light.chunks.front().padded_light, true, true);
+    Require(world.RecordLightCalculation(light, definitions->GetCatalogSnapshot()) == 1,
+            "the source chunk retains a real light calculation proof");
+  }
+  std::weak_ptr<const SectionLightVolume> padded = live->GetSectionLightField().GetPaddedData();
+  std::weak_ptr<const RelightComputeResult> proof = world.GetRecordedLightInputContext(coord, LightDomain::Sky);
+  Require(!padded.expired() && !proof.expired(), "both proof and padded source owners are live before capture");
+
+  UBinaryChunkSerializer binary;
+  UJsonChunkSerializer json;
+  const auto expected_binary = binary.Serialize(coord, *live, registry).bytes;
+  const auto expected_json = json.Serialize(coord, *live, registry).bytes;
+  UChunk air(air_coord);
+  std::array<uint8_t, CHUNK_VOLUME> pattern;
+  for (size_t i = 0; i < pattern.size(); ++i)
+    pattern[i] = static_cast<uint8_t>(i * 13 + 0x52);
+  air.ReplaceLightData(pattern);
+  air.SetWeatherState(0.25f, 135.25);
+  const auto expected_air = binary.Serialize(air_coord, air, registry).bytes;
+  const auto decoded = binary.Deserialize(expected_air, air_coord, registry);
+  const auto loaded = decoded.GetDecodedAirSlice(air_coord);
+  Require(loaded && manager.InstallLoadedAirSlice(*loaded, {{air_coord.x, 0, air_coord.z}, 1}, 1, false) &&
+              !manager.HasChunk(air_coord), "decoded AIR remains free of resident geometry");
+
+  size_t refusals = 0;
+  for (const auto target : {coord, air_coord})
+    for (size_t prefix = 0; prefix < 3; ++prefix)
+    {
+      observation::Scope allocations(prefix);
+      try { const std::shared_ptr<const UChunk> snapshot = manager.MakeTerrainSaveSnapshot(target); }
+      catch (const std::bad_alloc &) { ++refusals; }
+      Require(observation::State.refusals == 1 && !observation::State.live && !observation::State.blocks,
+              "failed terrain snapshot retires all observed allocations");
+    }
+
+  std::shared_ptr<const UChunk> resident, known_air;
+  size_t resident_bytes = 0, air_bytes = 0, attempts = 0;
+  {
+    observation::Scope allocations;
+    resident = manager.MakeTerrainSaveSnapshot(coord);
+    resident_bytes = observation::State.live;
+    known_air = manager.MakeTerrainSaveSnapshot(air_coord);
+    air_bytes = observation::State.live - resident_bytes;
+    attempts = observation::State.attempts;
+    Require(resident && known_air && known_air->IsAirOnly() && observation::State.blocks == 6 &&
+                observation::State.peak == resident_bytes + air_bytes && resident_bytes == air_bytes,
+            "resident and decoded AIR captures have identical ordinary ownership widths");
+  }
+  world.Clear();
+  const bool held_padding = !padded.expired();
+  Require(!held_padding && proof.expired() && binary.Serialize(coord, *resident, registry).bytes == expected_binary &&
+              json.Serialize(coord, *resident, registry).bytes == expected_json &&
+              binary.Serialize(air_coord, *known_air, registry).bytes == expected_air,
+          "snapshots preserve all persisted bytes after the source world retires");
+  resident.reset();
+  known_air.reset();
+  Require(refusals == 6 && attempts == 6 && padded.expired() && !observation::State.live && !observation::State.blocks,
+          "both complete terrain snapshots and all refusal cases retire");
+  return {{"resident_bytes", resident_bytes}, {"air_bytes", air_bytes}, {"attempts", attempts},
+          {"refusals", refusals}, {"held_padding_after_world_clear", held_padding}, {"proof_retired", true},
+          {"binary_and_json_byte_match", true}, {"air_byte_match", true}};
 }
 
 inline nlohmann::json CheckBinaryWriter()

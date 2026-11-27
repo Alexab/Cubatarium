@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -838,6 +839,95 @@ struct AsyncIoStorageProbe
     return {{"status", "PASS"}, {"id", id}, {"entries", 1}, {"worker_decode", true}, {"cold_reload", true}};
   }
 
+  static nlohmann::json CheckSaveSnapshotQueue(const std::filesystem::path &root)
+  {
+#if defined(_WIN64) && defined(_MSVC_STL_VERSION) && _ITERATOR_DEBUG_LEVEL == 0
+    constexpr auto limit = UAsyncChunkIO::kMaxOutstandingWrites;
+    using ChunkControl = std::_Ref_count_resource<UChunk *, std::default_delete<UChunk>>;
+    using LightControl = std::_Ref_count_obj2<SectionLightField>;
+    constexpr size_t bytes_per_snapshot = sizeof(UChunk) + sizeof(ChunkControl) + sizeof(LightControl);
+    UBlockWorld world;
+    const glm::ivec3 local{1, 2, 3};
+    for (size_t i = 0; i < limit; ++i)
+      world.SetBlock(glm::ivec3(static_cast<int>(i) * CHUNK_SIZE, 0, 0) + local, 8);
+    const glm::ivec3 first_coord(0);
+    auto *chunk = world.GetChunkManager().GetChunk(first_coord);
+    chunk->SetFluidLocal(local, FluidCellState::Flowing(3).WithKind(FluidKind::Water));
+    chunk->SetWeatherState(0.75f, 71.125);
+    SectionLightVolume volume;
+    volume.cells.fill(0x53);
+    Require(chunk->ReplaceComputedLightVolume(volume, true, true), "the queued source has padded light to retire");
+    std::weak_ptr<const SectionLightVolume> padded = chunk->GetSectionLightField().GetPaddedData();
+
+    UChunkStorageService storage;
+    UBlockRegistry registry(nullptr);
+    const auto expected = storage.SerializeChunk(first_coord, *chunk, registry).bytes;
+    const auto folder = root.string();
+    UAsyncChunkIO io;
+    Gate gate;
+    Release release{gate};
+    Park(io, gate, false);
+    for (size_t i = 0; i < limit; ++i)
+    {
+      const glm::ivec3 coord{static_cast<int>(i), 0, 0};
+      Require(io.RequestSave(coord, storage, folder, world, registry, {coord, 1}, i + 1),
+              "reserve and capture each queued snapshot up to capacity");
+    }
+    Require(io.GetOutstandingWriteCount() == limit && !padded.expired() &&
+                !io.RequestSave(first_coord, storage, folder, world, registry, {first_coord, 1}, limit + 1),
+            "full admission preserves the live field and refuses another capture");
+
+    std::vector<AsyncIoStorageIdentity> scratch(3 * limit + 16);
+    const auto capacity = io.InspectRetainedIo(scratch.data(), scratch.size());
+    size_t chunks = 0, fields = 0, snapshot_bytes = 0;
+    for (size_t i = 0; i < capacity.shared_blocks; ++i)
+    {
+      const auto &owner = scratch[i];
+      if (owner.bytes == sizeof(ChunkControl) && owner.backing == sizeof(UChunk))
+      {
+        ++chunks;
+        snapshot_bytes += owner.bytes + owner.backing;
+      }
+      if (owner.bytes == sizeof(LightControl) && !owner.backing)
+      {
+        ++fields;
+        snapshot_bytes += owner.bytes;
+      }
+    }
+    Require(capacity.retained_supported && capacity.queued[static_cast<size_t>(AsyncIoJobKind::Save)] == limit &&
+                !capacity.completed_backing && chunks == limit && fields == limit &&
+                snapshot_bytes == limit * bytes_per_snapshot,
+            "all queued snapshot requests match the detached chunk and field layout");
+
+    world.Clear();
+    Require(padded.expired(), "queued snapshots release the old world's padded field before workers run");
+    padded.reset();
+    gate.released.store(true);
+    Require(io.WaitIdleFor(std::chrono::seconds(20)), "all distinct detached saves reach their completion");
+    const auto completed = io.InspectRetainedIo(scratch.data(), scratch.size());
+    Require(completed.supported &&
+                std::none_of(scratch.begin(), scratch.begin() + completed.shared_blocks, [](const auto &owner) {
+                  return owner.backing || owner.bytes == sizeof(LightControl);
+                }), "completed results retain no chunk or light snapshot");
+    auto results = io.DrainSaves();
+    Require(results.size() == limit && io.GetOutstandingWriteCount() == limit &&
+                std::all_of(results.begin(), results.end(), [](const auto &done) { return done.success; }),
+            "every distinct detached snapshot saves while returned receipts retain their credits");
+    results.clear();
+    Require(!io.GetOutstandingWriteCount(), "the last returned receipt releases all queued write reservations");
+    std::ifstream file(storage.ChunkFilePath(folder, first_coord, ChunkDiskFormat::Binary), std::ios::binary);
+    const std::vector<uint8_t> actual{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    Require(actual == expected, "the worker writes the saved block, fluid, light and weather after world retirement");
+    return {{"status", "PASS"}, {"limit", limit}, {"chunk_owners", chunks}, {"field_owners", fields},
+            {"snapshot_bytes", bytes_per_snapshot}, {"queued_bytes", snapshot_bytes},
+            {"padded_retired_before_write", true}, {"completed_without_snapshot", true},
+            {"retired_credits", true}, {"physical_byte_match", true}};
+#else
+    (void)root;
+    return {{"supported", false}};
+#endif
+  }
+
   static nlohmann::json CheckPoolLifetime(const std::filesystem::path &shutdown,
                                          const std::string &folder, glm::ivec3 coord,
                                          UChunkStorageService &storage, UBlockRegistry &registry)
@@ -1096,6 +1186,7 @@ struct AsyncIoStorageProbe
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"json_streaming", CheckStreamingJson(root / "json-streaming", registry)},
             {"legacy_synthetic_json", CheckLegacySyntheticJson(root / "legacy-synthetic-json")},
+            {"terrain_save_snapshot_queue", CheckSaveSnapshotQueue(root / "save-snapshot-queue")},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},
             {"active_worker_storage_complete", false}};
