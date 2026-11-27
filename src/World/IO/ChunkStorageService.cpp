@@ -5,6 +5,7 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Core/BlockWorld.h"
+#include "World/IO/ColumnLightJsonReader.h"
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Math/GridMath.h"
@@ -977,14 +978,13 @@ StlSourceStorage ReceiptOutputBacking(const PersistedColumnLight &receipts) noex
 struct ReceiptReadObservation
 {
   const IoCodecProbe *destination;
-  const StlSourceStorage &parse_storage;
   const PersistedColumnLight &decoded;
   size_t stack_buffer;
 
   static void Sample(void *context, const IoCodecStorage &inner) noexcept
   {
     const auto &value = *static_cast<ReceiptReadObservation *>(context);
-    auto scratch = value.parse_storage;
+    StlSourceStorage scratch;
     scratch.Add(inner.scratch_bytes);
     scratch.Add(inner.input_bytes);
     const auto output = ReceiptOutputBacking(value.decoded);
@@ -1009,61 +1009,28 @@ UChunkStorageService::ReadColumnLight(const std::string &worldFolder,
 {
   try
   {
-    // Bound the actual read too: a file can grow after a size probe.
     std::ifstream file(ColumnLightFilePath(worldFolder, column),
                        std::ios::binary);
     if (!file)
       return {};
-    std::string text;
-    char buffer[4096];
-    while (file.read(buffer, sizeof(buffer)) || file.gcount())
-    {
-      if (size_t(file.gcount()) > kMaxColumnLightBytes - text.size())
-        return {};
-      text.append(buffer, size_t(file.gcount()));
-    }
-    if (!file.eof())
-      return {};
-    const auto data = RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] { return json::parse(text); });
-    int version = 0, x = 0, z = 0;
-    if (!persisted_light_detail::Integer(data.at("format_version"), version) ||
-        version != 1 || !data.at("column").is_array() ||
-        data.at("column").size() != 2 ||
-        !persisted_light_detail::Integer(data.at("column")[0], x) ||
-        !persisted_light_detail::Integer(data.at("column")[1], z) ||
-        x != column.x || z != column.z || !data.at("fields").is_array() ||
-        data.at("fields").size() > kMaxColumnLightSections)
-      return {};
     auto receipts = std::make_shared<PersistedColumnLight>();
-    StlSourceStorage scratch;
-    if (probe)
-    {
-      scratch.Text(text);
-      scratch.JsonTree(data);
-    }
-    ReceiptReadObservation observation{probe, scratch, *receipts, sizeof(buffer)};
+    column_light_json::Source source(file);
+    constexpr auto stack_bytes = sizeof(source) + sizeof(column_light_json::Reader);
+    ReceiptReadObservation observation{probe, *receipts, stack_bytes};
     const IoCodecProbe section_probe{&observation, ReceiptReadObservation::Sample,
                                     ReceiptReadObservation::Window};
-    size_t bytes = 0;
-    int64_t previous = std::numeric_limits<int>::min() - int64_t{1};
-    for (const auto &row : data.at("fields"))
-    {
-      auto receipt = DecodeSectionLight(row, probe ? &section_probe : nullptr);
-      if (!receipt || receipt->coord.x != x || receipt->coord.z != z ||
-          receipt->coord.y <= previous ||
-          PersistedLightBytes(*receipt) > kMaxColumnLightBytes - bytes)
-        return {};
-      previous = receipt->coord.y;
-      bytes += PersistedLightBytes(*receipt);
-      receipts->push_back(
-          std::make_shared<const PersistedSectionLight>(std::move(*receipt)));
-    }
+    column_light_json::Reader reader(column, *receipts, probe ? &section_probe : nullptr);
+    const bool valid = RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] {
+      nlohmann::detail::parser<json, column_light_json::Input> parser{column_light_json::Input{source, reader}};
+      return parser.sax_parse(&reader, true) && source.Complete() && reader.Complete();
+    });
+    if (!valid)
+      return {};
     if (probe)
     {
       const auto output = ReceiptOutputBacking(*receipts);
-      probe->sample(probe->context, {IoCodecKind::ReceiptRead, scratch.bytes.requested,
-                                    0, output.bytes.requested, sizeof(buffer),
-                                    scratch.bytes.supported && output.bytes.supported});
+      probe->sample(probe->context, {IoCodecKind::ReceiptRead, 0, 0, output.bytes.requested,
+                                    stack_bytes, output.bytes.supported});
     }
     return receipts;
   }

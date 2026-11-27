@@ -192,19 +192,16 @@ inline bool CoversSamplingDomain(const PersistedSectionLight &receipt,
       receipt.inputs.size() > PersistedSectionLight::MaxDependencies ||
       !receipt.profile.SliceBounds(receipt.coord.y, CHUNK_SIZE))
     return false;
-  std::map<std::tuple<int, int, int>, uint64_t> inputs;
-  for (const auto &input : receipt.inputs)
-    if (!inputs.emplace(Key(input.coord), input.content).second)
-      return false;
-  if (probe)
-  {
-    StlSourceStorage scratch, input;
-    scratch.Tree(inputs);
-    const auto input_bytes = ReceiptTextAndInputs(receipt, input);
-    probe->sample(probe->context, {IoCodecKind::ReceiptValidation, scratch.bytes.requested,
-                                  input_bytes, 0, 0,
-                                  scratch.bytes.supported && input.bytes.supported});
-  }
+  const auto sample = [&](const StlSourceStorage &scratch) {
+    if (probe)
+    {
+      StlSourceStorage input;
+      const auto input_bytes = ReceiptTextAndInputs(receipt, input);
+      probe->sample(probe->context, {IoCodecKind::ReceiptValidation, scratch.bytes.requested,
+                                    input_bytes, 0, 0,
+                                    scratch.bytes.supported && input.bytes.supported});
+    }
+  };
   // Both domains are restored together: the radius-2 output's complete
   // geometry halo and all direct-sky context to the configured ceiling are
   // mandatory even if a damaged receipt removed an otherwise valid row.
@@ -213,20 +210,69 @@ inline bool CoversSamplingDomain(const PersistedSectionLight &receipt,
   const int64_t top = receipt.profile.MaxChunkY(CHUNK_SIZE);
   if ((top - bottom + 1) * 9 > PersistedSectionLight::MaxDependencies)
     return false;
-  for (int dx = -1; dx <= 1; ++dx)
-    for (int dz = -1; dz <= 1; ++dz)
-    {
-      const int64_t x = int64_t(receipt.coord.x) + dx;
-      const int64_t z = int64_t(receipt.coord.z) + dz;
-      if (x < std::numeric_limits<int>::min() ||
-          x > std::numeric_limits<int>::max() ||
-          z < std::numeric_limits<int>::min() ||
-          z > std::numeric_limits<int>::max())
-        return false;
-      for (int64_t y = bottom; y <= top; ++y)
-        if (!inputs.count(std::tuple(int(x), int(y), int(z))))
+  const auto covers = [&](auto contains) {
+    for (int dx = -1; dx <= 1; ++dx)
+      for (int dz = -1; dz <= 1; ++dz)
+      {
+        const int64_t x = int64_t(receipt.coord.x) + dx;
+        const int64_t z = int64_t(receipt.coord.z) + dz;
+        if (x < std::numeric_limits<int>::min() || x > std::numeric_limits<int>::max() ||
+            z < std::numeric_limits<int>::min() || z > std::numeric_limits<int>::max())
           return false;
-    }
+        for (int64_t y = bottom; y <= top; ++y)
+          if (!contains(std::tuple(int(x), int(y), int(z))))
+            return false;
+      }
+    return true;
+  };
+
+  const auto first = receipt.inputs.begin(), last = receipt.inputs.end();
+  if (std::adjacent_find(first, last, [](const auto &a, const auto &b) {
+        return Key(a.coord) >= Key(b.coord);
+      }) == last)
+  {
+    sample({});
+    return covers([&](auto key) {
+      const auto found = std::lower_bound(first, last, key, [](const auto &input, const auto &target) {
+        return Key(input.coord) < target;
+      });
+      return found != last && Key(found->coord) == key;
+    });
+  }
+
+  // Calls with in-memory receipts can still supply an unordered input list.
+  std::map<std::tuple<int, int, int>, uint64_t> inputs;
+  for (const auto &input : receipt.inputs)
+    if (!inputs.emplace(Key(input.coord), input.content).second)
+      return false;
+  StlSourceStorage scratch;
+  if (probe)
+    scratch.Tree(inputs);
+  sample(scratch);
+  return covers([&](auto key) { return inputs.count(key) != 0; });
+}
+
+inline bool ValidateDecodedReceipt(const PersistedSectionLight &receipt, const IoCodecProbe *probe)
+{
+  return RunIoCodecWindow(probe, IoCodecWindow::ReceiptValidate,
+                          [&] { return CoversSamplingDomain(receipt, probe); }) &&
+         Checksum(receipt, probe) == receipt.checksum;
+}
+
+inline bool DecodePaddedLight(std::string_view hex, SectionLightVolume &volume) noexcept
+{
+  if (hex.size() != volume.cells.size() * 2)
+    return false;
+  const auto nibble = [](char c) {
+    return c >= '0' && c <= '9' ? c - '0' : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1;
+  };
+  for (size_t n = 0; n < volume.cells.size(); ++n)
+  {
+    const int hi = nibble(hex[n * 2]), lo = nibble(hex[n * 2 + 1]);
+    if (hi < 0 || lo < 0)
+      return false;
+    volume.cells[n] = static_cast<uint8_t>((hi << 4) | lo);
+  }
   return true;
 }
 
@@ -307,24 +353,7 @@ DecodeSectionLight(const nlohmann::json &data, const IoCodecProbe *probe = nullp
       receipt.inputs.push_back(input);
     }
     const auto &hex = data.at("padded_light").get_ref<const std::string &>();
-    if (hex.size() != SectionLightVolume::CellCount * 2)
-      return std::nullopt;
-    const auto nibble = [](char c)
-    {
-      return c >= '0' && c <= '9'   ? c - '0'
-             : c >= 'a' && c <= 'f' ? c - 'a' + 10
-                                    : -1;
-    };
-    for (size_t n = 0; n < receipt.volume.cells.size(); ++n)
-    {
-      const int hi = nibble(hex[n * 2]), lo = nibble(hex[n * 2 + 1]);
-      if (hi < 0 || lo < 0)
-        return std::nullopt;
-      receipt.volume.cells[n] = static_cast<uint8_t>((hi << 4) | lo);
-    }
-    if (!RunIoCodecWindow(probe, IoCodecWindow::ReceiptValidate,
-                          [&] { return CoversSamplingDomain(receipt, probe); }) ||
-        Checksum(receipt, probe) != receipt.checksum)
+    if (!DecodePaddedLight(hex, receipt.volume) || !ValidateDecodedReceipt(receipt, probe))
       return std::nullopt;
   }
   catch (const nlohmann::json::exception &)

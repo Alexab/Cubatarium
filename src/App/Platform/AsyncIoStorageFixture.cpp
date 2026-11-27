@@ -646,9 +646,9 @@ struct AsyncIoStorageProbe
     const auto *receipt_checksum = trace.FindCodec(IoCodecKind::ReceiptChecksum, 799);
     Require(receipt_result.size() == 1 && receipt_result[0].columnLight &&
                 receipt_result[0].columnLight->size() == 1 && receipt_codec &&
-                receipt_codec->scratch_bytes && receipt_codec->output_bytes &&
-                receipt_codec->stack_buffer_bytes == 4096,
-            "actual persisted receipt recovers after DOM and text observation");
+                !receipt_codec->scratch_bytes && receipt_codec->output_bytes &&
+                receipt_codec->stack_buffer_bytes > 4096,
+            "physical receipt read publishes typed output with bounded stack backing");
     for (const auto *sample : {receipt_validation, receipt_checksum})
       Require(sample && sample->supported && sample->scratch_bytes > receipt_codec->scratch_bytes &&
                   sample->output_bytes && sample->output_bytes < receipt_codec->output_bytes &&

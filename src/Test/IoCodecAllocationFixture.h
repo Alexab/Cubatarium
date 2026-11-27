@@ -775,9 +775,26 @@ inline nlohmann::json CheckReceiptWriter(const std::filesystem::path &root)
                   storage.WriteColumnLight(folder, column, receipts),
               "output refusal keeps the committed receipt file and permits the same retry");
     }
+    CapturedRequest read;
+    const auto read_probe = read.Probe();
+    {
+      observation::Scope allocations;
+      {
+        const auto decoded = storage.ReadColumnLight(folder, column, &read_probe);
+        Require(decoded && decoded->size() == receipts.size(), "observe the same physical receipt source");
+      }
+      read.operation_peak = observation::State.peak;
+      Require(!observation::State.live && !observation::State.blocks, "receipt reader allocations retire");
+    }
+    const auto &read_point = read.points[static_cast<size_t>(IoCodecKind::ReceiptRead)];
+    Require(!read_point.scratch_bytes && read_point.output_bytes && read_point.stack_buffer_bytes > 4096,
+            "physical read retains typed receipts and its buffered reader stack");
     return nlohmann::json{{"file_bytes", bytes.size()}, {"peak", capture.operation_peak},
                           {"encode_scratch", encode.scratch_bytes}, {"encode_output", encode.output_bytes},
                           {"encode_window_peak", window.additional}, {"encode_stack_buffer", encode.stack_buffer_bytes},
+                          {"read_peak", read.operation_peak}, {"read_scratch", read_point.scratch_bytes},
+                          {"read_output", read_point.output_bytes},
+                          {"read_stack", read_point.stack_buffer_bytes},
                           {"byte_match", true}, {"sections", sections}};
   };
   const std::string escaped = std::string("v1 \"\\\n\t\x01\xC3\xA9\xF0\x9F\x8C\x8D") + '\0';
@@ -823,6 +840,75 @@ inline nlohmann::json CheckReceiptWriter(const std::filesystem::path &root)
           {"allocation_refused_and_retried", true}};
 }
 
+inline nlohmann::json CheckReceiptStreamLimits(const std::filesystem::path &root)
+{
+  UChunkStorageService storage;
+  const glm::ivec3 column{1, 0, -2};
+  const auto folder = (root / "escaped").string();
+  const auto path = storage.ColumnLightFilePath(folder, column);
+  const auto expected = storage.ReadColumnLight(folder, column);
+  Require(expected && expected->size() == 1, "stream limits start from a canonical physical receipt");
+  std::vector<uint8_t> bytes;
+  Require(storage.ReadBytesFromFile(path, bytes), "load the canonical control bytes");
+  const std::string compact(bytes.begin(), bytes.end());
+  const auto measure = [&](const std::string &text, bool valid = true) {
+    {
+      std::ofstream file(path, std::ios::binary);
+      file.write(text.data(), static_cast<std::streamsize>(text.size()));
+      file.close();
+      Require(file.good(), "install a physical receipt stream control");
+    }
+    observation::Scope allocations;
+    {
+      const auto loaded = storage.ReadColumnLight(folder, column);
+      Require(bool(loaded) == valid, "receipt reader enforces the stream and semantic boundary");
+      if (loaded)
+        Require(loaded->size() == 1 && loaded->front()->checksum == expected->front()->checksum &&
+                    loaded->front()->signature == expected->front()->signature,
+                "compatible input retains its original receipt");
+    }
+    Require(!observation::State.live && !observation::State.blocks, "all stream control backing retires");
+    return observation::State.peak;
+  };
+  const auto compact_peak = measure(compact);
+  std::string large = compact.substr(0, compact.size() - 1) + R"(,"ignored":[)";
+  for (int i = 0; i < 262144; ++i)
+    large += "null,";
+  large += "\"" + std::string(131072, 'x') + "\"]}";
+  const auto large_peak = measure(large);
+
+  std::string duplicate = R"({"format_version":0,"column":[false],"fields":[{}],)" + compact.substr(1);
+  constexpr std::string_view first_row = R"("fields":[{"checksum":)";
+  const auto row = duplicate.find(first_row);
+  Require(row != std::string::npos, "find the canonical receipt row in the duplicate control");
+  duplicate.insert(row + std::string_view(R"("fields":[{)").size(),
+                   R"("inputs":[null],"padded_light":[],"light_signature":false,"coord":[0],)");
+  measure(duplicate);
+  measure(compact.substr(0, compact.size() - 1) + R"(,"fields":null})", false);
+  measure(compact + '\0' + "trailing", false);
+
+  std::string padded = compact;
+  padded.append(kMaxColumnLightBytes - padded.size(), ' ');
+  const auto exact = measure(padded);
+  padded.push_back(' ');
+  const auto beyond = measure(padded, false);
+  auto nested = [&](size_t depth) {
+    return compact.substr(0, compact.size() - 1) + R"(,"ignored":)" + std::string(depth, '[') +
+           "null" + std::string(depth, ']') + "}";
+  };
+  const auto deep = measure(nested(16384));
+  const auto beyond_depth = measure(nested(16385), false);
+#ifdef CUBATARIUM_JSON_LEXER_OVERRIDES
+  Require(large_peak <= compact_peak + 1024 && exact <= compact_peak + 1024 && beyond <= compact_peak + 1024,
+          "literal runs and ignored tokens do not grow heap with the file extent");
+#endif
+  measure(compact); // exact recovery after the refusal controls
+  return {{"compact_peak", compact_peak}, {"extension_bytes", large.size()}, {"extension_peak", large_peak},
+          {"file_limit", kMaxColumnLightBytes}, {"exact_limit_peak", exact}, {"over_limit_peak", beyond},
+          {"deep_peak", deep}, {"over_depth_peak", beyond_depth}, {"last_duplicates_win", true},
+          {"nul_rejected", true}, {"retry", true}};
+}
+
 inline nlohmann::json CheckReceiptTemporaries()
 {
   PersistedSectionLight receipt;
@@ -858,12 +944,18 @@ inline nlohmann::json CheckReceiptTemporaries()
     }
     const auto &map = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptValidate)];
     const auto &hash = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptHash)];
-    Require(map.calls == 1 && hash.calls == 1 && map.additional > 0 && !hash.additional,
-            "ordinary ASCII checksum streams without heap scratch");
+    Require(map.calls == 1 && hash.calls == 1 && !map.additional && !hash.additional,
+            "sorted footprint lookup and ordinary ASCII hashing use no extra heap scratch");
     return nlohmann::json{{"validation_peak", map.peak}, {"checksum_peak", hash.peak},
-                         {"checksum_extra_heap", hash.additional}, {"peak", capture.operation_peak}, {"decoded", valid}};
+                         {"checksum_extra_heap", hash.additional}, {"validation_extra_heap", map.additional},
+                         {"peak", capture.operation_peak}, {"decoded", valid}};
   };
   const auto valid = check(true);
+  auto unordered = receipt;
+  std::swap(unordered.inputs.front(), unordered.inputs.back());
+  Require(persisted_light_detail::CoversSamplingDomain(unordered), "in-memory validation still accepts unordered unique inputs");
+  unordered.inputs.front() = unordered.inputs.back();
+  Require(!persisted_light_detail::CoversSamplingDomain(unordered), "unordered duplicate inputs still fail validation");
   document["checksum"] = receipt.checksum ^ UINT64_C(1);
   return {{"valid", valid}, {"mismatched_checksum", check(false)}};
 }
