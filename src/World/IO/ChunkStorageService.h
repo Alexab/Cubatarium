@@ -137,7 +137,7 @@ public:
                             std::error_code *failure = nullptr) const;
   bool ReadBytesFromFile(const std::string &filePath,
                          std::vector<uint8_t> &outBytes) const;
-  static std::vector<uint8_t> ReadChunkBytes(std::istream &file, ChunkDiskFormat format);
+  static std::vector<uint8_t> ReadBinaryChunkBytes(std::istream &file);
 
   bool WriteStorageMarker(const std::string &worldFolder,
                           std::error_code *failure = nullptr) const;

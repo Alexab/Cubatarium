@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdint>
+#include <fstream>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -660,12 +661,12 @@ struct AsyncIoStorageProbe
     auto *cancelled = trace.Find(Kind::Load, Stage::Cancelled, 801);
     const auto *json_write = trace.FindCodec(IoCodecKind::JsonWrite, 800);
     const auto *json_read = trace.FindCodec(IoCodecKind::JsonRead, 801);
-    Require(save && save->encoded_bytes && decoded && decoded->input_bytes &&
+    Require(save && save->encoded_bytes && decoded && !decoded->input_bytes &&
                 decoded->decoded_bytes && cancelled && !cancelled->input_bytes &&
                 cancelled->decoded_bytes == decoded->decoded_bytes &&
                 json_write && json_write->scratch_bytes &&
                 json_write->output_bytes == save->encoded_bytes &&
-                json_read && json_read->scratch_bytes &&
+                json_read && !json_read->scratch_bytes && !json_read->input_bytes &&
                 json_read->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
             "active cancellation retires decoded source without publication");
@@ -682,6 +683,98 @@ struct AsyncIoStorageProbe
             {"receipt_checksum_scratch", receipt_checksum->scratch_bytes},
             {"receipt_prefix_output", receipt_validation->output_bytes},
             {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes}};
+  }
+
+  static nlohmann::json CheckStreamingJson(const std::filesystem::path &root, UBlockRegistry &registry)
+  {
+    using Kind = AsyncIoJobKind;
+    using Stage = AsyncIoWorkerStage;
+    UChunkStorageService storage;
+    const auto folder = root.string();
+    const glm::ivec3 coord(1, -2, 2);
+    const auto first = coord * CHUNK_SIZE;
+    const auto path = storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Json);
+    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+    constexpr size_t repeated = 32768;
+    {
+      std::ofstream file(path, std::ios::binary);
+      // Duplicate members keep their last value, including the voxel array.
+      file << R"({"format_version":9,"format_version":2,"cx":99,"cx":1,"cy":-2,"cz":2,)"
+              R"("voxels":[{"lx":4,"ly":4,"lz":4,"id":8}],"extra":{"voxels":[[1],false],"text":"two  spaces and \"quotes\""},)"
+              R"("voxels":[)";
+      constexpr std::string_view same = R"({"lx":0,"ly":0,"lz":0,"id":8},)";
+      for (size_t i = 0; i < repeated; ++i)
+        file << same;
+      file << R"({"lx":0,"ly":0,"lz":0,"type":"stone","id":8,"\u0069d":9},)"
+              R"({"lx":0,"ly":0,"lz":0,"id":0},)"
+              R"({"lx":1,"ly":0,"lz":0,"type":"stone"}],"weather_state":false,)"
+              R"("weather_state":{"surface_wetness":0.25,"last_update_sec":125}})";
+      std::array<char, 4096> whitespace;
+      whitespace.fill(' ');
+      for (int i = 0; i < 2048; ++i)
+        file.write(whitespace.data(), whitespace.size());
+      file.close();
+      Require(file.good(), "write a real JSON file with repeated cells and trailing whitespace");
+    }
+    const auto extent = std::filesystem::file_size(path);
+    AllocatorSourcePhase phase(NewRootStorageEpoch(), 1);
+    WorkerTrace trace;
+    const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
+    UAsyncChunkIO io;
+    io.WorkerProbe = &probe;
+    const auto load = [&](uint64_t demand, bool withhold = false) {
+      Require(io.RequestLoad(coord, storage, registry, folder, {coord, 1}, {}, demand, false, withhold) &&
+                  io.WaitIdleFor(std::chrono::seconds(8)), "real JSON source finishes on the worker");
+      auto results = io.DrainLoads();
+      Require(results.size() == 1 && !results.front().payload.capacity(),
+              "the result does not retain raw JSON bytes");
+      return std::move(results.front());
+    };
+    size_t decoded_bytes = 0;
+    {
+      const auto result = load(810);
+      const auto *decoded = trace.Find(Kind::Load, Stage::Decoded, 810);
+      const auto *codec = trace.FindCodec(IoCodecKind::JsonRead, 810);
+      Require(result.success && result.decodedBuffer && result.decodedBuffer->HasDecodedTerrainFrame(coord) &&
+                  result.decodedBuffer->GetBlock(first) == 9 &&
+                  result.decodedBuffer->GetBlock(first + glm::ivec3(1, 0, 0)) == 8 &&
+                  result.decodedBuffer->GetBlock(first + glm::ivec3(4)) == BLOCK_AIR &&
+                  decoded && !decoded->input_bytes && decoded->decoded_bytes &&
+                  codec && !codec->scratch_bytes && !codec->input_bytes &&
+                  !trace.Find(Kind::Load, Stage::ReadBytes, 810),
+              "large JSON streams directly into legacy-compatible terrain fields");
+      decoded_bytes = decoded->decoded_bytes;
+    }
+    UBlockWorld cold;
+    Require(storage.LoadChunk(coord, cold, folder, registry) == 2 &&
+                cold.GetBlock(first) == 9 &&
+                cold.GetChunkManager().GetChunk(coord)->GetWeatherLastUpdateSec() == 125,
+            "the synchronous route uses the same JSON fields");
+    {
+      const auto refused = load(811, true);
+      Require(refused.success && refused.injectedInvalidFrame && refused.decodedBuffer &&
+                  refused.decodedBuffer->HasGeometryPayload() &&
+                  !refused.decodedBuffer->HasDecodedTerrainFrame(coord),
+              "the controlled refusal keeps its diagnostic data unsealed");
+    }
+    {
+      const auto recovered = load(812);
+      Require(recovered.success && recovered.decodedBuffer && recovered.decodedBuffer->HasDecodedTerrainFrame(coord),
+              "the real file remains available to retry");
+    }
+    std::ofstream(path, std::ios::binary | std::ios::app).put('x');
+    {
+      const auto invalid = load(813);
+      Require(invalid.decodedBuffer && !invalid.decodedBuffer->HasDecodedTerrainFrame(coord) &&
+                  storage.LoadChunk(coord, cold, folder, registry) < 0 && cold.GetBlock(first) == 9 &&
+                  cold.GetChunkManager().HasUnresolvedTerrainColumnRead(coord),
+              "a syntax error after the document cannot authorize changing live terrain");
+    }
+    Require(!trace.overflow && !io.GetOutstandingLoadCount(), "streamed JSON reads release all credits");
+    return {{"status", "PASS"}, {"file_bytes", extent}, {"repeated_voxels", repeated},
+            {"decoded_ready_bytes", decoded_bytes}, {"raw_buffer_bytes", 0},
+            {"duplicate_members", true}, {"legacy_names", true}, {"withheld_and_retried", true},
+            {"trailing_syntax_rejected", true}, {"outstanding_after", io.GetOutstandingLoadCount()}};
   }
 
   static nlohmann::json CheckPoolLifetime(const std::filesystem::path &shutdown,
@@ -925,6 +1018,7 @@ struct AsyncIoStorageProbe
             {"index_warmup", CheckIndexWarmup(root / "index-warmup", registry)},
             {"binary_read_envelope", CheckBinaryReadEnvelope(root / "binary-read-envelope", registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
+            {"json_streaming", CheckStreamingJson(root / "json-streaming", registry)},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},
             {"active_worker_storage_complete", false}};

@@ -70,7 +70,8 @@ inline void Check(const CapturedRequest &capture)
 {
   if (capture.calls != 1 || !capture.storage.supported ||
       capture.observed != capture.storage.scratch_bytes + capture.storage.output_bytes ||
-      (capture.storage.kind != IoCodecKind::BinaryRead && !capture.storage.scratch_bytes) ||
+      ((capture.storage.kind != IoCodecKind::BinaryRead && capture.storage.kind != IoCodecKind::JsonRead) &&
+       !capture.storage.scratch_bytes) ||
       !capture.storage.output_bytes)
     throw std::runtime_error("codec checkpoint differs from independently observed ordinary requests: " +
         std::to_string(static_cast<int>(capture.storage.kind)) + " " + Describe(capture).dump());
@@ -131,8 +132,39 @@ inline nlohmann::json CheckCodecs()
       const auto &dump = encode.windows[static_cast<size_t>(IoCodecWindow::JsonDump)];
       Require(parse.calls == 1 && parse.additional > 0 && dump.calls == 1 && dump.additional > 0,
               "real JSON parse and dump publish their allocation windows");
+      Require(!decode.storage.scratch_bytes && decode.storage.stack_buffer_bytes,
+              "JSON read retires its syntax parser and keeps no value tree");
+      const auto stream_peak = [&](const std::string &source) {
+        std::istringstream file(source);
+        observation::Scope allocations;
+        {
+          const auto data = json.DeserializeStream(file, coord, registry);
+          Require(data.HasDecodedTerrainFrame(coord) && data.GetBlock({0, 0, 0}) == 8,
+                  "the stream retains the authored cell");
+        }
+        Require(!observation::State.live && !observation::State.blocks,
+                "the streamed JSON parser and result retire");
+        return observation::State.peak;
+      };
+      constexpr std::string_view row = R"({"lx":0,"ly":0,"lz":0,"id":8})";
+      const std::string prefix = R"({"voxels":[)" + std::string(row);
+      const auto compact_peak = stream_peak(prefix + "]} ");
+      std::string padded = prefix;
+      for (int i = 0; i < 32768; ++i)
+      {
+        padded += ',';
+        padded += row;
+      }
+      padded += "]}";
+      padded.append(8 * 1024 * 1024, ' ');
+      const auto padded_peak = stream_peak(padded);
+      const auto long_token_peak = stream_peak(prefix + R"(],"extra":")" + std::string(131072, 'x') + "\"}");
+      Require(compact_peak == padded_peak && long_token_peak > padded_peak,
+              "repeated cells and whitespace do not grow retained JSON values, while lexer tokens still cost memory");
       phases = {{"parse_peak", parse.peak}, {"parse_additional", parse.additional},
-                {"dump_peak", dump.peak}, {"dump_additional", dump.additional}};
+                {"dump_peak", dump.peak}, {"dump_additional", dump.additional},
+                {"compact_stream_peak", compact_peak}, {"padded_stream_peak", padded_peak},
+                {"padded_stream_bytes", padded.size()}, {"long_token_peak", long_token_peak}};
     }
     else
     {
@@ -144,7 +176,7 @@ inline nlohmann::json CheckCodecs()
       {
         observation::Scope allocations;
         {
-          const auto input = UChunkStorageService::ReadChunkBytes(accepted, ChunkDiskFormat::Binary);
+          const auto input = UChunkStorageService::ReadBinaryChunkBytes(accepted);
           Require(input.size() == limit && observation::State.live == raw_request,
                   "the reader allocates one exact input buffer");
         }
@@ -153,7 +185,7 @@ inline nlohmann::json CheckCodecs()
       }
       {
         observation::Scope allocations(0);
-        Require(UChunkStorageService::ReadChunkBytes(rejected, ChunkDiskFormat::Binary).empty() &&
+        Require(UChunkStorageService::ReadBinaryChunkBytes(rejected).empty() &&
                     !observation::State.attempts, "overlong input is refused before requesting memory");
       }
       phases = {{"file_input_peak", file_input_peak}, {"overlong_allocation_attempts", 0},
@@ -185,6 +217,14 @@ inline nlohmann::json CheckMalformedJson()
   }
   const auto &parse = capture.windows[static_cast<size_t>(IoCodecWindow::JsonParse)];
   Require(parse.calls == 1 && parse.additional > 0 && !capture.calls, "parse error closes its observed window");
+  for (const auto *broken : {R"({"voxels":[],"format_version":1     2})",
+                             R"({"voxels":[],"extra":tr     ue})",
+                             "{\"voxels\":[],\"extra\":\"raw\nnewline\"}"})
+  {
+    std::istringstream file(broken);
+    Require(!codec.DeserializeStream(file, {0, 0, 0}, registry).HasDecodedTerrainFrame({0, 0, 0}),
+            "whitespace normalization preserves invalid token boundaries and strings");
+  }
   return {{"peak", capture.operation_peak}, {"parse_peak", parse.peak}, {"retired", true}};
 }
 

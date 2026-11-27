@@ -494,49 +494,42 @@ void UAsyncChunkIO::LoadJob::operator()() const
     observe(AsyncIoWorkerStage::Cancelled);
     return;
   }
-  const auto read_started =
-      trace_io ? std::chrono::steady_clock::now()
-               : std::chrono::steady_clock::time_point{};
-  result.payload = UChunkStorageService::ReadChunkBytes(file, format);
-  file.close();
-  observe(AsyncIoWorkerStage::ReadBytes);
-  if (trace_io)
+  if (format == ChunkDiskFormat::Binary)
   {
-    result.fileReadMs = std::chrono::duration<double, std::milli>(
-                            std::chrono::steady_clock::now() -
-                            read_started)
-                            .count();
+    const auto read_started = trace_io ? Clock::now() : Clock::time_point{};
+    result.payload = UChunkStorageService::ReadBinaryChunkBytes(file);
+    file.close();
+    observe(AsyncIoWorkerStage::ReadBytes);
+    if (trace_io)
+      result.fileReadMs = std::chrono::duration<double, std::milli>(Clock::now() - read_started).count();
+    result.success = !result.payload.empty();
   }
+  else
+    result.success = file.peek() != std::char_traits<char>::eof();
+
   if (is_cancelled())
   {
     observe(AsyncIoWorkerStage::Cancelled);
     owner->NoteLoadCancellation();
     return;
   }
-  result.success = !result.payload.empty();
   if (result.success)
   {
-    // Diagnostic only: the saved file is never modified. Corrupt the
-    // actual read buffer so the normal codec/commit path must reject it.
-    if (injectInvalidFrame)
+    // Controlled diagnostic refusal. The source file remains available for retry.
+    result.injectedInvalidFrame = injectInvalidFrame;
+    if (injectInvalidFrame && format == ChunkDiskFormat::Binary)
     {
-      if (format == ChunkDiskFormat::Binary)
-      {
-        // Change the saved X coordinate without reallocating the input.
-        constexpr size_t encoded_x = sizeof(UBinaryChunkSerializer::kMagic) + 1;
-        result.payload[result.payload.size() > encoded_x ? encoded_x : 0] ^= 1;
-      }
-      else
-        result.payload.push_back('x');
-      result.injectedInvalidFrame = true;
+      constexpr size_t encoded_x = sizeof(UBinaryChunkSerializer::kMagic) + 1;
+      result.payload[result.payload.size() > encoded_x ? encoded_x : 0] ^= 1;
     }
     const auto deserialize_started = std::chrono::steady_clock::now();
     try
     {
-      UChunkStorageService worker_storage(worker_storage_settings);
       result.decodedBuffer = std::make_unique<UChunkBuffer>(
           WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(), [&](const IoCodecProbe *probe) {
-            return worker_storage.DeserializeChunk(result.payload, coord, format, registry, probe);
+            if (format == ChunkDiskFormat::Binary)
+              return UBinaryChunkSerializer{}.Deserialize(result.payload, coord, registry, probe);
+            return UJsonChunkSerializer{}.DeserializeStream(file, coord, registry, probe, injectInvalidFrame);
           }, codec_observer));
     }
     catch (...)
@@ -551,6 +544,8 @@ void UAsyncChunkIO::LoadJob::operator()() const
     observe(AsyncIoWorkerStage::Decoded);
     std::vector<uint8_t>().swap(result.payload);
   }
+  if (file.is_open())
+    file.close();
   if (read_probe_gate && read_probe_gate->demandId == demandId)
   {
     read_probe_gate->entered.store(true, std::memory_order_release);

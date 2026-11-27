@@ -4,8 +4,12 @@
 #include "World/Chunks/Chunk.h"
 #include "World/Math/FluidCellState.h"
 #include <algorithm>
+#include <array>
+#include <iterator>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <string>
+#include <string_view>
 
 namespace cutum
 {
@@ -15,23 +19,313 @@ using json = nlohmann::json;
 namespace
 {
 
-BlockId ResolveVoxelId(const json &voxel, UBlockRegistry &registry)
+// The JSON lexer keeps the raw text surrounding the current token for errors.
+// Collapse each run of inter-token whitespace to one separator. Whitespace
+// inside strings and separation within invalid literals remain significant.
+template<class Iterator>
+class JsonWhitespaceIterator
 {
-  if (voxel.contains("id"))
+public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = char;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const char *;
+  using reference = char;
+
+  JsonWhitespaceIterator(Iterator first, Iterator last) : Next(first), End(last) { ++*this; }
+  char operator*() const { return Current; }
+  JsonWhitespaceIterator operator++(int)
   {
-    const uint16_t raw = voxel.at("id").get<uint16_t>();
-    return static_cast<BlockId>(raw);
+    const auto previous = *this;
+    ++*this;
+    return previous;
   }
-  if (voxel.contains("type"))
+  bool operator==(const JsonWhitespaceIterator &other) const
   {
-    const std::string type = voxel.at("type").get<std::string>();
-    if (type.empty())
+    return HasCurrent == other.HasCurrent && (!HasCurrent || Next == other.Next);
+  }
+  bool operator!=(const JsonWhitespaceIterator &other) const { return !(*this == other); }
+
+  JsonWhitespaceIterator &operator++()
+  {
+    HasCurrent = Next != End;
+    if (!HasCurrent)
+      return *this;
+    Current = static_cast<char>(*Next);
+    ++Next;
+    if (!InString && IsWhitespace(Current))
     {
-      return BLOCK_AIR;
+      while (Next != End && IsWhitespace(static_cast<char>(*Next)))
+        ++Next;
+      Current = ' ';
     }
-    return registry.GetIdByTypeName(type);
+    else if (Escaped)
+      Escaped = false;
+    else if (InString && Current == '\\')
+      Escaped = true;
+    else if (Current == '"')
+      InString = !InString;
+    return *this;
   }
-  return BLOCK_AIR;
+
+private:
+  static bool IsWhitespace(char c) { return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
+  Iterator Next, End;
+  char Current{};
+  bool HasCurrent{false};
+  bool InString{false};
+  bool Escaped{false};
+};
+
+// Keep only the fields the terrain schema consumes. Unknown subtrees remain
+// subject to JSON syntax validation, without creating a value tree for them.
+class ChunkJsonReader : public nlohmann::json_sax<json>
+{
+public:
+  ChunkJsonReader(glm::ivec3 coord, UBlockRegistry &registry)
+      : Coord(coord), Registry(registry) {}
+
+  bool null() override { return Value(nullptr); }
+  bool boolean(bool) override { return Value(nullptr); }
+  bool binary(binary_t &) override { return Value(nullptr); }
+  bool number_integer(number_integer_t v) override { return Value(v); }
+  bool number_unsigned(number_unsigned_t v) override { return Value(v); }
+  bool number_float(number_float_t v, const string_t &) override { return Value(v); }
+  bool parse_error(size_t, const std::string &, const json::exception &) override { return false; }
+
+  bool key(string_t &value) override
+  {
+    if (Ignored)
+      return true;
+    static constexpr std::array<std::string_view, Count> names{
+        "", "format_version", "cx", "cy", "cz", "voxels", "weather_state",
+        "lx", "ly", "lz", "id", "fluid", "type", "surface_wetness", "last_update_sec"};
+    Member = static_cast<Field>(std::find(names.begin(), names.end(), value) - names.begin());
+    return true;
+  }
+
+  bool string(string_t &value) override
+  {
+    if (!Ignored && Place == Location::Voxel && Member == Type)
+    {
+      HasType = true;
+      ExplicitAir = value == "air";
+      TypeId = value.empty() ? BLOCK_AIR : Registry.GetIdByTypeName(value);
+      return true;
+    }
+    return Value(nullptr);
+  }
+
+  bool start_object(size_t) override
+  {
+    if (!Ignored && Place == Location::Document)
+      Place = Location::Root;
+    else if (!Ignored && Place == Location::Voxels)
+    {
+      for (auto field : {LX, LY, LZ, Id, Fluid})
+        Fields[field].reset();
+      HasType = false;
+      Place = Location::Voxel;
+    }
+    else if (!Ignored && Place == Location::Root && Member == Weather)
+    {
+      WeatherPresent = WeatherObject = true;
+      Fields[Wetness].reset();
+      Fields[LastUpdate].reset();
+      Place = Location::Weather;
+    }
+    else
+      SkipValue();
+    return true;
+  }
+
+  bool end_object() override
+  {
+    if (Ignored)
+      --Ignored;
+    else if (Place == Location::Voxel)
+    {
+      VoxelsValid &= ApplyVoxel();
+      Place = Location::Voxels;
+    }
+    else if (Place == Location::Weather)
+      Place = Location::Root;
+    else if (Place == Location::Root)
+      Place = Location::Done;
+    return true;
+  }
+
+  bool start_array(size_t) override
+  {
+    if (!Ignored && Place == Location::Root && Member == Voxels)
+    {
+      Buffer.Clear();
+      VoxelsValid = true;
+      Place = Location::Voxels;
+    }
+    else
+      SkipValue();
+    return true;
+  }
+
+  bool end_array() override
+  {
+    if (Ignored)
+      --Ignored;
+    else if (Place == Location::Voxels)
+      Place = Location::Root;
+    return true;
+  }
+
+  bool ReadHeader()
+  {
+    bool valid = Place == Location::Done && VoxelsValid;
+    if (Fields[Version])
+      valid &= IntegerIn(Fields[Version], 1, 4);
+    if (Fields[X] || Fields[Y] || Fields[Z])
+      for (int i = 0; i < 3; ++i)
+        valid &= IntegerIn(Fields[X + i], Coord[i], Coord[i]);
+
+    if (WeatherPresent)
+    {
+      const auto &wetness = Fields[Wetness];
+      const auto &updated = Fields[LastUpdate];
+      const bool weather_valid = WeatherObject && (!wetness || wetness->is_number()) &&
+                                 (!updated || updated->is_number());
+      valid &= weather_valid;
+      if (weather_valid)
+        Buffer.SetChunkWeatherState(Coord, wetness ? wetness->get<float>() : 0.0f,
+                                    updated ? updated->get<double>() : 0.0);
+    }
+    return valid;
+  }
+
+  UChunkBuffer Buffer;
+
+private:
+  enum Field { None, Version, X, Y, Z, Voxels, Weather, LX, LY, LZ, Id, Fluid, Type, Wetness, LastUpdate, Count };
+  enum class Location { Document, Root, Voxels, Voxel, Weather, Done };
+
+  static bool IntegerIn(const std::optional<json> &value, int lo, int hi)
+  {
+    if (!value || !value->is_number_integer())
+      return false;
+    if (value->is_number_unsigned())
+    {
+      const auto n = value->get<uint64_t>();
+      return hi >= 0 && n <= static_cast<uint64_t>(hi) &&
+             (lo <= 0 || n >= static_cast<uint64_t>(lo));
+    }
+    const auto n = value->get<int64_t>();
+    return lo <= n && n <= hi;
+  }
+
+  bool ApplyVoxel()
+  {
+    if (!IntegerIn(Fields[LX], 0, CHUNK_SIZE - 1) ||
+        !IntegerIn(Fields[LY], 0, CHUNK_SIZE - 1) ||
+        !IntegerIn(Fields[LZ], 0, CHUNK_SIZE - 1))
+      return false;
+    if (Fields[Id] ? !IntegerIn(Fields[Id], 0, UINT16_MAX) :
+        (!HasType || (TypeId == BLOCK_AIR && !ExplicitAir)))
+      return false;
+    const auto id = Fields[Id] ? Fields[Id]->get<BlockId>() : TypeId;
+    const bool fluid_valid = !Fields[Fluid] || IntegerIn(Fields[Fluid], 0, 0);
+    if (id != BLOCK_AIR)
+    {
+      const glm::ivec3 local(Fields[LX]->get<int>(), Fields[LY]->get<int>(), Fields[LZ]->get<int>());
+      const auto pos = Coord * CHUNK_SIZE + local;
+      Buffer.SetBlock(pos, id);
+      if (Fields[Fluid])
+      {
+        if (IntegerIn(Fields[Fluid], 0, UINT8_MAX))
+          Buffer.SetFluidPacked(pos, Fields[Fluid]->get<uint8_t>());
+      }
+      else if (Registry.IsLiquid(id))
+        Buffer.SetFluidPacked(pos, PackFluidCellState(FluidCellState::Source()));
+    }
+    return fluid_valid;
+  }
+
+  bool Value(json value)
+  {
+    if (Ignored)
+      return true;
+    switch (Place)
+    {
+    case Location::Root:
+      if (Member >= Version && Member <= Z)
+        Fields[Member] = std::move(value);
+      else if (Member == Weather)
+      {
+        WeatherPresent = true;
+        WeatherObject = false;
+      }
+      else if (Member == Voxels)
+      {
+        Buffer.Clear();
+        VoxelsValid = false;
+      }
+      break;
+    case Location::Voxels:
+      VoxelsValid = false;
+      break;
+    case Location::Voxel:
+      if (Member >= LX && Member <= Fluid)
+        Fields[Member] = std::move(value);
+      else if (Member == Type)
+        HasType = false;
+      break;
+    case Location::Weather:
+      if (Member == Wetness || Member == LastUpdate)
+        Fields[Member] = std::move(value);
+      break;
+    default:
+      break;
+    }
+    return true;
+  }
+
+  void SkipValue()
+  {
+    Value(nullptr);
+    ++Ignored;
+  }
+
+  glm::ivec3 Coord;
+  UBlockRegistry &Registry;
+  std::array<std::optional<json>, Count> Fields;
+  Location Place{Location::Document};
+  Field Member{None};
+  size_t Ignored{0};
+  BlockId TypeId{BLOCK_AIR};
+  bool HasType{false};
+  bool ExplicitAir{false};
+  bool VoxelsValid{false};
+  bool WeatherPresent{false};
+  bool WeatherObject{false};
+};
+
+template<class Parse, class Seal>
+UChunkBuffer DecodeJson(glm::ivec3 coord, UBlockRegistry &registry, size_t input_bytes,
+                        const IoCodecProbe *probe, Parse parse, Seal seal)
+{
+  ChunkJsonReader reader(coord, registry);
+  if (!RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] { return parse(reader); }))
+    return {};
+  if (reader.ReadHeader())
+    seal(reader.Buffer);
+  if (probe)
+    probe->sample(probe->context, {IoCodecKind::JsonRead, 0, input_bytes,
+                                  reader.Buffer.GetOwnedAllocationBytes(), sizeof(reader),
+                                  StlSourceStorage::SupportedProfile()});
+  return std::move(reader.Buffer);
+}
+
+template<class Iterator>
+bool ParseJson(Iterator first, Iterator last, ChunkJsonReader &reader)
+{
+  return json::sax_parse(JsonWhitespaceIterator(first, last), JsonWhitespaceIterator(last, last), &reader);
 }
 
 } // namespace
@@ -99,103 +393,30 @@ UJsonChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                   UBlockRegistry &registry,
                                   const IoCodecProbe *probe) const
 {
-  UChunkBuffer buffer;
   if (bytes.empty())
-  {
-    return buffer;
-  }
-  try
-  {
-    const std::string text(bytes.begin(), bytes.end());
-    const auto data = RunIoCodecWindow(probe, IoCodecWindow::JsonParse, [&] { return json::parse(text); });
-    bool frame_valid = data.is_object() && data.contains("voxels") &&
-                       data.at("voxels").is_array();
-    if (data.contains("format_version"))
-      frame_valid &= data.at("format_version").is_number_integer() &&
-                     data.at("format_version") >= 1 &&
-                     data.at("format_version") <= 4;
-    const char *keys[] = {"cx", "cy", "cz"};
-    const bool has_coord =
-        data.contains("cx") || data.contains("cy") || data.contains("cz");
-    if (has_coord)
-      for (int i = 0; i < 3; ++i)
-        frame_valid &= data.contains(keys[i]) &&
-                       data.at(keys[i]).is_number_integer() &&
-                       data.at(keys[i]) == chunkCoord[i];
-    if (data.contains("weather_state") && data["weather_state"].is_object())
-    {
-      const json &weather = data["weather_state"];
-      buffer.SetChunkWeatherState(chunkCoord,
-                                  weather.value("surface_wetness", 0.0f),
-                                  weather.value("last_update_sec", 0.0));
-    }
-    if (data.contains("weather_state"))
-    {
-      const auto &weather = data.at("weather_state");
-      frame_valid &= weather.is_object();
-      if (weather.is_object())
-        for (const char *key : {"surface_wetness", "last_update_sec"})
-          if (weather.contains(key))
-            frame_valid &= weather.at(key).is_number();
-    }
-    for (const auto &voxel : data.at("voxels"))
-    {
-      const int lx = voxel.at("lx").get<int>();
-      const int ly = voxel.at("ly").get<int>();
-      const int lz = voxel.at("lz").get<int>();
-      frame_valid &= voxel.at("lx").is_number_integer() &&
-                     voxel.at("ly").is_number_integer() &&
-                     voxel.at("lz").is_number_integer() && lx >= 0 &&
-                     lx < CHUNK_SIZE && ly >= 0 && ly < CHUNK_SIZE && lz >= 0 &&
-                     lz < CHUNK_SIZE;
-      if (voxel.contains("id"))
-        frame_valid &= voxel.at("id").is_number_integer() &&
-                       voxel.at("id") >= 0 && voxel.at("id") <= 65535;
-      else
-        frame_valid &= voxel.contains("type") && voxel.at("type").is_string();
-      if (voxel.contains("fluid"))
-        frame_valid &=
-            voxel.at("fluid").is_number_integer() && voxel.at("fluid") == 0;
-      const BlockId id = ResolveVoxelId(voxel, registry);
-      if (!voxel.contains("id") && id == BLOCK_AIR && voxel.contains("type"))
-        frame_valid &= voxel.at("type") == "air";
-      if (id == BLOCK_AIR)
-      {
-        continue;
-      }
-      const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
-                                chunkCoord.y * CHUNK_SIZE + ly,
-                                chunkCoord.z * CHUNK_SIZE + lz);
-      buffer.SetBlock(worldPos, id);
-      if (voxel.contains("fluid"))
-      {
-        buffer.SetFluidPacked(
-            worldPos, static_cast<uint8_t>(voxel.at("fluid").get<int>()));
-      }
-      else if (registry.IsLiquid(id))
-      {
-        buffer.SetFluidPacked(worldPos,
-                              PackFluidCellState(FluidCellState::Source()));
-      }
-    }
-    if (frame_valid)
-      buffer.MarkDecodedFrame(chunkCoord);
-    if (probe)
-    {
-      StlSourceStorage scratch, input;
-      scratch.Text(text);
-      scratch.JsonTree(data);
-      input.Buffer(bytes.capacity(), sizeof(uint8_t));
-      probe->sample(probe->context, {IoCodecKind::JsonRead, scratch.bytes.requested,
-                                    input.bytes.requested, buffer.GetOwnedAllocationBytes(), 0,
-                                    scratch.bytes.supported && input.bytes.supported});
-    }
-  }
-  catch (const json::exception &)
-  {
-    buffer.Clear();
-  }
-  return buffer;
+    return {};
+  StlSourceStorage input;
+  input.Buffer(bytes.capacity(), sizeof(uint8_t));
+  return DecodeJson(chunkCoord, registry, input.bytes.requested, probe,
+      [&](ChunkJsonReader &reader) { return ParseJson(bytes.begin(), bytes.end(), reader); },
+      [chunkCoord](UChunkBuffer &buffer) { buffer.MarkDecodedFrame(chunkCoord); });
+}
+
+UChunkBuffer UJsonChunkSerializer::DeserializeStream(std::istream &file, glm::ivec3 chunkCoord,
+                                                      UBlockRegistry &registry, const IoCodecProbe *probe,
+                                                      bool withholdFrame) const
+{
+  if (!file)
+    return {};
+  return DecodeJson(chunkCoord, registry, 0, probe,
+      [&](ChunkJsonReader &reader) {
+        return ParseJson(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>(), reader) &&
+               !file.bad();
+      },
+      [chunkCoord, withholdFrame](UChunkBuffer &buffer) {
+        if (!withholdFrame)
+          buffer.MarkDecodedFrame(chunkCoord);
+      });
 }
 
 } // namespace cutum

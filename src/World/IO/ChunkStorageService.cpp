@@ -394,12 +394,10 @@ bool UChunkStorageService::ReadBytesFromFile(
   return !outBytes.empty();
 }
 
-std::vector<uint8_t> UChunkStorageService::ReadChunkBytes(std::istream &file, ChunkDiskFormat format)
+std::vector<uint8_t> UChunkStorageService::ReadBinaryChunkBytes(std::istream &file)
 {
-  if (!file || format == ChunkDiskFormat::Absent)
+  if (!file)
     return {};
-  if (format == ChunkDiskFormat::Json)
-    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
 
   file.seekg(0, std::ios::end);
   const auto length = static_cast<std::streamoff>(file.tellg());
@@ -506,14 +504,14 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
   UChunkBuffer buffer;
   {
     std::ifstream file(filePath, std::ios::binary);
-    const auto bytes = ReadChunkBytes(file, format);
-    if (bytes.empty())
+    if (format == ChunkDiskFormat::Json)
+      buffer = JsonSerializer.DeserializeStream(file, chunkCoord, registry);
+    else
     {
-      world.GetChunkManager().MarkTerrainColumnReadUnresolved(chunkCoord);
-      return -1;
+      const auto bytes = ReadBinaryChunkBytes(file);
+      file.close();
+      buffer = DeserializeChunk(bytes, chunkCoord, format, registry);
     }
-    file.close();
-    buffer = DeserializeChunk(bytes, chunkCoord, format, registry);
   }
 
   const size_t before = world.CountNonAir();

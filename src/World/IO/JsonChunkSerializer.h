@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/IO/IUChunkSerializer.h"
+#include <iosfwd>
 
 namespace cutum
 {
@@ -17,6 +18,9 @@ public:
                            glm::ivec3 chunkCoord,
                            UBlockRegistry &registry,
                            const IoCodecProbe *probe = nullptr) const override;
+  UChunkBuffer DeserializeStream(std::istream &file, glm::ivec3 chunkCoord,
+                                 UBlockRegistry &registry, const IoCodecProbe *probe = nullptr,
+                                 bool withholdFrame = false) const;
 };
 
 } // namespace cutum
