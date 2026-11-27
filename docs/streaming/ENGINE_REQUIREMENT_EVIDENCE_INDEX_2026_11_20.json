@@ -3532,11 +3532,19 @@
       "receipt": "build/desktop-msvc/s4-q10-read-admission-acceptance.json",
       "scope": "Each I/O instance admits at most 256 slice reads from queued job through executing, completed, drained and requeued results. A world retains at most 32 column plans. A compact signed-Y plan resumes unsent slices in admission order without treating pressure as absent terrain. The native fixture fills both limits, coalesces a live demand, refuses a new saved column and installs it through the normal streamer after capacity returns. A separate out-of-profile save fixture verifies bounded submissions and cancellation without changing the file on disk. The existing terrain resolver still rejects an invalid column extent.",
       "remaining": "Q10 remains open for write and light-flag admission, live save/retry metadata, and payload bytes and peaks. Whole-process and full native/performance/memory acceptance remain in the original S0–S6 plan. The legacy UI fixture still exercises a manual retry and calls the fatal menu handler directly. Automatic silent recovery for temporary save failures and end-to-end fatal handling with world transfer remain S4.06 requirements. The S4.01 extended fixture binding and ecology S6.05 remain open. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.WRITE_ADMISSION",
+      "status": "SCOPED_Q10_WRITE_COUNT_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_WRITE_ADMISSION_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-write-admission-acceptance.json",
+      "scope": "The terrain writer reserves the full column before capturing light receipts or chunk snapshots. Up to 256 operations are covered from preparation to running work and final results, and at most 256 unload receipts retain accepted acknowledgments or retry state. The world flag producer reserves one independent operation before copying flags and acknowledges that exact folder/revision. Flat verifies refusal with 24 free slots, retry of the whole 25-operation save, active and returned batches, and cold replay of the terrain edit and deferred flag revision. A persisted flag retains its signature and still requires current light coverage for gameplay. Both native profiles verify startup and teardown.",
+      "remaining": "Q10 still requires byte and overlap envelopes, read-retry and warmup owner bounds, and composition with the configured Q01.L2 producer dependency. The recorded write and flag fixtures cover the current game profiles. S4.06 retains the silent recovery, fatal-menu and full transactional world relocation policy. The full native/performance/memory matrix, extended S4.01 fixture binding and S6.05 ecology mismatch remain open. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Число незавершённых чтений и повтор постановки под нагрузкой проверены. Следующий шаг — границы асинхронных записей и флагов освещения с подтверждением сохранности dirty-данных. Далее проверить размеры payload и связать результаты с зависимостью Q01.L2. Сохраняются полные критерии S0–S6 и открытые проверки S4.01 и S6.05. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Проверены лимиты чтений, записей и одной операции сохранения флагов. Далее ограничить длительно живущие метаданные повторов чтения и прогрева, проверить размеры и перекрытие полезной нагрузки во всех стадиях I/O и связать пределы с Q01.L2. Полный объём S0–S6 и открытые проверки S4.01, S4.06 и S6.05 остаются в плане. Закрыто 23 из 42 пакетов."
 }

@@ -378,9 +378,9 @@ struct AsyncIoStorageProbe
     };
     const auto joined = join(phase, trace.parked, participants);
     Require(queues.retained_supported && queues.active == participants &&
-                queues.queued[0] == 1 && queues.shared_blocks == 3 &&
+                queues.queued[0] == 1 && queues.shared_blocks == 6 &&
                 joined.supported && joined.participants == participants &&
-                joined.shared_blocks == 3 + load_workers && joined.shared_aliases == 2 * load_workers &&
+                joined.shared_blocks == 7 + load_workers && joined.shared_aliases == 2 * load_workers + 1 &&
                 joined.shared_bytes > queues.shared_bytes && joined.local_backing &&
                 joined.registry_references == load_workers + 1 && joined.storage_references == 2 &&
                 joined.disk_index_requested == roots.disk_index.requested && joined.disk_index_requested,
@@ -431,7 +431,7 @@ struct AsyncIoStorageProbe
                 !completed.storage_root.references && !completed.registry_root.references,
             "the same cancellation control survives queue publication");
     auto reads = io.DrainLoads();
-    Require(!weak.expired() && Inspect(io).shared_blocks == 1 && io.GetOutstandingLoadCount() == reads.size(),
+    Require(!weak.expired() && Inspect(io).shared_blocks == 5 && io.GetOutstandingLoadCount() == reads.size(),
             "returned owners leave the queue census and keep their admission credits");
     reads.clear();
     Require(weak.expired(), "all joined source owners retire");
@@ -501,7 +501,7 @@ struct AsyncIoStorageProbe
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
             "active cancellation retires decoded source without publication");
     cancellation.reset();
-    Require(weak.expired() && Inspect(io).shared_blocks == 1 && !trace.overflow,
+    Require(weak.expired() && Inspect(io).shared_blocks == 3 && !trace.overflow,
             "cancelled source leaves no retained I/O owner");
     return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
@@ -670,7 +670,7 @@ struct AsyncIoStorageProbe
             "queued source is supported while active worker storage remains open");
     Require(queued.queued == std::array<size_t, 6>{2, 1, 2, 1, 1, 2} &&
                 queued.callable_bytes && queued.queued_backing >= 600 * sizeof(glm::ivec2) &&
-                queued.shared_blocks == 8 && queued.shared_aliases == 4,
+                queued.shared_blocks == 16 && queued.shared_aliases == 10,
             "all six actual queue source kinds and shared aliases");
     Require(receipts.use_count() == receipt_refs + 2 && cancellation.use_count() == 3,
             "diagnostic does not change source references");
@@ -687,28 +687,32 @@ struct AsyncIoStorageProbe
     worker_phase.Close();
     const auto worker_stages = CheckWorkerTrace(worker_trace);
     Require(completed.supported && completed.completed == std::array<size_t, 3>{2, 5, 1} &&
-                completed.completed_backing && completed.shared_blocks == 4 &&
-                completed.shared_aliases == 3 && completed.callable_bytes == 0,
+                completed.completed_backing && completed.shared_blocks == 12 &&
+                completed.shared_aliases == 9 && completed.callable_bytes == 0,
             "queue owners retire and both results share the same cancellation control");
     auto reads = io.DrainLoads();
     Require(reads.size() == 2 && reads[0].success && reads[1].success &&
                 reads[0].decodedBuffer && reads[1].decodedBuffer,
             "actual terrain reads decode successfully");
-    const auto flags = io.DrainColumnLightFlagsSaves();
+    auto flags = io.DrainColumnLightFlagsSaves();
     Require(flags.size() == 1 && flags[0].success && flags[0].revision == 300,
             "actual light flags publish to disk");
-    const auto saves = io.DrainSaves();
+    auto saves = io.DrainSaves();
     Require(saves.size() == 5 && std::all_of(saves.begin(), saves.end(),
                 [](const auto &save) { return save.success; }), "all actual saves and cleanups succeed");
     cancellation.reset();
-    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 1,
-            "drained result retains cancellation outside the I/O queue");
+    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 3 &&
+                io.GetOutstandingWriteCount() == saves.size() && io.GetOutstandingFlagSaveCount() == flags.size(),
+            "drained results retain cancellation and admission outside the I/O queues");
     reads.clear();
+    saves.clear();
+    flags.clear();
     Require(weak_cancellation.expired(), "last returned owner retires");
     const auto drained = Inspect(io);
-    Require(drained.supported && drained.completed_backing == 0 && drained.shared_blocks == 1 &&
-                io.GetOutstandingLoadCount() == 0,
-            "drained queues retain slots and the idle admission counter");
+    Require(drained.supported && drained.completed_backing == 0 && drained.shared_blocks == 3 &&
+                io.GetOutstandingLoadCount() == 0 && io.GetOutstandingWriteCount() == 0 &&
+                io.GetOutstandingFlagSaveCount() == 0,
+            "drained queues retain slots and the idle admission counters");
     Require(queued.warmup_keys == 1 && drained.warmup_keys == 1 &&
                 queued.warmup_requested == drained.warmup_requested,
             "the warmed folder key remains owned after all I/O tasks retire");

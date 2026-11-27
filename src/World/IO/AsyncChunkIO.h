@@ -24,17 +24,18 @@
 namespace cutum
 {
 struct AsyncIoWorkerLocals;
-struct AsyncChunkLoadCredit;
+struct AsyncIoCredit;
 
 class UCore;
 class UBlockRegistry;
 class UBlockWorld;
 class UChunkStorageService;
+class UWorldPersistence;
 
 struct AsyncChunkLoadResult
 {
   // Declared first so payload storage retires before its admission credit.
-  std::shared_ptr<AsyncChunkLoadCredit> readCredit;
+  std::shared_ptr<AsyncIoCredit> readCredit;
   glm::ivec3 coord;
   uint64_t demandId{0};
   ChunkGenerationToken token;
@@ -85,6 +86,7 @@ struct AsyncLoadReadProbeGate
 
 struct AsyncChunkSaveRequest
 {
+  std::shared_ptr<AsyncIoCredit> writeCredit;
   uint64_t saveBatchId{0};
   glm::ivec3 coord;
   glm::ivec3 groundCoord;
@@ -101,6 +103,7 @@ struct AsyncChunkSaveRequest
 
 struct AsyncColumnLightFlagsSaveResult
 {
+  std::shared_ptr<AsyncIoCredit> writeCredit;
   std::string worldFolder;
   uint64_t revision{0};
   bool success{false};
@@ -115,6 +118,7 @@ private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
   friend struct AsyncIoStorageProbe;
   friend struct AsyncIoStorageInspector;
+  friend class UWorldPersistence;
   std::shared_ptr<AsyncSaveWriteProbeGate> SaveWriteProbeGate;
   std::shared_ptr<AsyncLoadReadProbeGate> LoadReadProbeGate;
   const AsyncIoWorkerProbe *WorkerProbe{nullptr};
@@ -167,33 +171,39 @@ public:
   }
 
   static constexpr size_t kMaxOutstandingLoads = 256;
+  static constexpr size_t kMaxOutstandingWrites = 256;
+  static constexpr size_t kMaxOutstandingFlagSaves = 1;
   size_t GetOutstandingLoadCount() const noexcept
   { return OutstandingLoads->load(std::memory_order_relaxed); }
+  size_t GetOutstandingWriteCount() const noexcept
+  { return OutstandingWrites->load(std::memory_order_relaxed); }
+  size_t GetOutstandingFlagSaveCount() const noexcept
+  { return OutstandingFlagSaves->load(std::memory_order_relaxed); }
   bool RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                    UBlockRegistry &registry, const std::string &worldFolder,
                    ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation,
                    uint64_t demandId, bool includeColumnLight = false,
                    bool injectInvalidFrame = false);
-  void RequestSaveColumnLight(
+  bool RequestSaveColumnLight(
       glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
       UChunkStorageService &storage, const std::string &worldFolder,
       uint64_t saveBatchId = 0);
   void RequestDiskIndexWarmup(UChunkStorageService &storage,
                               const std::string &worldFolder);
-  void RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
+  bool RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token,
                    uint64_t saveBatchId = 0);
-  void RequestRemoveChunkSlices(glm::ivec3 groundCoord, int firstCy,
+  bool RequestRemoveChunkSlices(glm::ivec3 groundCoord, int firstCy,
                                 int lastCy, UChunkStorageService &storage,
                                 const std::string &worldFolder,
                                 uint64_t saveBatchId = 0);
-  void RequestRemoveTerrainColumn(glm::ivec3 groundCoord, int maxWorldY,
+  bool RequestRemoveTerrainColumn(glm::ivec3 groundCoord, int maxWorldY,
                                   int minWorldY,
                                   UChunkStorageService &storage,
                                   const std::string &worldFolder);
-  void RequestSaveColumnLightFlags(std::string worldFolder, uint64_t revision,
+  bool RequestSaveColumnLightFlags(std::string worldFolder, uint64_t revision,
                                    std::vector<glm::ivec2> completeColumns,
                                    std::string lightSignature = {});
 
@@ -338,12 +348,22 @@ private:
   using StorageCleanupJob = std::function<bool(
       UChunkStorageService &, const std::string &, std::string &)>;
 
-  void EnqueueStorageCleanup(glm::ivec3 groundCoord, glm::ivec3 resultCoord,
-                             UChunkStorageService &storage,
-                             const std::string &worldFolder,
-                             std::string cleanupOperation,
-                             int cleanupSliceCount,
-                             StorageCleanupJob cleanup, uint64_t saveBatchId = 0);
+  std::shared_ptr<AsyncIoCredit> ReserveTerrainWrites(size_t count);
+  std::shared_ptr<AsyncIoCredit> ReserveFlagSave();
+  void QueueColumnLightFlagsSave(std::shared_ptr<AsyncIoCredit> credit,
+      std::string worldFolder, uint64_t revision, std::vector<glm::ivec2> columns,
+      std::string lightSignature);
+  void QueueTerrainColumnSave(std::shared_ptr<AsyncIoCredit> credit,
+      glm::ivec3 ground, int firstCy, int highestCy, int lastCy,
+      UChunkStorageService &storage, const std::string &worldFolder,
+      const UBlockWorld &world, std::shared_ptr<const PersistedColumnLight> light,
+      uint64_t saveBatchId);
+  SaveJob MakeSaveJob(std::shared_ptr<AsyncIoCredit> credit, glm::ivec3 coord,
+      const ChunkStorageSettings &settings, const std::string &worldFolder,
+      const UBlockWorld &world, uint64_t saveBatchId);
+  CleanupJob MakeRemoveSlicesJob(std::shared_ptr<AsyncIoCredit> credit, glm::ivec3 ground,
+      int firstCy, int lastCy, UChunkStorageService &storage,
+      const std::string &worldFolder, uint64_t saveBatchId);
 
   static void AccumulateMaximum(std::atomic<uint64_t> &target,
                                 uint64_t value)
@@ -389,6 +409,8 @@ private:
   // Queues and task-visible state must outlive all worker pools (reverse
   // declaration order controls destruction).
   std::shared_ptr<std::atomic<size_t>> OutstandingLoads{std::make_shared<std::atomic<size_t>>(0)};
+  std::shared_ptr<std::atomic<size_t>> OutstandingWrites{std::make_shared<std::atomic<size_t>>(0)};
+  std::shared_ptr<std::atomic<size_t>> OutstandingFlagSaves{std::make_shared<std::atomic<size_t>>(0)};
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   std::atomic<uint64_t> LoadResultPushWaitNs{0};
   std::atomic<uint64_t> LoadResultPushHeldNs{0};

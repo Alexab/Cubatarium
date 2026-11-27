@@ -114,6 +114,26 @@ void UJobThreadPool::Enqueue(std::function<void()> job)
   QueueCv.notify_one();
 }
 
+void UJobThreadPool::EnqueueBatch(std::vector<std::function<void()>> jobs)
+{
+  {
+    std::lock_guard<std::mutex> lock(QueueMutex);
+    const auto first = Jobs.size();
+    try
+    {
+      for (auto &job : jobs)
+        Jobs.push_back({std::move(job), 0});
+    }
+    catch (...)
+    {
+      while (Jobs.size() > first)
+        Jobs.pop_back();
+      throw;
+    }
+  }
+  QueueCv.notify_all();
+}
+
 bool UJobThreadPool::TryEnqueue(std::function<void()> job, uint64_t tag)
 {
   {

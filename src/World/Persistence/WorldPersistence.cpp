@@ -304,6 +304,9 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
       ChunkStorage->ClearColumnSavePending(pending.first);
   PendingAsyncColumnSaveSlices.clear();
   WorldFolderPath = path;
+  ReadFailureEditCell.reset();
+  ReadFailureRecoverySaveDemand.reset();
+  ReadFailureRecoverySaveRequested = false;
   FailedColumnRetryAfter.clear();
   UnloadSaveReceipts.clear();
   PendingSectionLightRestores.Clear();
@@ -560,6 +563,9 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
     return;
   }
 
+  auto credit = AsyncChunkIo->ReserveFlagSave();
+  if (!credit)
+    return;
   const auto snapshot_started = std::chrono::steady_clock::now();
   std::vector<glm::ivec2> complete_columns;
   complete_columns.reserve(LightCompleteColumns.size());
@@ -577,25 +583,27 @@ void UWorldPersistence::SaveColumnLightFlagsIfDirty(
   {
     *complete_columns_n = complete_columns.size();
   }
-  LightCompleteSaveWorldFolder = WorldFolderPath;
-  LightCompleteSaveRevision = LightCompleteRevision;
+  std::string folder = WorldFolderPath;
+  const auto revision = LightCompleteRevision;
+  const auto count = complete_columns.size();
+  const auto enqueue_started = std::chrono::steady_clock::now();
+  AsyncChunkIo->QueueColumnLightFlagsSave(std::move(credit), folder, revision,
+      std::move(complete_columns), LightCompleteSignature);
+  LightCompleteSaveWorldFolder = std::move(folder);
+  LightCompleteSaveRevision = revision;
   if (saved_revision)
   {
     *saved_revision = LightCompleteSaveRevision;
   }
   LightCompleteSaveInFlight = true;
-  const auto enqueue_started = std::chrono::steady_clock::now();
   if (IsEnvironmentFlagEnabled("CUBATARIUM_RELIGHT_AUDIT"))
   {
     CubatariumLogInfo(
         "RelightAudit",
         "light_flags event=save_queued world=" + LightCompleteSaveWorldFolder +
             " revision=" + std::to_string(LightCompleteSaveRevision) +
-            " complete_n=" + std::to_string(complete_columns.size()));
+            " complete_n=" + std::to_string(count));
   }
-  AsyncChunkIo->RequestSaveColumnLightFlags(
-      LightCompleteSaveWorldFolder, LightCompleteSaveRevision,
-      std::move(complete_columns), LightCompleteSignature);
   if (enqueue_ms)
   {
     *enqueue_ms = std::chrono::duration<double, std::milli>(
@@ -654,6 +662,9 @@ void UWorldPersistence::ProcessColumnLightFlagSaveResults(
           result.worker_queue_wait_ms;
       tick_metrics->light_flags_worker_service_ms = result.worker_service_ms;
     }
+    if (!LightCompleteSaveInFlight || result.worldFolder != LightCompleteSaveWorldFolder ||
+        result.revision != LightCompleteSaveRevision)
+      continue;
     LightCompleteSaveInFlight = false;
     LightCompleteSaveWorldFolder.clear();
     LightCompleteSaveRevision = 0;
@@ -707,7 +718,7 @@ bool UWorldPersistence::FlushColumnLightFlagsForWorldSwitch()
     }
 
     const auto now = std::chrono::steady_clock::now();
-    if (LightCompleteSaveInFlight)
+    if (LightCompleteSaveInFlight || AsyncChunkIo->GetOutstandingFlagSaveCount())
     {
       const auto remaining =
           std::chrono::duration_cast<std::chrono::milliseconds>(deadline - now);
@@ -4673,16 +4684,7 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
   if (ReadFailureEditCell && !ReadFailureRecoverySaveRequested &&
       UChunkManager::WorldToChunk(*ReadFailureEditCell).x == ground_coord.x &&
       UChunkManager::WorldToChunk(*ReadFailureEditCell).z == ground_coord.z)
-  {
-    // Flight-sim disables autosave and exits without a session save. Exercise
-    // the actual positive terrain-save path explicitly after recovery.
-    ReadFailureRecoverySaveRequested = true;
-    RequestAsyncTerrainColumnSave(world, ground_coord);
-    if (ChunkStorage->IsColumnSavePending(ground_coord))
-      TraceChunkResidency("disk_read_recovery_save_queued", ground_coord,
-                          ground_coord, state.demand_id,
-                          &world.BlockWorld.GetChunkManager());
-  }
+    ReadFailureRecoverySaveDemand = state.demand_id;
 }
 
 AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
@@ -5269,6 +5271,20 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       }
     }
   }
+  if (ReadFailureRecoverySaveDemand && ReadFailureEditCell)
+  {
+    // Flight-sim disables autosave. Keep the recovered demand until the
+    // real write path admits it so an occupied budget cannot hide the check.
+    auto ground = UChunkManager::WorldToChunk(*ReadFailureEditCell);
+    ground.y = 0;
+    if (RequestAsyncTerrainColumnSave(world, ground))
+    {
+      TraceChunkResidency("disk_read_recovery_save_queued", ground, ground,
+                          *ReadFailureRecoverySaveDemand, &world.BlockWorld.GetChunkManager());
+      ReadFailureRecoverySaveRequested = true;
+      ReadFailureRecoverySaveDemand.reset();
+    }
+  }
   const auto light_flags_save_started = std::chrono::steady_clock::now();
   SaveColumnLightFlagsIfDirty(&metrics.light_flags_snapshot_ms,
                               &metrics.light_flags_enqueue_ms,
@@ -5735,8 +5751,13 @@ bool UWorldPersistence::TrySaveTerrainColumnForUnload(UWorld &world,
       world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(ground))
     return false;
   const auto &settings = world.GetProceduralSettings();
-  if (!settings.AsyncChunkIo)
+  const int profile_slices = FloorDiv(settings.MaxHeight, CHUNK_SIZE) -
+                             FloorDiv(settings.MinHeight, CHUNK_SIZE) + 1;
+  const bool large_profile = profile_slices > int(UAsyncChunkIO::kMaxOutstandingWrites) - 2;
+  if (!settings.AsyncChunkIo || large_profile)
   {
+    if (ChunkStorage->IsColumnSavePending(ground))
+      return false;
     TerrainColumnSaveStamp stamp(world.BlockWorld.GetChunkManager(), ground,
                                  settings.MinHeight, settings.MaxHeight);
     const bool saved = SaveTerrainColumn(ground, world.BlockWorld, *world.BlockRegistry,
@@ -5777,22 +5798,41 @@ bool UWorldPersistence::TrySaveTerrainColumnForUnload(UWorld &world,
     return false;
   TerrainColumnSaveStamp stamp(world.BlockWorld.GetChunkManager(), ground,
                                 settings.MinHeight, settings.MaxHeight);
-  if (!stamp.Matches(world.BlockWorld.GetChunkManager()) ||
-      !RequestAsyncTerrainColumnSave(world, ground))
+  if (!stamp.Matches(world.BlockWorld.GetChunkManager()))
     return false;
-  const auto pending = PendingAsyncColumnSaveSlices.find(ground);
-  if (pending == PendingAsyncColumnSaveSlices.end())
-    return false;
-  auto &receipt = UnloadSaveReceipts[ground];
-  receipt.stamp = std::move(stamp);
-  receipt.catalog = catalog;
-  receipt.folder = WorldFolderPath;
-  receipt.minY = settings.MinHeight;
-  receipt.maxY = settings.MaxHeight;
-  receipt.batch = pending->second.BatchId();
+  if (UnloadSaveReceipts.size() >= UAsyncChunkIO::kMaxOutstandingWrites)
+  {
+    // Only cached acknowledgments and expired retry delays can be displaced.
+    // The column and its dirty stamps stay authoritative until unload.
+    auto reusable = UnloadSaveReceipts.end();
+    for (auto it = UnloadSaveReceipts.begin(); it != UnloadSaveReceipts.end(); ++it)
+      if (it->second.complete && (it->second.success || now >= it->second.retryAfter) &&
+          (reusable == UnloadSaveReceipts.end() || it->second.retryAfter < reusable->second.retryAfter))
+        reusable = it;
+    if (reusable == UnloadSaveReceipts.end())
+      return false;
+    UnloadSaveReceipts.erase(reusable);
+  }
+  const auto receipt = UnloadSaveReceipts.emplace(ground, UnloadSaveReceipt{
+      std::move(stamp), catalog, WorldFolderPath, settings.MinHeight, settings.MaxHeight}).first;
+  try
+  {
+    if (!RequestAsyncTerrainColumnSave(world, ground))
+    {
+      UnloadSaveReceipts.erase(receipt);
+      return false;
+    }
+  }
+  catch (...)
+  {
+    UnloadSaveReceipts.erase(receipt);
+    throw;
+  }
+  const auto batch = PendingAsyncColumnSaveSlices.at(ground).BatchId();
+  receipt->second.batch = batch;
   if (world.Streaming && world.Streaming->GetStreamer())
     world.Streaming->GetStreamer()->NoteColumnSaveQueued();
-  TraceChunkResidency("disk_save_waiting", ground, ground, receipt.batch,
+  TraceChunkResidency("disk_save_waiting", ground, ground, batch,
                       &world.BlockWorld.GetChunkManager());
   return false; // Keep RAM until all actual writes ACK this exact snapshot.
 }
@@ -5860,27 +5900,18 @@ bool UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                           ? highest_on_disk
                           : std::max(highest_on_disk, highest_to_save);
   }
-  // Capture before pending-save absence gates,
-  // including field-only columns which have no terrain slice to serialize.
-  const auto light_receipts = ChunkStorage->CaptureColumnLight(
-      ground_coord, world.BlockWorld, *world.BlockRegistry);
-  const uint64_t batch_id = NextWorldColumnRequestId();
-  if (highest_to_save == kNoTerrainChunkSlice)
-  {
-    ChunkStorage->MarkColumnSavePending(ground_coord);
-    PendingAsyncColumnSaveSlices[ground_coord] =
-        ColumnSaveCompletion(batch_id, WorldFolderPath, ground_coord, 0, -1, false);
-    AsyncChunkIo->RequestSaveColumnLight(ground_coord, light_receipts,
-                                         *ChunkStorage, WorldFolderPath, batch_id);
-    LogWorldColumnSave("skip_empty", ground_coord,
-                       "world_folder=" + WorldFolderPath);
-    return true;
-  }
-  highest_to_save = std::clamp(highest_to_save, min_cy, max_cy);
+  const bool field_only = highest_to_save == kNoTerrainChunkSlice;
+  const int first_cy = field_only ? 0 : min_cy;
+  highest_to_save = field_only ? -1 : std::clamp(highest_to_save, min_cy, max_cy);
+  const int save_count = highest_to_save - first_cy + 1;
+  const int stale_slice_count = field_only ? 0 : max_cy - highest_to_save;
+  auto credit = AsyncChunkIo->ReserveTerrainWrites(
+      static_cast<size_t>(save_count) + 1 + (stale_slice_count > 0));
+  if (!credit)
+    return false;
 
   const auto materialize_started = std::chrono::steady_clock::now();
-  int save_count = 0;
-  for (int cy = min_cy; cy <= highest_to_save; ++cy)
+  for (int cy = first_cy; cy <= highest_to_save; ++cy)
   {
     const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
     if (!world.BlockWorld.GetChunkManager().HasLoadedTerrainSlice(slice))
@@ -5890,49 +5921,44 @@ bool UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
                              " world_folder=" + WorldFolderPath);
       return false;
     }
-    ++save_count;
   }
   const double materialize_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - materialize_started)
           .count();
-  const int stale_slice_count = std::max(0, max_cy - highest_to_save);
-  const int cleanup_operation_count = stale_slice_count > 0 ? 1 : 0;
+  // Capture before pending-save absence gates, including field-only columns.
+  auto light = ChunkStorage->CaptureColumnLight(ground_coord, world.BlockWorld, *world.BlockRegistry);
+  const uint64_t batch_id = NextWorldColumnRequestId();
   const auto pending_started = std::chrono::steady_clock::now();
-  ChunkStorage->MarkColumnSavePending(ground_coord);
-  PendingAsyncColumnSaveSlices[ground_coord] = ColumnSaveCompletion(
-      batch_id, WorldFolderPath, ground_coord, min_cy, highest_to_save,
-      cleanup_operation_count > 0);
+  const auto pending = PendingAsyncColumnSaveSlices.try_emplace(ground_coord, batch_id,
+      WorldFolderPath, ground_coord, first_cy, highest_to_save, stale_slice_count > 0).first;
   const double pending_setup_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - pending_started)
           .count();
   const auto enqueue_started = std::chrono::steady_clock::now();
-  AsyncChunkIo->RequestSaveColumnLight(ground_coord, light_receipts,
-                                       *ChunkStorage, WorldFolderPath, batch_id);
-  for (int cy = min_cy; cy <= highest_to_save; ++cy)
+  try
   {
-    const glm::ivec3 slice(ground_coord.x, cy, ground_coord.z);
-    AsyncChunkIo->RequestSave(
-        slice, *ChunkStorage, WorldFolderPath, world.BlockWorld,
-        *world.BlockRegistry,
-        world.Streaming->GetChunkGenTokens().Current(ground_coord), batch_id);
+    ChunkStorage->MarkColumnSavePending(ground_coord);
+    AsyncChunkIo->QueueTerrainColumnSave(std::move(credit), ground_coord,
+        first_cy, highest_to_save, max_cy, *ChunkStorage, WorldFolderPath,
+        world.BlockWorld, std::move(light), batch_id);
+  }
+  catch (...)
+  {
+    ChunkStorage->ClearColumnSavePending(ground_coord);
+    PendingAsyncColumnSaveSlices.erase(pending);
+    throw;
   }
   const double snapshot_enqueue_ms =
       std::chrono::duration<double, std::milli>(
           std::chrono::steady_clock::now() - enqueue_started)
           .count();
-  const auto cleanup_enqueue_started = std::chrono::steady_clock::now();
-  if (cleanup_operation_count > 0)
+  if (field_only)
   {
-    AsyncChunkIo->RequestRemoveChunkSlices(ground_coord, highest_to_save + 1,
-                                           max_cy, *ChunkStorage,
-                                           WorldFolderPath, batch_id);
+    LogWorldColumnSave("skip_empty", ground_coord, "world_folder=" + WorldFolderPath);
+    return true;
   }
-  const double cleanup_enqueue_ms =
-      std::chrono::duration<double, std::milli>(
-          std::chrono::steady_clock::now() - cleanup_enqueue_started)
-          .count();
   if (IsWorldColumnSaveTraceEnabled())
   {
     LogWorldColumnSave(
@@ -5946,7 +5972,6 @@ bool UWorldPersistence::RequestAsyncTerrainColumnSave(UWorld &world,
             " materialize_ms=" + std::to_string(materialize_ms) +
             " snapshot_enqueue_ms=" + std::to_string(snapshot_enqueue_ms) +
             " pending_setup_ms=" + std::to_string(pending_setup_ms) +
-            " cleanup_enqueue_ms=" + std::to_string(cleanup_enqueue_ms) +
             " total_ms=" +
             std::to_string(
                 std::chrono::duration<double, std::milli>(

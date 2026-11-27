@@ -246,6 +246,93 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"column_limit", columns}, {"deferred_streamer_recovery", target_admitted},
           {"out_of_profile_bounded", true}, {"final_outstanding", io.GetOutstandingLoadCount()},
           {"final_columns", retained.size()}};
+
+      constexpr auto writes = UAsyncChunkIO::kMaxOutstandingWrites;
+      constexpr size_t target_writes = 25;
+      const glm::ivec3 missing(300, 19, 300);
+      for (size_t i = 0; i < writes - target_writes + 1; ++i)
+        require(io.RequestSave(missing, storage, folder.string(), world.BlockWorld,
+                               *world.BlockRegistry, {missing, 1}, i + 1),
+                "produce a real retained save result for a missing snapshot");
+      auto held_writes = io.DrainSaves();
+      const glm::ivec3 edited(2, 19 * CHUNK_SIZE + 1, 2), edited_slice(0, 19, 0);
+      world.BlockWorld.SetBlock(edited, 8);
+      world.ModifiedChunks.insert(edited_slice);
+      require(held_writes.size() == writes - target_writes + 1 &&
+                  io.GetOutstandingWriteCount() == held_writes.size() &&
+                  !persistence.TrySaveTerrainColumnForUnload(world, target) &&
+                  !storage.IsColumnSavePending(target) &&
+                  !persistence.PendingAsyncColumnSaveSlices.count(target) &&
+                  !persistence.UnloadSaveReceipts.count(target) &&
+                  world.ModifiedChunks.count(edited_slice) && world.BlockWorld.GetBlock(edited) == 8,
+              "insufficient capacity leaves the whole column and edit dirty");
+      held_writes.pop_back();
+      auto gate = std::make_shared<AsyncSaveWriteProbeGate>();
+      io.SaveWriteProbeGate = gate;
+      const bool unloaded = persistence.TrySaveTerrainColumnForUnload(world, target);
+      const auto write_deadline = std::chrono::steady_clock::now() + 3s;
+      while (!gate->entered.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < write_deadline)
+        std::this_thread::yield();
+      const bool bounded_while_active = gate->entered.load(std::memory_order_acquire) &&
+          io.GetPendingJobCount() > 0 && io.GetActiveJobCount() > 0 &&
+          io.GetOutstandingWriteCount() == writes;
+      gate->released.store(true, std::memory_order_release);
+      io.SaveWriteProbeGate.reset();
+      require(!unloaded && storage.IsColumnSavePending(target) && bounded_while_active &&
+                  world.ModifiedChunks.count(edited_slice),
+              "one released slot admits the complete batch through queued and active writes");
+      require(io.WaitIdleFor(8s) && io.GetSaveResultQueueDepth() == target_writes &&
+                  io.GetOutstandingWriteCount() == writes, "every admitted terrain write publishes an ACK");
+      persistence.TickAsyncChunkIo(world);
+      require(!storage.IsColumnSavePending(target) && world.ModifiedChunks.count(edited_slice) &&
+                  persistence.TrySaveTerrainColumnForUnload(world, target) &&
+                  !world.ModifiedChunks.count(edited_slice),
+              "all matching ACKs permit the original unload path to acknowledge the edit");
+      held_writes.clear();
+      UBlockWorld cold;
+      cold.SetVerticalProfile(settings.GetVerticalProfile());
+      require(io.GetOutstandingWriteCount() == 0 && persistence.PendingAsyncColumnSaveSlices.empty() &&
+                  persistence.UnloadSaveReceipts.empty() &&
+                  storage.LoadTerrainColumn(target, cold, folder.string(), *world.BlockRegistry, 319, -64) > 0 &&
+                  cold.GetBlock(edited) == 8,
+              "cold replay preserves the edited terrain and all write reservations retire");
+
+      // The temporary owner travels with a real returned result from a
+      // separate fixture folder. WorldPersistence must keep its own revision.
+      persistence.ProcessColumnLightFlagSaveResults();
+      require(io.WaitForColumnLightFlagsSaveIdleFor(5s), "prior world flag write reaches its ACK");
+      persistence.ProcessColumnLightFlagSaveResults();
+      const auto foreign_flags = (root / "write-admission-foreign-flags").string();
+      require(io.RequestSaveColumnLightFlags(foreign_flags, 9001, {{5, 6}}, "foreign") &&
+                  io.WaitForColumnLightFlagsSaveIdleFor(5s), "foreign flags produce a retained ACK");
+      auto flags = io.DrainColumnLightFlagsSaves();
+      require(flags.size() == 1 && flags[0].success && persistence.EnsureLightCacheSignatureCurrent(),
+              "separate flag reservation survives completed delivery");
+      const glm::ivec2 flagged(12, 19);
+      persistence.LightCompleteColumns.insert(flagged);
+      persistence.LightCompleteDirty = true;
+      ++persistence.LightCompleteRevision;
+      persistence.SaveColumnLightFlagsIfDirty();
+      require(!persistence.LightCompleteSaveInFlight && persistence.LightCompleteDirty &&
+                  io.GetOutstandingFlagSaveCount() == 1,
+              "flag saturation leaves the newest world revision dirty before copying it");
+      flags.clear();
+      persistence.SaveColumnLightFlagsIfDirty();
+      require(persistence.LightCompleteSaveInFlight && io.WaitForColumnLightFlagsSaveIdleFor(5s),
+              "the next flag save accepts the retained revision");
+      persistence.ProcessColumnLightFlagSaveResults();
+      require(!persistence.LightCompleteDirty && !persistence.LightCompleteSaveInFlight &&
+                  io.GetOutstandingFlagSaveCount() == 0, "current flag revision ACK retires its reservation");
+      persistence.LoadColumnLightFlags();
+      require(persistence.LightCompleteLoaded && persistence.LightCompleteColumns.count(flagged) &&
+                  persistence.LightCompleteSignature == persistence.CurrentLightCacheSignature(),
+              "cold flag replay restores the deferred entry with the current signature");
+      require(!persistence.IsColumnLightComplete(flagged),
+              "a persisted flag alone does not certify live light coverage");
+      report["bounded_disk_write_admission"] = {{"status", "PASS"}, {"write_limit", writes},
+          {"required_writes", target_writes}, {"rejected_with_free_slots", target_writes - 1},
+          {"bounded_while_active", bounded_while_active}, {"cold_edit", true}, {"deferred_flag_revision", true},
+          {"final_writes", io.GetOutstandingWriteCount()}, {"final_flags", io.GetOutstandingFlagSaveCount()}};
     });
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();

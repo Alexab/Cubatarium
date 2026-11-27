@@ -266,6 +266,7 @@ private:
   DiskAirCancellationProbe AirCancellationProbe;
   DiskReadFailureProbe ReadFailureProbe;
   std::optional<glm::ivec3> ReadFailureEditCell;
+  std::optional<uint64_t> ReadFailureRecoverySaveDemand;
   bool ReadFailureRecoverySaveRequested{false};
   void ObserveReadFailureSaveProbe(UWorld &world, glm::ivec3 ground,
                                    uint64_t demand_id);

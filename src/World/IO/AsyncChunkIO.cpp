@@ -130,8 +130,50 @@ decltype(auto) WithCodecProbe(bool enabled, const Call &call, Observer observe)
 }
 } // namespace
 
+struct AsyncIoCredit
+{
+  AsyncIoCredit(std::shared_ptr<std::atomic<size_t>> count, size_t slots) noexcept
+      : outstanding(std::move(count)), slots(slots) {}
+  ~AsyncIoCredit() { outstanding->fetch_sub(slots, std::memory_order_relaxed); }
+  const std::shared_ptr<std::atomic<size_t>> outstanding;
+  const size_t slots;
+};
+
+static std::shared_ptr<AsyncIoCredit> ReserveIoCredits(
+    const std::shared_ptr<std::atomic<size_t>> &counter, size_t limit, size_t slots)
+{
+  if (slots > limit)
+    return {};
+  auto count = counter->load(std::memory_order_relaxed);
+  do
+  {
+    if (count > limit - slots)
+      return {};
+  } while (!counter->compare_exchange_weak(count, count + slots, std::memory_order_relaxed));
+  try
+  {
+    return std::make_shared<AsyncIoCredit>(counter, slots);
+  }
+  catch (...)
+  {
+    counter->fetch_sub(slots, std::memory_order_relaxed);
+    throw;
+  }
+}
+
+std::shared_ptr<AsyncIoCredit> UAsyncChunkIO::ReserveTerrainWrites(size_t count)
+{
+  return ReserveIoCredits(OutstandingWrites, kMaxOutstandingWrites, count);
+}
+
+std::shared_ptr<AsyncIoCredit> UAsyncChunkIO::ReserveFlagSave()
+{
+  return ReserveIoCredits(OutstandingFlagSaves, kMaxOutstandingFlagSaves, 1);
+}
+
 struct UAsyncChunkIO::SaveFlagsJob
 {
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   std::string worldFolder;
   uint64_t revision;
@@ -147,6 +189,7 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
   owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::Entered, revision, {});
   const auto worker_started = std::chrono::steady_clock::now();
   AsyncColumnLightFlagsSaveResult result;
+  result.writeCredit = credit;
   result.worldFolder = worldFolder;
   result.revision = revision;
   result.worker_queue_wait_ms = std::chrono::duration<double, std::milli>(
@@ -272,13 +315,25 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
   }
 }
 
-void UAsyncChunkIO::RequestSaveColumnLightFlags(
+bool UAsyncChunkIO::RequestSaveColumnLightFlags(
     std::string worldFolder, const uint64_t revision,
     std::vector<glm::ivec2> completeColumns, std::string lightSignature)
 {
+  auto credit = ReserveFlagSave();
+  if (!credit)
+    return false;
+  QueueColumnLightFlagsSave(std::move(credit), std::move(worldFolder), revision,
+                          std::move(completeColumns), std::move(lightSignature));
+  return true;
+}
+
+void UAsyncChunkIO::QueueColumnLightFlagsSave(std::shared_ptr<AsyncIoCredit> credit,
+    std::string worldFolder, uint64_t revision, std::vector<glm::ivec2> columns,
+    std::string lightSignature)
+{
   const auto enqueue_started = std::chrono::steady_clock::now();
   ColumnLightFlagsPool.Enqueue(
-      SaveFlagsJob{this, std::move(worldFolder), revision, std::move(completeColumns),
+      SaveFlagsJob{std::move(credit), this, std::move(worldFolder), revision, std::move(columns),
                    std::move(lightSignature), enqueue_started});
 }
 
@@ -320,17 +375,9 @@ void UAsyncChunkIO::RequestDiskIndexWarmup(
   EnqueueBackgroundIo(IndexWarmupJob{this, storage, worldFolder});
 }
 
-struct AsyncChunkLoadCredit
-{
-  explicit AsyncChunkLoadCredit(std::shared_ptr<std::atomic<size_t>> count) noexcept
-      : outstanding(std::move(count)) {}
-  ~AsyncChunkLoadCredit() { outstanding->fetch_sub(1, std::memory_order_relaxed); }
-  const std::shared_ptr<std::atomic<size_t>> outstanding;
-};
-
 struct UAsyncChunkIO::LoadJob
 {
-  std::shared_ptr<AsyncChunkLoadCredit> credit;
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   glm::ivec3 coord;
   const std::string filePath;
@@ -527,23 +574,9 @@ bool UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
 {
   if (cancellation && cancellation->load(std::memory_order_acquire))
     return false;
-  auto count = GetOutstandingLoadCount();
-  do
-  {
-    if (count >= kMaxOutstandingLoads)
-      return false;
-  } while (!OutstandingLoads->compare_exchange_weak(count, count + 1,
-                                                     std::memory_order_relaxed));
-  std::shared_ptr<AsyncChunkLoadCredit> credit;
-  try
-  {
-    credit = std::make_shared<AsyncChunkLoadCredit>(OutstandingLoads);
-  }
-  catch (...)
-  {
-    OutstandingLoads->fetch_sub(1, std::memory_order_relaxed);
-    throw;
-  }
+  auto credit = ReserveIoCredits(OutstandingLoads, kMaxOutstandingLoads, 1);
+  if (!credit)
+    return false;
   const bool trace_io = IsAsyncChunkIoTraceEnabled();
   const auto detect_started = trace_io ? std::chrono::steady_clock::now()
                                        : std::chrono::steady_clock::time_point{};
@@ -586,6 +619,7 @@ bool UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
 
 struct UAsyncChunkIO::SaveReceiptsJob
 {
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   glm::ivec3 column;
   std::shared_ptr<const PersistedColumnLight> receipts;
@@ -600,6 +634,7 @@ void UAsyncChunkIO::SaveReceiptsJob::operator()() const
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Receipts, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
+  done.writeCredit = credit;
   done.saveBatchId = saveBatchId;
   done.coord = done.groundCoord = column;
   done.worldFolder = worldFolder;
@@ -633,18 +668,24 @@ void UAsyncChunkIO::SaveReceiptsJob::operator()() const
   owner->CompletedSaves.Push(std::move(done));
 }
 
-void UAsyncChunkIO::RequestSaveColumnLight(
+bool UAsyncChunkIO::RequestSaveColumnLight(
     glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
     UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
+  auto credit = ReserveTerrainWrites(1);
+  if (!credit)
+    return false;
   const auto settings = storage.GetSettings();
   column.y = 0;
   EnqueueBackgroundIo(
-      SaveReceiptsJob{this, column, std::move(receipts), settings, worldFolder, saveBatchId});
+      SaveReceiptsJob{std::move(credit), this, column, std::move(receipts), settings,
+                      worldFolder, saveBatchId});
+  return true;
 }
 
 struct UAsyncChunkIO::SaveJob
 {
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   const std::shared_ptr<const UChunk> snapshot;
   const ChunkStorageSettings settings;
@@ -661,6 +702,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
+  done.writeCredit = credit;
   done.saveBatchId = saveBatchId;
   done.coord = coord;
   done.groundCoord = ground;
@@ -679,6 +721,13 @@ void UAsyncChunkIO::SaveJob::operator()() const
 
   try
   {
+    UChunkStorageService worker_storage(settings);
+    if (!snapshot)
+    {
+      done.filePath = worker_storage.ChunkFilePath(worldFolder, coord, ChunkDiskFormat::Binary);
+      finish("chunk_missing_before_serialize");
+      return;
+    }
     if (probe_gate)
     {
       probe_gate->entered.store(true, std::memory_order_release);
@@ -693,7 +742,6 @@ void UAsyncChunkIO::SaveJob::operator()() const
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
-    UChunkStorageService worker_storage(settings);
     // Current CCHK4/JSON4 serialization writes numeric block IDs and
     // does not consult registry/catalog state. Do not retain a mutable
     // main-thread registry reference across a reload/world switch.
@@ -783,38 +831,35 @@ void UAsyncChunkIO::SaveJob::operator()() const
   }
 }
 
-void UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
-                                const std::string &worldFolder,
-                                const UBlockWorld &world,
-                                UBlockRegistry &registry,
-                                ChunkGenerationToken token, uint64_t saveBatchId)
+bool UAsyncChunkIO::RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
+                               const std::string &worldFolder,
+                               const UBlockWorld &world, UBlockRegistry &,
+                               ChunkGenerationToken, uint64_t saveBatchId)
 {
-  auto terrain_snapshot =
-      world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
-  if (!terrain_snapshot)
-  {
-    AsyncChunkSaveRequest failed;
-    failed.saveBatchId = saveBatchId;
-    failed.coord = coord;
-    failed.groundCoord = glm::ivec3(coord.x, 0, coord.z);
-    failed.worldFolder = worldFolder;
-    failed.filePath = storage.ChunkFilePath(
-        worldFolder, coord, ChunkDiskFormat::Binary);
-    failed.error = "chunk_missing_before_serialize";
-    CompletedSaves.Push(std::move(failed));
-    return;
-  }
+  auto credit = ReserveTerrainWrites(1);
+  if (!credit)
+    return false;
+  auto job = MakeSaveJob(std::move(credit), coord, storage.GetSettings(), worldFolder,
+                         world, saveBatchId);
+  if (job.snapshot)
+    EnqueueBackgroundIo(std::move(job));
+  else
+    job();
+  return true;
+}
+
+UAsyncChunkIO::SaveJob UAsyncChunkIO::MakeSaveJob(std::shared_ptr<AsyncIoCredit> credit,
+    glm::ivec3 coord, const ChunkStorageSettings &settings, const std::string &worldFolder,
+    const UBlockWorld &world, uint64_t saveBatchId)
+{
   // The world owns and mutates chunks on the main thread. Take a compact,
   // immutable snapshot here, then do palette/RLE/JSON serialization on the
   // I/O worker so unloading a column does not serialize every vertical slice
   // inside the streaming update.
-  const std::shared_ptr<const UChunk> snapshot(std::move(terrain_snapshot));
-  const ChunkStorageSettings settings = storage.GetSettings();
+  std::shared_ptr<const UChunk> snapshot = world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
   const glm::ivec3 ground(coord.x, 0, coord.z);
-  (void)token;
-  const auto probe_gate = SaveWriteProbeGate;
-  EnqueueBackgroundIo(
-      SaveJob{this, snapshot, settings, worldFolder, coord, ground, saveBatchId, probe_gate});
+  return SaveJob{std::move(credit), this, std::move(snapshot), settings, worldFolder,
+                 coord, ground, saveBatchId, SaveWriteProbeGate};
 }
 
 struct UAsyncChunkIO::RemoveSlices
@@ -851,26 +896,6 @@ bool UAsyncChunkIO::RemoveSlices::operator()(UChunkStorageService &worker_storag
   return success;
 }
 
-void UAsyncChunkIO::RequestRemoveChunkSlices(
-    glm::ivec3 groundCoord, const int firstCy, const int lastCy,
-    UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
-{
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  if (firstCy > lastCy)
-  {
-    return;
-  }
-  const int sliceCount = lastCy - firstCy + 1;
-  const glm::ivec3 resultCoord(groundCoord.x, firstCy, groundCoord.z);
-  EnqueueStorageCleanup(
-      groundCoord, resultCoord, storage, worldFolder, "slice_range",
-      sliceCount,
-      RemoveSlices{groundCoord, firstCy, lastCy}, saveBatchId);
-}
-
 struct UAsyncChunkIO::RemoveColumn
 {
   glm::ivec3 groundCoord;
@@ -888,21 +913,9 @@ bool UAsyncChunkIO::RemoveColumn::operator()(UChunkStorageService &worker_storag
       folder, groundCoord, maxWorldY, &error, minWorldY);
 }
 
-void UAsyncChunkIO::RequestRemoveTerrainColumn(
-    glm::ivec3 groundCoord, const int maxWorldY, const int minWorldY,
-    UChunkStorageService &storage, const std::string &worldFolder)
-{
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  EnqueueStorageCleanup(
-      groundCoord, groundCoord, storage, worldFolder, "full_column", -1,
-      RemoveColumn{groundCoord, maxWorldY, minWorldY});
-}
-
 struct UAsyncChunkIO::CleanupJob
 {
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   UChunkStorageService &storage;
   glm::ivec3 groundCoord;
@@ -920,6 +933,7 @@ void UAsyncChunkIO::CleanupJob::operator()()
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Cleanup, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
+  done.writeCredit = credit;
   done.saveBatchId = saveBatchId;
   done.coord = resultCoord;
   done.groundCoord = groundCoord;
@@ -950,19 +964,61 @@ void UAsyncChunkIO::CleanupJob::operator()()
   owner->CompletedSaves.Push(std::move(done));
 }
 
-void UAsyncChunkIO::EnqueueStorageCleanup(
-    glm::ivec3 groundCoord, glm::ivec3 resultCoord,
-    UChunkStorageService &storage, const std::string &worldFolder,
-    std::string cleanupOperation, const int cleanupSliceCount,
-    StorageCleanupJob cleanup, uint64_t saveBatchId)
+UAsyncChunkIO::CleanupJob UAsyncChunkIO::MakeRemoveSlicesJob(
+    std::shared_ptr<AsyncIoCredit> credit, glm::ivec3 ground, int firstCy, int lastCy,
+    UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
-  }
-  EnqueueBackgroundIo(
-      CleanupJob{this, storage, groundCoord, resultCoord, worldFolder,
-                 std::move(cleanupOperation), cleanupSliceCount, std::move(cleanup), saveBatchId});
+  const glm::ivec3 result(ground.x, firstCy, ground.z);
+  return CleanupJob{std::move(credit), this, storage, ground, result, worldFolder, "slice_range",
+                    lastCy - firstCy + 1, RemoveSlices{ground, firstCy, lastCy}, saveBatchId};
+}
+
+bool UAsyncChunkIO::RequestRemoveChunkSlices(
+    glm::ivec3 groundCoord, int firstCy, int lastCy, UChunkStorageService &storage,
+    const std::string &worldFolder, uint64_t saveBatchId)
+{
+  if (firstCy > lastCy)
+    return false;
+  auto credit = ReserveTerrainWrites(1);
+  if (!credit)
+    return false;
+  groundCoord.y = 0;
+  EnqueueBackgroundIo(MakeRemoveSlicesJob(std::move(credit), groundCoord, firstCy, lastCy,
+                                          storage, worldFolder, saveBatchId));
+  return true;
+}
+
+bool UAsyncChunkIO::RequestRemoveTerrainColumn(
+    glm::ivec3 groundCoord, int maxWorldY, int minWorldY, UChunkStorageService &storage,
+    const std::string &worldFolder)
+{
+  auto credit = ReserveTerrainWrites(1);
+  if (!credit)
+    return false;
+  groundCoord.y = 0;
+  EnqueueBackgroundIo(CleanupJob{std::move(credit), this, storage, groundCoord, groundCoord,
+      worldFolder, "full_column", -1, RemoveColumn{groundCoord, maxWorldY, minWorldY}, 0});
+  return true;
+}
+
+void UAsyncChunkIO::QueueTerrainColumnSave(std::shared_ptr<AsyncIoCredit> credit,
+    glm::ivec3 ground, int firstCy, int highestCy, int lastCy, UChunkStorageService &storage,
+    const std::string &worldFolder, const UBlockWorld &world,
+    std::shared_ptr<const PersistedColumnLight> light, uint64_t saveBatchId)
+{
+  std::vector<std::function<void()>> jobs;
+  jobs.reserve(credit->slots);
+  const auto settings = storage.GetSettings();
+  jobs.emplace_back(SaveReceiptsJob{credit, this, ground, std::move(light), settings,
+                                     worldFolder, saveBatchId});
+  for (int cy = firstCy; cy <= highestCy; ++cy)
+    jobs.emplace_back(MakeSaveJob(credit, {ground.x, cy, ground.z}, settings, worldFolder,
+                                  world, saveBatchId));
+  if (firstCy <= highestCy && highestCy < lastCy)
+    jobs.emplace_back(MakeRemoveSlicesJob(credit, ground, highestCy + 1, lastCy, storage,
+                                          worldFolder, saveBatchId));
+  auto &pool = BackgroundIoPool ? *BackgroundIoPool : LoadPool;
+  pool.EnqueueBatch(std::move(jobs));
 }
 
 struct AsyncIoStorageInspector
@@ -1258,27 +1314,30 @@ private:
     Text(Result.queued_backing, job.worldFolder);
     Shared(job.cancellation);
     Shared(job.read_probe_gate);
-    LoadCredit(job.credit);
+    Credit(job.credit);
   }
 
-  void LoadCredit(const std::shared_ptr<AsyncChunkLoadCredit> &credit)
+  void Credit(const std::shared_ptr<AsyncIoCredit> &credit)
   {
     if (Shared(credit))
       Shared(credit->outstanding);
   }
   void Capture(const Io::SaveJob &job)
   {
+    Credit(job.credit);
     Text(Result.queued_backing, job.worldFolder);
     Snapshot(job.snapshot);
     Shared(job.probe_gate);
   }
   void Capture(const Io::SaveReceiptsJob &job)
   {
+    Credit(job.credit);
     Text(Result.queued_backing, job.worldFolder);
     Receipts(job.receipts);
   }
   void Capture(const Io::SaveFlagsJob &job)
   {
+    Credit(job.credit);
     Text(Result.queued_backing, job.worldFolder);
     Text(Result.queued_backing, job.lightSignature);
     Buffer(Result.queued_backing, job.completeColumns.capacity(), sizeof(glm::ivec2));
@@ -1290,6 +1349,7 @@ private:
   }
   void Capture(const Io::CleanupJob &job)
   {
+    Credit(job.credit);
     Borrow(Result.storage_root, &job.storage);
     Text(Result.queued_backing, job.worldFolder);
     Text(Result.queued_backing, job.cleanupOperation);
@@ -1307,7 +1367,7 @@ private:
     size_t input_backing = 0, decoded_backing = 0;
     Buffer(input_backing, value.payload.capacity(), sizeof(uint8_t));
     Shared(value.cancellation);
-    LoadCredit(value.readCredit);
+    Credit(value.readCredit);
     Receipts(value.columnLight);
     if (value.decodedBuffer)
     {
@@ -1327,12 +1387,14 @@ private:
 
   void SaveResult(const AsyncChunkSaveRequest &value)
   {
+    Credit(value.writeCredit);
     for (const auto *text : {&value.worldFolder, &value.filePath, &value.cleanupOperation, &value.error})
       Text(Result.completed_backing, *text);
   }
 
   void FlagsResult(const AsyncColumnLightFlagsSaveResult &value)
   {
+    Credit(value.writeCredit);
     Text(Result.completed_backing, value.worldFolder);
     Text(Result.completed_backing, value.error);
   }
@@ -1368,6 +1430,8 @@ private:
       Shared(Owner.SaveWriteProbeGate);
       Shared(Owner.LoadReadProbeGate);
       Shared(Owner.OutstandingLoads);
+      Shared(Owner.OutstandingWrites);
+      Shared(Owner.OutstandingFlagSaves);
       Completed(0, Owner.CompletedLoads, [&](const AsyncChunkLoadResult &value) {
         LoadResult(value);
       });

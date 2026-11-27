@@ -57,6 +57,8 @@ public:
   /// Lossless legacy submission; no queue cap. New bounded producers must
   /// handle TryEnqueue(false) without discarding their demand.
   void Enqueue(std::function<void()> job);
+  // Admission is owned by the caller. Publish a prepared batch together.
+  void EnqueueBatch(std::vector<std::function<void()>> jobs);
   /// Returns false if the pending queue is at MaxPendingJobs (job not queued).
   bool TryEnqueue(std::function<void()> job, uint64_t tag = 0);
   void WaitIdle();
