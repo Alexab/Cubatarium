@@ -774,7 +774,9 @@
         {
           "id": "LIMIT-C1.Q10",
           "status": "CHECK",
-          "required_result": "Load/save/flag IO queued-running-completed payload count/bytes, pending maps/retry producer envelope and release; avoid dropping unsaved data."
+          "required_result": "Load/save/flag IO queued-running-completed payload count/bytes, pending maps/retry producer envelope and release; avoid dropping unsaved data.",
+          "read_admission_evidence": "S4_02_Q10_READ_ADMISSION_CERTIFICATE_2026_11_27.json",
+          "read_admission_result": "Each I/O instance admits at most 256 slice reads from queued job through executing, completed, drained and requeued results. A world retains at most 32 column plans. A compact signed-Y plan resumes unsent slices in admission order without treating pressure as absent terrain. The native fixture fills both limits, coalesces a live demand, refuses a new saved column and installs it through the normal streamer after capacity returns. A separate out-of-profile save fixture verifies bounded submissions and cancellation without changing the file on disk. The existing terrain resolver still rejects an invalid column extent. Q10 remains open for write and light-flag admission, live save/retry metadata, and payload bytes and peaks. Whole-process and full native/performance/memory acceptance remain in the original S0–S6 plan. The legacy UI fixture still exercises a manual retry and calls the fatal menu handler directly. Automatic silent recovery for temporary save failures and end-to-end fatal handling with world transfer remain S4.06 requirements. The S4.01 extended fixture binding and ecology S6.05 remain open. 23 of 42 packages complete."
         },
         {
           "id": "LIMIT-C1.Q11_Q12",

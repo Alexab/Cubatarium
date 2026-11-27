@@ -451,7 +451,7 @@ int main()
       [&](glm::ivec3, uint64_t)
       {
         ++disk_requests;
-        return false;
+        return cutum::TerrainColumnRead::Absent;
       },
       nullptr, nullptr, nullptr);
   streamer.SetAsyncGeneration(true);
@@ -497,7 +497,7 @@ int main()
       [&](glm::ivec3 c, uint64_t)
       {
         disk_requests += c == center ? 1 : 0;
-        return false;
+        return cutum::TerrainColumnRead::Absent;
       },
       nullptr, nullptr, nullptr);
   partial.SetAsyncGeneration(true);

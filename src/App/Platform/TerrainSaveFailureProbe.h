@@ -146,6 +146,107 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     report["allocator_returned_controls"]=RunAllocatorReturnedControlsProbe();
     report.update(RunStreamingSchedulerReinitProbe(root / "generation-replacement"));
     report["async_io_storage"] = RunAsyncIoStorageProbe(root / "async-io-storage");
+    RunTerrainProbePhase([&] {
+      using namespace std::chrono_literals;
+      auto owner = std::make_unique<UWorld>(nullptr, nullptr);
+      auto &world = *owner;
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone;
+      stone.Name = "stone";
+      stone.Physics = BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      ProceduralSettings settings;
+      settings.MinHeight = -64;
+      settings.MaxHeight = 319;
+      settings.AsyncChunkIo = true;
+      settings.AsyncRelight = false;
+      settings.AsyncChunkGeneration = true;
+      world.SetSpawnPoint({8, -63, 8});
+      world.SetProceduralSettings(settings, false);
+      world.Streaming->InitStreamerCallbacks(world);
+      auto &persistence = *world.Persistence;
+      auto &storage = persistence.GetChunkStorage();
+      auto &streamer = *world.Streaming->GetStreamer();
+      const auto folder = root / "read-admission";
+      fs::create_directories(folder / "chunks");
+      UBinaryChunkSerializer codec;
+      const auto write_slice = [&](glm::ivec3 coord) {
+        UChunk source(coord);
+        if (coord.y >= 19)
+          source.SetBlockLocal({1, 1, 1}, 8);
+        const auto frame = codec.Serialize(coord, source, *world.BlockRegistry);
+        require(storage.WriteBytesAtomically(storage.ChunkFilePath(folder.string(), coord, frame.format),
+                                             frame.bytes), "write real terrain slice for load limit");
+      };
+      constexpr auto columns = UWorldPersistence::kMaxPendingTerrainColumnLoads;
+      constexpr auto reads = UAsyncChunkIO::kMaxOutstandingLoads;
+      const glm::ivec3 target(0);
+      const glm::ivec3 outside_profile(static_cast<int>(columns + 1), 0, 0);
+      for (size_t i = 0; i <= columns; ++i)
+        for (int cy = -4; cy <= 19; ++cy)
+          write_slice({static_cast<int>(i), cy, 0});
+      write_slice({outside_profile.x, 9000, outside_profile.z});
+      world.SetWorldFolderPath(folder.string());
+      auto &io = *persistence.AsyncChunkIo;
+      for (size_t i = 1; i <= columns; ++i)
+        require(persistence.RequestAsyncTerrainColumnLoad(world, {static_cast<int>(i), 0, 0}, i) ==
+                    TerrainColumnRead::Pending, "admitted column keeps its remaining slices");
+      const auto &retained = persistence.PendingAsyncColumnLoadSlices;
+      const auto original = retained.at({1, 0, 0}).cancellation;
+      require(retained.size() == columns && io.GetOutstandingLoadCount() == reads &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, {1, 7, 0}, 5000) == TerrainColumnRead::Pending &&
+                  retained.at({1, 0, 0}).cancellation == original && retained.at({1, 0, 0}).demand_id == 1,
+              "both production limits saturate and coalescing preserves the admitted owner");
+      bool accepted_at_capacity = true;
+      require(persistence.RequestAsyncTerrainColumnLoad(world, target, 6000) == TerrainColumnRead::Deferred &&
+                  !streamer.EnsureChunkLoaded(target, true, &accepted_at_capacity) && !accepted_at_capacity &&
+                  !world.Streaming->GetChunkScheduler()->IsPending(target) && !retained.count(target),
+              "streamer leaves saturated saved terrain with its demand, without procedural fallback");
+
+      const std::vector<glm::ivec3> demand{target};
+      const auto deadline = std::chrono::steady_clock::now() + 15s;
+      bool target_admitted = false;
+      size_t peak_reads = 0;
+      size_t peak_columns = 0;
+      while (!target_admitted || !retained.empty() || io.GetOutstandingLoadCount())
+      {
+        persistence.TickAsyncChunkIo(world, 48, 20.0);
+        if (!target_admitted)
+        {
+          streamer.EnsureDataColumns(demand, 1);
+          if (const auto it = retained.find(target); it != retained.end())
+          {
+            require(it->second.highest_cy_on_disk == 19 && it->second.remaining_results == 24,
+                    "retry keeps the complete active signed profile");
+            target_admitted = true;
+          }
+        }
+        peak_reads = std::max(peak_reads, io.GetOutstandingLoadCount());
+        peak_columns = std::max(peak_columns, retained.size());
+        require(peak_reads <= reads && peak_columns <= columns && std::chrono::steady_clock::now() < deadline,
+                "retained streaming demand drains within both limits");
+        std::this_thread::yield();
+      }
+      require(world.BlockWorld.GetBlock({1, 19 * CHUNK_SIZE + 1, 1}) == 8 &&
+                  IsTerrainChunkComplete(world.BlockWorld, target, 319, 19, -64) &&
+                  !world.Streaming->GetChunkScheduler()->IsPending(target),
+              "normal streaming replay installs the original saved terrain");
+      require(persistence.RequestAsyncTerrainColumnLoad(world, outside_profile) == TerrainColumnRead::Pending &&
+                  retained.at(outside_profile).remaining_results == 24 && io.GetOutstandingLoadCount() <= 24,
+              "out-of-profile filename cannot expand the bounded active read range");
+      persistence.CancelAsyncTerrainColumnLoad(world, outside_profile);
+      require(io.WaitIdleFor(5s), "cancelled out-of-profile column releases its active jobs");
+      io.DiscardCancelledLoads();
+      require(io.GetOutstandingLoadCount() == 0 && retained.empty() &&
+                  storage.GetHighestChunkSliceOnDisk(folder.string(), outside_profile) == 9000,
+              "cancellation retires read credits and leaves the out-of-profile file in place");
+      report["bounded_disk_load_admission"] = {{"status", "PASS"}, {"slice_limit", reads},
+          {"column_limit", columns}, {"deferred_streamer_recovery", target_admitted},
+          {"out_of_profile_bounded", true}, {"final_outstanding", io.GetOutstandingLoadCount()},
+          {"final_columns", retained.size()}};
+    });
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
     const auto feature_candidate=BoundCatalogCandidateSource(CatalogCandidateKind::Features,{});

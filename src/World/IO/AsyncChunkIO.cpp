@@ -320,8 +320,17 @@ void UAsyncChunkIO::RequestDiskIndexWarmup(
   EnqueueBackgroundIo(IndexWarmupJob{this, storage, worldFolder});
 }
 
+struct AsyncChunkLoadCredit
+{
+  explicit AsyncChunkLoadCredit(std::shared_ptr<std::atomic<size_t>> count) noexcept
+      : outstanding(std::move(count)) {}
+  ~AsyncChunkLoadCredit() { outstanding->fetch_sub(1, std::memory_order_relaxed); }
+  const std::shared_ptr<std::atomic<size_t>> outstanding;
+};
+
 struct UAsyncChunkIO::LoadJob
 {
+  std::shared_ptr<AsyncChunkLoadCredit> credit;
   UAsyncChunkIO *owner;
   glm::ivec3 coord;
   const std::string filePath;
@@ -356,6 +365,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
     return;
   }
   AsyncChunkLoadResult result;
+  result.readCredit = credit;
   const auto codec_observer = [&](const IoCodecStorage &codec) noexcept {
     AsyncIoWorkerLocals locals(result);
     locals.codec = &codec;
@@ -507,7 +517,7 @@ void UAsyncChunkIO::LoadJob::operator()() const
   }
 }
 
-void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
+bool UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 UBlockRegistry &registry,
                                 const std::string &worldFolder,
                                 ChunkGenerationToken token,
@@ -515,14 +525,24 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                                 uint64_t demandId, bool includeColumnLight,
                                 bool injectInvalidFrame)
 {
-  const auto is_cancelled = [&]()
+  if (cancellation && cancellation->load(std::memory_order_acquire))
+    return false;
+  auto count = GetOutstandingLoadCount();
+  do
   {
-    return cancellation &&
-           cancellation->load(std::memory_order_acquire);
-  };
-  if (is_cancelled())
+    if (count >= kMaxOutstandingLoads)
+      return false;
+  } while (!OutstandingLoads->compare_exchange_weak(count, count + 1,
+                                                     std::memory_order_relaxed));
+  std::shared_ptr<AsyncChunkLoadCredit> credit;
+  try
   {
-    return;
+    credit = std::make_shared<AsyncChunkLoadCredit>(OutstandingLoads);
+  }
+  catch (...)
+  {
+    OutstandingLoads->fetch_sub(1, std::memory_order_relaxed);
+    throw;
   }
   const bool trace_io = IsAsyncChunkIoTraceEnabled();
   const auto detect_started = trace_io ? std::chrono::steady_clock::now()
@@ -538,6 +558,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   if (format == ChunkDiskFormat::Absent && !includeColumnLight)
   {
     AsyncChunkLoadResult result;
+    result.readCredit = std::move(credit);
     result.coord = coord;
     result.demandId = demandId;
     result.token = token;
@@ -549,7 +570,7 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
     }
     result.formatDetectMs = format_detect_ms;
     PushCompletedLoad(std::move(result));
-    return;
+    return true;
   }
 
   const std::string filePath =
@@ -557,9 +578,10 @@ void UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
   const auto read_probe_gate = LoadReadProbeGate;
   LoadPool.Enqueue(
-      LoadJob{this, coord, filePath, token, format, submitted_at, format_detect_ms,
+      LoadJob{std::move(credit), this, coord, filePath, token, format, submitted_at, format_detect_ms,
               trace_io, cancellation, demandId, registry, worker_storage_settings,
               includeColumnLight, worldFolder, injectInvalidFrame, read_probe_gate});
+  return true;
 }
 
 struct UAsyncChunkIO::SaveReceiptsJob
@@ -1236,6 +1258,13 @@ private:
     Text(Result.queued_backing, job.worldFolder);
     Shared(job.cancellation);
     Shared(job.read_probe_gate);
+    LoadCredit(job.credit);
+  }
+
+  void LoadCredit(const std::shared_ptr<AsyncChunkLoadCredit> &credit)
+  {
+    if (Shared(credit))
+      Shared(credit->outstanding);
   }
   void Capture(const Io::SaveJob &job)
   {
@@ -1278,6 +1307,7 @@ private:
     size_t input_backing = 0, decoded_backing = 0;
     Buffer(input_backing, value.payload.capacity(), sizeof(uint8_t));
     Shared(value.cancellation);
+    LoadCredit(value.readCredit);
     Receipts(value.columnLight);
     if (value.decodedBuffer)
     {
@@ -1337,6 +1367,7 @@ private:
       Pool(2, counts, bytes);
       Shared(Owner.SaveWriteProbeGate);
       Shared(Owner.LoadReadProbeGate);
+      Shared(Owner.OutstandingLoads);
       Completed(0, Owner.CompletedLoads, [&](const AsyncChunkLoadResult &value) {
         LoadResult(value);
       });

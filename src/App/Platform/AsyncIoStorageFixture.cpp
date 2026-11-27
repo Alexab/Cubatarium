@@ -111,6 +111,12 @@ struct AsyncIoStorageProbe
     }
   };
 
+  struct Release
+  {
+    Gate &gate;
+    ~Release() { gate.released.store(true); }
+  };
+
   static void Require(bool condition, const char *message)
   {
     if (!condition)
@@ -289,6 +295,46 @@ struct AsyncIoStorageProbe
             {"disk_index_requested", index->disk_index.requested}};
   }
 
+  static nlohmann::json CheckLoadCredits(const std::string &folder, glm::ivec3 coord,
+                                        UChunkStorageService &storage, UBlockRegistry &registry)
+  {
+    constexpr auto cap = UAsyncChunkIO::kMaxOutstandingLoads;
+    Gate gate;
+    UAsyncChunkIO io;
+    Release resume{gate};
+    Park(io, gate, false);
+    auto cancelled = std::make_shared<std::atomic<bool>>(false);
+    const glm::ivec3 absent(coord.x, coord.y + 300, coord.z);
+    const auto request = [&](glm::ivec3 slice, uint64_t demand) {
+      return io.RequestLoad(slice, storage, registry, folder, {coord, 2}, cancelled, demand);
+    };
+    Require(request(coord, 1), "real queued reader reserves one credit");
+    for (size_t i = 1; i < cap; ++i)
+      Require(request(absent, 1 + i), "absent result fills an admitted slot");
+    Require(io.GetOutstandingLoadCount() == cap && io.GetLoadResultQueueDepth() == cap - 1 &&
+                !request(coord, cap + 1), "queued and ready readers share the same limit");
+    gate.released.store(true);
+    Require(io.WaitIdleFor(std::chrono::seconds(5)), "queued reader drains before deadline");
+    auto returned = io.DrainLoads();
+    Require(returned.size() == cap && returned.back().success && io.GetOutstandingLoadCount() == cap &&
+                !request(coord, cap + 1), "drained results retain their credits");
+    returned.pop_back();
+    Require(request(coord, cap + 1) && io.WaitIdleFor(std::chrono::seconds(5)) &&
+                io.GetOutstandingLoadCount() == cap, "one released result admits exactly one successor");
+    auto held = std::move(returned.back());
+    returned.pop_back();
+    io.RequeueLoads(std::move(returned));
+    cancelled->store(true);
+    io.NoteLoadCancellation();
+    Require(io.DiscardCancelledLoads() == cap - 1 && io.GetOutstandingLoadCount() == 1,
+            "cancellation releases ready results while the escaped load stays charged");
+    const auto held_demand = held.demandId;
+    held = {};
+    Require(io.GetOutstandingLoadCount() == 0, "last returned result releases the last load credit");
+    return {{"status", "PASS"}, {"limit", cap}, {"queued_while_full", 1},
+            {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0}};
+  }
+
   static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,
                                              UChunkStorageService &storage, UBlockRegistry &registry)
   {
@@ -332,13 +378,13 @@ struct AsyncIoStorageProbe
     };
     const auto joined = join(phase, trace.parked, participants);
     Require(queues.retained_supported && queues.active == participants &&
-                queues.queued[0] == 1 && queues.shared_blocks == 1 &&
+                queues.queued[0] == 1 && queues.shared_blocks == 3 &&
                 joined.supported && joined.participants == participants &&
-                joined.shared_blocks == 1 && joined.shared_aliases == load_workers &&
-                joined.shared_bytes == queues.shared_bytes && joined.local_backing &&
+                joined.shared_blocks == 3 + load_workers && joined.shared_aliases == 2 * load_workers &&
+                joined.shared_bytes > queues.shared_bytes && joined.local_backing &&
                 joined.registry_references == load_workers + 1 && joined.storage_references == 2 &&
                 joined.disk_index_requested == roots.disk_index.requested && joined.disk_index_requested,
-            "joined active and pending allocations count shared cancellation once");
+            "joined active and pending allocations count each credit and share cancellation and counter");
     const auto join_roots = [&](const AsyncIoRootBinding &binding) {
       return JoinAsyncIoWorkers(phase, binding, queues, queue_shared.data(), queues.shared_blocks,
                                 trace.parked.data(), participants, scratch.data(), scratch.size());
@@ -360,7 +406,7 @@ struct AsyncIoStorageProbe
     const auto load = std::find_if(trace.parked.begin(), end, [](const auto *sample) {
       return sample->kind == AsyncIoJobKind::Load;
     });
-    Require(load != end && (*load)->sources.shared_blocks == 1, "load supplies shared cancellation");
+    Require(load != end && (*load)->sources.shared_blocks == 3, "load supplies cancellation, credit and counter");
     auto conflict = **load;
     auto conflict_list = trace.parked;
     for (size_t i = 0; i < participants; ++i)
@@ -385,7 +431,8 @@ struct AsyncIoStorageProbe
                 !completed.storage_root.references && !completed.registry_root.references,
             "the same cancellation control survives queue publication");
     auto reads = io.DrainLoads();
-    Require(!weak.expired() && Inspect(io).shared_bytes == 0, "returned owners leave the I/O census");
+    Require(!weak.expired() && Inspect(io).shared_blocks == 1 && io.GetOutstandingLoadCount() == reads.size(),
+            "returned owners leave the queue census and keep their admission credits");
     reads.clear();
     Require(weak.expired(), "all joined source owners retire");
     return {{"participants", participants}, {"shared_bytes", joined.shared_bytes},
@@ -454,7 +501,7 @@ struct AsyncIoStorageProbe
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
             "active cancellation retires decoded source without publication");
     cancellation.reset();
-    Require(weak.expired() && Inspect(io).shared_blocks == 0 && !trace.overflow,
+    Require(weak.expired() && Inspect(io).shared_blocks == 1 && !trace.overflow,
             "cancelled source leaves no retained I/O owner");
     return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
@@ -589,7 +636,7 @@ struct AsyncIoStorageProbe
     UAsyncChunkIO io;
     io.WorkerProbe = &worker_probe;
     // Release before pool destruction on every exit from the fixture.
-    struct Release { Gate &gate; ~Release() { gate.released.store(true); } } release{gate};
+    Release release{gate};
     const auto parked = Park(io, gate, true);
     auto cancellation = std::make_shared<std::atomic<bool>>(false);
     std::weak_ptr<std::atomic<bool>> weak_cancellation = cancellation;
@@ -623,7 +670,7 @@ struct AsyncIoStorageProbe
             "queued source is supported while active worker storage remains open");
     Require(queued.queued == std::array<size_t, 6>{2, 1, 2, 1, 1, 2} &&
                 queued.callable_bytes && queued.queued_backing >= 600 * sizeof(glm::ivec2) &&
-                queued.shared_blocks == 5 && queued.shared_aliases == 2,
+                queued.shared_blocks == 8 && queued.shared_aliases == 4,
             "all six actual queue source kinds and shared aliases");
     Require(receipts.use_count() == receipt_refs + 2 && cancellation.use_count() == 3,
             "diagnostic does not change source references");
@@ -640,8 +687,8 @@ struct AsyncIoStorageProbe
     worker_phase.Close();
     const auto worker_stages = CheckWorkerTrace(worker_trace);
     Require(completed.supported && completed.completed == std::array<size_t, 3>{2, 5, 1} &&
-                completed.completed_backing && completed.shared_blocks == 1 &&
-                completed.shared_aliases == 1 && completed.callable_bytes == 0,
+                completed.completed_backing && completed.shared_blocks == 4 &&
+                completed.shared_aliases == 3 && completed.callable_bytes == 0,
             "queue owners retire and both results share the same cancellation control");
     auto reads = io.DrainLoads();
     Require(reads.size() == 2 && reads[0].success && reads[1].success &&
@@ -654,13 +701,14 @@ struct AsyncIoStorageProbe
     Require(saves.size() == 5 && std::all_of(saves.begin(), saves.end(),
                 [](const auto &save) { return save.success; }), "all actual saves and cleanups succeed");
     cancellation.reset();
-    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 0,
+    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 1,
             "drained result retains cancellation outside the I/O queue");
     reads.clear();
     Require(weak_cancellation.expired(), "last returned owner retires");
     const auto drained = Inspect(io);
-    Require(drained.supported && drained.completed_backing == 0 && drained.shared_bytes == 0,
-            "drained queues retain slots only");
+    Require(drained.supported && drained.completed_backing == 0 && drained.shared_blocks == 1 &&
+                io.GetOutstandingLoadCount() == 0,
+            "drained queues retain slots and the idle admission counter");
     Require(queued.warmup_keys == 1 && drained.warmup_keys == 1 &&
                 queued.warmup_requested == drained.warmup_requested,
             "the warmed folder key remains owned after all I/O tasks retire");
@@ -700,6 +748,7 @@ struct AsyncIoStorageProbe
             {"cancelled_pending_retired", true}, {"normal_shutdown_drained", true},
             {"worker_stages", worker_stages},
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
+            {"load_credits", CheckLoadCredits(folder, coord, storage, registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},

@@ -215,8 +215,9 @@ public:
   int TakeRelightFifoPriorityInsert();
   int TakeRelightFifoProtectBlock();
   void ClearPendingRelights(const char *reason = nullptr);
-  void RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
-                                     uint64_t demand_id = 0);
+  static constexpr size_t kMaxPendingTerrainColumnLoads = 32;
+  TerrainColumnRead RequestAsyncTerrainColumnLoad(UWorld &world, glm::ivec3 ground_coord,
+                                                 uint64_t demand_id = 0);
   bool RequestAsyncTerrainColumnSave(UWorld &world, glm::ivec3 ground_coord);
   bool TrySaveTerrainColumnForUnload(UWorld &world, glm::ivec3 ground_coord);
   // Unload cancels workers before serializing the still-resident column.
@@ -272,11 +273,21 @@ private:
                                    UWorld *world_context, const char *producer,
                                    int fifo_n, int horiz, glm::ivec2 key,
                                    bool priority);
+  struct TerrainReadOrder
+  {
+    int focus{0}, min_cy{0}, max_cy{-1}, below{-1}, above{0};
+    std::optional<int> sea;
+    bool focus_pending{false}, sea_pending{false};
+    std::optional<int> TakeNext();
+  };
   struct PendingAsyncColumnLoadState
   {
     uint64_t demand_id{0};
     int remaining_results{0};
     int highest_cy_on_disk{kNoChunkSliceOnDisk};
+    TerrainReadOrder read_order;
+    ChunkGenerationToken token;
+    bool include_light_receipts{false};
     std::shared_ptr<std::atomic<bool>> cancellation;
     TerrainSliceLoadOwnership installed_terrain;
     std::unordered_set<glm::ivec3, IVec3Hash> consumed_slices;
@@ -306,6 +317,12 @@ private:
   };
 
   static constexpr int kMaxAsyncColumnLoadRetries = 4;
+
+  void BeginTerrainColumnRead(UWorld &world, glm::ivec3 ground,
+                              PendingAsyncColumnLoadState &state, bool include_light);
+  void SubmitTerrainColumnReads(UWorld &world, glm::ivec3 ground,
+                                PendingAsyncColumnLoadState &state);
+  void PumpTerrainColumnReads(UWorld &world);
 
   std::size_t RetireCancelledAirLoad(UWorld &world, glm::ivec3 ground_coord,
                                      PendingAsyncColumnLoadState &state);

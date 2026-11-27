@@ -1942,13 +1942,15 @@ void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
          queued < budget)
   {
     const glm::ivec3 ground =
-        Spatial.SpatialColumnQueue[Spatial.SpatialColumnQueueIndex++];
+        Spatial.SpatialColumnQueue[Spatial.SpatialColumnQueueIndex];
     const bool async_spatial_load =
         world.Persistence && world.ProceduralTemplate.AsyncChunkIo;
     if (async_spatial_load)
     {
-      world.Persistence->RequestAsyncTerrainColumnLoad(world, ground);
-      if (world.Persistence->IsTerrainColumnDiskLoadPending(ground))
+      const auto disk = world.Persistence->RequestAsyncTerrainColumnLoad(world, ground);
+      if (disk == TerrainColumnRead::Deferred)
+        break;
+      if (disk == TerrainColumnRead::Pending)
       {
         Spatial.SpatialAsyncColumns.push_back(ground);
       }
@@ -2004,6 +2006,7 @@ void UWorldCooperativeSession::HandlePhaseSpatialChunks(UWorld &world,
         CubatariumLogInfo("WorldColumnSource", message);
       }
     }
+    ++Spatial.SpatialColumnQueueIndex;
     ++Spatial.SpatialColumnsVisited;
     ++queued;
   }

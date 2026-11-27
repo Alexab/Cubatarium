@@ -758,28 +758,27 @@ auto UWorldStreaming::MakeStoredInitChunkScheduler0(UWorld &world)
 
 auto UWorldStreaming::MakeStoredInitStreamerCallbacks0(UWorld &world)
 {
-  return [this, &world](glm::ivec3 coord, uint64_t demand_id)
+  return [this, &world](glm::ivec3 coord, uint64_t demand_id) -> TerrainColumnRead
       {
         UWorldPersistence &persistence = *world.Persistence;
         if (persistence.GetChunkStorage().IsColumnSavePending(coord))
         {
-          return false;
+          return TerrainColumnRead::Deferred;
         }
         if (persistence.IsTerrainColumnDiskLoadPending(coord))
         {
-          return false;
+          return TerrainColumnRead::Pending;
         }
         const ProceduralSettings &settings = world.GetProceduralSettings();
         if (settings.AsyncChunkIo)
         {
-          persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
-          return false;
+          return persistence.RequestAsyncTerrainColumnLoad(world, coord, demand_id);
         }
         const auto t0 = std::chrono::high_resolution_clock::now();
-        const bool loaded = persistence.LoadTerrainColumn(
+        const int loaded = persistence.LoadTerrainColumn(
                                 coord, world.BlockWorld, *world.BlockRegistry,
-                                settings.MaxHeight, settings.MinHeight) > 0;
-        if (loaded)
+                                settings.MaxHeight, settings.MinHeight);
+        if (loaded > 0)
         {
           if (!IsTerrainChunkComplete(world.BlockWorld, coord,
                                       settings.MaxHeight, kNoTerrainChunkSlice,
@@ -791,7 +790,7 @@ auto UWorldStreaming::MakeStoredInitStreamerCallbacks0(UWorld &world)
                 std::chrono::duration<double, std::milli>(
                     std::chrono::high_resolution_clock::now() - t0)
                     .count();
-            return false;
+            return TerrainColumnRead::Deferred;
           }
           persistence.TryEnqueueTerrainColumnRelight(
               world, coord.x * CHUNK_SIZE, coord.z * CHUNK_SIZE,
@@ -801,7 +800,8 @@ auto UWorldStreaming::MakeStoredInitStreamerCallbacks0(UWorld &world)
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - t0)
                 .count();
-        return loaded;
+        return loaded > 0 ? TerrainColumnRead::Loaded :
+               loaded < 0 ? TerrainColumnRead::Deferred : TerrainColumnRead::Absent;
       };
 }
 
@@ -1154,11 +1154,9 @@ auto UWorldStreaming::MakeStoredInitStreamerCallbacks5(UWorld &world)
         // it; fall through so RequestLoad can refresh that request's priority.
         if (procedural.AsyncChunkIo && !generation_pending)
         {
-          persistence.RequestAsyncTerrainColumnLoad(world, ground, demand_id);
-          if (persistence.IsTerrainColumnDiskLoadPending(ground))
-          {
-            return true;
-          }
+          const auto disk = persistence.RequestAsyncTerrainColumnLoad(world, ground, demand_id);
+          if (disk != TerrainColumnRead::Absent)
+            return disk == TerrainColumnRead::Pending;
         }
         if (world.BlockWorld.GetChunkManager().HasUnresolvedTerrainColumnRead(
                 ground))

@@ -584,10 +584,14 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
 
   if (existing == nullptr)
   {
-    const bool loaded = OnLoadChunk && OnLoadChunk(chunkCoord, demand_id);
+    const auto disk = OnLoadChunk ? OnLoadChunk(chunkCoord, demand_id) : TerrainColumnRead::Absent;
+    if (disk == TerrainColumnRead::Pending)
+      note_queued();
+    if (disk == TerrainColumnRead::Pending || disk == TerrainColumnRead::Deferred)
+      return false;
     if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(chunkCoord))
       return false;
-    if (loaded)
+    if (disk == TerrainColumnRead::Loaded)
     {
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {

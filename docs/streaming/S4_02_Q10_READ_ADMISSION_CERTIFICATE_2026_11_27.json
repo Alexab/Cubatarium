@@ -1,0 +1,101 @@
+{
+  "schema": "s4-q10-read-admission.v1",
+  "status": "SCOPED_Q10_READ_COUNT_PASS_Q10_OPEN",
+  "baseline_commit": "44d7b1f7efabaf608cfd8fd1b564ca802bc52402",
+  "scope": "Each I/O instance admits at most 256 slice reads from queued job through executing, completed, drained and requeued results. A world retains at most 32 column plans. A compact signed-Y plan resumes unsent slices in admission order without treating pressure as absent terrain. The native fixture fills both limits, coalesces a live demand, refuses a new saved column and installs it through the normal streamer after capacity returns. A separate out-of-profile save fixture verifies bounded submissions and cancellation without changing the file on disk. The existing terrain resolver still rejects an invalid column extent.",
+  "remaining": "Q10 remains open for write and light-flag admission, live save/retry metadata, and payload bytes and peaks. Whole-process and full native/performance/memory acceptance remain in the original S0–S6 plan. The legacy UI fixture still exercises a manual retry and calls the fatal menu handler directly. Automatic silent recovery for temporary save failures and end-to-end fatal handling with world transfer remain S4.06 requirements. The S4.01 extended fixture binding and ecology S6.05 remain open. 23 of 42 packages complete.",
+  "read_credits": {
+    "escaped_demand": 256,
+    "limit": 256,
+    "outstanding_after": 0,
+    "queued_while_full": 1,
+    "ready_while_full": 255,
+    "status": "PASS"
+  },
+  "profiles": {
+    "flat": {
+      "frames": 956,
+      "native_exit": 0,
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "aggregate_smoke": "UNTESTED",
+      "saved_terrain_fixture": {
+        "column_limit": 32,
+        "deferred_streamer_recovery": true,
+        "final_columns": 0,
+        "final_outstanding": 0,
+        "out_of_profile_bounded": true,
+        "slice_limit": 256,
+        "status": "PASS"
+      },
+      "legacy_save_ui_fixture": {
+        "status": "PASS",
+        "manual_retry_exercised": true,
+        "fatal_scope": "Direct application fatal-save handler; no disk-full injection or WindowManager autosave scheduler acceptance"
+      }
+    },
+    "full": {
+      "frames": 657,
+      "native_exit": 0,
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "aggregate_smoke": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "source_sha256": "2e088c660ceb565d734636bd76148bdda58781e395e4db824ff37fbf7d68fea1",
+  "exe_sha256": "1b1a5623f147ca2ff5dd3a36ca0692afecf55e8065d2d23b899ea2de69fbd9d3",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-read-admission-provenance.json": "604908ee93ffb3d05960a4bffe4e710eae3528cbe6471a1ed79a809da6440b29",
+    "build/desktop-msvc/s4-q10-read-admission-regression-provenance.json": "aceea1560fdf6050f97af959cd6ac7ae0859e78c0cf6a0d9cdaf24990b31b0b8",
+    "build/desktop-msvc/s4-q10-read-admission-regressions.json": "58cbe65c7ad38ce54fd9028a260bf76061f17a2a856013fd969dfee71020011c",
+    "build/desktop-msvc/s4-q10-read-admission-io-storage.json": "0624459dd850c0f53e3038ee3174219c05da21c9231de737355c90fc2d7358ee",
+    "build/desktop-msvc/s4-q10-read-admission-final-build.log": "b8873944c4090d83eac0608308ef7ee3cbcefe7e5c49347f7b4ab4ed788129a5",
+    "build/desktop-msvc/s4-q10-read-admission-regression-build.log": "530292d24faf229e684c0ddf476e82bc4994daca46e8f4ba6a93ae5978e2ce1e",
+    "build/desktop-msvc/s4-q10-read-admission-flat/terrain-save-probe/report.json": "f01c89d196a68f170a12150e4719a0ed02b438e2e00702a52ef4105092953457",
+    "build/desktop-msvc/s4-q10-read-admission-verified-flat/terrain-save-probe/report.json": "510df2c843523a672cd2c0326b450e4a82cc3484c8b3d8ca4de2ecdfcc3009e8",
+    "build/desktop-msvc/s4-q10-read-admission-async_io_storage_test.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-read-admission-application_operation_storage_test.log": "65912d8324536460b67809de24c1b5228ef114aa49c97741639747d3a9181c4f",
+    "build/desktop-msvc/s4-q10-read-admission-catalog_worker_retirement_test.log": "ce2a025418c5b0f9330609d090015d2ef95848a19b037bbc60900f5327eb8c64",
+    "build/desktop-msvc/s4-q10-read-admission-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-read-admission-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-read-admission-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-read-admission-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-read-admission-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-read-admission-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-read-admission-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/route.json": "1d7e75b916bd2d70bbd9d29ff2128bac88c742c7b3765978767732bc15385164",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/smoke-verdict.json": "940d5a9058cfa659c3705341db1062c85a065f2d85d46160caae44b5b36e640a",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/flight_sim_report.json": "d7086992c810cbe93fe99fa31c7558be64ec10453a595a3e70bd4297ccb09a00",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/legacy-gates.json": "4555b17be1981de8252db42af1170296e626f9764034953ce47e7707e401bca3",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/desktop-normal-shutdown.json": "6f6bea7a361faf86e26d0668d0a5bdf46a4eaca727e6151ac672ac86aa85a179",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat.log": "273e7520a714be80d79a8cc2ae9145b1d89083d3bec8698e00b866d61c4977d6",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/runner.log": "bc6067ae1f587ab55024c961dd0089e46327a1a2d015071b980e1a7c3473d911",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/terrain-save-probe/report.json": "19ccc1bd8250089465360d53c054f2eca4edad4ee2307f8ef37e729742319a69",
+    "build/desktop-msvc/s4-q10-read-admission-final-flat/terrain-save-probe/save-error-ui/report.json": "65452306584f549021ae5d0dcc569bf6dff02cb667c4dbc9510066928d481ce9",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/route.json": "14828db5851842d17a83fbc1260c32304556ef0f4eca33717def64962d147631",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/smoke-verdict.json": "7cccb04c130feb9b036f0e06e1267f3a8293d70d3c657acb77cfb9a2831b066d",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/flight_sim_report.json": "a38c08dc62d4a9d6c3cbc2e36010a7bcb6b6b013522e69d246d84fc301fbb9ad",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/legacy-gates.json": "8831d9a1248f01f6ba7f8c0c998ec4bf25e2233a30b1dad4c16aa5abbacb6785",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/desktop-normal-shutdown.json": "88ccaee2bd1ca1af34a15d59ba6cfc6d8693eabea0f4888dd54a13bd9d78ef0b",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-read-admission-final-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-read-admission-final-full.log": "0721afdeb02f51d5efecac30a0f03b4d53801c644a391d0fab2b392d312d60e0",
+    "build/desktop-msvc/s4-q10-read-admission-final-full/runner.log": "4d3c11c59af0fd91111c5203df534c500b68ba9caac4c68723def7f1df731d99"
+  }
+}

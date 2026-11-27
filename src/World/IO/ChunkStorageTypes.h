@@ -20,6 +20,14 @@ enum class ChunkWriteFormat
   Json,
 };
 
+enum class TerrainColumnRead
+{
+  Absent,
+  Loaded,
+  Pending,
+  Deferred,
+};
+
 struct ChunkStorageSettings
 {
   ChunkWriteFormat writeFormat{ChunkWriteFormat::Binary};

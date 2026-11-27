@@ -24,6 +24,7 @@
 namespace cutum
 {
 struct AsyncIoWorkerLocals;
+struct AsyncChunkLoadCredit;
 
 class UCore;
 class UBlockRegistry;
@@ -32,6 +33,8 @@ class UChunkStorageService;
 
 struct AsyncChunkLoadResult
 {
+  // Declared first so payload storage retires before its admission credit.
+  std::shared_ptr<AsyncChunkLoadCredit> readCredit;
   glm::ivec3 coord;
   uint64_t demandId{0};
   ChunkGenerationToken token;
@@ -163,7 +166,10 @@ public:
   {
   }
 
-  void RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
+  static constexpr size_t kMaxOutstandingLoads = 256;
+  size_t GetOutstandingLoadCount() const noexcept
+  { return OutstandingLoads->load(std::memory_order_relaxed); }
+  bool RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
                    UBlockRegistry &registry, const std::string &worldFolder,
                    ChunkGenerationToken token,
                    std::shared_ptr<std::atomic<bool>> cancellation,
@@ -382,6 +388,7 @@ private:
 
   // Queues and task-visible state must outlive all worker pools (reverse
   // declaration order controls destruction).
+  std::shared_ptr<std::atomic<size_t>> OutstandingLoads{std::make_shared<std::atomic<size_t>>(0)};
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   std::atomic<uint64_t> LoadResultPushWaitNs{0};
   std::atomic<uint64_t> LoadResultPushHeldNs{0};

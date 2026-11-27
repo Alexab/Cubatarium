@@ -4,6 +4,7 @@
 #include "Creatures/Player/PlayerCapsule.h"
 #include "World/Chunks/ChunkLoadPriority.h"
 #include "World/Chunks/ChunkManager.h"
+#include "World/IO/ChunkStorageTypes.h"
 #include "World/Math/BlockTypes.h"
 #include "World/Streaming/RequiredWorldDomain.h"
 #include <algorithm>
@@ -100,7 +101,7 @@ class UChunkStreamer
 public:
   UChunkStreamer(const UChunkStreamer &) = delete;
   UChunkStreamer &operator=(const UChunkStreamer &) = delete;
-  using LoadChunkFn = std::function<bool(glm::ivec3, uint64_t demand_id)>;
+  using LoadChunkFn = std::function<TerrainColumnRead(glm::ivec3, uint64_t demand_id)>;
   using SaveChunkFn = std::function<void(glm::ivec3)>;
   using MarkDirtyFn = std::function<void(glm::ivec3)>;
   using UnloadChunkFn = std::function<void(glm::ivec3)>;
