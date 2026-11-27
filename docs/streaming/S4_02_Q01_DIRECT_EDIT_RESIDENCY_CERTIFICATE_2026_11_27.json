@@ -1,0 +1,70 @@
+{
+  "schema": "s4-q01-direct-edit-residency.v1",
+  "status": "SCOPED_Q01_L2_DIRECT_EDIT_RESIDENCY_PASS_Q01_L2_OPEN",
+  "baseline_commit": "e05100d00c6a83924fb979aa0f28cd3f12b1ba17",
+  "scope": "With active streaming, direct solid placement and direct replacement use the existing terrain threshold. A resident edit can write another vertical slice. The prefab holds its definition and counts unique cold XZ destinations of resolved, writable voxels before mutation when the simple voxel-count test cannot establish capacity. Refusal publishes no partial placement and leaves dirty state intact. An exact retry uses the newly available slots. Fluid placement still requires a loaded receiver. The test also exercises the nonstreamed admission path and the current limit when streaming resumes with pre-existing columns above it.",
+  "remaining": "Join the pre-existing terrain handoff, deferred physics including cold material-reaction destinations, relight owners, record-only owners, the live disk index and registry. For modeled steady producers with fixed threshold T, previous resident count N0 and largest one-result generation write W, the induction bound is max(N0, T minus one plus max(1,W)). Prove the handoff and remaining producers before using it as a whole-world bound. Full S0-S6 acceptance remains open at 23 of 42 packages.",
+  "source_sha256": "d2a7ad1558ab3973a0e8100321b6d9182acf8ace49be32d1262e058349aab963",
+  "desktop_exe_sha256": "5a4eb89c6994cfadeb54c7136fa939b500fdebac018a4ea48fc99904f37753a5",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_ctest": [
+    "ready_data_admission_test",
+    "chunk_buffer_capture_test",
+    "chunk_streamer_committed_column_test",
+    "decor_mesh_integration_test",
+    "resident_generation_progress_test",
+    "normal_shutdown_test"
+  ],
+  "native_profiles": {
+    "flat": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    },
+    "full": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    }
+  },
+  "native_fixture": {
+    "new_prefab_columns": 2,
+    "new_replacement_columns": 1,
+    "new_solid_columns": 1,
+    "over_limit_cold_refused": true,
+    "prefab_required_voxels": 4,
+    "prefab_writes_on_refusal": 0,
+    "resident_paths_at_capacity": true,
+    "status": "PASS",
+    "terrain_limit": 50,
+    "unstreamed_columns": 51
+  },
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q01-direct-edit-provenance.json": "7f0777a0ff01393b36dcf0452be93e0a4548cb0dc1042a442c200258700dbddf",
+    "build/desktop-msvc/s4-q01-direct-edit-ctest.log": "3de40b6d71fe33116c240ad8d196363005e59dada275247e0072ead5a4b15bf9",
+    "build/desktop-msvc/s4-q01-direct-edit-build.log": "a6c700a28be573e85a19d6a93450be6e732f6eb2e197db184758168af4065e70",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/route.json": "b79ccefab389fd517f9056e6a7ba3511e11bb1d77dc3a5867d798e5efa0d92db",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/smoke-verdict.json": "3638b270e92750b26445347403d759fb2600225d3eee641053c8a15e8de3a6a3",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/flight_sim_report.json": "25572614077715a5f1813998d4f05631a5614896f033dab4d4f1f75be2af419e",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/desktop-normal-shutdown.json": "a8797b0eb46ee57cf5721cc7223fd3bdce2771145532bd5125c4834da188facc",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/generation-shutdown.json": "4f07ea290b16e0cf3d2928ad9e5d5db1245535331db8439a56f1df544ebd2f60",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/legacy-gates.json": "a0fb0f30943c5aeaa9ec065f8e1e296889b3beb713317a069c8f7983a84ee145",
+    "build/desktop-msvc/s4-q01-direct-edit-flat.log": "8e869b7d3d91f3819228a0fe28ba68a9cea92b2d9ad21e1b88069f0eec3ed0f0",
+    "build/desktop-msvc/s4-q01-direct-edit-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-direct-edit-flat/terrain-save-probe/report.json": "60e6e9e2c61d7dcd29af2e549f19921562ff2d491fd59a2611ebeff4f88479ab",
+    "build/desktop-msvc/s4-q01-direct-edit-full/route.json": "4ac7dbe13dac30925c8ee8f9dc14b95675babaa4b732a832401daa1a4d679440",
+    "build/desktop-msvc/s4-q01-direct-edit-full/smoke-verdict.json": "8a2f9c5b61f651503fe7d8faaa71f28d770135873460c0824c0873a1f0d409fa",
+    "build/desktop-msvc/s4-q01-direct-edit-full/flight_sim_report.json": "dd002b7e46fd2cc2f7a8ec1863f653d77ca6b9284f81c0c33946547e69137e2b",
+    "build/desktop-msvc/s4-q01-direct-edit-full/desktop-normal-shutdown.json": "4b2ee7cf38c0c3fcf6ed75d0d3a38d46338a68399f6d01e9890bbcd09fe6d061",
+    "build/desktop-msvc/s4-q01-direct-edit-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-direct-edit-full/legacy-gates.json": "06cd7319e6c15d919ad7280b2f634ea7cc1d222a666ad27f2d4362fff4bc9625",
+    "build/desktop-msvc/s4-q01-direct-edit-full.log": "ff9d8546763369f92a94363b73c58b4beae09f4b23cb5ca11b222d9a0f87f13c",
+    "build/desktop-msvc/s4-q01-direct-edit-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

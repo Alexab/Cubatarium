@@ -1772,6 +1772,8 @@ private:
   void ExecuteLitApplyPlan(const LitApplyPlan &plan, const glm::ivec2 &column,
                            const glm::ivec3 &ground, bool finalize_gate);
   void EnsurePlayerOnGround();
+  std::optional<size_t> GetFreeTerrainColumnsForEdit() const;
+  bool CanEditTerrainAt(glm::ivec3 block_pos) const;
   void MarkBlockChunkDirty(glm::ivec3 blockPos,
                            bool sync_neighbor_chunks = false,
                            bool sync_light_ring = false);

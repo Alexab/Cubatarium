@@ -15513,6 +15513,23 @@ void UWorld::ApplyBreakSiteFluidFlood(
                                               mesh_touch_blocks);
 }
 
+std::optional<size_t> UWorld::GetFreeTerrainColumnsForEdit() const
+{
+  const auto *streamer = Streaming->GetStreamer();
+  if (!Streaming->IsStreamingEnabled() || !streamer || !streamer->IsEnabled())
+    return std::nullopt;
+  const size_t limit = streamer->GetTerrainColumnAdmissionLimit();
+  const size_t resident = BlockWorld.GetChunkManager().GetResidentTerrainColumnCount();
+  return limit - std::min(limit, resident);
+}
+
+bool UWorld::CanEditTerrainAt(glm::ivec3 block_pos) const
+{
+  const auto free = GetFreeTerrainColumnsForEdit();
+  return !free || *free > 0 || BlockWorld.GetChunkManager().HasResidentTerrainColumn(
+                                    UChunkManager::WorldToChunk(block_pos));
+}
+
 bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
 {
   if (!BlockRegistry)
@@ -15539,6 +15556,8 @@ bool UWorld::AddObject(const std::string type_id, const glm::vec3 &position)
       return false;
     }
   }
+  if (!CanEditTerrainAt(blockPos))
+    return false;
   BlockWorld.SetBlock(blockPos, Id);
   if (BlockWorld.GetBlock(blockPos) != Id)
   {
@@ -15619,10 +15638,34 @@ bool UWorld::PlaceObject(const std::string &prefab_name,
   {
     return false;
   }
-  const WorldObjectDefinition *prefab = ObjectLibrary->Get(prefab_name);
+  const auto prefab = ObjectLibrary->GetShared(prefab_name);
   if (!prefab)
   {
     return false;
+  }
+
+  if (const auto free = GetFreeTerrainColumnsForEdit(); free && prefab->voxels.size() > *free)
+  {
+    // Use the same resolved voxels and occupied-cell policy as placement.
+    // Check the whole operation before creating any new terrain columns.
+    const auto &chunks = BlockWorld.GetChunkManager();
+    std::unordered_set<glm::ivec3, IVec3Hash> new_columns;
+    bool fits = true;
+    PlaceObjectAt(BlockWorld, *BlockRegistry, *prefab, anchorWorldPos, true, {},
+                  [&](glm::ivec3 pos, BlockId) {
+      if (!fits)
+        return;
+      auto column = UChunkManager::WorldToChunk(pos);
+      column.y = 0;
+      if (chunks.HasResidentTerrainColumn(column))
+        return;
+      if (new_columns.size() < *free)
+        new_columns.insert(column);
+      else if (new_columns.count(column) == 0)
+        fits = false;
+    });
+    if (!fits)
+      return false;
   }
 
   const ObjectPlacementStats stats =
@@ -15918,6 +15961,8 @@ bool UWorld::ReplaceBlockAt(glm::ivec3 pos, const std::string &type)
   const auto old = BlockWorld.GetBlock(pos);
   if (old == id)
     return true;
+  if (!CanEditTerrainAt(pos))
+    return false;
   BlockWorld.SetBlock(pos, id);
   if (BlockWorld.GetBlock(pos) != id)
     return false;

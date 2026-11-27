@@ -22,6 +22,7 @@
 #include "World/Lighting/RelightResultInstall.h"
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
+#include "World/Objects/ObjectLibrary.h"
 #include "World/Streaming/WorldStreaming.h"
 #include "World/Streaming/StreamerAmortizePolicy.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
@@ -832,6 +833,101 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       report["cooperative_terrain_bounds"] = {{"status", "PASS"}, {"scan_batches", scan_batches},
           {"scan_cancelled_cursor_released", true}, {"candidate_paths_released", true},
           {"scope", "Physical terrain writes with the isolated direct mesh observer detached"}, {"cases", cases}};
+    });
+    RunTerrainProbePhase([&] {
+      UObjectLibrary objects;
+      auto owner = std::make_unique<UWorld>(nullptr, nullptr);
+      auto &world = *owner;
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition bedrock, stone, grass, water;
+      bedrock.Name = "bedrock";
+      stone.Name = "stone";
+      grass.Name = "grass";
+      water.Name = "water";
+      bedrock.Physics = stone.Physics = grass.Physics = BlockPhysicsProfile::Solid();
+      water.Physics = BlockPhysicsProfile::FromPreset("water");
+      definitions->ReplaceAll({{7, bedrock}, {8, stone}, {9, grass}, {10, water}},
+                              {{"bedrock", 7}, {"stone", 8}, {"grass", 9}, {"water", 10}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      world.BlockWorld.SetFluidDefinitions(definitions.get());
+      const auto object_dir = root / "direct-edit-objects";
+      fs::create_directories(object_dir);
+      std::ofstream(object_dir / "cross_edit.json") << R"({"anchor":[5,0,-3],"blocks":[{"dx":5,"dy":0,"dz":-3,"type":"stone"},{"dx":21,"dy":0,"dz":-3,"type":"stone"},{"dx":21,"dy":1,"dz":-3,"type":"grass"},{"dx":5,"dy":0,"dz":-19,"type":"stone"}]})";
+      std::ofstream(object_dir / "local_edit.json") << R"({"blocks":[{"dx":0,"dy":0,"dz":0,"type":"stone"},{"dx":0,"dy":1,"dz":0,"type":"grass"}]})";
+      objects.Load(object_dir.string(), *world.BlockRegistry);
+      world.ObjectLibrary = &objects;
+      ProceduralSettings settings;
+      settings.Generator = ProceduralGenerator::Flat;
+      settings.MinHeight = 0;
+      settings.MaxHeight = 31;
+      settings.FillWater = false;
+      settings.EnableCaves = false;
+      settings.AsyncChunkIo = false;
+      settings.AsyncChunkGeneration = false;
+      world.PhysicsFlags.EnableFluids = false;
+      world.SetProceduralSettings(settings);
+      world.SetLightingRelightDeferred(true);
+      world.Streaming->InitStreamerCallbacks(world);
+      auto &streamer = *world.Streaming->GetStreamer();
+      streamer.SetKeepPrefetchMargin(0);
+      streamer.SetRenderDistance(1);
+      streamer.SetRequiredDataDomain({0, 0, 0}, 0);
+      const auto limit = streamer.GetTerrainColumnAdmissionLimit();
+      const glm::ivec3 anchor(-48, 4, -32);
+      const glm::ivec3 edit_above = anchor + glm::ivec3(1, 16, 1);
+      const glm::ivec3 cold_add(-120, 4, -80), cold_replace(-136, 4, -96);
+      const glm::ivec3 cold_fluid(-152, 4, -112);
+      const glm::ivec3 east = anchor + glm::ivec3(CHUNK_SIZE, 0, 0);
+      const glm::ivec3 north = anchor + glm::ivec3(0, 0, -CHUNK_SIZE);
+      const glm::ivec3 above_east = east + glm::ivec3(0, 1, 0);
+      world.BlockWorld.SetBlock({anchor.x, 0, anchor.z}, 8);
+      for (size_t i = 0; i < limit - 1; ++i)
+        world.BlockWorld.SetBlock({(100 + static_cast<int>(i)) * CHUNK_SIZE, 0, 0}, 8);
+      auto &chunks = world.BlockWorld.GetChunkManager();
+      const auto dirty_before_refusal = world.ModifiedChunks.size();
+      require(!world.AddObject("stone", glm::vec3(cold_add)) && !world.ReplaceBlockAt(cold_replace, "grass") &&
+                  !world.PlaceObject("cross_edit", anchor) && chunks.GetResidentTerrainColumnCount() == limit &&
+                  world.ModifiedChunks.size() == dirty_before_refusal && world.BlockWorld.IsAir(anchor),
+              "a full streaming domain refuses cold edits before world or dirty-state mutation");
+      const auto resident_fluid = anchor + glm::ivec3(2, 0, 2);
+      require(world.AddObject("stone", glm::vec3(edit_above)) && world.ReplaceBlockAt(edit_above, "grass") &&
+                  world.PlaceObject("local_edit", anchor + glm::ivec3(3, 0, 3)) &&
+                  world.AddObject("water", glm::vec3(resident_fluid)) &&
+                  world.BlockWorld.GetBlock(edit_above) == 9 && world.BlockWorld.GetBlock(resident_fluid) == 10 &&
+                  chunks.GetResidentTerrainColumnCount() == limit,
+              "resident solid, liquid and prefab edits advance at capacity, including a new vertical slice");
+
+      chunks.RemoveChunk({100, 0, 0});
+      require(!world.AddObject("water", glm::vec3(cold_fluid)) &&
+                  world.AddObject("stone", glm::vec3(cold_add)) &&
+                  chunks.GetResidentTerrainColumnCount() == limit,
+              "liquid still requires a loaded slice and an ordinary new solid uses one available column");
+      chunks.RemoveChunk({101, 0, 0});
+      require(world.ReplaceBlockAt(cold_replace, "grass") && chunks.GetResidentTerrainColumnCount() == limit,
+              "replacement succeeds when exactly one new column fits");
+      chunks.RemoveChunk({102, 0, 0});
+      const auto after_one = world.ModifiedChunks.size();
+      require(!world.PlaceObject("cross_edit", anchor) && chunks.GetResidentTerrainColumnCount() == limit - 1 &&
+                  world.ModifiedChunks.size() == after_one && world.BlockWorld.IsAir(anchor) &&
+                  world.BlockWorld.IsAir(east) && world.BlockWorld.IsAir(north),
+              "a two-column prefab is refused as a whole when only one column fits");
+      chunks.RemoveChunk({103, 0, 0});
+      require(world.PlaceObject("cross_edit", anchor) && chunks.GetResidentTerrainColumnCount() == limit &&
+                  world.BlockWorld.GetBlock(anchor) == 8 && world.BlockWorld.GetBlock(east) == 8 &&
+                  world.BlockWorld.GetBlock(north) == 8 && world.BlockWorld.GetBlock(above_east) == 9,
+              "exact retry commits every voxel and charges each new signed XZ column once");
+      world.SetStreamingEnabled(false);
+      require(world.ReplaceBlockAt({1440, 4, 32}, "stone") && chunks.GetResidentTerrainColumnCount() == limit + 1,
+              "the same cold write can create a column in an unstreamed world");
+      world.SetStreamingEnabled(true);
+      require(!world.ReplaceBlockAt({1456, 4, 32}, "stone") && world.DelBlockAt(anchor) &&
+                  chunks.GetResidentTerrainColumnCount() == limit + 1,
+              "returning to streaming preserves existing data and blocks new edit columns above capacity");
+      world.ObjectLibrary = nullptr;
+      report["direct_edit_residency"] = {{"status", "PASS"}, {"terrain_limit", limit},
+          {"resident_paths_at_capacity", true}, {"new_solid_columns", 1}, {"new_replacement_columns", 1},
+          {"new_prefab_columns", 2}, {"prefab_required_voxels", 4}, {"prefab_writes_on_refusal", 0},
+          {"unstreamed_columns", limit + 1}, {"over_limit_cold_refused", true}};
     });
     RunTerrainProbePhase([&] {
       auto owner = std::make_unique<UWorld>(nullptr, nullptr);
