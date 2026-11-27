@@ -16,6 +16,7 @@
 #include <deque>
 #include <glm/glm.hpp>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -137,7 +138,8 @@ public:
 
   AsyncChunkIoTickMetrics TickAsyncChunkIo(UWorld &world,
                                            std::size_t max_slice_applies = 0,
-                                           double max_apply_ms = 0.0);
+                                           double max_apply_ms = 0.0,
+                                           std::optional<std::size_t> terrain_limit = std::nullopt);
   void FlushAsyncChunkIo(UWorld &world);
   bool TickDrainAsyncChunkIo(UWorld &world, int max_iterations);
   bool IsAsyncChunkIoQuiescent() const;

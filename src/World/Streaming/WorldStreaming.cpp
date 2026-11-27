@@ -4764,17 +4764,21 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const auto io_t0 = std::chrono::high_resolution_clock::now();
     AsyncChunkIoTickMetrics io_metrics;
+    std::optional<std::size_t> terrain_limit;
+    if (Streamer && !world.IsEnterSessionActive() && !world.IsEnterLitGateActive())
+      terrain_limit = Streamer->GetTerrainColumnAdmissionLimit();
     if (near_stream_budget_exhausted)
     {
       // Keep completed disk results moving while near generation/mesh work is
       // over budget. One result slice is a bounded fallback; the time target
       // is checked between slices, so a single costly apply can exceed it.
       io_metrics = world.Persistence->TickAsyncChunkIo(
-          world, /*max_slice_applies_override=*/1, /*max_apply_ms=*/2.5);
+          world, /*max_slice_applies_override=*/1, /*max_apply_ms=*/2.5,
+          terrain_limit);
     }
     else
     {
-      io_metrics = world.Persistence->TickAsyncChunkIo(world);
+      io_metrics = world.Persistence->TickAsyncChunkIo(world, 0, 0.0, terrain_limit);
     }
     world.PhysicsTelemetryData.AsyncChunkIoDrainMs +=
         std::chrono::duration<double, std::milli>(

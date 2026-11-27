@@ -4706,7 +4706,8 @@ void UWorldPersistence::FinalizeAsyncTerrainColumnLoad(
 }
 
 AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
-    UWorld &world, std::size_t max_slice_applies_override, double max_apply_ms)
+    UWorld &world, std::size_t max_slice_applies_override, double max_apply_ms,
+    std::optional<std::size_t> terrain_limit)
 {
   const auto tick_started = std::chrono::steady_clock::now();
   AsyncChunkIoTickMetrics metrics;
@@ -4825,7 +4826,30 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     // limit. The time budget can still stop application early and requeue the
     // remainder, while budget-eligible ticks can drain beyond a fixed batch of
     // four without rescanning the whole queue after every applied slice.
-    const std::size_t max_ranked_loads = max_slice_applies;
+    const auto &chunks = world.BlockWorld.GetChunkManager();
+    const auto can_apply = [&](const AsyncChunkLoadResult &load)
+    {
+      if (!terrain_limit || chunks.GetResidentTerrainColumnCount() < *terrain_limit)
+        return true;
+      const glm::ivec3 ground(load.coord.x, 0, load.coord.z);
+      if (chunks.HasResidentTerrainColumn(ground))
+        return true;
+      const auto pending = PendingAsyncColumnLoadSlices.find(ground);
+      // Obsolete results can still release their credit at saturation.
+      return pending == PendingAsyncColumnLoadSlices.end() ||
+             load.demandId != pending->second.demand_id ||
+             load.cancellation != pending->second.cancellation ||
+             !load.token.IsValidFor(ground, world.Streaming
+                 ? world.Streaming->GetChunkGenTokens().Current(ground).sequence
+                 : load.token.sequence);
+    };
+    const std::size_t residents = chunks.GetResidentTerrainColumnCount();
+    // Each disk result can install at most one new horizontal terrain column.
+    // Limit a batch that can cross the threshold. Once full, filter on the
+    // actual resident key so other slices of an admitted column still progress.
+    const std::size_t max_ranked_loads = terrain_limit && residents < *terrain_limit
+        ? std::min(max_slice_applies, *terrain_limit - residents)
+        : max_slice_applies;
     const auto field_input_required = [&](const AsyncChunkLoadResult &load)
     {
       const glm::ivec3 column(load.coord.x, 0, load.coord.z);
@@ -4848,7 +4872,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
       completed_loads = AsyncChunkIo->DrainConsumerLoadsUpTo(
           max_ranked_loads, result_rank, field_input_required, prefer_field_input,
           &metrics.ready_loads_before_n, &metrics.result_selection_mutex_wait_ms,
-          &metrics.result_selection_mutex_held_ms);
+          &metrics.result_selection_mutex_held_ms, can_apply);
     }
     catch (const std::bad_alloc &)
     {

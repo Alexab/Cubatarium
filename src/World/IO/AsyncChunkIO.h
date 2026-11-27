@@ -259,15 +259,15 @@ public:
                                              mutex_held_ms);
   }
   std::vector<AsyncChunkSaveRequest> DrainSaves();
-  template <typename Rank, typename Required>
+  template <typename Rank, typename Required, typename Eligible>
   std::vector<AsyncChunkLoadResult>
   DrainConsumerLoadsUpTo(std::size_t max_count, Rank rank, Required required,
-                         bool prefer_consumer, std::size_t *available = nullptr,
-                         double *wait_ms = nullptr, double *held_ms = nullptr)
+                         bool prefer_consumer, std::size_t *available,
+                         double *wait_ms, double *held_ms, Eligible eligible)
   {
     return DrainReadyDataForConsumers(CompletedLoads, max_count, rank, required,
                                       prefer_consumer, available, wait_ms,
-                                      held_ms);
+                                      held_ms, eligible);
   }
   std::vector<AsyncColumnLightFlagsSaveResult> DrainColumnLightFlagsSaves(
       double *mutex_wait_ms = nullptr, double *mutex_held_ms = nullptr);

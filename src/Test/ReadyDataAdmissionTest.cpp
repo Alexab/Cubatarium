@@ -73,6 +73,26 @@ int main()
   Expect(preferred.size() == 3 && preferred[0].demandId == 1 && preferred[1].demandId == 0 &&
              preferred[2].demandId == 2 && tied.Size() == 1,
          "a preferred member already in the selected prefix keeps ordinary FIFO ties");
+  UCompletedJobQueue<AsyncChunkLoadResult> gated;
+  gated.Push(Result(20, 0));
+  gated.Push(Result(21, 3));
+  gated.Push(Result(22, 8));
+  const auto allow_existing = [](const AsyncChunkLoadResult &r)
+  { return r.demandId == 22; };
+  const auto eligible = DrainReadyDataForConsumers(
+      gated, 4, rank, required, true, nullptr, nullptr, nullptr, allow_existing);
+  Expect(eligible.size() == 1 && eligible.front().demandId == 22 && gated.Size() == 2,
+         "eligibility applies before either ordinary or preferred selection");
+  {
+    observation::Scope allocation(0);
+    const auto blocked = DrainReadyDataForConsumers(
+        gated, 4, rank, required, true, nullptr, nullptr, nullptr, allow_existing);
+    Expect(blocked.empty() && observation::Snapshot().attempts == 0,
+           "a wholly blocked drain leaves the completion backing untouched");
+  }
+  const auto resumed = DrainReadyDataForConsumers(gated, 4, rank, required, false);
+  Expect(resumed.size() == 2 && resumed[0].demandId == 20 && resumed[1].demandId == 21,
+         "ordinary drain recovers both deferred results when they become eligible");
   UCompletedJobQueue<AsyncChunkLoadResult> ready;
   for (int i = 0; i < 96; ++i)
     ready.Push(Result(i, 0));

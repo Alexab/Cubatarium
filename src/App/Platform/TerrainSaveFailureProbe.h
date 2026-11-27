@@ -545,6 +545,106 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"physical_veto", true}, {"later_column_saved", true}, {"cold_resumption", true},
           {"old_record_retired", true}, {"recovered_edit_on_disk", true}};
     });
+    RunTerrainProbePhase([&] {
+      auto owner = std::make_unique<UWorld>(nullptr, nullptr);
+      auto &world = *owner;
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone;
+      stone.Name = "stone";
+      stone.Physics = BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      ProceduralSettings settings;
+      settings.MinHeight = -48;
+      settings.MaxHeight = -17;
+      settings.SeaLevel = -32;
+      settings.AsyncChunkIo = true;
+      settings.AsyncRelight = false;
+      world.SetProceduralSettings(settings, false);
+      world.SetSpawnPoint({8, -45, 8});
+      world.Streaming->InitStreamerCallbacks(world);
+      auto &streamer = *world.Streaming->GetStreamer();
+      streamer.SetKeepPrefetchMargin(0);
+      streamer.SetRenderDistance(1);
+      streamer.SetRequiredDataDomain({0, 0, 0}, 0);
+      const auto limit = streamer.GetTerrainColumnAdmissionLimit();
+      require(limit == 50, "async result fixture uses the configured terrain limit");
+
+      const auto folder = root / "ready-disk-admission";
+      fs::create_directories(folder / "chunks");
+      world.SetWorldFolderPath(folder.string());
+      auto &persistence = *world.Persistence;
+      auto &storage = persistence.GetChunkStorage();
+      auto &io = *persistence.AsyncChunkIo;
+      auto &chunks = world.BlockWorld.GetChunkManager();
+      const glm::ivec3 admitted(0, 0, 0), deferred(1, 0, 0), resident(3, 0, 0), control(4, 0, 0);
+      const auto cell = [](glm::ivec3 ground, int cy) {
+        return glm::ivec3(ground.x, cy, ground.z) * CHUNK_SIZE + glm::ivec3(1, 1, 1);
+      };
+      const auto enqueue = [&](glm::ivec3 ground, uint64_t demand, bool install_base = false) {
+        for (int cy = -3; cy <= -2; ++cy)
+        {
+          const glm::ivec3 slice(ground.x, cy, ground.z);
+          UChunk chunk(slice);
+          chunk.SetBlockLocal({1, 1, 1}, 8);
+          require(storage.SaveChunk(slice, chunk, folder.string(), *world.BlockRegistry),
+                  "ready disk admission writes a real signed slice");
+        }
+        if (install_base)
+        {
+          const glm::ivec3 base(ground.x, -3, ground.z);
+          require(storage.LoadChunk(base, world.BlockWorld, folder.string(), *world.BlockRegistry) == 1 &&
+                      chunks.HasDecodedTerrainSlice(base),
+                  "resident peer already owns its decoded lower slice");
+        }
+        require(persistence.RequestAsyncTerrainColumnLoad(world, ground, demand) == TerrainColumnRead::Pending,
+                "ready disk admission accepts the real saved column");
+      };
+      for (int i = 0; i < static_cast<int>(limit) - 2; ++i)
+        world.BlockWorld.SetBlock(cell({-60 - i, 0, 0}, -3), 8);
+      enqueue(admitted, 125001);
+      enqueue(deferred, 125002);
+      enqueue(resident, 125003, true);
+      const auto pending_owner = persistence.PendingAsyncColumnLoadSlices.at(deferred).cancellation;
+      require(io.WaitIdleFor(std::chrono::seconds(5)) && io.GetLoadResultQueueDepth() == 6,
+              "both signed slices of all three disk requests are ready");
+      const auto first = persistence.TickAsyncChunkIo(world, 10, 200.0, limit);
+      require(first.applied_slices_n == 1 && chunks.HasResidentTerrainColumn(admitted) &&
+                  chunks.GetResidentTerrainColumnCount() == limit && !chunks.HasResidentTerrainColumn(deferred),
+              "last available slot is used once even with several ready columns");
+      persistence.TickAsyncChunkIo(world, 10, 200.0, limit);
+      require(world.BlockWorld.GetBlock(cell(admitted, -3)) == 8 &&
+                  world.BlockWorld.GetBlock(cell(admitted, -2)) == 8 &&
+                  world.BlockWorld.GetBlock(cell(resident, -2)) == 8 &&
+                  !persistence.IsTerrainColumnDiskLoadPending(resident) &&
+                  !persistence.IsTerrainColumnDiskLoadPending(admitted),
+              "admitted and already resident columns finish while another read is held");
+      const auto held = persistence.TickAsyncChunkIo(world, 10, 200.0, limit);
+      require(held.selected_loads_n == 0 && io.GetLoadResultQueueDepth() == 2 &&
+                  io.GetOutstandingLoadCount() == 2 &&
+                  persistence.PendingAsyncColumnLoadSlices.at(deferred).cancellation == pending_owner &&
+                  !chunks.HasResidentTerrainColumn(deferred),
+              "ready but blocked disk slices keep their exact owner and credits");
+      chunks.RemoveChunk({-60, -3, 0});
+      persistence.TickAsyncChunkIo(world, 10, 200.0, limit);
+      persistence.TickAsyncChunkIo(world, 10, 200.0, limit);
+      require(chunks.GetResidentTerrainColumnCount() == limit && io.GetOutstandingLoadCount() == 0 &&
+                  !persistence.IsTerrainColumnDiskLoadPending(deferred) &&
+                  world.BlockWorld.GetBlock(cell(deferred, -3)) == 8 &&
+                  world.BlockWorld.GetBlock(cell(deferred, -2)) == 8,
+              "the held demand completes both signed slices after one slot retires");
+
+      enqueue(control, 125004);
+      require(io.WaitIdleFor(std::chrono::seconds(5)) && io.GetLoadResultQueueDepth() == 2,
+              "unrestricted drain control holds a real completed column");
+      persistence.TickAsyncChunkIo(world, 10, 200.0);
+      require(chunks.GetResidentTerrainColumnCount() == limit + 1 &&
+                  world.BlockWorld.GetBlock(cell(control, -2)) == 8,
+              "unrestricted drain demonstrates the old ready-result overshoot");
+      report["ready_disk_residency_admission"] = {{"status", "PASS"}, {"resident_limit", limit},
+          {"held_load_credits", 2}, {"resident_slices_completed", true},
+          {"same_demand_resumed", true}, {"unrestricted_count", limit + 1}};
+    });
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();
     const auto feature_candidate=BoundCatalogCandidateSource(CatalogCandidateKind::Features,{});

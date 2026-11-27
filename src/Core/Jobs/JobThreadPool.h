@@ -418,12 +418,14 @@ public:
 
   /// Compute one rank key per item. An optional consumer gets the first
   /// opportunity; the rest of the batch keeps the ordinary ranking.
-  template <typename KeyFn, typename Required = std::nullptr_t>
+  template <typename KeyFn, typename Required = std::nullptr_t,
+            typename Eligible = std::nullptr_t>
   std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn,
                                     std::size_t *availableCount = nullptr,
                                     double *mutex_wait_ms = nullptr,
                                     double *mutex_held_ms = nullptr,
-                                    Required required = nullptr)
+                                    Required required = nullptr,
+                                    Eligible eligible = nullptr)
   {
     using Key = std::decay_t<decltype(key_fn(std::declval<const T &>()))>;
     struct RankedOffset
@@ -457,7 +459,7 @@ public:
       return drained;
     }
 
-    const std::size_t take = std::min(maxCount, Count);
+    const std::size_t limit = std::min(maxCount, Count);
     const auto item_at = [this](std::size_t offset) -> T &
     { return Items[(Head + offset) % Items.size()]; };
     std::vector<RankedOffset> ranked;
@@ -476,17 +478,23 @@ public:
       // Preserve queue order when the caller's rank keys tie.
       return a.offset < b.offset;
     };
-    ranked.reserve(take);
     for (std::size_t offset = 0; offset < Count; ++offset)
     {
       const T &item = item_at(offset);
+      if constexpr (!std::is_same_v<Eligible, std::nullptr_t>)
+      {
+        if (!eligible(item))
+          continue;
+      }
+      if (ranked.empty())
+        ranked.reserve(limit);
       RankedOffset candidate{key_fn(item), offset};
       if constexpr (!std::is_same_v<Required, std::nullptr_t>)
       {
         if (required(item) && (!preferred || ranked_before(candidate, *preferred)))
           preferred.emplace(candidate);
       }
-      if (ranked.size() < take)
+      if (ranked.size() < limit)
       {
         ranked.push_back(std::move(candidate));
         std::push_heap(ranked.begin(), ranked.end(), ranked_before);
@@ -517,6 +525,7 @@ public:
     }
 
     // All backing must be available before moving any queue entry.
+    const std::size_t take = ranked.size();
     drained.reserve(take);
 
     // Move selected items into a best-first prefix using at most `take`
