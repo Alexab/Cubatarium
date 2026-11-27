@@ -179,9 +179,27 @@ inline nlohmann::json DescribeWindowsPlatformResources(const WindowsPlatformReso
   using Json = nlohmann::json;
   const auto number = [](const auto &value) { return value ? Json(*value) : Json(nullptr); };
   const auto &handles = row.handles;
+  const auto &files = handles.files;
+  const auto &crt = files.crt;
   auto types = Json::object();
   for (const auto &type : handles.types)
     types[type.type] = {{"entries", type.entries}, {"objects", number(type.objects)}};
+  auto kinds = Json::object();
+  if (files.stable)
+    for (std::size_t i = 0; i < files.kinds.size(); ++i)
+    {
+      const auto &kind = files.kinds[i];
+      kinds[WindowsFileKindNames[i]] = {{"entries", kind.entries}, {"objects", kind.objects},
+          {"linked_ucrt_entries", crt.stable ? Json(kind.linkedCrtEntries) : Json(nullptr)},
+          {"linked_ucrt_objects", crt.stable ? Json(kind.linkedCrtObjects) : Json(nullptr)}};
+    }
+  auto standardStreams = Json::object();
+  constexpr std::array standardNames{"stdin", "stdout", "stderr"};
+  for (std::size_t i = 0; i < standardNames.size(); ++i)
+  {
+    const auto kind = files.standardStreams[i];
+    standardStreams[standardNames[i]] = kind ? Json(WindowsFileKindNames[static_cast<std::size_t>(*kind)]) : Json(nullptr);
+  }
   return {{"schema", "windows-platform-resources.v1"},
       {"executive_handles", {
           {"status", handles.Complete() ? "PASS" : handles.supported ? "PARTIAL" : "UNSUPPORTED"},
@@ -191,6 +209,23 @@ inline nlohmann::json DescribeWindowsPlatformResources(const WindowsPlatformReso
           {"untyped_entries", handles.stable ? Json(handles.untyped) : Json(nullptr)}, {"types", std::move(types)},
           {"object_comparisons", handles.comparisons}, {"entry_limit_reached", handles.entryLimitReached},
           {"comparison_limit_reached", handles.comparisonLimitReached}}},
+      {"file_resources", {
+          {"status", files.stable && !handles.untyped ? "PASS" : handles.supported ? "PARTIAL" : "UNSUPPORTED"},
+          {"kinds", std::move(kinds)}, {"standard_streams", std::move(standardStreams)},
+          {"ucrt", {{"status", crt.stable ? "PASS" : crt.supported ? "PARTIAL" : "UNSUPPORTED"},
+                    {"stdio_slots", crt.stdioSlots}, {"allocated_dynamic_slots", crt.dynamicSlots},
+                    {"active_streams", crt.activeStreams}, {"streams_without_open_descriptor", crt.streamsWithoutDescriptor},
+                    {"lowio_blocks", crt.lowioBlocks}, {"open_descriptors", crt.openDescriptors},
+                    {"descriptors_without_os_handle", crt.descriptorsWithoutHandle},
+                    {"linked_file_descriptors", crt.linkedDescriptors}, {"linked_file_streams", crt.linkedStreams},
+                    {"pointer_table_requested_bytes", crt.pointerTableBytes}, {"dynamic_slots_requested_bytes", crt.dynamicSlotBytes},
+                    {"descriptor_blocks_requested_bytes", crt.descriptorBlockBytes},
+                    {"crt_buffer_count", crt.crtBuffers}, {"crt_configured_buffer_bytes", crt.crtBufferSpan},
+                    {"caller_buffer_count", crt.callerBuffers}, {"caller_configured_buffer_bytes", crt.callerBufferSpan},
+                    {"temporary_standard_attachments", crt.temporaryAttachments},
+                    {"temporary_standard_configured_bytes", crt.temporaryBufferSpan},
+                    {"retained_standard_temporary_buffers", crt.retainedTemporaryBuffers},
+                    {"retained_standard_temporary_requested_bytes", crt.retainedTemporaryBytes}}}}},
       {"gui_objects", {{"gdi", number(row.gdi)}, {"peak_gdi", number(row.peakGdi)},
                        {"user", number(row.user)}, {"peak_user", number(row.peakUser)}}}};
 }

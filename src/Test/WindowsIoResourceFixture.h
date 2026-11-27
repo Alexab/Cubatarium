@@ -76,6 +76,19 @@ inline void CheckFileObjects(const Sample &baseline, const Sample &sample, std::
           "distinct File objects and handle entries must follow the selected owner lifetime");
 }
 
+inline void CheckFileKind(const Sample &baseline, const Sample &sample, WindowsFileKind kind,
+                          std::size_t entries, std::size_t objects)
+{
+  if (!baseline.platform.handles.supported)
+    return;
+  const auto &before = baseline.platform.handles.files;
+  const auto &now = sample.platform.handles.files;
+  const auto index = static_cast<std::size_t>(kind);
+  Require(before.stable && now.stable && now.kinds[index].entries == before.kinds[index].entries + entries &&
+      now.kinds[index].objects == before.kinds[index].objects + objects,
+      "validate the File subtype of the selected Windows resource and its aliases");
+}
+
 inline Json CheckGuiObjects()
 {
   (void)ObserveWindowsPlatformResources();
@@ -230,8 +243,18 @@ inline Json Run(const std::filesystem::path &file)
   CheckFileObjects(baseline, search, count, count);
   CheckFileObjects(baseline, iterators, count, count);
   CheckFileObjects(baseline, lastIterator, 1, 1);
+  CheckFileKind(baseline, independent, WindowsFileKind::DiskFile, count, count);
+  CheckFileKind(baseline, duplicate, WindowsFileKind::DiskFile, count + 1, 1);
+  CheckFileKind(baseline, lastDuplicate, WindowsFileKind::DiskFile, 1, 1);
+  CheckFileKind(baseline, search, WindowsFileKind::Directory, count, count);
+  CheckFileKind(baseline, iterators, WindowsFileKind::Directory, count, count);
+  CheckFileKind(baseline, lastIterator, WindowsFileKind::Directory, 1, 1);
   for (const auto *retired : {&afterIndependent, &afterDuplicate, &afterSearch, &afterIterators})
+  {
     CheckFileObjects(baseline, *retired, 0, 0);
+    CheckFileKind(baseline, *retired, WindowsFileKind::DiskFile, 0, 0);
+    CheckFileKind(baseline, *retired, WindowsFileKind::Directory, 0, 0);
+  }
   return {{"status", "PASS"}, {"concurrent_owners", count}, {"baseline", baseline.Report()},
       {"independent_files", independent.Report()}, {"after_independent", afterIndependent.Report()},
       {"duplicate_handles", duplicate.Report()}, {"last_duplicate", lastDuplicate.Report()},

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/Memory/WindowsCrtIoStorage.h"
 #include "Core/Memory/WindowsProcessMemory.h"
 #include <algorithm>
 #include <array>
@@ -22,9 +23,26 @@ struct WindowsHandleType
   std::optional<std::size_t> objects;
 };
 
+enum class WindowsFileKind { DiskFile, Directory, Pipe, Character, DiskUnclassified, Unknown };
+inline constexpr std::array WindowsFileKindNames{"disk_file", "directory", "pipe", "character", "disk_unclassified", "unknown"};
+
+struct WindowsFileResourceRow
+{
+  std::size_t entries{}, objects{}, linkedCrtEntries{}, linkedCrtObjects{};
+};
+
+struct WindowsFileResources
+{
+  std::array<WindowsFileResourceRow, WindowsFileKindNames.size()> kinds{};
+  std::array<std::optional<WindowsFileKind>, 3> standardStreams;
+  WindowsCrtIoStorage crt;
+  bool stable{};
+};
+
 struct WindowsHandleTable
 {
   std::vector<WindowsHandleType> types;
+  WindowsFileResources files;
   std::uint32_t before{}, after{};
   std::size_t entries{}, untyped{}, comparisons{};
   bool supported{}, beforeObserved{}, afterObserved{}, stable{}, entryLimitReached{}, comparisonLimitReached{};
@@ -112,15 +130,22 @@ inline std::string ReadType(QueryObject query, HANDLE handle)
   return result;
 }
 
-inline std::optional<std::size_t> CountObjects(const std::vector<HANDLE> &handles, CompareHandles compare,
-                                               WindowsHandleTable &result)
+struct HandleObjects
 {
   std::vector<HANDLE> representatives;
-  representatives.reserve(handles.size());
+  std::vector<std::size_t> objectForEntry;
+};
+
+inline std::optional<HandleObjects> GroupObjects(const std::vector<HANDLE> &handles, CompareHandles compare,
+                                                WindowsHandleTable &result)
+{
+  HandleObjects groups;
+  groups.representatives.reserve(handles.size());
+  groups.objectForEntry.reserve(handles.size());
   for (const auto handle : handles)
   {
-    bool matched = false;
-    for (const auto known : representatives)
+    std::size_t index = 0;
+    for (; index < groups.representatives.size(); ++index)
     {
       if (result.comparisons == ComparisonLimit)
       {
@@ -128,19 +153,85 @@ inline std::optional<std::size_t> CountObjects(const std::vector<HANDLE> &handle
         return std::nullopt;
       }
       ++result.comparisons;
-      if (compare(handle, known))
-      {
-        matched = true;
+      if (compare(handle, groups.representatives[index]))
         break;
-      }
       if (GetLastError() != ERROR_NOT_SAME_OBJECT)
         return std::nullopt;
     }
-    if (!matched)
-      representatives.push_back(handle);
+    if (index == groups.representatives.size())
+      groups.representatives.push_back(handle);
+    groups.objectForEntry.push_back(index);
   }
-  return representatives.size();
+  return groups;
 }
+
+inline WindowsFileKind ReadFileKind(HANDLE handle) noexcept
+{
+  switch (GetFileType(handle) & ~FILE_TYPE_REMOTE)
+  {
+    case FILE_TYPE_PIPE: return WindowsFileKind::Pipe;
+    case FILE_TYPE_CHAR: return WindowsFileKind::Character;
+    case FILE_TYPE_DISK:
+    {
+      FILE_STANDARD_INFO info{};
+      if (!GetFileInformationByHandleEx(handle, FileStandardInfo, &info, sizeof(info)))
+        return WindowsFileKind::DiskUnclassified;
+      return info.Directory ? WindowsFileKind::Directory : WindowsFileKind::DiskFile;
+    }
+    default: return WindowsFileKind::Unknown;
+  }
+}
+
+inline std::vector<WindowsFileKind> ReadFileKinds(const HandleObjects &objects, WindowsFileResources &result)
+{
+  std::vector<WindowsFileKind> kinds;
+  kinds.reserve(objects.representatives.size());
+  for (auto handle : objects.representatives)
+  {
+    const auto kind = ReadFileKind(handle);
+    kinds.push_back(kind);
+    ++result.kinds[static_cast<std::size_t>(kind)].objects;
+  }
+  for (auto object : objects.objectForEntry)
+    ++result.kinds[static_cast<std::size_t>(kinds[object])].entries;
+  result.stable = true;
+  return kinds;
+}
+
+#if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
+inline void LinkCrtFiles(const windows_crt_io_detail::Snapshot &snapshot, const std::vector<HANDLE> &handles,
+                          const HandleObjects &objects, const std::vector<WindowsFileKind> &kinds,
+                          WindowsFileResources &result)
+{
+  result.crt = windows_crt_io_detail::Summarize(snapshot);
+  std::vector<bool> linkedEntries(handles.size()), linkedObjects(kinds.size());
+  for (const auto &descriptor : snapshot.descriptors)
+  {
+    if (!descriptor.HasHandle())
+      continue;
+    const auto address = static_cast<std::uintptr_t>(descriptor.handle);
+    const auto entry = std::lower_bound(handles.begin(), handles.end(), address, [](HANDLE current, auto value) {
+      return reinterpret_cast<std::uintptr_t>(current) < value;
+    });
+    if (entry == handles.end() || reinterpret_cast<std::uintptr_t>(*entry) != address)
+      continue;
+    const auto index = static_cast<std::size_t>(entry - handles.begin());
+    const auto object = objects.objectForEntry[index];
+    // freopen can bind a standard FILE slot to a different lowio index.
+    for (std::size_t i = 0; i < result.standardStreams.size(); ++i)
+      if ((snapshot.streams[i].flags & windows_crt_io_detail::SlotAllocated) &&
+          snapshot.streams[i].descriptor == static_cast<int>(descriptor.index))
+        result.standardStreams[i] = kinds[object];
+    auto &kind = result.kinds[static_cast<std::size_t>(kinds[object])];
+    kind.linkedCrtEntries += !linkedEntries[index];
+    kind.linkedCrtObjects += !linkedObjects[object];
+    linkedEntries[index] = true;
+    linkedObjects[object] = true;
+    ++result.crt.linkedDescriptors;
+    result.crt.linkedStreams += descriptor.streams;
+  }
+}
+#endif
 
 inline WindowsHandleTable ReadHandles()
 {
@@ -164,6 +255,9 @@ inline WindowsHandleTable ReadHandles()
   const auto capacity = std::min(HandleLimit, static_cast<std::size_t>(countBefore) + 32);
   std::vector<ULONG_PTR> buffer(2 + capacity * (sizeof(HandleRow) / sizeof(ULONG_PTR)));
   std::vector<HandleRow> before, after;
+#if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
+  const auto crtBefore = windows_crt_io_detail::ReadSnapshot();
+#endif
   if (!ReadTable(query, buffer, before) || before.size() != countBefore)
     return result;
 
@@ -178,8 +272,22 @@ inline WindowsHandleTable ReadHandles()
       groups[std::move(type)].push_back(row.handle);
   }
   std::vector<WindowsHandleType> types;
+  std::optional<HandleObjects> fileObjects{HandleObjects{}};
+  const std::vector<HANDLE> empty;
+  const std::vector<HANDLE> *fileHandles = &empty;
   for (const auto &group : groups)
-    types.push_back({group.first, group.second.size(), CountObjects(group.second, compare, result)});
+  {
+    auto objects = GroupObjects(group.second, compare, result);
+    types.push_back({group.first, group.second.size(), objects ? std::optional<std::size_t>(objects->representatives.size()) :
+                                                                 std::nullopt});
+    if (group.first == "File")
+    {
+      fileHandles = &group.second;
+      fileObjects = std::move(objects);
+    }
+  }
+  WindowsFileResources files;
+  auto kinds = fileObjects ? ReadFileKinds(*fileObjects, files) : std::vector<WindowsFileKind>{};
 
   const bool afterCaptured = ReadTable(query, buffer, after);
   DWORD countAfter{};
@@ -192,6 +300,12 @@ inline WindowsHandleTable ReadHandles()
     result.entries = before.size();
     result.untyped = untyped;
     result.types = std::move(types);
+#if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
+    const auto crtAfter = windows_crt_io_detail::ReadSnapshot();
+    if (fileObjects && !untyped && crtBefore && crtAfter && *crtBefore == *crtAfter)
+      LinkCrtFiles(*crtAfter, *fileHandles, *fileObjects, kinds, files);
+#endif
+    result.files = std::move(files);
   }
   return result;
 }

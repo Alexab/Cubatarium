@@ -50,14 +50,33 @@ nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
               before.streamSlots >= standard_streams + opened_per_wave,
           "CRT table bounds cover the valid limits and overlapping stdio pointer tables");
 
+  const auto beforeWrite = cutum::ObserveWindowsPlatformResources();
+  if (beforeWrite.handles.files.crt.supported)
+    Require(std::fputs("UCRT stderr buffer fixture\n", stderr) >= 0 && std::fflush(stderr) == 0,
+            "exercise the CRT standard stream temporary buffering path");
+  const auto baseline = cutum::ObserveWindowsPlatformResources();
+  const auto &baseFiles = baseline.handles.files;
+  if (baseFiles.crt.supported)
+  {
+    Require(baseFiles.stable && baseFiles.crt.stable, "observe the linked CRT and native File roots before opening readers");
+    Require(baseFiles.crt.retainedTemporaryBuffers > 0 &&
+        baseFiles.crt.retainedTemporaryBuffers >= beforeWrite.handles.files.crt.retainedTemporaryBuffers &&
+        baseFiles.crt.retainedTemporaryBytes == baseFiles.crt.retainedTemporaryBuffers * 4096 &&
+        !baseFiles.crt.temporaryAttachments &&
+        baseFiles.crt.callerBufferSpan == beforeWrite.handles.files.crt.callerBufferSpan,
+        "preserve the temporary standard stream backing after the attachment retires");
+  }
   using File = std::unique_ptr<FILE, decltype(&std::fclose)>;
   struct Wave
   {
     std::array<uintptr_t, opened_per_wave> streams{};
     std::array<int, opened_per_wave> descriptors{};
     size_t process_handles{};
+    size_t allocated_slots{}, lowio_blocks{};
+    nlohmann::json bindings;
   };
   const auto observe = [&] {
+    std::array<char, 512> callerBuffer{};
     std::vector<File> readers;
     readers.reserve(opened_per_wave);
     std::array<intptr_t, opened_per_wave> os_handles{};
@@ -76,6 +95,9 @@ nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
       Require(GetFileType(reinterpret_cast<HANDLE>(os_handles[i])) == FILE_TYPE_DISK,
               "CRT descriptor maps to the open disk file");
     }
+    Require(std::fgetc(readers.front().get()) == 'F' &&
+        std::setvbuf(readers[1].get(), callerBuffer.data(), _IOFBF, callerBuffer.size()) == 0,
+        "activate one ordinary CRT buffer and one caller-provided buffer");
     const auto sort_and_check_distinct = [](auto &values) {
       std::sort(values.begin(), values.end());
       Require(std::adjacent_find(values.begin(), values.end()) == values.end(),
@@ -89,6 +111,32 @@ nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
                 live.processHandles >= opened_per_wave,
             "observe process handle count with concurrent readers and unchanged stream limit");
     wave.process_handles = live.processHandles;
+    struct Duplicate
+    {
+      int fd;
+      ~Duplicate() { if (fd >= 0) _close(fd); }
+    } alias{_dup(wave.descriptors.front())};
+    Require(alias.fd >= 0, "duplicate a live CRT descriptor without adding a FILE stream");
+    const auto platform = cutum::ObserveWindowsPlatformResources();
+    const auto &files = platform.handles.files;
+    const auto &crt = files.crt;
+    const auto disk = static_cast<std::size_t>(cutum::WindowsFileKind::DiskFile);
+    wave.allocated_slots = crt.dynamicSlots;
+    wave.lowio_blocks = crt.lowioBlocks;
+    if (baseFiles.crt.supported)
+      Require(files.stable && crt.stable && crt.activeStreams == baseFiles.crt.activeStreams + opened_per_wave &&
+        crt.openDescriptors == baseFiles.crt.openDescriptors + opened_per_wave + 1 &&
+        crt.linkedStreams == baseFiles.crt.linkedStreams + opened_per_wave &&
+        crt.linkedDescriptors == baseFiles.crt.linkedDescriptors + opened_per_wave + 1 && crt.lowioBlocks >= 2 &&
+        files.kinds[disk].linkedCrtEntries == baseFiles.kinds[disk].linkedCrtEntries + opened_per_wave + 1 &&
+        files.kinds[disk].linkedCrtObjects == baseFiles.kinds[disk].linkedCrtObjects + opened_per_wave &&
+        crt.crtBuffers == baseFiles.crt.crtBuffers + 1 && crt.crtBufferSpan == baseFiles.crt.crtBufferSpan + 4096 &&
+        crt.callerBuffers == baseFiles.crt.callerBuffers + 1 &&
+        crt.callerBufferSpan == baseFiles.crt.callerBufferSpan + callerBuffer.size(),
+          "join the FILE slots, lowio descriptors, distinct disk objects, shared duplicate and both buffer origins");
+    wave.bindings = cutum::DescribeWindowsPlatformResources(platform)["file_resources"];
+    Require(_close(alias.fd) == 0, "retire the descriptor without retiring its independently held sibling");
+    alias.fd = -1;
     for (auto &reader : readers)
       Require(!std::fclose(reader.release()), "close an independent CRT reader");
     return wave;
@@ -96,6 +144,21 @@ nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
   const auto first = observe();
   const auto second = observe();
   const auto after = InspectWindowsCrtFileTables();
+  const auto retired = cutum::ObserveWindowsPlatformResources();
+  const auto &crt = retired.handles.files.crt;
+  if (baseFiles.crt.supported)
+  {
+    Require(crt.stable && crt.activeStreams == baseFiles.crt.activeStreams &&
+      crt.openDescriptors == baseFiles.crt.openDescriptors && crt.linkedStreams == baseFiles.crt.linkedStreams &&
+      crt.linkedDescriptors == baseFiles.crt.linkedDescriptors &&
+      crt.crtBufferSpan == baseFiles.crt.crtBufferSpan && crt.callerBufferSpan == baseFiles.crt.callerBufferSpan,
+        "retire the open stream, descriptor and buffer associations");
+    Require(crt.lowioBlocks >= 2 && crt.lowioBlocks == first.lowio_blocks && crt.lowioBlocks == second.lowio_blocks &&
+        crt.dynamicSlots >= opened_per_wave && crt.dynamicSlots == first.allocated_slots &&
+        crt.dynamicSlots == second.allocated_slots, "keep the same allocated CRT slots after both waves");
+    Require(crt.retainedTemporaryBytes == baseFiles.crt.retainedTemporaryBytes && !crt.temporaryAttachments,
+            "keep the separately identified standard stream backing through file retirement");
+  }
   Require(first.streams == second.streams && first.descriptors == second.descriptors,
           "CRT reuses closed FILE slots and descriptor indices across waves");
   Require(before.processHandlesObserved && after.processHandlesObserved &&
@@ -109,7 +172,10 @@ nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
           {"stream_slots", before.streamSlots}, {"current_requested_heap_upper", before.currentRequestedHeapUpper},
           {"requested_heap_upper", before.requestedHeapUpper}, {"table_statics_bytes", before.staticsBytes},
           {"process_handles_before", before.processHandles}, {"process_handles_after", after.processHandles},
-          {"process_handles_open", {first.process_handles, second.process_handles}}};
+          {"process_handles_open", {first.process_handles, second.process_handles}},
+          {"io_bindings", {{"baseline", cutum::DescribeWindowsPlatformResources(baseline)["file_resources"]},
+                            {"first", first.bindings}, {"second", second.bindings},
+                            {"retired", cutum::DescribeWindowsPlatformResources(retired)["file_resources"]}}}};
 #else
   (void)path;
   return {{"supported", false}};
