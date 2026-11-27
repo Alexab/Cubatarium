@@ -696,12 +696,13 @@ struct AsyncIoStorageProbe
     const auto path = storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Json);
     std::filesystem::create_directories(std::filesystem::path(path).parent_path());
     constexpr size_t repeated = 32768;
+    constexpr size_t extension_bytes = 128 * 1024;
     {
       std::ofstream file(path, std::ios::binary);
       // Duplicate members keep their last value, including the voxel array.
       file << R"({"format_version":9,"format_version":2,"cx":99,"cx":1,"cy":-2,"cz":2,)"
               R"("voxels":[{"lx":4,"ly":4,"lz":4,"id":8}],"extra":{"voxels":[[1],false],"text":"two  spaces and \"quotes\""},)"
-              R"("voxels":[)";
+              R"("extended_note":")" << std::string(extension_bytes, 'x') << R"(","voxels":[)";
       constexpr std::string_view same = R"({"lx":0,"ly":0,"lz":0,"id":8},)";
       for (size_t i = 0; i < repeated; ++i)
         file << same;
@@ -772,6 +773,7 @@ struct AsyncIoStorageProbe
     }
     Require(!trace.overflow && !io.GetOutstandingLoadCount(), "streamed JSON reads release all credits");
     return {{"status", "PASS"}, {"file_bytes", extent}, {"repeated_voxels", repeated},
+            {"ignored_string_bytes", extension_bytes},
             {"decoded_ready_bytes", decoded_bytes}, {"raw_buffer_bytes", 0},
             {"duplicate_members", true}, {"legacy_names", true}, {"withheld_and_retried", true},
             {"trailing_syntax_rejected", true}, {"outstanding_after", io.GetOutstandingLoadCount()}};

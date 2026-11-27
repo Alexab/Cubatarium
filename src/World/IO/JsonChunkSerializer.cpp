@@ -19,6 +19,8 @@ using json = nlohmann::json;
 namespace
 {
 
+constexpr size_t kIgnoredStringPrefixBytes = 16;
+
 // The JSON lexer keeps the raw text surrounding the current token for errors.
 // Collapse each run of inter-token whitespace to one separator. Whitespace
 // inside strings and separation within invalid literals remain significant.
@@ -93,6 +95,11 @@ public:
   bool number_float(number_float_t v, const string_t &) override { return Value(v); }
   bool parse_error(size_t, const std::string &, const json::exception &) override { return false; }
 
+  bool ReadsLegacyType() const noexcept
+  {
+    return !Ignored && Place == Location::Voxel && Member == Type;
+  }
+
   bool key(string_t &value) override
   {
     if (Ignored)
@@ -100,17 +107,24 @@ public:
     static constexpr std::array<std::string_view, Count> names{
         "", "format_version", "cx", "cy", "cz", "voxels", "weather_state",
         "lx", "ly", "lz", "id", "fluid", "type", "surface_wetness", "last_update_sec"};
+    static_assert([] {
+      for (const auto name : names)
+        if (name.size() >= kIgnoredStringPrefixBytes)
+          return false;
+      return true;
+    }());
     Member = static_cast<Field>(std::find(names.begin(), names.end(), value) - names.begin());
     return true;
   }
 
   bool string(string_t &value) override
   {
-    if (!Ignored && Place == Location::Voxel && Member == Type)
+    if (ReadsLegacyType())
     {
       HasType = true;
       ExplicitAir = value == "air";
-      TypeId = value.empty() ? BLOCK_AIR : Registry.GetIdByTypeName(value);
+      TypeId = value.empty() || value.size() > UJsonChunkSerializer::kMaxLegacyNameBytes
+                   ? BLOCK_AIR : Registry.GetIdByTypeName(value);
       return true;
     }
     return Value(nullptr);
@@ -118,6 +132,8 @@ public:
 
   bool start_object(size_t) override
   {
+    if (!EnterContainer())
+      return false;
     if (!Ignored && Place == Location::Document)
       Place = Location::Root;
     else if (!Ignored && Place == Location::Voxels)
@@ -141,6 +157,7 @@ public:
 
   bool end_object() override
   {
+    --Depth;
     if (Ignored)
       --Ignored;
     else if (Place == Location::Voxel)
@@ -157,6 +174,8 @@ public:
 
   bool start_array(size_t) override
   {
+    if (!EnterContainer())
+      return false;
     if (!Ignored && Place == Location::Root && Member == Voxels)
     {
       Buffer.Clear();
@@ -170,6 +189,7 @@ public:
 
   bool end_array() override
   {
+    --Depth;
     if (Ignored)
       --Ignored;
     else if (Place == Location::Voxels)
@@ -292,12 +312,21 @@ private:
     ++Ignored;
   }
 
+  bool EnterContainer() noexcept
+  {
+    if (Depth == UJsonChunkSerializer::kMaxContainerDepth)
+      return false;
+    ++Depth;
+    return true;
+  }
+
   glm::ivec3 Coord;
   UBlockRegistry &Registry;
   std::array<std::optional<json>, Count> Fields;
   Location Place{Location::Document};
   Field Member{None};
   size_t Ignored{0};
+  size_t Depth{0};
   BlockId TypeId{BLOCK_AIR};
   bool HasType{false};
   bool ExplicitAir{false};
@@ -328,8 +357,17 @@ class ChunkJsonInput
 public:
   using char_type = char;
   static constexpr bool cutum_collect_raw_lexer_diagnostics = false;
+  static constexpr size_t cutum_numeric_token_limit = UJsonChunkSerializer::kMaxNumericTokenBytes;
 
-  ChunkJsonInput(Iterator first, Iterator last) : Next(first, last), End(last, last) {}
+  ChunkJsonInput(Iterator first, Iterator last, const ChunkJsonReader &reader)
+      : Next(first, last), End(last, last), Reader(reader) {}
+
+  size_t cutum_string_token_limit(bool is_object_value) const noexcept
+  {
+    // One extra byte distinguishes an overlong name from an exact match.
+    return is_object_value && Reader.ReadsLegacyType()
+               ? UJsonChunkSerializer::kMaxLegacyNameBytes + 1 : kIgnoredStringPrefixBytes;
+  }
 
   std::char_traits<char>::int_type get_character()
   {
@@ -339,12 +377,13 @@ public:
 
 private:
   JsonWhitespaceIterator<Iterator> Next, End;
+  const ChunkJsonReader &Reader;
 };
 
 template<class Iterator>
 bool ParseJson(Iterator first, Iterator last, ChunkJsonReader &reader)
 {
-  nlohmann::detail::parser<json, ChunkJsonInput<Iterator>> parser{ChunkJsonInput(first, last)};
+  nlohmann::detail::parser<json, ChunkJsonInput<Iterator>> parser{ChunkJsonInput(first, last, reader)};
   return parser.sax_parse(&reader, true);
 }
 

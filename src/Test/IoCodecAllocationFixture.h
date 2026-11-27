@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Test/OrdinaryNewObservation.h"
+#include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Memory/NameStorageSource.h"
 #include "World/Chunks/Chunk.h"
@@ -168,11 +169,15 @@ inline nlohmann::json CheckCodecs()
       const auto literal_error_peak = stream_peak(literals + "nulx]}", false);
       literals += "null]}";
       const auto literal_peak = stream_peak(literals);
-      constexpr size_t depth = 16384;
-      const auto deep_peak = stream_peak(prefix + R"(],"extra":)" + std::string(depth, '[') +
-                                         "null" + std::string(depth, ']') + "}");
-      Require(compact_peak == padded_peak && long_token_peak > padded_peak,
-              "repeated cells and whitespace do not grow retained JSON values, while lexer tokens still cost memory");
+      constexpr size_t depth = UJsonChunkSerializer::kMaxContainerDepth - 1;
+      const auto nested = [&](size_t levels) {
+        return prefix + R"(],"extra":)" + std::string(levels, '[') +
+               "null" + std::string(levels, ']') + "}";
+      };
+      const auto deep_peak = stream_peak(nested(depth));
+      const auto beyond_depth_peak = stream_peak(nested(depth + 1), false);
+      Require(compact_peak == padded_peak && beyond_depth_peak <= deep_peak + 1024,
+              "the parser bounds nesting and preserves flat repeated cells and whitespace");
       Require(deep_peak > compact_literal_peak, "nesting still needs parser state");
 #ifdef CUBATARIUM_JSON_LEXER_OVERRIDES
       Require(compact_literal_peak == literal_peak && literal_error_peak <= compact_error_peak + 1024,
@@ -195,7 +200,44 @@ inline nlohmann::json CheckCodecs()
                 {"compact_literal_peak", compact_literal_peak}, {"literal_stream_peak", literal_peak},
                 {"literal_stream_bytes", literals.size()}, {"compact_error_peak", compact_error_peak},
                 {"literal_error_peak", literal_error_peak}, {"default_raw_diagnostic", has_default_diagnostic},
-                {"deep_peak", deep_peak}, {"nesting", depth}};
+                {"deep_peak", deep_peak}, {"nesting", depth}, {"beyond_depth_peak", beyond_depth_peak}};
+#ifdef CUBATARIUM_JSON_LEXER_OVERRIDES
+      const auto extra_text = prefix + R"(],"extra":")";
+      const auto short_token_peak = stream_peak(extra_text + std::string(32, 'x') + "\"}");
+      const auto long_key_peak = stream_peak(prefix + R"(],"voxels)" + std::string(131072, 'x') + R"(":false})");
+      stream_peak(extra_text + std::string(131072, 'x') + R"(\uD800"})", false);
+      stream_peak(prefix + "]}" + '\0' + "trailing", false);
+      Require(long_token_peak == short_token_peak && long_key_peak == short_token_peak,
+              "unknown strings and keys keep a bounded prefix without bypassing syntax checks");
+
+      const auto extra_number = prefix + R"(],"extra":)";
+      constexpr size_t number_limit = UJsonChunkSerializer::kMaxNumericTokenBytes;
+      const auto boundary_number = std::string("0.") + std::string(number_limit - 2, '0');
+      const auto number_peak = stream_peak(extra_number + boundary_number + "}");
+      const auto over_number_peak = stream_peak(extra_number + boundary_number + "0}", false);
+      const auto huge_number_peak = stream_peak(extra_number + "1e+" + std::string(131072, '0') + "}", false);
+      Require(number_peak < 24 * 1024 && over_number_peak <= number_peak + 1024 &&
+                  huge_number_peak <= number_peak + 1024,
+              "the exact numeric limit is readable and excess bytes use bounded storage");
+
+      constexpr size_t name_limit = UJsonChunkSerializer::kMaxLegacyNameBytes;
+      const std::string name = "fixture::" + std::string(name_limit - 9, 'n');
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      definitions->ReplaceAll({}, {{name, 8}, {name + 'x', 8}});
+      registry.SetDefinitions(definitions);
+      const std::string legacy = R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":")";
+      const auto name_peak = stream_peak(legacy + name + R"("}]})");
+      const auto over_name_peak = stream_peak(legacy + name + R"(x"}]})", false);
+      const auto numeric_precedence_peak = stream_peak(legacy + name + R"(x","id":8}]})");
+      Require(name.size() == name_limit && name_peak < 256 * 1024 &&
+                  over_name_peak <= name_peak + 1024 && numeric_precedence_peak <= name_peak + 1024,
+              "the byte-limit legacy name resolves exactly and valid numeric IDs retain precedence");
+      phases["read_limits"] = {{"short_token_peak", short_token_peak}, {"long_key_peak", long_key_peak},
+                               {"numeric_bytes", number_limit}, {"numeric_peak", number_peak},
+                               {"over_numeric_peak", over_number_peak}, {"huge_numeric_peak", huge_number_peak},
+                               {"legacy_name_bytes", name_limit}, {"legacy_name_peak", name_peak},
+                               {"over_legacy_name_peak", over_name_peak}, {"numeric_precedence_peak", numeric_precedence_peak}};
+#endif
     }
     else
     {
