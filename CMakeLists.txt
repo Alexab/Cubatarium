@@ -2582,6 +2582,7 @@ cubatarium_add_test(NAME decor_mesh_integration_test
     LIBRARIES glm::glm nlohmann_json::nlohmann_json glog::glog OpenGL::GL GLEW::GLEW)
 if(WIN32)
     target_link_libraries(decor_mesh_integration_test dbghelp)
+    target_include_directories(decor_mesh_integration_test PRIVATE ${CUBATARIUM_GENERATED_DIR})
 endif()
 add_test(NAME catalog_publication_roots_test
     COMMAND $<TARGET_FILE:decor_mesh_integration_test> --catalog-publication-roots
@@ -3255,6 +3256,10 @@ if(TARGET CubatariumCompileConfig)
       ${CMAKE_CURRENT_BINARY_DIR}/${_storage_report}.json)
     set_tests_properties(${_storage_target} PROPERTIES LABELS "integration;memory;ownership" TIMEOUT 120)
   endforeach()
+  if(MSVC)
+    add_library(windows_module_tls_fixture SHARED src/Test/WindowsModuleTlsFixtureDll.cpp)
+    add_dependencies(async_io_storage_test windows_module_tls_fixture)
+  endif()
 endif()
 endif()
 

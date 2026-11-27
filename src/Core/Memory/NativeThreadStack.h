@@ -116,6 +116,7 @@ inline std::uintptr_t CallingExecutableTlsAnchor() noexcept
 
 inline bool CopyTlsAnchors(std::size_t revision, NativeThreadTlsBlock *blocks,
                            std::size_t count) noexcept;
+inline std::size_t RegisteredThreadKind(DWORD id) noexcept;
 
 inline bool RevisionMatches(std::size_t revision) noexcept
 {
@@ -205,6 +206,7 @@ private:
   friend NativeThreadStacks InspectNativeThreadStacks() noexcept;
   friend bool native_thread_stack_detail::CopyTlsAnchors(std::size_t, NativeThreadTlsBlock *,
                                                          std::size_t) noexcept;
+  friend std::size_t native_thread_stack_detail::RegisteredThreadKind(DWORD) noexcept;
   DWORD Thread{};
   std::size_t Kind{}, Reservation{};
   std::uintptr_t TlsAnchor{};
@@ -227,6 +229,15 @@ inline bool native_thread_stack_detail::CopyTlsAnchors(std::size_t revision, Nat
     blocks[copied++].anchor = owner->TlsAnchor;
   }
   return copied == count;
+}
+
+inline std::size_t native_thread_stack_detail::RegisteredThreadKind(DWORD id) noexcept
+{
+  const RegistryLock lock;
+  for (const auto *owner = Head; owner; owner = owner->Next)
+    if (owner->Thread == id)
+      return owner->Kind;
+  return NativeThreadNames.size();
 }
 #endif
 

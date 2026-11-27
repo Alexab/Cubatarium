@@ -15,6 +15,8 @@ struct WindowsImageMemoryRow
   std::uintptr_t allocation{};
   std::uint64_t committed{}, queried{}, residentPrivate{}, residentShareable{};
   std::uint64_t tlsRaw{}, tlsZeroFill{};
+  std::uintptr_t tlsIndexAddress{};
+  std::uint32_t tlsIndex{};
   std::string filename;
   WindowsImageTlsState tls{WindowsImageTlsState::Unobserved};
   bool loaderModule{}, executable{};
@@ -129,6 +131,13 @@ inline void ReadImageTls(HANDLE self, HMODULE image, WindowsImageMemoryRow &row)
   row.tls = WindowsImageTlsState::Declared;
   row.tlsRaw = raw;
   row.tlsZeroFill = tls.SizeOfZeroFill;
+  DWORD index{};
+  if (tls.AddressOfIndex >= base && ReadImageValue(self, base, extent,
+      static_cast<std::size_t>(tls.AddressOfIndex - base), index))
+  {
+    row.tlsIndexAddress = static_cast<std::uintptr_t>(tls.AddressOfIndex);
+    row.tlsIndex = index;
+  }
 }
 
 struct ImageObserver

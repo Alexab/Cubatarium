@@ -1,7 +1,7 @@
 #pragma once
 
 #include "App/Platform/WindowsGpuMemoryReport.h"
-#include "Core/Memory/WindowsImageMemory.h"
+#include "Core/Memory/WindowsModuleTlsStorage.h"
 #include <chrono>
 #include <optional>
 
@@ -13,6 +13,7 @@ struct WindowsMemoryCheckpoint
   WindowsAddressSpace addressSpace;
   WindowsGpuMemory driver;
   std::optional<WindowsImageMemory> images;
+  std::optional<WindowsModuleTlsStorage> moduleTls;
   std::uint64_t elapsedMicros{};
   std::uint32_t processId{};
 };
@@ -27,7 +28,10 @@ inline WindowsMemoryCheckpoint ReadWindowsMemoryCheckpoint(WindowsMemoryDetail d
   const auto begin = std::chrono::steady_clock::now();
   result.before = ReadWindowsProcessMemory(/*includeShared=*/true);
   if (detail == WindowsMemoryDetail::ModuleImages)
+  {
     result.images = ReadWindowsImageMemory(result.addressSpace);
+    result.moduleTls = ObserveWindowsModuleTls(*result.images);
+  }
   else
     result.addressSpace = ReadWindowsAddressSpace();
   result.driver = ReadWindowsGpuMemory();
@@ -84,6 +88,31 @@ inline nlohmann::json DescribeWindowsImageMemory(const WindowsImageMemory &memor
       {"unattributed_committed_bytes", memory.unattributedCommitted}, {"images", std::move(images)}};
 }
 
+inline nlohmann::json DescribeWindowsModuleTls(const WindowsModuleTlsStorage &tls)
+{
+  using Json = nlohmann::json;
+  const auto storage = [](const WindowsTlsBlockStorage &row) {
+    return Json{{"blocks", row.blocks}, {"data_bytes", row.dataBytes}, {"heap_overhead_bytes", row.overheadBytes}};
+  };
+  auto modules = Json::array();
+  for (const auto &module : tls.modules)
+    modules.push_back({{"filename", module.filename}, {"template_bytes", module.templateBytes}, {"storage", storage(module.storage)}});
+  auto threads = Json::array();
+  constexpr std::array threadStates{"UNOBSERVED", "CHANGED", "VECTOR_NOT_IN_HEAP", "VECTOR_TOO_SMALL", "NO_VECTOR", "OBSERVED"};
+  for (const auto &thread : tls.threads)
+    threads.push_back({{"thread_id", thread.id}, {"engine_owner", thread.kind < NativeThreadNames.size() ?
+            Json(NativeThreadNames[thread.kind]) : Json(nullptr)}, {"stable", thread.Stable()},
+        {"state", threadStates[static_cast<std::size_t>(thread.state)]},
+        {"vector", storage(thread.vector)}, {"module_blocks", storage(thread.blocks)}});
+  return {{"schema", "windows-module-tls-storage.v1"},
+      {"status", tls.complete ? "PASS" : tls.supported ? "PARTIAL" : "UNSUPPORTED"},
+      {"teb_verified", tls.tebVerified}, {"module_list_stable", tls.moduleListStable},
+      {"thread_list_stable", tls.threadListStable}, {"heap_walk_finished", tls.heapWalkFinished},
+      {"process_threads", tls.processThreads}, {"stable_threads", tls.stableThreads},
+      {"threads_with_vector", tls.threadsWithVector}, {"threads_without_vector", tls.threadsWithoutVector},
+      {"modules", std::move(modules)}, {"threads", std::move(threads)}};
+}
+
 inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpoint &checkpoint)
 {
   const bool complete = checkpoint.before.extendedObserved && checkpoint.after.extendedObserved &&
@@ -97,6 +126,8 @@ inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpo
       {"driver_complete", checkpoint.driver.complete}, {"whole_runtime_complete", false}};
   if (checkpoint.images)
     report["module_images"] = DescribeWindowsImageMemory(*checkpoint.images);
+  if (checkpoint.moduleTls)
+    report["module_tls"] = DescribeWindowsModuleTls(*checkpoint.moduleTls);
   return report;
 }
 } // namespace cutum

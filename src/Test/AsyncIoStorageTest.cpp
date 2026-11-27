@@ -5,6 +5,7 @@
 #include "Test/NativeThreadStackFixture.h"
 #include "Test/WindowsAddressSpaceFixture.h"
 #include "Test/WindowsImageMemoryFixture.h"
+#include "Test/WindowsModuleTlsFixture.h"
 #include "Test/WindowsCrtThreadFixture.h"
 #include "Test/WindowsCrtLocaleFixture.h"
 #include "Test/WindowsExecutableTlsFixture.h"
@@ -175,6 +176,7 @@ int main(int argc, char **argv)
     result["windows_io_resources"] = cutum::windows_io_resource_fixture::Run(stdio);
     result["windows_address_space"] = cutum::windows_address_space_fixture::Run();
     result["windows_image_memory"] = cutum::windows_image_memory_fixture::Run();
+    result["windows_module_tls"] = cutum::windows_module_tls_fixture::Run();
     result["native_thread_stacks"] = cutum::native_thread_stack_fixture::Run();
     result["windows_crt_threads"] = cutum::windows_crt_thread_fixture::Run();
     result["windows_crt_locale"] = cutum::windows_crt_locale_fixture::Run();
