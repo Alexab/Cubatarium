@@ -4002,6 +4002,9 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
 {
   CUBA_ZONE("TickAsyncChunkSystems");
   RetryChunkSchedulerReplacement(world);
+  std::optional<std::size_t> terrain_limit;
+  if (Streamer && !world.IsEnterSessionActive() && !world.IsEnterLitGateActive())
+    terrain_limit = Streamer->GetTerrainColumnAdmissionLimit();
   const auto main_t0 = std::chrono::high_resolution_clock::now();
   auto elapsed_main_ms = [&]()
   {
@@ -4122,7 +4125,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         ChunkScheduler->Tick(world.BlockWorld, /*maxCommitsPerFrame=*/1,
                              /*maxGenerationStartsPerFrame=*/0,
                              /*maxApplyMsPerFrame=*/0.0,
-                             /*allowBoundedReadyDrain=*/false);
+                             /*allowBoundedReadyDrain=*/false, terrain_limit);
         world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
             std::chrono::duration<double, std::milli>(
                 std::chrono::high_resolution_clock::now() - bounded_tick_t0)
@@ -4421,7 +4424,7 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
     // snapshot here is stale by the time Completed.DrainAll() runs.
     const auto scheduler_t0 = std::chrono::high_resolution_clock::now();
     ChunkScheduler->Tick(world.BlockWorld, chunk_budget.MaxChunkCommits,
-                         chunk_budget.MaxLoadOps, 0.0, moving_any);
+                         chunk_budget.MaxLoadOps, 0.0, moving_any, terrain_limit);
     world.PhysicsTelemetryData.AsyncChunkSchedulerTickMs +=
         std::chrono::duration<double, std::milli>(
             std::chrono::high_resolution_clock::now() - scheduler_t0)
@@ -4764,9 +4767,6 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
   {
     const auto io_t0 = std::chrono::high_resolution_clock::now();
     AsyncChunkIoTickMetrics io_metrics;
-    std::optional<std::size_t> terrain_limit;
-    if (Streamer && !world.IsEnterSessionActive() && !world.IsEnterLitGateActive())
-      terrain_limit = Streamer->GetTerrainColumnAdmissionLimit();
     if (near_stream_budget_exhausted)
     {
       // Keep completed disk results moving while near generation/mesh work is

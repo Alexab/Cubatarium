@@ -3732,11 +3732,19 @@
       "receipt": "build/desktop-msvc/s4-q01-read-progress-acceptance.json",
       "scope": "Physical slice scheduling and active and combined retry owner admission each leave the last slot available for resident terrain. The Release baseline keeps 256 cold slice results ready and applies zero resident slices at terrain capacity. The corrected Flat fixture keeps 255 cold credits, uses the existing 256th for the resident, and completes its full signed column before any cold publication. It preserves the original cold owner and subsequently installs the deferred streaming demand. The existing hard limits remain 256 physical reads, 32 concurrent column plans and 256 combined active plans and retry timers.",
       "remaining": "Whole-world cardinality still needs procedural generation including cross-column writes, cooperative loading, direct edits, record-only owners and the live disk index and registry. The startup-only runs leave motion, outer-ring, cave, wet, visual and performance acceptance open. Full S0-S6 acceptance remains open at 23 of 42 packages."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.L2.GENERATION_PUBLICATION",
+      "status": "SCOPED_Q01_L2_GENERATION_PUBLICATION_PASS_Q01_L2_OPEN",
+      "certificate": "S4_02_Q01_GENERATION_PUBLICATION_RESIDENCY_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q01-generation-residency-acceptance.json",
+      "scope": "Both normal and deadline-limited gameplay generation drains check physical output at terrain saturation. A ready buffer that writes a cold block, explicit light, light section or weather section keeps its owner. Existing-only peers can still apply. Whole results starting below the threshold preserve every cross-column write. With a fixed threshold T and a direct output horizon W, one such buffer can raise residency to T minus one plus W. Later adding buffers wait until residency falls below T. The control at full capacity adds four columns without the gate. The held exact successor publishes after space becomes available.",
+      "remaining": "Compose the numeric maximum output footprint for supported world data and the synchronous, cooperative, direct edit and record-only owners. The generation buffer budget can grow for a valid isolated job. Prove progress with every generation result owner occupied and join the disk index and registry. The supplementary route and startup evidence leave the full movement, outer-ring, cave, wet, visual and performance matrix open. Full S0-S6 acceptance remains open at 23 of 42 packages."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Проверено продолжение чтения загруженной колонки при насыщении готовыми результатами. Учесть публикацию генерации, включая соседние колонки, прямые изменения и другие владельцы записей, затем свести с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
+  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Проверен учёт готовых результатов генерации при насыщении. Уточнить максимальный объём одной публикации и прогресс при занятой очереди, учесть синхронную генерацию, прямые изменения и другие владельцы записей, затем свести с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
 }

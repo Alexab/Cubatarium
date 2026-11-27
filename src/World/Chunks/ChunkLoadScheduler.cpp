@@ -594,7 +594,8 @@ bool UChunkLoadScheduler::ScheduleWorker(
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                int maxGenerationStartsPerFrame,
                                double maxApplyMsPerFrame,
-                               bool allowBoundedReadyDrain)
+                               bool allowBoundedReadyDrain,
+                               std::optional<std::size_t> terrainLimit)
 {
   LastTickApplyMs = 0.0;
   LastCommitsThisFrame = 0;
@@ -635,6 +636,7 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
               return live_priority(a) < live_priority(b);
             });
   int committed = 0;
+  const auto &chunks = world.GetChunkManager();
   for (PendingResult &pending : ready)
   {
     const auto tokenIt = ActiveTokens.find(pending.result.coord);
@@ -702,6 +704,14 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
         committed > 0 && maxApplyMsPerFrame > 0.0 &&
         LastTickApplyMs >= maxApplyMsPerFrame;
     if (committed >= maxCommitsPerFrame || apply_budget_exhausted)
+    {
+      Completed.Push(std::move(pending));
+      continue;
+    }
+    // Apply whole generation results. A single result starting below the
+    // threshold can cross it, but no later result can add columns while full.
+    if (terrainLimit && chunks.GetResidentTerrainColumnCount() >= *terrainLimit &&
+        pending.result.buffer.AddsTerrainColumn(chunks))
     {
       Completed.Push(std::move(pending));
       continue;

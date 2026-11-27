@@ -1,0 +1,235 @@
+{
+  "schema": "s4-q01-generation-publication-residency.v1",
+  "status": "SCOPED_Q01_L2_GENERATION_PUBLICATION_PASS_Q01_L2_OPEN",
+  "baseline_commit": "761722f86a59178a3037bce6d6445a9edf62a143",
+  "scope": "Both normal and deadline-limited gameplay generation drains check physical output at terrain saturation. A ready buffer that writes a cold block, explicit light, light section or weather section keeps its owner. Existing-only peers can still apply. Whole results starting below the threshold preserve every cross-column write. With a fixed threshold T and a direct output horizon W, one such buffer can raise residency to T minus one plus W. Later adding buffers wait until residency falls below T. The control at full capacity adds four columns without the gate. The held exact successor publishes after space becomes available.",
+  "remaining": "Compose the numeric maximum output footprint for supported world data and the synchronous, cooperative, direct edit and record-only owners. The generation buffer budget can grow for a valid isolated job. Prove progress with every generation result owner occupied and join the disk index and registry. The supplementary route and startup evidence leave the full movement, outer-ring, cave, wet, visual and performance matrix open. Full S0-S6 acceptance remains open at 23 of 42 packages.",
+  "source_sha256": "f4ee3b591a75f83176ac07e0f288d7a1a74fc867c6cdf6bf230d7b52ef92a62d",
+  "desktop_exe_sha256": "e8d1fc0722ed2449aa842a52f7b9660d545d636b4c8455959b0a29a744a7f14f",
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "physical_flat": {
+    "original_successor_published": true,
+    "released_generation_bytes": 0,
+    "resident_peer_published": true,
+    "retained_result_bytes": 5352,
+    "single_publication_count": 6,
+    "status": "PASS",
+    "threshold": 3,
+    "unrestricted_count": 7
+  },
+  "native_profiles": {
+    "flat": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 789,
+      "relocations": 0,
+      "aggregate": "UNTESTED"
+    },
+    "full": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 406,
+      "relocations": 0,
+      "aggregate": "UNTESTED"
+    }
+  },
+  "motion_initial": {
+    "max_fly_seconds": 90,
+    "stop_seconds": 20,
+    "aggregate": "FAIL",
+    "displacement_chunks": 6,
+    "relocations": 0,
+    "waypoints_required": 2,
+    "waypoints_visited": 1,
+    "last_motor_state": "inspect",
+    "inspection_requested": 14,
+    "inspection_verified": 0,
+    "frame_time_flying_median_ms": 685.44,
+    "world_streaming_phase_median_ms": 36.3788,
+    "components": {
+      "runtime": {
+        "status": "FAIL",
+        "reason": "native_process"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census"
+      },
+      "route": {
+        "status": "FAIL",
+        "reason": "bot_route_incomplete"
+      },
+      "route_path": {
+        "status": "FAIL",
+        "reason": "route_not_completed"
+      },
+      "inspection": {
+        "status": "FAIL",
+        "reason": "inspection_capture_coverage"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference"
+      },
+      "performance": {
+        "status": "UNTESTED",
+        "reason": "no_approved_performance_baseline"
+      },
+      "build_provenance": {
+        "status": "PASS",
+        "reason": "source_and_executable_match_build"
+      },
+      "normal_shutdown": {
+        "status": "FAIL",
+        "reason": "missing_or_incomplete_desktop_retirement"
+      }
+    },
+    "application_retirement": "PASS",
+    "legacy_runner_exit": 1,
+    "capture_files": 24,
+    "capture_files_digest": "7f86f1b78a6b8f2f2845ef6e82943c577b1fbb31c028a589ab2f48b324e4c264"
+  },
+  "motion_repeat": {
+    "max_fly_seconds": 150,
+    "stop_seconds": 20,
+    "aggregate": "UNTESTED",
+    "displacement_chunks": 6,
+    "relocations": 0,
+    "waypoints_required": 2,
+    "waypoints_visited": 2,
+    "last_motor_state": "complete",
+    "inspection_requested": 24,
+    "inspection_verified": 24,
+    "frame_time_flying_median_ms": 886.304,
+    "world_streaming_phase_median_ms": 46.9031,
+    "components": {
+      "runtime": {
+        "status": "PASS",
+        "reason": "native_process"
+      },
+      "startup": {
+        "status": "PASS",
+        "reason": "first_world_paint_required_ring_census"
+      },
+      "route": {
+        "status": "PASS",
+        "reason": "frontier_route_covered"
+      },
+      "route_path": {
+        "status": "PASS",
+        "reason": "ordered_route_path_observed"
+      },
+      "inspection": {
+        "status": "PASS",
+        "reason": "inspection_capture_coverage"
+      },
+      "visual": {
+        "status": "UNTESTED",
+        "reason": "missing_visual_reference"
+      },
+      "performance": {
+        "status": "UNTESTED",
+        "reason": "no_approved_performance_baseline"
+      },
+      "build_provenance": {
+        "status": "PASS",
+        "reason": "source_and_executable_match_build"
+      },
+      "normal_shutdown": {
+        "status": "PASS",
+        "reason": "verified_desktop_retirement"
+      }
+    },
+    "application_retirement": "PASS",
+    "legacy_runner_exit": 0,
+    "capture_files": 37,
+    "capture_files_digest": "3da745f0a512361fa77fb15965d2716be1deef7a727cfdf2954768566304dc3d"
+  },
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "streamer_amortize_policy_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "chunk_lighting_propagation_test",
+    "light_cache_certificate_test",
+    "relight_result_install_test",
+    "worldgen_scatter_block_resolve_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "completed_job_queue_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q01-generation-residency-build.log": "0cc4b470c2cdcfabcda2098b59161b647b596ad62da09876b3f40eb0a22b6750",
+    "build/desktop-msvc/s4-q01-generation-residency-provenance.json": "80a1ed211009e12eadb537ac1f5d7fecfb44d552bdc78150856837e88f0ec919",
+    "build/desktop-msvc/s4-q01-generation-residency-regression-build.log": "5e4f765a76e32f224eed8297c35312cfb1acb21bea09ea10fa47a26d80bc5a50",
+    "build/desktop-msvc/s4-q01-generation-residency-regressions.json": "0c8297f7f74825ea9451f80299905524e24c04fe0b28e63a946ea8501cce656a",
+    "build/desktop-msvc/s4-q01-generation-residency-io-storage.json": "1d40f30694e5591530e1316c7e01cde48fa16f1d47521b8d61da2a9ff1152d1c",
+    "build/desktop-msvc/s4-q01-generation-residency-async_io_storage_test.log": "5e721d6b7268ec6dff47c75e3ace35eb0a776067aab141d05fdb338ed973d606",
+    "build/desktop-msvc/s4-q01-generation-residency-application_operation_storage_test.log": "a979c1fc650e0bd4900e3b70f3f314f54abfce279d18cf136912b8428eed11a4",
+    "build/desktop-msvc/s4-q01-generation-residency-catalog_worker_retirement_test.log": "ee9d30ea1ddf557271e5b035f859b99f9a0e0a5fac276fc4228e9e59724f5b34",
+    "build/desktop-msvc/s4-q01-generation-residency-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q01-generation-residency-streamer_amortize_policy_test.log": "c343c44242910c573192f08f82b45e89749f70db3ac61ee5f748ba0bf2b9b6b3",
+    "build/desktop-msvc/s4-q01-generation-residency-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q01-generation-residency-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q01-generation-residency-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q01-generation-residency-chunk_lighting_propagation_test.log": "ed3dfbe34f9da1c33e19c20dca699c5c082d505d581170dc797fd0929f4c88a7",
+    "build/desktop-msvc/s4-q01-generation-residency-light_cache_certificate_test.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build/desktop-msvc/s4-q01-generation-residency-relight_result_install_test.log": "4341d3bf06613af3c0006e388d6f88e28212c1cc81dd101552767278e820df9a",
+    "build/desktop-msvc/s4-q01-generation-residency-worldgen_scatter_block_resolve_test.log": "2206c4d63d5eacefdd94166e7c60c4f18ce6acf0d94c9e367ce564217c3a4ef1",
+    "build/desktop-msvc/s4-q01-generation-residency-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q01-generation-residency-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q01-generation-residency-completed_job_queue_test.log": "c7730b8fbbc3c67ea79c44795ad9bfad49bd0b3262b9a0e89f8f84299a760eb5",
+    "build/desktop-msvc/s4-q01-generation-residency-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/route.json": "bb3f4647174e6131cfcb2e06e3c67be39ddd95b575280e5c66ec3982a2e7e84c",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/smoke-verdict.json": "3c64b502f2731cd4b4dd21dc932cf2e94d065cbdf832cd0fb35620ad1466e283",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/flight_sim_report.json": "43b2dd4e5f2c76b0dbaba7541ccf3e09e74a3001a070a3c9763de6c89a69fd73",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/desktop-normal-shutdown.json": "2dec50f1b52934d245a8b2dd1e24ada2c2618493e9acf58c7214b4153001d6fa",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/legacy-gates.json": "62376935461fed2452c1e2d4c4abb2223130eff1e6613a5f41ee9426acabd03b",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-generation-residency-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-generation-residency-flat.log": "68a6095e71fcd3ccbfb9959e5f826ff710849cb1d6aff10291701cb4f57dc394",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/runner.log": "115fa2448dce0d6adedba3e9c36a3a129d88c4fff294426b372fe33248e29c01",
+    "build/desktop-msvc/s4-q01-generation-residency-flat/terrain-save-probe/report.json": "cbb2205ae8e792a8184b3bb440acac9b045fff784a531e4c20f98b3fd05c0706",
+    "build/desktop-msvc/s4-q01-generation-residency-full/route.json": "1374b88edf9e678e2ab04e478e4bc021f519cfb68d5f8715088cbcadd06c9ac9",
+    "build/desktop-msvc/s4-q01-generation-residency-full/smoke-verdict.json": "3f23e2ec4aa201a7eaae8d5bf159eaaf10d0e94ddeef42ff261cb2c3c209949b",
+    "build/desktop-msvc/s4-q01-generation-residency-full/flight_sim_report.json": "99ec99768a743cb08c6f0db85d6165d44da65647edf16517267093ce100c0c81",
+    "build/desktop-msvc/s4-q01-generation-residency-full/desktop-normal-shutdown.json": "6a32875f58302ad4b91ccffaf00441dd603d0b02f9bf8dbf492eeb2f24765262",
+    "build/desktop-msvc/s4-q01-generation-residency-full/legacy-gates.json": "1a45cde6c6f926ff6f242d863bb39bdf4ff98c93c82b6727afa348c1858992e9",
+    "build/desktop-msvc/s4-q01-generation-residency-full/generation-shutdown.json": "4f07ea290b16e0cf3d2928ad9e5d5db1245535331db8439a56f1df544ebd2f60",
+    "build/desktop-msvc/s4-q01-generation-residency-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-generation-residency-full.log": "7de0d286616d66ae31c9316e1a875e9b4d2cca936d46fb10687a50977d21a412",
+    "build/desktop-msvc/s4-q01-generation-residency-full/runner.log": "45da728b1c52e908a0d6cc986d9abadec557bc55bf3ce96f0ee96f3629749234",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/route.json": "648bae48ab815f8f725bb6bc8ad904121688e7c2e75fd99c16e58079922b5ccc",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/flight_sim_report.json": "47a5d0e90cf73287a6942ba518f321e4d7b2e14b3ff378d612da9b921d847b75",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/smoke-verdict.json": "59b7f9a9ad8a4def7b383c6f32cb370a0f1ec922cf2f8285188dfc37a9981cd2",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/desktop-normal-shutdown.json": "44d3e1e10ac79c8e5ee64772d1fcb0a401a9753675370c4208e950a669f03fd6",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/legacy-gates.json": "b4d7e41649550fdf57bceee99d4c0820c7ceb969eba05c1c572787f51c7b1b00",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/ordered-route-path-evidence.json": "8bf075e1d374e7498011f876bf5ce14f1a15fa9117b5b691fbcefde0fb00ab15",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/bot-route.json": "a78a910a734ff5b5df03667adb4fb3f8176abcde8412c01855c7f0a2b11cc3a7",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/diagnostic_bot.jsonl": "3e18b1ada28d90bccca324e7050cf5d3b5a3cae9b92cb95a2d94cba0c59e3a3b",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/runner.log": "a8e775f83e33042fb38b48be3fb6696b46d6ded7216c1fbd69e3365761e47ab0",
+    "build/desktop-msvc/s4-q01-generation-residency-motion/evidence-report.json": "537e927d26d881193028cae2903ea6c70249674cdd76aace65d5bb9622254a47",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-generation-residency-motion.log": "622a739c65f07a41ec23e4012aec9fc6281c56c77dc7622b9eb36ecd883831cf",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/route.json": "dcd6d0add06f60822d7a5e50dab00998ae95aa26720e345b7c58c571e93a427b",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/flight_sim_report.json": "01a5552905c451923fc5163d294b673868f734447f88ff8d1b154ad8d9760398",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/smoke-verdict.json": "7105e7458bed46e28725ec510aabd05b23133e7d7fbc4c07b5cf54956eb45720",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/desktop-normal-shutdown.json": "890d8f0b1f26791ab8b23c387462d609b1d1a78c9035476673a2b69de10a96e1",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/legacy-gates.json": "8c39b375f29c6343f4c32d155eac0a88229c856aba3cb3fbdba2b5b070491566",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/ordered-route-path-evidence.json": "a62d55bfd717da317f05ac34f2ac8e17a9fa6a230bda7f67c3a685a0110f8451",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/bot-route.json": "a78a910a734ff5b5df03667adb4fb3f8176abcde8412c01855c7f0a2b11cc3a7",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/diagnostic_bot.jsonl": "16dfa2ccbe44f44d02efcfa40812aaabcc4ebfeb1dd734cf667642e522e0165b",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/runner.log": "be5a58e5ed52342ce4a84448946580d404d7a4af58e5fca2a3e6dee5826a38a2",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion/evidence-report.json": "62a2232985b35b7ab0aa861655818990bffc4a377e94cf7e4eb298643ae8d4b6",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-generation-residency-motion-completion.log": "0c7e5c65b7e435b5a3c6c44e7d02f31181b775169818e5a1588d6c08214ebedc"
+  }
+}

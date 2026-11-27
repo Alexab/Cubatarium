@@ -3210,6 +3210,128 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         }
       });
       if(flow_only) RunTerrainProbePhase([&] {
+        using namespace std::chrono_literals;
+        const glm::ivec3 home(-2, 0, 1), peer(0, 0, 1), next(2, 0, 1), filler(19, 0, 1);
+        const auto section = [](glm::ivec3 ground) { return glm::ivec3(ground.x, -3, ground.z); };
+        const auto cell = [&](glm::ivec3 ground) { return section(ground) * CHUNK_SIZE; };
+        const glm::ivec3 border(-3, 0, 1), light_cell(-2, 0, 2), light_section(-2, 0, 3), wet(-2, 0, 4);
+        const glm::ivec3 unused_fluid(-7, 0, 1);
+        struct CrossColumnPopulator final : IUChunkPopulator
+        {
+          const UBlockRegistry &registry;
+          explicit CrossColumnPopulator(const UBlockRegistry &registry) : registry(registry) {}
+          ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override
+          {
+            ChunkPopulateResult result;
+            result.coord = request.chunkCoord;
+            result.token = request.token;
+            const auto coord = result.coord;
+            result.buffer.SetWorldGenOwnerChunk({coord.x, -3, coord.z}, registry);
+            result.buffer.SetBlock({coord.x * CHUNK_SIZE, -48, coord.z * CHUNK_SIZE}, 8);
+            if (coord.x == -2)
+            {
+              result.buffer.SetBlock({-3 * CHUNK_SIZE, -48, CHUNK_SIZE}, 8);
+              result.buffer.SetLightPacked({-2 * CHUNK_SIZE, -48, 2 * CHUNK_SIZE}, 0x37);
+              std::array<uint8_t, CHUNK_VOLUME> section_light{};
+              section_light[0] = 0x21;
+              result.buffer.SetChunkLightData({-2, -3, 3}, section_light);
+              result.buffer.SetChunkWeatherState({-2, -3, 4}, 0.5f, 2.0);
+              result.buffer.SetFluidPacked({-7 * CHUNK_SIZE, -48, CHUNK_SIZE}, 1);
+            }
+            return result;
+          }
+        } populator(*world.BlockRegistry);
+        ProceduralSettings request;
+        request.MinHeight = -48;
+        request.MaxHeight = -33;
+        const auto work_deadline = std::chrono::steady_clock::now() + 5s;
+        while (UPipelineAdmission::Get().WorkSlotsInUse() && std::chrono::steady_clock::now() < work_deadline)
+          std::this_thread::yield();
+        const auto enqueue = [&](UChunkLoadScheduler &scheduler, glm::ivec3 column, int priority) {
+          require(scheduler.RequestLoad(column, priority, request) &&
+                      scheduler.StartQueuedGenerationWorkers(1) == 1 && scheduler.Pool.WaitIdleFor(5s),
+                  "generation residency uses a completed worker publication");
+        };
+        const auto seed = [&](UBlockWorld &terrain) {
+          terrain.SetVerticalProfile({-48, -33, -40});
+          for (const auto key : {home, peer, filler})
+            terrain.SetBlock(cell(key) + glm::ivec3(1, 0, 1), 8);
+        };
+        const auto applied_cross_inputs = [&](const UBlockWorld &terrain) {
+          const auto &chunks = terrain.GetChunkManager();
+          const auto *individual = chunks.GetChunk(section(light_cell));
+          const auto *complete = chunks.GetChunk(section(light_section));
+          const auto *weather = chunks.GetChunk(section(wet));
+          return terrain.GetBlock(cell(home)) == 8 && terrain.GetBlock(cell(border)) == 8 &&
+                 individual && individual->GetLightPackedLocal({0, 0, 0}) == 0x37 &&
+                 complete && complete->GetLightPackedLocal({0, 0, 0}) == 0x21 &&
+                 weather && weather->GetSurfaceWetness() == 0.5f && !chunks.HasResidentTerrainColumn(unused_fluid);
+        };
+        constexpr size_t limit = 3;
+        UBlockWorld terrain;
+        seed(terrain);
+        auto &chunks = terrain.GetChunkManager();
+        {
+          UChunkBuffer probe;
+          probe.SetBlock(cell(home), 8);
+          probe.SetFluidPacked(cell(unused_fluid), 1);
+          require(!probe.AddsTerrainColumn(chunks), "resident writes and a detached fluid byte need no new column");
+          probe.SetBlock(cell(border), 8);
+          require(probe.AddsTerrainColumn(chunks), "cross-border block needs a column even with a resident origin");
+          probe.SetBlock(cell(border), BLOCK_AIR);
+          require(!probe.AddsTerrainColumn(chunks), "erased border writes need no new column");
+          probe.SetLightPacked(cell(light_cell), 0);
+          require(probe.AddsTerrainColumn(chunks), "explicit zero light still materializes its section");
+          probe.Clear();
+          probe.SetChunkLightData(section(light_section), {});
+          require(probe.AddsTerrainColumn(chunks), "whole-section light-only result needs a new column");
+          probe.Clear();
+          probe.SetChunkWeatherState(section(wet), 0.5f, 2.0);
+          require(probe.AddsTerrainColumn(chunks), "weather-only result needs a new column");
+        }
+        UChunkGenerationRegistry tokens;
+        UChunkLoadScheduler scheduler(populator, tokens);
+        enqueue(scheduler, home, 0);
+        const auto retained_bytes = scheduler.GetCompletedReadyPayloadBytes();
+        const auto source_id = scheduler.ActiveRequestIds.at(home);
+        enqueue(scheduler, peer, 1);
+        scheduler.Tick(terrain, 8, 0, 0.0, false, limit);
+        require(chunks.GetResidentTerrainColumnCount() == limit && !terrain.GetBlock(cell(home)) &&
+                    terrain.GetBlock(cell(peer)) == 8 && scheduler.IsCommitted(peer) &&
+                    scheduler.GetState(home) == ChunkLoadState::Ready && scheduler.GetRetainedGenerationResultCount() == 1 &&
+                    scheduler.GetCompletedReadyPayloadBytes() == retained_bytes && scheduler.ActiveRequestIds.at(home) == source_id,
+                "whole cross-column result waits at saturation while a resident-only peer publishes");
+        chunks.RemoveChunk(section(filler));
+        enqueue(scheduler, next, 2);
+        const auto next_token = tokens.Current(next).sequence;
+        scheduler.Tick(terrain, 8, 0, 0.0, false, limit);
+        const auto crossed_count = chunks.GetResidentTerrainColumnCount();
+        require(crossed_count == 6 && applied_cross_inputs(terrain) && scheduler.IsCommitted(home) &&
+                    scheduler.GetState(next) == ChunkLoadState::Ready && !chunks.HasResidentTerrainColumn(next),
+                "only one whole result crosses the threshold and it retains all its physical inputs");
+        for (const auto key : {border, light_cell, light_section, wet})
+          chunks.RemoveChunk(section(key));
+        scheduler.Tick(terrain, 8, 0, 0.0, false, limit);
+        require(chunks.GetResidentTerrainColumnCount() == limit && scheduler.IsCommitted(next) &&
+                    terrain.GetBlock(cell(next)) == 8 && tokens.Current(next).sequence == next_token &&
+                    scheduler.GetRetainedGenerationResultCount() == 0 && scheduler.BufferReservedBytes() == 0,
+                "space releases the existing successor and its original result owner retires");
+
+        UBlockWorld unrestricted;
+        seed(unrestricted);
+        UChunkGenerationRegistry control_tokens;
+        UChunkLoadScheduler control(populator, control_tokens);
+        enqueue(control, home, 0);
+        control.Tick(unrestricted, 8, 0);
+        const auto control_count = unrestricted.GetChunkManager().GetResidentTerrainColumnCount();
+        require(control_count == 7 && applied_cross_inputs(unrestricted),
+                "unrestricted control adds four columns at the already full threshold");
+        report["generation_publication_residency"] = {{"status", "PASS"}, {"threshold", limit},
+            {"unrestricted_count", control_count}, {"single_publication_count", crossed_count},
+            {"retained_result_bytes", retained_bytes}, {"resident_peer_published", true},
+            {"original_successor_published", true}, {"released_generation_bytes", scheduler.BufferReservedBytes()}};
+      });
+      if(flow_only) RunTerrainProbePhase([&] {
         struct PressurePopulator final : IUChunkPopulator {
           std::atomic<int> calls{0},seed{0};
           std::shared_future<void> settings_gate;
