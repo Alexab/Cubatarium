@@ -436,6 +436,7 @@ int main(int argc, char **argv)
     const auto assignment = cutum::io_codec_fixture::CheckRuntimeIdAssignment();
     const auto synthetic = cutum::io_codec_fixture::CheckSyntheticRegistry();
     const auto disk = cutum::io_codec_fixture::CheckDiskIndex(folder + "-index");
+    const auto disk_commit = cutum::io_codec_fixture::CheckDiskIndexCommitRefusal(folder + "-index-commit");
     const auto malformed = cutum::io_codec_fixture::CheckMalformedJson();
     const auto receipt = cutum::io_codec_fixture::CheckReceiptTemporaries();
     const auto receipt_writer = cutum::io_codec_fixture::CheckReceiptWriter(folder + "-receipt-write");
@@ -464,6 +465,7 @@ int main(int argc, char **argv)
     result["runtime_id_assignment"] = assignment;
     result["synthetic_registry"] = synthetic;
     result["ordinary_disk_index"] = disk;
+    result["ordinary_disk_index_commit"] = disk_commit;
     result["ordinary_failed_parse"] = malformed;
     result["ordinary_receipt_temporaries"] = receipt;
     result["receipt_writer"] = receipt_writer;

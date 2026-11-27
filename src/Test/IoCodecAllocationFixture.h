@@ -1080,6 +1080,68 @@ inline nlohmann::json CheckFileStreams(const std::filesystem::path &root)
   return {{"write_peak", write_peak}, {"read_peak", read_peak}, {"read_retained", retained}};
 }
 
+inline nlohmann::json CheckDiskIndexCommitRefusal(const std::filesystem::path &root)
+{
+  namespace fs = std::filesystem;
+  const auto folder = root.string();
+  fs::create_directories(root / "chunks");
+  UChunkStorageService paths;
+  const glm::ivec3 ground{-4, 0, 7};
+  const auto old_path = paths.ChunkFilePath(folder, ground, ChunkDiskFormat::Binary);
+  std::ofstream(old_path).put('0');
+  const auto check = [&](glm::ivec3 committed) {
+    const auto new_path = paths.ChunkFilePath(folder, committed, ChunkDiskFormat::Binary);
+    const auto run = [&](size_t prefix) {
+      size_t attempts = 0;
+      {
+        UChunkStorageService index;
+        Require(index.GetHighestChunkSliceOnDisk(folder, ground) == ground.y,
+                "warm the index before the physical save");
+        const auto revision = index.GetKnownAirEvidenceRevision();
+        std::ofstream(new_path).put('1');
+        {
+          observation::Scope allocations(prefix);
+          index.RecordChunkSliceSaved(folder, committed);
+          attempts = observation::State.attempts;
+          Require(observation::State.refusals == (prefix == SIZE_MAX ? 0 : 1),
+                  "exercise the exact post-commit allocation prefix");
+        }
+        Require(index.GetKnownAirEvidenceRevision() > revision &&
+                    index.InspectDiskIndexStorage().folders == (prefix == SIZE_MAX ? 1 : 0),
+                "only a fully updated cached folder remains eligible for reads");
+        Require(index.GetHighestChunkSliceOnDisk(folder, committed) == committed.y &&
+                    !index.IsChunkSliceAbsentOnDisk(folder, committed) &&
+                    !index.IsChunkSliceAbsentOnDisk(folder, ground),
+                "replay recovers both the previous and physically committed slices");
+      }
+      Require(!observation::State.live && !observation::State.blocks, "post-commit index backing retires");
+      Require(fs::remove(new_path), "retire the controlled committed input between prefixes");
+      return attempts;
+    };
+    const auto attempts = run(SIZE_MAX);
+    for (size_t prefix = 0; prefix < attempts; ++prefix)
+      run(prefix);
+    run(SIZE_MAX);
+    return attempts;
+  };
+  const auto grow_refusals = check({ground.x, 3, ground.z});
+  const auto new_refusals = check({ground.x + 1, 3, ground.z});
+  for (const char *name : {"-4_+2_7.json", "-4_+2_7.cchunk", "-4_ 1_7.cchunk", "-4_-2147483648_7.cchunk",
+                           "-4_2147483648_7.cchunk", "-4_+-3_7.cchunk", "-4_5 _7.json"})
+    std::ofstream(root / "chunks" / name).put('0');
+  UChunkStorageService signed_names;
+  Require(signed_names.GetHighestChunkSliceOnDisk(folder, ground) == 2 &&
+              signed_names.InspectDiskIndexStorage().slices == 4 &&
+              !signed_names.IsChunkSliceAbsentOnDisk(folder, {ground.x, INT_MIN, ground.z}),
+          "signed decimal filename grammar, range refusal and encoding duplicates agree");
+  Require(signed_names.RemoveChunkSliceFromDisk(folder, ground) &&
+              signed_names.GetHighestChunkSliceOnDisk(folder, ground) == 2 &&
+              signed_names.InspectDiskIndexStorage().slices == 3,
+          "dirty column refresh preserves the compact signed coordinates");
+  return {{"grow_existing_refusals", grow_refusals}, {"new_column_refusals", new_refusals},
+          {"physical_recovery", true}, {"signed_duplicate_refresh", true}};
+}
+
 inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
 {
   std::filesystem::create_directories(root / "chunks");
@@ -1104,7 +1166,8 @@ inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
       warmed = storage.InspectDiskIndexStorage();
       warmup_additional_peak = observation::State.peak - baseline;
       Require(warmed.supported && warmed.initialized == 1 && warmed.heights == 320 &&
-                  warmed.columns == 320 && warmed.slices == 320 && warmed.tables == 324 &&
+                  warmed.columns == 320 && warmed.slices == 320 && warmed.tables == 3 &&
+                  warmed.slice_slots == 320 && warmed.slice_requested == 320 * sizeof(int) &&
                   observation::State.live - baseline == warmed.requested - cold.requested,
               "real disk index heap matches default ordinary allocations");
       Require(traversal.calls == 1 && traversal.storage.kind == IoCodecKind::DiskDirectoryEntry &&
@@ -1134,7 +1197,9 @@ inline nlohmann::json CheckDiskIndex(const std::filesystem::path &root)
   return {{"cold", cold.requested}, {"warmed", warmed.requested},
           {"after_removal", empty_column.requested}, {"bucket_slots", warmed.bucket_slots},
           {"columns", warmed.columns}, {"warmup_additional_peak", warmup_additional_peak},
-          {"sampled_traversal", traversal.storage.scratch_bytes}};
+          {"sampled_traversal", traversal.storage.scratch_bytes},
+          {"tables", warmed.tables}, {"slice_slots", warmed.slice_slots},
+          {"slice_requested", warmed.slice_requested}};
 }
 } // namespace io_codec_fixture
 } // namespace cutum

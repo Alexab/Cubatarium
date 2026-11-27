@@ -505,18 +505,30 @@ struct AsyncIoStorageProbe
               "each warmup respects the bounded folder index cache");
     }
     save(0, -2);
+    {
+      UChunkStorageService legacy({ChunkWriteFormat::Json, false});
+      const glm::ivec3 coord{column.x, -4, column.z};
+      const UChunk slice(coord);
+      Require(legacy.SaveChunk(coord, slice, folder(0), registry),
+              "retain the real legacy representation of an indexed slice");
+    }
     Require(storage.InspectDiskIndexStorage().slices == cap &&
                 storage.GetHighestChunkSliceOnDisk(folder(0), column) == -2 &&
                 !storage.IsChunkSliceAbsentOnDisk(folder(0), {column.x, -4, column.z}) &&
                 storage.InspectDiskIndexStorage().folders == cap,
             "late write to an evicted folder rebuilds its index from both saved slices");
+    const auto joined = storage.InspectDiskIndexStorage();
+    Require(joined.tables == 1 + 2 * cap && joined.slices == cap + 1 &&
+                joined.slice_slots == cap + 1 && joined.slice_requested == (cap + 1) * sizeof(int),
+            "both disk formats share one compact indexed coordinate");
     Require(storage.RemoveChunkSliceFromDisk(folder(0), {column.x, -2, column.z}) &&
                 storage.GetHighestChunkSliceOnDisk(folder(0), column) == -4 &&
                 storage.IsChunkSliceAbsentOnDisk(folder(0), {column.x, -2, column.z}),
             "removal invalidates the reconstructed index");
     return {{"status", "PASS"}, {"folder_limit", cap}, {"visited_folders", cap + 1},
             {"cancelled_retry", true}, {"evicted_folder_rebuilt", true},
-            {"outstanding_after", io.GetOutstandingIndexWarmupCount()}};
+            {"outstanding_after", io.GetOutstandingIndexWarmupCount()}, {"packed_tables", joined.tables},
+            {"packed_slices", joined.slices}, {"packed_slice_bytes", joined.slice_requested}};
   }
 
   static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,

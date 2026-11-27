@@ -10,10 +10,13 @@
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Math/GridMath.h"
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
+#include <charconv>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <string_view>
 #ifdef _WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -35,18 +38,30 @@ std::string CoordStem(glm::ivec3 coord)
          std::to_string(coord.z);
 }
 
-bool TryParseInt(const std::string &text, int &out)
+bool TryParseInt(std::string_view text, int &out) noexcept
 {
-  try
+  // Match the original decimal filename grammar, including leading
+  // whitespace and a leading plus, without allocating substrings.
+  while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())))
+    text.remove_prefix(1);
+  if (!text.empty() && text.front() == '+')
   {
-    size_t parsed = 0;
-    out = std::stoi(text, &parsed);
-    return parsed == text.size();
+    text.remove_prefix(1);
+    if (text.empty() || text.front() < '0' || text.front() > '9')
+      return false;
   }
-  catch (const std::exception &)
-  {
+  if (text.empty())
     return false;
-  }
+  const auto end = text.data() + text.size();
+  const auto parsed = std::from_chars(text.data(), end, out);
+  return parsed.ec == std::errc{} && parsed.ptr == end;
+}
+
+void InsertDiskSlice(std::vector<int> &slices, int cy)
+{
+  const auto position = std::lower_bound(slices.begin(), slices.end(), cy);
+  if (position == slices.end() || *position != cy)
+    slices.insert(position, cy);
 }
 
 bool HasExtensionFiles(const std::filesystem::path &chunks_dir,
@@ -72,6 +87,15 @@ bool HasExtensionFiles(const std::filesystem::path &chunks_dir,
 UChunkStorageService::UChunkStorageService(ChunkStorageSettings settings)
     : Settings(std::move(settings))
 {
+}
+
+void UChunkStorageService::DiskTerrainColumnIndex::RecordSlice(DiskTerrainColumnKey column, int cy)
+{
+  auto found = slice_cys.find(column);
+  if (found == slice_cys.end())
+    slice_cys.emplace(column, std::vector<int>{cy});
+  else
+    InsertDiskSlice(found->second, cy);
 }
 
 void UChunkStorageService::SetSettings(const ChunkStorageSettings &settings)
@@ -126,7 +150,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
   for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
   {
     const std::string extension = entry.path().extension().string();
-    const auto observe_entry = [&](const std::string *stem, size_t parts, bool parts_supported) {
+    const auto observe_entry = [&](const std::string *stem) {
       if (!directory_peak)
         return;
       const auto layout = GetCatalogFilesystemLayout();
@@ -137,8 +161,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
       storage.Text(extension);
       if (stem)
         storage.Text(*stem);
-      storage.Add(parts);
-      const bool supported = layout.supported && storage.bytes.supported && parts_supported;
+      const bool supported = layout.supported && storage.bytes.supported;
       if (directory_peak->kind == IoCodecKind::Count)
       {
         directory_peak->kind = IoCodecKind::DiskDirectoryEntry;
@@ -151,7 +174,7 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
     if (extension != JsonSerializer.FileExtension() &&
         extension != BinarySerializer.FileExtension())
     {
-      observe_entry(nullptr, 0, true);
+      observe_entry(nullptr);
       continue;
     }
     const std::string stem = entry.path().stem().string();
@@ -159,55 +182,39 @@ void UChunkStorageService::BuildHighestChunkSliceIndex(
     const size_t last_sep = stem.rfind('_');
     if (first_sep == std::string::npos || last_sep == first_sep)
     {
-      observe_entry(&stem, 0, true);
+      observe_entry(&stem);
       continue;
     }
     int x = 0;
     int cy = 0;
     int z = 0;
-    StlSourceStorage name_parts;
-    const auto parse = [&](const std::string &part, int &value) {
-      if (directory_peak)
-        name_parts.Text(part);
-      return TryParseInt(part, value);
-    };
-    const bool parsed = parse(stem.substr(0, first_sep), x) &&
-                        parse(stem.substr(first_sep + 1, last_sep - first_sep - 1), cy) &&
-                        parse(stem.substr(last_sep + 1), z);
-    observe_entry(&stem, name_parts.bytes.requested, name_parts.bytes.supported);
+    const std::string_view name(stem);
+    const bool parsed = TryParseInt(name.substr(0, first_sep), x) &&
+                        TryParseInt(name.substr(first_sep + 1, last_sep - first_sep - 1), cy) &&
+                        TryParseInt(name.substr(last_sep + 1), z);
+    observe_entry(&stem);
     if (!parsed)
     {
       continue;
     }
-    const DiskTerrainColumnKey column{x, z};
-    index.slice_cys[column].insert(cy);
-    auto [it, inserted] = index.highest_cy.emplace(column, cy);
-    if (!inserted)
-    {
-      it->second = std::max(it->second, cy);
-    }
+    index.RecordSlice({x, z}, cy);
   }
   index.initialized = true;
   KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
 }
 
-int UChunkStorageService::ScanHighestChunkSliceOnDisk(
-    const std::string &worldFolder, glm::ivec3 groundCoord,
-    std::unordered_set<int> *slices) const
+std::vector<int> UChunkStorageService::ScanDiskColumnSlices(
+    const std::string &worldFolder, glm::ivec3 groundCoord) const
 {
   const std::filesystem::path chunks_dir(ChunksDir(worldFolder));
   if (!std::filesystem::exists(chunks_dir) ||
       !std::filesystem::is_directory(chunks_dir))
   {
-    return kNoChunkSliceOnDisk;
-  }
-  if (groundCoord.y != 0)
-  {
-    groundCoord.y = 0;
+    return {};
   }
   const std::string prefix = std::to_string(groundCoord.x) + "_";
   const std::string suffix = "_" + std::to_string(groundCoord.z);
-  int highest = kNoChunkSliceOnDisk;
+  std::vector<int> slices;
   for (const auto &entry : std::filesystem::directory_iterator(chunks_dir))
   {
     const std::string extension = entry.path().extension().string();
@@ -224,16 +231,12 @@ int UChunkStorageService::ScanHighestChunkSliceOnDisk(
       continue;
     }
     int cy = 0;
-    const std::string cy_text = stem.substr(
+    const auto cy_text = std::string_view(stem).substr(
         prefix.size(), stem.size() - prefix.size() - suffix.size());
     if (TryParseInt(cy_text, cy))
-    {
-      if (slices)
-        slices->insert(cy);
-      highest = highest == kNoChunkSliceOnDisk ? cy : std::max(highest, cy);
-    }
+      InsertDiskSlice(slices, cy);
   }
-  return highest;
+  return slices;
 }
 
 ChunkDiskFormat
@@ -444,25 +447,24 @@ bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
 void UChunkStorageService::RecordChunkSliceSaved(
     const std::string &worldFolder, glm::ivec3 chunkCoord) const
 {
-  const glm::ivec3 ground(chunkCoord.x, 0, chunkCoord.z);
-  const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
   {
     std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-    const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
-    if (folder_index != HighestChunkSliceIndexByFolder.end() &&
-        folder_index->second.initialized)
+    auto &indexes = HighestChunkSliceIndexByFolder;
+    auto folder_index = indexes.end();
+    try
     {
-      DiskTerrainColumnIndex &index = folder_index->second;
-      const DiskTerrainColumnKey column{ground.x, ground.z};
-      index.slice_cys[column].insert(chunkCoord.y);
-      if (index.dirty_columns.count(column) == 0)
-      {
-        auto [cached, inserted] = index.highest_cy.emplace(column, chunkCoord.y);
-        if (!inserted)
-        {
-          cached->second = std::max(cached->second, chunkCoord.y);
-        }
-      }
+      folder_index = indexes.find(HighestChunkSliceIndexKey(worldFolder));
+      if (folder_index != indexes.end() && folder_index->second.initialized)
+        folder_index->second.RecordSlice({chunkCoord.x, chunkCoord.z}, chunkCoord.y);
+    }
+    catch (const std::bad_alloc &)
+    {
+      // The file is already committed. Retire any index that may be stale
+      // so a later lookup rebuilds from the actual disk state.
+      if (folder_index != indexes.end())
+        indexes.erase(folder_index);
+      else
+        indexes.clear();
     }
   }
   KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
@@ -586,21 +588,11 @@ void UChunkStorageService::RefreshDiskColumnIndex(
   const DiskTerrainColumnKey column{groundCoord.x, groundCoord.z};
   if (index.dirty_columns.count(column))
   {
-    std::unordered_set<int> slices;
-    const int highest =
-        ScanHighestChunkSliceOnDisk(worldFolder, groundCoord, &slices);
+    auto slices = ScanDiskColumnSlices(worldFolder, groundCoord);
     if (slices.empty())
       index.slice_cys.erase(column);
     else
-      index.slice_cys[column] = std::move(slices);
-    if (highest != kNoChunkSliceOnDisk)
-    {
-      index.highest_cy[column] = highest;
-    }
-    else
-    {
-      index.highest_cy.erase(column);
-    }
+      index.slice_cys.insert_or_assign(column, std::move(slices));
     index.dirty_columns.erase(column);
     KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
   }
@@ -614,9 +606,8 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
   auto &index = FindOrPrepareDiskIndex(worldFolder, cache_key);
   RefreshDiskColumnIndex(worldFolder, groundCoord, index);
-  const auto cached = index.highest_cy.find({groundCoord.x, groundCoord.z});
-  return cached != index.highest_cy.end() ? cached->second
-                                          : kNoChunkSliceOnDisk;
+  const auto cached = index.slice_cys.find({groundCoord.x, groundCoord.z});
+  return cached != index.slice_cys.end() ? cached->second.back() : kNoChunkSliceOnDisk;
 }
 
 bool UChunkStorageService::IsChunkSliceAbsentOnDisk(
@@ -629,7 +620,8 @@ bool UChunkStorageService::IsChunkSliceAbsentOnDisk(
   auto &index = FindOrPrepareDiskIndex(worldFolder, cache_key);
   RefreshDiskColumnIndex(worldFolder, {chunkCoord.x, 0, chunkCoord.z}, index);
   const auto found = index.slice_cys.find({chunkCoord.x, chunkCoord.z});
-  return found == index.slice_cys.end() || !found->second.count(chunkCoord.y);
+  return found == index.slice_cys.end() ||
+         !std::binary_search(found->second.begin(), found->second.end(), chunkCoord.y);
 }
 
 void UChunkStorageService::PrepareHighestChunkSliceIndex(
@@ -651,7 +643,7 @@ IoDiskIndexStorage UChunkStorageService::InspectDiskIndexStorage() const
 {
   std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
   IoDiskIndexStorage result;
-  StlSourceStorage storage;
+  StlSourceStorage storage, slices;
   const auto table = [&](const auto &values) {
     ++result.tables;
     result.nodes += values.size();
@@ -664,20 +656,22 @@ IoDiskIndexStorage UChunkStorageService::InspectDiskIndexStorage() const
   {
     storage.Text(path);
     result.initialized += index.initialized;
-    result.heights += index.highest_cy.size();
+    result.heights += index.slice_cys.size();
     result.columns += index.slice_cys.size();
     result.dirty += index.dirty_columns.size();
-    table(index.highest_cy);
     table(index.slice_cys);
     table(index.dirty_columns);
     for (const auto &entry : index.slice_cys)
     {
       result.slices += entry.second.size();
-      table(entry.second);
+      result.slice_slots += entry.second.capacity();
+      slices.Buffer(entry.second.capacity(), sizeof(int));
     }
   }
+  result.slice_requested = slices.bytes.requested;
+  storage.Add(result.slice_requested);
   result.requested = storage.bytes.requested;
-  result.supported = storage.bytes.supported;
+  result.supported = storage.bytes.supported && slices.bytes.supported;
   return result;
 }
 
@@ -691,11 +685,13 @@ bool UChunkStorageService::RemoveChunkSliceFromDisk(
   const auto invalidate_cached_highest = [&]()
   {
     std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-    const auto folder_index = HighestChunkSliceIndexByFolder.find(cache_key);
-    if (folder_index != HighestChunkSliceIndexByFolder.end() &&
+    auto &indexes = HighestChunkSliceIndexByFolder;
+    const auto folder_index = indexes.find(cache_key);
+    if (folder_index != indexes.end() &&
         folder_index->second.initialized)
     {
-      folder_index->second.dirty_columns.insert(column);
+      try { folder_index->second.dirty_columns.insert(column); }
+      catch (const std::bad_alloc &) { indexes.erase(folder_index); }
       KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
     }
   };

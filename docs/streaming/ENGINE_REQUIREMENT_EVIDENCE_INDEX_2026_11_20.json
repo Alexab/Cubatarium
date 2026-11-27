@@ -3652,11 +3652,19 @@
       "receipt": "build/desktop-msvc/s4-q10-flags-read-acceptance.json",
       "scope": "Read v2 completion flags by staging one native hash set and publishing after validated EOF, signature and schema. Preserve signed coordinates and last duplicate members. Deduplicate coordinates without extra node allocations and validate ignored extensions through the bounded lexer. The native world resets the old bucket high water before loading a replacement and retries a refused physical file. The loaded metadata still requires live light coverage.",
       "remaining": "The MSVC set measurement accounts for current nodes, sentinel and buckets. Join its cardinality and bucket growth and the optional reset allocation refusal with flag writer snapshots and result metadata, paths, indexes, read registry and Q01.L2. Full native, performance, memory and S0-S6 acceptance stays in scope. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.DISK_INDEX",
+      "status": "SCOPED_Q10_DISK_INDEX_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_DISK_INDEX_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-disk-index-acceptance.json",
+      "scope": "Retain sorted unique signed slice coordinates in one packed array per indexed column. Derive the highest slice and presence from the same array. Preserve filename grammar and both disk encodings. An allocation refusal after a physical commit retires the stale cache and the next lookup rebuilds it from disk. The fixtures observe four folders at most, one speculative warmup, native dual-format deduplication and recovery.",
+      "remaining": "Join measured per-folder column and slice high water, bucket history and directory traversal with the dirty refresh overlap, result metadata, path roots, read registry and Q01.L2. The complete S0-S6 native, performance and memory matrix stays in scope. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверить чтение флагов освещения и память набора завершённых колонок. Затем свести метаданные результатов, пути, индексы миров и реестр чтения с уже проверенными владельцами чанков и квитанций. Добавить Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Свести метаданные результатов I/O и пути с компактным индексом и памятью чанков, квитанций и флагов. Учесть реестр чтения и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

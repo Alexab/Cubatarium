@@ -193,14 +193,13 @@ private:
   {
     bool initialized{false};
     uint64_t last_access{0};
-    std::unordered_map<DiskTerrainColumnKey, int,
-                       DiskTerrainColumnKeyHash>
-        highest_cy;
-    std::unordered_map<DiskTerrainColumnKey, std::unordered_set<int>,
+    std::unordered_map<DiskTerrainColumnKey, std::vector<int>,
                        DiskTerrainColumnKeyHash>
         slice_cys;
     std::unordered_set<DiskTerrainColumnKey, DiskTerrainColumnKeyHash>
         dirty_columns;
+
+    void RecordSlice(DiskTerrainColumnKey column, int cy);
   };
 
   IUChunkSerializer &MutableSerializer(ChunkDiskFormat format);
@@ -212,9 +211,8 @@ private:
   void BuildHighestChunkSliceIndex(const std::string &worldFolder,
                                    DiskTerrainColumnIndex &index,
                                    IoCodecStorage *directory_peak = nullptr) const;
-  int ScanHighestChunkSliceOnDisk(
-      const std::string &worldFolder, glm::ivec3 groundCoord,
-      std::unordered_set<int> *slices = nullptr) const;
+  std::vector<int> ScanDiskColumnSlices(const std::string &worldFolder,
+                                      glm::ivec3 groundCoord) const;
   void RefreshDiskColumnIndex(const std::string &worldFolder,
                               glm::ivec3 groundCoord,
                               DiskTerrainColumnIndex &index) const;

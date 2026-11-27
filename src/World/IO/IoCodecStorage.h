@@ -50,6 +50,7 @@ struct IoDiskIndexStorage
 {
   size_t folders{}, initialized{}, heights{}, columns{}, slices{}, dirty{};
   size_t tables{}, nodes{}, bucket_slots{}, requested{};
+  size_t slice_slots{}, slice_requested{};
   bool supported{};
 };
 } // namespace cutum
