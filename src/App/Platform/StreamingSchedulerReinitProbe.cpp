@@ -1,4 +1,5 @@
 #include "App/Platform/StreamingSchedulerReinitProbe.h"
+#include "App/WorldOperationRunner.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "World/Core/World.h"
 #include "World/Streaming/WorldStreaming.h"
@@ -9,7 +10,10 @@
 #include "Test/WorldOwnedStorageFixture.h"
 #include "Test/MemberCallbackStorageFixture.h"
 #include "Test/RootStorageCompositionFixture.h"
+#include <atomic>
+#include <cstdlib>
 #include <fstream>
+#include <future>
 
 namespace cutum {
 struct StreamingSchedulerReinitProbe {
@@ -23,6 +27,109 @@ struct StreamingSchedulerReinitProbe {
       return gate.Populate(request);
     }
   };
+
+  static nlohmann::json CheckNormalGenerationShutdown(UCore &core, bool use_runner)
+  {
+    using namespace std::chrono_literals;
+    using Clock = std::chrono::steady_clock;
+    const auto require = [](bool value, const char *message) {
+      if (!value) throw std::runtime_error(message);
+    };
+    GenerationRetirementGate gate;
+    UWorld world(nullptr, nullptr);
+    world.BlockRegistry = std::make_unique<UBlockRegistry>(
+        nullptr, std::make_shared<UBlockDefinitionStorage>());
+    ProceduralSettings settings;
+    settings.Generator = ProceduralGenerator::Flat;
+    settings.MinHeight = 0;
+    settings.MaxHeight = 15;
+    settings.AsyncChunkGeneration = true;
+    settings.AsyncChunkIo = false;
+    world.SetProceduralSettings(settings, false);
+    auto &stream = *world.Streaming;
+    stream.ChunkPopulator = std::make_unique<NativeGate>(*world.BlockRegistry, gate);
+    stream.ChunkScheduler = std::make_unique<UChunkLoadScheduler>(*stream.ChunkPopulator,
+                                                                 stream.ChunkGenTokens);
+    GenerationGateRelease cleanup{gate};
+    auto *scheduler = stream.GetChunkScheduler();
+    gate.control = scheduler->ControlMemory;
+    std::weak_ptr<UBufferAllocationBudget> buffer_budget = scheduler->BufferBudget;
+    std::weak_ptr<std::atomic<size_t>> result_slots = scheduler->RetainedResults;
+    const glm::ivec3 active{0, 0, 10}, queued{0, 0, 11};
+    require(scheduler->RequestLoad(active, 1, settings) && scheduler->StartQueuedGenerationWorkers(1) == 1 &&
+                scheduler->RequestLoad(queued, 1, settings), "normal close has active and queued generation");
+    gate.Wait();
+
+    UNullProgressSink progress;
+    bool retired_after_release = false;
+    bool queued_cancelled = false;
+    size_t waiting_ticks = 0;
+    if (use_runner)
+    {
+      UWorldOperationRunner runner(core, world);
+      WorldRunnerRequest request;
+      request.op = WorldRunnerOp::Shutdown;
+      runner.Start(request);
+      const auto deadline = Clock::now() + 6s;
+      while (!world.IsBackgroundQuiesceFinished() && !runner.Tick(progress, 1))
+        require(Clock::now() < deadline, "close runner reaches finalization with generation still parked");
+      require(world.IsBackgroundQuiesceFinished() && stream.GetChunkScheduler() == scheduler,
+              "quiesce keeps generation owned while it is active");
+      queued_cancelled = scheduler->GetPendingQueueCount() == 0 && scheduler->GetGenInFlightCount() == 1;
+      const auto hold_until = Clock::now() + 250ms;
+      bool done = false;
+      do
+      {
+        done = runner.Tick(progress, 1);
+        if (done || stream.GetChunkScheduler() != scheduler || gate.control.expired())
+          break;
+        ++waiting_ticks;
+        std::this_thread::sleep_for(5ms);
+      } while (Clock::now() < hold_until);
+      retired_after_release = !done && !runner.ShouldCloseApplication() && waiting_ticks > 1 &&
+          stream.GetChunkScheduler() == scheduler && !gate.control.expired();
+      gate.Release();
+      if (!gate.control.expired())
+        require(AllocatorOwnerCensus::WaitSchedulerIdle(*scheduler, 3s), "generation completes before world release");
+      const auto finish_deadline = Clock::now() + 3s;
+      while (!runner.Tick(progress, 1))
+        require(Clock::now() < finish_deadline, "close runner finishes after generation release");
+      require(runner.Succeeded() && runner.ShouldCloseApplication(), "normal close is authorized after finalization");
+    }
+    else
+    {
+      UBackgroundQuiesceState quiesce;
+      world.BeginBackgroundQuiesce(quiesce);
+      const auto deadline = Clock::now() + 3s;
+      while (!world.TickBackgroundQuiesce(quiesce, 0ms, &progress))
+        require(Clock::now() < deadline, "direct shutdown fixture quiesces before transfer of owners");
+      queued_cancelled = scheduler->GetPendingQueueCount() == 0 && scheduler->GetGenInFlightCount() == 1;
+      auto release_worker = std::async(std::launch::async, [&] {
+        std::this_thread::sleep_for(400ms);
+        gate.Release();
+      });
+      world.PrepareForShutdown();
+      {
+        std::lock_guard lock(gate.mutex);
+        retired_after_release = gate.release;
+      }
+      release_worker.get();
+      // The old detach path leaves the scheduler allocated. Keep its world
+      // alive until the released job finishes before recording that failure.
+      if (!gate.control.expired())
+        require(AllocatorOwnerCensus::WaitSchedulerIdle(*scheduler, 3s), "detached baseline job drains safely");
+    }
+
+    const bool owners_retired = !stream.ChunkScheduler && !stream.ChunkPopulator && gate.destroyed == 1 &&
+        gate.scheduler_before_populator && gate.control.expired() && buffer_budget.expired() && result_slots.expired();
+    const bool no_publication = !world.BlockWorld.GetChunkManager().GetChunk(active) &&
+                                !world.BlockWorld.GetChunkManager().GetChunk(queued);
+    const bool passed = retired_after_release && queued_cancelled && owners_retired && gate.cancelled && no_publication;
+    return {{"status", passed ? "PASS" : "FAIL"}, {"queued_cancelled", queued_cancelled},
+            {"valid_worker_cancellation", gate.cancelled}, {"no_publication", no_publication},
+            {"retired_after_release", retired_after_release}, {"owners_retired", owners_retired},
+            {"waiting_ticks", waiting_ticks}, {"hold_ms", use_runner ? 250 : 400}};
+  }
 
   static nlohmann::json CheckWorldReplacement(const std::filesystem::path &root)
   {
@@ -220,5 +327,21 @@ struct StreamingSchedulerReinitProbe {
 nlohmann::json RunStreamingSchedulerReinitProbe(const std::filesystem::path &replacement_root)
 {
   return StreamingSchedulerReinitProbe::Run(replacement_root);
+}
+
+void RunStreamingGenerationShutdownProbe(UCore &core)
+{
+  const char *output = std::getenv("CUBA_FLIGHT_QA_GENERATION_SHUTDOWN");
+  if (!output || !*output)
+    return;
+  const auto runner = StreamingSchedulerReinitProbe::CheckNormalGenerationShutdown(core, true);
+  const auto direct = StreamingSchedulerReinitProbe::CheckNormalGenerationShutdown(core, false);
+  const nlohmann::json report = {{"schema", "normal-generation-shutdown.v1"},
+      {"status", runner["status"] == "PASS" && direct["status"] == "PASS" ? "PASS" : "FAIL"},
+      {"runner", runner}, {"direct", direct}};
+  std::ofstream file(output);
+  file << report.dump(2) << '\n';
+  if (!file)
+    throw std::runtime_error("cannot write normal generation shutdown report");
 }
 }

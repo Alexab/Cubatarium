@@ -435,9 +435,11 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         record_replay: bool = False, debt_target: dict | None = None,
         flat_publication: bool = False, face_repair_only: bool = False,
         flow_only: bool = False, probe_first_paint_debt: bool = False,
-        normal_shutdown: bool = False) -> dict:
+        normal_shutdown: bool = False, probe_generation_shutdown: bool = False) -> dict:
     if type(normal_shutdown) is not bool:
         raise ValueError("Normal shutdown must be requested explicitly as a boolean")
+    if type(probe_generation_shutdown) is not bool or (probe_generation_shutdown and not (startup_only and normal_shutdown)):
+        raise ValueError("Generation shutdown probe requires startup-only isolation and normal shutdown")
     if type(probe_first_paint_debt) is not bool or (probe_first_paint_debt and not startup_only):
         raise ValueError("First-paint debt probe requires startup-only isolation")
     if type(flow_only) is not bool or (flow_only and (not flat_publication or face_repair_only)):
@@ -624,6 +626,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         })
         if probe_first_paint_debt:
             env["CUBA_FLIGHT_QA_FIRST_PAINT_DEBT"] = "1"
+        if probe_generation_shutdown:
+            env["CUBA_FLIGHT_QA_GENERATION_SHUTDOWN"] = str(artifacts / "generation-shutdown.json")
         if fixture_scene == "air-pocket-negative-cave":
             env["CUBA_FLIGHT_AIR_POCKET_PROBE"] = "1"
         if round_trip:
@@ -758,6 +762,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "unpacked_meshing_requested": unpacked_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
                  "normal_shutdown": normal_shutdown,
+                 "probe_generation_shutdown": probe_generation_shutdown,
                  "walking": walking, "record_replay": record_replay,
                  "debt_target": debt_target,
                  "secondary_residency_column": secondary_residency_column,
@@ -1038,6 +1043,22 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             verdict["components"]["normal_shutdown"] = {
                 "status": "PASS" if retired else "FAIL", "artifact": shutdown_artifact,
                 "reason": "verified_desktop_retirement" if retired else "missing_or_incomplete_desktop_retirement"}
+        if probe_generation_shutdown:
+            required.append("generation_shutdown")
+            probe_artifact = "generation-shutdown.json"
+            try:
+                probe = json.loads((artifacts / probe_artifact).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                probe = {}
+            fields = ("queued_cancelled", "valid_worker_cancellation", "no_publication",
+                      "retired_after_release", "owners_retired")
+            passed = (isinstance(probe, dict) and probe.get("schema") == "normal-generation-shutdown.v1"
+                      and probe.get("status") == "PASS" and all(
+                          isinstance(report, dict) and report.get("status") == "PASS" and
+                          all(report.get(field) is True for field in fields)
+                          for report in (probe.get("runner"), probe.get("direct"))))
+            verdict["components"]["generation_shutdown"] = {
+                "status": "PASS" if passed else "FAIL", "artifact": probe_artifact}
         finalize(verdict, required)
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
@@ -1104,6 +1125,8 @@ def main() -> int:
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
     parser.add_argument("--normal-shutdown", action="store_true",
                         help="require native desktop teardown and the resource retirement report")
+    parser.add_argument("--probe-generation-shutdown", action="store_true",
+                        help="verify normal close with active generation in an isolated test world")
     parser.add_argument("--fixture-scene", choices=["air-pocket-negative-cave", "dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     parser.add_argument("--observe-bound-light", action="store_true",
                         help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
@@ -1139,6 +1162,7 @@ def main() -> int:
                   face_repair_only=args.face_repair_only,
                   flow_only=args.flow_only,
                   normal_shutdown=args.normal_shutdown,
+                  probe_generation_shutdown=args.probe_generation_shutdown,
                   probe_first_paint_debt=args.probe_first_paint_debt,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,

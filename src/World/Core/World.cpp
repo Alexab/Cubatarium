@@ -11585,11 +11585,15 @@ void UWorld::QuiesceBackgroundWork(
   BackgroundQuiesceFinished = true;
 }
 
-void UWorld::PrepareForShutdown()
+bool UWorld::TryFinalizeShutdownAfterQuiesce()
 {
-  PrepareForShutdownWithBudgets(std::chrono::milliseconds(2000),
-                                std::chrono::milliseconds(150),
-                                std::chrono::milliseconds(50));
+  if (!BackgroundQuiesceFinished)
+    return false;
+  auto *scheduler = Streaming ? Streaming->GetChunkScheduler() : nullptr;
+  if (scheduler && !scheduler->WaitForWorkersIdle(std::chrono::milliseconds(0)))
+    return false;
+  PrepareForShutdown();
+  return true;
 }
 
 void UWorld::PrepareForShutdownFast()
@@ -11633,10 +11637,7 @@ void UWorld::PrepareForShutdownFast()
             << std::endl;
 }
 
-void UWorld::PrepareForShutdownWithBudgets(
-    std::chrono::milliseconds quiesce_budget,
-    std::chrono::milliseconds abandon_budget,
-    std::chrono::milliseconds mesh_idle_budget)
+void UWorld::PrepareForShutdown()
 {
   if (ShutdownPrepared)
   {
@@ -11662,7 +11663,7 @@ void UWorld::PrepareForShutdownWithBudgets(
   // latch and re-enter 10s WaitIdle (hangs after "World saved.").
   if (!BackgroundQuiesceFinished)
   {
-    QuiesceBackgroundWork(quiesce_budget);
+    QuiesceBackgroundWork(std::chrono::milliseconds(2000));
     phase_ms("quiesce");
   }
   else
@@ -11686,17 +11687,13 @@ void UWorld::PrepareForShutdownWithBudgets(
   phase_ms("fluid_summary_worker");
   if (Streaming)
   {
-    // Abandon before mesh WaitIdle so long populate cannot hang shutdown.
-    Streaming->AbandonWorkersForProcessExit(abandon_budget);
-    phase_ms("abandon_workers");
+    Streaming->StopChunkGenerationAndJoin();
+    phase_ms("generation_joined");
   }
   if (MeshService)
   {
     MeshService->CancelAsyncMeshWork();
-    if (mesh_idle_budget.count() > 0)
-    {
-      (void)MeshService->WaitForAsyncMeshIdleFor(mesh_idle_budget);
-    }
+    (void)MeshService->WaitForAsyncMeshIdleFor(std::chrono::milliseconds(50));
     // Workers may Push Completed after Cancel epoch bump — drop residual RAM.
     MeshService->CancelAsyncMeshWork();
   }
@@ -15405,43 +15402,12 @@ bool UWorld::TickBackgroundQuiesce(UBackgroundQuiesceState &state,
     }
     if (Streaming)
     {
-      // Cancel queued gen immediately; active workers drain in ChunkGenCancel.
-      Streaming->PauseChunkGeneration(std::chrono::milliseconds(0));
+      // Let active generation unwind while I/O and the save make progress.
+      Streaming->CancelChunkGeneration("shutdown_quiesce");
     }
     report("streaming", 0.15f, "Stopping streaming...");
-    state.phase = UBackgroundQuiesceState::Phase::ChunkGenCancel;
+    state.phase = UBackgroundQuiesceState::Phase::DrainIo;
     return false;
-
-  case UBackgroundQuiesceState::Phase::ChunkGenCancel:
-  {
-    bool idle = true;
-    if (Streaming && Streaming->GetChunkScheduler())
-    {
-      // First passes: brief wait. Later: cancel-only so long carve cannot pin
-      // the quit path for the full kMaxWaitPasses budget.
-      if (state.waitChunkGenPasses < 8)
-      {
-        Streaming->PauseChunkGeneration(step_timeout);
-        idle = Streaming->GetChunkScheduler()->GetGenBacklogTotal() == 0 &&
-               Streaming->GetChunkScheduler()->WaitForWorkersIdle(step_timeout);
-      }
-      else
-      {
-        Streaming->CancelChunkGeneration();
-        idle = Streaming->GetChunkScheduler()->GetGenInFlightCount() == 0;
-      }
-    }
-    const float frac =
-        0.15f + 0.15f * static_cast<float>(state.waitChunkGenPasses) /
-                    static_cast<float>(UBackgroundQuiesceState::kMaxWaitPasses);
-    report("chunk_gen", std::min(0.3f, frac), "Waiting for chunk workers...");
-    if (idle ||
-        ++state.waitChunkGenPasses >= UBackgroundQuiesceState::kMaxWaitPasses)
-    {
-      state.phase = UBackgroundQuiesceState::Phase::DrainIo;
-    }
-    return false;
-  }
 
   case UBackgroundQuiesceState::Phase::DrainIo:
   {

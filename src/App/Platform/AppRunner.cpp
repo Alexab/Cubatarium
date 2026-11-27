@@ -36,6 +36,7 @@
 #include "World/Objects/ObjectLibrary.h"
 #if !defined(__ANDROID__)
 #include "App/Platform/DesktopShutdownCheckpoint.h"
+#include "App/Platform/StreamingSchedulerReinitProbe.h"
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
 #include "App/Platform/InputManager.h"
@@ -2429,6 +2430,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               ExportCreatureQaFrames(*core, *world,
                                      geometry_engine->GetShaderManager());
               RunCreatureQaWorldUserProbe(*core, *world);
+              RunStreamingGenerationShutdownProbe(*core);
               RunTerrainSaveFailureProbe(*core);
               RunSaveErrorUiProbe(*application, *core);
             }

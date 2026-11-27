@@ -1,0 +1,162 @@
+{
+  "schema": "s4-e12-w83-normal-generation-shutdown.v1",
+  "status": "SCOPED_NORMAL_GENERATION_SHUTDOWN_PASS_E12_OPEN",
+  "baseline_commit": "82248b1ca11b9396f396b834e4ef8fe0862a15cc",
+  "prior_certificate": "S4_02_E12_W82_WORLD_GENERATION_RETIREMENT_CERTIFICATE_2026_11_27.json",
+  "scope": "The normal close runner cancels queued generation during quiesce and checks the active worker each frame before authorizing close. Direct normal world preparation joins generation before releasing the scheduler, populator and their dependencies. The isolated native cases reproduce premature retirement and retained controls on the old path and pass on the corrected path. Actual desktop teardown also passes on the same Release executables. The fast flight-only process exit and the complete native/performance/memory matrix remain open.",
+  "fixtures": {
+    "repro_flat": {
+      "generation": {
+        "direct": {
+          "hold_ms": 400,
+          "no_publication": true,
+          "owners_retired": false,
+          "queued_cancelled": true,
+          "retired_after_release": false,
+          "status": "FAIL",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 0
+        },
+        "runner": {
+          "hold_ms": 250,
+          "no_publication": true,
+          "owners_retired": false,
+          "queued_cancelled": true,
+          "retired_after_release": false,
+          "status": "FAIL",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 0
+        },
+        "schema": "normal-generation-shutdown.v1",
+        "status": "FAIL"
+      },
+      "frames": 957,
+      "native_exit": 0,
+      "normal_shutdown": "PASS",
+      "smoke": "FAIL"
+    },
+    "fixed_flat": {
+      "generation": {
+        "direct": {
+          "hold_ms": 400,
+          "no_publication": true,
+          "owners_retired": true,
+          "queued_cancelled": true,
+          "retired_after_release": true,
+          "status": "PASS",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 0
+        },
+        "runner": {
+          "hold_ms": 250,
+          "no_publication": true,
+          "owners_retired": true,
+          "queued_cancelled": true,
+          "retired_after_release": true,
+          "status": "PASS",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 17
+        },
+        "schema": "normal-generation-shutdown.v1",
+        "status": "PASS"
+      },
+      "frames": 913,
+      "native_exit": 0,
+      "normal_shutdown": "PASS",
+      "smoke": "UNTESTED"
+    },
+    "fixed_full": {
+      "generation": {
+        "direct": {
+          "hold_ms": 400,
+          "no_publication": true,
+          "owners_retired": true,
+          "queued_cancelled": true,
+          "retired_after_release": true,
+          "status": "PASS",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 0
+        },
+        "runner": {
+          "hold_ms": 250,
+          "no_publication": true,
+          "owners_retired": true,
+          "queued_cancelled": true,
+          "retired_after_release": true,
+          "status": "PASS",
+          "valid_worker_cancellation": true,
+          "waiting_ticks": 18
+        },
+        "schema": "normal-generation-shutdown.v1",
+        "status": "PASS"
+      },
+      "frames": 651,
+      "native_exit": 0,
+      "normal_shutdown": "PASS",
+      "smoke": "UNTESTED"
+    }
+  },
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "b459941c3e7469c114f6a1accdbabdfb37db8e14c149a8d56794e340c5686795",
+  "exe_sha256": "0d33f656cebb35e13154f6279c7144eb417f5e4ba00c7bf214e0f0c1dd95a776",
+  "release_regressions": [
+    "decor_mesh_integration_test",
+    "catalog_worker_retirement_test",
+    "normal_shutdown_test",
+    "application_operation_storage_test",
+    "async_relight_lifecycle_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "fluid_chunk_io_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-provenance.json": "61cfe86c4e589a4587d6ac9071c32c4a4e56e45b6ca4ec77f2d359189e72b74e",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-provenance.json": "27706a695ccee8f60c18665d622a9d4eabb64b20866f6f85ed37dd54e2d4c0c3",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-build.log": "b2cb5f76f42881b64560ca3a76fd7037a9de6db206f594ecd0ab6caa0b7df42e",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-build.log": "ee9d2b562e3f29bcc191bd47157c499715301bedbe89b4a20f7209a54e58a6bc",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat.log": "4f87fdf97f610ef3029c6f8e75245d73e30adab98af61adc51ebf713c2fd58bc",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/generation-shutdown.json": "4664fd5db7d25468ff4015290d0dae1ae67b7448149c937d0e36c717c93c5ec9",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/smoke-verdict.json": "059c74f5b79c12854e81adf3db2080837fd1c9ef1da718b976a8dfe609cc8cae",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/route.json": "9b597907d0631d8b548cd14611cc2d82391524656e9376c2b309d1a3d9fc13b1",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/flight_sim_report.json": "5656ce630ef7dddf7b4976d5d3b269cbedda91996cfe5771a754a5b57b67b816",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/legacy-gates.json": "8f3a9f510ee8fe40da16349a17609bae1d294fd394b098c8efa0d6a3f0698bbb",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/desktop-normal-shutdown.json": "714286c4f42638a76708c690fbb1b8730cfb84c831813187d47c0e40ff09efb1",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/runner.log": "90569151c34da314e782e38ffeca626e287e397b61e35245a7ef4100b3ac763a",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/terrain-save-probe/report.json": "76a24027b7ccd2c603cd974d381b3e3d64fa5593b44aea4caf1f9b76e5a1096d",
+    "build/desktop-msvc/s4-normal-generation-shutdown-repro-flat/terrain-save-probe/save-error-ui/report.json": "82532538fae2ad70aa65dd4b71e5798bf309b6d4bb6d7e9e682b0349b7c98698",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat.log": "9c22463cb414ee929161d02b2c83cc08e1ca4969b342e6f4d0db269b2dd55a9f",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/smoke-verdict.json": "9f8f10aead1312562a4073fb47b031d27de6b640654b7d4d920a13cd1eac41ab",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/route.json": "a0a21a87085a1de7fb7ccd5f123f0c8ec154875f13f5e15fba5209b9b876845d",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/flight_sim_report.json": "b1ebde514ddf949537273b73c2ed3c3c594c5b0e2e7e9c4cadd28ee910d3b7cb",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/legacy-gates.json": "4a66a2555203d99ff5f2fe4e30790b9eaf75164c06a0210f30e368a9392b90ae",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/desktop-normal-shutdown.json": "70ed9585b0eb9c6a52a74277740da84736832617d2e138b0d8bd06dcc785f9ef",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/runner.log": "16d5107ca8a18a125445d0d4a2c771db79a24ade48c610893334b63c5fe8e141",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/terrain-save-probe/report.json": "59a99aeb7f9782a1359752d330257d381b3bc0a8ca95a28fea0592dcece8321e",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-flat/terrain-save-probe/save-error-ui/report.json": "65452306584f549021ae5d0dcc569bf6dff02cb667c4dbc9510066928d481ce9",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full.log": "562d099a88dce7239507f5f664d7771c0837a2991a687e0209b36a88fafd0c07",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/generation-shutdown.json": "4f07ea290b16e0cf3d2928ad9e5d5db1245535331db8439a56f1df544ebd2f60",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/smoke-verdict.json": "ca56d3c919a753df97b339f38180bfdee2f86bc40c22bb63dfbf753e7c72f4c4",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/route.json": "4524186bdeeade2264086005ca1b2014f610820d2578f9e40dce4f5b73f6602c",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/flight_sim_report.json": "2e0a9d17858976bdb615cc89801b02d3fb3ae53e8225e10ccb963ea7fd831237",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/legacy-gates.json": "f2a6095b414cecf837246c1e1072c672d051fc3b792acc10e96f62626f9202ef",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/desktop-normal-shutdown.json": "3cd7d0dbb3b8048f57873dcfc215fc907fdd4128066e62e16225a058c6b726fe",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-full/runner.log": "9348e4cc15e061c143dde885597a3c09a98ae31be3cef7718b08ca6685c8a555",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-regressions.json": "4049300615ab400fc5ccbbce06e9c55849bc0aca98fbd9aba980c0fe2d269108",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-regression-build.log": "2436ae153b50caf53d0af7d606ecc42be4d7a21a8a951e8945a4823dc67db3af",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-python-tests.log": "241d85fd13532b68f0bddf8d7f77a299b9b75f36dd12d6cb3e8cb09a496507e8",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-catalog_worker_retirement_test.log": "45e5b750d5dd880f0f9607a69e4a6188cf7d0d6bf16107040e74e9f06a5bf4d7",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-application_operation_storage_test.log": "4b02f2ed3202f6a24282e350bc937c8969caeb128737a75d5e18b248f7392354",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-normal-generation-shutdown-fixed-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3"
+  },
+  "full_scope": "S4.02 and full S0–S6 remain open. 23 of 42 packages complete."
+}

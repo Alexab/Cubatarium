@@ -85,6 +85,8 @@ public:
       std::chrono::milliseconds worker_wait = std::chrono::milliseconds(10000));
   /// Cancel queued gen + bump tokens without waiting for in-flight populate.
   void CancelChunkGeneration(const char *reason = "cancelled_all");
+  /// Normal teardown joins the pool while its token and catalog owners are live.
+  void StopChunkGenerationAndJoin() noexcept;
   /// Process exit: cancel gen, brief wait, then drop or leak workers so
   /// Join never blocks forever on late ChunkPopulate/carve.
   void AbandonWorkersForProcessExit(

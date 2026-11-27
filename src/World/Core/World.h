@@ -214,7 +214,6 @@ struct UBackgroundQuiesceState
   {
     Start,
     StreamingOff,
-    ChunkGenCancel,
     DrainIo,
     CancelWorkers,
     WaitRelight,
@@ -225,7 +224,6 @@ struct UBackgroundQuiesceState
 
   Phase phase{Phase::Start};
   int drainIoPasses{0};
-  int waitChunkGenPasses{0};
   int waitRelightPasses{0};
   int waitMeshPasses{0};
   static constexpr int kMaxDrainIoPasses = 32;
@@ -427,8 +425,11 @@ public:
   void WaitForPendingMeshJobs();
   void WaitForPendingRelightJobs();
   bool WaitForPendingRelightJobsFor(std::chrono::milliseconds timeout);
+  /// The close runner polls generation after quiesce and any requested save.
+  /// It can keep processing frames while a cancelled worker finishes.
+  [[nodiscard]] bool TryFinalizeShutdownAfterQuiesce();
   void PrepareForShutdown();
-  /// Flight-sim / harness: short joins so exit cannot hang experiments.
+  /// Flight-only preparation for immediate std::_Exit with no C++ teardown.
   void PrepareForShutdownFast();
   /// UX U5: metadata-only session refresh (storage marker, users,
   /// creatures, world data) without the full terrain-column dump or the
@@ -1958,10 +1959,6 @@ private:
   bool SpawnAreaPreparedByCooperativeLoad{false};
   bool ShutdownPrepared{false};
   bool BackgroundQuiesceFinished{false};
-  void
-  PrepareForShutdownWithBudgets(std::chrono::milliseconds quiesce_budget,
-                                std::chrono::milliseconds abandon_budget,
-                                std::chrono::milliseconds mesh_idle_budget);
   int RenderDistanceChunks{4};
   int EffectiveRenderDistance{4};
   /// Fog-only RD (pull-in); 0 → use EffectiveRenderDistance via getter.

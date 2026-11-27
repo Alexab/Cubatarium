@@ -286,11 +286,20 @@ UWorldStreaming::UWorldStreaming()
 
 UWorldStreaming::~UWorldStreaming()
 {
-  // Join normal workers before populator, token registry or callback targets
-  // start destruction. Only the explicit process-exit path may detach.
-  if(ChunkScheduler){
-    try { ChunkScheduler->CancelAllPending(std::chrono::milliseconds(0),"streaming_destroyed"); }
-    catch(...) {} // diagnostic allocation cannot skip the join below
+  StopChunkGenerationAndJoin();
+}
+
+void UWorldStreaming::StopChunkGenerationAndJoin() noexcept
+{
+  if (Streamer)
+    Streamer->SetEnabled(false);
+  try
+  {
+    CancelChunkGeneration("world_shutdown");
+  }
+  catch (...)
+  {
+    // Diagnostic allocation or cancellation bookkeeping cannot skip the join.
   }
   ChunkScheduler.reset();
   ChunkPopulator.reset();
