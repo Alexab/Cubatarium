@@ -159,6 +159,8 @@ public:
   }
   int GetVisualRenderDistance() const { return VisualRenderDistance; }
   int GetKeepRenderDistance() const { return KeepRenderDistance; }
+  size_t GetTerrainColumnAdmissionLimit() const;
+  bool IsTerrainColumnAdmissionFull() const;
   void SetRequiredDataDomain(glm::ivec3 center, int radius)
   {
     RequiredData = {glm::ivec3(center.x, 0, center.z), radius};
@@ -261,6 +263,7 @@ private:
   friend void RunTerrainSaveFailureProbe(UCore &core);
   bool EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync = false,
                          bool *out_async_queued = nullptr);
+  bool CanAdmitTerrainColumn(glm::ivec3 ground) const;
   bool AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord, int max_sub_columns,
                                       bool only_empty_columns);
   void InvalidateTerrainCompleteCache(glm::ivec3 groundCoord);

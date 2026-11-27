@@ -3708,11 +3708,19 @@
       "receipt": "build/desktop-msvc/s4-q10-disk-history-acceptance.json",
       "scope": "Bound stale removals independently of the live savestate at 256 columns and 16384 packed slice slots per cached folder. Unindexed absent cleanup creates no dirty records. An over-budget invalidation retires the cached folder. Refreshes share the warmup filename grammar. Verified save acknowledgements and fresh reconstruction protect committed and removed slices. A fresh bucket table moves surviving nodes after a large shrink.",
       "remaining": "The live index grows with the saved file set of its four cached directories. Future composition covers live registry history, reconstruction and refresh peaks during travel and Q01.L2 resident owners including terrain retained by a save veto. Full S0-S6 acceptance remains open at 23 of 42 packages."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.L2.STREAMER_RESIDENCY",
+      "status": "SCOPED_Q01_L2_STREAMER_RESIDENCY_ADMISSION_PASS_Q01_L2_OPEN",
+      "certificate": "S4_02_Q01_RESIDENCY_ADMISSION_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q01-residency-admission-verified-acceptance.json",
+      "scope": "Apply one residency threshold to cold streamer data, view, collision and prefetch ingress. It derives from the keep footprint with one-column advance headroom and the independent required-data footprint. Existing resident and accepted requests keep their paths. At saturation the unload scan continues from its cursor and receives an early bounded opportunity in the frame. The physical control preserves a failed column's edits and record, saves a later column despite the first veto, resumes the deferred load and then retries the failed save. A synchronous disk load refreshes cached completeness before its terrain is accepted.",
+      "remaining": "The threshold applies to new streamer ingress. Already admitted generation and disk workers can still produce results. The whole-world proof still needs their output footprint, owner cardinality for cooperative loading and direct edits, relight and record-only owners, and registry and live-index composition during travel. Full S0-S6 acceptance remains open at 23 of 42 packages."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10 и Q01.L2. Хвост удалений дискового индекса ограничен. Свести живые файлы и пики перечитывания с ростом реестра и числом записей колонок, включая удержание при сбое сохранения. Закрыто 23 из 42 пакетов. Полный объём S0–S6 остаётся в плане."
+  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Порог новых запросов стримера при удержании колонок проверен. Добавить уже принятых производителей, прямые изменения и другие владельцы записей колонок, затем свести результат с живым индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
 }

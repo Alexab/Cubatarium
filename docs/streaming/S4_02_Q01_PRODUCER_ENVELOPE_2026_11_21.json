@@ -441,7 +441,10 @@
       "wip": "World-owned stage/intent and allocator charge/release verified. Bounded old-interest retirement accepted: all8 live guards preserved,100 orphan records retired,max32 visits,fresh actual publication. No bound on live-owner cardinality yet; resident/save-veto and other queue envelopes remain dependencies. MSVC charge64+280*(N+1), excluding OS heap overhead.",
       "partial_evidence": "build/desktop-msvc/s4-flow-stage-projection-acceptance-20261121.json",
       "allocator_evidence": "build/desktop-msvc/s4-world-record-allocator-acceptance-20261121.json",
-      "interest_retirement_evidence": "build/desktop-msvc/s4-world-record-interest-acceptance-20261121.json"
+      "interest_retirement_evidence": "build/desktop-msvc/s4-world-record-interest-acceptance-20261121.json",
+      "streamer_residency_evidence": "S4_02_Q01_RESIDENCY_ADMISSION_CERTIFICATE_2026_11_27.json",
+      "streamer_residency_scope": "Apply one residency threshold to cold streamer data, view, collision and prefetch ingress. It derives from the keep footprint with one-column advance headroom and the independent required-data footprint. Existing resident and accepted requests keep their paths. At saturation the unload scan continues from its cursor and receives an early bounded opportunity in the frame. The physical control preserves a failed column's edits and record, saves a later column despite the first veto, resumes the deferred load and then retries the failed save. A synchronous disk load refreshes cached completeness before its terrain is accepted.",
+      "streamer_residency_remaining": "The threshold applies to new streamer ingress. Already admitted generation and disk workers can still produce results. The whole-world proof still needs their output footprint, owner cardinality for cooperative loading and direct edits, relight and record-only owners, and registry and live-index composition during travel. Full S0-S6 acceptance remains open at 23 of 42 packages."
     },
     {
       "id": "Q01.L3",

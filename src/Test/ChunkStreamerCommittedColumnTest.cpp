@@ -27,6 +27,73 @@ static void Expect(bool value, const char *message)
   }
 }
 
+static void TestBoundedAdmissionUnderSaveVeto()
+{
+  using namespace cutum;
+  auto &tuning = URuntimeTuning::Get();
+  const int prior = tuning.UnloadAmortizeMode;
+  tuning.UnloadAmortizeMode = kUnloadAmortizeU0;
+  UBlockWorld world;
+  UBlockRegistry registry(nullptr);
+  UChunkStreamer streamer(world, registry, 1, 0, 319, -64);
+  streamer.SetKeepPrefetchMargin(1);
+  streamer.SetRenderDistance(2);
+  streamer.SetRequiredDataDomain({0, 0, 0}, 1);
+  streamer.SetMaxLoadOpsPerFrame(2);
+  streamer.SetMaxUnloadOpsPerFrame(1);
+  constexpr size_t limit = 11 * 11 + 3 * 3;
+  const glm::ivec3 first(100, 0, 3), second(101, 0, 3);
+  auto &manager = world.GetChunkManager();
+  for (int i = 0; i < static_cast<int>(limit); ++i)
+    world.SetBlock({(first.x + i) * CHUNK_SIZE, -64, first.z * CHUNK_SIZE}, 8);
+  bool storage_recovered = false;
+  streamer.SetUnloadColumnCallback([&](glm::ivec3 column, int) {
+    return storage_recovered && column == second;
+  });
+  int new_loads = 0;
+  streamer.SetCallbacks([&](glm::ivec3 column, uint64_t) {
+    ++new_loads;
+    for (int x = 0; x < CHUNK_SIZE; ++x)
+      for (int z = 0; z < CHUNK_SIZE; ++z)
+        world.SetBlock({column.x * CHUNK_SIZE + x, -64, column.z * CHUNK_SIZE + z}, 8);
+    return TerrainColumnRead::Loaded;
+  }, nullptr, nullptr, nullptr);
+  const glm::ivec3 feet(0, -64, 0), next(0, 0, 0);
+  const glm::vec3 eye(8, -60, 8);
+  UFrameDeadline::Get().BeginFrame(0);
+  Expect(streamer.GetTerrainColumnAdmissionLimit() == limit && streamer.IsTerrainColumnAdmissionFull(),
+         "residency limit includes the keep, advance and consumer footprints");
+  streamer.UnloadPass(feet, eye, PlayerCapsule{});
+  streamer.EnsureDataColumns({next}, 1);
+  streamer.Update(feet, eye, PlayerCapsule{});
+  streamer.EnsureCollisionChunks(feet);
+  int prefetch_requests = 0;
+  streamer.SetAsyncGeneration(true);
+  streamer.SetAsyncCallbacks([&](glm::ivec3, int, uint64_t) { ++prefetch_requests; return true; }, nullptr);
+  streamer.PrefetchAhead({0, 0, 0}, {1, 0, 0}, 3.0f, 1.0f);
+  streamer.PrefetchKeepShell({0, 0, 0}, 4);
+  Expect(new_loads == 0 && prefetch_requests == 0 && manager.GetResidentTerrainColumnCount() == limit,
+         "new streamer columns stay deferred while vetoed terrain fills the residency limit");
+  streamer.SetColumnPendingCallback([](glm::ivec3 column) { return column == glm::ivec3(1, 0, 0); });
+  streamer.EnsureCollisionChunks(feet);
+  Expect(prefetch_requests == 1 && manager.GetResidentTerrainColumnCount() == limit,
+         "an existing async request can refresh at the residency limit");
+  streamer.SetColumnPendingCallback(nullptr);
+  streamer.SetAsyncGeneration(false);
+
+  storage_recovered = true;
+  for (size_t i = 0; i < limit && manager.HasResidentTerrainColumn(second); ++i)
+    streamer.UnloadPass(feet, eye, PlayerCapsule{});
+  Expect(!manager.HasResidentTerrainColumn(second) && manager.HasResidentTerrainColumn(first),
+         "a persistent veto cannot starve another column's successful save");
+  streamer.EnsureDataColumns({next}, 1);
+  Expect(new_loads == 1 && manager.GetResidentTerrainColumnCount() == limit &&
+             streamer.IsTerrainChunkCompleteCached(next) && world.GetBlock({0, -64, 0}) == 8 &&
+             world.GetBlock({first.x * CHUNK_SIZE, -64, first.z * CHUNK_SIZE}) == 8,
+         "eviction resumes the original demand while preserving unsaved terrain");
+  tuning.UnloadAmortizeMode = prior;
+}
+
 static void TestRetiredUnloadCandidate()
 {
   using namespace cutum;
@@ -431,6 +498,7 @@ static void TestAirOnlyColumnLifecycle()
 
 int main()
 {
+  TestBoundedAdmissionUnderSaveVeto();
   TestAirOnlyColumnLifecycle();
   TestAirRetiresWithTerrainColumn();
   TestRetiredUnloadCandidate();

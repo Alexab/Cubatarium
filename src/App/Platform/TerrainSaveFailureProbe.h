@@ -23,6 +23,7 @@
 #include "World/Math/GridMath.h"
 #include "World/Mesh/WorldMeshService.h"
 #include "World/Streaming/WorldStreaming.h"
+#include "World/Streaming/StreamerAmortizePolicy.h"
 #include "World/Chunks/ChunkLoadScheduler.h"
 #include "World/Chunks/TerrainColumnUtil.h"
 #include "World/Streaming/ColumnFlowExecutor.h"
@@ -444,6 +445,105 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"unread_terrain_protected", true}, {"rapid_world_changes_coalesced", true},
           {"cached_folders", storage.InspectDiskIndexStorage().folders},
           {"final_warmups", io.GetOutstandingIndexWarmupCount()}};
+    });
+    RunTerrainProbePhase([&] {
+      struct RestoreFramePolicy
+      {
+        int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
+        UFrameDeadline deadline = UFrameDeadline::Get();
+        ~RestoreFramePolicy()
+        {
+          URuntimeTuning::Get().UnloadAmortizeMode = unload_mode;
+          UFrameDeadline::Get() = deadline;
+        }
+      } restore;
+      URuntimeTuning::Get().UnloadAmortizeMode = kUnloadAmortizeU0;
+      auto owner = std::make_unique<UWorld>(nullptr, nullptr);
+      auto &world = *owner;
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition stone;
+      stone.Name = "stone";
+      stone.Physics = BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{8, stone}}, {{"stone", 8}});
+      world.BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+      ProceduralSettings settings;
+      settings.MinHeight = -48;
+      settings.MaxHeight = -33;
+      settings.SeaLevel = -40;
+      settings.AsyncChunkGeneration = false;
+      settings.AsyncChunkIo = false;
+      settings.AsyncRelight = false;
+      world.SetSpawnPoint({8, -45, 8});
+      world.SetProceduralSettings(settings, false);
+      world.Streaming->InitStreamerCallbacks(world);
+      auto &streamer = *world.Streaming->GetStreamer();
+      streamer.SetKeepPrefetchMargin(0);
+      streamer.SetRenderDistance(1);
+      streamer.SetRequiredDataDomain({0, 0, 0}, 0);
+      streamer.SetMaxLoadOpsPerFrame(2);
+      streamer.SetMaxUnloadOpsPerFrame(1);
+      const auto limit = streamer.GetTerrainColumnAdmissionLimit();
+      require(limit == 50, "physical residency fixture uses the configured keep and consumer footprints");
+      const auto folder = root / "resident-save-admission";
+      fs::create_directories(folder / "chunks");
+      world.SetWorldFolderPath(folder.string());
+      auto &storage = world.Persistence->GetChunkStorage();
+      const glm::ivec3 first(-100, -3, 3), second(-99, -3, 3), next(0, -3, 0);
+      const glm::ivec3 next_ground(next.x, 0, next.z);
+      auto &manager = world.BlockWorld.GetChunkManager();
+      for (int i = 0; i < static_cast<int>(limit); ++i)
+      {
+        const auto coord = first + glm::ivec3(i, 0, 0);
+        for (int x = 0; x < CHUNK_SIZE; ++x)
+          for (int z = 0; z < CHUNK_SIZE; ++z)
+            world.BlockWorld.SetBlock(coord * CHUNK_SIZE + glm::ivec3(x, 0, z), 8);
+        world.SetColumnEmergeState({coord.x, 0, coord.z}, ColumnEmergeState::Lighting);
+      }
+      world.ModifiedChunks.insert(first);
+      world.ModifiedChunks.insert(second);
+      const auto held_record = glm::ivec2(first.x, first.z);
+      const auto record_count = world.GetColumnRecords().Size();
+      UChunk incoming(next);
+      incoming.SetBlockLocal({1, 0, 1}, 8);
+      require(storage.SaveChunk(next, incoming, folder.string(), *world.BlockRegistry),
+              "prepare a genuine disk load for the blocked successor");
+      const auto blocked_file = fs::path(storage.ChunkFilePath(folder.string(), first, ChunkDiskFormat::Binary) + ".tmp");
+      fs::create_directory(blocked_file);
+      const auto obstacle = blocked_file / "fixture.txt";
+      std::ofstream(obstacle).put('0');
+      const glm::ivec3 feet(8, -48, 8);
+      const glm::vec3 eye(8, -45, 8);
+      UFrameDeadline::Get().BeginFrame(0);
+      streamer.UnloadPass(feet, eye, PlayerCapsule{});
+      streamer.EnsureDataColumns({next_ground}, 1);
+      require(streamer.GetLastFrameStats().unloadVetoesThisFrame == 1 &&
+                  manager.GetResidentTerrainColumnCount() == limit && !manager.HasChunk(next) &&
+                  world.GetColumnRecords().Size() == record_count && world.GetColumnRecords().Find(held_record) &&
+                  world.ModifiedChunks.count(first) && world.BlockWorld.GetBlock(first * CHUNK_SIZE) == 8,
+              "physical save failure keeps the exact edit and record and defers the cold column");
+      streamer.UnloadPass(feet, eye, PlayerCapsule{});
+      require(!manager.HasChunk(second) && manager.HasChunk(first) && !world.ModifiedChunks.count(second) &&
+                  fs::exists(storage.ChunkFilePath(folder.string(), second, ChunkDiskFormat::Binary)),
+              "one failing column cannot hide another column's successful physical save and unload");
+      streamer.EnsureDataColumns({next_ground}, 1);
+      const auto resumed_count = manager.GetResidentTerrainColumnCount();
+      require(resumed_count == limit && world.BlockWorld.GetBlock(next * CHUNK_SIZE + glm::ivec3(1, 0, 1)) == 8,
+              "released residency admits exactly the deferred disk column");
+      require(fs::remove(obstacle) && fs::remove(blocked_file), "clear the test-owned write obstruction");
+      streamer.SetMaxLoadOpsPerFrame(4);
+      for (size_t frame = 0; frame <= limit && manager.HasChunk(first); ++frame)
+        streamer.UnloadPass(feet, eye, PlayerCapsule{});
+      UBlockWorld cold;
+      cold.SetVerticalProfile(settings.GetVerticalProfile());
+      require(!manager.HasChunk(first) && !world.ModifiedChunks.count(first) && !world.GetColumnRecords().Find(held_record) &&
+                  storage.LoadTerrainColumn({first.x, 0, first.z}, cold, folder.string(), *world.BlockRegistry,
+                                            settings.MaxHeight, settings.MinHeight) > 0 &&
+                  cold.GetBlock(first * CHUNK_SIZE) == 8,
+              "normal unload retries, retires the held record and preserves the edit on cold reload");
+      report["resident_save_admission"] = {{"status", "PASS"}, {"resident_limit", limit},
+          {"resumed_residents", resumed_count}, {"veto_retained_records", record_count},
+          {"physical_veto", true}, {"later_column_saved", true}, {"cold_resumption", true},
+          {"old_record_retired", true}, {"recovered_edit_on_disk", true}};
     });
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();

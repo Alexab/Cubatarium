@@ -6520,14 +6520,15 @@ void UWorldStreaming::UpdateStreaming(
         world.GetRequiredPresentationRadius(), world.RequiresLightingLitGate());
     Streamer->SetRequiredDataDomain(required_focus, prior_domain.data);
     bool unload_pass_early = false;
-    if (unload_mode >= kUnloadAmortizeUD && moving_for_unload)
+    const bool terrain_admission_full = Streamer->IsTerrainColumnAdmissionFull();
+    if (terrain_admission_full || (unload_mode >= kUnloadAmortizeUD && moving_for_unload))
     {
       // Give the cursor a chance before column discovery, loading, and mesh
       // pressure work consume the shared streaming deadline.
       Streamer->SetEffectiveUnloadOpsPerFrame(
           std::min(world.MaxUnloadOpsPerFrame, 1));
       const auto unload_t0 = std::chrono::high_resolution_clock::now();
-      if (Streamer->HasDeferredUnloadSaves())
+      if (!terrain_admission_full && Streamer->HasDeferredUnloadSaves())
       {
         Streamer->DrainDeferredUnloadSaves(WorldPosToBlock(eye), eye, cap, 1);
       }

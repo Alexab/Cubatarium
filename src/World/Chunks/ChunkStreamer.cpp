@@ -16,6 +16,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
+#include <limits>
 
 namespace cutum
 {
@@ -463,10 +464,34 @@ bool UChunkStreamer::AdvanceTerrainColumnGeneration(glm::ivec3 chunkCoord,
   return complete;
 }
 
+size_t UChunkStreamer::GetTerrainColumnAdmissionLimit() const
+{
+  const auto square = [](uint64_t radius) -> size_t {
+    const auto side = 2 * radius + 1;
+    const auto max = std::numeric_limits<size_t>::max();
+    return side > max / side ? max : static_cast<size_t>(side * side);
+  };
+  // Reserve the keep ring, a one-column advance in each direction and the
+  // independent consumer data lease. Their centers may differ.
+  const auto keep = square(uint64_t(KeepRenderDistance) + UnloadMargin + 1);
+  const auto required = RequiredData.radius >= 0 ? square(RequiredData.radius) : 0;
+  const auto max = std::numeric_limits<size_t>::max();
+  return required > max - keep ? max : keep + required;
+}
+
+bool UChunkStreamer::IsTerrainColumnAdmissionFull() const
+{
+  return World.GetChunkManager().GetResidentTerrainColumnCount() >= GetTerrainColumnAdmissionLimit();
+}
+
+bool UChunkStreamer::CanAdmitTerrainColumn(glm::ivec3 ground) const
+{
+  return !IsTerrainColumnAdmissionFull() || World.GetChunkManager().HasResidentTerrainColumn(ground);
+}
+
 bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
                                        bool *out_async_queued)
 {
-  const uint64_t demand_id = NewWorldColumnRequestIdForTrace();
   if (out_async_queued)
   {
     *out_async_queued = false;
@@ -484,6 +509,9 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
   {
     return false;
   }
+  if (!CanAdmitTerrainColumn(chunkCoord) && !(OnIsColumnPending && OnIsColumnPending(chunkCoord)))
+    return false;
+  const uint64_t demand_id = NewWorldColumnRequestIdForTrace();
 
   if (World.GetChunkManager().HasUnresolvedTerrainColumnRead(chunkCoord))
   {
@@ -593,6 +621,8 @@ bool UChunkStreamer::EnsureChunkLoaded(glm::ivec3 chunkCoord, bool forceSync,
       return false;
     if (disk == TerrainColumnRead::Loaded)
     {
+      // The readiness check before the load may have cached an absent column.
+      InvalidateTerrainCompleteCache(chunkCoord);
       if (IsTerrainChunkCompleteCached(chunkCoord))
       {
         ++TerrainEvidenceRevision;
@@ -799,7 +829,7 @@ void UChunkStreamer::UnloadDistantChunks(glm::ivec3 /*centerChunk*/,
   const int keep_cy_min = std::max(minCy, player_cy_min - 1);
   const int keep_cy_max = std::min(maxCy, player_cy_max + 1);
 
-  const bool use_cursor = UnloadModeUsesScanCursor(mode);
+  const bool use_cursor = UnloadModeUsesScanCursor(mode) || IsTerrainColumnAdmissionFull();
   const bool trace_unload = IsStreamerUnloadTraceEnabled();
   if (!use_cursor || UnloadColumnSnapshot.empty() ||
       UnloadScanCursor >= UnloadColumnSnapshot.size())
@@ -1007,7 +1037,7 @@ void UChunkStreamer::UnloadPass(glm::ivec3 cameraBlockPos, const glm::vec3 &eyeP
                  UChunkManager::WorldToChunk(feetBlockPos).z);
   (void)cameraBlockPos;
   const int unload_mode = URuntimeTuning::Get().UnloadAmortizeMode;
-  if ((MaxLoadOpsPerFrame > 2 || unload_mode >= kUnloadAmortizeUD) &&
+  if ((MaxLoadOpsPerFrame > 2 || unload_mode >= kUnloadAmortizeUD || IsTerrainColumnAdmissionFull()) &&
       EffectiveUnloadOpsPerFrame > 0)
   {
     UnloadDistantChunks(loadCenter, feetBlockPos, eyePos, cap);
@@ -1284,6 +1314,8 @@ void UChunkStreamer::PrefetchAhead(glm::ivec3 feet_chunk,
   auto try_queue = [&](int cx, int cz)
   {
     const glm::ivec3 coord(cx, 0, cz);
+    if (!CanAdmitTerrainColumn(coord))
+      return;
     const int dist = std::max(std::abs(coord.x - feet_ground.x),
                               std::abs(coord.z - feet_ground.z));
     if (dist > VisualRenderDistance || dist < 1)
@@ -1418,6 +1450,8 @@ void UChunkStreamer::PrefetchKeepShell(glm::ivec3 feet_chunk, int max_ops,
       continue;
     }
     const glm::ivec3 coord(feet_ground.x + lx, 0, feet_ground.z + lz);
+    if (!CanAdmitTerrainColumn(coord))
+      continue;
     if (OnIsChunkCommitted && OnIsChunkCommitted(coord))
     {
       continue;
