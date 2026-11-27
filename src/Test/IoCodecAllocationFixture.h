@@ -192,12 +192,122 @@ inline void Check(const CapturedRequest &capture)
 {
   if (capture.calls != 1 || !capture.storage.supported ||
       capture.observed != capture.storage.scratch_bytes + capture.storage.output_bytes ||
-      ((capture.storage.kind != IoCodecKind::BinaryRead && capture.storage.kind != IoCodecKind::JsonRead &&
-        capture.storage.kind != IoCodecKind::JsonWrite) &&
-       !capture.storage.scratch_bytes) ||
       !capture.storage.output_bytes)
     throw std::runtime_error("codec checkpoint differs from independently observed ordinary requests: " +
         std::to_string(static_cast<int>(capture.storage.kind)) + " " + Describe(capture).dump());
+}
+
+inline nlohmann::json CheckBinaryWriter()
+{
+  UBlockRegistry registry(nullptr);
+  UBinaryChunkSerializer codec;
+  const glm::ivec3 coord{-21, -2, 3};
+  UChunk chunk(coord);
+  chunk.SetWeatherState(0.5f, 135.25);
+  const auto measure = [&] {
+    std::vector<BlockId> palette{BLOCK_AIR};
+    std::vector<std::pair<uint16_t, uint16_t>> runs;
+    for (const auto id : chunk.GetData())
+    {
+      const auto found = std::find(palette.begin(), palette.end(), id);
+      const auto index = static_cast<uint16_t>(found - palette.begin());
+      if (found == palette.end())
+        palette.push_back(id);
+      if (runs.empty() || runs.back().second != index)
+        runs.emplace_back(0, index);
+      ++runs.back().first;
+    }
+    std::vector<uint8_t> expected{'C', 'C', 'H', 'K', 4};
+    const auto append = [&](uint64_t number, size_t width) {
+      for (size_t i = 0; i < width; ++i)
+        expected.push_back(static_cast<uint8_t>(number >> (i * 8)));
+    };
+    for (int axis = 0; axis < 3; ++axis)
+      append(static_cast<uint32_t>(coord[axis]), 4);
+    append(palette.size(), 2);
+    for (const auto id : palette)
+      append(id, 2);
+    append(runs.size(), 4);
+    for (const auto &run : runs)
+    {
+      append(run.first, 2);
+      append(run.second, 2);
+    }
+    for (const auto *plane : {&chunk.GetFluidData(), &chunk.GetLightData()})
+    {
+      append(plane->size(), 4);
+      expected.insert(expected.end(), plane->begin(), plane->end());
+    }
+    append(32768, 2);
+    append(135250, 8);
+
+    CapturedRequest encode;
+    const auto probe = encode.Probe();
+    size_t capacity = 0, requests = 0;
+    {
+      observation::Scope allocations;
+      {
+        const auto output = codec.Serialize(coord, chunk, registry, &probe);
+        Require(output.format == ChunkDiskFormat::Binary && output.bytes == expected,
+                "CCHK bytes match the independent v4 reference");
+        capacity = output.bytes.capacity();
+        requests = observation::State.attempts;
+      }
+      encode.operation_peak = observation::State.peak;
+      Require(!observation::State.live && !observation::State.blocks, "all CCHK writer backing retires");
+    }
+    Check(encode);
+    const auto extent = expected.size();
+    Require(extent <= UBinaryChunkSerializer::kMaxWrittenFrameBytes && capacity == extent && requests == 1 &&
+                !encode.storage.scratch_bytes && encode.storage.stack_buffer_bytes == (3 * CHUNK_VOLUME + 2) * sizeof(uint16_t) &&
+                encode.operation_peak == encode.storage.output_bytes &&
+                encode.operation_peak == extent + NameStorageAlignmentSlack(extent),
+            "CCHK has one exact encoded allocation and a fixed palette on the stack");
+    return nlohmann::json{{"size", expected.size()}, {"capacity", capacity}, {"requests", requests},
+                          {"palette", palette.size()}, {"runs", runs.size()}, {"peak", encode.operation_peak},
+                          {"scratch", encode.storage.scratch_bytes}, {"stack_buffer", encode.storage.stack_buffer_bytes},
+                          {"byte_match", true}};
+  };
+
+  auto air = measure();
+  std::array<uint8_t, CHUNK_VOLUME> light;
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    const glm::ivec3 pos{i % CHUNK_SIZE, i / CHUNK_SIZE % CHUNK_SIZE, i / (CHUNK_SIZE * CHUNK_SIZE)};
+    chunk.SetBlockLocal(pos, i / 9 % 3 == 0 ? BLOCK_AIR : i / 9 % 3 == 1 ? 1024 : UINT16_MAX);
+    if (chunk.GetBlockLocal(pos) != BLOCK_AIR)
+      chunk.SetFluidLocal(pos, UnpackFluidCellState(static_cast<uint8_t>(i)));
+    light[i] = static_cast<uint8_t>(i * 13);
+  }
+  chunk.ReplaceLightData(light);
+  auto mixed = measure();
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    const glm::ivec3 pos{i % CHUNK_SIZE, i / CHUNK_SIZE % CHUNK_SIZE, i / (CHUNK_SIZE * CHUNK_SIZE)};
+    chunk.SetBlockLocal(pos, static_cast<BlockId>(UINT16_MAX - i));
+  }
+  bool refused = false;
+  {
+    observation::Scope allocations(0);
+    try { (void)codec.Serialize(coord, chunk, registry); }
+    catch (const std::bad_alloc &) { refused = true; }
+    Require(refused && observation::State.refusals == 1 && !observation::State.live && !observation::State.blocks,
+            "CCHK output refusal retires every writer allocation");
+  }
+  auto dense = measure();
+  for (int i = 0; i < CHUNK_VOLUME; ++i)
+  {
+    const glm::ivec3 pos{i % CHUNK_SIZE, i / CHUNK_SIZE % CHUNK_SIZE, i / (CHUNK_SIZE * CHUNK_SIZE)};
+    const auto cell = i < CHUNK_VOLUME / 2 ? i : CHUNK_VOLUME - 1 - i;
+    chunk.SetBlockLocal(pos, static_cast<BlockId>(UINT16_MAX - 13 * cell));
+  }
+  auto collisions = measure();
+  constexpr auto max_frame = UBinaryChunkSerializer::kMaxWrittenFrameBytes;
+  Require(dense["size"] == max_frame, "full palette and run tables reach the writer size limit");
+  return {{"air", std::move(air)}, {"mixed", std::move(mixed)}, {"dense", std::move(dense)},
+          {"collisions", std::move(collisions)}, {"max_frame", max_frame},
+          {"max_requested", max_frame + NameStorageAlignmentSlack(max_frame)},
+          {"allocation_refused_and_retried", true}};
 }
 
 inline nlohmann::json CheckJsonWriter()

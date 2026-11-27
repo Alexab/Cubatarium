@@ -22,6 +22,10 @@ public:
       sizeof(kMagic) + 1 + 3 * 4 + 2 +
       (std::numeric_limits<uint16_t>::max)() * 2 + 4 + CHUNK_VOLUME * 4 +
       2 * (4 + CHUNK_VOLUME) + 2 + 8;
+  // The writer emits AIR and at most one palette entry per cell.
+  static_assert(CHUNK_VOLUME < (std::numeric_limits<uint16_t>::max)());
+  static constexpr size_t kMaxWrittenFrameBytes = kMaxFrameBytes -
+      2 * ((std::numeric_limits<uint16_t>::max)() - (CHUNK_VOLUME + 1));
 
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Binary; }
   const char *FileExtension() const override { return ".cchunk"; }

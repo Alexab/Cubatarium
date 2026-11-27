@@ -8,6 +8,7 @@
 #include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
+#include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/PersistedSectionLight.h"
@@ -278,7 +279,8 @@ struct AsyncIoStorageProbe
     Require(read_codec && read_codec->input_bytes == raw->input_bytes &&
                 !read_codec->scratch_bytes && read_codec->stack_buffer_bytes == CHUNK_VOLUME &&
                 read_codec->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
-                write_codec && write_codec->scratch_bytes &&
+                write_codec && !write_codec->scratch_bytes &&
+                write_codec->stack_buffer_bytes == (3 * CHUNK_VOLUME + 2) * sizeof(uint16_t) &&
                 write_codec->output_bytes == save->encoded_bytes &&
                 flags_encoded->codec.kind == IoCodecKind::FlagsWrite &&
                 flags_encoded->codec.scratch_bytes &&
@@ -292,6 +294,8 @@ struct AsyncIoStorageProbe
             {"binary_read_scratch", read_codec->scratch_bytes},
             {"binary_read_inline_light", read_codec->stack_buffer_bytes},
             {"binary_write_scratch", write_codec->scratch_bytes},
+            {"binary_write_stack_buffer", write_codec->stack_buffer_bytes},
+            {"binary_write_shared_bytes", save->sources.shared_bytes},
             {"flags_dom", flags_encoded->codec.scratch_bytes},
             {"receipt_write_dom", receipt_encode->scratch_bytes},
             {"receipt_write_output", receipt_write->output_bytes},
@@ -943,7 +947,11 @@ struct AsyncIoStorageProbe
     UBlockRegistry registry(nullptr, definitions);
     UBlockWorld world;
     world.SetBlock({1, 2, 3}, 8);
-    world.SetBlock({CHUNK_SIZE + 1, 2, 3}, 8);
+    for (int i = 0; i < CHUNK_VOLUME; ++i)
+    {
+      const glm::ivec3 local{i % CHUNK_SIZE, i / CHUNK_SIZE % CHUNK_SIZE, i / (CHUNK_SIZE * CHUNK_SIZE)};
+      world.SetBlock(save_coord * CHUNK_SIZE + local, static_cast<BlockId>(UINT16_MAX - i));
+    }
     UChunkStorageService storage;
     auto snapshot = world.GetChunkManager().MakeTerrainSaveSnapshot(coord);
     Require(snapshot && storage.SaveChunk(coord, *snapshot, folder, registry), "I/O fixture saves baseline slice");
@@ -1004,7 +1012,18 @@ struct AsyncIoStorageProbe
             "I/O fixture runs and publishes before deadline");
     const auto completed = Inspect(io);
     worker_phase.Close();
-    const auto worker_stages = CheckWorkerTrace(worker_trace);
+    auto worker_stages = CheckWorkerTrace(worker_trace);
+    const auto file = storage.ChunkFilePath(folder, save_coord, ChunkDiskFormat::Binary);
+    const auto encoded_extent = fs::file_size(file);
+    UBlockWorld cold;
+    Require(encoded_extent == UBinaryChunkSerializer::kMaxWrittenFrameBytes &&
+                worker_stages["binary_encoded"] == encoded_extent + NameStorageAlignmentSlack(static_cast<size_t>(encoded_extent)) &&
+                storage.LoadChunk(save_coord, cold, folder, registry) == CHUNK_VOLUME &&
+                cold.GetBlock(save_coord * CHUNK_SIZE) == UINT16_MAX &&
+                cold.GetBlock(save_coord * CHUNK_SIZE + glm::ivec3(CHUNK_SIZE - 1)) == UINT16_MAX - CHUNK_VOLUME + 1,
+            "maximum-sized physical CCHK frame reloads every voxel with its original IDs");
+    worker_stages["binary_write_file_bytes"] = encoded_extent;
+    worker_stages["binary_write_voxels"] = CHUNK_VOLUME;
     Require(completed.supported && completed.completed == std::array<size_t, 3>{2, 5, 1} &&
                 completed.completed_backing && completed.shared_blocks == 13 &&
                 completed.shared_aliases == 9 && completed.callable_bytes == 0,

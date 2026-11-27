@@ -8,7 +8,6 @@
 #include <cmath>
 #include <cstring>
 #include <limits>
-#include <unordered_map>
 #include <vector>
 
 namespace cutum
@@ -16,6 +15,59 @@ namespace cutum
 
 namespace
 {
+
+struct ChunkWritePalette
+{
+  // Palette index zero is reserved for AIR and marks an unoccupied slot.
+  // At most CHUNK_VOLUME non-air values keep the table at most half full.
+  std::array<uint16_t, 2 * CHUNK_VOLUME> Slots{};
+  std::array<BlockId, CHUNK_VOLUME + 1> Values;
+  uint16_t Count{1};
+
+  ChunkWritePalette() { Values[0] = BLOCK_AIR; }
+
+  void Include(BlockId id)
+  {
+    if (id == BLOCK_AIR)
+      return;
+    auto &entry = Slots[FindSlot(id)];
+    if (!entry)
+    {
+      Values[Count] = id;
+      entry = Count++;
+    }
+  }
+
+  uint16_t Index(BlockId id) const
+  {
+    return id == BLOCK_AIR ? 0 : Slots[FindSlot(id)];
+  }
+
+private:
+  size_t FindSlot(BlockId id) const
+  {
+    // The high bits spread the 16-bit IDs across the fixed table.
+    const uint32_t hash = uint32_t{id} * 2654435761u;
+    size_t slot = (hash >> 16) % Slots.size();
+    while (Slots[slot] && Values[Slots[slot]] != id)
+      slot = (slot + 1) % Slots.size();
+    return slot;
+  }
+};
+
+template<class Visitor>
+size_t VisitChunkRuns(const std::array<BlockId, CHUNK_VOLUME> &data, Visitor visit)
+{
+  size_t count = 0;
+  for (auto cell = data.begin(); cell != data.end(); ++count)
+  {
+    const BlockId id = *cell;
+    const auto next = std::find_if(cell + 1, data.end(), [id](BlockId other) { return other != id; });
+    visit(id, static_cast<uint16_t>(next - cell));
+    cell = next;
+  }
+  return count;
+}
 
 void AppendU16(std::vector<uint8_t> &out, uint16_t value)
 {
@@ -105,80 +157,25 @@ UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
   SerializedChunk out;
   out.format = ChunkDiskFormat::Binary;
 
-  std::unordered_map<BlockId, uint16_t> paletteIndex;
-  std::vector<BlockId> palette;
-  palette.push_back(BLOCK_AIR);
-  paletteIndex[BLOCK_AIR] = 0;
-
-  auto paletteFor = [&](BlockId id) -> uint16_t
-  {
-    const auto it = paletteIndex.find(id);
-    if (it != paletteIndex.end())
-    {
-      return it->second;
-    }
-    const uint16_t index = static_cast<uint16_t>(palette.size());
-    palette.push_back(id);
-    paletteIndex[id] = index;
-    return index;
-  };
-
-  struct Run
-  {
-    uint16_t length{0};
-    uint16_t paletteIdx{0};
-  };
-  std::vector<Run> runs;
-  Run currentRun{0, 0};
-  bool hasRun = false;
-
-  for (int z = 0; z < CHUNK_SIZE; ++z)
-  {
-    for (int y = 0; y < CHUNK_SIZE; ++y)
-    {
-      for (int x = 0; x < CHUNK_SIZE; ++x)
-      {
-        const BlockId id = chunk.GetBlockLocal(glm::ivec3(x, y, z));
-        const uint16_t paletteIdx = paletteFor(id);
-        if (!hasRun)
-        {
-          currentRun = Run{1, paletteIdx};
-          hasRun = true;
-          continue;
-        }
-        if (currentRun.paletteIdx == paletteIdx &&
-            currentRun.length < UINT16_MAX)
-        {
-          ++currentRun.length;
-          continue;
-        }
-        runs.push_back(currentRun);
-        currentRun = Run{1, paletteIdx};
-      }
-    }
-  }
-  if (hasRun)
-  {
-    runs.push_back(currentRun);
-  }
-
+  ChunkWritePalette palette;
+  const auto &data = chunk.GetData();
+  const auto runs = VisitChunkRuns(data, [&](BlockId id, uint16_t) { palette.Include(id); });
+  constexpr size_t fixed_bytes = kMaxWrittenFrameBytes - 2 * (CHUNK_VOLUME + 1) - 4 * CHUNK_VOLUME;
   std::vector<uint8_t> &bytes = out.bytes;
+  bytes.reserve(fixed_bytes + 2 * palette.Count + 4 * runs);
   bytes.insert(bytes.end(), std::begin(kMagic), std::end(kMagic));
   bytes.push_back(kVersion);
   AppendI32(bytes, chunkCoord.x);
   AppendI32(bytes, chunkCoord.y);
   AppendI32(bytes, chunkCoord.z);
-  AppendU16(bytes, static_cast<uint16_t>(palette.size()));
-  for (const BlockId id : palette)
-  {
-    AppendU16(bytes, static_cast<uint16_t>(id));
-  }
-  AppendU32(bytes, static_cast<uint32_t>(runs.size()));
-  for (const Run &run : runs)
-  {
-    AppendU16(bytes, run.length);
-    AppendU16(bytes, run.paletteIdx);
-  }
+  AppendU16(bytes, palette.Count);
+  for (uint16_t index = 0; index < palette.Count; ++index)
+    AppendU16(bytes, palette.Values[index]);
+  AppendU32(bytes, static_cast<uint32_t>(runs));
+  VisitChunkRuns(data, [&](BlockId id, uint16_t length) {
+    AppendU16(bytes, length);
+    AppendU16(bytes, palette.Index(id));
+  });
 
   AppendU32(bytes, static_cast<uint32_t>(CHUNK_VOLUME));
   bytes.insert(bytes.end(), chunk.GetFluidData().begin(),
@@ -199,14 +196,10 @@ UBinaryChunkSerializer::Serialize(glm::ivec3 chunkCoord, const UChunk &chunk,
   AppendU64(bytes, last_update_ms);
   if (probe)
   {
-    StlSourceStorage scratch, output;
-    scratch.Hash(paletteIndex);
-    scratch.Buffer(palette.capacity(), sizeof(BlockId));
-    scratch.Buffer(runs.capacity(), sizeof(Run));
+    StlSourceStorage output;
     output.Buffer(bytes.capacity(), sizeof(uint8_t));
-    probe->sample(probe->context, {IoCodecKind::BinaryWrite, scratch.bytes.requested,
-                                  0, output.bytes.requested, 0,
-                                  scratch.bytes.supported && output.bytes.supported});
+    probe->sample(probe->context, {IoCodecKind::BinaryWrite, 0, 0, output.bytes.requested,
+                                  sizeof(palette), output.bytes.supported});
   }
   return out;
 }
