@@ -1788,9 +1788,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   }
 
   const bool normalShutdown = options.NormalShutdown;
-  WindowsMemoryCheckpoint beforeWindow;
+  std::optional<DesktopShutdownCheckpoint> shutdownCheckpoint;
   if (normalShutdown)
-    beforeWindow = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages);
+  {
+    auto &checkpoint = shutdownCheckpoint.emplace();
+    checkpoint.beforeWindow = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages, &checkpoint.tlsHistory);
+  }
   UDesktopPlatformWindow window;
   const bool ok = options.VisibleWindow
                       ? window.Initialize(1280, 720, "flight-sim")
@@ -1800,6 +1803,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::cerr << "flight-sim: failed to initialize window" << std::endl;
     return 1;
   }
+  if (shutdownCheckpoint)
+    shutdownCheckpoint->afterWindow = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages,
+                                                                  &shutdownCheckpoint->tlsHistory);
   // Long loads exceed the 60s autosave interval; firing save on first InGame
   // frame starves streaming (wall≈3s) and invalidates travel/stop gates.
   window.SetAutosaveEnabled(false);
@@ -3606,8 +3612,7 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   // performs the same teardown used when the desktop application closes.
   try
   {
-    DesktopShutdownCheckpoint checkpoint;
-    checkpoint.beforeWindow = std::move(beforeWindow);
+    auto &checkpoint = *shutdownCheckpoint;
     window.Shutdown(checkpoint);
     std::ofstream report(shutdownReportPath);
     report << DescribeDesktopShutdown(checkpoint).dump(2) << '\n';

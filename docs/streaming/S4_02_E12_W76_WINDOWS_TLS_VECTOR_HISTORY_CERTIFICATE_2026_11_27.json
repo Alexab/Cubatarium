@@ -1,0 +1,513 @@
+{
+  "schema": "s4-e12-w76-windows-tls-vector-history.v1",
+  "status": "SCOPED_WINDOWS_TLS_VECTOR_HISTORY_PASS_E12_OPEN",
+  "baseline_commit": "4ab7762191e919980ec9b2f2bc54bf40d9213102",
+  "prior_certificate": "S4_02_E12_W75_WINDOWS_MODULE_TLS_CERTIFICATE_2026_11_27.json",
+  "summary": "W76 tracks previously observed static TLS vector allocations through replacements. A retained block must match the original heap record and two known slots while its thread survives. The same live thread census observes dynamic TLS expansion arrays and distinguishes empty expansion pointers. The Release fixture forces multiple loader growth events and checks the dynamic expansion against TlsGetValue and the actual heap allocation. The replaced worker blocks and expansion array retire after thread exit. Flat and Full observe both storage domains through five desktop phases. All 46 Release regression groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W76. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. W73 verifies normal desktop shutdown, selected GL name retirement and exact application owner expiry across Flat and Full, and fixes block-atlas release while the context is current. W74 attributes committed and resident image spans and declared module TLS at four matched desktop phases. W75 joins live static TLS vector and loaded-module allocations to observed process threads at the four native phases. W76 observes retained previously sampled static TLS vectors, their checked worker retirement and actual dynamic TLS expansion arrays. Next, resolve older vectors missed between snapshots, FLS and dynamic TLS payload ownership, then join retained file, platform and driver resources outside the mapped images. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows Release previously observed replaced static TLS vectors and live dynamic TLS expansion arrays",
+  "composition_rule": "Use disjoint heap allocations and checked phase ownership. Previously sampled replaced vectors are distinct from current vectors. Dynamic expansion stores slot pointers. Their pointed-to allocations and FLS have separate lifetimes. The observations are a subset of process heap memory.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format",
+    "https://learn.microsoft.com/en-us/windows/win32/procthread/thread-local-storage",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-teb",
+    "https://learn.microsoft.com/en-us/windows/win32/memory/enumerating-a-heap"
+  ],
+  "fixture": {
+    "after_join": {
+      "limit_reached": false,
+      "observed_replacements": 6,
+      "released": 3,
+      "retained": {
+        "blocks": 3,
+        "data_bytes": 456,
+        "heap_overhead_bytes": 24
+      },
+      "sampled": true,
+      "schema": "windows-replaced-tls-vectors.v1",
+      "status": "PASS",
+      "tracked_vectors": 8,
+      "unconfirmed": 0
+    },
+    "expansion_retained_after_index_free": true,
+    "live": {
+      "limit_reached": false,
+      "observed_replacements": 6,
+      "released": 0,
+      "retained": {
+        "blocks": 6,
+        "data_bytes": 912,
+        "heap_overhead_bytes": 48
+      },
+      "sampled": true,
+      "schema": "windows-replaced-tls-vectors.v1",
+      "status": "PASS",
+      "tracked_vectors": 8,
+      "unconfirmed": 0
+    },
+    "loaded_dlls": 24,
+    "remaining_worker_blocks_after_join": 0,
+    "status": "PASS",
+    "verified_worker_replacements": 3,
+    "worker_expansion_bytes": 8192
+  },
+  "native": {
+    "flat": {
+      "flight_frames": 739,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 0,
+            "released": 0,
+            "retained": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 1,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 4
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 4,
+          "active_static_vectors": 1,
+          "elapsed_us": 79828
+        },
+        "after_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 8,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 10
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 10,
+          "active_static_vectors": 7,
+          "elapsed_us": 100363
+        },
+        "before_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 31,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 33
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 33,
+          "active_static_vectors": 30,
+          "elapsed_us": 133824
+        },
+        "after_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 32,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 14
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 14,
+          "active_static_vectors": 11,
+          "elapsed_us": 97267
+        },
+        "after_context_destroy": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 32,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 13
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 13,
+          "active_static_vectors": 10,
+          "elapsed_us": 95910
+        }
+      }
+    },
+    "full": {
+      "flight_frames": 412,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 0,
+            "released": 0,
+            "retained": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 1,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 4
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 4,
+          "active_static_vectors": 1,
+          "elapsed_us": 83042
+        },
+        "after_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 8,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 10
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 10,
+          "active_static_vectors": 7,
+          "elapsed_us": 83534
+        },
+        "before_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 35,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 34
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 34,
+          "active_static_vectors": 34,
+          "elapsed_us": 149180
+        },
+        "after_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 36,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 11
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 11,
+          "active_static_vectors": 11,
+          "elapsed_us": 112641
+        },
+        "after_context_destroy": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 36,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 10
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "process_threads": 10,
+          "active_static_vectors": 10,
+          "elapsed_us": 110237
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "182514bc46eef642e71b4c5a966de3e649bc184fe15d12610c1c069005737f4d",
+  "source_sha256_raw": {
+    "src/App/Platform/AppRunner.cpp": "905c9f535f3a61fffd46c3365b58d6ac7be3c86144d2b7cf486f5a9742ec85e0",
+    "src/App/Platform/DesktopShutdownCheckpoint.h": "21b58d277e3c215e11c1ceeb1e86211a2e65e92f62b8b2319b0c1569acc60390",
+    "src/App/Platform/WindowManager.cpp": "7b5beec68f6fadafe4cfd0fb0c6d800e2adb7e33d7de13c33c32afcd989713af",
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "7d373551f9412838222de17b7e419d5b31d914e275459c12a9b780104e38932a",
+    "src/Core/Memory/WindowsModuleTlsStorage.h": "8de74e78271e6bcf26df05af06ad0c73ff8669fffe7126313931c0771395bb4b",
+    "src/Core/Memory/WindowsTlsVectorHistory.h": "09861bf2fc6d571192645eb71939524f507af562381d37f3f351281e9700c6b9",
+    "src/Test/AsyncIoStorageTest.cpp": "615e29fce71cae07d8a1c880e5e7a86922c12b7adbf29f927a2184049c860a82",
+    "src/Test/WindowsTlsVectorHistoryFixture.h": "2293f707a5a1ab59b175dcf9d802d0e947c9efd4d5083bc87c416f9f4c501ebc"
+  },
+  "desktop_exe_sha256": "683e03f03db62f062c58c4e46d12670823de692316f29d4215afbd47dcf75b43",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-tls-history-provenance.json": "49aa85574573232ba30913e4906bf8b8270f61a5409dbc0a0b540c29be6b1334",
+    "build/desktop-msvc/s4-tls-history-frozen-source.json": "e715fa37029ab502752d9678b31283c58bf2b2f68c43493b3e6a4b114872d720",
+    "build/desktop-msvc/s4-tls-history-regressions.json": "280d2fddf06c7ccf69bcaa03a9b9c02ac348c915a04a27a9034a97e06add9db0",
+    "build/desktop-msvc/s4-tls-history-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-tls-history-focused.json": "5bf14e36d7de64cbd74f6cfd9d2a356300edf93d4d00b794c532af1a7c0ba530",
+    "build/desktop-msvc/s4-tls-history-io-owners.json": "d168a74050c15c3545ca96894f3fc5e650cda94435a8c8a92bf41610790c9562",
+    "build/desktop-msvc/Release/windows_module_tls_fixture.dll": "16a24723db6c428963b8b3e54260a795b8872b825536272fa9ec42eaef31a807",
+    "build/desktop-msvc/s4-tls-history-flat-native/smoke-verdict.json": "32555697a01a7d4f0090fcd9a76653ad872ac54dce9acb168fe5faa5b55cc65d",
+    "build/desktop-msvc/s4-tls-history-flat-native/flight_sim_report.json": "bedee9c720cd6d8afcefe474f1a31d5ccfe4618eaa92f91c61bf744f4370aec5",
+    "build/desktop-msvc/s4-tls-history-flat-native/desktop-normal-shutdown.json": "04042795ccca75a888691eee6d91edce40f183df5cdb1fbd35303a94ef8a6c2c",
+    "build/desktop-msvc/s4-tls-history-flat-native/legacy-gates.json": "8f2e829dd3298f7a2b91dd9695d3bfbe648864ae1d9089ce39ab4103147b1df6",
+    "build/desktop-msvc/s4-tls-history-flat-native/route.json": "8f994b2fa6366f3ad64286fa57d830aa2b8b98e8b6229e234810bb3b536ae1f1",
+    "build/desktop-msvc/s4-tls-history-flat-native/runner.log": "9db423e34e84ffa5004b56998947321b9ab31384a62e277dcba2457124f9e674",
+    "build/desktop-msvc/s4-tls-history-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-tls-history-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-tls-history-full-native/smoke-verdict.json": "b3f8bd09f82e77887ed2c84318253f165fcc2d759da87120c35ce15aaac4c5da",
+    "build/desktop-msvc/s4-tls-history-full-native/flight_sim_report.json": "0ec2e2cb4324fea8bfad75fb1b017c5504bd07627ecab58f5417ddc7222f9cb1",
+    "build/desktop-msvc/s4-tls-history-full-native/desktop-normal-shutdown.json": "c8b6e33cb9ba15e692b603bec64a1695287041f035a735132e857afa8e0bff27",
+    "build/desktop-msvc/s4-tls-history-full-native/legacy-gates.json": "ed427d84495e49d4ea2057e091ddf57534b2745436fc2365ad9b7295e6ef6478",
+    "build/desktop-msvc/s4-tls-history-full-native/route.json": "0404271691f9755653164a790969aa80aea3d0d36849eb9a332c0c289e8052b0",
+    "build/desktop-msvc/s4-tls-history-full-native/runner.log": "8c9f1ab933a2f7101f10e2212015e99d23e4ef3b24911f8325bd0cd44ea2f318",
+    "build/desktop-msvc/s4-tls-history-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

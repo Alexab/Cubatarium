@@ -11,7 +11,8 @@ inline constexpr std::array DesktopShutdownOwnerNames{
 
 struct DesktopShutdownCheckpoint
 {
-  WindowsMemoryCheckpoint beforeWindow, beforeOwners, afterOwners, afterContext;
+  WindowsTlsVectorHistory tlsHistory;
+  WindowsMemoryCheckpoint beforeWindow, afterWindow, beforeOwners, afterOwners, afterContext;
   TerrainGpuBufferSnapshot buffersBefore, buffersAfter;
   RenderImageSnapshot imagesBefore, imagesAfter;
   std::array<bool, DesktopShutdownOwnerNames.size()> ownersBefore{}, ownersRetired{};
@@ -49,6 +50,7 @@ inline nlohmann::json DescribeDesktopShutdown(const DesktopShutdownCheckpoint &r
       {"owners", std::move(owners)}, {"context_before", row.contextBefore},
       {"context_after_owners", row.contextAfterOwners}, {"context_released", row.contextReleased},
       {"before_window_initialization", memory(row.beforeWindow)},
+      {"after_window_initialization", memory(row.afterWindow)},
       {"before_owner_release", memory(row.beforeOwners)}, {"after_owner_release", memory(row.afterOwners)},
       {"after_context_destroy", memory(row.afterContext)}, {"buffers_before", buffers(row.buffersBefore)},
       {"buffers_after", buffers(row.buffersAfter)}, {"images_before", DescribeRenderImages(row.imagesBefore)},

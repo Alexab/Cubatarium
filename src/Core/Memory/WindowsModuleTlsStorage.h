@@ -3,6 +3,9 @@
 #include "Core/Memory/WindowsExecutableTlsStorage.h"
 #include "Core/Memory/WindowsImageMemory.h"
 #include <memory>
+#if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
+#include <winternl.h>
+#endif
 
 namespace cutum
 {
@@ -26,13 +29,25 @@ struct WindowsModuleTlsRow
 };
 
 enum class WindowsThreadTlsState { Unobserved, Changed, VectorNotInHeap, VectorTooSmall, NoVector, Observed };
+enum class WindowsDynamicTlsState { Unobserved, Absent, Observed };
+
+struct WindowsTlsVectorWitness
+{
+  NativeThreadTlsBlock allocation;
+  std::uint64_t threadCreated{};
+  std::array<std::size_t, 2> slotOffsets{};
+  std::array<std::uintptr_t, 2> values{};
+};
 
 struct WindowsThreadTlsRow
 {
   std::uint32_t id{};
   std::size_t kind{NativeThreadNames.size()};
   WindowsTlsBlockStorage vector, blocks;
+  WindowsTlsBlockStorage dynamicExpansion;
+  WindowsTlsVectorWitness vectorWitness;
   WindowsThreadTlsState state{WindowsThreadTlsState::Unobserved};
+  WindowsDynamicTlsState dynamicState{WindowsDynamicTlsState::Unobserved};
 
   bool Stable() const { return state == WindowsThreadTlsState::Observed || state == WindowsThreadTlsState::NoVector; }
 };
@@ -52,6 +67,8 @@ constexpr std::size_t ThreadLimit = 512, TlsIndexLimit = 4096;
 // Windows x64 TEB ThreadLocalStoragePointer. Verify the profile against the
 // calling thread, the executable TLS declaration and a linked TLS anchor.
 constexpr std::size_t StaticTlsVectorOffset = 0x58;
+constexpr std::size_t DynamicExpansionOffset = offsetof(TEB, TlsExpansionSlots);
+constexpr std::size_t InlineDynamicTlsSlots = 64, ExpansionDynamicTlsSlots = 1024;
 
 struct CloseHandleOwner
 {
@@ -120,8 +137,9 @@ struct ThreadSample
   NativeHandle handle;
   std::uintptr_t teb{}, vector{};
   std::vector<std::uintptr_t> slots;
-  NativeThreadTlsBlock vectorBlock;
-  bool vectorRead{}, slotsRead{};
+  NativeThreadTlsBlock vectorBlock, dynamicBlock;
+  std::uintptr_t dynamicExpansion{};
+  bool vectorRead{}, slotsRead{}, dynamicRead{};
 };
 
 struct HeapTarget : NativeThreadTlsBlock
@@ -145,6 +163,14 @@ inline bool MatchesModuleIndices(HANDLE self, const std::vector<const WindowsIma
     DWORD index{};
     return ReadValue(self, module->tlsIndexAddress, 0, index) && index == module->tlsIndex;
   });
+}
+
+inline std::uint64_t ThreadCreationTime(HANDLE thread) noexcept
+{
+  FILETIME created{}, exited{}, kernel{}, user{};
+  if (!GetThreadTimes(thread, &created, &exited, &kernel, &user))
+    return 0;
+  return (std::uint64_t{created.dwHighDateTime} << 32) | created.dwLowDateTime;
 }
 } // namespace windows_module_tls_detail
 #endif
@@ -201,7 +227,9 @@ inline WindowsModuleTlsStorage ObserveWindowsModuleTls(const WindowsImageMemory 
     result.modules.push_back({module->filename, static_cast<std::size_t>(module->tlsRaw + module->tlsZeroFill), {}});
   std::vector<ThreadSample> samples(ids.size());
   std::vector<HeapTarget> targets;
-  targets.reserve(ids.size() * (modules.size() + 1));
+  const auto staticVectorTarget = modules.size();
+  const auto dynamicExpansionTarget = modules.size() + 1;
+  targets.reserve(ids.size() * (modules.size() + 2));
   for (std::size_t i = 0; i < ids.size(); ++i)
   {
     auto &row = result.threads[i];
@@ -212,12 +240,15 @@ inline WindowsModuleTlsStorage ObserveWindowsModuleTls(const WindowsImageMemory 
     if (!sample.handle)
       continue;
     sample.teb = ReadThreadTeb(query, sample.handle.get(), process, row.id);
+    sample.dynamicRead = ReadValue(self, sample.teb, DynamicExpansionOffset, sample.dynamicExpansion);
+    if (sample.dynamicRead && sample.dynamicExpansion)
+      targets.push_back({{sample.dynamicExpansion}, i, dynamicExpansionTarget});
     sample.vectorRead = ReadValue(self, sample.teb, StaticTlsVectorOffset, sample.vector);
     if (!sample.vectorRead || !sample.vector)
       continue;
     sample.slots.resize(modules.size());
     sample.slotsRead = true;
-    targets.push_back({{sample.vector}, i, modules.size()});
+    targets.push_back({{sample.vector}, i, staticVectorTarget});
     for (std::size_t m = 0; m < modules.size(); ++m)
     {
       sample.slotsRead &= ReadValue(self, sample.vector, modules[m]->tlsIndex * sizeof(void *), sample.slots[m]);
@@ -235,14 +266,30 @@ inline WindowsModuleTlsStorage ObserveWindowsModuleTls(const WindowsImageMemory 
     return result;
 
   for (const auto &target : targets)
-    if (target.module == modules.size())
+    if (target.module == staticVectorTarget)
       samples[target.thread].vectorBlock = target;
+    else if (target.module == dynamicExpansionTarget)
+      samples[target.thread].dynamicBlock = target;
   const auto vectorBytes = (modules.back()->tlsIndex + 1) * sizeof(void *);
   for (std::size_t i = 0; i < samples.size(); ++i)
   {
     const auto &sample = samples[i];
     const auto &heapVector = sample.vectorBlock;
     auto &row = result.threads[i];
+    std::uintptr_t expansion{};
+    if (sample.dynamicRead && WaitForSingleObject(sample.handle.get(), 0) == WAIT_TIMEOUT &&
+        ReadValue(self, sample.teb, DynamicExpansionOffset, expansion) && expansion == sample.dynamicExpansion &&
+        WaitForSingleObject(sample.handle.get(), 0) == WAIT_TIMEOUT)
+    {
+      if (!expansion)
+        row.dynamicState = WindowsDynamicTlsState::Absent;
+      else if (sample.dynamicBlock.base == expansion &&
+               sample.dynamicBlock.dataBytes >= ExpansionDynamicTlsSlots * sizeof(void *))
+      {
+        row.dynamicExpansion.Add(sample.dynamicBlock);
+        row.dynamicState = WindowsDynamicTlsState::Observed;
+      }
+    }
     std::uintptr_t currentVector{};
     if (!sample.vectorRead)
       continue;
@@ -289,6 +336,15 @@ inline WindowsModuleTlsStorage ObserveWindowsModuleTls(const WindowsImageMemory 
     }
     row.state = WindowsThreadTlsState::Observed;
     row.vector.Add(heapVector);
+    row.vectorWitness.allocation = heapVector;
+    row.vectorWitness.threadCreated = ThreadCreationTime(sample.handle.get());
+    std::size_t witness = 0;
+    for (std::size_t m = 0; m < modules.size() && witness < row.vectorWitness.values.size(); ++m)
+      if (sample.slots[m])
+      {
+        row.vectorWitness.values[witness] = sample.slots[m];
+        row.vectorWitness.slotOffsets[witness++] = modules[m]->tlsIndex * sizeof(void *);
+      }
     ++result.threadsWithVector;
   }
   result.stableThreads = result.threadsWithVector + result.threadsWithoutVector;
@@ -297,7 +353,7 @@ inline WindowsModuleTlsStorage ObserveWindowsModuleTls(const WindowsImageMemory 
   if (!result.moduleListStable)
     return result;
   for (const auto &target : targets)
-    if (target.module != modules.size() && target.base && result.threads[target.thread].state == WindowsThreadTlsState::Observed)
+    if (target.module < modules.size() && target.base && result.threads[target.thread].state == WindowsThreadTlsState::Observed)
     {
       auto &module = result.modules[target.module];
       const auto offset = target.anchor - target.base;

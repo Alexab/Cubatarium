@@ -2279,7 +2279,7 @@ void UWindowManager::Shutdown(DesktopShutdownCheckpoint *checkpoint)
     InspectFlightCaptureGpuBuffers(shutdownBuffers);
     checkpoint->buffersBefore = shutdownBuffers.Read();
     checkpoint->imagesBefore = shutdownImages.Read();
-    checkpoint->beforeOwners = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages);
+    checkpoint->beforeOwners = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages, &checkpoint->tlsHistory);
   }
 
   StopFlightCapture();
@@ -2324,7 +2324,7 @@ void UWindowManager::Shutdown(DesktopShutdownCheckpoint *checkpoint)
       checkpoint->buffersAfter = shutdownBuffers.Read();
       checkpoint->imagesAfter = shutdownImages.Read();
     }
-    checkpoint->afterOwners = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages);
+    checkpoint->afterOwners = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages, &checkpoint->tlsHistory);
   }
 
   if (Window)
@@ -2343,7 +2343,7 @@ void UWindowManager::Shutdown(DesktopShutdownCheckpoint *checkpoint)
 #ifdef _WIN32
     checkpoint->contextReleased = checkpoint->contextReleased && !wglGetCurrentContext();
 #endif
-    checkpoint->afterContext = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages);
+    checkpoint->afterContext = ReadWindowsMemoryCheckpoint(WindowsMemoryDetail::ModuleImages, &checkpoint->tlsHistory);
   }
 }
 
