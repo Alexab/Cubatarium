@@ -4842,10 +4842,18 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     const bool prefer_field_input =
         PreferFieldInputLoadNext_ && world.MeshService &&
         world.MeshService->GetCache().GetGeometryAwaitingLightCount() != 0;
-    auto completed_loads = AsyncChunkIo->DrainConsumerLoadsUpTo(
-        max_ranked_loads, result_rank, field_input_required, prefer_field_input,
-        &metrics.ready_loads_before_n, &metrics.result_selection_mutex_wait_ms,
-        &metrics.result_selection_mutex_held_ms);
+    std::vector<AsyncChunkLoadResult> completed_loads;
+    try
+    {
+      completed_loads = AsyncChunkIo->DrainConsumerLoadsUpTo(
+          max_ranked_loads, result_rank, field_input_required, prefer_field_input,
+          &metrics.ready_loads_before_n, &metrics.result_selection_mutex_wait_ms,
+          &metrics.result_selection_mutex_held_ms);
+    }
+    catch (const std::bad_alloc &)
+    {
+      // Ranking leaves the entire batch queued on refusal. Try on a later tick.
+    }
     metrics.result_selection_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - result_selection_time)
@@ -5146,8 +5154,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     if (next_load < completed_loads.size())
     {
       const auto requeue_started = std::chrono::steady_clock::now();
-      std::vector<AsyncChunkLoadResult> deferred;
-      deferred.reserve(completed_loads.size() - next_load);
+      std::size_t deferred_end = next_load;
       for (std::size_t i = next_load; i < completed_loads.size(); ++i)
       {
         const auto &load = completed_loads[i];
@@ -5160,10 +5167,13 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           ++metrics.cancelled_discard_n;
           continue;
         }
-        deferred.push_back(std::move(completed_loads[i]));
+        // Keep the live suffix in order using the selected result backing.
+        if (i != deferred_end)
+          std::swap(completed_loads[deferred_end], completed_loads[i]);
+        ++deferred_end;
       }
-      metrics.requeued_loads_n = deferred.size();
-      AsyncChunkIo->RequeueLoads(std::move(deferred),
+      metrics.requeued_loads_n = deferred_end - next_load;
+      AsyncChunkIo->RequeueLoads(completed_loads.data() + next_load, metrics.requeued_loads_n,
                                  &metrics.result_requeue_mutex_wait_ms,
                                  &metrics.result_requeue_mutex_held_ms);
       metrics.result_requeue_ms =

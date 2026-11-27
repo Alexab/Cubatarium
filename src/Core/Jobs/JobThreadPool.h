@@ -10,7 +10,9 @@
 #include <cstdint>
 #include <deque>
 #include <functional>
+#include <iterator>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
 #include <type_traits>
@@ -248,7 +250,13 @@ public:
   void PushRange(std::vector<T> &&values, double *mutex_wait_ms = nullptr,
                  double *mutex_held_ms = nullptr)
   {
-    if (values.empty())
+    PushRange(values.data(), values.size(), mutex_wait_ms, mutex_held_ms);
+  }
+
+  void PushRange(T *values, std::size_t count, double *mutex_wait_ms = nullptr,
+                 double *mutex_held_ms = nullptr)
+  {
+    if (count == 0)
     {
       if (mutex_wait_ms)
       {
@@ -269,9 +277,9 @@ public:
                            lock_acquired - lock_wait_started)
                            .count();
     }
-    for (T &value : values)
+    for (std::size_t i = 0; i < count; ++i)
     {
-      PushUnlocked(std::move(value), nullptr);
+      PushUnlocked(std::move(values[i]), nullptr);
     }
     if (mutex_held_ms)
     {
@@ -408,13 +416,14 @@ public:
     return drained;
   }
 
-  /// Drain a bounded best-first batch after computing one rank key per item.
-  /// This avoids recalculating distance/age state for every selection pass.
-  template <typename KeyFn>
+  /// Compute one rank key per item. An optional consumer gets the first
+  /// opportunity; the rest of the batch keeps the ordinary ranking.
+  template <typename KeyFn, typename Required = std::nullptr_t>
   std::vector<T> DrainBestByKeyUpTo(std::size_t maxCount, KeyFn &&key_fn,
                                     std::size_t *availableCount = nullptr,
                                     double *mutex_wait_ms = nullptr,
-                                    double *mutex_held_ms = nullptr)
+                                    double *mutex_held_ms = nullptr,
+                                    Required required = nullptr)
   {
     using Key = std::decay_t<decltype(key_fn(std::declval<const T &>()))>;
     struct RankedOffset
@@ -452,6 +461,7 @@ public:
     const auto item_at = [this](std::size_t offset) -> T &
     { return Items[(Head + offset) % Items.size()]; };
     std::vector<RankedOffset> ranked;
+    std::optional<RankedOffset> preferred;
     const auto ranked_before = [](const RankedOffset &a,
                                   const RankedOffset &b)
     {
@@ -469,7 +479,13 @@ public:
     ranked.reserve(take);
     for (std::size_t offset = 0; offset < Count; ++offset)
     {
-      RankedOffset candidate{key_fn(item_at(offset)), offset};
+      const T &item = item_at(offset);
+      RankedOffset candidate{key_fn(item), offset};
+      if constexpr (!std::is_same_v<Required, std::nullptr_t>)
+      {
+        if (required(item) && (!preferred || ranked_before(candidate, *preferred)))
+          preferred.emplace(candidate);
+      }
       if (ranked.size() < take)
       {
         ranked.push_back(std::move(candidate));
@@ -483,6 +499,25 @@ public:
       }
     }
     std::sort(ranked.begin(), ranked.end(), ranked_before);
+    if constexpr (!std::is_same_v<Required, std::nullptr_t>)
+    {
+      if (preferred)
+      {
+        const auto match = std::find_if(ranked.begin(), ranked.end(), [&](const auto &choice) {
+          return choice.offset == preferred->offset;
+        });
+        if (match != ranked.end())
+          std::rotate(ranked.begin(), match, std::next(match));
+        else
+        {
+          std::move_backward(ranked.begin(), std::prev(ranked.end()), ranked.end());
+          ranked.front() = std::move(*preferred);
+        }
+      }
+    }
+
+    // All backing must be available before moving any queue entry.
+    drained.reserve(take);
 
     // Move selected items into a best-first prefix using at most `take`
     // swaps. Track only selected offsets; avoid two scratch arrays sized to
@@ -505,7 +540,6 @@ public:
       }
     }
 
-    drained.reserve(take);
     for (std::size_t i = 0; i < take; ++i)
     {
       drained.push_back(std::move(item_at(i)));
@@ -566,50 +600,31 @@ public:
       return 0;
     }
 
-    std::vector<T> kept;
-    kept.reserve(Count);
+    const auto item_at = [this](std::size_t offset) -> T &
+    { return Items[(Head + offset) % Items.size()]; };
     std::size_t removed = 0;
-    const std::size_t old_count = Count;
-    for (std::size_t i = 0; i < old_count; ++i)
+    for (std::size_t i = 0; i < Count; ++i)
     {
-      T &item = Items[(Head + i) % Items.size()];
+      T &item = item_at(i);
       if (pred(item))
       {
+        // Retire the entire value, including owners in its moved-from slot.
+        std::exchange(item, T{});
         ++removed;
       }
-      else
-      {
-        kept.push_back(std::move(item));
-      }
-    }
-    if (removed == 0)
-    {
-      for (std::size_t i = 0; i < kept.size(); ++i)
-      {
-        Items[(Head + i) % Items.size()] = std::move(kept[i]);
-      }
-      return 0;
+      else if (removed)
+        item_at(i - removed) = std::move(item);
     }
 
-    if (Cap == 0)
+    for (std::size_t i = Count - removed; i < Count; ++i)
+      item_at(i) = T{};
+    Count -= removed;
+    if (Count == 0)
     {
-      Items = std::move(kept);
       Head = 0;
-      Count = Items.size();
-      return removed;
+      if (Cap == 0)
+        Items.clear();
     }
-
-    const std::size_t kept_count = kept.size();
-    for (std::size_t i = 0; i < kept_count; ++i)
-    {
-      Items[i] = std::move(kept[i]);
-    }
-    for (std::size_t i = kept_count; i < old_count; ++i)
-    {
-      Items[i] = T{};
-    }
-    Head = 0;
-    Count = kept_count;
     return removed;
   }
 

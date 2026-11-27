@@ -1,4 +1,5 @@
 #include "Core/Jobs/JobThreadPool.h"
+#include "Test/OrdinaryNewObservation.h"
 
 #include <iostream>
 #include <string>
@@ -44,6 +45,19 @@ int main()
              reserved.DrainAll() == std::vector<int>({2, 3, 4, 5}) &&
              reserved.DiscardedOverflow() == 0,
          "growth through a wrapped ring uses the reserve and preserves order");
+  for (int n = 0; n < 8; ++n)
+    reserved.Push(n);
+  (void)reserved.DrainUpTo(3);
+  reserved.Push(8);
+  {
+    observation::Scope no_allocations(0);
+    Expect(reserved.EraseIf([](int n) { return n % 2 != 0; }) == 3 &&
+               observation::Snapshot().attempts == 0,
+           "retire cancelled entries from a wrapped ring without allocating");
+  }
+  Expect(reserved.GetStorageSnapshot().bytes == storage.bytes &&
+             reserved.DrainAll() == std::vector<int>({4, 6, 8}),
+         "cancellation preserves reserved backing and FIFO");
   cutum::UCompletedJobQueue<int> q;
   q.SetCapacity(3);
   Expect(q.Capacity() == 3, "capacity set");

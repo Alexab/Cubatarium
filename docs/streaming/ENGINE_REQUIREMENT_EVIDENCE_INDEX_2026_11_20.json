@@ -3684,6 +3684,14 @@
       "receipt": "build/desktop-msvc/s4-q10-json-fluid-release-acceptance.json",
       "scope": "Accept the stored unsigned fluid byte for non-air JSON cells before certifying their frame. Zero or omitted fluid remains valid for air. Physical JSON save and stream reload preserve falling water, and publication on a live column token preserves the byte. Malformed suffix and invalid fluid controls cannot certify terrain. The existing lexer, codec admission and decoded buffer ownership remain in force.",
       "remaining": "Compose retained/active I/O with path, flag, index and registry histories and Q01.L2. Legacy registry mutation before full terrain certification and whole-catalog replacement stay open. S4.02 remains open at 23 of 42 packages. Full startup/motion/outer-ring/cave/wet and S0-S6 acceptance remain required."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.READY_OWNERSHIP",
+      "status": "SCOPED_Q10_READY_OWNERSHIP_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_READY_OWNERSHIP_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-ready-ownership-acceptance.json",
+      "scope": "Reserve one ranked selection and one result vector before moving any ready result. The optional field-dependent result gets the first slot, then ordinary ranking and ties apply. A ranking refusal leaves the original ready queue for the next tick. Reuse the delivered vector for the deferred suffix and compact the cancelled ring in place. The native fixture joins the ring slot requests with one full returned vector while all read credits are occupied, releases one credit for its successor, and then retires cancelled and escaped results.",
+      "remaining": "Compose payload, path, flag, disk-index and legacy registry histories with overlapping I/O stages and Q01.L2 world column owner counts. The claimed simultaneous total covers slot backing per one observed I/O instance. S4.02 remains open at 23 of 42 packages; full S0-S6 acceptance remains required."
     }
   ],
   "completed_handoff": {

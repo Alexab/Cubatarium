@@ -232,7 +232,13 @@ public:
                     double *mutex_wait_ms = nullptr,
                     double *mutex_held_ms = nullptr)
   {
-    CompletedLoads.PushRange(std::move(loads), mutex_wait_ms, mutex_held_ms);
+    RequeueLoads(loads.data(), loads.size(), mutex_wait_ms, mutex_held_ms);
+  }
+  void RequeueLoads(AsyncChunkLoadResult *loads, std::size_t count,
+                    double *mutex_wait_ms = nullptr,
+                    double *mutex_held_ms = nullptr)
+  {
+    CompletedLoads.PushRange(loads, count, mutex_wait_ms, mutex_held_ms);
   }
   template <typename Compare>
   std::vector<AsyncChunkLoadResult>

@@ -1,5 +1,6 @@
 #include "World/IO/ReadyDataAdmission.h"
 #include "Core/Jobs/JobThreadPool.h"
+#include "Test/OrdinaryNewObservation.h"
 #include "World/IO/AsyncChunkIO.h"
 #include <cstdlib>
 #include <iostream>
@@ -31,6 +32,47 @@ int main()
   { return std::tuple{r.coord.x, r.demandId}; };
   const auto required = [](const AsyncChunkLoadResult &r)
   { return r.coord.x == 3; };
+  for (const size_t prefix : {2u, 3u, 4u, 0u, 1u})
+  {
+    UCompletedJobQueue<AsyncChunkLoadResult> pending;
+    for (int id = 0; id < 7; ++id)
+      pending.Push(Result(id, 0));
+    pending.Push(Result(90, 3));
+    std::vector<AsyncChunkLoadResult> selected;
+    bool refused = false;
+    size_t requests = 0;
+    {
+      observation::Scope allocation(prefix);
+      try { selected = DrainReadyDataForConsumers(pending, 4, rank, required, true); }
+      catch (const std::bad_alloc &) { refused = true; }
+      requests = observation::Snapshot().attempts;
+    }
+    if (refused)
+    {
+      Expect(pending.Size() == 8, "ranking allocation refusal preserves every ready result");
+      size_t position = 0;
+      pending.InspectStorage([](size_t) {}, [&](const auto &result) {
+        Expect(result.demandId == (position == 7 ? 90 : position),
+               "ranking allocation refusal preserves FIFO and the reserved field dependency");
+        ++position;
+      });
+      selected = DrainReadyDataForConsumers(pending, 4, rank, required, true);
+    }
+    Expect(requests == (prefix == 0 ? 1 : 2) && refused == (prefix < 2),
+           "ranked drain needs only one rank buffer and one returned vector");
+    Expect(pending.Size() == 4 && selected.size() == 4 && selected[0].demandId == 90 &&
+               selected[1].demandId == 0 && selected[2].demandId == 1 && selected[3].demandId == 2,
+           "the next drain recovers the reserved result and ordinary priority");
+  }
+  UCompletedJobQueue<AsyncChunkLoadResult> tied;
+  for (int id = 0; id < 4; ++id)
+    tied.Push(Result(id, 0));
+  const auto equal_rank = [](const AsyncChunkLoadResult &) { return 0; };
+  const auto second_is_required = [](const AsyncChunkLoadResult &r) { return r.demandId == 1; };
+  const auto preferred = DrainReadyDataForConsumers(tied, 3, equal_rank, second_is_required, true);
+  Expect(preferred.size() == 3 && preferred[0].demandId == 1 && preferred[1].demandId == 0 &&
+             preferred[2].demandId == 2 && tied.Size() == 1,
+         "a preferred member already in the selected prefix keeps ordinary FIFO ties");
   UCompletedJobQueue<AsyncChunkLoadResult> ready;
   for (int i = 0; i < 96; ++i)
     ready.Push(Result(i, 0));

@@ -343,25 +343,33 @@ struct AsyncIoStorageProbe
     Require(cold_slots == full_slots && full_slots[0] > 0 && full_slots[1] > 0 && full_slots[2] > 0,
             "the first and full completion cohorts use the admission-sized reserve");
     auto returned = io.DrainLoads();
+    StlSourceStorage delivered_slots;
+    delivered_slots.Buffer(returned.capacity(), sizeof(AsyncChunkLoadResult));
     Require(returned.size() == cap && returned.back().success && io.GetOutstandingLoadCount() == cap &&
-                !request(coord, cap + 1), "drained results retain their credits");
+                delivered_slots.bytes.requested == full_slots[0] && !request(coord, cap + 1),
+            "drained results retain their credits and a separate delivery vector");
     returned.pop_back();
     Require(request(coord, cap + 1) && io.WaitIdleFor(std::chrono::seconds(5)) &&
                 io.GetOutstandingLoadCount() == cap, "one released result admits exactly one successor");
     auto held = std::move(returned.back());
     returned.pop_back();
-    io.RequeueLoads(std::move(returned));
+    io.RequeueLoads(returned.data(), returned.size());
     cancelled->store(true);
     io.NoteLoadCancellation();
     Require(io.DiscardCancelledLoads() == cap - 1 && io.GetOutstandingLoadCount() == 1,
             "cancellation releases ready results while the escaped load stays charged");
+    const auto after_cancel_slots = Inspect(io).completed_slots_bytes;
+    Require(after_cancel_slots == cold_slots,
+            "cancellation retains the prepared ring while the delivery vector is alive");
     const auto held_demand = held.demandId;
     held = {};
     Require(io.GetOutstandingLoadCount() == 0, "last returned result releases the last load credit");
     return {{"status", "PASS"}, {"limit", cap}, {"queued_while_full", 1},
             {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0},
             {"queued_path_backing", queued_path_backing}, {"cold_slot_requests", cold_slots},
-            {"full_slot_requests", full_slots}, {"load_record_width", sizeof(AsyncChunkLoadResult)}};
+            {"full_slot_requests", full_slots}, {"after_cancel_slot_requests", after_cancel_slots},
+            {"returned_slot_request", delivered_slots.bytes.requested},
+            {"load_record_width", sizeof(AsyncChunkLoadResult)}};
   }
 
   static nlohmann::json CheckBinaryReadEnvelope(const std::filesystem::path &root, UBlockRegistry &registry)
