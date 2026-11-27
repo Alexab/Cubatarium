@@ -1,0 +1,1083 @@
+{
+  "schema": "s4-e12-w77-windows-slot-storage.v1",
+  "status": "SCOPED_WINDOWS_SLOT_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "cd31bbb638f623d42bb52c190c6d70802276aade",
+  "prior_certificate": "S4_02_E12_W76_WINDOWS_TLS_VECTOR_HISTORY_CERTIFICATE_2026_11_27.json",
+  "summary": "W77 observes live inline and expanded TLS slot values and the FLS list of the Windows 10 x64 Release profile. The thread and FLS list snapshots agree across the heap walk. Directly referenced default-heap allocations are counted once by backing block. The controlled fixture verifies the parked fiber, interior and structure aliases, a stack value and exact callback retirement. Both native profiles record the selected allocation domains across five phases. All 46 Release regression groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W77. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. W73 verifies normal desktop shutdown, selected GL name retirement and exact application owner expiry across Flat and Full, and fixes block-atlas release while the context is current. W74 attributes committed and resident image spans and declared module TLS at four matched desktop phases. W75 joins live static TLS vector and loaded-module allocations to observed process threads at the four native phases. W76 observes retained previously sampled static TLS vectors, their checked worker retirement and actual dynamic TLS expansion arrays. W77 joins live inline and expanded TLS values, active and detached FLS slot storage and their direct default-heap references by physical allocation. Continue with the retained file, platform and driver backing outside mapped images. Resolve older unobserved static vectors, FLS callback metadata, indirectly reached allocations and independent ownership before whole-process composition. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows 10 x64 build 19045 Release inline and expanded TLS values and active and detached FLS slot storage",
+  "composition_rule": "Join slot references by their busy default-heap allocation base. Count known FLS and TLS slot backing separately, and report references to the same allocation as aliases. Other slot values are unmatched. Treat referenced allocations as non-additive with CRT, static TLS, process heaps and process memory. A slot reference alone does not establish payload ownership.",
+  "remaining_measurements": [
+    "Static vectors replaced between checkpoints and FLS global callback backing",
+    "Resources reachable indirectly from slots, index liveness, allocations outside the default heap and independent ownership attribution",
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations",
+    "Matched full process, memory, performance and native acceptance matrix"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format",
+    "https://learn.microsoft.com/en-us/windows/win32/procthread/thread-local-storage",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-teb",
+    "https://learn.microsoft.com/en-us/windows/win32/memory/enumerating-a-heap",
+    "https://learn.microsoft.com/en-us/windows/win32/procthread/fibers",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fibersapi/nf-fibersapi-flsalloc"
+  ],
+  "fixture": {
+    "callbacks": 3,
+    "controlled_payload_bytes": 717,
+    "controlled_payload_overhead": 51,
+    "deleted_fiber": {
+      "active_fls_roots": 1,
+      "detached_fls_roots": 0,
+      "distinct_default_heap_payload": {
+        "blocks": 3,
+        "data_bytes": 3099,
+        "heap_overhead_bytes": 37
+      },
+      "expanded_tls": {
+        "default_heap_references": 0,
+        "nonzero_values": 0,
+        "unmatched_values": 0
+      },
+      "expansion_arrays": {
+        "blocks": 1,
+        "data_bytes": 8192,
+        "heap_overhead_bytes": 16
+      },
+      "fls": {
+        "default_heap_references": 3,
+        "nonzero_values": 5,
+        "unmatched_values": 2
+      },
+      "fls_chunks": {
+        "blocks": 3,
+        "data_bytes": 920,
+        "heap_overhead_bytes": 24
+      },
+      "fls_headers": {
+        "blocks": 1,
+        "data_bytes": 80,
+        "heap_overhead_bytes": 16
+      },
+      "fls_list_observed": true,
+      "heap_walk_finished": true,
+      "inline_tls": {
+        "default_heap_references": 1,
+        "nonzero_values": 2,
+        "unmatched_values": 1
+      },
+      "metadata_aliases": 0,
+      "payload_aliases": 1,
+      "process_threads": 4,
+      "schema": "windows-slot-storage.v1",
+      "status": "PASS"
+    },
+    "initial": {
+      "active_fls_roots": 1,
+      "detached_fls_roots": 0,
+      "distinct_default_heap_payload": {
+        "blocks": 2,
+        "data_bytes": 2904,
+        "heap_overhead_bytes": 24
+      },
+      "expanded_tls": {
+        "default_heap_references": 0,
+        "nonzero_values": 0,
+        "unmatched_values": 0
+      },
+      "expansion_arrays": {
+        "blocks": 1,
+        "data_bytes": 8192,
+        "heap_overhead_bytes": 16
+      },
+      "fls": {
+        "default_heap_references": 2,
+        "nonzero_values": 4,
+        "unmatched_values": 2
+      },
+      "fls_chunks": {
+        "blocks": 3,
+        "data_bytes": 920,
+        "heap_overhead_bytes": 24
+      },
+      "fls_headers": {
+        "blocks": 1,
+        "data_bytes": 80,
+        "heap_overhead_bytes": 16
+      },
+      "fls_list_observed": true,
+      "heap_walk_finished": true,
+      "inline_tls": {
+        "default_heap_references": 0,
+        "nonzero_values": 0,
+        "unmatched_values": 0
+      },
+      "metadata_aliases": 0,
+      "payload_aliases": 0,
+      "process_threads": 4,
+      "schema": "windows-slot-storage.v1",
+      "status": "PASS"
+    },
+    "parked_fiber": {
+      "active_fls_roots": 1,
+      "detached_fls_roots": 1,
+      "distinct_default_heap_payload": {
+        "blocks": 5,
+        "data_bytes": 3621,
+        "heap_overhead_bytes": 75
+      },
+      "expanded_tls": {
+        "default_heap_references": 1,
+        "nonzero_values": 1,
+        "unmatched_values": 0
+      },
+      "expansion_arrays": {
+        "blocks": 1,
+        "data_bytes": 8192,
+        "heap_overhead_bytes": 16
+      },
+      "fls": {
+        "default_heap_references": 5,
+        "nonzero_values": 7,
+        "unmatched_values": 2
+      },
+      "fls_chunks": {
+        "blocks": 5,
+        "data_bytes": 1320,
+        "heap_overhead_bytes": 40
+      },
+      "fls_headers": {
+        "blocks": 2,
+        "data_bytes": 160,
+        "heap_overhead_bytes": 32
+      },
+      "fls_list_observed": true,
+      "heap_walk_finished": true,
+      "inline_tls": {
+        "default_heap_references": 2,
+        "nonzero_values": 3,
+        "unmatched_values": 1
+      },
+      "metadata_aliases": 1,
+      "payload_aliases": 2,
+      "process_threads": 4,
+      "schema": "windows-slot-storage.v1",
+      "status": "PASS"
+    },
+    "retired_child_blocks": 3,
+    "status": "PASS"
+  },
+  "native": {
+    "flat": {
+      "flight_frames": 684,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 0,
+            "released": 0,
+            "retained": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 1,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 4
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 1,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 3,
+              "data_bytes": 13832,
+              "heap_overhead_bytes": 40
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 2,
+              "nonzero_values": 5,
+              "unmatched_values": 3
+            },
+            "fls_chunks": {
+              "blocks": 1,
+              "data_bytes": 136,
+              "heap_overhead_bytes": 8
+            },
+            "fls_headers": {
+              "blocks": 1,
+              "data_bytes": 80,
+              "heap_overhead_bytes": 16
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 1,
+              "nonzero_values": 1,
+              "unmatched_values": 0
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 4,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 4,
+          "active_static_vectors": 1,
+          "elapsed_us": 171670
+        },
+        "after_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 8,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 10
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 7,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 31,
+              "data_bytes": 100576,
+              "heap_overhead_bytes": 416
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 22,
+              "nonzero_values": 35,
+              "unmatched_values": 13
+            },
+            "fls_chunks": {
+              "blocks": 7,
+              "data_bytes": 952,
+              "heap_overhead_bytes": 56
+            },
+            "fls_headers": {
+              "blocks": 7,
+              "data_bytes": 560,
+              "heap_overhead_bytes": 112
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 9,
+              "nonzero_values": 11,
+              "unmatched_values": 2
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 10,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 10,
+          "active_static_vectors": 7,
+          "elapsed_us": 180257
+        },
+        "before_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 31,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 33
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 30,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 191,
+              "data_bytes": 467288,
+              "heap_overhead_bytes": 5096
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 158,
+              "nonzero_values": 194,
+              "unmatched_values": 36
+            },
+            "fls_chunks": {
+              "blocks": 30,
+              "data_bytes": 4080,
+              "heap_overhead_bytes": 240
+            },
+            "fls_headers": {
+              "blocks": 30,
+              "data_bytes": 2400,
+              "heap_overhead_bytes": 480
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 33,
+              "nonzero_values": 35,
+              "unmatched_values": 2
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 33,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 33,
+          "active_static_vectors": 30,
+          "elapsed_us": 314137
+        },
+        "after_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 32,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 14
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 11,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 56,
+              "data_bytes": 161768,
+              "heap_overhead_bytes": 1256
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 43,
+              "nonzero_values": 60,
+              "unmatched_values": 17
+            },
+            "fls_chunks": {
+              "blocks": 11,
+              "data_bytes": 1496,
+              "heap_overhead_bytes": 88
+            },
+            "fls_headers": {
+              "blocks": 11,
+              "data_bytes": 880,
+              "heap_overhead_bytes": 176
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 13,
+              "nonzero_values": 16,
+              "unmatched_values": 3
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 14,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 14,
+          "active_static_vectors": 11,
+          "elapsed_us": 159416
+        },
+        "after_context_destroy": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 32,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 13
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 10,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 49,
+              "data_bytes": 145720,
+              "heap_overhead_bytes": 1160
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 38,
+              "nonzero_values": 54,
+              "unmatched_values": 16
+            },
+            "fls_chunks": {
+              "blocks": 10,
+              "data_bytes": 1360,
+              "heap_overhead_bytes": 80
+            },
+            "fls_headers": {
+              "blocks": 10,
+              "data_bytes": 800,
+              "heap_overhead_bytes": 160
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 11,
+              "nonzero_values": 13,
+              "unmatched_values": 2
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 13,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 13,
+          "active_static_vectors": 10,
+          "elapsed_us": 154266
+        }
+      }
+    },
+    "full": {
+      "flight_frames": 500,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 0,
+            "released": 0,
+            "retained": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 1,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 4
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 1,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 3,
+              "data_bytes": 13832,
+              "heap_overhead_bytes": 40
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 2,
+              "nonzero_values": 5,
+              "unmatched_values": 3
+            },
+            "fls_chunks": {
+              "blocks": 1,
+              "data_bytes": 136,
+              "heap_overhead_bytes": 8
+            },
+            "fls_headers": {
+              "blocks": 1,
+              "data_bytes": 80,
+              "heap_overhead_bytes": 16
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 1,
+              "nonzero_values": 1,
+              "unmatched_values": 0
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 4,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 4,
+          "active_static_vectors": 1,
+          "elapsed_us": 128745
+        },
+        "after_window_initialization": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 8,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 10
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 7,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 31,
+              "data_bytes": 100576,
+              "heap_overhead_bytes": 416
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 22,
+              "nonzero_values": 35,
+              "unmatched_values": 13
+            },
+            "fls_chunks": {
+              "blocks": 7,
+              "data_bytes": 952,
+              "heap_overhead_bytes": 56
+            },
+            "fls_headers": {
+              "blocks": 7,
+              "data_bytes": 560,
+              "heap_overhead_bytes": 112
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 9,
+              "nonzero_values": 11,
+              "unmatched_values": 2
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 10,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 10,
+          "active_static_vectors": 7,
+          "elapsed_us": 186083
+        },
+        "before_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 33,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 30
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 30,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 202,
+              "data_bytes": 475448,
+              "heap_overhead_bytes": 4904
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 170,
+              "nonzero_values": 205,
+              "unmatched_values": 35
+            },
+            "fls_chunks": {
+              "blocks": 30,
+              "data_bytes": 4080,
+              "heap_overhead_bytes": 240
+            },
+            "fls_headers": {
+              "blocks": 30,
+              "data_bytes": 2400,
+              "heap_overhead_bytes": 480
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 32,
+              "nonzero_values": 35,
+              "unmatched_values": 3
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 30,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 30,
+          "active_static_vectors": 30,
+          "elapsed_us": 234865
+        },
+        "after_owner_release": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 34,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 7
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 7,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 40,
+              "data_bytes": 105928,
+              "heap_overhead_bytes": 776
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 31,
+              "nonzero_values": 43,
+              "unmatched_values": 12
+            },
+            "fls_chunks": {
+              "blocks": 7,
+              "data_bytes": 952,
+              "heap_overhead_bytes": 56
+            },
+            "fls_headers": {
+              "blocks": 7,
+              "data_bytes": 560,
+              "heap_overhead_bytes": 112
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 9,
+              "nonzero_values": 12,
+              "unmatched_values": 3
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 7,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 7,
+          "active_static_vectors": 7,
+          "elapsed_us": 188692
+        },
+        "after_context_destroy": {
+          "replaced_vectors": {
+            "limit_reached": false,
+            "observed_replacements": 1,
+            "released": 0,
+            "retained": {
+              "blocks": 1,
+              "data_bytes": 88,
+              "heap_overhead_bytes": 8
+            },
+            "sampled": true,
+            "schema": "windows-replaced-tls-vectors.v1",
+            "status": "PASS",
+            "tracked_vectors": 35,
+            "unconfirmed": 0
+          },
+          "dynamic_expansion": {
+            "states": {
+              "ABSENT": 7
+            },
+            "storage": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            }
+          },
+          "slot_storage": {
+            "active_fls_roots": 7,
+            "detached_fls_roots": 0,
+            "distinct_default_heap_payload": {
+              "blocks": 39,
+              "data_bytes": 104936,
+              "heap_overhead_bytes": 888
+            },
+            "expanded_tls": {
+              "default_heap_references": 0,
+              "nonzero_values": 0,
+              "unmatched_values": 0
+            },
+            "expansion_arrays": {
+              "blocks": 0,
+              "data_bytes": 0,
+              "heap_overhead_bytes": 0
+            },
+            "fls": {
+              "default_heap_references": 31,
+              "nonzero_values": 43,
+              "unmatched_values": 12
+            },
+            "fls_chunks": {
+              "blocks": 7,
+              "data_bytes": 952,
+              "heap_overhead_bytes": 56
+            },
+            "fls_headers": {
+              "blocks": 7,
+              "data_bytes": 560,
+              "heap_overhead_bytes": 112
+            },
+            "fls_list_observed": true,
+            "heap_walk_finished": true,
+            "inline_tls": {
+              "default_heap_references": 8,
+              "nonzero_values": 10,
+              "unmatched_values": 2
+            },
+            "metadata_aliases": 0,
+            "payload_aliases": 0,
+            "process_threads": 7,
+            "schema": "windows-slot-storage.v1",
+            "status": "PASS"
+          },
+          "process_threads": 7,
+          "active_static_vectors": 7,
+          "elapsed_us": 175210
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "05a82c3ae8e1094f3d18b3d7c4ab39d599a8d3c350fe34700755c9780fcc8d04",
+  "source_sha256_raw": {
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "fcf5722f059893ca0b57cd6a49a185b0d60e68f2633a6c0418c3d547337cfad9",
+    "src/Core/Memory/WindowsExecutableTlsStorage.h": "cecea605e3f8fbd81dcc154356978b9a0383f66afb498405024b7f9884f3ee70",
+    "src/Core/Memory/WindowsSlotStorage.h": "ccccdc04d279bdbfc8c768de39bea5f1cd6acc5ceb258f0a7af6dd8ba1bbb50f",
+    "src/Test/AsyncIoStorageTest.cpp": "07432e24be820120bdf9bfe5741fffebc5f4f43ff829604d50d6d8d3087b5cc5",
+    "src/Test/WindowsSlotStorageFixture.h": "14e540754fc67428746625d8c9da8cc2066ce58132f1d97affca2e8cd8ead4ed"
+  },
+  "desktop_exe_sha256": "37dbe86f684eb8e17f27d35a6df0545b0bd162c5381b59de63aeeab8adde5fa9",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-slot-storage-provenance.json": "85ee6484c6f5b15960b4dc8d7603ea6c50cb53dcd05ddf972048281b0c06ba4b",
+    "build/desktop-msvc/s4-slot-storage-frozen-source.json": "b1b24bcaf26d09ddc9d4138efc57eb176c7f8f259be0fe70e2647b71b4299c23",
+    "build/desktop-msvc/s4-slot-storage-regressions.json": "c7dda084ed00658c2106ce1b1ac3d812c8ee09c4a2e078de7b521deb5584759f",
+    "build/desktop-msvc/s4-slot-storage-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-slot-storage-focused.json": "32038803410e3587d466aac70959df2c3680d817c7e3b44732d12a06c6fc58c1",
+    "build/desktop-msvc/s4-slot-storage-io-owners.json": "71d7d8d37e18f444dc92a94a1588c9b59f3188dd7977d02f9dfb59e828a9f58e",
+    "build/desktop-msvc/Release/windows_module_tls_fixture.dll": "16a24723db6c428963b8b3e54260a795b8872b825536272fa9ec42eaef31a807",
+    "build/desktop-msvc/s4-fls-layout-probe.log": "2080c34635707cb5a0fd36bc917f3059c99e5ddf7ca73d67203765acb0bc8a21",
+    "build/desktop-msvc/s4-fls-list-probe.log": "fbec82e0fa6449fb8692e6941800abeb99657ac1ddd8ff2144c93efeecfad04e",
+    "build/desktop-msvc/s4-slot-storage-flat-native/smoke-verdict.json": "4979c68099bddb95dc0427124420c0e72a1a8dbdea2473bdb4f18b88314d8627",
+    "build/desktop-msvc/s4-slot-storage-flat-native/flight_sim_report.json": "2e96517a821720dab12f936223b854151261ab9241fa021ba900f178b2700bcb",
+    "build/desktop-msvc/s4-slot-storage-flat-native/desktop-normal-shutdown.json": "7e2d7a796a730b373db7612d3494484033c05ea0f3404c48baf5451ed5b0bb9c",
+    "build/desktop-msvc/s4-slot-storage-flat-native/legacy-gates.json": "0a14d44f1a1e17e887d394646fbb9acb6e92c298e05fee0fc1ba14705e2b0396",
+    "build/desktop-msvc/s4-slot-storage-flat-native/route.json": "b9805ebe43c2076e4116dbe5df68a358fb0e540cb95cdd921fb92435b7f366ee",
+    "build/desktop-msvc/s4-slot-storage-flat-native/runner.log": "794d8a48f860fa47069ff215506fc28f8f7e8b15a41a5d97344b83cd3b80ecb5",
+    "build/desktop-msvc/s4-slot-storage-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-slot-storage-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-slot-storage-full-native/smoke-verdict.json": "449bfc7cbeff6e6d0e4f88cba22a26a152b65eb2ff828f5933ce5b35af068da2",
+    "build/desktop-msvc/s4-slot-storage-full-native/flight_sim_report.json": "291e40f1379b65f05d44dbd89be791cc00c0ac1cf099e237a9a5b8102385ed91",
+    "build/desktop-msvc/s4-slot-storage-full-native/desktop-normal-shutdown.json": "6aeb0543c7a84035d0268ea35ac92a0e5f722bdd7de9966b8ef50cc530f43b2f",
+    "build/desktop-msvc/s4-slot-storage-full-native/legacy-gates.json": "b77bff643c1d59d9597e2145ff2de4890c9689a87f160f49d45cadabbe1776ab",
+    "build/desktop-msvc/s4-slot-storage-full-native/route.json": "aabb7f7268689a65c34eb4443da6f623c30536d29ca2b852f0d2ef9f1cc33f92",
+    "build/desktop-msvc/s4-slot-storage-full-native/runner.log": "79019310088f4bfa2e4932e2ecded53422647d6d4b151c4f745e41072dbecafa",
+    "build/desktop-msvc/s4-slot-storage-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

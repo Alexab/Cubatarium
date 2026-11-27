@@ -14,19 +14,23 @@ struct WindowsTlsHeapScan
   bool finished{};
 };
 
+enum class WindowsTlsHeapAnchors { DistinctBlocks, AllowAliases };
+
 // Callers keep the anchors live or verify that their owners survived the
 // entire walk. The walk handles only integer addresses on the default heap.
 // It never locks the registry, allocates or dereferences an anchor.
 template<class Block>
-inline WindowsTlsHeapScan ScanWindowsTlsHeapBlocks(Block *begin, Block *end) noexcept
+inline WindowsTlsHeapScan ScanWindowsTlsHeapBlocks(Block *begin, Block *end,
+    WindowsTlsHeapAnchors policy = WindowsTlsHeapAnchors::DistinctBlocks) noexcept
 {
   if (begin == end)
     return {};
   const auto less = [](const auto &a, const auto &b) { return a.anchor < b.anchor; };
   std::sort(begin, end, less);
-  if (!begin->anchor || std::adjacent_find(begin, end, [](const auto &a, const auto &b) {
+  const bool distinct = policy == WindowsTlsHeapAnchors::DistinctBlocks;
+  if (!begin->anchor || (distinct && std::adjacent_find(begin, end, [](const auto &a, const auto &b) {
         return a.anchor == b.anchor;
-      }) != end)
+      }) != end))
     return {};
   const auto heap = GetProcessHeap();
   if (!heap || !HeapLock(heap))
@@ -50,12 +54,18 @@ inline WindowsTlsHeapScan ScanWindowsTlsHeapBlocks(Block *begin, Block *end) noe
     });
     if (row == end || row->anchor - base >= entry.cbData)
       continue;
-    if (row->base || (row + 1 != end && (row + 1)->anchor - base < entry.cbData))
+    if (distinct && row + 1 != end && (row + 1)->anchor - base < entry.cbData)
       return {};
-    row->base = base;
-    row->dataBytes = entry.cbData;
-    row->overheadBytes = entry.cbOverhead;
-    if (++result.matched == count)
+    for (auto match = row; match != end && match->anchor - base < entry.cbData; ++match)
+    {
+      if (match->base)
+        return {};
+      match->base = base;
+      match->dataBytes = entry.cbData;
+      match->overheadBytes = entry.cbOverhead;
+      ++result.matched;
+    }
+    if (result.matched == count)
     {
       result.finished = true;
       return result;

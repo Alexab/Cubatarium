@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Platform/WindowsGpuMemoryReport.h"
+#include "Core/Memory/WindowsSlotStorage.h"
 #include "Core/Memory/WindowsTlsVectorHistory.h"
 #include <chrono>
 #include <optional>
@@ -15,6 +16,7 @@ struct WindowsMemoryCheckpoint
   std::optional<WindowsImageMemory> images;
   std::optional<WindowsModuleTlsStorage> moduleTls;
   std::optional<WindowsReplacedTlsVectors> replacedTlsVectors;
+  std::optional<WindowsSlotStorage> slotStorage;
   std::uint64_t elapsedMicros{};
   std::uint32_t processId{};
 };
@@ -35,6 +37,7 @@ inline WindowsMemoryCheckpoint ReadWindowsMemoryCheckpoint(WindowsMemoryDetail d
     result.moduleTls = ObserveWindowsModuleTls(*result.images);
     if (history)
       result.replacedTlsVectors = history->Observe(*result.moduleTls);
+    result.slotStorage = ObserveWindowsSlots();
   }
   else
     result.addressSpace = ReadWindowsAddressSpace();
@@ -131,6 +134,27 @@ inline nlohmann::json DescribeWindowsReplacedTlsVectors(const WindowsReplacedTls
                     {"heap_overhead_bytes", row.retained.overheadBytes}}}};
 }
 
+inline nlohmann::json DescribeWindowsSlotStorage(const WindowsSlotStorage &row)
+{
+  using Json = nlohmann::json;
+  const auto storage = [](const WindowsTlsBlockStorage &value) {
+    return Json{{"blocks", value.blocks}, {"data_bytes", value.dataBytes}, {"heap_overhead_bytes", value.overheadBytes}};
+  };
+  const auto references = [](const WindowsSlotReferences &value) {
+    return Json{{"nonzero_values", value.values}, {"default_heap_references", value.inDefaultHeap},
+                {"unmatched_values", value.values - value.inDefaultHeap}};
+  };
+  return {{"schema", "windows-slot-storage.v1"},
+      {"status", row.stable ? "PASS" : row.supported ? "PARTIAL" : "UNSUPPORTED"},
+      {"fls_list_observed", row.flsListObserved}, {"heap_walk_finished", row.heapWalkFinished},
+      {"process_threads", row.processThreads}, {"active_fls_roots", row.activeFlsRoots},
+      {"detached_fls_roots", row.detachedFlsRoots}, {"payload_aliases", row.payloadAliases},
+      {"metadata_aliases", row.metadataAliases}, {"inline_tls", references(row.inlineTls)},
+      {"expanded_tls", references(row.expandedTls)}, {"fls", references(row.fls)},
+      {"expansion_arrays", storage(row.expansionArrays)}, {"fls_headers", storage(row.flsHeaders)},
+      {"fls_chunks", storage(row.flsChunks)}, {"distinct_default_heap_payload", storage(row.distinctPayload)}};
+}
+
 inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpoint &checkpoint)
 {
   const bool complete = checkpoint.before.extendedObserved && checkpoint.after.extendedObserved &&
@@ -148,6 +172,8 @@ inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpo
     report["module_tls"] = DescribeWindowsModuleTls(*checkpoint.moduleTls);
   if (checkpoint.replacedTlsVectors)
     report["replaced_tls_vectors"] = DescribeWindowsReplacedTlsVectors(*checkpoint.replacedTlsVectors);
+  if (checkpoint.slotStorage)
+    report["slot_storage"] = DescribeWindowsSlotStorage(*checkpoint.slotStorage);
   return report;
 }
 } // namespace cutum
