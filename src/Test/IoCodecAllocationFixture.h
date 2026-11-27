@@ -707,6 +707,122 @@ inline nlohmann::json CheckMalformedJson()
   return {{"peak", capture.operation_peak}, {"parse_peak", parse.peak}, {"retired", true}};
 }
 
+inline nlohmann::json CheckReceiptWriter(const std::filesystem::path &root)
+{
+  UChunkStorageService storage;
+  const glm::ivec3 column{1, 0, -2};
+  const auto measure = [&](int sections, std::string_view signature, bool plain, const std::string &folder) {
+    PersistedColumnLight receipts;
+    auto expected_fields = nlohmann::json::array();
+    for (int y = 0; y < sections; ++y)
+    {
+      auto row = std::make_shared<PersistedSectionLight>();
+      row->coord = {column.x, y, column.z};
+      row->profile = {0, sections * CHUNK_SIZE - 1, 7};
+      row->configuration = UINT64_MAX;
+      row->signature = signature;
+      for (int x = column.x - 1; x <= column.x + 1; ++x)
+        for (int iy = 0; iy < sections; ++iy)
+          for (int z = column.z - 1; z <= column.z + 1; ++z)
+            row->inputs.push_back({{x, iy, z}, UINT64_MAX - uint64_t{static_cast<unsigned>(iy)}});
+      for (size_t i = 0; i < row->volume.cells.size(); ++i)
+        row->volume.cells[i] = static_cast<uint8_t>(i + y);
+      row->checksum = persisted_light_detail::HashBytes(persisted_light_detail::Payload(*row).dump());
+      Require(persisted_light_detail::Checksum(*row) == row->checksum, "receipt checksum matches the canonical v1 oracle");
+      expected_fields.push_back(EncodeSectionLight(*row));
+      receipts.push_back(std::move(row));
+    }
+    const auto expected = nlohmann::json{{"column", {column.x, column.z}}, {"fields", std::move(expected_fields)},
+                                         {"format_version", 1}}.dump();
+    CapturedRequest capture;
+    const auto probe = capture.Probe();
+    Require(storage.WriteColumnLight(folder, column, receipts), "prepare an existing physical receipt file");
+    {
+      observation::Scope allocations;
+      Require(storage.WriteColumnLight(folder, column, receipts, nullptr, &probe), "write observed column receipts");
+      capture.operation_peak = observation::State.peak;
+      Require(!observation::State.live && !observation::State.blocks, "column writer allocations retire");
+    }
+    std::ifstream file(storage.ColumnLightFilePath(folder, column), std::ios::binary);
+    const std::string bytes{std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+    file.close();
+    Require(bytes == expected, "column receipt file preserves the exact canonical v1 bytes");
+    const auto loaded = storage.ReadColumnLight(folder, column);
+    Require(loaded && loaded->size() == receipts.size() &&
+                loaded->back()->checksum == receipts.back()->checksum && loaded->back()->signature == receipts.back()->signature,
+            "physical receipt files still pass the existing reader");
+    const auto &encode = capture.points[static_cast<size_t>(IoCodecKind::ReceiptEncode)];
+    const auto &window = capture.windows[static_cast<size_t>(IoCodecWindow::JsonDump)];
+    const auto output = bytes.size() + NameStorageAlignmentSlack(bytes.size());
+    Require(capture.calls == 2 && !encode.scratch_bytes && encode.output_bytes == output &&
+                encode.stack_buffer_bytes == persisted_light_detail::kReceiptEncodingBufferBytes &&
+                capture.point_live[static_cast<size_t>(IoCodecKind::ReceiptEncode)] == output &&
+                window.calls == 1 && (!plain || window.additional == output),
+            "receipt encoder publishes its exact output and fixed buffer widths");
+    if (plain)
+    {
+      bool refused = false;
+      {
+        observation::Scope allocations(0);
+        try { (void)storage.WriteColumnLight(folder, column, receipts); }
+        catch (const std::bad_alloc &) { refused = true; }
+        Require(refused && observation::State.refusals == 1 && !observation::State.live,
+                "refused receipt output allocation retires before writing");
+      }
+      std::vector<uint8_t> preserved;
+      Require(storage.ReadBytesFromFile(storage.ColumnLightFilePath(folder, column), preserved) &&
+                  std::equal(preserved.begin(), preserved.end(), bytes.begin(), bytes.end()) &&
+                  storage.WriteColumnLight(folder, column, receipts),
+              "output refusal keeps the committed receipt file and permits the same retry");
+    }
+    return nlohmann::json{{"file_bytes", bytes.size()}, {"peak", capture.operation_peak},
+                          {"encode_scratch", encode.scratch_bytes}, {"encode_output", encode.output_bytes},
+                          {"encode_window_peak", window.additional}, {"encode_stack_buffer", encode.stack_buffer_bytes},
+                          {"byte_match", true}, {"sections", sections}};
+  };
+  const std::string escaped = std::string("v1 \"\\\n\t\x01\xC3\xA9\xF0\x9F\x8C\x8D") + '\0';
+  const auto folder = (root / "column").string();
+  auto escaped_result = measure(1, escaped, false, (root / "escaped").string());
+  auto max_escaped = measure(1, std::string(persisted_light_detail::kMaxSignatureBytes, '\0'), false,
+                             (root / "max-escaped").string());
+  auto column_result = measure(24, "light-v6:fixture", true, folder);
+
+  PersistedColumnLight oversized;
+  size_t input_bytes = 0;
+  constexpr int low = (std::numeric_limits<int>::min)();
+  for (int y = 0; y < 5; ++y)
+  {
+    auto row = std::make_shared<PersistedSectionLight>();
+    row->coord = {column.x, y, column.z};
+    row->signature = "light-v6:fixture";
+    row->inputs.reserve(PersistedSectionLight::MaxDependencies);
+    for (int i = 0; i < PersistedSectionLight::MaxDependencies; ++i)
+      row->inputs.push_back({{low, low, low + i}, UINT64_MAX});
+    input_bytes += PersistedLightBytes(*row);
+    oversized.push_back(std::move(row));
+  }
+  Require(input_bytes < kMaxColumnLightBytes &&
+              oversized.size() * PersistedSectionLight::MaxDependencies * 50 > kMaxColumnLightBytes,
+          "overflow fixture fits the source budget and exceeds the serialized budget");
+  const auto path = storage.ColumnLightFilePath(folder, column);
+  std::vector<uint8_t> previous, preserved;
+  Require(storage.ReadBytesFromFile(path, previous), "measure the existing committed file");
+  {
+    std::error_code failure;
+    observation::Scope allocations;
+    Require(!storage.WriteColumnLight(folder, column, oversized, &failure) &&
+                failure == std::errc::invalid_argument && !observation::State.attempts,
+            "oversized canonical receipt text is refused before output allocation");
+  }
+  Require(storage.ReadBytesFromFile(path, preserved) && preserved == previous,
+          "output length refusal keeps the committed file byte-identical");
+  return {{"escaped", std::move(escaped_result)}, {"max_escaped", std::move(max_escaped)},
+          {"column", std::move(column_result)}, {"output_limit", kMaxColumnLightBytes},
+          {"output_upper_request", kMaxColumnLightBytes + NameStorageAlignmentSlack(kMaxColumnLightBytes)},
+          {"oversized_input_bytes", input_bytes}, {"oversized_without_allocation", true},
+          {"allocation_refused_and_retried", true}};
+}
+
 inline nlohmann::json CheckReceiptTemporaries()
 {
   PersistedSectionLight receipt;
@@ -742,10 +858,10 @@ inline nlohmann::json CheckReceiptTemporaries()
     }
     const auto &map = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptValidate)];
     const auto &hash = capture.windows[static_cast<size_t>(IoCodecWindow::ReceiptHash)];
-    Require(map.calls == 1 && hash.calls == 1 && map.additional > 0 && hash.additional > 0,
-            "receipt allocation windows close");
+    Require(map.calls == 1 && hash.calls == 1 && map.additional > 0 && !hash.additional,
+            "ordinary ASCII checksum streams without heap scratch");
     return nlohmann::json{{"validation_peak", map.peak}, {"checksum_peak", hash.peak},
-                          {"peak", capture.operation_peak}, {"decoded", valid}};
+                         {"checksum_extra_heap", hash.additional}, {"peak", capture.operation_peak}, {"decoded", valid}};
   };
   const auto valid = check(true);
   document["checksum"] = receipt.checksum ^ UINT64_C(1);

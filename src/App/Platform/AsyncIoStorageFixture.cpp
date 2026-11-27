@@ -286,8 +286,9 @@ struct AsyncIoStorageProbe
                 flags_encoded->codec.kind == IoCodecKind::FlagsWrite &&
                 flags_encoded->codec.scratch_bytes &&
                 flags_encoded->codec.output_bytes == flags_encoded->encoded_bytes &&
-                receipt_encode && receipt_encode->scratch_bytes &&
-                receipt_write && receipt_write->output_bytes,
+                receipt_encode && !receipt_encode->scratch_bytes && receipt_encode->output_bytes &&
+                receipt_encode->stack_buffer_bytes == persisted_light_detail::kReceiptEncodingBufferBytes &&
+                receipt_write && receipt_write->output_bytes == receipt_encode->output_bytes,
             "binary, receipt and flags codec storage joins the actual worker");
     return {{"entered", entered}, {"read_input", raw->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"binary_encoded", save->encoded_bytes},
@@ -299,6 +300,7 @@ struct AsyncIoStorageProbe
             {"binary_write_shared_bytes", save->sources.shared_bytes},
             {"flags_dom", flags_encoded->codec.scratch_bytes},
             {"receipt_write_dom", receipt_encode->scratch_bytes},
+            {"receipt_encode_buffer", receipt_encode->stack_buffer_bytes},
             {"receipt_write_output", receipt_write->output_bytes},
             {"disk_index_slices", index->disk_index.slices},
             {"directory_sampled", directory->codec.scratch_bytes},
@@ -650,8 +652,9 @@ struct AsyncIoStorageProbe
     for (const auto *sample : {receipt_validation, receipt_checksum})
       Require(sample && sample->supported && sample->scratch_bytes > receipt_codec->scratch_bytes &&
                   sample->output_bytes && sample->output_bytes < receipt_codec->output_bytes &&
-                  sample->stack_buffer_bytes == receipt_codec->stack_buffer_bytes,
-              "inner receipt allocation shares the live reader DOM, text and empty output owner");
+                  sample->stack_buffer_bytes == receipt_codec->stack_buffer_bytes +
+                      (sample == receipt_checksum ? persisted_light_detail::kReceiptEncodingBufferBytes : 0),
+              "inner receipt windows preserve the live reader backing and checksum buffer");
     trace.cancel_on_decode = cancellation.get();
     const glm::ivec3 coord{2, 0, 0};
     const auto base = coord * CHUNK_SIZE;
@@ -703,6 +706,7 @@ struct AsyncIoStorageProbe
             {"receipt_read_output", receipt_codec->output_bytes},
             {"receipt_validation_scratch", receipt_validation->scratch_bytes},
             {"receipt_checksum_scratch", receipt_checksum->scratch_bytes},
+            {"receipt_checksum_stack", receipt_checksum->stack_buffer_bytes},
             {"receipt_prefix_output", receipt_validation->output_bytes},
             {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes}};
   }

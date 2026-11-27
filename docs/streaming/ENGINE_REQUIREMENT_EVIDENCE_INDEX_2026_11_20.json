@@ -3612,11 +3612,19 @@
       "receipt": "build/desktop-msvc/s4-q10-snapshot-acceptance.json",
       "scope": "Ordinary resident and decoded AIR save captures contain one detached chunk, its separate shared control and one coallocated light field. Padded sampling data and calculation proof owners retire with the source world. Resident captures retain persisted bytes in both formats, and decoded AIR retains its CCHK bytes after retirement. The physical fixture holds 256 independent snapshots, rejects the 257th request and saves all 256 after source retirement. A pinned ordinary-allocation snapshot occupies 17496 bytes.",
       "remaining": "Snapshot plus encoder heap totals are per I/O instance and exclude other owners. Complete receipt payloads, flags, result credits, paths, file indexes, synchronous overlap, scoped allocator and process composition, the read registry and Q01.L2. Retain full native/performance/memory verification and S0–S6 acceptance. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.RECEIPT_WRITE",
+      "status": "SCOPED_Q10_RECEIPT_WRITE_CHECKSUM_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_RECEIPT_WRITE_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-receipt-write-acceptance.json",
+      "scope": "The column light v1 writer uses a canonical row emitter and one exact-size output allocation. An oversized serialized column fails before output allocation or replacement. The same emitter feeds the checksum without heap scratch for ordinary ASCII signatures. The fixtures retain byte identity, checksum rejection, Unicode and escaped strings, physical reload and retry.",
+      "remaining": "The 8 MiB logical and 8388647-byte MSVC output requests cover the output buffer. Escaped signature temporaries and filesystem paths are separate. Retain the current reader, repair its combined DOM and file backing, and account receipt source ownership, flags, results, paths, indexes, the read registry and Q01.L2. Full native/performance/memory and S0–S6 acceptance stay in scope. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Подтверждён предел памяти снимков и активного кодирования в обоих форматах. Далее проверить объём квитанций освещения, затем флаги, пути, кредиты результатов и индексы. Свести общий пик с памятью реестра чтения и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Подтверждены совместимый вывод квитанций освещения и предел выходной памяти. Далее ограничить память чтения и хранимых квитанций, проверить флаги, пути, результаты и индексы. Свести общий пик с памятью реестра чтения и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

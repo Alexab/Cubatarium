@@ -6,17 +6,26 @@
 #include "World/Lighting/RelightInputValidation.h"
 #include "Core/Memory/StlSourceStorage.h"
 #include "World/IO/IoCodecStorage.h"
+#include <algorithm>
+#include <array>
+#include <charconv>
 #include <limits>
 #include <map>
+#include <string_view>
 #include <tuple>
 
 namespace cutum
 {
 namespace persisted_light_detail
 {
-inline uint64_t HashBytes(std::string_view bytes)
+inline constexpr uint64_t kHashSeed = 14695981039346656037ull;
+inline constexpr size_t kMaxSignatureBytes = 256;
+inline constexpr size_t kNumberBufferBytes = 32;
+inline constexpr size_t kHexBufferBytes = 256;
+inline constexpr size_t kReceiptEncodingBufferBytes = kNumberBufferBytes + kHexBufferBytes;
+
+inline uint64_t HashBytes(std::string_view bytes, uint64_t hash = kHashSeed)
 {
-  uint64_t hash = 14695981039346656037ull;
   for (const unsigned char byte : bytes)
   {
     hash ^= byte;
@@ -72,23 +81,107 @@ inline size_t ReceiptTextAndInputs(const PersistedSectionLight &receipt,
   return storage.bytes.requested;
 }
 
+template<class Append, class Number>
+void AppendReceiptNumber(Append &append, Number value)
+{
+  static_assert(std::numeric_limits<Number>::digits10 + 2 <= kNumberBufferBytes);
+  std::array<char, kNumberBufferBytes> text;
+  const auto end = std::to_chars(text.data(), text.data() + text.size(), value).ptr;
+  append(std::string_view(text.data(), static_cast<size_t>(end - text.data())));
+}
+
+template<class Append>
+void AppendReceiptPayload(const PersistedSectionLight &receipt, bool with_checksum, Append &append)
+{
+  const auto number = [&](auto value) { AppendReceiptNumber(append, value); };
+  const auto coordinates = [&](glm::ivec3 value) {
+    number(value.x);
+    append(",");
+    number(value.y);
+    append(",");
+    number(value.z);
+  };
+  // Keep the sorted v1 key order used by the original JSON object and checksum.
+  append("{");
+  if (with_checksum)
+  {
+    append(R"("checksum":)");
+    number(receipt.checksum);
+    append(",");
+  }
+  append(R"("configuration":)");
+  number(receipt.configuration);
+  append(R"(,"coord":[)");
+  coordinates(receipt.coord);
+  append(R"(],"format_version":1,"inputs":[)");
+  bool first = true;
+  for (const auto &input : receipt.inputs)
+  {
+    if (!first)
+      append(",");
+    first = false;
+    append("[");
+    coordinates(input.coord);
+    append(",");
+    number(input.content);
+    append("]");
+  }
+  append(R"(],"light_signature":)");
+  if (std::all_of(receipt.signature.begin(), receipt.signature.end(), [](unsigned char c) {
+        return c >= 0x20 && c < 0x7f && c != '"' && c != '\\';
+      }))
+  {
+    append("\"");
+    append(receipt.signature);
+    append("\"");
+  }
+  else
+  {
+    // The canonical JSON encoder preserves legacy escapes and UTF-8 validation.
+    append(nlohmann::json(receipt.signature).dump());
+  }
+  append(R"(,"padded_light":")");
+  constexpr char hex[] = "0123456789abcdef";
+  std::array<char, kHexBufferBytes> packed;
+  for (size_t offset = 0; offset < receipt.volume.cells.size();)
+  {
+    const auto cells = std::min(packed.size() / 2, receipt.volume.cells.size() - offset);
+    for (size_t i = 0; i < cells; ++i)
+    {
+      const auto value = receipt.volume.cells[offset + i];
+      packed[2 * i] = hex[value >> 4];
+      packed[2 * i + 1] = hex[value & 15];
+    }
+    append(std::string_view(packed.data(), 2 * cells));
+    offset += cells;
+  }
+  append(R"(","profile":[)");
+  const auto &profile = receipt.profile;
+  number(profile.MinY);
+  for (const auto value : {profile.MaxY, profile.SeaLevelY, profile.BedrockTopY, profile.DatumY})
+  {
+    append(",");
+    number(value);
+  }
+  append("]}");
+}
+
 inline uint64_t Checksum(const PersistedSectionLight &receipt,
                         const IoCodecProbe *probe = nullptr)
 {
   // Corruption checksum, not authentication of hostile save files.
-  if (!probe)
-    return HashBytes(Payload(receipt).dump());
   return RunIoCodecWindow(probe, IoCodecWindow::ReceiptHash, [&] {
-    const auto data = Payload(receipt);
-    const auto text = data.dump();
-    StlSourceStorage scratch, input;
-    scratch.JsonTree(data);
-    scratch.Text(text);
-    const auto input_bytes = ReceiptTextAndInputs(receipt, input);
-    probe->sample(probe->context, {IoCodecKind::ReceiptChecksum, scratch.bytes.requested,
-                                  input_bytes, 0, 0,
-                                  scratch.bytes.supported && input.bytes.supported});
-    return HashBytes(text);
+    auto hash = kHashSeed;
+    auto append = [&](std::string_view text) { hash = HashBytes(text, hash); };
+    AppendReceiptPayload(receipt, false, append);
+    if (probe)
+    {
+      StlSourceStorage input;
+      const auto input_bytes = ReceiptTextAndInputs(receipt, input);
+      probe->sample(probe->context, {IoCodecKind::ReceiptChecksum, 0, input_bytes, 0,
+                                    kReceiptEncodingBufferBytes, input.bytes.supported});
+    }
+    return hash;
   });
 }
 
@@ -195,9 +288,10 @@ DecodeSectionLight(const nlohmann::json &data, const IoCodecProbe *probe = nullp
     for (int n = 0; n < 5; ++n)
       if (!Integer(data.at("profile")[n], *profile[n]))
         return std::nullopt;
-    receipt.signature = data.at("light_signature").get<std::string>();
-    if (receipt.signature.empty() || receipt.signature.size() > 256)
+    const auto &signature = data.at("light_signature").get_ref<const std::string &>();
+    if (signature.empty() || signature.size() > kMaxSignatureBytes)
       return std::nullopt;
+    receipt.signature = signature;
     for (const auto &row : data.at("inputs"))
     {
       PersistedSectionLight::Input input;

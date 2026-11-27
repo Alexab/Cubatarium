@@ -241,6 +241,7 @@ int main(int argc, char **argv)
     const auto disk = cutum::io_codec_fixture::CheckDiskIndex(folder + "-index");
     const auto malformed = cutum::io_codec_fixture::CheckMalformedJson();
     const auto receipt = cutum::io_codec_fixture::CheckReceiptTemporaries();
+    const auto receipt_writer = cutum::io_codec_fixture::CheckReceiptWriter(folder + "-receipt-write");
     const auto streams = cutum::io_codec_fixture::CheckFileStreams(folder + "-streams");
     const auto launch = CheckWorkerLaunchAllocations();
     auto result = cutum::RunAsyncIoStorageProbe(folder);
@@ -265,6 +266,7 @@ int main(int argc, char **argv)
     result["ordinary_disk_index"] = disk;
     result["ordinary_failed_parse"] = malformed;
     result["ordinary_receipt_temporaries"] = receipt;
+    result["receipt_writer"] = receipt_writer;
     result["ordinary_file_streams"] = streams;
     result["ordinary_worker_launch"] = launch;
     std::ofstream output(report);

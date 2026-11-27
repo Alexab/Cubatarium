@@ -881,47 +881,64 @@ bool UChunkStorageService::WriteColumnLight(
     *failure = std::make_error_code(std::errc::invalid_argument);
   if (receipts.size() > kMaxColumnLightSections)
     return false;
-  json fields = json::array();
   size_t bytes = 0;
   int64_t previous = std::numeric_limits<int>::min() - int64_t{1};
   for (const auto &receipt : receipts)
   {
     if (!receipt || receipt->coord.x != column.x ||
         receipt->coord.z != column.z || receipt->coord.y <= previous ||
+        receipt->signature.empty() || receipt->signature.size() > persisted_light_detail::kMaxSignatureBytes ||
+        receipt->inputs.size() > PersistedSectionLight::MaxDependencies ||
         PersistedLightBytes(*receipt) > kMaxColumnLightBytes - bytes)
       return false;
     previous = receipt->coord.y;
     bytes += PersistedLightBytes(*receipt);
-    fields.push_back(EncodeSectionLight(*receipt));
   }
-  const auto encode = [probe](const json &data) {
-    auto text = RunIoCodecWindow(probe, IoCodecWindow::JsonDump, [&] { return data.dump(); });
-    if (probe)
+  const auto emit = [&](auto &append) {
+    using namespace persisted_light_detail;
+    append(R"({"column":[)");
+    AppendReceiptNumber(append, column.x);
+    append(",");
+    AppendReceiptNumber(append, column.z);
+    append(R"(],"fields":[)");
+    bool first = true;
+    for (const auto &receipt : receipts)
     {
-      StlSourceStorage scratch, output;
-      scratch.JsonTree(data);
-      output.Text(text);
-      probe->sample(probe->context, {IoCodecKind::ReceiptEncode, scratch.bytes.requested,
-                                    0, output.bytes.requested, 0,
-                                    scratch.bytes.supported && output.bytes.supported});
+      if (!first)
+        append(",");
+      first = false;
+      AppendReceiptPayload(*receipt, true, append);
     }
-    return text;
+    append(R"(],"format_version":1})");
   };
-  const auto text = encode(json{{"format_version", 1},
-                                {"column", {column.x, column.z}},
-                                {"fields", std::move(fields)}});
-  if (text.size() > kMaxColumnLightBytes)
+  std::vector<uint8_t> payload;
+  const bool encoded = RunIoCodecWindow(probe, IoCodecWindow::JsonDump, [&] {
+    size_t size = 0;
+    auto count = [&](std::string_view text) { size += text.size(); };
+    emit(count);
+    if (size > kMaxColumnLightBytes)
+      return false;
+    payload.reserve(size);
+    auto append = [&](std::string_view text) { payload.insert(payload.end(), text.begin(), text.end()); };
+    emit(append);
+    return true;
+  });
+  if (!encoded)
     return false;
+  StlSourceStorage output;
+  if (probe)
+  {
+    output.Buffer(payload.capacity(), sizeof(uint8_t));
+    probe->sample(probe->context, {IoCodecKind::ReceiptEncode, 0, 0, output.bytes.requested,
+                                  persisted_light_detail::kReceiptEncodingBufferBytes, output.bytes.supported});
+  }
   try
   {
     const auto path = ColumnLightFilePath(worldFolder, column);
-    const std::vector<uint8_t> payload(text.begin(), text.end());
     if (probe)
     {
-      StlSourceStorage scratch, output;
-      scratch.Text(text);
+      StlSourceStorage scratch;
       scratch.Text(path);
-      output.Buffer(payload.capacity(), sizeof(uint8_t));
       probe->sample(probe->context, {IoCodecKind::ReceiptWrite, scratch.bytes.requested,
                                     0, output.bytes.requested, 0,
                                     scratch.bytes.supported && output.bytes.supported});
@@ -972,7 +989,7 @@ struct ReceiptReadObservation
     scratch.Add(inner.input_bytes);
     const auto output = ReceiptOutputBacking(value.decoded);
     const IoCodecStorage sample{inner.kind, scratch.bytes.requested, 0,
-                                output.bytes.requested, value.stack_buffer,
+                                output.bytes.requested, value.stack_buffer + inner.stack_buffer_bytes,
                                 inner.supported && scratch.bytes.supported && output.bytes.supported};
     value.destination->sample(value.destination->context, sample);
   }
