@@ -3676,6 +3676,14 @@
       "receipt": "build/desktop-msvc/s4-q10-read-registry-acceptance.json",
       "scope": "Check lookup lengths against published names before making impossible qualified keys on ordinary reads. Preserve generation name-credit controls and successful qualification, exact and local precedence. Borrow a suffix for the disk synthetic Tier A check. Store each placeholder key once in its stable LRU node while indexing it by view. Preserve replacement, collision sharing, rollback and physical legacy fallback.",
       "remaining": "Join registry entry high water, remaining possible qualified scratch and placeholder backing with I/O payloads, metadata, paths, disk indexes and Q01.L2. Whole-catalog replacement and early legacy mutations before full terrain certification stay in the plan. Full S0-S6 acceptance remains open. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.JSON_PACKED_FLUID",
+      "status": "SCOPED_Q10_JSON_PACKED_FLUID_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_JSON_PACKED_FLUID_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-json-fluid-release-acceptance.json",
+      "scope": "Accept the stored unsigned fluid byte for non-air JSON cells before certifying their frame. Zero or omitted fluid remains valid for air. Physical JSON save and stream reload preserve falling water, and publication on a live column token preserves the byte. Malformed suffix and invalid fluid controls cannot certify terrain. The existing lexer, codec admission and decoded buffer ownership remain in force.",
+      "remaining": "Compose retained/active I/O with path, flag, index and registry histories and Q01.L2. Legacy registry mutation before full terrain certification and whole-catalog replacement stay open. S4.02 remains open at 23 of 42 packages. Full startup/motion/outer-ring/cave/wet and S0-S6 acceptance remain required."
     }
   ],
   "completed_handoff": {

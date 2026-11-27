@@ -130,6 +130,11 @@ int main()
       json_serializer.Serialize(glm::ivec3(0, 0, 0), chunk, registry);
   const cutum::UChunkBuffer json_buffer = json_serializer.Deserialize(
       json_serialized.bytes, glm::ivec3(0, 0, 0), registry);
+  Expect(json_buffer.HasDecodedTerrainFrame(glm::ivec3(0, 0, 0)),
+         "v4 JSON flowing water must be accepted as a terrain frame");
+  Expect(json_buffer.GetFluidPacked(world_pos) ==
+             cutum::PackFluidCellState(cutum::FluidCellState::Flowing(3)),
+         "v4 JSON round-trip preserves packed fluid");
   cutum::UBlockWorld json_apply;
   json_buffer.ApplyTo(json_apply);
   const cutum::UChunk *json_chunk =
@@ -143,12 +148,37 @@ int main()
   const std::vector<uint8_t> old_json_bytes(old_json.begin(), old_json.end());
   const cutum::UChunkBuffer old_json_buffer = json_serializer.Deserialize(
       old_json_bytes, glm::ivec3(2, 0, 0), registry);
+  Expect(old_json_buffer.HasDecodedTerrainFrame(glm::ivec3(2, 0, 0)),
+         "older JSON chunks still certify terrain");
   cutum::UBlockWorld old_json_apply;
   old_json_buffer.ApplyTo(old_json_apply);
   const cutum::UChunk *old_json_chunk =
       old_json_apply.GetChunkManager().GetChunk(glm::ivec3(2, 0, 0));
   Expect(old_json_chunk && old_json_chunk->GetSurfaceWetness() == 0.0f,
          "older JSON chunks default weather state to dry");
+
+  const auto read_cell = [&](const char *block, const char *fluid) {
+    const std::string text = std::string(R"({"format_version":3,"voxels":[{"lx":0,"ly":0,"lz":0,)") +
+                             block + fluid + "}]}";
+    return json_serializer.Deserialize(std::vector<uint8_t>(text.begin(), text.end()), glm::ivec3(0), registry);
+  };
+  const auto legacy_water = read_cell(R"("type":"water")", ",\"fluid\":19");
+  Expect(legacy_water.HasDecodedTerrainFrame(glm::ivec3(0)) && legacy_water.GetFluidPacked(glm::ivec3(0)) == 19,
+         "older JSON preserves an explicit packed water state");
+  const auto source_water = read_cell(R"("type":"water")", "");
+  Expect(source_water.HasDecodedTerrainFrame(glm::ivec3(0)) &&
+             cutum::UnpackFluidCellState(source_water.GetFluidPacked(glm::ivec3(0))).IsSource(),
+         "older JSON without a fluid member still infers a liquid source");
+  const auto maximum_fluid = read_cell(R"("id":9)", ",\"fluid\":255");
+  Expect(maximum_fluid.HasDecodedTerrainFrame(glm::ivec3(0)) && maximum_fluid.GetFluidPacked(glm::ivec3(0)) == 255,
+         "the explicit fluid field accepts the full stored byte width");
+  Expect(read_cell(R"("id":0)", ",\"fluid\":0").GetDecodedAirSlice(glm::ivec3(0)).has_value(),
+         "zero fluid allows a certified air slice");
+  Expect(!read_cell(R"("id":0)", ",\"fluid\":1").HasDecodedTerrainFrame(glm::ivec3(0)),
+         "nonzero fluid on air cannot certify a terrain frame");
+  for (const char *invalid : {",\"fluid\":-1", ",\"fluid\":256", ",\"fluid\":1.5", ",\"fluid\":null"})
+    Expect(!read_cell(R"("id":9)", invalid).HasDecodedTerrainFrame(glm::ivec3(0)),
+           "negative, oversized or non-integer fluid cannot certify a terrain frame");
 
   std::cout << "fluid_chunk_io_test: OK" << std::endl;
   return 0;

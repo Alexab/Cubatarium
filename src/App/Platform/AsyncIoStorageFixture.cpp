@@ -11,6 +11,7 @@
 #include "World/IO/BinaryChunkSerializer.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
+#include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
 #include "WorldGen/Core/MergeSourceEnvelope.h"
@@ -705,6 +706,9 @@ struct AsyncIoStorageProbe
       for (int y = 0; y < CHUNK_SIZE; ++y)
         for (int x = 0; x < CHUNK_SIZE; ++x)
           world.SetBlock(base + glm::ivec3(x, y, z), 8);
+    const auto water = FluidCellState::Flowing(3, true).WithKind(FluidKind::Water);
+    world.SetBlock(base, 9);
+    world.SetFluidState(base, water);
     io.RequestSave(coord, storage, folder, world, registry, {coord, 1}, 800);
     Require(io.WaitIdleFor(std::chrono::seconds(6)), "JSON save finishes");
     const auto saves = io.DrainSaves();
@@ -715,8 +719,10 @@ struct AsyncIoStorageProbe
     UBlockWorld cold;
     Require(file_size <= UJsonChunkSerializer::MaxFrameBytes() &&
                 storage.LoadChunk(coord, cold, folder, registry) == CHUNK_VOLUME &&
+                cold.GetBlock(base) == 9 &&
+                PackFluidCellState(cold.GetFluidState(base)) == PackFluidCellState(water) &&
                 cold.GetBlock(base + glm::ivec3(CHUNK_SIZE - 1)) == 8,
-            "the physical dense JSON file reloads the complete chunk");
+            "the physical dense JSON file reloads the complete chunk and its falling water");
     io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 801);
     Require(io.WaitIdleFor(std::chrono::seconds(6)) && io.CompletedLoadsEmpty(),
             "active cancellation suppresses result publication");
@@ -743,6 +749,7 @@ struct AsyncIoStorageProbe
             {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
             {"json_write_scratch", json_write->scratch_bytes},
             {"json_write_file_bytes", file_size}, {"json_write_voxels", CHUNK_VOLUME},
+            {"json_write_reloaded_fluid", PackFluidCellState(cold.GetFluidState(base))},
             {"json_write_shared_bytes", save->sources.shared_bytes},
             {"json_write_stack_buffer", json_write->stack_buffer_bytes},
             {"json_read_scratch", json_read->scratch_bytes},
@@ -777,7 +784,7 @@ struct AsyncIoStorageProbe
       constexpr std::string_view same = R"({"lx":0,"ly":0,"lz":0,"id":8},)";
       for (size_t i = 0; i < repeated; ++i)
         file << same;
-      file << R"({"lx":0,"ly":0,"lz":0,"type":"stone","id":8,"\u0069d":9},)"
+      file << R"({"lx":0,"ly":0,"lz":0,"type":"stone","id":8,"\u0069d":9,"fluid":0,"fluid":27},)"
               R"({"lx":0,"ly":0,"lz":0,"id":0},)"
               R"({"lx":1,"ly":0,"lz":0,"type":"stone"}],"weather_state":false,)"
               R"("weather_state":{"surface_wetness":0.25,"last_update_sec":125}})";
@@ -794,8 +801,9 @@ struct AsyncIoStorageProbe
     const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
     UAsyncChunkIO io;
     io.WorkerProbe = &probe;
+    const ChunkGenerationToken token{{coord.x, 0, coord.z}, 1};
     const auto load = [&](uint64_t demand, bool withhold = false) {
-      Require(io.RequestLoad(coord, storage, registry, folder, {coord, 1}, {}, demand, false, withhold) &&
+      Require(io.RequestLoad(coord, storage, registry, folder, token, {}, demand, false, withhold) &&
                   io.WaitIdleFor(std::chrono::seconds(8)), "real JSON source finishes on the worker");
       auto results = io.DrainLoads();
       Require(results.size() == 1 && !results.front().payload.capacity(),
@@ -803,23 +811,32 @@ struct AsyncIoStorageProbe
       return std::move(results.front());
     };
     size_t decoded_bytes = 0;
+    constexpr uint8_t falling_water = 27;
     {
       const auto result = load(810);
       const auto *decoded = trace.Find(Kind::Load, Stage::Decoded, 810);
       const auto *codec = trace.FindCodec(IoCodecKind::JsonRead, 810);
       Require(result.success && result.decodedBuffer && result.decodedBuffer->HasDecodedTerrainFrame(coord) &&
                   result.decodedBuffer->GetBlock(first) == 9 &&
+                  result.decodedBuffer->GetFluidPacked(first) == falling_water &&
                   result.decodedBuffer->GetBlock(first + glm::ivec3(1, 0, 0)) == 8 &&
                   result.decodedBuffer->GetBlock(first + glm::ivec3(4)) == BLOCK_AIR &&
                   decoded && !decoded->input_bytes && decoded->decoded_bytes &&
                   codec && !codec->scratch_bytes && !codec->input_bytes &&
                   !trace.Find(Kind::Load, Stage::ReadBytes, 810),
               "large JSON streams directly into legacy-compatible terrain fields");
+      UBlockWorld installed;
+      Require(ApplyTerrainSliceLoad(installed, coord, result.decodedBuffer.get(), nullptr, result.token,
+                                    token.sequence, false) &&
+                  installed.GetChunkManager().HasDecodedTerrainSlice(coord) &&
+                  PackFluidCellState(installed.GetFluidState(first)) == falling_water,
+              "the main-thread commit accepts the decoded worker frame and preserves its packed fluid");
       decoded_bytes = decoded->decoded_bytes;
     }
     UBlockWorld cold;
     Require(storage.LoadChunk(coord, cold, folder, registry) == 2 &&
                 cold.GetBlock(first) == 9 &&
+                PackFluidCellState(cold.GetFluidState(first)) == falling_water &&
                 cold.GetChunkManager().GetChunk(coord)->GetWeatherLastUpdateSec() == 125,
             "the synchronous route uses the same JSON fields");
     {
@@ -839,12 +856,14 @@ struct AsyncIoStorageProbe
       const auto invalid = load(813);
       Require(invalid.decodedBuffer && !invalid.decodedBuffer->HasDecodedTerrainFrame(coord) &&
                   storage.LoadChunk(coord, cold, folder, registry) < 0 && cold.GetBlock(first) == 9 &&
+                  PackFluidCellState(cold.GetFluidState(first)) == falling_water &&
                   cold.GetChunkManager().HasUnresolvedTerrainColumnRead(coord),
               "a syntax error after the document cannot authorize changing live terrain");
     }
     Require(!trace.overflow && !io.GetOutstandingLoadCount(), "streamed JSON reads release all credits");
     return {{"status", "PASS"}, {"file_bytes", extent}, {"repeated_voxels", repeated},
             {"ignored_string_bytes", extension_bytes},
+            {"installed_packed_fluid", falling_water}, {"worker_committed_fluid", true},
             {"decoded_ready_bytes", decoded_bytes}, {"raw_buffer_bytes", 0},
             {"duplicate_members", true}, {"legacy_names", true}, {"withheld_and_retried", true},
             {"trailing_syntax_rejected", true}, {"outstanding_after", io.GetOutstandingLoadCount()}};

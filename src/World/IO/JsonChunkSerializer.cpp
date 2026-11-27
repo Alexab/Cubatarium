@@ -254,21 +254,19 @@ private:
         (!HasType || (TypeId == BLOCK_AIR && !ExplicitAir)))
       return false;
     const auto id = Fields[Id] ? Fields[Id]->get<BlockId>() : TypeId;
-    const bool fluid_valid = !Fields[Fluid] || IntegerIn(Fields[Fluid], 0, 0);
+    if (Fields[Fluid] && !IntegerIn(Fields[Fluid], 0, id == BLOCK_AIR ? 0 : UINT8_MAX))
+      return false;
     if (id != BLOCK_AIR)
     {
       const glm::ivec3 local(Fields[LX]->get<int>(), Fields[LY]->get<int>(), Fields[LZ]->get<int>());
       const auto pos = Coord * CHUNK_SIZE + local;
       Buffer.SetBlock(pos, id);
       if (Fields[Fluid])
-      {
-        if (IntegerIn(Fields[Fluid], 0, UINT8_MAX))
-          Buffer.SetFluidPacked(pos, Fields[Fluid]->get<uint8_t>());
-      }
+        Buffer.SetFluidPacked(pos, Fields[Fluid]->get<uint8_t>());
       else if (Registry.IsLiquid(id))
         Buffer.SetFluidPacked(pos, PackFluidCellState(FluidCellState::Source()));
     }
-    return fluid_valid;
+    return true;
   }
 
   bool Value(json value)
