@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/Progress/IUProgressSink.h"
+#include "World/Core/CooperativeTerrainBounds.h"
 #include "World/IO/ColumnSaveReceipt.h"
 #include <chrono>
 #include <climits>
@@ -112,9 +113,12 @@ private:
   /// Incremental chunk-file scan (UX U2/S8): one directory batch per call
   /// under a wall budget instead of a full-directory sweep in one tick.
   /// Returns false while more batches remain.
-  bool ScanChunkFilesBatch(UWorld &world, double maxWallMs);
-  void ScanChunkFiles(UWorld &world);
+  bool ScanChunkFilesBatch(double maxWallMs);
   void ScanSaveChunkCoords(UWorld &world);
+  // Use the extents from the corresponding direct and worker configurations.
+  // Unknown generation extents leave the disk inputs measurable.
+  CooperativeTerrainBounds GetTerrainColumnBounds(
+      const std::optional<WorldGenWriteExtents> &extents) const;
   void InitGenerationGrid(UWorld &world, bool center_on_load_focus = false);
   void SealFluidInGenerationPatch(UWorld &world);
   /// S5: seals one row of chunks per call; returns false while more rows
@@ -173,10 +177,9 @@ private:
 
   std::vector<std::filesystem::path> ChunkFiles;
   size_t ChunkFileIndex{0};
+  size_t CompletedChunkFileCount{0};
   /// S8 incremental scan cursor.
-  std::filesystem::path ScanChunksDir;
-  bool ScanChunksActive{false};
-  std::vector<std::filesystem::path> ScanChunksBatch;
+  std::filesystem::directory_iterator ChunkScanCursor;
 
   std::string ChunksFileName;
 

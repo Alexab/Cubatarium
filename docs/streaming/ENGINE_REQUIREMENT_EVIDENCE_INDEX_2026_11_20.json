@@ -3764,11 +3764,19 @@
       "receipt": "build/desktop-msvc/s4-q01-write-extents-acceptance.json",
       "scope": "The query joins the generator stage mask and resolved stage order with the same feature rules and strategy registry used by placement. It covers aligned local stages, signed prefab offset minus anchor and surface-water search, scatter, authored tree and shrub profiles, lava, fire and the separate synchronous and chunk ravine write domains. The rectangle is a conservative column bound for stable content and valid engine coordinates. An unmodeled strategy yields an unknown bound. The model counts direct terrain columns for one sample or one aligned worker result.",
       "remaining": "Apply the bounds to cooperative startup generation and load, including disk input and overlap with other owners. Join direct edits, record-only owners and the live disk index and registry. The whole-world, outer-ring, cave, wet visual and performance acceptance matrix remains open at 23 of 42 packages."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.L2.COOPERATIVE_TERRAIN_BOUNDS",
+      "status": "SCOPED_Q01_L2_COOPERATIVE_TERRAIN_BOUNDS_PASS_Q01_L2_OPEN",
+      "certificate": "S4_02_Q01_COOPERATIVE_TERRAIN_BOUNDS_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q01-cooperative-terrain-acceptance.json",
+      "scope": "The legacy load scan holds one directory cursor across frames. The budget covers ignored entries, the completed scan sorts its candidates, and cancellation retires the cursor and path list. Loading retires the consumed list and keeps the candidate count for diagnostics. Each legacy candidate contributes at most one XZ. The startup spatial path covers its requested square. The cooperative generation domain projects its signed block patch directly and its aligned chunk patch through the supplied matching extents. The combined upper bound counts disk/generation rectangular overlap once and adds the count of legacy file candidates. The diagnostic preserves unknown extents. Native cases cover Flat sync and worker generation with the isolated direct mesh observer detached, actual legacy saved files with duplicate formats and both sync and async spatial disk loads. The wide fixture verifies projection using the previously proved prefab offsets. The result accounts for incoming terrain from these operations.",
+      "remaining": "Join existing terrain at operation handoff and the remaining direct edits, record-only owners, live disk index and registry. The active legacy scan and file loads still scale with input files. Measure synchronous cooperative generation with the production mesh observer in the full performance scope. Verify the remaining whole-world, outer-ring, cave, wet visual and performance acceptance matrix. Full S0-S6 acceptance remains open at 23 of 42 packages."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Вычислена граница прямых записей для активных генераторов. Применить её к области кооперативной загрузки, учесть записи с диска, прямые изменения и записи колонок. Свести эти вклады с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
+  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Посчитан вклад входящей кооперативной генерации и диска. Учесть ранее загруженный рельеф, прямые изменения и записи без геометрии. Свести вклады с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
 }

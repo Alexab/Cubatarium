@@ -798,7 +798,7 @@ void UWorldCooperativeSession::RecordPhaseTiming(const UWorld &world)
       std::string("kind=") + kind + " phase=" + TimedPhaseId +
       " phase_ms=" + std::to_string(phase_ms) +
       " operation_ms=" + std::to_string(operation_ms) +
-      " chunk_files_seen=" + std::to_string(ChunkFiles.size()) +
+      " chunk_files_seen=" + std::to_string(std::max(ChunkFiles.size(), CompletedChunkFileCount)) +
       " chunk_files_read=" + std::to_string(ChunkFilesRead) +
       " voxels_from_files=" + std::to_string(VoxelsFromChunkFiles) +
       " spatial_columns=" + std::to_string(Spatial.SpatialColumnsVisited) +
@@ -865,6 +865,9 @@ void UWorldCooperativeSession::Cancel()
 {
   Active = false;
   CurrentPhase = Phase::Done;
+  ChunkScanCursor = {};
+  decltype(ChunkFiles){}.swap(ChunkFiles);
+  ChunkFileIndex = 0;
   CancelBackgroundWorkers();
 }
 
@@ -972,58 +975,61 @@ void UWorldCooperativeSession::BeginCreate(UWorld &world,
   (void)world;
 }
 
-bool UWorldCooperativeSession::ScanChunkFilesBatch(UWorld &world,
-                                                   double maxWallMs)
+bool UWorldCooperativeSession::ScanChunkFilesBatch(double maxWallMs)
 {
-  (void)world;
-  if (!ScanChunksActive)
-  {
-    return true;
-  }
   const auto batch_start = std::chrono::steady_clock::now();
-  for (const auto &entry : std::filesystem::directory_iterator(ScanChunksDir))
+  const std::filesystem::directory_iterator end;
+  while (ChunkScanCursor != end)
   {
-    const auto ext = entry.path().extension();
-    if (ext != ".json" && ext != ".cchunk")
-    {
-      continue;
-    }
-    ScanChunksBatch.push_back(entry.path());
+    const auto &path = ChunkScanCursor->path();
+    const auto ext = path.extension();
+    if (ext == ".json" || ext == ".cchunk")
+      ChunkFiles.push_back(path);
+    ++ChunkScanCursor;
     const double elapsed_ms =
         std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - batch_start)
             .count();
     if (elapsed_ms >= maxWallMs)
-    {
-      return false; // more batches remain
-    }
+      break;
   }
-  return true; // directory exhausted
+  return ChunkScanCursor == end;
 }
 
-void UWorldCooperativeSession::ScanChunkFiles(UWorld &world)
+CooperativeTerrainBounds UWorldCooperativeSession::GetTerrainColumnBounds(
+    const std::optional<WorldGenWriteExtents> &extents) const
 {
-  ChunkFiles.clear();
-  ChunkFileIndex = 0;
-  const std::string chunks_dir = FolderPath + "/chunks";
-  if (!Spatial.SpatialStreamingLoad && std::filesystem::exists(chunks_dir))
+  CooperativeTerrainBounds bounds;
+  bounds.legacy_file_candidates = std::max(ChunkFiles.size(), CompletedChunkFileCount);
+  if (!Spatial.SpatialColumnQueue.empty())
   {
-    // S8: drain the directory in wall-budgeted batches; a huge worlds dir
-    // no longer sweeps in one tick (typical cost tens of ms per 10k files).
-    ScanChunksDir = chunks_dir;
-    ScanChunksBatch.clear();
-    ScanChunksActive = true;
-    bool done = false;
-    while (!done)
-    {
-      done = ScanChunkFilesBatch(world, 16.0);
-    }
-    ScanChunksActive = false;
-    ChunkFiles = std::move(ScanChunksBatch);
-    ScanChunksBatch.clear();
-    std::sort(ChunkFiles.begin(), ChunkFiles.end());
+    const int64_t x = Spatial.SpatialCenter.x;
+    const int64_t z = Spatial.SpatialCenter.z;
+    const int64_t radius = Spatial.SpatialRadius;
+    bounds.spatial_disk = {x - radius, x + radius, z - radius, z + radius};
   }
-  (void)world;
+  if (Gen.GenColumnQueue.empty() && Gen.GenChunkQueue.empty())
+  {
+    bounds.synchronous = bounds.worker = TerrainColumnRectangle{};
+    return bounds;
+  }
+  if (!extents)
+    return bounds;
+
+  const auto &sync = extents->synchronous_sample;
+  const int64_t x0 = Gen.GenPatchMinX, x1 = Gen.GenPatchMaxX;
+  const int64_t z0 = Gen.GenPatchMinZ, z1 = Gen.GenPatchMaxZ;
+  bounds.synchronous = TerrainColumnRectangle::FromBlocks(
+      x0 + sync.min_x, x1 + sync.max_x, z0 + sync.min_z, z1 + sync.max_z);
+
+  const auto &worker = extents->worker_sample;
+  const auto aligned = TerrainColumnRectangle::FromBlocks(x0, x1, z0, z1);
+  bounds.worker = TerrainColumnRectangle::FromBlocks(
+      aligned.min_x * CHUNK_SIZE + worker.min_x,
+      aligned.max_x * CHUNK_SIZE + CHUNK_SIZE - 1 + worker.max_x,
+      aligned.min_z * CHUNK_SIZE + worker.min_z,
+      aligned.max_z * CHUNK_SIZE + CHUNK_SIZE - 1 + worker.max_z);
+  return bounds;
 }
 
 void UWorldCooperativeSession::ScanSaveChunkCoords(UWorld &world)
@@ -1125,10 +1131,11 @@ void UWorldCooperativeSession::InitGenerationGrid(
   Gen.GenChunkScheduleIndex = 0;
   delete ParallelGen;
   ParallelGen = nullptr;
-  const int min_cx = FloorDiv(min_x, CHUNK_SIZE);
-  const int max_cx = FloorDiv(max_x, CHUNK_SIZE);
-  const int min_cz = FloorDiv(min_z, CHUNK_SIZE);
-  const int max_cz = FloorDiv(max_z, CHUNK_SIZE);
+  const auto chunk_bounds = TerrainColumnRectangle::FromBlocks(min_x, max_x, min_z, max_z);
+  const int min_cx = static_cast<int>(chunk_bounds.min_x);
+  const int max_cx = static_cast<int>(chunk_bounds.max_x);
+  const int min_cz = static_cast<int>(chunk_bounds.min_z);
+  const int max_cz = static_cast<int>(chunk_bounds.max_z);
   Gen.GenChunkQueue.reserve(
       static_cast<size_t>((max_cx - min_cx + 1) * (max_cz - min_cz + 1)));
   for (int cx = min_cx; cx <= max_cx; ++cx)
@@ -1460,29 +1467,14 @@ try
   {
     // UX U2/S8: one directory batch per tick under a wall budget; a large
     // worlds dir no longer sweeps in a single tick.
-    if (!ScanChunksActive)
+    if (!Spatial.SpatialStreamingLoad && ChunkScanCursor == std::filesystem::directory_iterator{})
     {
-      ChunkFiles.clear();
-      ChunkFileIndex = 0;
-      ScanChunksBatch.clear();
-      const std::string chunks_dir = FolderPath + "/chunks";
-      if (!Spatial.SpatialStreamingLoad && std::filesystem::exists(chunks_dir))
-      {
-        ScanChunksDir = chunks_dir;
-        ScanChunksActive = true;
-      }
-      else
-      {
-        CurrentPhase = Phase::LoadChunks;
-        Report(sink, "scan", -1.f, "Scanning chunk files...");
-        break;
-      }
+      const auto chunks_dir = std::filesystem::path(FolderPath) / "chunks";
+      if (std::filesystem::exists(chunks_dir))
+        ChunkScanCursor = std::filesystem::directory_iterator(chunks_dir);
     }
-    if (ScanChunkFilesBatch(world, 8.0))
+    if (ScanChunkFilesBatch(8.0))
     {
-      ScanChunksActive = false;
-      ChunkFiles = std::move(ScanChunksBatch);
-      ScanChunksBatch.clear();
       std::sort(ChunkFiles.begin(), ChunkFiles.end());
       CurrentPhase = Phase::LoadChunks;
     }
@@ -1891,6 +1883,9 @@ void UWorldCooperativeSession::HandlePhaseLoadChunks(UWorld &world,
   }
   if (ChunkFileIndex >= ChunkFiles.size())
   {
+    CompletedChunkFileCount = ChunkFiles.size();
+    decltype(ChunkFiles){}.swap(ChunkFiles);
+    ChunkFileIndex = 0;
     // UX U2/S6: early-out existence check instead of a full-world scan
     // in one tick (the codebase itself warned these "look like a hang").
     const bool blocksInWorld = world.BlockWorld.HasAnyNonAir();

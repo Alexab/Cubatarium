@@ -1,0 +1,115 @@
+{
+  "schema": "s4-q01-cooperative-terrain-bounds.v1",
+  "status": "SCOPED_Q01_L2_COOPERATIVE_TERRAIN_BOUNDS_PASS_Q01_L2_OPEN",
+  "baseline_commit": "1bb231539e885a538765544fc0a475de0ab5ca55",
+  "scope": "The legacy load scan holds one directory cursor across frames. The budget covers ignored entries, the completed scan sorts its candidates, and cancellation retires the cursor and path list. Loading retires the consumed list and keeps the candidate count for diagnostics. Each legacy candidate contributes at most one XZ. The startup spatial path covers its requested square. The cooperative generation domain projects its signed block patch directly and its aligned chunk patch through the supplied matching extents. The combined upper bound counts disk/generation rectangular overlap once and adds the count of legacy file candidates. The diagnostic preserves unknown extents. Native cases cover Flat sync and worker generation with the isolated direct mesh observer detached, actual legacy saved files with duplicate formats and both sync and async spatial disk loads. The wide fixture verifies projection using the previously proved prefab offsets. The result accounts for incoming terrain from these operations.",
+  "remaining": "Join existing terrain at operation handoff and the remaining direct edits, record-only owners, live disk index and registry. The active legacy scan and file loads still scale with input files. Measure synchronous cooperative generation with the production mesh observer in the full performance scope. Verify the remaining whole-world, outer-ring, cave, wet visual and performance acceptance matrix. Full S0-S6 acceptance remains open at 23 of 42 packages.",
+  "source_sha256": "da86c76cfea675eee85590f36e8cfbbcacc2685c298f6d37f7c8874e1169f964",
+  "desktop_exe_sha256": "a80bb3b40a7e2a74c7f12b80480a8b93fd43ad42f7b35acda6cf830e1250a1dc",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_scan_control": {
+    "before": {
+      "batches": 5,
+      "completed": false,
+      "paths": 5,
+      "unique_paths": 1
+    },
+    "fixed": {
+      "batches": 4,
+      "completed": true,
+      "paths": 3,
+      "unique_paths": 3
+    }
+  },
+  "release_ctest": [
+    "async_io_storage_test",
+    "chunk_buffer_capture_test",
+    "chunk_streamer_committed_column_test",
+    "decor_mesh_integration_test",
+    "resident_generation_progress_test",
+    "normal_shutdown_test"
+  ],
+  "release_isolated_application_operation_storage": "PASS",
+  "native_profiles": {
+    "flat": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    },
+    "full": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    }
+  },
+  "native_fixture": {
+    "candidate_paths_released": true,
+    "cases": [
+      {
+        "flat_generation_upper": 49,
+        "legacy_candidates": 3,
+        "legacy_columns": 2,
+        "legacy_plus_flat_observed": 50,
+        "legacy_plus_flat_upper": 52,
+        "parallel": false,
+        "spatial_disk_observed": 1,
+        "spatial_disk_upper": 25,
+        "spatial_plus_flat_upper": 49,
+        "wide_synchronous_upper": 110,
+        "wide_worker_upper": 120
+      },
+      {
+        "flat_generation_upper": 49,
+        "legacy_candidates": 3,
+        "legacy_columns": 2,
+        "legacy_plus_flat_observed": 50,
+        "legacy_plus_flat_upper": 52,
+        "parallel": true,
+        "spatial_disk_observed": 1,
+        "spatial_disk_upper": 25,
+        "spatial_plus_flat_upper": 49,
+        "wide_synchronous_upper": 110,
+        "wide_worker_upper": 120
+      }
+    ],
+    "scan_batches": 4,
+    "scan_cancelled_cursor_released": true,
+    "scope": "Physical terrain writes with the isolated direct mesh observer detached",
+    "status": "PASS"
+  },
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q01-cooperative-terrain-provenance.json": "034ba23699317d70f308c3532c28e87b1b0aa31a35bb16787d4e116d06bbe3e0",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-controls.log": "d7baed49a5c6fc4424c86a47f45b032be99fa760ea34678efa641590591a38e7",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-verified-ctest.log": "f1ef3fc1b487dfc2d5c5539b1511318c1b1e5091a9a556027e98c7e7a61636e0",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-build.log": "1872b15011430dd3fb4975778cfa1b365b7bc3379ddbe11b54e957a2843ac8ec",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-application.json": "8954dbaf1b9a9797cfe70f8ad79ffcf07df9069630803ca28e7f5c74cd07fb6b",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-application.log": "2f5ba6ad2494095c51c9831bf5226a1b643c784eabb168683fe998e5e3868946",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-before.cpp": "ea906cdd361148357d535abf1af00433e5732ce5034075b5f8f416d1cd5f8fec",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-before.exe": "185f9922cba055178534d9d2cef2819448e406ee76762b9d914e8e4fe0cd855b",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-fixed.cpp": "fe486d0f88bef02cdf8cb743571afdbddceefd1f5432bfee2e060e3dfe27db89",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-fixed.exe": "83e033e29ec185dd98971bea0dc45b3dd1135068d15d457bd2d7c284f6cccdf3",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/route.json": "2e441db61ff4974e601e2654c1967aff576696985e99f5ea793403b508b772df",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/smoke-verdict.json": "f2efd88324daca3be25c000df2cd3c98b43c5d9b35804a51d8850187e57ac854",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/flight_sim_report.json": "0facf462769acecdf5a9be51fcc36a6d63b83ea7203f48906921c1978837dbb5",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/desktop-normal-shutdown.json": "d843e7af56114cca2abdce28714ed73df8cc03f4aee9769f09dc490e6327ff5e",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/legacy-gates.json": "8c71782820b7e0b09c60b4e920e5f03dddce11253aba3a5c7df11ce3470c0849",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat.log": "507100ebd0e5490ea2676abe2bef8b7387c997c8a3984a3025cf4b816d1b31f2",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-flat/terrain-save-probe/report.json": "d835bac1387d51b324f41867569bdc8966835101b45c447aefadcaa1f16d7249",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/route.json": "6b167d38d0e592e103121f221aee9b6574033ea267013c1be50e42169ac9d439",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/smoke-verdict.json": "11a0f08d29808b2f36c60919f89d786895e090a897e7be36e761c4473d8143a0",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/flight_sim_report.json": "93ce3446e66dbcb0d73cc04e67b908c99dc7b8a74a3dcec710786d035698e01f",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/desktop-normal-shutdown.json": "92845c5c1f0712163b39e8d53b380ce0ea984e72af1e266b14aa927f0ab97415",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full/legacy-gates.json": "5e8412f004d645cc6cb9ce8bc46f36929116ba59e26c5aa1d00a3fd2f982f3f3",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full.log": "1ce40169e454f7b4c30ca0de373ab90f77ff8298c77eaf93001f6afa0cba846f",
+    "build/desktop-msvc/s4-q01-cooperative-terrain-final-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

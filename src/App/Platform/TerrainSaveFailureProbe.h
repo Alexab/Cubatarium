@@ -671,6 +671,169 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       report["generation_write_extents"] = {{"status", "PASS"}, {"cases", extents}};
     });
     RunTerrainProbePhase([&] {
+      const auto folder = root / "cooperative-terrain";
+      const auto directory = folder / "chunks";
+      fs::create_directories(directory);
+      const glm::ivec3 inside(-1, 0, -2), outside(8, 0, -7);
+      const glm::ivec3 edit(4, 15, 5);
+      auto definitions = std::make_shared<UBlockDefinitionStorage>();
+      BlockDefinition bedrock, stone, grass;
+      bedrock.Name = "bedrock";
+      stone.Name = "stone";
+      grass.Name = "grass";
+      bedrock.Physics = stone.Physics = grass.Physics = BlockPhysicsProfile::Solid();
+      definitions->ReplaceAll({{7, bedrock}, {8, stone}, {9, grass}},
+                              {{"bedrock", 7}, {"stone", 8}, {"grass", 9}});
+      const auto make_world = [&](bool parallel) {
+        auto world = std::make_unique<UWorld>(nullptr, nullptr);
+        world->BlockRegistry = std::make_unique<UBlockRegistry>(nullptr, definitions);
+        ProceduralSettings settings;
+        settings.Generator = ProceduralGenerator::Flat;
+        settings.MinHeight = 0;
+        settings.MaxHeight = 15;
+        settings.FlatSurfaceY = 3;
+        settings.FillWater = false;
+        settings.AsyncChunkGeneration = settings.AsyncChunkIo = parallel;
+        world->SetProceduralSettings(settings);
+        world->SetRenderDistanceChunks(1);
+        world->PhysicsFlags.EnableCollisionReadinessGate = false;
+        world->SetSpawnPoint({-1.0f, 3.0f, -17.0f});
+        world->SetWorldFolderPath(folder.string());
+        world->SetLightingRelightDeferred(true);
+        return world;
+      };
+      const auto setup = make_world(false);
+      UBlockWorld source;
+      source.SetBlock(inside * CHUNK_SIZE + edit, 9);
+      source.SetBlock(outside * CHUNK_SIZE + edit, 8);
+      auto &storage = setup->GetChunkStorage();
+      for (const auto key : {inside, outside})
+        require(storage.SaveChunk(key, *source.GetChunkManager().GetChunk(key), folder.string(),
+                                  *setup->BlockRegistry), "save actual legacy terrain slice");
+      storage.SetWriteFormat(ChunkWriteFormat::Json);
+      require(storage.SaveChunk(inside, *source.GetChunkManager().GetChunk(inside), folder.string(),
+                                *setup->BlockRegistry), "write alternate format of the same signed slice");
+      std::ofstream(directory / "ignored.txt") << "cooperative scan fixture";
+
+      UWorldCooperativeSession scan;
+      scan.BeginLoad(*setup, folder.string());
+      scan.ChunkScanCursor = fs::directory_iterator(directory);
+      int scan_batches = 0;
+      bool scan_done = false;
+      for (; scan_batches < 5 && !scan_done;)
+      {
+        ++scan_batches;
+        scan_done = scan.ScanChunkFilesBatch(0);
+      }
+      auto candidates = scan.ChunkFiles;
+      std::sort(candidates.begin(), candidates.end());
+      require(scan_done && scan_batches == 4 && candidates.size() == 3 &&
+                  std::adjacent_find(candidates.begin(), candidates.end()) == candidates.end(),
+              "one-entry batches visit the complete directory without repeated or ignored paths");
+      scan.ChunkScanCursor = fs::directory_iterator(directory);
+      require(!scan.ScanChunkFilesBatch(0), "a fresh cooperative scan still has unread entries");
+      scan.Cancel();
+      require(scan.ChunkScanCursor == fs::directory_iterator{} && scan.ChunkFiles.capacity() == 0,
+              "cancellation releases the directory cursor and candidate paths");
+      scan.BeginLoad(*setup, folder.string());
+      require(scan.ChunkFiles.empty() && scan.ChunkScanCursor == fs::directory_iterator{},
+              "a replacement session starts with an empty directory plan");
+      scan.CurrentPhase = UWorldCooperativeSession::Phase::ScanChunks;
+      Progress scan_progress;
+      for (int attempt = 0; attempt < 4 && scan.CurrentPhase == UWorldCooperativeSession::Phase::ScanChunks; ++attempt)
+        scan.Tick(*setup, scan_progress, 1);
+      require(scan.CurrentPhase == UWorldCooperativeSession::Phase::LoadChunks && scan.ChunkFiles == candidates,
+              "the normal scan phase publishes the same sorted file list and advances to loading");
+
+      Json cases = Json::array();
+      for (const bool parallel : {false, true})
+      {
+        auto world = make_world(parallel);
+        UWorldCooperativeSession op;
+        Progress progress;
+        op.BeginLoad(*world, folder.string());
+        op.ChunkFiles = candidates;
+        const auto legacy = op.GetTerrainColumnBounds(std::nullopt);
+        op.HandlePhaseLoadChunks(*world, progress, 8);
+        auto &chunks = world->BlockWorld.GetChunkManager();
+        require(*legacy.CombinedUpper(parallel) == 3 && op.ChunkFilesRead == 3 &&
+                    chunks.GetResidentTerrainColumnCount() == 2 && op.ChunkFiles.capacity() == 0 &&
+                    op.GetTerrainColumnBounds(std::nullopt).legacy_file_candidates == 3,
+                "legacy loading commits two columns, releases all paths and retains the source count");
+
+        op.InitGenerationGrid(*world, true);
+        auto *generator = dynamic_cast<UComposableWorldGenerator *>(world->WorldGen.get());
+        require(generator != nullptr, "use the current generation context for the cooperative bound");
+        const auto extents = GetWorldGenWriteExtents(*generator);
+        // Count direct terrain ownership here. A visual warmup has its own
+        // smoke run and does not participate in this isolated generation plan.
+        generator->GetContext().OnColumnMeshDirty = {};
+        const auto planned = op.GetTerrainColumnBounds(extents);
+        const auto &generated = parallel ? planned.worker : planned.synchronous;
+        require(generated && generated->Count() == 49 && *planned.CombinedUpper(parallel) == 52,
+                "a signed Flat patch and the legacy file candidates compose to an upper bound of 52");
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (!(parallel ? op.AdvanceParallelGeneration(*world, 64) : op.AdvanceGeneration(*world, 2048)))
+        {
+          if (std::chrono::steady_clock::now() >= deadline)
+          {
+            const auto pool = op.GetGenerationPoolDomain();
+            report["cooperative_timeout"] = {{"parallel", parallel}, {"generated", op.Gen.GenDoneColumns},
+                  {"total", op.Gen.GenTotalColumns}, {"pool_pending", pool.pending}, {"pool_active", pool.active}};
+            require(false, "cooperative generation must retire within ten seconds");
+          }
+          std::this_thread::yield();
+        }
+        size_t actual_generated_domain = 0;
+        chunks.ForEachTerrainDataColumn([&](const glm::ivec3 &key) {
+          actual_generated_domain += generated->Contains(key.x, key.z);
+        });
+        require(actual_generated_domain == 49 && chunks.GetResidentTerrainColumnCount() == 50 &&
+                    world->BlockWorld.GetBlock(inside * CHUNK_SIZE + edit) == 9 &&
+                    world->BlockWorld.GetBlock(outside * CHUNK_SIZE + edit) == 8,
+                "the overlap is counted once and both saved edits survive real generation");
+
+        auto spatial_world = make_world(parallel);
+        UWorldCooperativeSession spatial;
+        spatial.BeginLoad(*spatial_world, folder.string());
+        spatial_world->HasPersistedSave = true;
+        spatial.Spatial.SpatialStreamingLoad = true;
+        spatial.Spatial.SpatialCenter = inside;
+        spatial.Spatial.SpatialRadius = 2;
+        spatial.HandlePhaseLoadChunks(*spatial_world, progress, 8);
+        require(spatial.Spatial.SpatialColumnQueue.size() == 25, "spatial disk plan enumerates its signed square");
+        const auto disk_deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (spatial.CurrentPhase == UWorldCooperativeSession::Phase::SpatialChunks)
+        {
+          spatial.HandlePhaseSpatialChunks(*spatial_world, progress, 8);
+          require(std::chrono::steady_clock::now() < disk_deadline, "spatial disk plan must retire within ten seconds");
+          std::this_thread::yield();
+        }
+        const auto &spatial_chunks = spatial_world->BlockWorld.GetChunkManager();
+        require(spatial_chunks.GetResidentTerrainColumnCount() == 1 &&
+                    spatial_chunks.HasResidentTerrainColumn(inside) && !spatial_chunks.HasResidentTerrainColumn(outside),
+                "the spatial path reads the in-range edit and leaves the out-of-range column on disk");
+        spatial.InitGenerationGrid(*spatial_world, true);
+        const auto overlapping = spatial.GetTerrainColumnBounds(extents);
+        const auto unknown = spatial.GetTerrainColumnBounds(std::nullopt);
+        const WorldGenWriteExtent wide{-34, 24, -16, 20};
+        const auto widened = spatial.GetTerrainColumnBounds(WorldGenWriteExtents{wide, wide});
+        require(overlapping.spatial_disk.Count() == 25 && *overlapping.CombinedUpper(parallel) == 49 &&
+                    !unknown.CombinedUpper(parallel) && unknown.spatial_disk.Count() == 25 &&
+                    widened.synchronous->Count() == 110 && widened.worker->Count() == 120 &&
+                    *widened.CombinedUpper(false) == 110 && *widened.CombinedUpper(true) == 120,
+                "subtract the real overlap and expand the signed worker grid before applying its offsets");
+        cases.push_back({{"parallel", parallel}, {"legacy_candidates", 3}, {"legacy_columns", 2},
+                         {"flat_generation_upper", 49}, {"legacy_plus_flat_upper", 52},
+                         {"legacy_plus_flat_observed", 50}, {"spatial_disk_upper", 25},
+                         {"spatial_disk_observed", 1}, {"spatial_plus_flat_upper", 49},
+                         {"wide_synchronous_upper", 110}, {"wide_worker_upper", 120}});
+      }
+      report["cooperative_terrain_bounds"] = {{"status", "PASS"}, {"scan_batches", scan_batches},
+          {"scan_cancelled_cursor_released", true}, {"candidate_paths_released", true},
+          {"scope", "Physical terrain writes with the isolated direct mesh observer detached"}, {"cases", cases}};
+    });
+    RunTerrainProbePhase([&] {
       auto owner = std::make_unique<UWorld>(nullptr, nullptr);
       auto &world = *owner;
       auto definitions = std::make_shared<UBlockDefinitionStorage>();
