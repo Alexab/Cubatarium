@@ -339,6 +339,7 @@ void UAsyncChunkIO::QueueColumnLightFlagsSave(std::shared_ptr<AsyncIoCredit> cre
 
 struct UAsyncChunkIO::IndexWarmupJob
 {
+  std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   UChunkStorageService &storage;
   std::string worldFolder;
@@ -349,13 +350,22 @@ struct UAsyncChunkIO::IndexWarmupJob
 void UAsyncChunkIO::IndexWarmupJob::operator()() const
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Entered, 0, {});
-  WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
-      [&](const IoCodecProbe *probe) { storage.PrepareHighestChunkSliceIndex(worldFolder, probe); },
-      [&](const IoCodecStorage &codec) noexcept {
-        AsyncIoWorkerLocals locals;
-        locals.codec = &codec;
-        owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Codec, 0, locals);
-      });
+  try
+  {
+    WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
+        [&](const IoCodecProbe *probe) { storage.PrepareHighestChunkSliceIndex(worldFolder, probe); },
+        [&](const IoCodecStorage &codec) noexcept {
+          AsyncIoWorkerLocals locals;
+          locals.codec = &codec;
+          owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Codec, 0, locals);
+        });
+  }
+  catch (const std::filesystem::filesystem_error &error)
+  {
+    // Demand lookups can rescan after a failed speculative scan.
+    CubatariumLogInfo("WorldColumnSource", error.what());
+    return;
+  }
   if (!owner->WorkerProbe || !owner->WorkerProbe->phase.IsOpen())
     return;
   AsyncIoWorkerLocals locals;
@@ -364,15 +374,16 @@ void UAsyncChunkIO::IndexWarmupJob::operator()() const
   owner->ObserveWorker(*this, AsyncIoJobKind::Warmup, AsyncIoWorkerStage::Finished, 0, locals);
 }
 
-void UAsyncChunkIO::RequestDiskIndexWarmup(
+bool UAsyncChunkIO::RequestDiskIndexWarmup(
     UChunkStorageService &storage, const std::string &worldFolder)
 {
-  if (worldFolder.empty() ||
-      !DiskIndexWarmupFolders.insert(worldFolder).second)
-  {
-    return;
-  }
-  EnqueueBackgroundIo(IndexWarmupJob{this, storage, worldFolder});
+  if (worldFolder.empty())
+    return false;
+  auto credit = ReserveIoCredits(OutstandingIndexWarmups, 1, 1);
+  if (!credit)
+    return false;
+  EnqueueBackgroundIo(IndexWarmupJob{std::move(credit), this, storage, worldFolder});
+  return true;
 }
 
 struct UAsyncChunkIO::LoadJob
@@ -1035,15 +1046,6 @@ struct AsyncIoStorageInspector
 
   AsyncIoStorage Inspect()
   {
-    // Submissions and the warmup set are owned by the thread requesting this
-    // diagnostic. I/O workers modify the storage service's separate index.
-    StlSourceStorage warmup;
-    warmup.Hash(Owner.DiskIndexWarmupFolders);
-    for (const auto &path : Owner.DiskIndexWarmupFolders)
-      warmup.Text(path);
-    Result.warmup_keys = Owner.DiskIndexWarmupFolders.size();
-    Result.warmup_requested = warmup.bytes.requested;
-    Result.retained_supported &= warmup.bytes.supported;
     const auto visit = [&](const auto &job) { Pending(job); };
     Owner.LoadPool.InspectPendingJobs(visit, [&](auto counts, size_t bytes) {
       Pool(0, counts, bytes);
@@ -1344,6 +1346,7 @@ private:
   }
   void Capture(const Io::IndexWarmupJob &job)
   {
+    Credit(job.credit);
     Borrow(Result.storage_root, &job.storage);
     Text(Result.queued_backing, job.worldFolder);
   }
@@ -1432,6 +1435,7 @@ private:
       Shared(Owner.OutstandingLoads);
       Shared(Owner.OutstandingWrites);
       Shared(Owner.OutstandingFlagSaves);
+      Shared(Owner.OutstandingIndexWarmups);
       Completed(0, Owner.CompletedLoads, [&](const AsyncChunkLoadResult &value) {
         LoadResult(value);
       });

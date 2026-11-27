@@ -3540,11 +3540,19 @@
       "receipt": "build/desktop-msvc/s4-q10-write-admission-acceptance.json",
       "scope": "The terrain writer reserves the full column before capturing light receipts or chunk snapshots. Up to 256 operations are covered from preparation to running work and final results, and at most 256 unload receipts retain accepted acknowledgments or retry state. The world flag producer reserves one independent operation before copying flags and acknowledges that exact folder/revision. Flat verifies refusal with 24 free slots, retry of the whole 25-operation save, active and returned batches, and cold replay of the terrain edit and deferred flag revision. A persisted flag retains its signature and still requires current light coverage for gameplay. Both native profiles verify startup and teardown.",
       "remaining": "Q10 still requires byte and overlap envelopes, read-retry and warmup owner bounds, and composition with the configured Q01.L2 producer dependency. The recorded write and flag fixtures cover the current game profiles. S4.06 retains the silent recovery, fatal-menu and full transactional world relocation policy. The full native/performance/memory matrix, extended S4.01 fixture binding and S6.05 ecology mismatch remain open. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.RETRY_INDEX",
+      "status": "SCOPED_Q10_RETRY_WARMUP_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_RETRY_INDEX_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-metadata-acceptance.json",
+      "scope": "Up to 256 active read plans and exhausted-read cooldown owners coexist per world, including up to 32 active plans. The exhausted request transfers its reservation to the exact column cooldown and keeps the unread-terrain guard. Deadlines expire on the world tick. Each I/O instance retains one queued or active speculative index job and the world retries only its current deferred binding. Each storage instance retains four folder index entries. A late save to an evicted folder is observed when that folder is rebuilt from actual disk. Native startup and normal shutdown pass in Flat and Full.",
+      "remaining": "Payload and peak byte envelopes remain open, including the contents of each cached folder index and the unread-terrain safety owners. Compose Q10 with Q01.L2 and retain the full native/performance/memory matrix and original S0–S6 criteria. S4.01 extended fixture binding, S4.06 save recovery and world relocation, and S6.05 ecology remain open. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверены лимиты чтений, записей и одной операции сохранения флагов. Далее ограничить длительно живущие метаданные повторов чтения и прогрева, проверить размеры и перекрытие полезной нагрузки во всех стадиях I/O и связать пределы с Q01.L2. Полный объём S0–S6 и открытые проверки S4.01, S4.06 и S6.05 остаются в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Проверены очереди чтения и записи и количество владельцев таймеров и прогрева. Далее вывести и проверить верхние пределы размера входного файла, декодера, снимков записи и их перекрытия, связать с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

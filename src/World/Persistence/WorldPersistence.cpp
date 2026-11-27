@@ -317,10 +317,12 @@ void UWorldPersistence::SetWorldFolderPath(const std::string &path)
   ++LightCompleteRevision;
   LightCompleteSaveFailures = 0;
   LightCompleteSaveRetryAt = {};
+  DiskIndexWarmupPending = false;
   if (!WorldFolderPath.empty())
   {
     EnsureChunkIoInitialized();
-    AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
+    DiskIndexWarmupPending =
+        !AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
     LoadColumnLightFlags();
   }
 }
@@ -4700,6 +4702,10 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     metrics.unattributed_ms = metrics.tick_wall_ms;
     return metrics;
   }
+  ExpireTerrainReadCooldowns(tick_started);
+  if (DiskIndexWarmupPending && AsyncChunkIo)
+    DiskIndexWarmupPending =
+        !AsyncChunkIo->RequestDiskIndexWarmup(*ChunkStorage, WorldFolderPath);
 
   const auto light_flags_result_drain_started =
       std::chrono::steady_clock::now();
@@ -5543,6 +5549,17 @@ void UWorldPersistence::PumpTerrainColumnReads(UWorld &world)
     SubmitTerrainColumnReads(world, (*it)->first, (*it)->second);
 }
 
+void UWorldPersistence::ExpireTerrainReadCooldowns(std::chrono::steady_clock::time_point now)
+{
+  for (auto entry = FailedColumnRetryAfter.begin(); entry != FailedColumnRetryAfter.end();)
+  {
+    if (entry->second <= now)
+      entry = FailedColumnRetryAfter.erase(entry);
+    else
+      ++entry;
+  }
+}
+
 TerrainColumnRead UWorldPersistence::RequestAsyncTerrainColumnLoad(
     UWorld &world, glm::ivec3 ground_coord, uint64_t demand_id)
 {
@@ -5555,10 +5572,13 @@ TerrainColumnRead UWorldPersistence::RequestAsyncTerrainColumnLoad(
   {
     ground_coord.y = 0;
   }
-  if (const auto retry = FailedColumnRetryAfter.find(ground_coord);
-      retry != FailedColumnRetryAfter.end() &&
-      std::chrono::steady_clock::now() < retry->second)
-    return TerrainColumnRead::Deferred;
+  const auto now = std::chrono::steady_clock::now();
+  if (const auto retry = FailedColumnRetryAfter.find(ground_coord); retry != FailedColumnRetryAfter.end())
+  {
+    if (now < retry->second)
+      return TerrainColumnRead::Deferred;
+    FailedColumnRetryAfter.erase(retry);
+  }
   if (ChunkStorage->IsColumnSavePending(ground_coord))
     return TerrainColumnRead::Deferred;
   if (PendingAsyncColumnLoadSlices.count(ground_coord))
@@ -5599,6 +5619,14 @@ TerrainColumnRead UWorldPersistence::RequestAsyncTerrainColumnLoad(
     return TerrainColumnRead::Absent;
   if (PendingAsyncColumnLoadSlices.size() >= kMaxPendingTerrainColumnLoads)
     return TerrainColumnRead::Deferred;
+  if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= kMaxTerrainReadOwners)
+  {
+    ExpireTerrainReadCooldowns(now);
+    // The final read completion replaces its active plan with a cooldown on
+    // failure. Reserve both phases with the same limit.
+    if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= kMaxTerrainReadOwners)
+      return TerrainColumnRead::Deferred;
+  }
 
   BeginTerrainColumnRead(world, ground_coord, state, true);
   state.cancellation = std::make_shared<std::atomic<bool>>(false);

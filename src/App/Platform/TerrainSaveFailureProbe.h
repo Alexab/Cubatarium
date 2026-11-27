@@ -333,6 +333,77 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
           {"required_writes", target_writes}, {"rejected_with_free_slots", target_writes - 1},
           {"bounded_while_active", bounded_while_active}, {"cold_edit", true}, {"deferred_flag_revision", true},
           {"final_writes", io.GetOutstandingWriteCount()}, {"final_flags", io.GetOutstandingFlagSaveCount()}};
+
+      constexpr auto owner_limit = UWorldPersistence::kMaxTerrainReadOwners;
+      auto &cooldowns = persistence.FailedColumnRetryAfter;
+      const auto fixture_deadline = std::chrono::steady_clock::now() + 60s;
+      for (size_t i = 1; i < owner_limit; ++i)
+        cooldowns.emplace(glm::ivec3(static_cast<int>(i), 0, 3100), fixture_deadline);
+      require(persistence.RequestAsyncTerrainColumnLoad(world, outside_profile) == TerrainColumnRead::Pending &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Deferred &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, missing) == TerrainColumnRead::Absent &&
+                  retained.size() + cooldowns.size() == owner_limit,
+              "an active failed-read candidate reserves its timer without blocking a disk miss");
+      const auto retry_deadline = std::chrono::steady_clock::now() + 10s;
+      while (!retained.empty())
+      {
+        persistence.TickAsyncChunkIo(world, 48, 20.0);
+        require(retained.size() + cooldowns.size() <= owner_limit &&
+                    std::chrono::steady_clock::now() < retry_deadline,
+                "real retry plans and cooldowns share one owner budget");
+        std::this_thread::yield();
+      }
+      auto &manager = world.BlockWorld.GetChunkManager();
+      require(cooldowns.size() == owner_limit && cooldowns.count(outside_profile) &&
+                  manager.HasUnresolvedTerrainColumnRead(outside_profile) &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, outside_profile) == TerrainColumnRead::Deferred &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Deferred,
+              "retry exhaustion retains the exact failed column under full owner admission");
+      for (auto &[column, expiry] : cooldowns)
+        expiry = std::chrono::steady_clock::now();
+      persistence.TickAsyncChunkIo(world);
+      require(cooldowns.empty() && manager.HasUnresolvedTerrainColumnRead(outside_profile) &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Pending,
+              "expiry retires timers and restores admission without clearing protection of unread terrain");
+      persistence.CancelAsyncTerrainColumnLoad(world, target);
+      require(io.WaitIdleFor(5s), "all load attempts drain before the next fixture");
+      io.DiscardCancelledLoads();
+
+      auto warmup_gate = std::make_shared<AsyncSaveWriteProbeGate>();
+      const auto pool_workers = io.BackgroundIoPool ? 1 : io.LoadPool.GetWorkerCount();
+      auto entered = std::make_shared<std::atomic<size_t>>(0);
+      for (size_t i = 0; i < pool_workers; ++i)
+        io.EnqueueBackgroundIo([warmup_gate, entered] {
+          ++*entered;
+          const auto until = std::chrono::steady_clock::now() + 6s;
+          while (!warmup_gate->released.load() && std::chrono::steady_clock::now() < until)
+            std::this_thread::sleep_for(1ms);
+        });
+      const auto park_deadline = std::chrono::steady_clock::now() + 3s;
+      while (entered->load() < pool_workers && std::chrono::steady_clock::now() < park_deadline)
+        std::this_thread::yield();
+      require(entered->load() == pool_workers, "park the warmup pool");
+      const auto past = (root / "warmup-past").string();
+      const auto skipped = (root / "warmup-skipped").string();
+      const auto current = (root / "warmup-current").string();
+      world.SetWorldFolderPath(past);
+      require(io.GetOutstandingIndexWarmupCount() == 1 && !persistence.DiskIndexWarmupPending,
+              "the first world owns the available warmup slot");
+      world.SetWorldFolderPath(skipped);
+      world.SetWorldFolderPath(current);
+      const bool coalesced = persistence.DiskIndexWarmupPending && io.GetOutstandingIndexWarmupCount() == 1;
+      warmup_gate->released.store(true);
+      require(coalesced && io.WaitIdleFor(5s) && storage.InspectDiskIndexStorage().folders == 2,
+              "rapid world changes leave only the last deferred warmup");
+      persistence.TickAsyncChunkIo(world);
+      require(!persistence.DiskIndexWarmupPending && io.WaitIdleFor(5s) &&
+                  io.GetOutstandingIndexWarmupCount() == 0 && storage.InspectDiskIndexStorage().folders == 3,
+              "the current world warms after the old job retires");
+      report["bounded_read_retry_and_warmup"] = {{"status", "PASS"}, {"owner_limit", owner_limit},
+          {"terminal_failure_retained", true}, {"expired_timers_retired", true},
+          {"unread_terrain_protected", true}, {"rapid_world_changes_coalesced", true},
+          {"cached_folders", storage.InspectDiskIndexStorage().folders},
+          {"final_warmups", io.GetOutstandingIndexWarmupCount()}};
     });
     report["texture_atlas_construction"]=RunTextureAtlasConstructionProbe(root/"texture-atlas");
     const auto json_sources=GetCatalogJsonSourceSnapshot();

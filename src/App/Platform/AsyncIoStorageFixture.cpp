@@ -335,6 +335,56 @@ struct AsyncIoStorageProbe
             {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0}};
   }
 
+  static nlohmann::json CheckIndexWarmup(const std::filesystem::path &root, UBlockRegistry &registry)
+  {
+    constexpr auto cap = UChunkStorageService::kMaxCachedDiskIndexes;
+    UChunkStorageService storage;
+    Gate gate;
+    UAsyncChunkIO io;
+    Release resume{gate};
+    Park(io, gate, true);
+    const auto folder = [&](size_t n) { return (root / std::to_string(n)).string(); };
+    const glm::ivec3 column(-1, 0, 2);
+    const auto save = [&](size_t n, int y) {
+      const glm::ivec3 coord(column.x, y, column.z);
+      UChunk slice(coord);
+      Require(storage.SaveChunk(coord, slice, folder(n), registry), "write a real indexed terrain frame");
+    };
+    save(0, -4);
+    Require(io.RequestDiskIndexWarmup(storage, folder(0)) &&
+                !io.RequestDiskIndexWarmup(storage, folder(1)) &&
+                io.GetOutstandingIndexWarmupCount() == 1,
+            "only one blocked index warmup can own a path");
+    io.CancelPending();
+    Require(io.GetOutstandingIndexWarmupCount() == 0 && storage.InspectDiskIndexStorage().folders == 0 &&
+                io.RequestDiskIndexWarmup(storage, folder(0)),
+            "cancelling a queued warmup releases its path and permits retry");
+    gate.released.store(true);
+    Require(io.WaitIdleFor(std::chrono::seconds(5)) && io.GetOutstandingIndexWarmupCount() == 0 &&
+                storage.InspectDiskIndexStorage().folders == 1,
+            "completed warmup retains only its cached index");
+    for (size_t n = 1; n <= cap; ++n)
+    {
+      save(n, -4);
+      Require(io.RequestDiskIndexWarmup(storage, folder(n)) && io.WaitIdleFor(std::chrono::seconds(5)) &&
+                  storage.InspectDiskIndexStorage().folders == std::min(cap, n + 1),
+              "each warmup respects the bounded folder index cache");
+    }
+    save(0, -2);
+    Require(storage.InspectDiskIndexStorage().slices == cap &&
+                storage.GetHighestChunkSliceOnDisk(folder(0), column) == -2 &&
+                !storage.IsChunkSliceAbsentOnDisk(folder(0), {column.x, -4, column.z}) &&
+                storage.InspectDiskIndexStorage().folders == cap,
+            "late write to an evicted folder rebuilds its index from both saved slices");
+    Require(storage.RemoveChunkSliceFromDisk(folder(0), {column.x, -2, column.z}) &&
+                storage.GetHighestChunkSliceOnDisk(folder(0), column) == -4 &&
+                storage.IsChunkSliceAbsentOnDisk(folder(0), {column.x, -2, column.z}),
+            "removal invalidates the reconstructed index");
+    return {{"status", "PASS"}, {"folder_limit", cap}, {"visited_folders", cap + 1},
+            {"cancelled_retry", true}, {"evicted_folder_rebuilt", true},
+            {"outstanding_after", io.GetOutstandingIndexWarmupCount()}};
+  }
+
   static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,
                                              UChunkStorageService &storage, UBlockRegistry &registry)
   {
@@ -377,10 +427,12 @@ struct AsyncIoStorageProbe
                                 list.data(), count, scratch.data(), scratch.size());
     };
     const auto joined = join(phase, trace.parked, participants);
+    const auto warmup_active = size_t(UAsyncChunkIO::HasBackgroundIoBudget());
     Require(queues.retained_supported && queues.active == participants &&
-                queues.queued[0] == 1 && queues.shared_blocks == 6 &&
+                queues.queued[0] == 1 && queues.shared_blocks == 8 - warmup_active &&
                 joined.supported && joined.participants == participants &&
-                joined.shared_blocks == 7 + load_workers && joined.shared_aliases == 2 * load_workers + 1 &&
+                joined.shared_blocks == 9 + load_workers &&
+                joined.shared_aliases == 2 * load_workers + 1 + warmup_active &&
                 joined.shared_bytes > queues.shared_bytes && joined.local_backing &&
                 joined.registry_references == load_workers + 1 && joined.storage_references == 2 &&
                 joined.disk_index_requested == roots.disk_index.requested && joined.disk_index_requested,
@@ -427,11 +479,11 @@ struct AsyncIoStorageProbe
     const auto completed = Inspect(io);
     Require(completed.supported && completed.completed[0] == load_workers + 1 &&
                 completed.completed[1] == 1 && completed.completed[2] == 1 &&
-                completed.shared_bytes == joined.shared_bytes &&
+                completed.shared_bytes < joined.shared_bytes && completed.shared_blocks + 1 == joined.shared_blocks &&
                 !completed.storage_root.references && !completed.registry_root.references,
             "the same cancellation control survives queue publication");
     auto reads = io.DrainLoads();
-    Require(!weak.expired() && Inspect(io).shared_blocks == 5 && io.GetOutstandingLoadCount() == reads.size(),
+    Require(!weak.expired() && Inspect(io).shared_blocks == 6 && io.GetOutstandingLoadCount() == reads.size(),
             "returned owners leave the queue census and keep their admission credits");
     reads.clear();
     Require(weak.expired(), "all joined source owners retire");
@@ -501,7 +553,7 @@ struct AsyncIoStorageProbe
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
             "active cancellation retires decoded source without publication");
     cancellation.reset();
-    Require(weak.expired() && Inspect(io).shared_blocks == 3 && !trace.overflow,
+    Require(weak.expired() && Inspect(io).shared_blocks == 4 && !trace.overflow,
             "cancelled source leaves no retained I/O owner");
     return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
@@ -670,7 +722,7 @@ struct AsyncIoStorageProbe
             "queued source is supported while active worker storage remains open");
     Require(queued.queued == std::array<size_t, 6>{2, 1, 2, 1, 1, 2} &&
                 queued.callable_bytes && queued.queued_backing >= 600 * sizeof(glm::ivec2) &&
-                queued.shared_blocks == 16 && queued.shared_aliases == 10,
+                queued.shared_blocks == 18 && queued.shared_aliases == 11,
             "all six actual queue source kinds and shared aliases");
     Require(receipts.use_count() == receipt_refs + 2 && cancellation.use_count() == 3,
             "diagnostic does not change source references");
@@ -687,7 +739,7 @@ struct AsyncIoStorageProbe
     worker_phase.Close();
     const auto worker_stages = CheckWorkerTrace(worker_trace);
     Require(completed.supported && completed.completed == std::array<size_t, 3>{2, 5, 1} &&
-                completed.completed_backing && completed.shared_blocks == 12 &&
+                completed.completed_backing && completed.shared_blocks == 13 &&
                 completed.shared_aliases == 9 && completed.callable_bytes == 0,
             "queue owners retire and both results share the same cancellation control");
     auto reads = io.DrainLoads();
@@ -701,7 +753,7 @@ struct AsyncIoStorageProbe
     Require(saves.size() == 5 && std::all_of(saves.begin(), saves.end(),
                 [](const auto &save) { return save.success; }), "all actual saves and cleanups succeed");
     cancellation.reset();
-    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 3 &&
+    Require(!weak_cancellation.expired() && Inspect(io).shared_blocks == 4 &&
                 io.GetOutstandingWriteCount() == saves.size() && io.GetOutstandingFlagSaveCount() == flags.size(),
             "drained results retain cancellation and admission outside the I/O queues");
     reads.clear();
@@ -709,13 +761,13 @@ struct AsyncIoStorageProbe
     flags.clear();
     Require(weak_cancellation.expired(), "last returned owner retires");
     const auto drained = Inspect(io);
-    Require(drained.supported && drained.completed_backing == 0 && drained.shared_blocks == 3 &&
+    Require(drained.supported && drained.completed_backing == 0 && drained.shared_blocks == 4 &&
                 io.GetOutstandingLoadCount() == 0 && io.GetOutstandingWriteCount() == 0 &&
                 io.GetOutstandingFlagSaveCount() == 0,
             "drained queues retain slots and the idle admission counters");
-    Require(queued.warmup_keys == 1 && drained.warmup_keys == 1 &&
-                queued.warmup_requested == drained.warmup_requested,
-            "the warmed folder key remains owned after all I/O tasks retire");
+    Require(queued.warmup_keys == 0 && drained.warmup_keys == 0 &&
+                io.GetOutstandingIndexWarmupCount() == 0,
+            "the warmup job retires without retaining a separate folder history");
 
     // The fallback route submits saves and warmup to the real load pool.
     Gate cancel_gate;
@@ -753,6 +805,7 @@ struct AsyncIoStorageProbe
             {"worker_stages", worker_stages},
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
             {"load_credits", CheckLoadCredits(folder, coord, storage, registry)},
+            {"index_warmup", CheckIndexWarmup(root / "index-warmup", registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},

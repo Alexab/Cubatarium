@@ -528,18 +528,39 @@ bool UChunkStorageService::ResolveTerrainColumnRead(
   return true;
 }
 
+UChunkStorageService::DiskTerrainColumnIndex &UChunkStorageService::FindOrPrepareDiskIndex(
+    const std::string &worldFolder, const std::string &cacheKey,
+    IoCodecStorage *directoryPeak) const
+{
+  auto &indexes = HighestChunkSliceIndexByFolder;
+  auto found = indexes.find(cacheKey);
+  if (found == indexes.end())
+  {
+    if (indexes.size() == kMaxCachedDiskIndexes)
+      indexes.erase(std::min_element(indexes.begin(), indexes.end(),
+          [](const auto &a, const auto &b) { return a.second.last_access < b.second.last_access; }));
+    found = indexes.try_emplace(cacheKey).first;
+    try
+    {
+      BuildHighestChunkSliceIndex(worldFolder, found->second, directoryPeak);
+    }
+    catch (...)
+    {
+      indexes.erase(found);
+      throw;
+    }
+  }
+  found->second.last_access = ++DiskIndexAccessSequence;
+  return found->second;
+}
+
 void UChunkStorageService::RefreshDiskColumnIndex(
     const std::string &worldFolder, glm::ivec3 groundCoord,
     DiskTerrainColumnIndex &index) const
 {
-  if (!index.initialized)
-  {
-    BuildHighestChunkSliceIndex(worldFolder, index);
-  }
   const DiskTerrainColumnKey column{groundCoord.x, groundCoord.z};
-  if (index.dirty_columns.erase(column) > 0)
+  if (index.dirty_columns.count(column))
   {
-    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
     std::unordered_set<int> slices;
     const int highest =
         ScanHighestChunkSliceOnDisk(worldFolder, groundCoord, &slices);
@@ -555,6 +576,8 @@ void UChunkStorageService::RefreshDiskColumnIndex(
     {
       index.highest_cy.erase(column);
     }
+    index.dirty_columns.erase(column);
+    KnownAirEvidenceRevision.fetch_add(1, std::memory_order_release);
   }
 }
 
@@ -564,7 +587,7 @@ int UChunkStorageService::GetHighestChunkSliceOnDisk(
   groundCoord.y = 0;
   const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
   std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-  auto &index = HighestChunkSliceIndexByFolder[cache_key];
+  auto &index = FindOrPrepareDiskIndex(worldFolder, cache_key);
   RefreshDiskColumnIndex(worldFolder, groundCoord, index);
   const auto cached = index.highest_cy.find({groundCoord.x, groundCoord.z});
   return cached != index.highest_cy.end() ? cached->second
@@ -578,7 +601,7 @@ bool UChunkStorageService::IsChunkSliceAbsentOnDisk(
     return false;
   const std::string cache_key = HighestChunkSliceIndexKey(worldFolder);
   std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-  auto &index = HighestChunkSliceIndexByFolder[cache_key];
+  auto &index = FindOrPrepareDiskIndex(worldFolder, cache_key);
   RefreshDiskColumnIndex(worldFolder, {chunkCoord.x, 0, chunkCoord.z}, index);
   const auto found = index.slice_cys.find({chunkCoord.x, chunkCoord.z});
   return found == index.slice_cys.end() || !found->second.count(chunkCoord.y);
@@ -591,9 +614,7 @@ void UChunkStorageService::PrepareHighestChunkSliceIndex(
   IoCodecStorage directory_peak;
   {
     std::lock_guard<std::mutex> lock(HighestChunkSliceCacheMutex);
-    DiskTerrainColumnIndex &index = HighestChunkSliceIndexByFolder[cache_key];
-    if (!index.initialized)
-      BuildHighestChunkSliceIndex(worldFolder, index, probe ? &directory_peak : nullptr);
+    FindOrPrepareDiskIndex(worldFolder, cache_key, probe ? &directory_peak : nullptr);
   }
   // This is a high point from earlier in the scan. Invoke the observer
   // outside the index lock and do not attribute the iterator to live roots.

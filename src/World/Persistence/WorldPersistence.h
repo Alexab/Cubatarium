@@ -352,11 +352,14 @@ private:
   // reference until the pool joins during destruction.
   std::unique_ptr<UChunkStorageService> ChunkStorage;
   std::unique_ptr<UAsyncChunkIO> AsyncChunkIo;
+  bool DiskIndexWarmupPending{false};
   std::unordered_map<glm::ivec3, PendingAsyncColumnLoadState, IVec3Hash>
       PendingAsyncColumnLoadSlices;
+  static constexpr size_t kMaxTerrainReadOwners = 256;
   std::unordered_map<glm::ivec3, std::chrono::steady_clock::time_point,
                      IVec3Hash>
       FailedColumnRetryAfter;
+  void ExpireTerrainReadCooldowns(std::chrono::steady_clock::time_point now);
   bool PreferFieldInputLoadNext_{true};
   std::unordered_map<glm::ivec3, ColumnSaveCompletion, IVec3Hash> PendingAsyncColumnSaveSlices;
   struct UnloadSaveReceipt

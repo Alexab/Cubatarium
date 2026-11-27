@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 #include <thread>
-#include <unordered_set>
 #include <vector>
 
 namespace cutum
@@ -189,8 +188,10 @@ public:
       glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
       UChunkStorageService &storage, const std::string &worldFolder,
       uint64_t saveBatchId = 0);
-  void RequestDiskIndexWarmup(UChunkStorageService &storage,
-                              const std::string &worldFolder);
+  bool RequestDiskIndexWarmup(UChunkStorageService &storage,
+                             const std::string &worldFolder);
+  size_t GetOutstandingIndexWarmupCount() const noexcept
+  { return OutstandingIndexWarmups->load(std::memory_order_relaxed); }
   bool RequestSave(glm::ivec3 coord, UChunkStorageService &storage,
                    const std::string &worldFolder, const UBlockWorld &world,
                    UBlockRegistry &registry, ChunkGenerationToken token,
@@ -411,6 +412,7 @@ private:
   std::shared_ptr<std::atomic<size_t>> OutstandingLoads{std::make_shared<std::atomic<size_t>>(0)};
   std::shared_ptr<std::atomic<size_t>> OutstandingWrites{std::make_shared<std::atomic<size_t>>(0)};
   std::shared_ptr<std::atomic<size_t>> OutstandingFlagSaves{std::make_shared<std::atomic<size_t>>(0)};
+  std::shared_ptr<std::atomic<size_t>> OutstandingIndexWarmups{std::make_shared<std::atomic<size_t>>(0)};
   UCompletedJobQueue<AsyncChunkLoadResult> CompletedLoads;
   std::atomic<uint64_t> LoadResultPushWaitNs{0};
   std::atomic<uint64_t> LoadResultPushHeldNs{0};
@@ -421,7 +423,6 @@ private:
   UCompletedJobQueue<AsyncColumnLightFlagsSaveResult>
       CompletedColumnLightFlagsSaves;
   std::atomic<bool> CancelledLoadSweepPending{false};
-  std::unordered_set<std::string> DiskIndexWarmupFolders;
   // Reads retain their full configured budget; writes/index warmup use an
   // extra background worker when the machine has spare logical capacity.
   UJobThreadPool LoadPool;

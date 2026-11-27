@@ -1,0 +1,91 @@
+{
+  "schema": "s4-q10-retry-index.v1",
+  "status": "SCOPED_Q10_RETRY_WARMUP_PASS_Q10_OPEN",
+  "baseline_commit": "7ce0c198bd22354dd3dd43dbb647e644fb74f20d",
+  "scope": "Up to 256 active read plans and exhausted-read cooldown owners coexist per world, including up to 32 active plans. The exhausted request transfers its reservation to the exact column cooldown and keeps the unread-terrain guard. Deadlines expire on the world tick. Each I/O instance retains one queued or active speculative index job and the world retries only its current deferred binding. Each storage instance retains four folder index entries. A late save to an evicted folder is observed when that folder is rebuilt from actual disk. Native startup and normal shutdown pass in Flat and Full.",
+  "remaining": "Payload and peak byte envelopes remain open, including the contents of each cached folder index and the unread-terrain safety owners. Compose Q10 with Q01.L2 and retain the full native/performance/memory matrix and original S0–S6 criteria. S4.01 extended fixture binding, S4.06 save recovery and world relocation, and S6.05 ecology remain open. 23 of 42 packages complete.",
+  "index_fixture": {
+    "cancelled_retry": true,
+    "evicted_folder_rebuilt": true,
+    "folder_limit": 4,
+    "outstanding_after": 0,
+    "status": "PASS",
+    "visited_folders": 5
+  },
+  "profiles": {
+    "flat": {
+      "status": "PASS",
+      "frames": 867,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED",
+      "retry_and_warmup": {
+        "cached_folders": 3,
+        "expired_timers_retired": true,
+        "final_warmups": 0,
+        "owner_limit": 256,
+        "rapid_world_changes_coalesced": true,
+        "status": "PASS",
+        "terminal_failure_retained": true,
+        "unread_terrain_protected": true
+      }
+    },
+    "full": {
+      "status": "PASS",
+      "frames": 534,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "30f03e94935feafe81cda2139d032990fe60c09522869302a86c8a351545ad68",
+  "exe_sha256": "54480cb899256123f1167005065ab01249751146384a7aeea3b337e5b6eb84f8",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-metadata-provenance.json": "d3066edf2f6834b7fb1ade046dbe165949fc57611a357c48c28dbafc63bdc432",
+    "build/desktop-msvc/s4-q10-metadata-build.log": "3d614b49fbe23141fdb7fd2361185f0ed09190b25806c5f58428b754985dc6b6",
+    "build/desktop-msvc/s4-q10-metadata-regressions.json": "5c7e532da0eed5c5e30968a916d05e558d9074aed899fe690407f0fae81f46cd",
+    "build/desktop-msvc/s4-q10-metadata-regression-build.log": "33d35c05b8e74adaee67c6b802bc6be9b3a3e4c22253980d747d15d5a7472916",
+    "build/desktop-msvc/s4-q10-metadata-io-storage.json": "d649db7e7dba90a4f2d4917557f3b40c518e2a3c6e0e5ec30880d51d5abccedc",
+    "build/desktop-msvc/s4-q10-metadata-async_io_storage_test.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-metadata-application_operation_storage_test.log": "7069f2db224d0cd7d8910fdd531e700ffc15a0985ecf8c99315af7c4f4f34261",
+    "build/desktop-msvc/s4-q10-metadata-catalog_worker_retirement_test.log": "2d58e0c64acc6611069143ac54ba8dfc0e733a54dc2e4c6bbebeff68226f8c0e",
+    "build/desktop-msvc/s4-q10-metadata-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-metadata-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-metadata-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-metadata-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-metadata-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-metadata-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-metadata-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-metadata-flat/route.json": "f2e385d6bcfcb2e5f6a71943fbde83d568ff7c897ad22c12c0b8601a43d303d3",
+    "build/desktop-msvc/s4-q10-metadata-flat/smoke-verdict.json": "b28ecd83aef8521065c6167a358f2881aa6597866a7a435eab41d3b66187d175",
+    "build/desktop-msvc/s4-q10-metadata-flat/flight_sim_report.json": "ee0593f91526f37ab58abb4fcbbdfc398594344766f24ff63656d94934fc36dd",
+    "build/desktop-msvc/s4-q10-metadata-flat/desktop-normal-shutdown.json": "c8d4f9eee7359d8264ebdd46d5fcc1637b8459f20e52d9bdc95f16a2143df305",
+    "build/desktop-msvc/s4-q10-metadata-flat/legacy-gates.json": "df432a7ff5ca8c6be0212463669eb949d579ab4fb441c98ee01ecaf7c9bac14d",
+    "build/desktop-msvc/s4-q10-metadata-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-metadata-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-metadata-flat.log": "00d0449fc031954c6f086c32b5fdcac82b38e7a4ecc42273935337090391a9b5",
+    "build/desktop-msvc/s4-q10-metadata-flat/runner.log": "747288e1830527185eb23602007d4c2c7b47645c8bcfc76aeefa5696b1773bc4",
+    "build/desktop-msvc/s4-q10-metadata-flat/terrain-save-probe/report.json": "e4c26946c3eb940af55a5319dcfe26ce6d8e1e38a269f55f9ddc8c2c99bc6ad7",
+    "build/desktop-msvc/s4-q10-metadata-full/route.json": "b7c742bc6cf42e485357b6bf6ac241040ca17c5b650f5b3000d33ca8f7bc2d6c",
+    "build/desktop-msvc/s4-q10-metadata-full/smoke-verdict.json": "8bc6f2891330facee33aa0f8d6f55a2182bdb439f04d1cb5c39541abf026ea0e",
+    "build/desktop-msvc/s4-q10-metadata-full/flight_sim_report.json": "4684bb1728fd3c9db0ca4ac22f076a64b9cb53b1eb02f727fea38f61275f24b8",
+    "build/desktop-msvc/s4-q10-metadata-full/desktop-normal-shutdown.json": "4cd96a44bb3b1e47440c0272fc32f84f576eefba98a296c78eba39d18ca8817f",
+    "build/desktop-msvc/s4-q10-metadata-full/legacy-gates.json": "6b89729bbdf8c43b5a5fcf080ab18407370b4b3d6de8ed50d2d3eb9c6feba74c",
+    "build/desktop-msvc/s4-q10-metadata-full/generation-shutdown.json": "4f07ea290b16e0cf3d2928ad9e5d5db1245535331db8439a56f1df544ebd2f60",
+    "build/desktop-msvc/s4-q10-metadata-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-metadata-full.log": "dca811c19e30b6e922881daffb6b412172fd9b1135be84564f459e09e5b0501d",
+    "build/desktop-msvc/s4-q10-metadata-full/runner.log": "233a7b7bbf1af3a829bd75aaffa1c43e9f3c28418643dd3bb243d806c0110fe3"
+  }
+}

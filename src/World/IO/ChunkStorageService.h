@@ -87,6 +87,7 @@ public:
   /// Call from a background I/O job; later lookups are constant-time.
   void PrepareHighestChunkSliceIndex(const std::string &worldFolder,
                                     const IoCodecProbe *probe = nullptr) const;
+  static constexpr size_t kMaxCachedDiskIndexes = 4;
   IoDiskIndexStorage InspectDiskIndexStorage() const;
   bool RemoveChunkSliceFromDisk(const std::string &worldFolder,
                                 glm::ivec3 chunkCoord,
@@ -189,6 +190,7 @@ private:
   struct DiskTerrainColumnIndex
   {
     bool initialized{false};
+    uint64_t last_access{0};
     std::unordered_map<DiskTerrainColumnKey, int,
                        DiskTerrainColumnKeyHash>
         highest_cy;
@@ -202,6 +204,9 @@ private:
   IUChunkSerializer &MutableSerializer(ChunkDiskFormat format);
 
   std::string HighestChunkSliceIndexKey(const std::string &worldFolder) const;
+  DiskTerrainColumnIndex &FindOrPrepareDiskIndex(
+      const std::string &worldFolder, const std::string &cacheKey,
+      IoCodecStorage *directoryPeak = nullptr) const;
   void BuildHighestChunkSliceIndex(const std::string &worldFolder,
                                    DiskTerrainColumnIndex &index,
                                    IoCodecStorage *directory_peak = nullptr) const;
@@ -220,6 +225,7 @@ private:
   UBinaryChunkSerializer BinarySerializer;
   std::unordered_set<glm::ivec3, IVec3Hash> PendingSaveColumns;
   mutable std::mutex HighestChunkSliceCacheMutex;
+  mutable uint64_t DiskIndexAccessSequence{0};
   mutable std::unordered_map<std::string, DiskTerrainColumnIndex>
       HighestChunkSliceIndexByFolder;
 };
