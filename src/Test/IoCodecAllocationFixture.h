@@ -4,10 +4,12 @@
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
 #include "Core/Memory/NameStorageSource.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Chunks/Chunk.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include <fstream>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <sstream>
 #include <stdexcept>
@@ -20,6 +22,125 @@ inline void Require(bool condition, const char *message)
 {
   if (!condition)
     throw std::runtime_error(message);
+}
+
+inline nlohmann::json CheckRuntimeIdAssignment()
+{
+  BlockDefinition definition;
+  definition.Name = "fixture_runtime_" + std::string(128, 'r');
+  constexpr auto expected_id = kRuntimeBlockIdMin;
+  size_t attempts = 0;
+  {
+    UBlockMergeRegistry merge;
+    merge.RegisterRuntimeBlock(definition, {});
+    observation::Scope allocations;
+    merge.Rebuild({}, nullptr, 16);
+    Require(merge.LookupBlockName(definition.Name) == expected_id, "assign the first runtime ID");
+    attempts = observation::State.attempts;
+  }
+  Require(attempts && !observation::State.live && !observation::State.blocks,
+          "the successful rebuild's observed backing retires");
+
+  for (size_t prefix = 0; prefix < attempts; ++prefix)
+  {
+    {
+      UBlockMergeRegistry merge;
+      merge.RegisterRuntimeBlock(definition, {});
+      bool refused = false;
+      {
+        observation::Scope allocations(prefix);
+        try { merge.Rebuild({}, nullptr, 16); }
+        catch (const std::bad_alloc &) { refused = true; }
+        Require(refused && observation::State.refusals == 1, "force one refusal within runtime ID assignment");
+      }
+      if (!merge.GetNameToId().empty() || !merge.GetCubeDescriptors().empty() || merge.HasBlockId(expected_id))
+        throw std::runtime_error("runtime ID binding changed after refusal prefix " + std::to_string(prefix));
+      merge.Rebuild({}, nullptr, 16);
+      const auto *reverse = merge.GetTypeNameById(expected_id);
+      Require(merge.LookupBlockName(definition.Name) == expected_id && reverse && *reverse == definition.Name &&
+                  merge.GetNameToId().size() == 1 && merge.GetCubeDescriptors().size() == 1,
+              "rebuild retry publishes matching name, ID and descriptor");
+    }
+    Require(!observation::State.live && !observation::State.blocks, "runtime refusal backing retires with its registry");
+  }
+  return {{"refusals", attempts}, {"stable_retry_id", expected_id}};
+}
+
+inline nlohmann::json CheckSyntheticRegistry()
+{
+  const std::string name = "stored_block_" + std::string(127, 'n');
+  constexpr auto first_id = kRuntimeBlockIdMin;
+  constexpr auto next_id = static_cast<BlockId>(first_id + 1);
+  size_t attempts = 0;
+  size_t peak = 0;
+  size_t refusal_backing = 0;
+  {
+    UBlockMergeRegistry merge;
+    Require(merge.ResolveName("existing_fixture") == first_id, "seed the first synthetic ID");
+    observation::Scope allocations;
+    Require(merge.ResolveName(name) == next_id, "publish the next synthetic ID");
+    attempts = observation::State.attempts;
+    peak = observation::State.peak;
+  }
+  Require(attempts && !observation::State.live && !observation::State.blocks,
+          "the successful registry's observed backing retires");
+
+  for (size_t prefix = 0; prefix < attempts; ++prefix)
+  {
+    {
+      UBlockMergeRegistry merge;
+      Require(merge.ResolveName("existing_fixture") == first_id, "seed the before-refusal catalog");
+      bool refused = false;
+      {
+        observation::Scope allocations(prefix);
+        try { (void)merge.ResolveName(name); }
+        catch (const std::bad_alloc &) { refused = true; }
+        Require(refused && observation::State.refusals == 1, "force one refusal in synthetic publication");
+      }
+      if (merge.HasBlock(name) || merge.HasBlockId(next_id) || merge.ResolveName("existing_fixture") != first_id ||
+          merge.GetNameToId().size() != 1 || merge.GetCubeDescriptors().size() != 1)
+        throw std::runtime_error("synthetic catalog changed after refusal prefix " + std::to_string(prefix));
+      refusal_backing = std::max(refusal_backing, observation::State.live);
+      Require(merge.ResolveName(name) == next_id && merge.GetCubeDescriptors().back().Name == name,
+              "retry publishes one descriptor at the same ID");
+      const auto *reverse = merge.GetTypeNameById(next_id);
+      Require(reverse && *reverse == name && merge.GetNameToId().size() == 2 && merge.GetCubeDescriptors().size() == 2,
+              "retry publishes each name, ID and descriptor exactly once");
+    }
+    Require(!observation::State.live && !observation::State.blocks,
+            "refused publication and retries leave no observed backing after retirement");
+  }
+
+  constexpr auto last_id = (std::numeric_limits<BlockId>::max)();
+  auto merge = std::make_shared<UBlockMergeRegistry>();
+  UBlockRegistry blocks(nullptr);
+  blocks.SetMergeRegistry(merge);
+  const auto stored_name = [](uint32_t id) { return "fixture_saved_" + std::to_string(id); };
+  for (uint32_t id = first_id; id <= last_id; ++id)
+    Require(merge->ResolveName(stored_name(id)) == id, "allocate the exact remaining synthetic ID");
+  constexpr size_t count = size_t{last_id} - first_id + 1;
+  const glm::ivec3 coord{0};
+  UJsonChunkSerializer codec;
+  const auto decode = [&](const std::string &type) {
+    std::istringstream source(R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":")" + type + R"("}]})");
+    return codec.DeserializeStream(source, coord, blocks);
+  };
+  for (int i = 0; i < 32; ++i)
+    Require(!decode("fixture_extra_" + std::to_string(i)).HasDecodedTerrainFrame(coord),
+            "unknown legacy names cannot publish a chunk after ID exhaustion");
+  for (const auto id : {first_id, static_cast<BlockId>(last_id - 1), last_id})
+  {
+    const auto type = stored_name(id);
+    const auto decoded = decode(type);
+    const auto *reverse = merge->GetTypeNameById(id);
+    Require(decoded.HasDecodedTerrainFrame(coord) && decoded.GetBlock(coord) == id && reverse && *reverse == type,
+            "exhaustion preserves existing chunk names and numeric IDs");
+  }
+  Require(merge->GetCubeDescriptors().size() == count && merge->GetNameToId().size() == count,
+          "refused names do not grow the saturated catalog");
+  return {{"first_id", first_id}, {"last_id", last_id}, {"entries", count},
+          {"refused_names", 32}, {"allocation_refusals", attempts}, {"allocation_peak", peak},
+          {"refusal_retained_backing", refusal_backing}};
 }
 
 struct CapturedRequest

@@ -5,6 +5,7 @@
 #include "Core/Memory/NameStorageSource.h"
 #include "Core/Memory/RootStorageSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
+#include "ResourcePacks/BlockMergeRegistry.h"
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
@@ -779,6 +780,44 @@ struct AsyncIoStorageProbe
             {"trailing_syntax_rejected", true}, {"outstanding_after", io.GetOutstandingLoadCount()}};
   }
 
+  static nlohmann::json CheckLegacySyntheticJson(const std::filesystem::path &root)
+  {
+    UChunkStorageService storage;
+    const auto folder = root.string();
+    const glm::ivec3 coord{2, -2, 2};
+    const auto cell = coord * CHUNK_SIZE;
+    const auto path = storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Json);
+    std::filesystem::create_directories(std::filesystem::path(path).parent_path());
+    const std::string name = "fixture_legacy_missing_block";
+    {
+      std::ofstream file(path, std::ios::binary);
+      file << R"({"voxels":[{"lx":0,"ly":0,"lz":0,"type":")" << name << R"("}]})";
+      file.close();
+      Require(file.good(), "write the physical legacy synthetic chunk");
+    }
+    auto merge = std::make_shared<UBlockMergeRegistry>();
+    UBlockRegistry registry(nullptr);
+    registry.SetMergeRegistry(merge);
+    UAsyncChunkIO io;
+    Require(io.RequestLoad(coord, storage, registry, folder, {coord, 1}, {}, 820, false) &&
+                io.WaitIdleFor(std::chrono::seconds(8)), "resolve the legacy name on the disk worker");
+    constexpr BlockId id = kRuntimeBlockIdMin;
+    {
+      const auto ready = io.DrainLoads();
+      Require(ready.size() == 1 && ready.front().success && ready.front().decodedBuffer &&
+                  ready.front().decodedBuffer->HasDecodedTerrainFrame(coord) &&
+                  ready.front().decodedBuffer->GetBlock(cell) == id,
+              "the worker decodes the new synthetic ID");
+    }
+    UBlockWorld cold;
+    const auto *reverse = merge->GetTypeNameById(id);
+    Require(storage.LoadChunk(coord, cold, folder, registry) == 1 && cold.GetBlock(cell) == id &&
+                merge->LookupBlockName(name) == id && reverse && *reverse == name &&
+                merge->GetCubeDescriptors().size() == 1 && merge->GetCubeDescriptors().front().Name == name &&
+                !io.GetOutstandingLoadCount(), "cold reload reuses the same complete catalog entry");
+    return {{"status", "PASS"}, {"id", id}, {"entries", 1}, {"worker_decode", true}, {"cold_reload", true}};
+  }
+
   static nlohmann::json CheckPoolLifetime(const std::filesystem::path &shutdown,
                                          const std::string &folder, glm::ivec3 coord,
                                          UChunkStorageService &storage, UBlockRegistry &registry)
@@ -1021,6 +1060,7 @@ struct AsyncIoStorageProbe
             {"binary_read_envelope", CheckBinaryReadEnvelope(root / "binary-read-envelope", registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"json_streaming", CheckStreamingJson(root / "json-streaming", registry)},
+            {"legacy_synthetic_json", CheckLegacySyntheticJson(root / "legacy-synthetic-json")},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},
             {"active_worker_storage_complete", false}};

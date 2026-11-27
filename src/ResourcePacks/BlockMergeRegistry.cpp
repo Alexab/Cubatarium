@@ -9,15 +9,55 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <set>
 #include <shared_mutex>
+#include <type_traits>
 #include <unordered_set>
 
 namespace cutum
 {
 
 namespace fs = std::filesystem;
+
+namespace
+{
+BlockId NextRuntimeBlockId(const std::vector<MergedCubeDesc> &descriptors) noexcept
+{
+  // Runtime descriptors are appended in increasing ID order after the pack IDs.
+  const uint32_t next = descriptors.empty() ? kRuntimeBlockIdMin : uint32_t{descriptors.back().Id} + 1;
+  if (next > (std::numeric_limits<BlockId>::max)())
+    return BLOCK_AIR;
+  return std::max(kRuntimeBlockIdMin, static_cast<BlockId>(next));
+}
+
+template<class PublishDefinition>
+void PublishBlockBinding(const std::string &name, MergedCubeDesc &&descriptor,
+                         std::unordered_map<std::string, BlockId> &names,
+                         std::unordered_map<BlockId, std::string> &ids,
+                         std::vector<MergedCubeDesc> &descriptors,
+                         PublishDefinition publishDefinition)
+{
+  // The caller holds the catalog lock and supplies an unused name and ID.
+  const BlockId id = descriptor.Id;
+  try
+  {
+    names.emplace(name, id);
+    ids.emplace(id, name);
+    descriptors.push_back(std::move(descriptor));
+    publishDefinition();
+  }
+  catch (...)
+  {
+    if (!descriptors.empty() && descriptors.back().Id == id)
+      descriptors.pop_back();
+    ids.erase(id);
+    names.erase(name);
+    throw;
+  }
+}
+} // namespace
 
 const std::array<std::string_view,18> UBlockMergeRegistry::kTierAWorldgenNames =
     {"bedrock", "stone", "dirt", "grass",    "sand",      "sandstone",
@@ -308,16 +348,13 @@ void UBlockMergeRegistry::AssignRuntimeIds()
                 << name << "' and '" << IdToName.at(id) << "'" << std::endl;
       return false;
     }
-    entry.Definition.Id = id;
-    NameToId[name] = id;
-    IdToName[id] = name;
-
     MergedCubeDesc desc;
     desc.Name = name;
     desc.Id = id;
     desc.Stems = entry.Stems;
     desc.AnimFrames = std::max(1, entry.Definition.Animation.FrameCount);
-    CubeDescs.push_back(desc);
+    PublishBlockBinding(name, std::move(desc), NameToId, IdToName, CubeDescs,
+                        [&] { entry.Definition.Id = id; });
     return true;
   };
 
@@ -378,11 +415,9 @@ void UBlockMergeRegistry::AssignRuntimeIds()
     {
       continue;
     }
-    BlockId runtimeId = kRuntimeBlockIdMin;
-    for (const auto &idPair : IdToName)
-    {
-      runtimeId = std::max(runtimeId, static_cast<BlockId>(idPair.first + 1));
-    }
+    const BlockId runtimeId = NextRuntimeBlockId(CubeDescs);
+    if (runtimeId == BLOCK_AIR)
+      break;
     registerBlock(pair.first, pair.second, runtimeId);
   }
 }
@@ -425,8 +460,13 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
     return BLOCK_AIR;
   }
 
+  const BlockId nextId = NextRuntimeBlockId(CubeDescs);
+  if (nextId == BLOCK_AIR)
+    return BLOCK_AIR;
+
   MergedEntry entry;
   entry.Definition.Name = name;
+  entry.Definition.Id = nextId;
   entry.Definition.Physics = BlockPhysicsProfile::Solid();
   entry.Definition.Types = {"unknown"};
   entry.OwnerPackId = "synthetic";
@@ -438,23 +478,16 @@ BlockId UBlockMergeRegistry::CreateSyntheticBlock(const std::string &name)
           PlaceholderCache->GetOrCreateStem(name, face, PlaceholderTileSize);
     }
   }
-  BlocksByName[name] = entry;
-  BlockId nextId = kRuntimeBlockIdMin;
-  for (const auto &pair : IdToName)
-  {
-    nextId = std::max(nextId, static_cast<BlockId>(pair.first + 1));
-  }
-  BlocksByName[name].Definition.Id = nextId;
-  NameToId[name] = nextId;
-  IdToName[nextId] = name;
-
   MergedCubeDesc desc;
   desc.Name = name;
   desc.Id = nextId;
-  desc.Stems = BlocksByName[name].Stems;
-  desc.AnimFrames =
-      std::max(1, BlocksByName[name].Definition.Animation.FrameCount);
-  CubeDescs.push_back(desc);
+  desc.Stems = entry.Stems;
+  desc.AnimFrames = std::max(1, entry.Definition.Animation.FrameCount);
+
+  // Publish the definition after its index and descriptor backing is ready.
+  static_assert(std::is_nothrow_move_assignable_v<MergedEntry>);
+  PublishBlockBinding(name, std::move(desc), NameToId, IdToName, CubeDescs,
+                      [&] { BlocksByName.insert_or_assign(name, std::move(entry)); });
   return nextId;
 }
 
@@ -633,10 +666,13 @@ void UBlockMergeRegistry::PopulateBlockDefinitionStorage(
 {
   std::shared_lock lock(CatalogMutex);
   std::unordered_map<BlockId, BlockDefinition> byId;
-  byId.reserve(BlocksByName.size());
+  byId.reserve(NameToId.size());
   for (const auto &pair : BlocksByName)
   {
-    const BlockId id = NameToId.at(pair.first);
+    const auto indexed = NameToId.find(pair.first);
+    if (indexed == NameToId.end())
+      continue;
+    const BlockId id = indexed->second;
     const auto entry=byId.insert_or_assign(id,pair.second.Definition).first;
     entry->second.Id = id;
   }

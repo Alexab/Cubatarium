@@ -3580,11 +3580,19 @@
       "receipt": "build/desktop-msvc/s4-q10-json-limits-acceptance.json",
       "scope": "The pinned Windows Release terrain lexer validates arbitrary ignored string lengths using a 16-byte prefix. The parser accepts up to 16385 containers including the root and 4096 bytes per number. A legacy name can carry 65536 decoded bytes; the reader keeps one additional byte to identify oversize. The voxel can still use a valid numeric ID or a subsequent valid type. Invalid Unicode or a raw null suffix prevents terrain certification. Ordinary focused allocation observations cover exact limits and excess cases. The physical sync and worker fixture reads a large ignored string and retains its previous compatibility and retirement checks.",
       "remaining": "The decoder's final requested-byte composition must include registry lookup and synthetic names, error scratch, terrain results and simultaneous read owners. Compose those terms with write snapshots, serialized backing, lighting receipts, flags, per-folder index contents and Q01.L2. The full native/performance/memory matrix and original S0–S6 acceptance requirements remain in scope. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.SYNTHETIC_REGISTRY",
+      "status": "SCOPED_Q10_SYNTHETIC_REGISTRY_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_SYNTHETIC_REGISTRY_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-synthetic-final-acceptance.json",
+      "scope": "Legacy terrain names retain their established synthetic lookup. Synthetic admission stops at the 16-bit runtime limit, admits 61440 sequential runtime IDs and preserves their name and reverse mappings. Synthetic and rebuild ID bindings roll back all index and descriptor rows on a failed publication. Ordinary allocation refusal prefixes preserve existing IDs and permit exact retries. The physical disk worker and synchronous reload use the same registry entry.",
+      "remaining": "Retained placeholder cache bytes, qualified lookup scratch, synthetic strings and allocator capacity must join the Q10 byte composition. Whole-catalog rebuild rollback and side effects of successful per-voxel lookups before final JSON certification remain separate. Complete the write snapshot and encoded payload, receipts, flags, file indexes and Q01.L2, and retain the full native/performance/memory matrix and S0–S6 criteria. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Границы токенов и вложенности проверены для чтения чанков JSON. Далее учесть обращения к реестру имён и синтетические блоки, снимки, выход записи и метаданные, затем замкнуть пик I/O вместе с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Подтверждён конечный диапазон ID и откат записей реестра при отказе. Далее свести память имён, синтетических блоков и текстур с пиком чтения. Проверить снимки, выход записи, квитанции и метаданные, затем замкнуть пик I/O с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

@@ -1,0 +1,161 @@
+{
+  "schema": "s4-q10-synthetic-final.v1",
+  "status": "SCOPED_Q10_SYNTHETIC_REGISTRY_PASS_Q10_OPEN",
+  "baseline_commit": "eb8341f9b5343bc423b81ce3a2ccc85a38efe528",
+  "scope": "Legacy terrain names retain their established synthetic lookup. Synthetic admission stops at the 16-bit runtime limit, admits 61440 sequential runtime IDs and preserves their name and reverse mappings. Synthetic and rebuild ID bindings roll back all index and descriptor rows on a failed publication. Ordinary allocation refusal prefixes preserve existing IDs and permit exact retries. The physical disk worker and synchronous reload use the same registry entry.",
+  "remaining": "Retained placeholder cache bytes, qualified lookup scratch, synthetic strings and allocator capacity must join the Q10 byte composition. Whole-catalog rebuild rollback and side effects of successful per-voxel lookups before final JSON certification remain separate. Complete the write snapshot and encoded payload, receipts, flags, file indexes and Q01.L2, and retain the full native/performance/memory matrix and S0–S6 criteria. 23 of 42 packages complete.",
+  "physical_fixture": {
+    "decoded_ready_bytes": 5304,
+    "duplicate_members": true,
+    "file_bytes": 9503137,
+    "ignored_string_bytes": 131072,
+    "legacy_names": true,
+    "outstanding_after": 0,
+    "raw_buffer_bytes": 0,
+    "repeated_voxels": 32768,
+    "status": "PASS",
+    "trailing_syntax_rejected": true,
+    "withheld_and_retried": true
+  },
+  "ordinary_peak": {
+    "beyond_depth_peak": 9996,
+    "compact_error_peak": 5564,
+    "compact_literal_peak": 5260,
+    "compact_stream_peak": 5260,
+    "deep_peak": 9996,
+    "default_raw_diagnostic": true,
+    "dump_additional": 23187,
+    "dump_peak": 370929,
+    "literal_error_peak": 5564,
+    "literal_stream_bytes": 1310777,
+    "literal_stream_peak": 5260,
+    "long_token_peak": 5292,
+    "nesting": 16384,
+    "padded_stream_bytes": 9371690,
+    "padded_stream_peak": 5260,
+    "parse_additional": 26092,
+    "parse_peak": 26092,
+    "read_limits": {
+      "huge_numeric_peak": 15323,
+      "legacy_name_bytes": 65536,
+      "legacy_name_peak": 114226,
+      "long_key_peak": 5292,
+      "numeric_bytes": 4096,
+      "numeric_peak": 15323,
+      "numeric_precedence_peak": 114226,
+      "over_legacy_name_peak": 114226,
+      "over_numeric_peak": 15323,
+      "short_token_peak": 5292
+    }
+  },
+  "baseline_refusals": {
+    "synthetic": {
+      "witness": "synthetic catalog changed after refusal prefix 9",
+      "exe_sha256": "1218298731c027dd4f1775c48a9d544618abfc89394b34da95d2281494c30034"
+    },
+    "runtime_assignment": {
+      "witness": "runtime ID binding changed after refusal prefix 18",
+      "exe_sha256": "fac23661c9529f55b50a2d7ced52ca8af7c7005370c3a88254e4b2921e20e0bc"
+    }
+  },
+  "synthetic_registry": {
+    "allocation_peak": 2432,
+    "allocation_refusals": 15,
+    "entries": 61440,
+    "first_id": 4096,
+    "last_id": 65535,
+    "refusal_retained_backing": 480,
+    "refused_names": 32
+  },
+  "runtime_assignment": {
+    "refusals": 22,
+    "stable_retry_id": 4096
+  },
+  "physical_synthetic": {
+    "cold_reload": true,
+    "entries": 1,
+    "id": 4096,
+    "status": "PASS",
+    "worker_decode": true
+  },
+  "profiles": {
+    "flat": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 861,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED",
+      "streamed_disk_fixture": "PASS",
+      "legacy_synthetic_json": "PASS"
+    },
+    "full": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 685,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "5da1ead596ce2e935c895aecfa7e4ba1b061d3fd6ffc1b8b473becdef37b808d",
+  "exe_sha256": "557005d9243c8124508c7ec9cefd68bfb16b864f95365ddb4d74b96d8c10d1ab",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "worldgen_scatter_block_resolve_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-synthetic-final-provenance.json": "b0fd27251ea70246dbba1d520f665b5b73bea713cdb61fce801155965abd27ae",
+    "build/desktop-msvc/s4-q10-synthetic-final-build.log": "0261b7707b53e087cfb24264a0ad23941b4201fadd1b8fd85eccf688425b3813",
+    "build/desktop-msvc/s4-q10-synthetic-final-regressions.json": "369bafdedb26613bf02b3021b7910b89008701d7a45d3553d1cf2022dd87fcb6",
+    "build/desktop-msvc/s4-q10-synthetic-final-regression-build.log": "aa9f41eb748b9b3ed803d3ca549870d0648dcd79ba3733b57752906bcb3934e3",
+    "build/desktop-msvc/s4-q10-synthetic-final-io-storage.json": "a0ee5a6db0374af221927aad02f17702e27e1f50802b4275d814c32006476bb4",
+    "build/desktop-msvc/s4-q10-synthetic-before.log": "599a34f357f7ffd688c2e2a6b7d8d78dcf90c61d80b2d7a3424a670bee729ca5",
+    "build/desktop-msvc/s4-q10-synthetic-before.exe": "1218298731c027dd4f1775c48a9d544618abfc89394b34da95d2281494c30034",
+    "build/desktop-msvc/s4-q10-synthetic-before-exe.sha256": "a1b3c81bb260958f6423b1566134647786bd2a54f4d0ecce5e2a593bd604c86c",
+    "build/desktop-msvc/s4-q10-synthetic-before-build.log": "e79d0bf2f6e86a03e338932911ccc9ba6224d10d6476ed6b5fd974ba2b56085d",
+    "build/desktop-msvc/s4-q10-synthetic-assignment-before.log": "1acced8890c11c597bb0385f0f76c878d1d72b8f08ce103eb8110c888775b5ab",
+    "build/desktop-msvc/s4-q10-synthetic-assignment-before.exe": "fac23661c9529f55b50a2d7ced52ca8af7c7005370c3a88254e4b2921e20e0bc",
+    "build/desktop-msvc/s4-q10-synthetic-assignment-before-exe.sha256": "87d6b50ddb75ff7087241a97188bd34dada9b43492f3a312b62d6b71669e6d20",
+    "build/desktop-msvc/s4-q10-synthetic-assignment-before-build.log": "e26d1c8c7d6edf2712e61f240d073888681fd59270583a443e3b7ad45a3fe794",
+    "build/desktop-msvc/s4-q10-synthetic-final-async_io_storage_test.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-synthetic-final-application_operation_storage_test.log": "6e1e133a1de8b971e56077aef2951d75199e1d52b33799c0875067db33b54ec8",
+    "build/desktop-msvc/s4-q10-synthetic-final-catalog_worker_retirement_test.log": "d1af71fd1ebff9c65132a3cb05da6e752acb48533dca66616db9d71c3234cbda",
+    "build/desktop-msvc/s4-q10-synthetic-final-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-synthetic-final-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-synthetic-final-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-synthetic-final-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-synthetic-final-worldgen_scatter_block_resolve_test.log": "a9f0e2c4ed7c2d6ddfa08f094094a19cc877919f5f96b57ed18df792058c345c",
+    "build/desktop-msvc/s4-q10-synthetic-final-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-synthetic-final-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-synthetic-final-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/route.json": "6e237d41ee3a559854a083c8f81418fda0c48dea7d8ec9145b89ddb7764411c3",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/smoke-verdict.json": "c1c52e0950a80c69eb8062accbaa8947cdce349fa93f624ec3c025d17574e805",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/flight_sim_report.json": "886b4e927e1028e725651aa5191baeba007f05f71e9e151e5e714d745f2b20da",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/desktop-normal-shutdown.json": "f78c7a97eaaa9cf154aa062b139289cf209334155bde20c1369407de7b28e5e4",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/legacy-gates.json": "d3e3cbfb6affb011c8670dd16a87fd8a41012514a7dc945a042c2b873552e38a",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/generation-shutdown.json": "4f07ea290b16e0cf3d2928ad9e5d5db1245535331db8439a56f1df544ebd2f60",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat.log": "a5a96d085ceccd1befc8d1a9e47b922a343cb66a3d8ae794bc5793b267cbfac3",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/runner.log": "7fb5fac458d92ab33e8af93da7e93017c36a833cf23b37759062769aaeb55077",
+    "build/desktop-msvc/s4-q10-synthetic-final-flat/terrain-save-probe/report.json": "347e738aa53fd0525d75b0aef026253dfc3adcdd73f3337a540e863c09f0fff4",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/route.json": "78b26e552eae240ea1d49a83afec4a1f4bb6489181c9934c8423a9fc2786b217",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/smoke-verdict.json": "67af7d4826208cef459c2ba0892cc5afcb76fad318102a0fff86ab47347bcadb",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/flight_sim_report.json": "f0e94ae2d2948a2018db8b1ce57dd40753a6970879117b343e6b21e43e995065",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/desktop-normal-shutdown.json": "9a236bfd2a8a788d8ae976205f5d5f3c32fafc05a0da03eb4f1064e19ed6e7dc",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/legacy-gates.json": "536eb96df849d0185148abb1edd9acb82d5e4fc4a5ee0508f3ed338611054ea6",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-synthetic-final-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-synthetic-final-full.log": "16a6700b7fd8ef043c5f8c284457779b92aadd269dbd1526e9a1ca3378f0349f",
+    "build/desktop-msvc/s4-q10-synthetic-final-full/runner.log": "a3017d0984b8f00b9b27256aa3c5712abd4c360585b932c216901a355c598cc7"
+  }
+}
