@@ -2,6 +2,7 @@
 #include "App/Platform/Log.h"
 #include "Blocks/BlockDefinitionStorage.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Memory/NameStorageSource.h"
 #include "Core/Memory/RootStorageSource.h"
 #include "Core/Memory/WindowsCrtFileTables.h"
 #include "World/Core/BlockWorld.h"
@@ -272,6 +273,7 @@ struct AsyncIoStorageProbe
     const auto *receipt_encode = trace.FindCodec(IoCodecKind::ReceiptEncode, 201);
     const auto *receipt_write = trace.FindCodec(IoCodecKind::ReceiptWrite, 201);
     Require(read_codec && read_codec->input_bytes == raw->input_bytes &&
+                !read_codec->scratch_bytes && read_codec->stack_buffer_bytes == CHUNK_VOLUME &&
                 read_codec->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
                 write_codec && write_codec->scratch_bytes &&
                 write_codec->output_bytes == save->encoded_bytes &&
@@ -285,6 +287,7 @@ struct AsyncIoStorageProbe
             {"decoded_backing", decoded->decoded_bytes}, {"binary_encoded", save->encoded_bytes},
             {"flags_encoded", flags_encoded->encoded_bytes}, {"samples", trace.used},
             {"binary_read_scratch", read_codec->scratch_bytes},
+            {"binary_read_inline_light", read_codec->stack_buffer_bytes},
             {"binary_write_scratch", write_codec->scratch_bytes},
             {"flags_dom", flags_encoded->codec.scratch_bytes},
             {"receipt_write_dom", receipt_encode->scratch_bytes},
@@ -333,6 +336,120 @@ struct AsyncIoStorageProbe
     Require(io.GetOutstandingLoadCount() == 0, "last returned result releases the last load credit");
     return {{"status", "PASS"}, {"limit", cap}, {"queued_while_full", 1},
             {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0}};
+  }
+
+  static nlohmann::json CheckBinaryReadEnvelope(const std::filesystem::path &root, UBlockRegistry &registry)
+  {
+    using Kind = AsyncIoJobKind;
+    using Stage = AsyncIoWorkerStage;
+    constexpr auto limit = UBinaryChunkSerializer::kMaxFrameBytes;
+    const auto raw_request_max = limit + NameStorageAlignmentSlack(limit);
+    const glm::ivec3 coord(1, -2, 2);
+    const glm::ivec3 first = coord * CHUNK_SIZE;
+    UChunk chunk(coord);
+    for (int n = 0; n < CHUNK_VOLUME; ++n)
+    {
+      const glm::ivec3 cell(n % CHUNK_SIZE, n / CHUNK_SIZE % CHUNK_SIZE,
+                            n / (CHUNK_SIZE * CHUNK_SIZE));
+      chunk.SetBlockLocal(cell, static_cast<BlockId>(n + 8));
+      chunk.SetFluidLocal(cell, FluidCellState::Source());
+    }
+    std::array<uint8_t, CHUNK_VOLUME> light{};
+    light.fill(91);
+    chunk.ReplaceLightData(light);
+    chunk.SetWeatherState(0.5f, 12.25);
+
+    UChunkStorageService storage;
+    auto maximum = storage.SerializeChunk(coord, chunk, registry).bytes;
+    const auto authored_bytes = maximum.size();
+    constexpr size_t palette_start = 19;
+    constexpr size_t authored_palette = CHUNK_VOLUME + 1;
+    constexpr size_t maximum_palette = std::numeric_limits<uint16_t>::max();
+    maximum.insert(maximum.begin() + palette_start + authored_palette * 2,
+                   (maximum_palette - authored_palette) * 2, 0);
+    maximum[17] = maximum[18] = 255;
+    Require(maximum.size() == limit, "authored maximum has a complete 16-bit palette and one run per cell");
+    const auto folder = root.string();
+    const auto path = storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Binary);
+    AllocatorSourcePhase phase(NewRootStorageEpoch(), 1);
+    WorkerTrace trace;
+    const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
+    UAsyncChunkIO io;
+    io.WorkerProbe = &probe;
+    const auto load = [&](uint64_t demand) {
+      Require(io.RequestLoad(coord, storage, registry, folder, {coord, 1}, {}, demand) &&
+                  io.WaitIdleFor(std::chrono::seconds(5)), "the disk load completes on its actual worker");
+      auto ready = io.DrainLoads();
+      Require(ready.size() == 1 && !ready.front().payload.capacity(),
+              "a ready result does not own the file bytes");
+      return ready;
+    };
+    constexpr std::array<size_t, 4> removed_bytes{
+        2 * (4 + CHUNK_VOLUME) + 10, 4 + CHUNK_VOLUME + 10, 10, 0};
+    nlohmann::json versions = nlohmann::json::array();
+    size_t max_decoded = 0;
+    size_t max_decoding = 0;
+    for (size_t i = 0; i < removed_bytes.size(); ++i)
+    {
+      const auto version = static_cast<uint8_t>(i + 1);
+      auto bytes = std::vector<uint8_t>(maximum.begin(), maximum.end() - removed_bytes[i]);
+      bytes[4] = version;
+      Require(storage.WriteBytesAtomically(path, bytes), "write an actual compatible frame");
+      const auto ready = load(version);
+      const auto &result = ready.front();
+      const auto *raw = trace.Find(Kind::Load, Stage::ReadBytes, version);
+      const auto *decoded = trace.Find(Kind::Load, Stage::Decoded, version);
+      const auto *published = trace.Find(Kind::Load, Stage::BeforePublish, version);
+      const auto *codec = trace.FindCodec(IoCodecKind::BinaryRead, version);
+      Require(result.success && result.decodedBuffer && result.decodedBuffer->HasDecodedTerrainFrame(coord) &&
+                  result.decodedBuffer->GetBlock(first) == 8 &&
+                  result.decodedBuffer->GetBlock(first + glm::ivec3(CHUNK_SIZE - 1)) == CHUNK_VOLUME + 7 &&
+                  (version < 2 || result.decodedBuffer->GetFluidPacked(first) == PackFluidCellState(FluidCellState::Source())) &&
+                  (version < 3 || result.decodedBuffer->GetLightPacked(first) == 91),
+              "all historical versions retain their expected terrain fields");
+      Require(raw && decoded && published && codec &&
+                  raw->input_bytes == bytes.size() + NameStorageAlignmentSlack(bytes.size()) &&
+                  !raw->decoded_bytes && decoded->input_bytes == raw->input_bytes &&
+                  !codec->scratch_bytes && codec->stack_buffer_bytes == (version >= 3 ? CHUNK_VOLUME : 0) &&
+                  !published->input_bytes && published->decoded_bytes == decoded->decoded_bytes,
+              "a worker decodes the input in place and retires it before publication");
+      const auto requests = result.decodedBuffer->GetAllocationSnapshot();
+      max_decoded = std::max(max_decoded, published->decoded_bytes);
+      max_decoding = std::max(max_decoding, published->decoded_bytes - requests.live_bytes + requests.peak_bytes);
+      versions.push_back({{"version", version}, {"file_bytes", bytes.size()}, {"raw_request_bytes", raw->input_bytes},
+          {"decoded_ready_bytes", published->decoded_bytes}, {"decoder_table_peak", requests.peak_bytes}});
+    }
+    UBlockWorld cold;
+    Require(storage.LoadChunk(coord, cold, folder, registry) == CHUNK_VOLUME && cold.GetBlock(first) == 8,
+            "the same maximum frame is accepted by the synchronous storage route");
+    auto oversized = maximum;
+    oversized.push_back(0);
+    Require(storage.WriteBytesAtomically(path, oversized), "write an overlong test frame");
+    {
+      const auto rejected = load(5);
+      const auto *raw = trace.Find(Kind::Load, Stage::ReadBytes, 5);
+      Require(!rejected.front().success && !rejected.front().decodedBuffer && raw && !raw->input_bytes &&
+                  !trace.Find(Kind::Load, Stage::Decoded, 5) &&
+                  storage.LoadChunk(coord, cold, folder, registry) < 0 &&
+                  cold.GetChunkManager().HasUnresolvedTerrainColumnRead(coord) && cold.GetBlock(first) == 8,
+              "both routes refuse an overlong file and keep existing terrain protected");
+    }
+    Require(storage.WriteBytesAtomically(path, maximum), "restore the valid test frame");
+    {
+      const auto recovered = load(6);
+      Require(recovered.front().success && recovered.front().decodedBuffer &&
+                  recovered.front().decodedBuffer->HasDecodedTerrainFrame(coord),
+              "a subsequent valid read recovers after the test refusal");
+    }
+    const auto workers = io.GetLoadWorkerCount();
+    const auto slots = UAsyncChunkIO::kMaxOutstandingLoads;
+    Require(!trace.overflow && io.GetOutstandingLoadCount() == 0, "all binary read results release their slots");
+    return {{"status", "PASS"}, {"compatible", versions}, {"frame_limit", limit}, {"authored_bytes", authored_bytes},
+            {"oversize_rejected", true}, {"valid_retry", true}, {"heap_palette_bytes", 0},
+            {"raw_request_max", raw_request_max}, {"ready_backing_max", max_decoded},
+            {"active_decoded_peak", max_decoding}, {"worker_limit", workers},
+            {"binary_read_payload_upper", slots * max_decoded + workers * (raw_request_max + max_decoding - max_decoded)},
+            {"outstanding_after", io.GetOutstandingLoadCount()}};
   }
 
   static nlohmann::json CheckIndexWarmup(const std::filesystem::path &root, UBlockRegistry &registry)
@@ -806,6 +923,7 @@ struct AsyncIoStorageProbe
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
             {"load_credits", CheckLoadCredits(folder, coord, storage, registry)},
             {"index_warmup", CheckIndexWarmup(root / "index-warmup", registry)},
+            {"binary_read_envelope", CheckBinaryReadEnvelope(root / "binary-read-envelope", registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},

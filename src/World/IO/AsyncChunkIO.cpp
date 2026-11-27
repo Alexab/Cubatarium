@@ -497,8 +497,8 @@ void UAsyncChunkIO::LoadJob::operator()() const
   const auto read_started =
       trace_io ? std::chrono::steady_clock::now()
                : std::chrono::steady_clock::time_point{};
-  result.payload.assign(std::istreambuf_iterator<char>(file),
-                        std::istreambuf_iterator<char>());
+  result.payload = UChunkStorageService::ReadChunkBytes(file, format);
+  file.close();
   observe(AsyncIoWorkerStage::ReadBytes);
   if (trace_io)
   {
@@ -520,7 +520,14 @@ void UAsyncChunkIO::LoadJob::operator()() const
     // actual read buffer so the normal codec/commit path must reject it.
     if (injectInvalidFrame)
     {
-      result.payload.push_back(format == ChunkDiskFormat::Json ? 'x' : 0);
+      if (format == ChunkDiskFormat::Binary)
+      {
+        // Change the saved X coordinate without reallocating the input.
+        constexpr size_t encoded_x = sizeof(UBinaryChunkSerializer::kMagic) + 1;
+        result.payload[result.payload.size() > encoded_x ? encoded_x : 0] ^= 1;
+      }
+      else
+        result.payload.push_back('x');
       result.injectedInvalidFrame = true;
     }
     const auto deserialize_started = std::chrono::steady_clock::now();

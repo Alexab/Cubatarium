@@ -218,7 +218,7 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                     const IoCodecProbe *probe) const
 {
   UChunkBuffer buffer;
-  if (bytes.size() < 4 + 1 + 12 + 2)
+  if (bytes.size() < 4 + 1 + 12 + 2 || bytes.size() > kMaxFrameBytes)
   {
     return buffer;
   }
@@ -244,28 +244,28 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   {
     return buffer;
   }
-  bool frame_valid = glm::ivec3(cx, cy, cz) == chunkCoord;
+  const bool coordinate_matches = glm::ivec3(cx, cy, cz) == chunkCoord;
 
   uint16_t paletteCount = 0;
-  if (!ReadU16(bytes, offset, paletteCount))
+  if (!ReadU16(bytes, offset, paletteCount) || !paletteCount ||
+      paletteCount > (bytes.size() - offset) / 2)
   {
     return buffer;
   }
 
-  std::vector<BlockId> palette;
-  palette.reserve(paletteCount);
-  for (uint16_t i = 0; i < paletteCount; ++i)
-  {
-    uint16_t rawId = 0;
-    if (!ReadU16(bytes, offset, rawId))
-    {
-      return buffer;
-    }
-    palette.push_back(static_cast<BlockId>(rawId));
-  }
+  const size_t palette_start = offset;
+  offset += size_t(paletteCount) * 2;
 
   uint32_t runCount = 0;
-  if (!ReadU32(bytes, offset, runCount))
+  if (!ReadU32(bytes, offset, runCount) || !runCount || runCount > CHUNK_VOLUME)
+  {
+    return buffer;
+  }
+  const size_t footer_bytes =
+      (version >= kVersionFluid ? 4 + CHUNK_VOLUME : 0) +
+      (version >= kVersionLight ? 4 + CHUNK_VOLUME : 0) +
+      (version >= kVersion ? 2 + 8 : 0);
+  if (bytes.size() - offset < size_t(runCount) * 4 + footer_bytes)
   {
     return buffer;
   }
@@ -298,20 +298,16 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
       buffer.Clear();
       return buffer;
     }
-    if (paletteIdx >= palette.size())
+    if (!length || paletteIdx >= paletteCount || length > CHUNK_VOLUME - filled)
     {
       buffer.Clear();
       return buffer;
     }
-    frame_valid &= length != 0;
-    const BlockId id = palette[paletteIdx];
+    size_t palette_entry = palette_start + size_t(paletteIdx) * 2;
+    BlockId id = BLOCK_AIR;
+    ReadU16(bytes, palette_entry, id);
     for (uint16_t i = 0; i < length; ++i)
     {
-      if (filled >= CHUNK_VOLUME || lz >= CHUNK_SIZE)
-      {
-        buffer.Clear();
-        return buffer;
-      }
       if (id != BLOCK_AIR)
       {
         const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + lx,
@@ -338,42 +334,33 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   if (version >= kVersionFluid)
   {
     uint32_t fluid_byte_count = 0;
-    if (!ReadU32(bytes, offset, fluid_byte_count))
+    if (!ReadU32(bytes, offset, fluid_byte_count) || fluid_byte_count != CHUNK_VOLUME)
     {
       buffer.Clear();
       return buffer;
     }
-    frame_valid &= fluid_byte_count == CHUNK_VOLUME;
-    if (fluid_byte_count == CHUNK_VOLUME)
+    int fx = 0;
+    int fy = 0;
+    int fz = 0;
+    for (uint32_t fi = 0; fi < fluid_byte_count; ++fi)
     {
-      if (offset + CHUNK_VOLUME > bytes.size())
+      const uint8_t packed = bytes[offset++];
+      if (packed != 0)
       {
-        buffer.Clear();
-        return buffer;
+        const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + fx,
+                                  chunkCoord.y * CHUNK_SIZE + fy,
+                                  chunkCoord.z * CHUNK_SIZE + fz);
+        buffer.SetFluidPacked(worldPos, packed);
       }
-      int fx = 0;
-      int fy = 0;
-      int fz = 0;
-      for (uint32_t fi = 0; fi < fluid_byte_count; ++fi)
+      ++fx;
+      if (fx >= CHUNK_SIZE)
       {
-        const uint8_t packed = bytes[offset++];
-        if (packed != 0)
+        fx = 0;
+        ++fy;
+        if (fy >= CHUNK_SIZE)
         {
-          const glm::ivec3 worldPos(chunkCoord.x * CHUNK_SIZE + fx,
-                                    chunkCoord.y * CHUNK_SIZE + fy,
-                                    chunkCoord.z * CHUNK_SIZE + fz);
-          buffer.SetFluidPacked(worldPos, packed);
-        }
-        ++fx;
-        if (fx >= CHUNK_SIZE)
-        {
-          fx = 0;
-          ++fy;
-          if (fy >= CHUNK_SIZE)
-          {
-            fy = 0;
-            ++fz;
-          }
+          fy = 0;
+          ++fz;
         }
       }
     }
@@ -382,24 +369,15 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
   if (version >= kVersionLight)
   {
     uint32_t light_byte_count = 0;
-    if (!ReadU32(bytes, offset, light_byte_count))
+    if (!ReadU32(bytes, offset, light_byte_count) || light_byte_count != CHUNK_VOLUME)
     {
       buffer.Clear();
       return buffer;
     }
-    frame_valid &= light_byte_count == CHUNK_VOLUME;
-    if (light_byte_count == CHUNK_VOLUME)
-    {
-      if (offset + CHUNK_VOLUME > bytes.size())
-      {
-        buffer.Clear();
-        return buffer;
-      }
-      std::array<uint8_t, CHUNK_VOLUME> light{};
-      std::memcpy(light.data(), bytes.data() + offset, CHUNK_VOLUME);
-      offset += CHUNK_VOLUME;
-      buffer.SetChunkLightData(chunkCoord, light);
-    }
+    std::array<uint8_t, CHUNK_VOLUME> light{};
+    std::memcpy(light.data(), bytes.data() + offset, CHUNK_VOLUME);
+    offset += CHUNK_VOLUME;
+    buffer.SetChunkLightData(chunkCoord, light);
   }
 
   if (version >= kVersion)
@@ -417,16 +395,18 @@ UBinaryChunkSerializer::Deserialize(const std::vector<uint8_t> &bytes,
                                 static_cast<double>(last_update_ms) / 1000.0);
   }
 
-  if (frame_valid && offset == bytes.size())
+  // A bounded decoded prefix can still carry geometry for diagnostics.
+  // Only the exact frame may be applied as terrain.
+  if (coordinate_matches && offset == bytes.size())
     buffer.MarkDecodedFrame(chunkCoord);
   if (probe)
   {
-    StlSourceStorage scratch, input;
-    scratch.Buffer(palette.capacity(), sizeof(BlockId));
+    StlSourceStorage input;
     input.Buffer(bytes.capacity(), sizeof(uint8_t));
-    probe->sample(probe->context, {IoCodecKind::BinaryRead, scratch.bytes.requested,
-                                  input.bytes.requested, buffer.GetOwnedAllocationBytes(), 0,
-                                  scratch.bytes.supported && input.bytes.supported});
+    probe->sample(probe->context, {IoCodecKind::BinaryRead, 0, input.bytes.requested,
+                                  buffer.GetOwnedAllocationBytes(),
+                                  version >= kVersionLight ? size_t(CHUNK_VOLUME) : 0,
+                                  input.bytes.supported});
   }
   return buffer;
 }

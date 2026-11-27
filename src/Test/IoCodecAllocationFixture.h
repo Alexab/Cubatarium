@@ -2,11 +2,13 @@
 
 #include "Test/OrdinaryNewObservation.h"
 #include "Blocks/BlockRegistry.h"
+#include "Core/Memory/NameStorageSource.h"
 #include "World/Chunks/Chunk.h"
 #include "World/IO/ChunkStorageService.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <sstream>
 #include <stdexcept>
 
 namespace cutum
@@ -68,7 +70,8 @@ inline void Check(const CapturedRequest &capture)
 {
   if (capture.calls != 1 || !capture.storage.supported ||
       capture.observed != capture.storage.scratch_bytes + capture.storage.output_bytes ||
-      !capture.storage.scratch_bytes || !capture.storage.output_bytes)
+      (capture.storage.kind != IoCodecKind::BinaryRead && !capture.storage.scratch_bytes) ||
+      !capture.storage.output_bytes)
     throw std::runtime_error("codec checkpoint differs from independently observed ordinary requests: " +
         std::to_string(static_cast<int>(capture.storage.kind)) + " " + Describe(capture).dump());
 }
@@ -116,6 +119,9 @@ inline nlohmann::json CheckCodecs()
       Require(!observation::State.live && !observation::State.blocks, "decoded allocations retire");
     }
     Check(decode);
+    if (codec->GetFormat() == ChunkDiskFormat::Binary)
+      Require(!decode.storage.scratch_bytes && decode.storage.stack_buffer_bytes == CHUNK_VOLUME,
+              "binary decode borrows its palette and uses one local light plane");
     Require(encode.operation_peak >= encode.observed && decode.operation_peak >= decode.observed,
             "ordinary peak covers the retained checkpoint");
     auto phases = nlohmann::json::object();
@@ -127,6 +133,31 @@ inline nlohmann::json CheckCodecs()
               "real JSON parse and dump publish their allocation windows");
       phases = {{"parse_peak", parse.peak}, {"parse_additional", parse.additional},
                 {"dump_peak", dump.peak}, {"dump_additional", dump.additional}};
+    }
+    else
+    {
+      constexpr auto limit = UBinaryChunkSerializer::kMaxFrameBytes;
+      const auto raw_request = limit + NameStorageAlignmentSlack(limit);
+      std::istringstream accepted(std::string(limit, 'b'));
+      std::istringstream rejected(std::string(limit + 1, 'b'));
+      size_t file_input_peak = 0;
+      {
+        observation::Scope allocations;
+        {
+          const auto input = UChunkStorageService::ReadChunkBytes(accepted, ChunkDiskFormat::Binary);
+          Require(input.size() == limit && observation::State.live == raw_request,
+                  "the reader allocates one exact input buffer");
+        }
+        file_input_peak = observation::State.peak;
+        Require(!observation::State.live && file_input_peak == raw_request, "the exact file input returns all requests");
+      }
+      {
+        observation::Scope allocations(0);
+        Require(UChunkStorageService::ReadChunkBytes(rejected, ChunkDiskFormat::Binary).empty() &&
+                    !observation::State.attempts, "overlong input is refused before requesting memory");
+      }
+      phases = {{"file_input_peak", file_input_peak}, {"overlong_allocation_attempts", 0},
+                {"inline_light_bytes", decode.storage.stack_buffer_bytes}};
     }
     report.push_back({{"format", static_cast<int>(codec->GetFormat())},
                       {"encode", Describe(encode)}, {"decode", Describe(decode)}, {"windows", phases}});

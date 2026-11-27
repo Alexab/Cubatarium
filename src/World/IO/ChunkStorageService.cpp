@@ -394,6 +394,28 @@ bool UChunkStorageService::ReadBytesFromFile(
   return !outBytes.empty();
 }
 
+std::vector<uint8_t> UChunkStorageService::ReadChunkBytes(std::istream &file, ChunkDiskFormat format)
+{
+  if (!file || format == ChunkDiskFormat::Absent)
+    return {};
+  if (format == ChunkDiskFormat::Json)
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+
+  file.seekg(0, std::ios::end);
+  const auto length = static_cast<std::streamoff>(file.tellg());
+  if (length <= 0 || length > static_cast<std::streamoff>(UBinaryChunkSerializer::kMaxFrameBytes))
+    return {};
+
+  file.seekg(0, std::ios::beg);
+  if (!file)
+    return {};
+  std::vector<uint8_t> bytes(static_cast<size_t>(length));
+  if (!file.read(reinterpret_cast<char *>(bytes.data()), static_cast<std::streamsize>(length)) ||
+      file.peek() != std::char_traits<char>::eof() || file.bad())
+    return {};
+  return bytes;
+}
+
 bool UChunkStorageService::SaveChunk(glm::ivec3 chunkCoord, const UChunk &chunk,
                                      const std::string &worldFolder,
                                      UBlockRegistry &registry,
@@ -480,16 +502,20 @@ int UChunkStorageService::LoadChunk(glm::ivec3 chunkCoord, UBlockWorld &world,
     return -1;
   }
 
-  std::vector<uint8_t> bytes;
   const std::string filePath = ChunkFilePath(worldFolder, chunkCoord, format);
-  if (!ReadBytesFromFile(filePath, bytes))
+  UChunkBuffer buffer;
   {
-    world.GetChunkManager().MarkTerrainColumnReadUnresolved(chunkCoord);
-    return -1;
+    std::ifstream file(filePath, std::ios::binary);
+    const auto bytes = ReadChunkBytes(file, format);
+    if (bytes.empty())
+    {
+      world.GetChunkManager().MarkTerrainColumnReadUnresolved(chunkCoord);
+      return -1;
+    }
+    file.close();
+    buffer = DeserializeChunk(bytes, chunkCoord, format, registry);
   }
 
-  const UChunkBuffer buffer =
-      DeserializeChunk(bytes, chunkCoord, format, registry);
   const size_t before = world.CountNonAir();
   if (!ApplyTerrainSliceLoad(world, chunkCoord, &buffer, nullptr,
                              {{chunkCoord.x, 0, chunkCoord.z}, 0}, 0, false))

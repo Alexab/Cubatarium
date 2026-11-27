@@ -1,6 +1,7 @@
 #pragma once
 
 #include "World/IO/IUChunkSerializer.h"
+#include <limits>
 
 namespace cutum
 {
@@ -15,6 +16,12 @@ public:
   static constexpr uint8_t kVersionLight = 3;
   static constexpr uint8_t kVersionFluid = 2;
   static constexpr uint8_t kVersionLegacy = 1;
+  // Field widths on disk. Preserve the entire 16-bit palette range, including
+  // unused entries in older worlds, and one positive-length run per cell.
+  static constexpr size_t kMaxFrameBytes =
+      sizeof(kMagic) + 1 + 3 * 4 + 2 +
+      (std::numeric_limits<uint16_t>::max)() * 2 + 4 + CHUNK_VOLUME * 4 +
+      2 * (4 + CHUNK_VOLUME) + 2 + 8;
 
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Binary; }
   const char *FileExtension() const override { return ".cchunk"; }

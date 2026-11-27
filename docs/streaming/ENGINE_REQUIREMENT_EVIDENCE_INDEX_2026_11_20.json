@@ -3548,11 +3548,19 @@
       "receipt": "build/desktop-msvc/s4-q10-metadata-acceptance.json",
       "scope": "Up to 256 active read plans and exhausted-read cooldown owners coexist per world, including up to 32 active plans. The exhausted request transfers its reservation to the exact column cooldown and keeps the unread-terrain guard. Deadlines expire on the world tick. Each I/O instance retains one queued or active speculative index job and the world retries only its current deferred binding. Each storage instance retains four folder index entries. A late save to an evicted folder is observed when that folder is rebuilt from actual disk. Native startup and normal shutdown pass in Flat and Full.",
       "remaining": "Payload and peak byte envelopes remain open, including the contents of each cached folder index and the unread-terrain safety owners. Compose Q10 with Q01.L2 and retain the full native/performance/memory matrix and original S0–S6 criteria. S4.01 extended fixture binding, S4.06 save recovery and world relocation, and S6.05 ecology remain open. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.BINARY_READ",
+      "status": "SCOPED_Q10_BINARY_READ_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_BINARY_READ_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-binary-read-acceptance.json",
+      "scope": "CCHK versions 1 through 4 retain all allowed 16-bit palette entries and use at most 4096 runs. A shared synchronous and asynchronous reader reserves the exact binary file extent up to 155687 bytes, checks the end of the opened stream and closes it before decoding. Packed palette entries are borrowed from the input. The decoder releases the raw data before result publication and uses one inline light plane. A bounded unsealed prefix still exposes its parsed geometry to diagnostics while terrain application requires an exact frame. A one-byte excess is refused before requesting payload memory, leaves terrain protected and permits later reads. The joined peak includes MSVC alignment and covers the binary input and single-chunk decoded table requests under the observed load slot and worker counts.",
+      "remaining": "The binary peak covers requested payload backing on the pinned Release implementation. JSON input and parsing, overlapping write snapshots and output, light receipts, indexes by saved size and unread-terrain owners still require byte envelopes and Q01.L2 composition. Keep full native/performance/memory acceptance and the original S0–S6 scope. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверены очереди чтения и записи и количество владельцев таймеров и прогрева. Далее вывести и проверить верхние пределы размера входного файла, декодера, снимков записи и их перекрытия, связать с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Проверены границы входа и декодирования CCHK v1–v4. Далее проверить совместимые JSON-чтения, размеры снимков, записи и метаданных, затем замкнуть пиковый объём I/O вместе с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

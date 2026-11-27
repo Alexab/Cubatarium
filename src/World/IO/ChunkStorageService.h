@@ -9,6 +9,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <iosfwd>
 #include <limits>
 #include <memory>
 #include <mutex>
@@ -136,6 +137,7 @@ public:
                             std::error_code *failure = nullptr) const;
   bool ReadBytesFromFile(const std::string &filePath,
                          std::vector<uint8_t> &outBytes) const;
+  static std::vector<uint8_t> ReadChunkBytes(std::istream &file, ChunkDiskFormat format);
 
   bool WriteStorageMarker(const std::string &worldFolder,
                           std::error_code *failure = nullptr) const;
