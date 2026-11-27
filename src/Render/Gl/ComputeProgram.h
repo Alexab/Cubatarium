@@ -2,6 +2,7 @@
 
 #include "Render/Backend/RenderBackendCaps.h"
 #include <string>
+#include <utility>
 
 namespace cutum
 {
@@ -25,6 +26,7 @@ public:
 
   unsigned Program() const { return ProgramId; }
   bool Valid() const { return ProgramId != 0; }
+  unsigned Release() noexcept { return std::exchange(ProgramId, 0); }
   void Destroy();
 
 private:

@@ -2,6 +2,7 @@
 
 #include "Render/GlIncludes.h"
 #include <array>
+#include <bitset>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -25,7 +26,8 @@ enum class TerrainGpuBufferRole
   GeometryCubeVertices, GeometryCubeIndices, GeometryCubeInstances,
   GeometryFaceVertices, GeometryFaceIndices, GeometryFaceInstances,
   GeometryPreviewVertices, GeometryPreviewIndices, GeometryOutlineVertices, GeometryOutlineIndices,
-  GeometryCrosshairVertices, SkyGradient, BlockCracks, BlockDebris, InfluenceLines, WeatherParticles, WindowCapture, Count
+  GeometryCrosshairVertices, SkyGradient, BlockCracks, BlockDebris, InfluenceLines, WeatherParticles, WindowCapture,
+  FluidColumnScan, TransparentSort, BlocklightFlood, LightTransportScratch, Count
 };
 
 inline constexpr std::array TerrainGpuBufferRoleNames{
@@ -43,9 +45,9 @@ inline constexpr std::array TerrainGpuBufferRoleNames{
     "geometry_cube_vertices", "geometry_cube_indices", "geometry_cube_instances",
     "geometry_face_vertices", "geometry_face_indices", "geometry_face_instances",
     "geometry_preview_vertices", "geometry_preview_indices", "geometry_outline_vertices", "geometry_outline_indices",
-    "geometry_crosshair_vertices", "sky_gradient", "block_cracks", "block_debris", "influence_lines", "weather_particles", "window_capture"};
+    "geometry_crosshair_vertices", "sky_gradient", "block_cracks", "block_debris", "influence_lines", "weather_particles", "window_capture",
+    "fluid_column_scan", "transparent_sort", "blocklight_flood", "light_transport_scratch"};
 static_assert(TerrainGpuBufferRoleNames.size() == static_cast<std::size_t>(TerrainGpuBufferRole::Count));
-static_assert(TerrainGpuBufferRoleNames.size() <= std::numeric_limits<std::uint64_t>::digits);
 
 struct TerrainGpuBufferSize
 {
@@ -71,7 +73,7 @@ public:
   {
     if (!name)
       return;
-    Names[name] |= std::uint64_t{1} << static_cast<std::size_t>(role);
+    Names[name].set(static_cast<std::size_t>(role));
     ++References;
   }
 
@@ -127,9 +129,9 @@ public:
       }
       ++result.total.objects;
       result.total.bytes += bytes;
-      result.sharedAcrossRoles += (roles & (roles - 1)) != 0;
+      result.sharedAcrossRoles += roles.count() > 1;
       for (std::size_t index = 0; index < result.roles.size(); ++index)
-        if (roles & (std::uint64_t{1} << index))
+        if (roles[index])
         {
           ++result.roles[index].objects;
           result.roles[index].bytes += bytes;
@@ -139,7 +141,7 @@ public:
   }
 
 private:
-  std::unordered_map<GLuint, std::uint64_t> Names;
+  std::unordered_map<GLuint, std::bitset<TerrainGpuBufferRoleNames.size()>> Names;
   std::size_t References{};
 };
 } // namespace cutum

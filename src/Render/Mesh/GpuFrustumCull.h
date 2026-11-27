@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Render/Mesh/CpuFrustumCull.h"
-#include <memory>
 
 namespace cutum
 {
@@ -12,9 +11,6 @@ namespace cutum
 class UGpuFrustumCull final : public IUChunkCull
 {
 public:
-  UGpuFrustumCull();
-  ~UGpuFrustumCull() override;
-
   const char *BackendName() const override { return "gpu_frustum"; }
   bool SupportsGpuCull() const override { return true; }
 
@@ -23,10 +19,7 @@ public:
                       float max_cull_distance) override;
 
 private:
-  struct GpuState;
-  bool EnsureGpu();
   UCpuFrustumCull Delegate;
-  std::unique_ptr<GpuState> State;
 };
 
 } // namespace cutum

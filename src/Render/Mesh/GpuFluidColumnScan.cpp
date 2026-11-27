@@ -1,9 +1,9 @@
 #include "Render/Mesh/GpuFluidColumnScan.h"
 #include "Render/Backend/RenderBackendCaps.h"
-#include "Render/Gl/ComputeProgram.h"
-#include "Render/GlIncludes.h"
-#include "glog/logging.h"
+#include "Render/Gl/ComputeBufferBindings.h"
+#include "Render/Gl/ComputeScratchBuffers.h"
 #include <cstring>
+#include <limits>
 #include <vector>
 
 namespace cutum
@@ -15,36 +15,17 @@ uint64_t gFluidScanDispatches = 0;
 uint64_t gFluidReadbacks = 0;
 bool gPreferGpuFluidColumnScan = false;
 
-struct FluidScanState
+ComputeScratchBuffers<2> &ScanState()
 {
-  UComputeProgram Program;
-  GLuint FlagsSsbo{0};
-  GLuint TopsSsbo{0};
-  bool InitAttempted{false};
-};
-
-FluidScanState &ScanState()
-{
-  static FluidScanState s;
+  static thread_local ComputeScratchBuffers<2> s;
   return s;
 }
 
-bool EnsureFluidScanGpu()
+bool CompileFluidScan(UComputeProgram &program, const RenderBackendCaps &caps)
 {
-  auto &s = ScanState();
-  if (s.InitAttempted)
-  {
-    return s.Program.Valid();
-  }
-  s.InitAttempted = true;
-  const RenderBackendCaps &caps = GetActiveRenderBackendCaps();
-  if (!caps.HasCompute || !caps.HasSsbo)
-  {
-    return false;
-  }
   // Prefer file shaders; fall back to inline GLES/desktop sources.
-  if (!s.Program.CompileForCaps(caps, "shaders/compute/fluid_column_scan.comp",
-                                "shaders/gles/compute/fluid_column_scan.comp"))
+  if (!program.CompileForCaps(caps, "shaders/compute/fluid_column_scan.comp",
+                              "shaders/gles/compute/fluid_column_scan.comp"))
   {
     const char *fallback =
         caps.Platform == RenderPlatformKind::Android
@@ -96,27 +77,33 @@ void main() {
   tops[col] = top;
 }
 )";
-    if (!s.Program.CompileSource(fallback))
-    {
-      return false;
-    }
+    return program.CompileSource(fallback);
   }
-  glGenBuffers(1, &s.FlagsSsbo);
-  glGenBuffers(1, &s.TopsSsbo);
   return true;
+}
+} // namespace
+
+void InspectFluidColumnScanGpuBuffers(TerrainGpuBufferCensus &out)
+{
+  ScanState().Inspect(out, TerrainGpuBufferRole::FluidColumnScan);
+}
+
+void ReleaseFluidColumnScanGpuStorage(const void *context)
+{
+  ScanState().Release(context ? context : CurrentComputeContext());
 }
 
 bool TryGpuDispatchFluidColumns(const uint8_t *fluid_flags, int height,
                                 std::vector<int16_t> &out_top_y)
 {
-  if (!EnsureFluidScanGpu())
-  {
+  if (!fluid_flags || height <= 0 || height > std::numeric_limits<int16_t>::max() + 1 || !ComputeStorageAvailable())
     return false;
-  }
-  auto &s = ScanState();
-  const int n = CHUNK_SIZE;
-  const size_t flag_bytes =
-      static_cast<size_t>(height) * static_cast<size_t>(n * n);
+  const auto &caps = GetActiveRenderBackendCaps();
+  if (!caps.HasCompute || !caps.HasSsbo)
+    return false;
+  constexpr int n = CHUNK_SIZE;
+  constexpr size_t tops_count = n * n;
+  const size_t flag_bytes = static_cast<size_t>(height) * tops_count;
   // Pack flags as uint bytes into SSBO (4 flags per uint).
   const size_t packed_words = (flag_bytes + 3) / 4;
   std::vector<uint32_t> packed(packed_words, 0);
@@ -125,31 +112,42 @@ bool TryGpuDispatchFluidColumns(const uint8_t *fluid_flags, int height,
     packed[i >> 2] |=
         (static_cast<uint32_t>(fluid_flags[i]) & 0xffu) << ((i & 3u) * 8u);
   }
-  const size_t tops_count = static_cast<size_t>(n * n);
-  out_top_y.assign(tops_count, static_cast<int16_t>(-1));
+  std::vector<int32_t> tops32(tops_count);
+  std::vector<int16_t> next(tops_count);
+  auto &s = ScanState();
+  if (!s.Initialize([&](UComputeProgram &program) { return CompileFluidScan(program, caps); }))
+    return false;
+  const ComputeBufferBindings<2> restore;
+  const auto [flagsSsbo, topsSsbo] = s.names;
 
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.FlagsSsbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, flagsSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(packed.size() * sizeof(uint32_t)),
                packed.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.TopsSsbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, topsSsbo);
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(tops_count * sizeof(int32_t)), nullptr,
                GL_DYNAMIC_READ);
+  if (glGetError() != GL_NO_ERROR)
+  {
+    s.DestroyBuffers();
+    return false;
+  }
 
-  glUseProgram(s.Program.Program());
-  glUniform1ui(glGetUniformLocation(s.Program.Program(), "side"),
+  glUseProgram(s.program);
+  glUniform1ui(glGetUniformLocation(s.program, "side"),
                static_cast<GLuint>(n));
-  glUniform1ui(glGetUniformLocation(s.Program.Program(), "height"),
+  glUniform1ui(glGetUniformLocation(s.program, "height"),
                static_cast<GLuint>(height));
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, s.FlagsSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s.TopsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, flagsSsbo);
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, topsSsbo);
   const GLuint groups = (static_cast<GLuint>(tops_count) + 63u) / 64u;
   glDispatchCompute(groups, 1, 1);
-  glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+  glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+  if (glGetError() != GL_NO_ERROR)
+    return false;
 
-  std::vector<int32_t> tops32(tops_count);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.TopsSsbo);
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, topsSsbo);
   void *mapped =
       glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0,
                        static_cast<GLsizeiptr>(tops_count * sizeof(int32_t)),
@@ -157,32 +155,35 @@ bool TryGpuDispatchFluidColumns(const uint8_t *fluid_flags, int height,
   if (mapped)
   {
     std::memcpy(tops32.data(), mapped, tops_count * sizeof(int32_t));
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    if (glUnmapBuffer(GL_SHADER_STORAGE_BUFFER) != GL_TRUE)
+      return false;
   }
   else
   {
 #if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+    if (glGetError() != GL_NO_ERROR)
+      return false;
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                        static_cast<GLsizeiptr>(tops_count * sizeof(int32_t)),
                        tops32.data());
 #else
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     return false;
 #endif
   }
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  glUseProgram(0);
+  if (glGetError() != GL_NO_ERROR)
+    return false;
 
   for (size_t i = 0; i < tops_count; ++i)
   {
-    out_top_y[i] = static_cast<int16_t>(tops32[i]);
+    if (tops32[i] < -1 || tops32[i] >= height)
+      return false;
+    next[i] = static_cast<int16_t>(tops32[i]);
   }
+  out_top_y.swap(next);
   ++gFluidScanDispatches;
   ++gFluidReadbacks;
   return true;
 }
-
-} // namespace
 
 void SetPreferGpuFluidColumnScan(bool prefer)
 {

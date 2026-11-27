@@ -1,17 +1,11 @@
 #include "Render/Pipeline/GpuTransparentSort.h"
 #include "Render/Pipeline/GreedyTransparentSort.h"
-#include "Render/GlIncludes.h"
-#include "glog/logging.h"
+#include "Render/Gl/ComputeBufferBindings.h"
+#include "Render/Gl/ComputeScratchBuffers.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <vector>
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <windows.h>
-#endif
 
 namespace cutum
 {
@@ -64,68 +58,28 @@ void main() {
 }
 )";
 
-struct GpuSortState
+ComputeScratchBuffers<1> &SortState()
 {
-  GLuint Program{0};
-  GLuint KeysSsbo{0};
-  bool InitAttempted{false};
-};
-
-GpuSortState &SortState()
-{
-  static GpuSortState state;
+  static thread_local ComputeScratchBuffers<1> state;
   return state;
-}
-
-GLuint CompileSortProgram()
-{
-  const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
-  glShaderSource(sh, 1, &kBitonicSortCompute, nullptr);
-  glCompileShader(sh);
-  GLint ok = 0;
-  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
-  if (!ok)
-  {
-    char log[512];
-    glGetShaderInfoLog(sh, 512, nullptr, log);
-    LOG(WARNING) << "[GpuTransparentSort] compile failed: " << log;
-    glDeleteShader(sh);
-    return 0;
-  }
-  const GLuint prog = glCreateProgram();
-  glAttachShader(prog, sh);
-  glLinkProgram(prog);
-  glDeleteShader(sh);
-  glGetProgramiv(prog, GL_LINK_STATUS, &ok);
-  if (!ok)
-  {
-    LOG(WARNING) << "[GpuTransparentSort] link failed";
-    glDeleteProgram(prog);
-    return 0;
-  }
-  return prog;
 }
 
 bool EnsureSortProgram()
 {
-  GpuSortState &state = SortState();
-  if (state.InitAttempted)
-  {
-    return state.Program != 0;
-  }
-  state.InitAttempted = true;
-  state.Program = CompileSortProgram();
-  if (!state.Program)
-  {
+  auto &state = SortState();
+  const bool warm = state.names.front() != 0;
+  if (!state.Initialize([](UComputeProgram &p) { return p.CompileSource(kBitonicSortCompute); }))
     return false;
-  }
-  glGenBuffers(1, &state.KeysSsbo);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.KeysSsbo);
+  if (warm)
+    return true;
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.names.front());
   glBufferData(GL_SHADER_STORAGE_BUFFER,
                static_cast<GLsizeiptr>(kMaxGpuSortKeys * sizeof(GpuSortKey)),
                nullptr, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  return true;
+  if (glGetError() == GL_NO_ERROR)
+    return true;
+  state.DestroyBuffers();
+  return false;
 }
 
 uint32_t NextPow2(uint32_t v)
@@ -168,6 +122,20 @@ void BuildHostKeys(const std::vector<GreedyBatchRef> &refs,
 
 } // namespace
 
+void InspectTransparentSortGpuBuffers(TerrainGpuBufferCensus &out)
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  SortState().Inspect(out, TerrainGpuBufferRole::TransparentSort);
+#endif
+}
+
+void ReleaseTransparentSortGpuStorage()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  SortState().Release(CurrentComputeContext());
+#endif
+}
+
 bool TryGpuSortTransparentGreedyBatches(
     std::vector<GreedyBatchRef> &refs, const UChunkMeshCache &cache,
     const glm::vec3 &cameraPos, const UBlockRegistry &registry)
@@ -179,22 +147,9 @@ bool TryGpuSortTransparentGreedyBatches(
   (void)registry;
   return false;
 #else
-#if defined(_WIN32)
-  if (wglGetCurrentContext() == nullptr)
-  {
+  if (refs.size() < kMinGpuSortRefs || refs.size() > kMaxGpuSortKeys || !ComputeStorageAvailable())
     return false;
-  }
-#endif
-  if (refs.size() < kMinGpuSortRefs || !EnsureSortProgram())
-  {
-    return false;
-  }
-  if (refs.size() > kMaxGpuSortKeys)
-  {
-    return false;
-  }
 
-  GpuSortState &state = SortState();
   std::vector<GpuSortKey> keys;
   BuildHostKeys(refs, cache, cameraPos, registry, keys);
 
@@ -206,15 +161,22 @@ bool TryGpuSortTransparentGreedyBatches(
     keys[i] = GpuSortKey{-1e9f, 0u, 0u, UINT32_MAX};
   }
 
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, state.KeysSsbo);
+  const ComputeBufferBindings<1> restore;
+  if (!EnsureSortProgram())
+    return false;
+  const auto &state = SortState();
+  const GLuint keysSsbo = state.names.front();
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, keysSsbo);
   glBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                   static_cast<GLsizeiptr>(keys.size() * sizeof(GpuSortKey)),
                   keys.data());
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, state.KeysSsbo);
-  glUseProgram(state.Program);
-  const GLint loc_n = glGetUniformLocation(state.Program, "n");
-  const GLint loc_h = glGetUniformLocation(state.Program, "blockHeight");
-  const GLint loc_s = glGetUniformLocation(state.Program, "blockStep");
+  if (glGetError() != GL_NO_ERROR)
+    return false;
+  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, keysSsbo);
+  glUseProgram(state.program);
+  const GLint loc_n = glGetUniformLocation(state.program, "n");
+  const GLint loc_h = glGetUniformLocation(state.program, "blockHeight");
+  const GLint loc_s = glGetUniformLocation(state.program, "blockStep");
   glUniform1ui(loc_n, n);
   for (uint32_t k = 2; k <= n; k <<= 1)
   {
@@ -226,14 +188,17 @@ bool TryGpuSortTransparentGreedyBatches(
       glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
   }
-  glUseProgram(0);
+  glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+  if (glGetError() != GL_NO_ERROR)
+    return false;
 
   keys.resize(count);
   glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0,
                      static_cast<GLsizeiptr>(keys.size() * sizeof(GpuSortKey)),
                      keys.data());
+  if (glGetError() != GL_NO_ERROR)
+    return false;
   NoteGpuTransparentSortReadback();
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
   std::vector<GreedyBatchRef> ordered;
   ordered.reserve(refs.size());

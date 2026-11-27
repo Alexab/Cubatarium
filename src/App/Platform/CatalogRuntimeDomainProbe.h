@@ -1,5 +1,6 @@
 #pragma once
 #include "App/Platform/IUPlatformWindow.h"
+#include "Render/Gl/PersistentComputeStorage.h"
 
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "App/Core.h"
@@ -552,8 +553,11 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
   if (launcher.window)
     launcher.window->InspectFlightCaptureGpuBuffers(effectsBuffers);
   report["effects_gpu_buffers"] = DescribeEffectsGpuBuffers(effectsBuffers.Read());
+  TerrainGpuBufferCensus computeBuffers;
+  InspectPersistentComputeGpuBuffers(computeBuffers);
+  report["compute_gpu_buffers"] = DescribeComputeGpuBuffers(computeBuffers.Read());
   report["selected_gpu_buffers"] = DescribeSelectedGpuBuffers(
-      {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers});
+      {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers, &computeBuffers});
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
   report["windows_gpu_memory"] = DescribeWindowsGpuMemory(driverMemory);

@@ -1,5 +1,7 @@
 #include "World/Lighting/GpuLightTransport.h"
+#include "Render/Gl/ComputeBufferBindings.h"
 #include "Render/GlIncludes.h"
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -44,33 +46,14 @@ bool TryGpuTransportLight(const LightTransportInput &input,
   GLint64 max_block = 0;
   glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &max_block);
   if (bytes > max_block) { reason = "ssbo_capacity"; return false; }
+  const ComputeBufferBindings<4> restore;
   struct Resources
   {
-    GLint old_program{0}, old_buffer{0};
-    std::array<GLint, 4> bindings{};
-    std::array<GLint64, 4> starts{}, sizes{};
     std::array<GLuint, 4> buffers{};
     GLuint program{0}, shader{0};
     GLsync fence{nullptr};
-    Resources()
-    {
-      glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
-      glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &old_buffer);
-      for (GLuint i = 0; i < 4; ++i)
-      {
-        glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, i, &bindings[i]);
-        glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_START, i, &starts[i]);
-        glGetInteger64i_v(GL_SHADER_STORAGE_BUFFER_SIZE, i, &sizes[i]);
-      }
-    }
     ~Resources()
     {
-      glUseProgram(old_program);
-      for (GLuint i = 0; i < 4; ++i)
-        if (bindings[i] && sizes[i] > 0)
-          glBindBufferRange(GL_SHADER_STORAGE_BUFFER, i, bindings[i], starts[i], sizes[i]);
-        else glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, bindings[i]);
-      glBindBuffer(GL_SHADER_STORAGE_BUFFER, old_buffer);
       if (fence) glDeleteSync(fence);
       glDeleteBuffers(4, buffers.data());
       if (program) glDeleteProgram(program);
@@ -105,6 +88,7 @@ void main() {
 }
 )";
   resources.shader = glCreateShader(GL_COMPUTE_SHADER);
+  if (!resources.shader) { reason = "compute_shader_create"; return false; }
   std::string extension_source;
   const char *shader_source = source;
   if (!GLEW_VERSION_4_3)
@@ -126,6 +110,7 @@ void main() {
     reason = std::string("compute_compile: ") + log; return false;
   }
   resources.program = glCreateProgram();
+  if (!resources.program) { reason = "compute_program_create"; return false; }
   glAttachShader(resources.program, resources.shader);
   glLinkProgram(resources.program);
   glGetProgramiv(resources.program, GL_LINK_STATUS, &ok);
@@ -133,16 +118,20 @@ void main() {
   std::vector<uint32_t> seeds(input.seeds.begin(), input.seeds.end());
   std::vector<uint32_t> material(input.transmission.begin(), input.transmission.end());
   glGenBuffers(4, resources.buffers.data());
+  if (std::any_of(resources.buffers.begin(), resources.buffers.end(), [](GLuint name) { return name == 0; }))
+  { reason = "compute_buffer_create"; return false; }
   for (GLuint i = 0; i < 4; ++i)
   {
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, resources.buffers[i]);
     glBufferData(GL_SHADER_STORAGE_BUFFER, bytes,
         i == 1 ? material.data() : seeds.data(), GL_STREAM_DRAW);
+    if (glGetError() != GL_NO_ERROR) { reason = "compute_buffer_upload"; return false; }
   }
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, resources.buffers[0]);
   glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, resources.buffers[1]);
   glUseProgram(resources.program);
   glUniform3ui(glGetUniformLocation(resources.program, "shape"), input.width, input.height, input.depth);
+  if (glGetError() != GL_NO_ERROR) { reason = "compute_bindings"; return false; }
   work.scratch_bytes = uint64_t(bytes) * 4;
   // Max light 15, each edge costs >=1: 14 hops suffice; pass 15 settles all
   // positive paths and starts from immutable seeds on every new calculation.

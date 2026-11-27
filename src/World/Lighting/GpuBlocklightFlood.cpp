@@ -1,13 +1,13 @@
 #include "World/Lighting/GpuBlocklightFlood.h"
 
 #include "Blocks/BlockRegistry.h"
-#include "Render/GlIncludes.h"
+#include "Render/Gl/ComputeBufferBindings.h"
+#include "Render/Gl/ComputeScratchBuffers.h"
 #include "World/Chunks/Chunk.h"
 #include "World/Chunks/ChunkManager.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Lighting/ChunkLighting.h"
 #include "World/Lighting/LightUtil.h"
-#include "glog/logging.h"
 
 #include <cstdlib>
 #include <vector>
@@ -79,59 +79,10 @@ void main() {
 }
 )";
 
-struct BlocklightFloodState
+ComputeScratchBuffers<4> &BlocklightFloodStateInstance()
 {
-  GLuint Program{0};
-  GLuint LightA{0};
-  GLuint LightB{0};
-  GLuint EmitSsbo{0};
-  GLuint TransSsbo{0};
-  bool InitAttempted{false};
-};
-
-BlocklightFloodState &BlocklightFloodStateInstance()
-{
-  static BlocklightFloodState s;
+  static thread_local ComputeScratchBuffers<4> s;
   return s;
-}
-
-bool EnsureFloodCompute()
-{
-  auto &s = BlocklightFloodStateInstance();
-  if (s.InitAttempted)
-  {
-    return s.Program != 0;
-  }
-  s.InitAttempted = true;
-  const GLuint sh = glCreateShader(GL_COMPUTE_SHADER);
-  glShaderSource(sh, 1, &kBlocklightFloodCompute, nullptr);
-  glCompileShader(sh);
-  GLint ok = 0;
-  glGetShaderiv(sh, GL_COMPILE_STATUS, &ok);
-  if (!ok)
-  {
-    char log[512];
-    glGetShaderInfoLog(sh, 512, nullptr, log);
-    LOG(WARNING) << "[GpuBlocklight] compile failed: " << log;
-    glDeleteShader(sh);
-    return false;
-  }
-  s.Program = glCreateProgram();
-  glAttachShader(s.Program, sh);
-  glLinkProgram(s.Program);
-  glDeleteShader(sh);
-  glGetProgramiv(s.Program, GL_LINK_STATUS, &ok);
-  if (!ok)
-  {
-    glDeleteProgram(s.Program);
-    s.Program = 0;
-    return false;
-  }
-  glGenBuffers(1, &s.LightA);
-  glGenBuffers(1, &s.LightB);
-  glGenBuffers(1, &s.EmitSsbo);
-  glGenBuffers(1, &s.TransSsbo);
-  return true;
 }
 
 bool GpuBlocklightComputeEnabled()
@@ -143,7 +94,7 @@ bool GpuBlocklightComputeEnabled()
 void DispatchGpuBlocklightFloodNoReadback(const UChunk &chunk,
                                           const UBlockRegistry &registry)
 {
-  if (!GpuBlocklightComputeEnabled() || !EnsureFloodCompute())
+  if (!GpuBlocklightComputeEnabled() || !ComputeStorageAvailable())
   {
     return;
   }
@@ -172,35 +123,53 @@ void DispatchGpuBlocklightFloodNoReadback(const UChunk &chunk,
   const uint32_t side = static_cast<uint32_t>(CHUNK_SIZE);
   const GLsizeiptr bytes =
       static_cast<GLsizeiptr>(CHUNK_VOLUME * sizeof(uint32_t));
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.LightA);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, light.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.LightB);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, nullptr, GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.EmitSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, emit.data(), GL_DYNAMIC_DRAW);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.TransSsbo);
-  glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, trans.data(), GL_DYNAMIC_DRAW);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, s.EmitSsbo);
-  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, s.TransSsbo);
-  glUseProgram(s.Program);
-  glUniform1ui(glGetUniformLocation(s.Program, "side"), side);
+  if (!s.Initialize([](UComputeProgram &program) { return program.CompileSource(kBlocklightFloodCompute); }))
+    return;
+  const ComputeBufferBindings<4> restore;
+  const std::array<const uint32_t *, 4> sources{light.data(), nullptr, emit.data(), trans.data()};
+  for (GLuint i = 0; i < s.names.size(); ++i)
+  {
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, s.names[i]);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, bytes, sources[i], GL_DYNAMIC_DRAW);
+  }
+  if (glGetError() != GL_NO_ERROR)
+  {
+    s.DestroyBuffers();
+    return;
+  }
+  for (GLuint i = 0; i < s.names.size(); ++i)
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, i, s.names[i]);
+  glUseProgram(s.program);
+  glUniform1ui(glGetUniformLocation(s.program, "side"), side);
+  const auto readALocation = glGetUniformLocation(s.program, "read_a");
   const uint32_t groups = (static_cast<uint32_t>(CHUNK_VOLUME) + 63u) / 64u;
   for (int pass = 0; pass < 15; ++pass)
   {
     const uint32_t read_a = (pass & 1) == 0 ? 1u : 0u;
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, s.LightA);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, s.LightB);
-    glUniform1ui(glGetUniformLocation(s.Program, "read_a"), read_a);
+    glUniform1ui(readALocation, read_a);
     glDispatchCompute(groups, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
   }
-  glUseProgram(0);
-  glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-  ++gBlocklightDispatches;
+  if (glGetError() == GL_NO_ERROR)
+    ++gBlocklightDispatches;
 }
 #endif
 
 } // namespace
+
+void InspectBlocklightFloodGpuBuffers(TerrainGpuBufferCensus &out)
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  BlocklightFloodStateInstance().Inspect(out, TerrainGpuBufferRole::BlocklightFlood);
+#endif
+}
+
+void ReleaseBlocklightFloodGpuStorage()
+{
+#if !defined(__ANDROID__) && !defined(CUBATARIUM_GLES)
+  BlocklightFloodStateInstance().Release(CurrentComputeContext());
+#endif
+}
 
 void NoteGpuBlocklightFlood() { ++gBlocklightFloods; }
 

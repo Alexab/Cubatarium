@@ -28,6 +28,7 @@
 #include "Render/Backend/RenderBackendCaps.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
+#include "Render/Gl/PersistentComputeStorage.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
@@ -2072,6 +2073,7 @@ void UWindowManager::Shutdown()
       if (const auto textures = Core->GetCreatureTextureStorage())
         textures->Clear();
     ItemGltfTextureCache::ClearForContextShutdown();
+    ReleasePersistentComputeGpuStorage();
   }
   Core.reset();
 

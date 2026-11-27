@@ -3398,8 +3398,12 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           report << "  \"window_capture_gpu_lifetime\": " << nlohmann::json{
               {"before_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.beforeShutdown)},
               {"after_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.afterShutdown)}}.dump() << ",\n";
+          TerrainGpuBufferCensus computeBuffers;
+          InspectPersistentComputeGpuBuffers(computeBuffers);
+          report << "  \"compute_gpu_buffers_after_loop\": "
+                 << DescribeComputeGpuBuffers(computeBuffers.Read()).dump() << ",\n";
           report << "  \"selected_gpu_buffers_after_loop\": " << DescribeSelectedGpuBuffers(
-              {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers}).dump() << ",\n";
+              {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers, &computeBuffers}).dump() << ",\n";
           RenderImageCensus renderImages;
           if (texture_cube_instance)
             texture_cube_instance->InspectRenderImages(renderImages);

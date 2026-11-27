@@ -13,6 +13,8 @@ namespace cutum
 bool TryGpuSortTransparentGreedyBatches(
     std::vector<GreedyBatchRef> &refs, const UChunkMeshCache &cache,
     const glm::vec3 &cameraPos, const UBlockRegistry &registry);
+void InspectTransparentSortGpuBuffers(class TerrainGpuBufferCensus &out);
+void ReleaseTransparentSortGpuStorage();
 
 uint64_t ConsumeGpuTransparentSortCount();
 

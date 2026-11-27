@@ -10,6 +10,7 @@
 #include "Test/ActorGpuStorageFixture.h"
 #include "Test/GeometryGpuStorageFixture.h"
 #include "Test/EffectsGpuStorageFixture.h"
+#include "Test/ComputeGpuStorageFixture.h"
 #include "Test/MainMenuStorageFixture.h"
 #include "Test/InGameHudStorageFixture.h"
 #include "Test/ConsoleStorageFixture.h"
@@ -516,6 +517,7 @@ int main(int argc,char **argv){
     report["actor_gpu_storage"]=actor_gpu_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json",world);
     report["geometry_gpu_storage"]=geometry_gpu_storage_fixture::Run();
     report["effects_gpu_storage"]=effects_gpu_storage_fixture::Run(argc>1?argv[1]:"application-operation-storage.json");
+    report["compute_gpu_storage"]=compute_gpu_storage_fixture::Run();
     report["rigid_model_source"]=shared_visual_source_fixture::CheckRigidModels(argc>1?argv[1]:"application-operation-storage.json");
     report["retained_visual_assets"]=shared_visual_source_fixture::CheckRetainedVisualOwners();
     report["visual_loader_construction"]=shared_visual_source_fixture::CheckVisualLoaderConstruction(argc>1?argv[1]:"application-operation-storage.json");

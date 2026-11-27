@@ -11,6 +11,7 @@
 #include <string>
 
 #include "Render/GlIncludes.h"
+#include "Render/Mesh/GpuFluidColumnScan.h"
 
 namespace cutum
 {
@@ -167,6 +168,11 @@ void EglContext::Shutdown()
   if (display_ == EGL_NO_DISPLAY)
   {
     return;
+  }
+  if (context_ != EGL_NO_CONTEXT)
+  {
+    EnsureCurrent();
+    ReleaseFluidColumnScanGpuStorage(context_);
   }
   eglMakeCurrent(static_cast<EGLDisplay>(display_), EGL_NO_SURFACE,
                  EGL_NO_SURFACE, EGL_NO_CONTEXT);

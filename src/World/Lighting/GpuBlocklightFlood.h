@@ -12,6 +12,8 @@ namespace cutum
 /// optional compute dispatch without readback under env flag).
 bool TryGpuPropagateBlocklight(UBlockWorld &world, UBlockRegistry &registry,
                                glm::ivec3 chunk_coord);
+void InspectBlocklightFloodGpuBuffers(class TerrainGpuBufferCensus &out);
+void ReleaseBlocklightFloodGpuStorage();
 
 uint64_t ConsumeGpuBlocklightFloodCount();
 void NoteGpuBlocklightFlood();

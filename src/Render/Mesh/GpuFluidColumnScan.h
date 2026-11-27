@@ -36,9 +36,14 @@ inline void ScanFluidColumnsCpu(const uint8_t *fluid_flags, int height,
   }
 }
 
-/// Desktop compute scan; returns false on Android / init failure.
+/// Desktop uses the CPU scan in the frame loop. GLES may use compute.
 bool TryGpuScanFluidColumns(const uint8_t *fluid_flags, int height,
                             std::vector<int16_t> &out_top_y);
+/// Explicit compute entry point for the GLES backend and driver checks.
+bool TryGpuDispatchFluidColumns(const uint8_t *fluid_flags, int height,
+                                std::vector<int16_t> &out_top_y);
+void InspectFluidColumnScanGpuBuffers(class TerrainGpuBufferCensus &out);
+void ReleaseFluidColumnScanGpuStorage(const void *context = nullptr);
 
 uint64_t GpuFluidColumnScanDispatchCount();
 uint64_t ConsumeGpuFluidReadbackCount();
