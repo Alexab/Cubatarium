@@ -167,7 +167,8 @@ private:
 public:
   AsyncIoStorage InspectRetainedIo(AsyncIoStorageIdentity *scratch,
                                    size_t scratch_count,
-                                   const AllocatorSourcePhase *phase = nullptr) const;
+                                   const AllocatorSourcePhase *phase = nullptr,
+                                   const AsyncIoReturnedBatches &returned = {}) const;
   AsyncIoRootBinding InspectBorrowedIoRoots(const AllocatorSourcePhase &phase,
                                            const UChunkStorageService &storage,
                                            const UBlockRegistry &registry) const;

@@ -14,7 +14,7 @@
 #include "World/IO/TerrainSliceLoad.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include "World/Lighting/SectionLightRestoreQueue.h"
-#include "WorldGen/Core/MergeSourceEnvelope.h"
+#include "WorldGen/Core/CatalogConstructionComposition.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cstdio>
@@ -561,13 +561,27 @@ struct AsyncIoStorageProbe
     const AsyncIoWorkerProbe probe{phase, &trace, WorkerTrace::Sample};
     UAsyncChunkIO io;
     ReleaseWorkers release{phase, trace};
-    io.WorkerProbe = &probe;
     auto cancellation = std::make_shared<std::atomic<bool>>(false);
     std::weak_ptr<std::atomic<bool>> weak = cancellation;
+    const ChunkGenerationToken token{{coord.x, 0, coord.z}, 2};
+    const glm::ivec3 absent(coord.x, coord.y + 300, coord.z);
+    Require(io.RequestLoad(coord, storage, registry, folder, token, cancellation, 580) &&
+                io.RequestRemoveChunkSlices({8, 0, 0}, 0, 0, storage, folder, 581) &&
+                io.WaitIdleFor(std::chrono::seconds(6)), "prepare real delivered I/O owners");
+    auto held_reads = io.DrainLoads();
+    auto held_saves = io.DrainSaves();
+    Require(held_reads.size() == 1 && held_reads.front().decodedBuffer &&
+                held_saves.size() == 1 && held_saves.front().success,
+            "one delivered decoded read and one delivered write ACK stay live");
+    const AsyncIoReturnedBatches held{&held_reads, &held_saves, nullptr};
+    io.WorkerProbe = &probe;
+    Require(io.RequestLoad(absent, storage, registry, folder, token, cancellation, 590),
+            "one absent result remains in the completion ring");
     // One extra read remains pending while every load worker holds the same
     // cancellation control. This crosses the actual pool ownership boundary.
     for (size_t i = 0; i <= load_workers; ++i)
-      io.RequestLoad(coord, storage, registry, folder, {coord, 2}, cancellation, 600 + i);
+      Require(io.RequestLoad(coord, storage, registry, folder, token, cancellation, 600 + i),
+              "admit one real read for each worker and a queued successor");
     io.RequestSaveColumnLightFlags(folder, 700, {{0, 0}}, "join-execution");
     io.RequestDiskIndexWarmup(storage, folder);
     io.RequestRemoveChunkSlices({8, 0, 0}, 0, 0, storage, folder, 701);
@@ -583,7 +597,7 @@ struct AsyncIoStorageProbe
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     std::array<AsyncIoStorageIdentity, 32> queue_shared{}, scratch{};
-    const auto queues = io.InspectRetainedIo(queue_shared.data(), queue_shared.size(), &phase);
+    const auto queues = io.InspectRetainedIo(queue_shared.data(), queue_shared.size(), &phase, held);
     const auto roots = io.InspectBorrowedIoRoots(phase, storage, registry);
     const auto join = [&](const AllocatorSourcePhase &source_phase, const auto &list, size_t count) {
       return JoinAsyncIoWorkers(source_phase, roots, queues, queue_shared.data(), queues.shared_blocks,
@@ -592,14 +606,44 @@ struct AsyncIoStorageProbe
     const auto joined = join(phase, trace.parked, participants);
     const auto warmup_active = size_t(UAsyncChunkIO::HasBackgroundIoBudget());
     Require(queues.retained_supported && queues.active == participants &&
-                queues.queued[0] == 1 && queues.shared_blocks == 8 - warmup_active &&
+                queues.queued[0] == 1 && queues.shared_blocks == 11 - warmup_active &&
+                queues.completed == std::array<size_t, 3>{1, 0, 0} &&
+                queues.returned == std::array<size_t, 3>{1, 1, 0} &&
                 joined.supported && joined.participants == participants &&
-                joined.shared_blocks == 9 + load_workers &&
+                joined.shared_blocks == 12 + load_workers &&
                 joined.shared_aliases == 2 * load_workers + 1 + warmup_active &&
                 joined.shared_bytes > queues.shared_bytes && joined.local_backing &&
                 joined.registry_references == load_workers + 1 && joined.storage_references == 2 &&
-                joined.disk_index_requested == roots.disk_index.requested && joined.disk_index_requested,
-            "joined active and pending allocations count each credit and share cancellation and counter");
+                joined.disk_index_requested == roots.disk_index.requested && joined.disk_index_requested &&
+                joined.admitted_slots == std::array<size_t, kAsyncIoCreditKinds>{load_workers + 3, 2, 1, 1} &&
+                joined.queue_slots && joined.completion_slots && joined.returned_slots && joined.returned_backing,
+            "pending, active, ready and delivered allocations share controls and account every admitted slot");
+    const auto missing_delivery = io.InspectRetainedIo(scratch.data(), scratch.size(), &phase);
+    std::array<AsyncIoStorageIdentity, 32> alternate_union{};
+    Require(missing_delivery.retained_supported &&
+                !JoinAsyncIoWorkers(phase, roots, missing_delivery, scratch.data(), missing_delivery.shared_blocks,
+                                    trace.parked.data(), participants, alternate_union.data(), alternate_union.size()).supported,
+            "omitting a delivered read and ACK leaves unmatched admission credits");
+    {
+      UAsyncChunkIO foreign_io;
+      Require(foreign_io.RequestLoad(absent, storage, registry, folder, token, {}, 591),
+              "produce a delivery with a different admission counter");
+      const auto foreign_reads = foreign_io.DrainLoads();
+      const auto foreign = io.InspectRetainedIo(scratch.data(), scratch.size(), &phase,
+                                                {&foreign_reads, &held_saves, nullptr});
+      Require(!foreign.retained_supported, "an I/O instance cannot claim a foreign delivery credit");
+    }
+
+    CatalogResourceRoots catalog_roots;
+    catalog_roots.registry = &registry;
+    const auto registry_storage = MeasureCatalogStorage(nullptr, 0, nullptr, 0, {}, catalog_roots);
+    const auto catalog = BoundRetainedCatalogRequests(registry_storage);
+    NameStorageEnvelope composed{joined.requested, joined.supported && catalog.supported, catalog.overflow};
+    NameStorageAdd(composed, catalog.requested_heap_upper);
+    Require(composed.supported && !composed.overflow && catalog.requested_heap_upper > 0 &&
+                roots.registry == reinterpret_cast<uintptr_t>(catalog_roots.registry) &&
+                registry_storage.Objects(CatalogObjectKind::Registry) == 1,
+            "add the same retained registry graph once across all worker references");
     const auto join_roots = [&](const AsyncIoRootBinding &binding) {
       return JoinAsyncIoWorkers(phase, binding, queues, queue_shared.data(), queues.shared_blocks,
                                 trace.parked.data(), participants, scratch.data(), scratch.size());
@@ -640,22 +684,47 @@ struct AsyncIoStorageProbe
                 io.WaitForColumnLightFlagsSaveIdleFor(std::chrono::seconds(6)) &&
                 !trace.timed_out.load(), "coherent I/O execution completes before deadline");
     const auto completed = Inspect(io);
-    Require(completed.supported && completed.completed[0] == load_workers + 1 &&
+    Require(completed.supported && completed.completed[0] == load_workers + 2 &&
                 completed.completed[1] == 1 && completed.completed[2] == 1 &&
-                completed.shared_bytes < joined.shared_bytes && completed.shared_blocks + 1 == joined.shared_blocks &&
+                completed.shared_bytes < joined.shared_bytes && completed.shared_blocks + 3 == joined.shared_blocks &&
                 !completed.storage_root.references && !completed.registry_root.references,
             "the same cancellation control survives queue publication");
-    auto reads = io.DrainLoads();
-    Require(!weak.expired() && Inspect(io).shared_blocks == 6 && io.GetOutstandingLoadCount() == reads.size(),
-            "returned owners leave the queue census and keep their admission credits");
-    reads.clear();
+    {
+      const auto reads = io.DrainLoads();
+      Require(!weak.expired() && Inspect(io).shared_blocks == 6 &&
+                  io.GetOutstandingLoadCount() == reads.size() + held_reads.size(),
+              "returned owners leave the queue census and keep their admission credits");
+    }
+    held_reads.clear();
+    held_saves.clear();
     Require(weak.expired(), "all joined source owners retire");
+    auto flags = io.DrainColumnLightFlagsSaves();
+    AllocatorSourcePhase idle(NewRootStorageEpoch(), 0);
+    // Empty vectors still have capacity. The sole live flag result owns its
+    // credit even after every I/O worker has retired from the sampled phase.
+    const auto idle_sources = io.InspectRetainedIo(queue_shared.data(), queue_shared.size(), &idle,
+                                                   {&held_reads, &held_saves, &flags});
+    const auto idle_join = JoinAsyncIoWorkers(idle, io.InspectBorrowedIoRoots(idle, storage, registry),
+        idle_sources, queue_shared.data(), idle_sources.shared_blocks, nullptr, 0, scratch.data(), scratch.size());
+    Require(idle_join.supported && idle_join.admitted_slots == std::array<size_t, kAsyncIoCreditKinds>{0, 1, 1, 0} &&
+                idle_join.returned_slots == joined.returned_slots + sizeof(AsyncColumnLightFlagsSaveResult) &&
+                idle_sources.returned == std::array<size_t, 3>{0, 0, 1} && idle_join.returned_backing,
+            "idle join retains delivered vector capacity and the remaining write and flag credits");
+    idle.Close();
     return {{"participants", participants}, {"shared_bytes", joined.shared_bytes},
             {"shared_aliases", joined.shared_aliases}, {"callable_bytes", joined.callable_bytes},
             {"registry_references", joined.registry_references}, {"storage_references", joined.storage_references},
             {"disk_index_requested", joined.disk_index_requested}, {"foreign_root_controls", true},
             {"background_participated", trace.pause_index},
-            {"local_backing", joined.local_backing}, {"negative_controls", true}};
+            {"local_backing", joined.local_backing}, {"negative_controls", true},
+            {"captured_backing", joined.captured_backing}, {"queue_slots", joined.queue_slots},
+            {"completion_slots", joined.completion_slots}, {"returned_slots", joined.returned_slots},
+            {"returned_backing", joined.returned_backing}, {"io_requested", joined.requested},
+            {"admitted_slots", joined.admitted_slots}, {"registry_upper", catalog.requested_heap_upper},
+            {"registry_merge_roots", registry_storage.Objects(CatalogObjectKind::Merge)},
+            {"registry_placeholder_roots", registry_storage.Objects(CatalogObjectKind::Placeholder)},
+            {"combined_upper", composed.requested}, {"idle_delivery_slots", idle_join.returned_slots},
+            {"missing_and_foreign_delivery_rejected", true}};
   }
 
   static nlohmann::json CheckJsonAndCancellation(const std::string &folder, UBlockWorld &world,
@@ -923,10 +992,14 @@ struct AsyncIoStorageProbe
                 merge->GetCubeDescriptors().size() == 1 && merge->GetCubeDescriptors().front().Name == name &&
                 !io.GetOutstandingLoadCount() && placeholder->GetEntryCount() == 6,
             "cold qualified reload reuses the same complete catalog entry and cache");
+    const auto composition = CheckJoinedExecution(folder, coord, storage, registry);
+    Require(composition.at("registry_merge_roots") == 1 && composition.at("registry_placeholder_roots") == 1,
+            "the physical legacy phase joins its actual merge registry and cache once");
     return {{"status", "PASS"}, {"id", id}, {"entries", 1}, {"worker_decode", true}, {"cold_reload", true},
             {"legacy_name_bytes", name.size()}, {"cache_rows", cache.pixel_count},
             {"cache_pixel_requests", cache.pixel_heap_upper}, {"registry_upper", owner.heap_upper},
-            {"cache_structure_upper", cache.structural_heap_upper}, {"qualified_fallback", true}};
+            {"cache_structure_upper", cache.structural_heap_upper}, {"qualified_fallback", true},
+            {"joined_execution", composition}};
   }
 
   static nlohmann::json CheckSaveSnapshotQueue(const std::filesystem::path &root)

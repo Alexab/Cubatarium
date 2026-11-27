@@ -3692,11 +3692,19 @@
       "receipt": "build/desktop-msvc/s4-q10-ready-ownership-acceptance.json",
       "scope": "Reserve one ranked selection and one result vector before moving any ready result. The optional field-dependent result gets the first slot, then ordinary ranking and ties apply. A ranking refusal leaves the original ready queue for the next tick. Reuse the delivered vector for the deferred suffix and compact the cancelled ring in place. The native fixture joins the ring slot requests with one full returned vector while all read credits are occupied, releases one credit for its successor, and then retires cancelled and escaped results.",
       "remaining": "Compose payload, path, flag, disk-index and legacy registry histories with overlapping I/O stages and Q01.L2 world column owner counts. The claimed simultaneous total covers slot backing per one observed I/O instance. S4.02 remains open at 23 of 42 packages; full S0-S6 acceptance remains required."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.LIVE_COMPOSITION",
+      "status": "SCOPED_Q10_LIVE_IO_COMPOSITION_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_IO_COMPOSITION_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-io-composition-acceptance.json",
+      "scope": "Join actual pending callable and path allocations, parked workers, completed results and supplied delivered buffers. Shared payload and admission controls are joined once, with per-direction slots matched against live counters. Include pool, ring and delivered vector backing and the same storage index. The legacy fixture measures the supplied live registry graph including its synthetic entry and placeholder cache once. Omitted unique credits and foreign deliveries fail the observation.",
+      "remaining": "The phase observes at most one supplied delivery vector of each kind. The remaining proof covers registry and disk-index history across full travel, concurrent codec and allocator peaks, and write batches sharing one credit across several deliveries. Carry these terms into Q01.L2 and close live resident and save-veto owner cardinality. Full S0-S6 acceptance remains open at 23 of 42 packages."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Свести проверенные данные и метаданные I/O, пути, реестр чтения и историю дискового индекса с Q01.L2. Учесть рост реестра и оставшиеся временные выделения. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10 и Q01.L2. Совместное наблюдение I/O, индекса и реестра сохранено. Вывести пределы истории индекса и реестра и числа записей колонок, включая удержание при неудачном сохранении. Закрыто 23 из 42 пакетов. Полный объём S0–S6 остаётся в плане."
 }
