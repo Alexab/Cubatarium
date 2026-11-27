@@ -91,12 +91,17 @@ MakeLightCacheSignature(const WorldVerticalProfile &profile,
          ":" + std::to_string(profile.MaxY) + ":" + std::to_string(hash);
 }
 
-inline nlohmann::json EncodeColumnLightCache(std::vector<glm::ivec2> columns,
-                                             const std::string &signature)
+inline void SortUniqueColumnLightCacheColumns(std::vector<glm::ivec2> &columns)
 {
   std::sort(columns.begin(), columns.end(), [](const auto &a, const auto &b)
             { return a.x < b.x || (a.x == b.x && a.y < b.y); });
   columns.erase(std::unique(columns.begin(), columns.end()), columns.end());
+}
+
+inline nlohmann::json EncodeColumnLightCache(std::vector<glm::ivec2> columns,
+                                             const std::string &signature)
+{
+  SortUniqueColumnLightCacheColumns(columns);
   nlohmann::json complete = nlohmann::json::array();
   for (const auto &column : columns)
     complete.push_back({column.x, column.y});

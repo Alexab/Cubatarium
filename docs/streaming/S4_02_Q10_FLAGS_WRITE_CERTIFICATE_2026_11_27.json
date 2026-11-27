@@ -1,0 +1,194 @@
+{
+  "schema": "s4-q10-flags-write.v1",
+  "status": "SCOPED_Q10_FLAGS_WRITE_PASS_Q10_OPEN",
+  "baseline_commit": "16a01683fab16908d313898a027869b8d86cfd19",
+  "scope": "Stream the sorted and deduplicated v2 flag coordinate pairs through a 32-byte row buffer into the temporary file. Preserve signature escaping, canonical bytes, the atomic replacement and exact revision and credit. The writer preserves the old commit on controlled temporary path refusal or invalid UTF-8 and successfully retries. The physical producer defers and replays its revision while the existing flag credit is occupied.",
+  "remaining": "The ordinary peaks exclude the already allocated input snapshot and include asynchronous submission, temporary-file and result scopes. The producer takes one snapshot of eight bytes per marked column before allocator alignment. Join the live set backing, flag read parse and result metadata, paths and disk indexes with active terrain, receipt, registry, allocator and Q01.L2 terms. Keep full S0-S6 acceptance. 23 of 42 packages complete.",
+  "baseline_exe_sha256": "068beaa89c42870a2815628e530a33a7fe8f4c83aaf5f4cce1efd9a369d5d63f",
+  "ordinary_before": {
+    "dense": {
+      "attempts": 65653,
+      "file_bytes": 366229,
+      "peak": 3583797,
+      "snapshot_bytes": 262183
+    },
+    "empty": {
+      "attempts": 45,
+      "file_bytes": 94,
+      "peak": 1738,
+      "snapshot_bytes": 0
+    },
+    "invalid_utf8_preserved": true,
+    "retry": true,
+    "signed_escaped": {
+      "attempts": 56,
+      "file_bytes": 141,
+      "peak": 1990,
+      "snapshot_bytes": 32
+    },
+    "temporary_refusal_preserved": true
+  },
+  "ordinary_after": {
+    "dense": {
+      "attempts": 22,
+      "file_bytes": 366229,
+      "peak": 1544,
+      "snapshot_bytes": 262183
+    },
+    "empty": {
+      "attempts": 22,
+      "file_bytes": 94,
+      "peak": 1544,
+      "snapshot_bytes": 0
+    },
+    "invalid_utf8_preserved": true,
+    "retry": true,
+    "signed_escaped": {
+      "attempts": 23,
+      "file_bytes": 141,
+      "peak": 1544,
+      "snapshot_bytes": 32
+    },
+    "temporary_refusal_preserved": true
+  },
+  "ordinary_focused_repeat": {
+    "dense": {
+      "attempts": 22,
+      "file_bytes": 366229,
+      "peak": 1256,
+      "snapshot_bytes": 262183
+    },
+    "empty": {
+      "attempts": 22,
+      "file_bytes": 94,
+      "peak": 1256,
+      "snapshot_bytes": 0
+    },
+    "invalid_utf8_preserved": true,
+    "retry": true,
+    "signed_escaped": {
+      "attempts": 23,
+      "file_bytes": 141,
+      "peak": 1256,
+      "snapshot_bytes": 32
+    },
+    "temporary_refusal_preserved": true
+  },
+  "physical_worker": {
+    "flags_encoded": 0,
+    "flags_dom": 0,
+    "flags_row_buffer": 32,
+    "flags_signature_heap": 32,
+    "flags_snapshot_retired_before_replace": true
+  },
+  "physical_producer": {
+    "bounded_while_active": true,
+    "cold_edit": true,
+    "deferred_flag_revision": true,
+    "final_flags": 0,
+    "final_writes": 0,
+    "rejected_with_free_slots": 24,
+    "required_writes": 25,
+    "status": "PASS",
+    "write_limit": 256
+  },
+  "physical_receipt_read": {
+    "receipt_read_scratch": 0,
+    "receipt_read_output": 8664,
+    "receipt_read_stack_buffer": 12368,
+    "receipt_checksum_stack": 12656,
+    "receipt_restore_payload": 8847,
+    "receipt_restore_handoff": true
+  },
+  "physical_receipt_write": {
+    "receipt_encode_buffer": 288,
+    "receipt_write_dom": 0,
+    "receipt_write_output": 16461
+  },
+  "profiles": {
+    "flat": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 906,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED",
+      "streamed_disk_fixture": "PASS",
+      "streamed_flag_write": "PASS"
+    },
+    "full": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 649,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "9e3d4e62531dc5c4b8ad5100551297ed86784e35e970b564489d0333c15565fd",
+  "exe_sha256": "984ab54f4ff353fe0ea09ef7b14a1e2fc32b1df19af9ee07a38fad9e8886130e",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "chunk_lighting_propagation_test",
+    "light_cache_certificate_test",
+    "relight_result_install_test",
+    "worldgen_scatter_block_resolve_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-flags-write-provenance.json": "57ee0135bab7369690bba64da1fa5059b77f1c98fa8799e3552673c1b13269ce",
+    "build/desktop-msvc/s4-q10-flags-write-build.log": "a30715fa75631d93d8e7d91b3d55b35400624eca3cfa8b29627513bf2b5e18ed",
+    "build/desktop-msvc/s4-q10-flags-write-regressions.json": "d27cd02a7771e96377471d12e3f5051753a031bdb617e78981d19e9ea15c95d5",
+    "build/desktop-msvc/s4-q10-flags-write-regression-build.log": "1bc96feae91909449ecb42efb94d9b706514bbaf1922c9bb11f014d7ccbeeba6",
+    "build/desktop-msvc/s4-q10-flags-write-io-storage.json": "cdf7eea3ba20dfbdd49950bee2a14716c6ecf7f2f318a161d680c5ad406ea88d",
+    "build/desktop-msvc/s4-q10-flags-write-before.exe": "068beaa89c42870a2815628e530a33a7fe8f4c83aaf5f4cce1efd9a369d5d63f",
+    "build/desktop-msvc/s4-q10-flags-write-before-exe.sha256": "89206b46022e43f46f9a3ca7baf1177cb3434ecb4b1d0e89c2c734b7b4ab524b",
+    "build/desktop-msvc/s4-q10-flags-write-before.json": "7c07b3978c1abd24e22d77f47096c3f59ac1ec148115e3431fa82409baa2ddd6",
+    "build/desktop-msvc/s4-q10-flags-write-before.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-flags-write-before-build.log": "75840f05177540a3ce3778d37fc048d8944590f2004ed3ad2917e944a845a925",
+    "docs/streaming/S4_02_Q10_RECEIPT_OWNERS_CERTIFICATE_2026_11_27.json": "557bc28fa16f27781e6dd4c94cbd1f3660071980ed9276ee16708cfc26b7b45e",
+    "build/desktop-msvc/s4-q10-flags-write-async_io_storage_test.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-flags-write-application_operation_storage_test.log": "923a6042734274dece74b899170db9e720daa46dd732fff5014676ef579fe7fc",
+    "build/desktop-msvc/s4-q10-flags-write-catalog_worker_retirement_test.log": "f624e03191a8f8a76aee19a23368be089b2c79d961e337f5dbd7329da4f4568d",
+    "build/desktop-msvc/s4-q10-flags-write-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-flags-write-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-flags-write-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-flags-write-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-flags-write-chunk_lighting_propagation_test.log": "ed3dfbe34f9da1c33e19c20dca699c5c082d505d581170dc797fd0929f4c88a7",
+    "build/desktop-msvc/s4-q10-flags-write-light_cache_certificate_test.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build/desktop-msvc/s4-q10-flags-write-relight_result_install_test.log": "4341d3bf06613af3c0006e388d6f88e28212c1cc81dd101552767278e820df9a",
+    "build/desktop-msvc/s4-q10-flags-write-worldgen_scatter_block_resolve_test.log": "a9f0e2c4ed7c2d6ddfa08f094094a19cc877919f5f96b57ed18df792058c345c",
+    "build/desktop-msvc/s4-q10-flags-write-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-flags-write-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-flags-write-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-flags-write-focused.json": "9b625f8fe443239ab6c8fe4fcc89b75b441af80c38cd880354a8b180de6b7b7c",
+    "build/desktop-msvc/s4-q10-flags-write-focused.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-flags-write-flat/route.json": "a1384c1ced80191eda4dc761b533e688145b2266d37bae06d73a0ed27fb677af",
+    "build/desktop-msvc/s4-q10-flags-write-flat/smoke-verdict.json": "fffa7b57e954c7b5370c974eff1786efa25967f1e6612a52866a7f1765ca6974",
+    "build/desktop-msvc/s4-q10-flags-write-flat/flight_sim_report.json": "22b89e85bc689036dad089edf0779187fcf018d9bbabc59ac1ad28a0c3ac441c",
+    "build/desktop-msvc/s4-q10-flags-write-flat/desktop-normal-shutdown.json": "a979733a85f146adf62e535b39566c337764afcf5753761976143086c172aeba",
+    "build/desktop-msvc/s4-q10-flags-write-flat/legacy-gates.json": "9b54ddc1ff908ecf9affb00d7870e40d05eed1d0393ad3481807cdcd72c5b970",
+    "build/desktop-msvc/s4-q10-flags-write-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-flags-write-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-flags-write-flat.log": "4570045817a38ecc4e940801bd718f7df78670148be173aaa05f906de11a762b",
+    "build/desktop-msvc/s4-q10-flags-write-flat/runner.log": "7809c9706f3af699d5a0ae9752934c32e00f3b645455b23669f8553fa8ff3948",
+    "build/desktop-msvc/s4-q10-flags-write-flat/terrain-save-probe/report.json": "1e3dc364f0e2b58dc29134b924ea31c3b780805bb2aa9d4f96362dda27e5a555",
+    "build/desktop-msvc/s4-q10-flags-write-full/route.json": "646e2afa9e6671fa9acd2e6613e9c3cd4cdccbe3395270e4f6b3358ebfe1b906",
+    "build/desktop-msvc/s4-q10-flags-write-full/smoke-verdict.json": "57af9fe00337b944ac9ed9d4fb9311d069a0c59757fabf0104d47f07cfed05ab",
+    "build/desktop-msvc/s4-q10-flags-write-full/flight_sim_report.json": "dd121318a28f151856c986d97ecf5c23a72d6f6bce135320f3c9954cc1690d5b",
+    "build/desktop-msvc/s4-q10-flags-write-full/desktop-normal-shutdown.json": "3344b7198f704f074cc0ff1eb3ccbe44b5929912d7fe479a93119dc2bea02cab",
+    "build/desktop-msvc/s4-q10-flags-write-full/legacy-gates.json": "e620770c74df1d45d695b6b27641305d94443085c8652e1ff4f1ee1150c46bf6",
+    "build/desktop-msvc/s4-q10-flags-write-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-flags-write-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-flags-write-full.log": "1dd14fb234ff962d78fc54e4c00001cd934e0a13ef21035723c6831642c85c87",
+    "build/desktop-msvc/s4-q10-flags-write-full/runner.log": "563ce50b2aaf9c99ec6c8e398e12d2ae9981d18a72c7bd93c0f167f559088d03"
+  }
+}

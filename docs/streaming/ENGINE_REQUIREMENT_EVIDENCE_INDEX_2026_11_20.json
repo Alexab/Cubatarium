@@ -3636,11 +3636,19 @@
       "receipt": "build/desktop-msvc/s4-q10-receipt-owners-acceptance.json",
       "scope": "Charge receipt section backing on both I/O directions using the existing I/O slot ownership and check submitted write vector and section capacities before reserving a job. Production column capture and read retain the existing per-column limit. The restore queue reserves by count and payload bytes, links waiting and replacement nodes without allocating, and preserves accounting if a new node request is refused. The physical worker result releases its column wrapper and read credit while the same section survives in the bounded world restore queue.",
       "remaining": "The section charge and column vector terms apply to the actual producer routes. Join active capture, reader, writer and restore scratch with the receipt and terrain owners, flag and result metadata, paths, indexes, registry and Q01.L2. Shared section identities can overlap between the returned I/O results and restore owner. Keep whole-process, performance and native S0-S6 acceptance in scope. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.FLAGS_WRITE",
+      "status": "SCOPED_Q10_FLAGS_WRITE_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_FLAGS_WRITE_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-flags-write-acceptance.json",
+      "scope": "Stream the sorted and deduplicated v2 flag coordinate pairs through a 32-byte row buffer into the temporary file. Preserve signature escaping, canonical bytes, the atomic replacement and exact revision and credit. The writer preserves the old commit on controlled temporary path refusal or invalid UTF-8 and successfully retries. The physical producer defers and replays its revision while the existing flag credit is occupied.",
+      "remaining": "The ordinary peaks exclude the already allocated input snapshot and include asynchronous submission, temporary-file and result scopes. The producer takes one snapshot of eight bytes per marked column before allocator alignment. Join the live set backing, flag read parse and result metadata, paths and disk indexes with active terrain, receipt, registry, allocator and Q01.L2 terms. Keep full S0-S6 acceptance. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверить память подготовки и записи флагов освещения, затем свести метаданные результатов, пути и индексы миров с уже подтверждёнными владельцами чанков и квитанций. Добавить память реестра чтения и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Проверить чтение флагов освещения и память набора завершённых колонок. Затем свести метаданные результатов, пути, индексы миров и реестр чтения с уже проверенными владельцами чанков и квитанций. Добавить Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

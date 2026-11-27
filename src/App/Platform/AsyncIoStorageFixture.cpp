@@ -256,13 +256,16 @@ struct AsyncIoStorageProbe
     auto *save = trace.Find(Kind::Save, Stage::Encoded, 200);
     auto *save_publish = trace.Find(Kind::Save, Stage::BeforePublish, 200);
     auto *flags_entered = trace.Find(Kind::Flags, Stage::Entered, 300);
+    auto *flags_streaming = trace.Find(Kind::Flags, Stage::Codec, 300);
     auto *flags_encoded = trace.Find(Kind::Flags, Stage::Encoded, 300);
     Require(save && save->encoded_bytes && save->path_bytes && save_publish &&
                 save_publish->encoded_bytes == save->encoded_bytes && flags_entered &&
-                flags_encoded && flags_encoded->encoded_bytes && flags_encoded->path_bytes &&
-                flags_entered->sources.queued_backing >=
+                flags_streaming && flags_encoded && !flags_streaming->encoded_bytes &&
+                !flags_encoded->encoded_bytes && flags_encoded->path_bytes &&
+                flags_entered->sources.queued_backing == flags_streaming->sources.queued_backing &&
+                flags_streaming->sources.queued_backing >=
                     flags_encoded->sources.queued_backing + 600 * sizeof(glm::ivec2),
-            "actual save and flags serialization sources and vector transfer");
+            "the flag vector remains live during streaming and retires before replacement");
     const auto *index = trace.Find(Kind::Warmup, Stage::Finished, 0);
     const auto *directory = trace.Find(Kind::Warmup, Stage::Codec, 0);
     Require(directory && directory->codec.kind == IoCodecKind::DiskDirectoryEntry &&
@@ -284,9 +287,10 @@ struct AsyncIoStorageProbe
                 write_codec && !write_codec->scratch_bytes &&
                 write_codec->stack_buffer_bytes == (3 * CHUNK_VOLUME + 2) * sizeof(uint16_t) &&
                 write_codec->output_bytes == save->encoded_bytes &&
-                flags_encoded->codec.kind == IoCodecKind::FlagsWrite &&
-                flags_encoded->codec.scratch_bytes &&
-                flags_encoded->codec.output_bytes == flags_encoded->encoded_bytes &&
+                flags_streaming->codec.kind == IoCodecKind::FlagsWrite &&
+                !flags_streaming->codec.output_bytes && !flags_encoded->codec.output_bytes &&
+                flags_streaming->codec.stack_buffer_bytes == 32 &&
+                !flags_encoded->codec.stack_buffer_bytes &&
                 receipt_encode && !receipt_encode->scratch_bytes && receipt_encode->output_bytes &&
                 receipt_encode->stack_buffer_bytes == persisted_light_detail::kReceiptEncodingBufferBytes &&
                 receipt_write && receipt_write->output_bytes == receipt_encode->output_bytes,
@@ -299,7 +303,9 @@ struct AsyncIoStorageProbe
             {"binary_write_scratch", write_codec->scratch_bytes},
             {"binary_write_stack_buffer", write_codec->stack_buffer_bytes},
             {"binary_write_shared_bytes", save->sources.shared_bytes},
-            {"flags_dom", flags_encoded->codec.scratch_bytes},
+            {"flags_dom", 0}, {"flags_row_buffer", flags_streaming->codec.stack_buffer_bytes},
+            {"flags_signature_heap", flags_streaming->codec.scratch_bytes},
+            {"flags_snapshot_retired_before_replace", true},
             {"receipt_write_dom", receipt_encode->scratch_bytes},
             {"receipt_encode_buffer", receipt_encode->stack_buffer_bytes},
             {"receipt_write_output", receipt_write->output_bytes},

@@ -10,6 +10,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/LightCacheCertificate.h"
+#include <charconv>
 #include <cstdlib>
 #include <fstream>
 #include <mutex>
@@ -30,6 +31,35 @@ using Clock = std::chrono::steady_clock;
 
 namespace
 {
+constexpr size_t kFlagRowBufferBytes = 32;
+
+void StreamColumnLightFlags(std::ostream &file, std::vector<glm::ivec2> columns,
+                            std::string_view escapedSignature,
+                            std::array<char, kFlagRowBufferBytes> &row)
+{
+  static_assert(2 * (std::numeric_limits<int>::digits10 + 2) + 4 <= kFlagRowBufferBytes);
+  SortUniqueColumnLightCacheColumns(columns);
+  char *const limit = row.data() + row.size();
+  file << R"({"complete":[)";
+  bool first = true;
+  for (const auto &column : columns)
+  {
+    if (!file)
+      return;
+    auto *end = row.data();
+    if (!first)
+      *end++ = ',';
+    first = false;
+    *end++ = '[';
+    end = std::to_chars(end, limit, column.x).ptr;
+    *end++ = ',';
+    end = std::to_chars(end, limit, column.y).ptr;
+    *end++ = ']';
+    file.write(row.data(), static_cast<std::streamsize>(end - row.data()));
+  }
+  file << R"(],"format_version":2,"light_signature":)" << escapedSignature << '}';
+}
+
 bool IsAsyncChunkIoTraceEnabled()
 {
   const char *value = std::getenv("CUBA_WORLD_COLUMN_SOURCE_TRACE");
@@ -104,11 +134,10 @@ struct AsyncIoWorkerLocals
   const AsyncChunkSaveRequest *save{};
   const AsyncColumnLightFlagsSaveResult *flags{};
   const std::vector<uint8_t> *encoded_bytes{};
-  const std::string *encoded_text{}, *temporary_name{}, *diagnostic{};
+  const std::string *temporary_name{}, *diagnostic{};
   const std::filesystem::path *target_path{}, *temporary_path{};
   const IoCodecStorage *codec{};
   const IoDiskIndexStorage *disk_index{};
-  bool codec_output_in_outer_sample{};
 
   AsyncIoWorkerLocals() = default;
   explicit AsyncIoWorkerLocals(const AsyncChunkLoadResult &value) : load(&value) {}
@@ -197,29 +226,25 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
                                     .count();
   try
   {
-    const json data = EncodeColumnLightCache(std::move(completeColumns),
-                                             lightSignature);
-    const std::string encoded = data.dump();
+    // Validate and quote the signature before opening the temporary file.
+    const std::string escaped_signature = json(lightSignature).dump();
 
     const std::filesystem::path target =
         std::filesystem::path(worldFolder) / "column_light.json";
     const std::filesystem::path temp = target.string() + ".tmp";
-    if (owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen())
-    {
+    const auto observe = [&](AsyncIoWorkerStage stage, size_t stack_bytes) {
+      if (!owner->WorkerProbe || !owner->WorkerProbe->phase.IsOpen())
+        return;
       AsyncIoWorkerLocals locals(result);
-      locals.encoded_text = &encoded;
       locals.target_path = &target;
       locals.temporary_path = &temp;
-      StlSourceStorage scratch, output;
-      scratch.JsonTree(data);
-      output.Text(encoded);
+      StlSourceStorage scratch;
+      scratch.Text(escaped_signature);
       const IoCodecStorage codec{IoCodecKind::FlagsWrite, scratch.bytes.requested,
-                                0, output.bytes.requested, 0,
-                                scratch.bytes.supported && output.bytes.supported};
+                                0, 0, stack_bytes, scratch.bytes.supported};
       locals.codec = &codec;
-      locals.codec_output_in_outer_sample = true;
-      owner->ObserveWorker(*this, AsyncIoJobKind::Flags, AsyncIoWorkerStage::Encoded, revision, locals);
-    }
+      owner->ObserveWorker(*this, AsyncIoJobKind::Flags, stage, revision, locals);
+    };
     std::error_code ec;
     std::filesystem::create_directories(target.parent_path(), ec);
     if (ec)
@@ -236,8 +261,12 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
         }
         else
         {
-          file.write(encoded.data(),
-                     static_cast<std::streamsize>(encoded.size()));
+          {
+            std::array<char, kFlagRowBufferBytes> row;
+            observe(AsyncIoWorkerStage::Codec, row.size());
+            StreamColumnLightFlags(file, std::move(completeColumns), escaped_signature, row);
+          }
+          observe(AsyncIoWorkerStage::Encoded, 0);
           file.flush();
           if (!file.good())
           {
@@ -290,6 +319,7 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
   {
     result.error = "unknown_exception";
   }
+  std::vector<glm::ivec2>{}.swap(completeColumns);
   result.worker_service_ms = std::chrono::duration<double, std::milli>(
                                  std::chrono::steady_clock::now() -
                                  worker_started)
@@ -1105,8 +1135,6 @@ struct AsyncIoStorageInspector
       inspector.Text(inspector.Result.completed_backing, *locals.diagnostic);
     if (locals.encoded_bytes)
       inspector.Buffer(sample.encoded_bytes, locals.encoded_bytes->capacity(), sizeof(uint8_t));
-    if (locals.encoded_text)
-      inspector.Text(sample.encoded_bytes, *locals.encoded_text);
     if (locals.temporary_name)
       inspector.Text(sample.path_bytes, *locals.temporary_name);
     if (locals.target_path)
@@ -1124,10 +1152,7 @@ struct AsyncIoStorageInspector
       if (sample.codec.kind != IoCodecKind::DiskDirectoryEntry)
       {
         inspector.Add(inspector.Result.completed_backing, sample.codec.scratch_bytes);
-        // Read inputs are already included from locals.load. Flags encoding
-        // likewise supplies encoded_text at the outer checkpoint.
-        if (!locals.codec_output_in_outer_sample)
-          inspector.Add(inspector.Result.completed_backing, sample.codec.output_bytes);
+        inspector.Add(inspector.Result.completed_backing, sample.codec.output_bytes);
       }
     }
     if (locals.disk_index)

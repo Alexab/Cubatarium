@@ -12,6 +12,8 @@
 #include "Test/WindowsCrtLocaleFixture.h"
 #include "Test/WindowsExecutableTlsFixture.h"
 #include "Test/WindowsIoResourceFixture.h"
+#include "World/IO/AsyncChunkIO.h"
+#include "World/Lighting/LightCacheCertificate.h"
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -26,6 +28,88 @@
 
 namespace
 {
+nlohmann::json CheckFlagWriter(const std::filesystem::path &root)
+{
+  using cutum::UAsyncChunkIO;
+  using cutum::io_codec_fixture::Require;
+  namespace fs = std::filesystem;
+  Require(fs::create_directories(root), "flags fixture requires a fresh directory");
+  const auto folder = root.string();
+  const auto target = root / "column_light.json";
+  const auto temp = root / "column_light.json.tmp";
+  uint64_t revision = 0;
+  const auto read = [&] {
+    std::ifstream file(target, std::ios::binary);
+    return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+  };
+  const auto write = [&](std::vector<glm::ivec2> columns, std::string signature, bool success,
+                         bool observe = true) {
+    const auto cells = columns.capacity() * sizeof(glm::ivec2);
+    auto io = std::make_unique<UAsyncChunkIO>();
+    observation::Counts counts;
+    const auto submit = [&] {
+      Require(io->RequestSaveColumnLightFlags(folder, ++revision, std::move(columns), std::move(signature)),
+              "submit a real asynchronous flag snapshot");
+      Require(io->WaitForColumnLightFlagsSaveIdleFor(std::chrono::seconds(12)),
+              "wait for the flag worker and completion");
+      const auto results = io->DrainColumnLightFlagsSaves();
+      Require(results.size() == 1 && results[0].success == success && results[0].revision == revision &&
+                  results[0].worldFolder == folder && io->GetOutstandingFlagSaveCount() == 1,
+              "the worker publishes the exact flag revision with its credit");
+    };
+    if (!observe)
+    {
+      submit();
+      return nlohmann::json{};
+    }
+    {
+      observation::Scope allocations;
+      submit();
+      Require(io->GetOutstandingFlagSaveCount() == 0, "releasing the flag result returns its credit");
+      io.reset();
+      counts = observation::Snapshot();
+    }
+    if (counts.live || counts.blocks)
+      throw std::runtime_error("flag backing after worker retirement at revision " +
+          std::to_string(revision) + ": bytes=" + std::to_string(counts.live) +
+          " blocks=" + std::to_string(counts.blocks));
+    return nlohmann::json{{"snapshot_bytes", cells + cutum::NameStorageAlignmentSlack(cells)},
+                          {"peak", counts.peak}, {"attempts", counts.attempts}};
+  };
+  const auto check = [&](const std::vector<glm::ivec2> &columns, const std::string &signature) {
+    const auto expected = cutum::EncodeColumnLightCache(columns, signature).dump();
+    auto result = write(columns, signature, true);
+    Require(read() == expected && !fs::exists(temp), "physical flag output matches canonical v2 bytes");
+    result["file_bytes"] = expected.size();
+    return result;
+  };
+  const std::string standard = "light-v6:0:-64:319:18446744073709551615";
+  // Warm the process-wide stream and failure logging paths before observation.
+  write({}, standard, true, false);
+  write({}, std::string(1, '\xff'), false, false);
+  const auto empty = check({}, standard);
+  const std::string escaped = std::string("sig \"\\\n\t\x01\xC3\xA9\xF0\x9F\x8C\x8D") + '\0';
+  const std::vector<glm::ivec2> mixed{{INT_MAX, INT_MIN}, {-3, 4}, {INT_MAX, INT_MIN}, {INT_MIN, INT_MAX}};
+  const auto edges = check(mixed, escaped);
+  std::vector<glm::ivec2> dense;
+  dense.reserve(32768);
+  for (int i = 32767; i >= 0; --i)
+    dense.push_back({i - 16384, (i % 128) - 64});
+  const auto large = check(dense, standard);
+  const auto previous = read();
+  Require(fs::create_directory(temp), "install a controlled temporary-path refusal");
+  const auto marker = temp / "owned";
+  std::ofstream(marker) << "fixture";
+  write(mixed, standard, false);
+  Require(read() == previous && fs::is_regular_file(marker), "temporary-path refusal preserves the prior commit");
+  Require(fs::remove(marker) && fs::remove(temp), "retire the temporary-path control");
+  write(mixed, std::string(1, '\xff'), false);
+  Require(read() == previous && !fs::exists(temp), "invalid UTF-8 preserves the prior commit");
+  check(mixed, standard);
+  return {{"empty", empty}, {"signed_escaped", edges}, {"dense", large},
+          {"temporary_refusal_preserved", true}, {"invalid_utf8_preserved", true}, {"retry", true}};
+}
+
 nlohmann::json CheckCrtFileTables(const std::filesystem::path &path)
 {
 #if defined(_WIN32) && defined(_MSC_VER) && defined(_M_X64)
@@ -246,6 +330,7 @@ int main(int argc, char **argv)
     const auto receipt_stream = cutum::io_codec_fixture::CheckReceiptStreamLimits(folder + "-receipt-write");
     const auto streams = cutum::io_codec_fixture::CheckFileStreams(folder + "-streams");
     const auto launch = CheckWorkerLaunchAllocations();
+    const auto flag_writer = CheckFlagWriter(folder + "-flags");
     auto result = cutum::RunAsyncIoStorageProbe(folder);
     const auto stdio = std::filesystem::path(folder) / "stdio.bin";
     result["crt_file_tables"] = CheckCrtFileTables(stdio);
@@ -271,6 +356,7 @@ int main(int argc, char **argv)
     result["receipt_writer"] = receipt_writer;
     result["receipt_stream_limits"] = receipt_stream;
     result["ordinary_receipt_restore_queue"] = receipt_restore;
+    result["ordinary_flag_writer"] = flag_writer;
     result["ordinary_file_streams"] = streams;
     result["ordinary_worker_launch"] = launch;
     std::ofstream output(report);
