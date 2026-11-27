@@ -9,6 +9,7 @@
 #include "Blocks/Input/BlockInputController.h"
 #include "Core/FrameStageWatchdog.h"
 #include "Core/Memory/NativeThreadStack.h"
+#include "Core/Memory/ScopedPngEncoder.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -32,7 +33,6 @@
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
 #include "ThirdParty/stb_image.h"
-#include "ThirdParty/stb_image_write.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
 #include "World/Diagnostics/MeshAuditDiagnostics.h"
@@ -46,7 +46,6 @@
 #include <condition_variable>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -143,9 +142,21 @@ bool ReadFlightCaptureEnvBool(const char *name)
 class UFlightCaptureService
 {
 public:
-  UFlightCaptureService() : Worker([this] { WorkerLoop(); }) {}
+  explicit UFlightCaptureService(bool sampleCodec = false, PngAllocationObserver probe = {})
+      : SampleCodec(sampleCodec), Probe(probe), Worker([this] { WorkerLoop(); }) {}
 
   ~UFlightCaptureService() { Shutdown(); }
+
+  FlightCaptureCpuStorage InspectCpuStorage() const
+  {
+    std::lock_guard lock(Mutex);
+    auto snapshot = Cpu;
+    snapshot.serviceInlineBytes = sizeof(*this);
+    snapshot.slotLimit = KPboSlotCount;
+    snapshot.queueLimit = KMaxQueuedImages;
+    snapshot.codecSampled = SampleCodec;
+    return snapshot;
+  }
 
   void InspectGpuBuffers(TerrainGpuBufferCensus &out) const
   {
@@ -198,7 +209,7 @@ public:
       // A completed diagnostic frame remains owned by its bounded PBO slot
       // while the encoder is full. QueueImage does not move on rejection.
       // Releasing the slot first used to silently drop already-accepted PNGs.
-      if (QueueImage(std::move(slot.Payload), false))
+      if (QueueImage(slot, false))
         ReleaseSlot(slot);
       else
       {
@@ -242,15 +253,12 @@ public:
     {
       return false;
     }
-    const auto rowBytes = uint64_t(width) * 4;
-    const auto pngIntMax = uint64_t(std::numeric_limits<int>::max());
-    // The PNG encoder accumulates signed-byte filter scores and includes one filter byte per row.
-    if (rowBytes > pngIntMax / 128 || (rowBytes + 1) * uint64_t(height) > pngIntMax ||
-        rowBytes * uint64_t(height) > uint64_t(std::numeric_limits<GLsizeiptr>::max()))
+    const auto extentBytes = RgbaPngInputBytes(width, height);
+    if (!extentBytes || extentBytes > static_cast<size_t>(std::numeric_limits<GLsizeiptr>::max()))
     {
       return false;
     }
-    const auto byte_count = static_cast<GLsizeiptr>(rowBytes * uint64_t(height));
+    const auto byte_count = static_cast<GLsizeiptr>(extentBytes);
     Frame payload{width, height, path, index, camera_x, camera_y, source_buffer, {}, std::move(receipt)};
 
     const PackCaptureScope pack(source_buffer);
@@ -295,6 +303,10 @@ public:
     slot->Payload = std::move(payload);
     slot->Fence = fence;
     slot->Busy = true;
+    {
+      std::lock_guard lock(Mutex);
+      ++Cpu.acceptedFrames;
+    }
     return true;
   }
 
@@ -391,16 +403,43 @@ private:
     }
   };
 
-  static bool CopyPixels(PboSlot &slot)
+  void ObserveCpuStorage()
+  {
+    const auto &s = Cpu.current;
+    if (s.LiveBytes() > Cpu.atPeakLive.LiveBytes())
+      Cpu.atPeakLive = s;
+    if (s.AdmittedBytes() > Cpu.atPeakAdmission.AdmittedBytes())
+      Cpu.atPeakAdmission = s;
+    Cpu.peakCodecLiveRequestBytes = std::max(Cpu.peakCodecLiveRequestBytes, s.codecLiveRequestBytes);
+  }
+
+  static void ObserveCodec(void *context, size_t live, size_t pending) noexcept
+  {
+    auto &service = *static_cast<UFlightCaptureService *>(context);
+    {
+      std::lock_guard lock(service.Mutex);
+      service.Cpu.current.codecLiveRequestBytes = live;
+      service.Cpu.current.codecPendingRequestBytes = pending;
+      service.ObserveCpuStorage();
+    }
+    if (service.Probe.sample)
+      service.Probe.sample(service.Probe.context, live, pending);
+  }
+
+  bool CopyPixels(PboSlot &slot)
   {
     if (!slot.Payload.Pixels.empty())
       return true;
     if (slot.StoreBytes <= 0)
       return false;
-    std::vector<unsigned char> pixels;
+    auto &pixels = slot.Payload.Pixels;
     try
     {
+      std::lock_guard lock(Mutex);
       pixels.resize(static_cast<size_t>(slot.StoreBytes));
+      ++Cpu.current.copiedSlots;
+      Cpu.current.slotPixelBytes += pixels.capacity();
+      ObserveCpuStorage();
     }
     catch (const std::bad_alloc &)
     {
@@ -417,8 +456,6 @@ private:
       copied = glUnmapBuffer(GL_PIXEL_PACK_BUFFER) == GL_TRUE;
     }
     glBindBuffer(GL_PIXEL_PACK_BUFFER, static_cast<GLuint>(previous));
-    if (copied)
-      slot.Payload.Pixels = std::move(pixels);
     return copied;
   }
 
@@ -429,24 +466,39 @@ private:
       glDeleteSync(slot.Fence);
       slot.Fence = nullptr;
     }
-    slot.Payload = Frame{};
+    {
+      std::lock_guard lock(Mutex);
+      if (const auto charge = slot.Payload.Pixels.capacity())
+      {
+        --Cpu.current.copiedSlots;
+        Cpu.current.slotPixelBytes -= charge;
+      }
+      slot.Payload = Frame{};
+    }
     slot.Busy = false;
   }
 
-  bool QueueImage(Frame &&frame, bool wait_for_space)
+  bool QueueImage(PboSlot &slot, bool wait_for_space)
   {
     std::unique_lock<std::mutex> lock(Mutex);
     if (wait_for_space)
     {
       QueueSpaceAvailable.wait(
           lock,
-          [this] { return ImageJobs.size() < KMaxQueuedImages || StopWorker; });
+          [this] { return Cpu.current.queuedFrames < KMaxQueuedImages || StopWorker; });
     }
-    if (ImageJobs.size() >= KMaxQueuedImages || StopWorker)
+    if (Cpu.current.queuedFrames >= KMaxQueuedImages || StopWorker)
     {
       return false;
     }
-    ImageJobs.push_back(std::move(frame));
+    const auto charge = slot.Payload.Pixels.capacity();
+    ImageJobs[(QueueHead + Cpu.current.queuedFrames) % KMaxQueuedImages] = std::move(slot.Payload);
+    slot.Payload = Frame{};
+    --Cpu.current.copiedSlots;
+    Cpu.current.slotPixelBytes -= charge;
+    ++Cpu.current.queuedFrames;
+    Cpu.current.queuedPixelBytes += charge;
+    ObserveCpuStorage();
     lock.unlock();
     WorkAvailable.notify_one();
     return true;
@@ -470,13 +522,12 @@ private:
       }
       if (CopyPixels(slot))
       {
-        Frame frame = std::move(slot.Payload);
-        ReleaseSlot(slot);
-        if (!QueueImage(std::move(frame), true))
+        if (!QueueImage(slot, true))
         {
           CubatariumLogInfo("FlightCapture",
                             "could not queue completed frame during shutdown");
         }
+        ReleaseSlot(slot);
       }
       else
       {
@@ -497,13 +548,18 @@ private:
       {
         std::unique_lock<std::mutex> lock(Mutex);
         WorkAvailable.wait(lock,
-                           [this] { return StopWorker || !ImageJobs.empty(); });
-        if (ImageJobs.empty() && StopWorker)
+                           [this] { return StopWorker || Cpu.current.queuedFrames != 0; });
+        if (Cpu.current.queuedFrames == 0 && StopWorker)
         {
           return;
         }
-        frame = std::move(ImageJobs.front());
-        ImageJobs.pop_front();
+        frame = std::move(ImageJobs[QueueHead]);
+        ImageJobs[QueueHead] = Frame{};
+        QueueHead = (QueueHead + 1) % KMaxQueuedImages;
+        --Cpu.current.queuedFrames;
+        Cpu.current.queuedPixelBytes -= frame.Pixels.capacity();
+        Cpu.current.encoderPixelBytes = frame.Pixels.capacity();
+        ObserveCpuStorage();
       }
       QueueSpaceAvailable.notify_one();
 
@@ -519,43 +575,38 @@ private:
       bool saved = false;
       try
       {
-        const size_t row_bytes = static_cast<size_t>(frame.Width) * 4u;
-        std::vector<unsigned char> row(row_bytes);
-        for (int y = 0; y < frame.Height / 2; ++y)
-        {
-          const size_t top = static_cast<size_t>(y) * row_bytes;
-          const size_t bottom =
-              static_cast<size_t>(frame.Height - 1 - y) * row_bytes;
-          std::memcpy(row.data(), frame.Pixels.data() + top, row_bytes);
-          std::memcpy(frame.Pixels.data() + top, frame.Pixels.data() + bottom,
-                      row_bytes);
-          std::memcpy(frame.Pixels.data() + bottom, row.data(), row_bytes);
-        }
-
         std::error_code ec;
         std::filesystem::create_directories(frame.Path.parent_path(), ec);
-        saved =
-            !ec &&
-            row_bytes <= static_cast<size_t>(std::numeric_limits<int>::max()) &&
-            stbi_write_png(frame.Path.string().c_str(), frame.Width,
-                           frame.Height, 4, frame.Pixels.data(),
-                           static_cast<int>(row_bytes)) != 0;
+        struct Output
+        {
+          const Frame &frame;
+          uint64_t checksum{14695981039346656037ull};
+        } output{frame};
+        saved = !ec && EncodeRgbaPng({frame.Pixels.data(), frame.Pixels.size(), frame.Width,
+                                      frame.Height, true}, &output,
+            [](void *context, const unsigned char *png, size_t length, size_t) {
+              auto &out = *static_cast<Output *>(context);
+              std::ofstream file(out.frame.Path, std::ios::binary | std::ios::trunc);
+              if (!file)
+                return false;
+              file.write(reinterpret_cast<const char *>(png), static_cast<std::streamsize>(length));
+              file.close();
+              if (file.fail())
+                return false;
+              if (!out.frame.Receipt.is_null())
+                for (size_t i = 0; i < length; ++i)
+                {
+                  out.checksum ^= png[i];
+                  out.checksum *= 1099511628211ull;
+                }
+              return true;
+            }, SampleCodec ? PngAllocationObserver{this, ObserveCodec} : PngAllocationObserver{});
         if (saved && !frame.Receipt.is_null())
         {
           // Bind the completed encoder output to the immutable readback pose.
           // FNV-1a detects accidental replacement; it is not an authenticity hash.
-          std::ifstream png(frame.Path, std::ios::binary);
-          uint64_t checksum = 14695981039346656037ull;
-          char byte{};
-          while (png.get(byte))
-          {
-            checksum ^= static_cast<unsigned char>(byte);
-            checksum *= 1099511628211ull;
-          }
-          if (!png.eof() || png.bad())
-            throw std::runtime_error("capture checksum read failed");
           std::ostringstream hex;
-          hex << std::hex << std::setw(16) << std::setfill('0') << checksum;
+          hex << std::hex << std::setw(16) << std::setfill('0') << output.checksum;
           frame.Receipt["png_fnv1a64"] = hex.str();
           frame.Receipt["width"] = frame.Width;
           frame.Receipt["height"] = frame.Height;
@@ -572,6 +623,12 @@ private:
       {
         saved = false;
       }
+      {
+        std::lock_guard lock(Mutex);
+        std::vector<unsigned char>().swap(frame.Pixels);
+        Cpu.current.encoderPixelBytes = 0;
+        Cpu.persistedFrames += saved;
+      }
       CubatariumLogInfo(
           "FlightCapture",
           std::string(saved ? "saved" : "write failed") +
@@ -583,12 +640,16 @@ private:
   }
 
   std::array<PboSlot, KPboSlotCount> PboSlots{};
-  std::mutex Mutex;
+  mutable std::mutex Mutex;
   std::condition_variable WorkAvailable;
   std::condition_variable QueueSpaceAvailable;
-  std::deque<Frame> ImageJobs;
+  std::array<Frame, KMaxQueuedImages> ImageJobs{};
+  size_t QueueHead{};
+  FlightCaptureCpuStorage Cpu;
   bool StopWorker{};
   bool Stopped{};
+  const bool SampleCodec;
+  const PngAllocationObserver Probe;
   std::thread Worker;
 };
 
@@ -1006,7 +1067,7 @@ void UWindowManager::Run(FlightCaptureGpuCheckpoint *captureCheckpoint)
     {
       if (!FlightCapture)
       {
-        FlightCapture = std::make_unique<UFlightCaptureService>();
+        FlightCapture = std::make_unique<UFlightCaptureService>(captureCheckpoint != nullptr);
       }
       FlightCapture->PollCompleted();
 
@@ -1202,6 +1263,17 @@ void UWindowManager::InspectFlightCaptureGpuBuffers(TerrainGpuBufferCensus &out)
     FlightCapture->InspectGpuBuffers(out);
 }
 
+void UWindowManager::SetFlightCaptureMemoryProbe(PngAllocationObserver observer)
+{
+  if (!FlightCapture)
+    FlightCapture = std::make_unique<UFlightCaptureService>(true, observer);
+}
+
+FlightCaptureCpuStorage UWindowManager::InspectFlightCaptureCpuStorage() const
+{
+  return FlightCapture ? FlightCapture->InspectCpuStorage() : FlightCaptureCpuStorage{};
+}
+
 void UWindowManager::StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint)
 {
   TerrainGpuBufferCensus names;
@@ -1209,6 +1281,13 @@ void UWindowManager::StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint)
   {
     InspectFlightCaptureGpuBuffers(names);
     checkpoint->beforeShutdown = names.Read();
+    checkpoint->cpuBeforeShutdown = InspectFlightCaptureCpuStorage();
+  }
+  if (FlightCapture)
+  {
+    FlightCapture->Shutdown();
+    if (checkpoint)
+      checkpoint->cpuAfterShutdown = InspectFlightCaptureCpuStorage();
   }
   FlightCapture.reset();
   if (checkpoint)

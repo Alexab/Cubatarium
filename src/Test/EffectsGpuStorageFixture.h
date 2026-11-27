@@ -2,6 +2,7 @@
 
 #include "App/Platform/FlightCaptureGpuCheckpoint.h"
 #include "App/Platform/WindowManager.h"
+#include "Core/Memory/ScopedPngEncoder.h"
 #include "Test/GeometryGpuStorageFixture.h"
 #include "ThirdParty/stb_image.h"
 
@@ -30,9 +31,18 @@ struct EffectsGpuStorageProbe
 struct WindowCaptureGpuStorageProbe
 {
   static void Attach(UWindowManager &manager) { manager.Window = glfwGetCurrentContext(); }
-  static bool Queue(UWindowManager &manager, const std::filesystem::path &path, uint32_t index)
+  static bool Queue(UWindowManager &manager, const std::filesystem::path &path, uint32_t index,
+                    nlohmann::json receipt = nullptr)
   {
-    return manager.QueueFlightCapture(path, index, 0.f, 0.f, GL_BACK, nullptr);
+    return manager.QueueFlightCapture(path, index, 0.f, 0.f, GL_BACK, std::move(receipt));
+  }
+  static void Profile(UWindowManager &manager, PngAllocationObserver observer)
+  {
+    manager.SetFlightCaptureMemoryProbe(observer);
+  }
+  static FlightCaptureCpuStorage Cpu(const UWindowManager &manager)
+  {
+    return manager.InspectFlightCaptureCpuStorage();
   }
   static void Drain(UWindowManager &manager, FlightCaptureGpuCheckpoint &checkpoint)
   {

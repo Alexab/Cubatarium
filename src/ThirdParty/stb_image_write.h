@@ -1094,15 +1094,15 @@ static unsigned char stbiw__paeth(int a, int b, int c)
 }
 
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
-static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
+static void stbiw__encode_png_line(const unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, int flip, signed char *line_buffer)
 {
    static int mapping[] = { 0,1,2,3,4 };
    static int firstmap[] = { 0,1,0,5,6 };
    int *mymap = (y != 0) ? mapping : firstmap;
    int i;
    int type = mymap[filter_type];
-   unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
-   int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
+   const unsigned char *z = pixels + stride_bytes * (flip ? height-1-y : y);
+   int signed_stride = flip ? -stride_bytes : stride_bytes;
 
    if (type==0) {
       memcpy(line_buffer, z, width*n);
@@ -1130,7 +1130,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    }
 }
 
-static unsigned char *stbiw__png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
+static unsigned char *stbiw__png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int flip, int *out_len)
 {
    int force_filter = stbi_write_force_png_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
@@ -1152,11 +1152,11 @@ static unsigned char *stbiw__png_to_mem(const unsigned char *pixels, int stride_
       int filter_type;
       if (force_filter > -1) {
          filter_type = force_filter;
-         stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, force_filter, line_buffer);
+         stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, force_filter, flip, line_buffer);
       } else { // Estimate the best filter by running through all of them:
          int best_filter = 0, best_filter_val = 0x7fffffff, est, i;
          for (filter_type = 0; filter_type < 5; filter_type++) {
-            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, filter_type, line_buffer);
+            stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, filter_type, flip, line_buffer);
 
             // Estimate the entropy of the line using this filter; the less, the better.
             est = 0;
@@ -1169,7 +1169,7 @@ static unsigned char *stbiw__png_to_mem(const unsigned char *pixels, int stride_
             }
          }
          if (filter_type != best_filter) {  // If the last iteration already got us the best filter, don't redo it
-            stbiw__encode_png_line((unsigned char*)(pixels), stride_bytes, x, y, j, n, best_filter, line_buffer);
+            stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, best_filter, flip, line_buffer);
             filter_type = best_filter;
          }
       }
@@ -1218,7 +1218,7 @@ static unsigned char *stbiw__png_to_mem(const unsigned char *pixels, int stride_
 
 STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
-   return stbiw__png_to_mem(pixels, stride_bytes, x, y, n, out_len);
+   return stbiw__png_to_mem(pixels, stride_bytes, x, y, n, stbi__flip_vertically_on_write, out_len);
 }
 
 #ifndef STBI_WRITE_NO_STDIO

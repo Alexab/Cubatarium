@@ -5,6 +5,7 @@
 #include "App/Platform/CreatureQaCapture.h"
 #include "App/Platform/FlightSimHarness.h"
 #include "App/Platform/FlightCaptureGpuCheckpoint.h"
+#include "App/Platform/FlightCaptureStorageReport.h"
 #include "App/Platform/SampleProfiler.h"
 #include "Core/StallTimer.h"
 #include "Core/UiPump.h"
@@ -3398,6 +3399,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           report << "  \"window_capture_gpu_lifetime\": " << nlohmann::json{
               {"before_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.beforeShutdown)},
               {"after_shutdown", DescribeEffectsGpuBuffers(captureCheckpoint.afterShutdown)}}.dump() << ",\n";
+          report << "  \"window_capture_cpu_storage\": " << nlohmann::json{
+              {"before_shutdown", DescribeFlightCaptureCpuStorage(captureCheckpoint.cpuBeforeShutdown)},
+              {"after_shutdown", DescribeFlightCaptureCpuStorage(captureCheckpoint.cpuAfterShutdown)}}.dump() << ",\n";
           TerrainGpuBufferCensus computeBuffers;
           InspectPersistentComputeGpuBuffers(computeBuffers);
           report << "  \"compute_gpu_buffers_after_loop\": "

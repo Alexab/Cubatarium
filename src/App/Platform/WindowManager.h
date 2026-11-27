@@ -29,6 +29,8 @@ class UApplication;
 class UBlockInputController;
 class UFlightCaptureService;
 struct FlightCaptureGpuCheckpoint;
+struct FlightCaptureCpuStorage;
+struct PngAllocationObserver;
 
 class UWindowManager
 {
@@ -137,6 +139,8 @@ private: // Instances of core systems
 
   std::unique_ptr<UBlockInputController> BlockInput;
   friend struct WindowCaptureGpuStorageProbe;
+  void SetFlightCaptureMemoryProbe(PngAllocationObserver observer);
+  FlightCaptureCpuStorage InspectFlightCaptureCpuStorage() const;
   bool QueueFlightCapture(const std::filesystem::path &path, uint32_t index,
                           float cameraX, float cameraY, GLenum source, nlohmann::json receipt);
   void StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint = nullptr);
