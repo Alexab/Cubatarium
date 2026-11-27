@@ -83,6 +83,8 @@ using PersistedColumnLight =
     std::vector<std::shared_ptr<const PersistedSectionLight>>;
 inline constexpr size_t kMaxColumnLightSections = 256;
 inline constexpr size_t kMaxColumnLightBytes = 8 * 1024 * 1024;
+// Allows geometric capacity growth for decoded and captured column owners.
+inline constexpr size_t kMaxColumnLightOwnerCapacity = 2 * kMaxColumnLightSections;
 
 inline size_t PersistedLightBytes(const PersistedSectionLight &receipt)
 {

@@ -11,6 +11,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/Lighting/ChunkRelightSnapshot.h"
 #include "World/Lighting/PersistedSectionLight.h"
+#include "World/Lighting/SectionLightRestoreQueue.h"
 #include <fstream>
 #include <limits>
 #include <nlohmann/json.hpp>
@@ -907,6 +908,96 @@ inline nlohmann::json CheckReceiptStreamLimits(const std::filesystem::path &root
           {"file_limit", kMaxColumnLightBytes}, {"exact_limit_peak", exact}, {"over_limit_peak", beyond},
           {"deep_peak", deep}, {"over_depth_peak", beyond_depth}, {"last_duplicates_win", true},
           {"nul_rejected", true}, {"retry", true}};
+}
+
+inline nlohmann::json CheckReceiptRestoreQueue()
+{
+  SectionLightRestoreQueue queue;
+  auto receipt = std::make_shared<PersistedSectionLight>();
+  const auto bytes = PersistedLightBytes(*receipt);
+  bool refused = false;
+  {
+    observation::Scope allocations(0);
+    refused = !queue.Offer(receipt, 1);
+    Require(refused && observation::State.refusals == 1 && !observation::State.live,
+            "force refusal of the first restore queue entry allocation");
+  }
+  if (queue.Size() != 0 || queue.RetainedBytes() != 0)
+    throw std::runtime_error("restore queue after allocation refusal: entries=" +
+                             std::to_string(queue.Size()) + " retained_bytes=" +
+                             std::to_string(queue.RetainedBytes()));
+  Require(queue.Offer(receipt, 1) && queue.Size() == 1 && queue.RetainedBytes() == bytes,
+          "retry retains exactly one restore receipt");
+  queue.CancelColumn(receipt->coord);
+  Require(queue.Size() == 0 && queue.RetainedBytes() == 0,
+          "cancellation retires the retried restore receipt");
+
+  std::array<std::shared_ptr<PersistedSectionLight>, SectionLightRestoreQueue::MaxCount> fixtures;
+  for (size_t i = 0; i < fixtures.size(); ++i)
+  {
+    fixtures[i] = std::make_shared<PersistedSectionLight>();
+    fixtures[i]->coord.x = static_cast<int>(i);
+  }
+  auto replacement = std::make_shared<PersistedSectionLight>();
+  replacement->signature.reserve(4096);
+  const auto replacement_bytes = PersistedLightBytes(*replacement);
+  receipt->coord.x = static_cast<int>(fixtures.size());
+  UBlockWorld world;
+  size_t empty_backing = 0, full_backing = 0, node_request = 0;
+  {
+    observation::Scope allocations;
+    {
+      SectionLightRestoreQueue saturated;
+      empty_backing = observation::State.live;
+      for (const auto &row : fixtures)
+        Require(saturated.Offer(row, 2), "fill all published restore entries");
+      full_backing = observation::State.live;
+      node_request = (full_backing - empty_backing) / fixtures.size();
+      const auto attempts = observation::State.attempts;
+      Require(saturated.RetainedBytes() == fixtures.size() * bytes &&
+                  !saturated.Offer(receipt, 2) && saturated.Offer(replacement, 3) &&
+                  fixtures.front().use_count() == 1 && replacement.use_count() == 2 &&
+                  observation::State.attempts == attempts &&
+                  saturated.RetainedBytes() == (fixtures.size() - 1) * bytes + replacement_bytes,
+              "the full queue rejects extra entries and replaces an existing one in place");
+      glm::ivec3 visited{-1};
+      const auto rejected = saturated.Drain(world, {}, [&](glm::ivec3 coord, uint64_t) {
+        visited = coord;
+        return false;
+      }, [](glm::ivec3) {}, 1);
+      Require(rejected.cancelled == 1 && visited == fixtures[1]->coord &&
+                  saturated.RetainedBytes() == (fixtures.size() - 2) * bytes + replacement_bytes,
+              "replacement moves to the tail without losing another FIFO entry");
+      saturated.Clear();
+      Require(saturated.Size() == 0 && saturated.RetainedBytes() == 0 &&
+                  replacement.use_count() == 1 && observation::State.live == empty_backing &&
+                  observation::State.attempts == attempts,
+              "clear retires every node and receipt reference");
+    }
+    Require(!observation::State.live && !observation::State.blocks,
+            "destroying the queue retires the empty backing");
+  }
+
+  auto large = std::make_shared<PersistedSectionLight>();
+  auto extra = std::make_shared<PersistedSectionLight>();
+  large->signature.reserve(9 * 1024 * 1024);
+  extra->signature.reserve(9 * 1024 * 1024);
+  extra->coord.x = 1;
+  Require(queue.Offer(large, 1) && !queue.Offer(extra, 1) && queue.Size() == 1 &&
+              queue.RetainedBytes() == PersistedLightBytes(*large),
+          "byte admission is independent of count and preserves the accepted entry");
+  PersistedColumnLight column;
+  for (size_t i = 0; i < kMaxColumnLightSections; ++i)
+    column.push_back(receipt);
+  Require(column.capacity() <= kMaxColumnLightOwnerCapacity,
+          "ordinary column construction stays within the submitted owner capacity");
+  return {{"cold_refusal_preserved_accounting", true}, {"retry", true},
+          {"empty_backing", empty_backing}, {"full_backing", full_backing},
+          {"node_request", node_request}, {"inline_bytes", sizeof(SectionLightRestoreQueue)},
+          {"max_count", SectionLightRestoreQueue::MaxCount},
+          {"max_payload", SectionLightRestoreQueue::MaxBytes},
+          {"column_capacity", column.capacity()}, {"column_limit", kMaxColumnLightOwnerCapacity},
+          {"full_replacement_without_allocation", true}, {"byte_refusal", true}};
 }
 
 inline nlohmann::json CheckReceiptTemporaries()

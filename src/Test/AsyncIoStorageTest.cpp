@@ -232,6 +232,7 @@ int main(int argc, char **argv)
     const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
     const auto folder = report.string() + ".data-" + std::to_string(stamp);
     // Codec observations run before any worker starts.
+    const auto receipt_restore = cutum::io_codec_fixture::CheckReceiptRestoreQueue();
     const auto codec = cutum::io_codec_fixture::CheckCodecs();
     const auto json_writer = cutum::io_codec_fixture::CheckJsonWriter();
     const auto binary_writer = cutum::io_codec_fixture::CheckBinaryWriter();
@@ -269,6 +270,7 @@ int main(int argc, char **argv)
     result["ordinary_receipt_temporaries"] = receipt;
     result["receipt_writer"] = receipt_writer;
     result["receipt_stream_limits"] = receipt_stream;
+    result["ordinary_receipt_restore_queue"] = receipt_restore;
     result["ordinary_file_streams"] = streams;
     result["ordinary_worker_launch"] = launch;
     std::ofstream output(report);

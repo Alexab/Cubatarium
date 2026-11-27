@@ -1,7 +1,7 @@
 #pragma once
 
 #include "World/Lighting/PersistedSectionLight.h"
-#include <deque>
+#include <list>
 
 namespace cutum
 {
@@ -35,11 +35,21 @@ public:
       return false;
     if (prior != Entries.end())
     {
-      Bytes -= prior->bytes;
-      Entries.erase(prior);
+      *prior = Entry{std::move(receipt), owner, bytes};
+      Entries.splice(Entries.end(), Entries, prior);
     }
-    Bytes += bytes;
-    Entries.push_back({std::move(receipt), owner, bytes});
+    else
+    {
+      try
+      {
+        Entries.push_back({std::move(receipt), owner, bytes});
+      }
+      catch (const std::bad_alloc &)
+      {
+        return false; // The ordinary relight path still owns the obligation.
+      }
+    }
+    Bytes = Bytes - prior_bytes + bytes;
     return true;
   }
   template <class OwnerCurrent, class OnReady>
@@ -52,29 +62,31 @@ public:
     const auto count = std::min(visit_budget, Entries.size());
     for (size_t n = 0; n < count; ++n)
     {
-      auto entry = std::move(Entries.front());
-      Entries.pop_front();
-      Bytes -= entry.bytes;
-      const auto coord = entry.receipt->coord;
-      if (!owner_current(coord, entry.owner))
+      const auto entry = Entries.begin();
+      const auto coord = entry->receipt->coord;
+      if (!owner_current(coord, entry->owner))
       {
+        Erase(entry);
         ++stats.cancelled;
         continue;
       }
       if (world.HasCompleteLightSamplingCalculation(coord, catalog))
       {
+        Erase(entry);
         ++stats.current;
         on_ready(coord);
         continue;
       }
       SectionLightRestoreDiagnostic diagnostic;
-      switch (RestoreSectionLight(world, *entry.receipt, catalog, &diagnostic))
+      switch (RestoreSectionLight(world, *entry->receipt, catalog, &diagnostic))
       {
       case SectionLightRestoreResult::Restored:
+        Erase(entry);
         ++stats.restored;
         on_ready(coord);
         break;
       case SectionLightRestoreResult::Rejected:
+        Erase(entry);
         ++stats.rejected;
         ++stats.reasons[static_cast<size_t>(diagnostic.reason)];
         if (!stats.first_rejected)
@@ -82,8 +94,7 @@ public:
         break;
       case SectionLightRestoreResult::InputsUnavailable:
         ++stats.waiting;
-        Bytes += entry.bytes;
-        Entries.push_back(std::move(entry));
+        Entries.splice(Entries.end(), Entries, entry);
         break;
       }
     }
@@ -93,10 +104,7 @@ public:
   {
     for (auto it = Entries.begin(); it != Entries.end();)
       if (it->receipt->coord.x == column.x && it->receipt->coord.z == column.z)
-      {
-        Bytes -= it->bytes;
-        it = Entries.erase(it);
-      }
+        it = Erase(it);
       else
         ++it;
   }
@@ -115,7 +123,14 @@ private:
     uint64_t owner{0};
     size_t bytes{0};
   };
-  std::deque<Entry> Entries;
+  using EntriesList = std::list<Entry>;
+  EntriesList::iterator Erase(EntriesList::iterator entry)
+  {
+    Bytes -= entry->bytes;
+    return Entries.erase(entry);
+  }
+
+  EntriesList Entries;
   size_t Bytes{0};
 };
 } // namespace cutum

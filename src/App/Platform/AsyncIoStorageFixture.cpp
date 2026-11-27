@@ -12,6 +12,7 @@
 #include "World/IO/ChunkStorageService.h"
 #include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/PersistedSectionLight.h"
+#include "World/Lighting/SectionLightRestoreQueue.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <cstdio>
@@ -640,7 +641,8 @@ struct AsyncIoStorageProbe
     io.RequestLoad(receipt_coord, storage, registry, folder, {receipt_coord, 1},
                    {}, 799, true);
     Require(io.WaitIdleFor(std::chrono::seconds(6)), "receipt read finishes");
-    const auto receipt_result = io.DrainLoads();
+    const auto completed_receipt = Inspect(io);
+    auto receipt_result = io.DrainLoads();
     const auto *receipt_codec = trace.FindCodec(IoCodecKind::ReceiptRead, 799);
     const auto *receipt_validation = trace.FindCodec(IoCodecKind::ReceiptValidation, 799);
     const auto *receipt_checksum = trace.FindCodec(IoCodecKind::ReceiptChecksum, 799);
@@ -655,6 +657,21 @@ struct AsyncIoStorageProbe
                   sample->stack_buffer_bytes == receipt_codec->stack_buffer_bytes +
                       (sample == receipt_checksum ? persisted_light_detail::kReceiptEncodingBufferBytes : 0),
               "inner receipt windows preserve the live reader backing and checksum buffer");
+    SectionLightRestoreQueue restore;
+    std::weak_ptr<const PersistedColumnLight> weak_column = receipt_result[0].columnLight;
+    std::weak_ptr<const PersistedSectionLight> weak_section = receipt_result[0].columnLight->front();
+    Require(completed_receipt.retained_supported && completed_receipt.completed[0] == 1 &&
+                io.GetOutstandingLoadCount() == 1 &&
+                restore.Offer(receipt_result[0].columnLight->front(), receipt_result[0].token.sequence),
+            "the returned load keeps a credit while the restore queue takes the same section");
+    const auto restore_bytes = restore.RetainedBytes();
+    receipt_result.clear();
+    Require(io.GetOutstandingLoadCount() == 0 && weak_column.expired() && !weak_section.expired() &&
+                restore.Size() == 1 && restore_bytes > 0,
+            "releasing the returned result retires the column wrapper and keeps only the pending section");
+    restore.CancelColumn(receipt_coord);
+    Require(weak_section.expired() && restore.Size() == 0 && restore.RetainedBytes() == 0,
+            "column cancellation retires the last restored payload owner");
     trace.cancel_on_decode = cancellation.get();
     const glm::ivec3 coord{2, 0, 0};
     const auto base = coord * CHUNK_SIZE;
@@ -708,7 +725,8 @@ struct AsyncIoStorageProbe
             {"receipt_checksum_scratch", receipt_checksum->scratch_bytes},
             {"receipt_checksum_stack", receipt_checksum->stack_buffer_bytes},
             {"receipt_prefix_output", receipt_validation->output_bytes},
-            {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes}};
+            {"receipt_read_stack_buffer", receipt_codec->stack_buffer_bytes},
+            {"receipt_restore_payload", restore_bytes}, {"receipt_restore_handoff", true}};
   }
 
   static nlohmann::json CheckStreamingJson(const std::filesystem::path &root, UBlockRegistry &registry)
@@ -1075,11 +1093,25 @@ struct AsyncIoStorageProbe
     receipt->checksum = persisted_light_detail::Checksum(*receipt);
     receipts->push_back(receipt);
     const auto receipt_refs = receipts.use_count();
+    {
+      auto excessive_column = std::make_shared<PersistedColumnLight>(*receipts);
+      excessive_column->reserve(kMaxColumnLightOwnerCapacity + 1);
+      auto excessive_section = std::make_shared<PersistedSectionLight>(*receipt);
+      excessive_section->inputs.reserve(kMaxColumnLightBytes / sizeof(PersistedSectionLight::Input) + 1);
+      auto excessive_payload = std::make_shared<PersistedColumnLight>();
+      excessive_payload->push_back(excessive_section);
+      Require(!io.RequestSaveColumnLight(coord, excessive_column, storage, folder) &&
+                  !io.RequestSaveColumnLight(coord, excessive_payload, storage, folder) &&
+                  io.GetOutstandingWriteCount() == 0 && excessive_column.use_count() == 1 &&
+                  excessive_payload.use_count() == 1,
+              "oversized receipt capacity is declined before occupying write credits");
+    }
     io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 100);
     io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 101);
     io.RequestSave(save_coord, storage, folder, world, registry, {save_coord, 1}, 200);
-    io.RequestSaveColumnLight(coord, receipts, storage, folder, 201);
-    io.RequestSaveColumnLight(coord, receipts, storage, folder, 202);
+    Require(io.RequestSaveColumnLight(coord, receipts, storage, folder, 201) &&
+                io.RequestSaveColumnLight(coord, receipts, storage, folder, 202),
+            "normal receipt backing is admitted after the controls");
     std::vector<glm::ivec2> complete{{0, 0}};
     complete.reserve(600);
     io.RequestSaveColumnLightFlags(folder, 300, std::move(complete), "io-storage-test");
@@ -1182,7 +1214,7 @@ struct AsyncIoStorageProbe
             {"drained", Describe(drained)}, {"fallback", Describe(fallback_queued)},
             {"unknown_scratch_controls", true}, {"returned_owner_retired", true},
             {"cancelled_pending_retired", true}, {"normal_shutdown_drained", true},
-            {"worker_stages", worker_stages},
+            {"worker_stages", worker_stages}, {"receipt_queue_capacity_refused", true},
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
             {"load_credits", CheckLoadCredits(folder, coord, storage, registry)},
             {"index_warmup", CheckIndexWarmup(root / "index-warmup", registry)},

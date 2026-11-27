@@ -685,6 +685,20 @@ bool UAsyncChunkIO::RequestSaveColumnLight(
     glm::ivec3 column, std::shared_ptr<const PersistedColumnLight> receipts,
     UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
+  if (receipts)
+  {
+    if (receipts->size() > kMaxColumnLightSections ||
+        receipts->capacity() > kMaxColumnLightOwnerCapacity)
+      return false;
+    size_t remaining = kMaxColumnLightBytes;
+    for (const auto &receipt : *receipts)
+    {
+      const size_t bytes = receipt ? PersistedLightBytes(*receipt) : 0;
+      if (bytes > remaining)
+        return false;
+      remaining -= bytes;
+    }
+  }
   auto credit = ReserveTerrainWrites(1);
   if (!credit)
     return false;
