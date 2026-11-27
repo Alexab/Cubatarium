@@ -134,13 +134,14 @@ inline nlohmann::json CheckCodecs()
               "real JSON parse and dump publish their allocation windows");
       Require(!decode.storage.scratch_bytes && decode.storage.stack_buffer_bytes,
               "JSON read retires its syntax parser and keeps no value tree");
-      const auto stream_peak = [&](const std::string &source) {
+      const auto stream_peak = [&](const std::string &source, bool valid = true) {
         std::istringstream file(source);
         observation::Scope allocations;
         {
           const auto data = json.DeserializeStream(file, coord, registry);
-          Require(data.HasDecodedTerrainFrame(coord) && data.GetBlock({0, 0, 0}) == 8,
-                  "the stream retains the authored cell");
+          const bool decoded = data.HasDecodedTerrainFrame(coord);
+          Require(decoded == valid && (!valid || data.GetBlock({0, 0, 0}) == 8),
+                  "the stream publishes the authored cell only after validation");
         }
         Require(!observation::State.live && !observation::State.blocks,
                 "the streamed JSON parser and result retire");
@@ -159,12 +160,42 @@ inline nlohmann::json CheckCodecs()
       padded.append(8 * 1024 * 1024, ' ');
       const auto padded_peak = stream_peak(padded);
       const auto long_token_peak = stream_peak(prefix + R"(],"extra":")" + std::string(131072, 'x') + "\"}");
+      std::string literals = prefix + R"(],"extra":[)";
+      const auto compact_literal_peak = stream_peak(literals + "null]}");
+      const auto compact_error_peak = stream_peak(literals + "nulx]}", false);
+      for (int i = 0; i < 262144; ++i)
+        literals += "null,";
+      const auto literal_error_peak = stream_peak(literals + "nulx]}", false);
+      literals += "null]}";
+      const auto literal_peak = stream_peak(literals);
+      constexpr size_t depth = 16384;
+      const auto deep_peak = stream_peak(prefix + R"(],"extra":)" + std::string(depth, '[') +
+                                         "null" + std::string(depth, ']') + "}");
       Require(compact_peak == padded_peak && long_token_peak > padded_peak,
               "repeated cells and whitespace do not grow retained JSON values, while lexer tokens still cost memory");
+      Require(deep_peak > compact_literal_peak, "nesting still needs parser state");
+#ifdef CUBATARIUM_JSON_LEXER_OVERRIDES
+      Require(compact_literal_peak == literal_peak && literal_error_peak <= compact_error_peak + 1024,
+              "literal runs keep the allocation peak both on success and on malformed trailing input");
+#endif
+      bool has_default_diagnostic = false;
+      try
+      {
+        (void)nlohmann::json::parse("[1,nulx]");
+      }
+      catch (const nlohmann::json::parse_error &error)
+      {
+        has_default_diagnostic = std::string_view(error.what()).find("last read: '1,nulx'") != std::string_view::npos;
+      }
+      Require(has_default_diagnostic, "ordinary JSON clients retain the raw token in diagnostics");
       phases = {{"parse_peak", parse.peak}, {"parse_additional", parse.additional},
                 {"dump_peak", dump.peak}, {"dump_additional", dump.additional},
                 {"compact_stream_peak", compact_peak}, {"padded_stream_peak", padded_peak},
-                {"padded_stream_bytes", padded.size()}, {"long_token_peak", long_token_peak}};
+                {"padded_stream_bytes", padded.size()}, {"long_token_peak", long_token_peak},
+                {"compact_literal_peak", compact_literal_peak}, {"literal_stream_peak", literal_peak},
+                {"literal_stream_bytes", literals.size()}, {"compact_error_peak", compact_error_peak},
+                {"literal_error_peak", literal_error_peak}, {"default_raw_diagnostic", has_default_diagnostic},
+                {"deep_peak", deep_peak}, {"nesting", depth}};
     }
     else
     {

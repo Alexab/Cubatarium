@@ -323,9 +323,29 @@ UChunkBuffer DecodeJson(glm::ivec3 coord, UBlockRegistry &registry, size_t input
 }
 
 template<class Iterator>
+class ChunkJsonInput
+{
+public:
+  using char_type = char;
+  static constexpr bool cutum_collect_raw_lexer_diagnostics = false;
+
+  ChunkJsonInput(Iterator first, Iterator last) : Next(first, last), End(last, last) {}
+
+  std::char_traits<char>::int_type get_character()
+  {
+    return Next == End ? std::char_traits<char>::eof() :
+                         std::char_traits<char>::to_int_type(*Next++);
+  }
+
+private:
+  JsonWhitespaceIterator<Iterator> Next, End;
+};
+
+template<class Iterator>
 bool ParseJson(Iterator first, Iterator last, ChunkJsonReader &reader)
 {
-  return json::sax_parse(JsonWhitespaceIterator(first, last), JsonWhitespaceIterator(last, last), &reader);
+  nlohmann::detail::parser<json, ChunkJsonInput<Iterator>> parser{ChunkJsonInput(first, last)};
+  return parser.sax_parse(&reader, true);
 }
 
 } // namespace

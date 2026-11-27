@@ -3564,11 +3564,19 @@
       "receipt": "build/desktop-msvc/s4-q10-json-stream-acceptance.json",
       "scope": "The synchronous and worker JSON chunk routes parse the open stream directly. The retained values are scalar terrain fields, one voxel record, and the decoded slice. No full-file vector, second text copy or voxel DOM belongs to these routes. The stream keeps one separator per whitespace run outside quoted strings and preserves token boundaries. The physical fixture verifies repeated cells, duplicate members, historical block names, weather, refusal, retry and protection after malformed trailing input. Independent ordinary allocation observation joins repeated voxels and whitespace to the same peak as one compact voxel with matching token size and depth.",
       "remaining": "Tokenizer token length, lexer diagnostic text across runs of literals and punctuation, parser nesting, registry lookup and error-path scratch remain input-dependent. Compose those limits with the existing I/O request credits, write snapshots, receipts, flags, per-folder index contents and Q01.L2. Keep the full native/performance/memory matrix and original S0–S6 acceptance requirements. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.JSON_LEXER",
+      "status": "SCOPED_Q10_JSON_LEXER_DIAGNOSTIC_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_JSON_LEXER_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-json-lexer-acceptance.json",
+      "scope": "The pinned Windows Release JSON lexer skips collection of raw diagnostic text for the terrain adapter. Other JSON adapters retain their existing raw diagnostic text. The installed package is unchanged. The scoped ordinary allocation probe compares one literal against 262145 literals, verifies that malformed trailing input still refuses to publish terrain, and retains independent long-string and deep-nesting controls. The sync and worker fixture remains bound to the same physical JSON format and retirement checks.",
+      "remaining": "Decoded tokenizer values, parser nesting, registry lookup and error-path scratch remain input-dependent. Compose their limits with I/O request credits, write snapshots, receipts, flags, per-folder index contents and Q01.L2. Keep the complete native/performance/memory matrix and original S0–S6 acceptance requirements. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Проверены двоичное чтение и потоковый разбор JSON без полной копии файла. Далее оценить и ограничить память токенов и вложенности, проверить снимки, запись и метаданные, затем замкнуть пиковый объём I/O вместе с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Для чтения чанков JSON проверено отключение накопления исходного текста ошибок. Далее ограничить декодированные токены и вложенность, проверить снимки, запись и метаданные, затем замкнуть пиковый объём I/O вместе с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }
