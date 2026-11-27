@@ -15,6 +15,7 @@ public:
   static constexpr size_t kMaxContainerDepth = 16385;
   static constexpr size_t kMaxNumericTokenBytes = 4096;
   static constexpr size_t kMaxLegacyNameBytes = 64 * 1024;
+  static size_t MaxFrameBytes() noexcept;
 
   ChunkDiskFormat GetFormat() const override { return ChunkDiskFormat::Json; }
   const char *FileExtension() const override { return ".json"; }

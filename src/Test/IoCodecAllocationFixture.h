@@ -192,11 +192,96 @@ inline void Check(const CapturedRequest &capture)
 {
   if (capture.calls != 1 || !capture.storage.supported ||
       capture.observed != capture.storage.scratch_bytes + capture.storage.output_bytes ||
-      ((capture.storage.kind != IoCodecKind::BinaryRead && capture.storage.kind != IoCodecKind::JsonRead) &&
+      ((capture.storage.kind != IoCodecKind::BinaryRead && capture.storage.kind != IoCodecKind::JsonRead &&
+        capture.storage.kind != IoCodecKind::JsonWrite) &&
        !capture.storage.scratch_bytes) ||
       !capture.storage.output_bytes)
     throw std::runtime_error("codec checkpoint differs from independently observed ordinary requests: " +
         std::to_string(static_cast<int>(capture.storage.kind)) + " " + Describe(capture).dump());
+}
+
+inline nlohmann::json CheckJsonWriter()
+{
+  UBlockRegistry registry(nullptr);
+  UJsonChunkSerializer codec;
+  const auto reference = [](const UChunk &chunk, glm::ivec3 coord) {
+    nlohmann::json cells = nlohmann::json::array();
+    for (size_t i = 0; i < chunk.GetData().size(); ++i)
+    {
+      const auto id = chunk.GetData()[i];
+      if (id == BLOCK_AIR)
+        continue;
+      nlohmann::json cell{{"id", id}, {"lx", i % CHUNK_SIZE},
+                          {"ly", i / CHUNK_SIZE % CHUNK_SIZE}, {"lz", i / (CHUNK_SIZE * CHUNK_SIZE)}};
+      if (const auto fluid = chunk.GetFluidData()[i])
+        cell["fluid"] = fluid;
+      cells.push_back(std::move(cell));
+    }
+    return nlohmann::json{{"cx", coord.x}, {"cy", coord.y}, {"cz", coord.z}, {"format_version", 4},
+        {"voxels", std::move(cells)}, {"weather_state", {{"last_update_sec", std::max(0.0, chunk.GetWeatherLastUpdateSec())},
+            {"surface_wetness", std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f)}}}}.dump();
+  };
+  const auto measure = [&](const UChunk &chunk, glm::ivec3 coord) {
+    const auto expected = reference(chunk, coord);
+    CapturedRequest encode;
+    const auto probe = encode.Probe();
+    size_t size = 0, capacity = 0, requests = 0;
+    {
+      observation::Scope allocations;
+      {
+        const auto output = codec.Serialize(coord, chunk, registry, &probe);
+        size = output.bytes.size();
+        capacity = output.bytes.capacity();
+        Require(output.format == ChunkDiskFormat::Json &&
+                    std::equal(output.bytes.begin(), output.bytes.end(), expected.begin(), expected.end()),
+                "JSON bytes match the independent v4 reference");
+        requests = observation::State.attempts;
+      }
+      encode.operation_peak = observation::State.peak;
+      Require(!observation::State.live && !observation::State.blocks, "all writer backing retires");
+    }
+    Check(encode);
+    Require(size <= UJsonChunkSerializer::MaxFrameBytes() && capacity == size && requests == 1 &&
+                !encode.storage.scratch_bytes && encode.storage.stack_buffer_bytes == 64 &&
+                encode.operation_peak == encode.storage.output_bytes &&
+                encode.operation_peak == size + NameStorageAlignmentSlack(size),
+            "v4 JSON writer acquires only its exact output backing");
+    return nlohmann::json{{"size", size}, {"capacity", capacity}, {"requests", requests},
+                          {"peak", encode.operation_peak}, {"scratch", encode.storage.scratch_bytes},
+                          {"stack_buffer", encode.storage.stack_buffer_bytes}, {"byte_match", true}};
+  };
+
+  const glm::ivec3 limits{(std::numeric_limits<int>::min)(), (std::numeric_limits<int>::max)(), -1};
+  UChunk chunk({0, 0, 0});
+  chunk.SetWeatherState(-0.0f, std::numeric_limits<double>::denorm_min());
+  auto empty = measure(chunk, limits);
+  chunk.SetBlockLocal({3, 1, 2}, 9);
+  chunk.SetBlockLocal({15, 14, 13}, 10000);
+  chunk.SetFluidLocal({15, 14, 13}, FluidCellState::Flowing(7, true).WithKind(FluidKind::Water));
+  chunk.SetWeatherState(0.73f, 135.25);
+  auto sparse = measure(chunk, {-14, -2, 20});
+  for (int z = 0; z < CHUNK_SIZE; ++z)
+    for (int y = 0; y < CHUNK_SIZE; ++y)
+      for (int x = 0; x < CHUNK_SIZE; ++x)
+      {
+        const glm::ivec3 pos{x, y, z};
+        chunk.SetBlockLocal(pos, (std::numeric_limits<BlockId>::max)());
+        chunk.SetFluidLocal(pos, UnpackFluidCellState(UINT8_MAX));
+      }
+  chunk.SetWeatherState(0.125f, (std::numeric_limits<double>::max)());
+  bool refused = false;
+  {
+    observation::Scope allocations(0);
+    try { (void)codec.Serialize(limits, chunk, registry); }
+    catch (const std::bad_alloc &) { refused = true; }
+    Require(refused && observation::State.refusals == 1 && !observation::State.live && !observation::State.blocks,
+            "output allocation refusal leaves no writer backing");
+  }
+  auto dense = measure(chunk, limits);
+  const auto max_frame = UJsonChunkSerializer::MaxFrameBytes();
+  return {{"empty", std::move(empty)}, {"sparse", std::move(sparse)}, {"dense", std::move(dense)},
+          {"max_frame", max_frame}, {"max_requested", max_frame + NameStorageAlignmentSlack(max_frame)},
+          {"allocation_refused_and_retried", true}};
 }
 
 inline nlohmann::json CheckCodecs()
@@ -252,8 +337,9 @@ inline nlohmann::json CheckCodecs()
     {
       const auto &parse = decode.windows[static_cast<size_t>(IoCodecWindow::JsonParse)];
       const auto &dump = encode.windows[static_cast<size_t>(IoCodecWindow::JsonDump)];
-      Require(parse.calls == 1 && parse.additional > 0 && dump.calls == 1 && dump.additional > 0,
-              "real JSON parse and dump publish their allocation windows");
+      Require(parse.calls == 1 && parse.additional > 0 && dump.calls == 1 &&
+                  dump.additional == encode.storage.output_bytes && !encode.storage.scratch_bytes,
+              "JSON parse retains its window and the writer observes exactly the output allocation");
       Require(!decode.storage.scratch_bytes && decode.storage.stack_buffer_bytes,
               "JSON read retires its syntax parser and keeps no value tree");
       const auto stream_peak = [&](const std::string &source, bool valid = true) {

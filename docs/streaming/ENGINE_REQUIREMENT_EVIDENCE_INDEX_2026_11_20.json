@@ -3588,11 +3588,19 @@
       "receipt": "build/desktop-msvc/s4-q10-synthetic-final-acceptance.json",
       "scope": "Legacy terrain names retain their established synthetic lookup. Synthetic admission stops at the 16-bit runtime limit, admits 61440 sequential runtime IDs and preserves their name and reverse mappings. Synthetic and rebuild ID bindings roll back all index and descriptor rows on a failed publication. Ordinary allocation refusal prefixes preserve existing IDs and permit exact retries. The physical disk worker and synchronous reload use the same registry entry.",
       "remaining": "Retained placeholder cache bytes, qualified lookup scratch, synthetic strings and allocator capacity must join the Q10 byte composition. Whole-catalog rebuild rollback and side effects of successful per-voxel lookups before final JSON certification remain separate. Complete the write snapshot and encoded payload, receipts, flags, file indexes and Q01.L2, and retain the full native/performance/memory matrix and S0–S6 criteria. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.JSON_WRITE",
+      "status": "SCOPED_Q10_JSON_WRITE_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_JSON_WRITE_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-json-write-acceptance.json",
+      "scope": "The terrain JSON v4 writer sizes and fills one output allocation. Its independent ordinary request observation matches that allocation and a 64-byte numeric formatting buffer is on the stack. Empty, sparse and dense files match the v4 byte reference, including full-width IDs, packed fluid, signed coordinates and floating-point terrain weather. The single allocation refusal retires all backing and the retry emits the same bytes. Flat confirms physical async write and synchronous reload of 4096 voxels.",
+      "remaining": "The payload bound is per executing terrain JSON writer. Compose save snapshots and their shared light owners, binary encoding, persisted light receipts, flags, paths, file indexes and Q01.L2. The peak read term still includes registry names, synthetic entries and placeholder assets. The full native/performance/memory matrix and S0–S6 acceptance criteria remain open. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Подтверждён конечный диапазон ID и откат записей реестра при отказе. Далее свести память имён, синтетических блоков и текстур с пиком чтения. Проверить снимки, выход записи, квитанции и метаданные, затем замкнуть пик I/O с Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Для JSON-записи доказан предел выходных байтов и проверена побайтовая совместимость. Далее связать активный выход со снимками и совместной памятью света, проверить двоичную запись, квитанции и файловые метаданные. Свести итоговый пик с памятью реестра при чтении и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

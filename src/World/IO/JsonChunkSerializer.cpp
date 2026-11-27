@@ -5,9 +5,13 @@
 #include "World/Math/FluidCellState.h"
 #include <algorithm>
 #include <array>
+#include <charconv>
+#include <cmath>
 #include <iterator>
+#include <limits>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -387,61 +391,110 @@ bool ParseJson(Iterator first, Iterator last, ChunkJsonReader &reader)
   return parser.sax_parse(&reader, true);
 }
 
-} // namespace
+constexpr size_t kJsonNumberBufferBytes = 64;
 
-SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
-                                                const UChunk &chunk,
-                                                UBlockRegistry &registry,
-                                                const IoCodecProbe *probe) const
+template<class Append>
+void EncodeChunkJson(glm::ivec3 coord, const UChunk &chunk, Append append)
 {
-  SerializedChunk out;
-  out.format = ChunkDiskFormat::Json;
+  std::array<char, kJsonNumberBufferBytes> number;
+  const auto integer = [&](auto value) {
+    static_assert(std::numeric_limits<decltype(value)>::digits10 + 2 <= kJsonNumberBufferBytes);
+    const auto end = std::to_chars(number.data(), number.data() + number.size(), value).ptr;
+    append({number.data(), static_cast<size_t>(end - number.data())});
+  };
+  const auto floating = [&](double value) {
+    if (!std::isfinite(value))
+    {
+      append("null");
+      return;
+    }
+    // The v4 files use nlohmann's double formatting, including signed zero.
+    const auto end = nlohmann::detail::to_chars(number.data(), number.data() + number.size(), value);
+    append({number.data(), static_cast<size_t>(end - number.data())});
+  };
 
-  json data;
-  data["format_version"] = 4;
-  data["cx"] = chunkCoord.x;
-  data["cy"] = chunkCoord.y;
-  data["cz"] = chunkCoord.z;
-  json voxels = json::array();
+  append(R"({"cx":)");
+  integer(coord.x);
+  append(R"(,"cy":)");
+  integer(coord.y);
+  append(R"(,"cz":)");
+  integer(coord.z);
+  append(R"(,"format_version":4,"voxels":[)");
+  size_t index = 0;
+  bool first = true;
   for (int z = 0; z < CHUNK_SIZE; ++z)
   {
     for (int y = 0; y < CHUNK_SIZE; ++y)
     {
-      for (int x = 0; x < CHUNK_SIZE; ++x)
+      for (int x = 0; x < CHUNK_SIZE; ++x, ++index)
       {
-        const glm::ivec3 local(x, y, z);
-        const BlockId id = chunk.GetBlockLocal(local);
+        const BlockId id = chunk.GetData()[index];
         if (id == BLOCK_AIR)
-        {
           continue;
-        }
-        json voxel = {{"lx", x}, {"ly", y}, {"lz", z}, {"id", id}};
-        const uint8_t fluid_packed =
-            PackFluidCellState(chunk.GetFluidLocal(local));
-        if (fluid_packed != 0)
+        if (!first)
+          append(",");
+        first = false;
+        append("{");
+        if (const auto fluid = chunk.GetFluidData()[index])
         {
-          voxel["fluid"] = fluid_packed;
+          append(R"("fluid":)");
+          integer(fluid);
+          append(",");
         }
-        voxels.push_back(std::move(voxel));
+        append(R"("id":)");
+        integer(id);
+        append(R"(,"lx":)");
+        integer(x);
+        append(R"(,"ly":)");
+        integer(y);
+        append(R"(,"lz":)");
+        integer(z);
+        append("}");
       }
     }
   }
-  data["voxels"] = voxels;
-  data["weather_state"] = {
-      {"surface_wetness", std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f)},
-      {"last_update_sec", std::max(0.0, chunk.GetWeatherLastUpdateSec())}};
-  const auto text = RunIoCodecWindow(probe, IoCodecWindow::JsonDump, [&] { return data.dump(); });
-  out.bytes.assign(text.begin(), text.end());
+  append(R"(],"weather_state":{"last_update_sec":)");
+  floating(std::max(0.0, chunk.GetWeatherLastUpdateSec()));
+  append(R"(,"surface_wetness":)");
+  floating(std::clamp(chunk.GetSurfaceWetness(), 0.0f, 1.0f));
+  append("}}");
+}
+
+} // namespace
+
+size_t UJsonChunkSerializer::MaxFrameBytes() noexcept
+{
+  static_assert(CHUNK_SIZE <= 100);
+  // Header punctuation and keys, three signed coordinates and two numbers.
+  constexpr size_t header = 106 + 3 * (std::numeric_limits<int>::digits10 + 2) + 2 * kJsonNumberBufferBytes;
+  // A separated full voxel has 35 fixed bytes, fluid, ID and three local coordinates.
+  constexpr size_t voxel = 35 + 3 + 5 + 3 * 2;
+  return header + CHUNK_VOLUME * voxel;
+}
+
+SerializedChunk UJsonChunkSerializer::Serialize(glm::ivec3 chunkCoord,
+                                                const UChunk &chunk,
+                                                UBlockRegistry & /*registry*/,
+                                                const IoCodecProbe *probe) const
+{
+  SerializedChunk out;
+  out.format = ChunkDiskFormat::Json;
+  RunIoCodecWindow(probe, IoCodecWindow::JsonDump, [&] {
+    size_t extent = 0;
+    EncodeChunkJson(chunkCoord, chunk, [&](std::string_view text) { extent += text.size(); });
+    if (extent > MaxFrameBytes())
+      throw std::length_error("Terrain JSON frame exceeds its v4 byte limit");
+    out.bytes.reserve(extent);
+    EncodeChunkJson(chunkCoord, chunk, [&](std::string_view text) {
+      out.bytes.insert(out.bytes.end(), text.begin(), text.end());
+    });
+  });
   if (probe)
   {
-    StlSourceStorage scratch, output;
-    scratch.JsonTree(voxels);
-    scratch.JsonTree(data);
-    scratch.Text(text);
+    StlSourceStorage output;
     output.Buffer(out.bytes.capacity(), sizeof(uint8_t));
-    probe->sample(probe->context, {IoCodecKind::JsonWrite, scratch.bytes.requested,
-                                  0, output.bytes.requested, 0,
-                                  scratch.bytes.supported && output.bytes.supported});
+    probe->sample(probe->context, {IoCodecKind::JsonWrite, 0, 0, output.bytes.requested,
+                                  kJsonNumberBufferBytes, output.bytes.supported});
   }
   return out;
 }

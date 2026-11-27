@@ -233,6 +233,7 @@ int main(int argc, char **argv)
     const auto folder = report.string() + ".data-" + std::to_string(stamp);
     // Codec observations run before any worker starts.
     const auto codec = cutum::io_codec_fixture::CheckCodecs();
+    const auto json_writer = cutum::io_codec_fixture::CheckJsonWriter();
     const auto assignment = cutum::io_codec_fixture::CheckRuntimeIdAssignment();
     const auto synthetic = cutum::io_codec_fixture::CheckSyntheticRegistry();
     const auto disk = cutum::io_codec_fixture::CheckDiskIndex(folder + "-index");
@@ -254,6 +255,7 @@ int main(int argc, char **argv)
     result["windows_crt_locale"] = cutum::windows_crt_locale_fixture::Run();
     result["windows_executable_tls"] = cutum::windows_executable_tls_fixture::Run();
     result["ordinary_codec"] = codec;
+    result["json_writer"] = json_writer;
     result["runtime_id_assignment"] = assignment;
     result["synthetic_registry"] = synthetic;
     result["ordinary_disk_index"] = disk;

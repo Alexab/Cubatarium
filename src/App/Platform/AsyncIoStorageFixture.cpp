@@ -9,6 +9,7 @@
 #include "World/Core/BlockWorld.h"
 #include "World/IO/AsyncChunkIO.h"
 #include "World/IO/ChunkStorageService.h"
+#include "World/IO/JsonChunkSerializer.h"
 #include "World/Lighting/PersistedSectionLight.h"
 #include <nlohmann/json.hpp>
 #include <algorithm>
@@ -648,12 +649,22 @@ struct AsyncIoStorageProbe
               "inner receipt allocation shares the live reader DOM, text and empty output owner");
     trace.cancel_on_decode = cancellation.get();
     const glm::ivec3 coord{2, 0, 0};
-    world.SetBlock({2 * CHUNK_SIZE + 3, 2, 3}, 8);
+    const auto base = coord * CHUNK_SIZE;
+    for (int z = 0; z < CHUNK_SIZE; ++z)
+      for (int y = 0; y < CHUNK_SIZE; ++y)
+        for (int x = 0; x < CHUNK_SIZE; ++x)
+          world.SetBlock(base + glm::ivec3(x, y, z), 8);
     io.RequestSave(coord, storage, folder, world, registry, {coord, 1}, 800);
     Require(io.WaitIdleFor(std::chrono::seconds(6)), "JSON save finishes");
     const auto saves = io.DrainSaves();
     Require(saves.size() == 1 && saves[0].success && saves[0].format == ChunkDiskFormat::Json,
             "real JSON save publishes");
+    const auto file_size = std::filesystem::file_size(saves[0].filePath);
+    UBlockWorld cold;
+    Require(file_size <= UJsonChunkSerializer::MaxFrameBytes() &&
+                storage.LoadChunk(coord, cold, folder, registry) == CHUNK_VOLUME &&
+                cold.GetBlock(base + glm::ivec3(CHUNK_SIZE - 1)) == 8,
+            "the physical dense JSON file reloads the complete chunk");
     io.RequestLoad(coord, storage, registry, folder, {coord, 1}, cancellation, 801);
     Require(io.WaitIdleFor(std::chrono::seconds(6)) && io.CompletedLoadsEmpty(),
             "active cancellation suppresses result publication");
@@ -665,8 +676,10 @@ struct AsyncIoStorageProbe
     Require(save && save->encoded_bytes && decoded && !decoded->input_bytes &&
                 decoded->decoded_bytes && cancelled && !cancelled->input_bytes &&
                 cancelled->decoded_bytes == decoded->decoded_bytes &&
-                json_write && json_write->scratch_bytes &&
+                json_write && !json_write->scratch_bytes && json_write->stack_buffer_bytes == 64 &&
                 json_write->output_bytes == save->encoded_bytes &&
+                save->encoded_bytes == file_size + NameStorageAlignmentSlack(static_cast<size_t>(file_size)) &&
+                save->sources.shared_bytes &&
                 json_read && !json_read->scratch_bytes && !json_read->input_bytes &&
                 json_read->output_bytes + sizeof(UChunkBuffer) == decoded->decoded_bytes &&
                 !trace.Find(Kind::Load, Stage::BeforePublish, 801),
@@ -677,6 +690,9 @@ struct AsyncIoStorageProbe
     return {{"json_encoded", save->encoded_bytes}, {"json_input", decoded->input_bytes},
             {"decoded_backing", decoded->decoded_bytes}, {"cancelled_before_publish", true},
             {"json_write_scratch", json_write->scratch_bytes},
+            {"json_write_file_bytes", file_size}, {"json_write_voxels", CHUNK_VOLUME},
+            {"json_write_shared_bytes", save->sources.shared_bytes},
+            {"json_write_stack_buffer", json_write->stack_buffer_bytes},
             {"json_read_scratch", json_read->scratch_bytes},
             {"receipt_read_scratch", receipt_codec->scratch_bytes},
             {"receipt_read_output", receipt_codec->output_bytes},
