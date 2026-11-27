@@ -1969,6 +1969,8 @@ def main() -> int:
     ap.add_argument("--no-fly", action="store_true")
     ap.add_argument("--strict-no-relocation", action="store_true",
                     help="disable native altitude resets and audit external position changes")
+    ap.add_argument("--normal-shutdown", action="store_true",
+                    help="exercise native desktop teardown and record resource retirement")
     ap.add_argument("--diagnostic-route", type=Path,
                     help="declarative native diagnostic bot waypoint route")
     ap.add_argument(
@@ -3416,6 +3418,8 @@ def main() -> int:
         ]
         if args.strict_no_relocation:
             sim_cmd.append("--strict-no-relocation")
+        if args.normal_shutdown:
+            sim_cmd.append("--normal-shutdown")
         if args.diagnostic_route:
             sim_cmd.extend(["--diagnostic-route", str(args.diagnostic_route.resolve())])
         break_scenarios = ("break-stand", "visual-dig", "idle-edit-smoke")

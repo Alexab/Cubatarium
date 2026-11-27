@@ -35,6 +35,7 @@
 #include "World/Diagnostics/MovementDiagnosticsRecorder.h"
 #include "World/Objects/ObjectLibrary.h"
 #if !defined(__ANDROID__)
+#include "App/Platform/DesktopShutdownCheckpoint.h"
 #include "App/Platform/DesktopPlatformWindow.h"
 #include "App/Platform/GlfwKeyCompat.h"
 #include "App/Platform/InputManager.h"
@@ -1799,6 +1800,9 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
   // frame starves streaming (wall≈3s) and invalidates travel/stop gates.
   window.SetAutosaveEnabled(false);
 
+  const bool normalShutdown = options.NormalShutdown;
+  std::filesystem::path shutdownReportPath;
+  int result = 1;
   try
   {
     IUPlatformPaths::SetGlobal(
@@ -3555,21 +3559,22 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
         *world,
         (report_path.parent_path() / "movement_diagnostics.json").string());
     std::cout << "flight-sim: report written path=" << report_path.string()
-              << " — shutting down (fast)" << std::endl;
-    world->PrepareForShutdownFast();
-    if (native_thread_stack_detail::Enabled())
+              << " — shutting down (" << (normalShutdown ? "normal" : "fast") << ')' << std::endl;
+    if (!normalShutdown)
     {
-      const auto checkpoint = ReadWindowsMemoryCheckpoint();
-      std::ofstream memoryReport(report_path.parent_path() / "flight-memory-after-shutdown-request.json");
-      memoryReport << nlohmann::json{{"phase", "after_fast_world_shutdown_request"},
-          {"checkpoint", DescribeWindowsMemoryCheckpoint(checkpoint)},
-          {"windows_gpu_memory", DescribeWindowsGpuMemory(checkpoint.driver)}}.dump(2) << '\n';
-      if (!memoryReport)
-        CubatariumLogError("FlightSim", "could not write the process memory checkpoint after the world shutdown request");
+      world->PrepareForShutdownFast();
+      if (native_thread_stack_detail::Enabled())
+      {
+        const auto checkpoint = ReadWindowsMemoryCheckpoint();
+        std::ofstream memoryReport(report_path.parent_path() / "flight-memory-after-shutdown-request.json");
+        memoryReport << nlohmann::json{{"phase", "after_fast_world_shutdown_request"},
+            {"checkpoint", DescribeWindowsMemoryCheckpoint(checkpoint)},
+            {"windows_gpu_memory", DescribeWindowsGpuMemory(checkpoint.driver)}}.dump(2) << '\n';
+        if (!memoryReport)
+          CubatariumLogError("FlightSim", "could not write the process memory checkpoint after the world shutdown request");
+      }
     }
-    // Flight-sim exits with std::_Exit to avoid unbounded worker joins. Flush
-    // the app log after cancellation so the final audit/shutdown records are
-    // persisted even though normal logging destructors will not run.
+    // Persist diagnostics before shutdown joins or a fast process exit.
     FinishSampleProfiler();
     UMeshAuditDiagnostics::FinishFlickerTrace();
     FlushChunkResidencyTrace();
@@ -3581,8 +3586,10 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
               << std::endl;
     std::cout.flush();
     std::cerr.flush();
-    // Skip destructor joins (Persistence/mesh workers) — known hang after save.
-    std::_Exit(exit_code);
+    if (!normalShutdown)
+      std::_Exit(exit_code);
+    shutdownReportPath = report_path.parent_path() / "desktop-normal-shutdown.json";
+    result = exit_code;
   }
   catch (const std::exception &e)
   {
@@ -3590,6 +3597,25 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     CubatariumFlushLogs();
     std::cerr << "flight-sim: exception: " << e.what() << std::endl;
     std::_Exit(1);
+  }
+
+  // The flight scope has released its owning references. The window now
+  // performs the same teardown used when the desktop application closes.
+  try
+  {
+    DesktopShutdownCheckpoint checkpoint;
+    window.Shutdown(checkpoint);
+    std::ofstream report(shutdownReportPath);
+    report << DescribeDesktopShutdown(checkpoint).dump(2) << '\n';
+    report.close();
+    if (!report || !checkpoint.Retired())
+      return 1;
+    return result;
+  }
+  catch (const std::exception &e)
+  {
+    CubatariumLogError("FlightSim", std::string("normal shutdown observation: ") + e.what());
+    return 1;
   }
 }
 #endif // !__ANDROID__

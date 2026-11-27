@@ -68,6 +68,7 @@ struct FlightSimOptions
   bool TeleportToCruiseStart{false};
   /// Disable legacy altitude clamps and diagnostic water placement.
   bool StrictNoRelocation{false};
+  bool NormalShutdown{false};
   /// Declarative waypoint route driven by normal movement inputs.
   std::string DiagnosticRoutePath;
   float CruiseStartChunkX{-47.0f};

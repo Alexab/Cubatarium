@@ -30,6 +30,7 @@ class UBlockInputController;
 class UFlightCaptureService;
 struct FlightCaptureGpuCheckpoint;
 struct FlightCaptureCpuStorage;
+struct DesktopShutdownCheckpoint;
 struct PngAllocationObserver;
 
 class UWindowManager
@@ -62,7 +63,7 @@ public:
   }
   /// Flight-sim / harness: skip budgeted autosave (avoids multi-second hitch).
   void SetAutosaveEnabled(bool enabled) { AutosaveEnabled = enabled; }
-  void Shutdown();
+  void Shutdown(DesktopShutdownCheckpoint *checkpoint = nullptr);
 
   /// Initializes the window manager with the specified parameters.
   /// \param Core The core instance.

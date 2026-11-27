@@ -161,6 +161,10 @@ int main(int argc, char *argv[])
         {
           opt.Fly = false;
         }
+        else if (std::strcmp(argv[j], "--normal-shutdown") == 0)
+        {
+          opt.NormalShutdown = true;
+        }
         else if (std::strcmp(argv[j], "--hold-forward") == 0)
         {
           opt.HoldForward = true;

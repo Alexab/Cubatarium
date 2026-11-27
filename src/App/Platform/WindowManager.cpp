@@ -1,5 +1,6 @@
 #include "App/Platform/WindowManager.h"
 #include "App/Platform/FlightCaptureGpuCheckpoint.h"
+#include "App/Platform/DesktopShutdownCheckpoint.h"
 #include "App/Application.h"
 #include "App/Core.h"
 #include "App/Platform/CursorCapture.h"
@@ -16,6 +17,8 @@
 #include "Creatures/Core/CreatureInventory.h"
 #include "Creatures/Definition/CreatureDefinition.h"
 #include "Creatures/Visual/CreatureTextureStorage.h"
+#include "Creatures/Visual/CreatureBonePaletteGpu.h"
+#include "Creatures/Visual/CreatureMeshGpuCache.h"
 #include "Creatures/Diagnostics/CreaturePassTimingProbe.h"
 #include "Creatures/Influence/InfluenceApplier.h"
 #include "Creatures/Influence/InfluenceResolver.h"
@@ -31,8 +34,10 @@
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/ViewEngine.h"
 #include "Render/Gl/PersistentComputeStorage.h"
+#include "Render/Mesh/GpuMeshPipeline.h"
 #include "Render/Pipeline/GlStateMask.h"
 #include "Render/Pipeline/GlStateScope.h"
+#include "Render/Textures/TextureCube.h"
 #include "ThirdParty/stb_image.h"
 #include "World/Core/World.h"
 #include "World/Diagnostics/FramePerfMonitor.h"
@@ -49,6 +54,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <tuple>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -2221,7 +2227,7 @@ void UWindowManager::SetTextRenderer(
   }
 }
 
-void UWindowManager::Shutdown()
+void UWindowManager::Shutdown(DesktopShutdownCheckpoint *checkpoint)
 {
   if (!IsInitialized)
   {
@@ -2236,6 +2242,44 @@ void UWindowManager::Shutdown()
   if (Window)
   {
     glfwMakeContextCurrent(Window);
+  }
+
+  TerrainGpuBufferCensus shutdownBuffers;
+  RenderImageCensus shutdownImages;
+  using Owners = std::tuple<std::weak_ptr<UApplication>, std::weak_ptr<UCore>,
+      std::weak_ptr<UGeometryEngine>, std::weak_ptr<UWorld>, std::weak_ptr<UTextRenderer>, std::weak_ptr<UViewEngine>>;
+  std::optional<Owners> owners;
+  if (checkpoint && Window && glfwGetCurrentContext() == Window)
+  {
+    checkpoint->contextBefore = true;
+    owners.emplace(Application, Core, Geometries, World, TextRenderer, Views);
+    checkpoint->ownersBefore = std::apply([](const auto &...owner) { return std::array{!owner.expired()...}; }, *owners);
+    if (Geometries)
+    {
+      Geometries->InspectTerrainGpuBuffers(shutdownBuffers);
+      Geometries->InspectActorGpuBuffers(shutdownBuffers);
+      Geometries->InspectGeometryGpuBuffers(shutdownBuffers);
+      Geometries->InspectEffectsGpuBuffers(shutdownBuffers);
+      Geometries->InspectRenderImages(shutdownImages);
+    }
+    if (World)
+      if (const auto *pipeline = World->GetMeshService().GetCache().GetGpuMeshPipeline())
+        pipeline->InspectGpuBuffers(shutdownBuffers);
+    if (Application)
+    {
+      Application->InspectGuiGpuBuffers(shutdownBuffers);
+      Application->InspectPreviewGpuBuffers(shutdownBuffers);
+      Application->InspectIconReadbackGpuBuffers(shutdownBuffers);
+      Application->InspectActorGpuBuffers(shutdownBuffers);
+      Application->InspectRenderImages(shutdownImages);
+    }
+    CreatureMeshGpuCache::Instance().InspectGpuBuffers(shutdownBuffers);
+    InspectCreatureBonePaletteGpu(shutdownBuffers);
+    InspectPersistentComputeGpuBuffers(shutdownBuffers);
+    InspectFlightCaptureGpuBuffers(shutdownBuffers);
+    checkpoint->buffersBefore = shutdownBuffers.Read();
+    checkpoint->imagesBefore = shutdownImages.Read();
+    checkpoint->beforeOwners = ReadWindowsMemoryCheckpoint();
   }
 
   StopFlightCapture();
@@ -2259,12 +2303,29 @@ void UWindowManager::Shutdown()
   if (Window && glfwGetCurrentContext() == Window)
   {
     if (Core)
+    {
+      if (const auto atlases = Core->GetTextureCubeStorage())
+        atlases->Clear();
       if (const auto textures = Core->GetCreatureTextureStorage())
         textures->Clear();
+    }
     ItemGltfTextureCache::ClearForContextShutdown();
     ReleasePersistentComputeGpuStorage();
   }
   Core.reset();
+
+  if (owners)
+  {
+    checkpoint->contextAfterOwners = glfwGetCurrentContext() == Window;
+    checkpoint->ownersRetired = std::apply([](const auto &...owner) { return std::array{owner.expired()...}; }, *owners);
+    owners.reset();
+    if (checkpoint->contextAfterOwners)
+    {
+      checkpoint->buffersAfter = shutdownBuffers.Read();
+      checkpoint->imagesAfter = shutdownImages.Read();
+    }
+    checkpoint->afterOwners = ReadWindowsMemoryCheckpoint();
+  }
 
   if (Window)
   {
@@ -2272,9 +2333,18 @@ void UWindowManager::Shutdown()
     Window = nullptr;
   }
 
+  if (checkpoint)
+    checkpoint->contextReleased = checkpoint->contextBefore && !glfwGetCurrentContext();
   glfwTerminate();
   IsInitialized = false;
   IsRunning = false;
+  if (checkpoint)
+  {
+#ifdef _WIN32
+    checkpoint->contextReleased = checkpoint->contextReleased && !wglGetCurrentContext();
+#endif
+    checkpoint->afterContext = ReadWindowsMemoryCheckpoint();
+  }
 }
 
 void UWindowManager::RenderUI()

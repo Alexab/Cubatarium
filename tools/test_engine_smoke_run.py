@@ -13,6 +13,33 @@ import engine_smoke_run
 
 
 class IsolatedFixtureTest(unittest.TestCase):
+    def test_normal_shutdown_requires_native_completion_and_retirement(self):
+        (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
+        receipt = {"schema": "desktop-normal-shutdown.v1", "status": "PASS", "context_released": True}
+        for name, recorded, exit_code, expected in (
+                ("missing", None, 0, "FAIL"),
+                ("retained", {**receipt, "status": "PARTIAL"}, 0, "FAIL"),
+                ("late_failure", receipt, 1, "FAIL"),
+                ("complete", receipt, 0, "PASS")):
+            with self.subTest(name=name):
+                artifacts = self.root / ("shutdown-" + name)
+
+                def launch(command, **kwargs):
+                    self.assertIn("--normal-shutdown", command)
+                    (artifacts / "legacy-gates.json").write_text(json.dumps({"process_rc": exit_code, "hang_killed": False}))
+                    if recorded is not None:
+                        (artifacts / "desktop-normal-shutdown.json").write_text(json.dumps(recorded))
+                    return Mock(pid=123, returncode=0)
+
+                with patch.object(engine_smoke_run, "ROOT", self.root), \
+                     patch("flight_sim_run.exe_writable", return_value=True), \
+                     patch.object(engine_smoke_run.subprocess, "check_output", return_value="test-sha"), \
+                     patch.object(engine_smoke_run.subprocess, "Popen", side_effect=launch):
+                    verdict = engine_smoke_run.run("Saved", artifacts, startup_only=True, normal_shutdown=True)
+                self.assertEqual(verdict["components"]["normal_shutdown"]["status"], expected)
+                self.assertIn("normal_shutdown", verdict["required_components"])
+                self.assertEqual(self.config.read_bytes(), self.original)
+
     def test_air_pocket_component_survives_startup_scope_reduction(self):
         (self.runtime / "Cubatarium.exe").write_bytes(b"test executable identity")
         for status in ("PASS", "FAIL"):

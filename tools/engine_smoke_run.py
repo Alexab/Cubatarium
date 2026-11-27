@@ -434,7 +434,10 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
         probe_terrain_save_failure: bool = False, walking: bool = False,
         record_replay: bool = False, debt_target: dict | None = None,
         flat_publication: bool = False, face_repair_only: bool = False,
-        flow_only: bool = False, probe_first_paint_debt: bool = False) -> dict:
+        flow_only: bool = False, probe_first_paint_debt: bool = False,
+        normal_shutdown: bool = False) -> dict:
+    if type(normal_shutdown) is not bool:
+        raise ValueError("Normal shutdown must be requested explicitly as a boolean")
     if type(probe_first_paint_debt) is not bool or (probe_first_paint_debt and not startup_only):
         raise ValueError("First-paint debt probe requires startup-only isolation")
     if type(flow_only) is not bool or (flow_only and (not flat_publication or face_repair_only)):
@@ -735,6 +738,8 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             command.append("--sprint")
         if process_timeout is not None:
             command.extend(["--process-timeout", str(process_timeout)])
+        if normal_shutdown:
+            command.append("--normal-shutdown")
         route = {"schema": "engine-smoke-route.v1", "world_source": world,
                  "inspection_receipt_schema": "diagnostic-capture-receipt.v1",
                  "build_provenance": build_provenance,
@@ -752,6 +757,7 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
                  "synchronous_meshing": synchronous_meshing,
                  "unpacked_meshing_requested": unpacked_meshing,
                  "sprint": sprint, "startup_only": startup_only, "round_trip": round_trip,
+                 "normal_shutdown": normal_shutdown,
                  "walking": walking, "record_replay": record_replay,
                  "debt_target": debt_target,
                  "secondary_residency_column": secondary_residency_column,
@@ -1016,6 +1022,22 @@ def run(world: str, artifacts: Path, *, fly_seconds: float = 300,
             required.append("air_pocket_load")
         if not startup_only:
             required.append("route_path")
+        if normal_shutdown:
+            required.append("normal_shutdown")
+            shutdown_artifact = "desktop-normal-shutdown.json"
+            try:
+                shutdown = json.loads((artifacts / shutdown_artifact).read_text(encoding="utf-8"))
+                native = json.loads((artifacts / "legacy-gates.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                shutdown, native = {}, {}
+            retired = (isinstance(shutdown, dict) and isinstance(native, dict) and
+                       shutdown.get("schema") == "desktop-normal-shutdown.v1" and
+                       shutdown.get("status") == "PASS" and shutdown.get("context_released") is True and
+                       type(native.get("process_rc")) is int and native["process_rc"] == 0 and
+                       native.get("hang_killed") is False)
+            verdict["components"]["normal_shutdown"] = {
+                "status": "PASS" if retired else "FAIL", "artifact": shutdown_artifact,
+                "reason": "verified_desktop_retirement" if retired else "missing_or_incomplete_desktop_retirement"}
         finalize(verdict, required)
         publication = analyze_mesh_publication(artifacts, verdict)
         (artifacts / "mesh-publication-diagnostics.json").write_text(
@@ -1080,6 +1102,8 @@ def main() -> int:
                         help="isolated config override, restored byte-for-byte after the run")
     parser.add_argument("--process-timeout", type=float,
                         help="explicit wall deadline for bounded diagnostics; timeout is a failure")
+    parser.add_argument("--normal-shutdown", action="store_true",
+                        help="require native desktop teardown and the resource retirement report")
     parser.add_argument("--fixture-scene", choices=["air-pocket-negative-cave", "dry-negative-cave", "dry-custom-profile-cave", "wet-negative-cave", "dry-wide-negative-cave", "dry-lit-negative-cave", "dry-rgb-negative-cave", "dry-rgb-air-border", "open-sky-plane", "open-sky-cross", "open-sky-items", "open-sky-falling-creature"])
     parser.add_argument("--observe-bound-light", action="store_true",
                         help="capture actual bound GPU light and atlas witnesses without preparing a scene; does not grant a visual PASS")
@@ -1114,6 +1138,7 @@ def main() -> int:
                   flat_publication=args.flat_publication,
                   face_repair_only=args.face_repair_only,
                   flow_only=args.flow_only,
+                  normal_shutdown=args.normal_shutdown,
                   probe_first_paint_debt=args.probe_first_paint_debt,
                   observe_bound_light=args.observe_bound_light,
                   source_observation_scene=json.loads(args.source_observation_scene.read_text(encoding='utf-8')) if args.source_observation_scene else None,

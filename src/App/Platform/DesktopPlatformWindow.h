@@ -36,6 +36,7 @@ public:
     WindowManager.InspectFlightCaptureGpuBuffers(out);
   }
   void Shutdown() override;
+  void Shutdown(DesktopShutdownCheckpoint &checkpoint) { WindowManager.Shutdown(&checkpoint); }
   void PollEvents() override;
   void SwapBuffers() override;
   glm::ivec2 GetFramebufferSize() const override;
