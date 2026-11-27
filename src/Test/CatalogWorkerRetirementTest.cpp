@@ -41,6 +41,121 @@ struct CatalogWorkerRetirementProbe
 {
   static bool Wait(UChunkLoadScheduler &scheduler)
   {return scheduler.Pool.WaitIdleFor(std::chrono::seconds(10));}
+  static nlohmann::json ResidentGenerationProgress()
+  {
+    using Json = nlohmann::json;
+    const auto check = [](bool ok, const char *message) {
+      FluidTest::Expect(ok, "resident_generation_progress", message);
+    };
+    const auto cell = [](glm::ivec3 coord) { return glm::ivec3(coord.x * CHUNK_SIZE, -48, coord.z * CHUNK_SIZE); };
+    struct BorderPopulator final : IUChunkPopulator
+    {
+      std::atomic<int> calls{0};
+      std::atomic<uint32_t> latestSeed{0};
+      ChunkPopulateResult Populate(const ChunkPopulateRequest &request) override
+      {
+        ++calls;
+        latestSeed = request.settings.Seed;
+        const auto coord = request.chunkCoord;
+        ChunkPopulateResult result;
+        result.coord = coord;
+        result.token = request.token;
+        result.buffer.SetBlock({coord.x * CHUNK_SIZE, -48, coord.z * CHUNK_SIZE}, 8);
+        if (coord.x >= 10)
+          result.buffer.SetBlock({coord.x * CHUNK_SIZE, -48, -CHUNK_SIZE}, 8);
+        return result;
+      }
+    } populator;
+    UChunkGenerationRegistry tokens;
+    UChunkLoadScheduler scheduler(populator, tokens);
+    UBlockWorld world;
+    auto &chunks = world.GetChunkManager();
+    ProceduralSettings settings;
+    settings.MinHeight = -48;
+    settings.MaxHeight = -33;
+    settings.Seed = 41;
+    const glm::ivec3 resident(0), cold(2, 0, 0);
+    world.SetBlock(cell(resident) + glm::ivec3(1, 0, 1), 8);
+    constexpr auto slots = UChunkLoadScheduler::kMaxRetainedGenerationResults;
+    const glm::ivec3 recycled(9 + static_cast<int>(slots), 0, 0);
+    auto original_requested_at = std::chrono::steady_clock::time_point{};
+    uint64_t original_token = 0;
+    for (size_t i = 0; i < slots; ++i)
+    {
+      const glm::ivec3 home(10 + static_cast<int>(i), 0, 0);
+      world.SetBlock(cell(home) + glm::ivec3(1, 0, 1), 8);
+      check(scheduler.RequestLoad(home, static_cast<int>(i), settings, {2, 3}, true, 9500 + i),
+            "admit each exact generation request");
+      if (home == recycled)
+      {
+        const auto &request = scheduler.QueuedRequests.at(home);
+        original_requested_at = request.requestedAt;
+        original_token = request.token.sequence;
+      }
+      check(scheduler.StartQueuedGenerationWorkers(1) == 1 && Wait(scheduler),
+            "all eight workers have produced ready cross-column outputs");
+    }
+    const auto limit = chunks.GetResidentTerrainColumnCount();
+    check(scheduler.GetCompletedReadyCount() == slots && scheduler.GetRetainedGenerationResultCount() == slots &&
+              scheduler.RequestLoad(cold, -2, settings) && scheduler.RequestLoad(resident, -1, settings),
+          "cold and resident requests wait behind the full completion queue");
+    scheduler.Tick(world, 1, 1, 0.0, false, limit);
+    const auto retained = scheduler.GetRetainedGenerationResultCount();
+    const bool room = retained == slots - 1 && scheduler.GetPendingQueueCount() == 3 &&
+                      chunks.GetResidentTerrainColumnCount() == limit;
+    Json report = {{"schema", "resident-generation-progress.v1"}, {"status", "FAIL"},
+                   {"retained_after_pressure", retained}, {"requests_after_pressure", scheduler.GetPendingQueueCount()},
+                   {"resident_commits_first_tick", scheduler.GetLastCommitsThisFrame()}, {"terrain_limit", limit}};
+    if (!room)
+      return report;
+
+    const glm::ivec3 witness(recycled.x, 0, -1);
+    const auto &parked = scheduler.QueuedRequests.at(recycled);
+    check(parked.blockedColumn == witness && parked.token.sequence == original_token &&
+              parked.requestedAt == original_requested_at && parked.demandId == 9500 + slots - 1 &&
+              parked.settings->value.Seed == 41 && parked.hasColumnOrigin && parked.columnOrigin == glm::ivec2(2, 3),
+          "recycled result keeps its exact request and cold neighboring column");
+    auto changed = settings;
+    changed.Seed = 500;
+    check(scheduler.RequestLoad(recycled, -3, changed, {8, 7}, true, 30000), "coalesce a newer priority into the parked request");
+    scheduler.Tick(world, 1, 1, 0.0, false, limit);
+    check(Wait(scheduler), "resident continuation finishes its worker");
+    scheduler.Tick(world, 1, 0, 0.0, false, limit);
+    check(scheduler.IsCommitted(resident) && world.GetBlock(cell(resident)) == 8 &&
+              populator.calls == slots + 1 && !chunks.HasResidentTerrainColumn(cold) &&
+              scheduler.GetRetainedGenerationResultCount() == slots - 1,
+          "resident request advances past both higher-priority cold and parked requests at capacity");
+    for (int tick = 0; tick < 8; ++tick)
+      scheduler.Tick(world, 1, 1, 0.0, false, limit);
+    check(populator.calls == slots + 1 && scheduler.GetPendingQueueCount() == 2,
+          "unchanged residency causes no regeneration of a deferred result");
+
+    chunks.RemoveChunk({10, -3, 0});
+    world.SetBlock(cell(witness) + glm::ivec3(1, 0, 1), 8);
+    check(chunks.GetResidentTerrainColumnCount() == limit, "another producer provides the exact neighbor at the same count");
+    scheduler.Tick(world, 0, 1, 0.0, false, limit);
+    check(Wait(scheduler), "original parked request runs once its neighbor exists");
+    check(scheduler.GetRetainedGenerationResultCount() == slots, "same-capacity reactivation uses the freed result slot");
+    scheduler.Tick(world, 1, 0, 0.0, false, limit);
+    check(scheduler.IsCommitted(recycled) && world.GetBlock(cell(witness)) == 8 && populator.latestSeed == 41 &&
+              tokens.Current(recycled).sequence == original_token && chunks.GetResidentTerrainColumnCount() == limit,
+          "resident neighbor resumes the original immutable request at the same capacity");
+
+    chunks.RemoveChunk({resident.x, -3, resident.z});
+    scheduler.Tick(world, 0, 1, 0.0, false, limit);
+    check(Wait(scheduler), "cold work resumes after a terrain slot becomes available");
+    scheduler.Tick(world, 1, 0, 0.0, false, limit);
+    check(scheduler.IsCommitted(cold) && world.GetBlock(cell(cold)) == 8 && chunks.GetResidentTerrainColumnCount() == limit,
+          "the original cold successor commits below the threshold");
+    scheduler.CancelAllPending();
+    const bool retired = scheduler.GetRetainedGenerationResultCount() == 0 && scheduler.BufferReservedBytes() == 0 &&
+                         scheduler.SettingsPayloadBytes() == 0 && scheduler.Completed.DiscardedOverflow() == 0;
+    check(retired, "all generation credits and settings retire");
+    report.update({{"status", "PASS"}, {"resident_progress", true}, {"no_regeneration_while_blocked", true},
+                   {"exact_same_capacity_retry", true}, {"original_cold_successor", true}, {"owners_retired", true},
+                   {"worker_calls", populator.calls.load()}});
+    return report;
+  }
   static nlohmann::json ControlRefusal(bool baseline) {
     using Json=nlohmann::json;
     struct EmptyPopulator final: IUChunkPopulator {
@@ -329,6 +444,14 @@ Json RuntimeDomain()
 }
 int main(int argc,char **argv)
 {
+  if (argc == 3 && std::string(argv[1]) == "--resident-generation-progress")
+  {
+    const auto result = CatalogWorkerRetirementProbe::ResidentGenerationProgress();
+    std::ofstream out(argv[2]);
+    out << result.dump(2) << '\n';
+    std::cout << result.dump() << std::endl;
+    return out && result["status"] == "PASS" ? 0 : 1;
+  }
   if(argc==3 && std::string(argv[1])=="--producer-retirement"){
     try {
       auto result=RunGenerationProducerRetirementProbe();size_t failures=0;bool complete=false;

@@ -460,8 +460,8 @@ void UChunkLoadScheduler::Invalidate(glm::ivec3 coord)
 bool UChunkLoadScheduler::ScheduleWorker(
     const PendingRequest &request, const int generation_start_cap_per_frame)
 {
-  if((BufferSerialMode.load(std::memory_order_relaxed) && GetRetainedGenerationResultCount()!=0) ||
-      BufferBudget->UsedBytes()>=BufferBudget->LimitBytes()) return false;
+  if (!HasResultCapacity())
+    return false;
   size_t retained = RetainedResults->load(std::memory_order_relaxed);
   do
   {
@@ -553,16 +553,18 @@ bool UChunkLoadScheduler::ScheduleWorker(
         } catch(const UBufferBudgetExceeded &) {
           pending.result.coord=populateRequest.chunkCoord;
           pending.result.token=populateRequest.token;
-          pending.bufferRetry=std::move(retry_request);
+          pending.retryBuffer = true;
           BufferSerialMode.store(true,std::memory_order_relaxed);
         } catch(const std::bad_alloc &) {
           // Keep the same immutable input for a later ordinary Tick. The
           // completed ring is preallocated for every retained-result lease.
           pending.result.coord=populateRequest.chunkCoord;
           pending.result.token=populateRequest.token;
-          pending.bufferRetry=std::move(retry_request);
+          pending.retryBuffer = true;
           BufferSerialMode.store(true,std::memory_order_relaxed);
         }
+        if (!pending.result.discarded && !populateRequest.shouldCancel())
+          pending.request = std::move(retry_request);
         pending.generationFinishedAt = std::chrono::steady_clock::now();
         pending.generationMs = std::chrono::duration<double, std::milli>(
                                    pending.generationFinishedAt -
@@ -591,6 +593,53 @@ bool UChunkLoadScheduler::ScheduleWorker(
   return true;
 }
 
+bool UChunkLoadScheduler::HasResultCapacity() const
+{
+  const auto retained = GetRetainedGenerationResultCount();
+  return retained < kMaxRetainedGenerationResults &&
+         (!BufferSerialMode.load(std::memory_order_relaxed) || retained == 0) &&
+         BufferBudget->UsedBytes() < BufferBudget->LimitBytes();
+}
+
+bool UChunkLoadScheduler::CanStartWithFullTerrain(const PendingRequest &request,
+                                                  const UChunkManager &chunks)
+{
+  return chunks.HasResidentTerrainColumn(request.coord) &&
+         (!request.blockedColumn || chunks.HasResidentTerrainColumn(*request.blockedColumn));
+}
+
+bool UChunkLoadScheduler::RequeueResult(const PendingResult &pending,
+                                       std::optional<glm::ivec3> blockedColumn)
+{
+  auto retry = pending.request;
+  const auto priority = RequestPriorities.find(retry.coord);
+  if (priority != RequestPriorities.end())
+    retry.priority = priority->second;
+  retry.queueRevision = NextRequestQueueRevision++;
+  retry.blockedColumn = blockedColumn;
+  try
+  {
+    const auto [entry, inserted] = QueuedRequests.try_emplace(retry.coord, retry);
+    if (!inserted)
+      return false;
+    try
+    {
+      Queue.insert(std::move(retry));
+    }
+    catch (...)
+    {
+      QueuedRequests.erase(entry);
+      throw;
+    }
+    States.find(entry->first)->second.state = ChunkLoadState::Requested;
+    return true;
+  }
+  catch (const std::bad_alloc &)
+  {
+    return false;
+  }
+}
+
 void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
                                int maxGenerationStartsPerFrame,
                                double maxApplyMsPerFrame,
@@ -599,7 +648,11 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
 {
   LastTickApplyMs = 0.0;
   LastCommitsThisFrame = 0;
-  StartQueuedGenerationWorkers(maxGenerationStartsPerFrame);
+  const auto &chunks = world.GetChunkManager();
+  const auto terrain_full = [&] {
+    return terrainLimit && chunks.GetResidentTerrainColumnCount() >= *terrainLimit;
+  };
+  StartQueuedGenerationWorkers(maxGenerationStartsPerFrame, terrain_full() ? &chunks : nullptr);
 
   std::vector<PendingResult> ready = Completed.DrainAll();
   TickBatchStorage.count=ready.size();
@@ -635,8 +688,14 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
               };
               return live_priority(a) < live_priority(b);
             });
+  const bool needs_result_slot = terrain_full() && !HasResultCapacity() &&
+      ready.size() == GetRetainedGenerationResultCount() &&
+      std::any_of(Queue.begin(), Queue.end(), [&](const PendingRequest &request) {
+        return CanStartWithFullTerrain(request, chunks);
+      });
+  PendingResult *held_result = nullptr;
+  std::optional<glm::ivec3> held_column;
   int committed = 0;
-  const auto &chunks = world.GetChunkManager();
   for (PendingResult &pending : ready)
   {
     const auto tokenIt = ActiveTokens.find(pending.result.coord);
@@ -675,14 +734,10 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
         EraseQueuedRequest(pending.result.coord);
       continue;
     }
-    if(pending.bufferRetry) {
-      auto retry=std::move(*pending.bufferRetry);
-      const auto priority=RequestPriorities.find(retry.coord);
-      if(priority!=RequestPriorities.end()) retry.priority=priority->second;
-      retry.queueRevision=NextRequestQueueRevision++;
-      QueuedRequests[retry.coord]=retry;
-      Queue.insert(std::move(retry));
-      States[pending.result.coord].state=ChunkLoadState::Requested;
+    if (pending.retryBuffer)
+    {
+      if (!RequeueResult(pending, pending.request.blockedColumn))
+        Completed.Push(std::move(pending));
       continue;
     }
     if (pending.result.discarded)
@@ -710,11 +765,23 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     }
     // Apply whole generation results. A single result starting below the
     // threshold can cross it, but no later result can add columns while full.
-    if (terrainLimit && chunks.GetResidentTerrainColumnCount() >= *terrainLimit &&
-        pending.result.buffer.AddsTerrainColumn(chunks))
+    if (terrain_full())
     {
-      Completed.Push(std::move(pending));
-      continue;
+      if (auto new_column = pending.result.buffer.FindNewTerrainColumn(chunks))
+      {
+        if (needs_result_slot)
+        {
+          // The batch is ranked. Retain the last blocked result as the one
+          // candidate for making space for a resident request.
+          if (held_result)
+            Completed.Push(std::move(*held_result));
+          held_result = &pending;
+          held_column = new_column;
+        }
+        else
+          Completed.Push(std::move(pending));
+        continue;
+      }
     }
     const double ready_wait_ms = std::chrono::duration<double, std::milli>(
                                      std::chrono::steady_clock::now() -
@@ -817,19 +884,37 @@ void UChunkLoadScheduler::Tick(UBlockWorld &world, int maxCommitsPerFrame,
     }
     ++committed;
   }
+  if (held_result)
+  {
+    const bool another_slot_released = std::any_of(ready.begin(), ready.end(), [&](const auto &result) {
+      return &result != held_result && result.resultSlot;
+    });
+    if (another_slot_released || !RequeueResult(*held_result, held_column))
+      Completed.Push(std::move(*held_result));
+  }
   LastCommitsThisFrame = committed;
 }
 
-int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts)
+int UChunkLoadScheduler::StartQueuedGenerationWorkers(int maxStarts,
+                                                      const UChunkManager *fullTerrain)
 {
   if(Queue.empty() && GetRetainedGenerationResultCount()==0 && BufferBudget->UsedBytes()==0)
     BufferSerialMode.store(false,std::memory_order_relaxed);
   int generationStarts = 0;
   while (!Queue.empty() && generationStarts < maxStarts)
   {
+    auto next_it = Queue.begin();
+    if (fullTerrain)
+    {
+      next_it = std::find_if(next_it, Queue.end(), [&](const PendingRequest &request) {
+        return CanStartWithFullTerrain(request, *fullTerrain);
+      });
+      if (next_it == Queue.end())
+        break;
+    }
     // Retain the existing node so a refused construction can restore rank and
     // ownership without allocating while memory is still unavailable.
-    auto next_node = Queue.extract(Queue.begin());
+    auto next_node = Queue.extract(next_it);
     const PendingRequest &next = next_node.value();
     const auto stateIt = States.find(next.coord);
     const auto queuedIt = QueuedRequests.find(next.coord);
@@ -868,8 +953,8 @@ int UChunkLoadScheduler::GetAvailableGenerationWorkerSlots() const
 {
   const JobThreadPoolSnapshot snapshot = Pool.GetSnapshot();
   const std::size_t occupied = snapshot.pending + snapshot.active;
-  if((BufferSerialMode.load(std::memory_order_relaxed) && GetRetainedGenerationResultCount()!=0) ||
-      BufferBudget->UsedBytes()>=BufferBudget->LimitBytes()) return 0;
+  if (!HasResultCapacity())
+    return 0;
   const size_t retained = GetRetainedGenerationResultCount();
   return static_cast<int>(std::min(
       snapshot.workers > occupied ? snapshot.workers - occupied : size_t{0},

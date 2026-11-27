@@ -103,7 +103,8 @@ public:
             std::optional<std::size_t> terrainLimit = std::nullopt);
   /// Admit already-requested generation work without applying completed
   /// results. Used by bounded fallback paths that cannot run a full Tick.
-  int StartQueuedGenerationWorkers(int maxStarts);
+  int StartQueuedGenerationWorkers(int maxStarts,
+                                   const UChunkManager *fullTerrain = nullptr);
   int GetAvailableGenerationWorkerSlots() const;
   bool IsCommitted(glm::ivec3 coord) const;
   bool IsPending(glm::ivec3 coord) const;
@@ -162,6 +163,7 @@ private:
     std::shared_ptr<const OwnedSettings> settings;
     glm::ivec2 columnOrigin{0};
     bool hasColumnOrigin{false};
+    std::optional<glm::ivec3> blockedColumn;
   };
 
   struct ResultSlotGuard
@@ -173,7 +175,8 @@ private:
   {
     std::shared_ptr<ResultSlotGuard> resultSlot;
     ChunkPopulateResult result;
-    std::optional<PendingRequest> bufferRetry;
+    PendingRequest request{};
+    bool retryBuffer{false};
     uint64_t requestId{0};
     uint64_t demandId{0};
     int priority{0};
@@ -203,6 +206,11 @@ private:
 
   bool ScheduleWorker(const PendingRequest &request,
                       int generation_start_cap_per_frame);
+  bool HasResultCapacity() const;
+  static bool CanStartWithFullTerrain(const PendingRequest &request,
+                                      const UChunkManager &chunks);
+  bool RequeueResult(const PendingResult &pending,
+                     std::optional<glm::ivec3> blockedColumn);
   void EraseQueuedRequest(glm::ivec3 coord);
 
   struct StateRecord

@@ -93,7 +93,7 @@ public:
     for(const auto &pending:results){
       CountedWeakOrigin(pending.resultSlot,Kind::ResultGuard,origin,true);
       if(pending.resultSlot)Observe(pending.resultSlot->count,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>(),false);
-      if(pending.bufferRetry)Settings(pending.bufferRetry->settings);
+      Settings(pending.request.settings);
       if(const auto *owners=BufferOwners(pending.result.buffer)){CountedWeakOrigin(owners->job,Kind::JobCounted,origin,true);Context(*owners);}
     }
   }
@@ -205,7 +205,7 @@ private:
     scheduler.Completed.InspectValues([&](const auto &pending){
       Counted(pending.resultSlot,Kind::ResultGuard,scheduler.ControlMemory,true);
       if(pending.resultSlot)Observe(pending.resultSlot->count,Kind::ResultCounter,NormalBytes<std::atomic<size_t>>(),false);
-      if(pending.bufferRetry)Settings(pending.bufferRetry->settings);
+      Settings(pending.request.settings);
       if(pending.result.buffer.Payload){
         CountedJob(pending.result.buffer.Payload->Budget.job,scheduler.ControlMemory,true);Buffer(pending.result.buffer);
       }

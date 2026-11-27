@@ -4070,8 +4070,11 @@ void UWorldStreaming::TickAsyncChunkSystems(UWorld &world)
         // them moving into genuinely idle workers even when its far-stream
         // phase exhausted the frame budget. This is async admission only: it
         // neither applies results nor exceeds the worker pool's capacity.
+        const auto &chunks = world.BlockWorld.GetChunkManager();
+        const auto *full_terrain = terrain_limit && chunks.GetResidentTerrainColumnCount() >= *terrain_limit
+                                       ? &chunks : nullptr;
         admitted = pending_before > 0 && worker_slots_before > 0
-                       ? ChunkScheduler->StartQueuedGenerationWorkers(1)
+                       ? ChunkScheduler->StartQueuedGenerationWorkers(1, full_terrain)
                        : 0;
         if (IsWorldColumnSourceTraceEnabled() &&
             (pending_before > 0 || ready_before > 0))

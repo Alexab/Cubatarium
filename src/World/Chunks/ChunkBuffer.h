@@ -69,7 +69,9 @@ public:
   bool HasYBounds() const { return Payload && Payload->State.HasBounds; }
   int GetMinY() const { return Payload ? Payload->State.MinY : 0; }
   int GetMaxY() const { return Payload ? Payload->State.MaxY : -1; }
-  bool AddsTerrainColumn(const UChunkManager &chunks) const;
+  std::optional<glm::ivec3> FindNewTerrainColumn(const UChunkManager &chunks) const;
+  bool AddsTerrainColumn(const UChunkManager &chunks) const
+  { return FindNewTerrainColumn(chunks).has_value(); }
   void ApplyTo(UBlockWorld &world) const;
   /// Fast path for buffers known to contain one chunk (disk slice loads).
   void ApplyToChunk(UBlockWorld &world, glm::ivec3 chunkCoord) const;

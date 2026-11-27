@@ -3332,6 +3332,10 @@ add_test(NAME scheduler_control_refusal_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --control-refusal
         ${CMAKE_CURRENT_BINARY_DIR}/scheduler-control-refusal.json)
 set_tests_properties(scheduler_control_refusal_test PROPERTIES LABELS "integration;memory;streaming" TIMEOUT 120)
+add_test(NAME resident_generation_progress_test
+    COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --resident-generation-progress
+        ${CMAKE_CURRENT_BINARY_DIR}/resident-generation-progress.json)
+set_tests_properties(resident_generation_progress_test PROPERTIES LABELS "integration;memory;streaming" TIMEOUT 120)
 add_test(NAME catalog_cooperative_owners_test
     COMMAND $<TARGET_FILE:catalog_worker_retirement_test> --cooperative-owners
         ${CMAKE_CURRENT_BINARY_DIR}/catalog-cooperative-owners.json)

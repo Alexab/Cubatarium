@@ -26,6 +26,12 @@ struct AllocatorReturnedControlsProbe {
     std::weak_ptr<UBufferAllocationBudget> budget=owners->budget;std::weak_ptr<BufferBudgetJob> job=owners->job;
     std::weak_ptr<UChunkLoadScheduler::ResultSlotGuard> guard=returned[0].resultSlot;
     std::weak_ptr<std::atomic<size_t>> counter=returned[0].resultSlot->count;
+    const auto widths=AllocatorOwnerCensus::RequestWidths();
+    const auto settings_bytes=widths[idx(Kind::SettingsValue)];
+    const auto settings_budget_bytes=widths[idx(Kind::SettingsBudget)];
+    require(bool(returned[0].request.settings),"returned result owns its immutable request settings");
+    std::weak_ptr<const UChunkLoadScheduler::OwnedSettings> settings_owner=returned[0].request.settings;
+    std::weak_ptr<UChunkLoadScheduler::SettingsBudgetState> settings_budget=returned[0].request.settings->reservation.budget;
     auto budget_witness=owners->budget;auto counter_witness=returned[0].resultSlot->count;
     const auto resource_history=AllocatorOwnerCensus::RememberResource(origin),budget_history=AllocatorOwnerCensus::RememberBudget(budget);
     const auto job_history=AllocatorOwnerCensus::RememberCountedJob(job,origin),guard_history=AllocatorOwnerCensus::RememberResultGuard(guard,origin);
@@ -33,12 +39,15 @@ struct AllocatorReturnedControlsProbe {
     const auto observe=[&](AllocatorOwnerCensus &out){out.History(resource_history);out.History(budget_history);out.History(job_history,true);out.History(counter_history);out.History(guard_history,true);};
     AllocatorOwnerCensus omitted(64),complete(64);omitted.Scheduler(*scheduler);
     complete.SchedulerWithReturned(*scheduler,returned,origin);const auto owned=complete.Result(true);
-    require(!omitted.Result(true).supported && owned.supported && owned.additional_requests==384 && owned.covered_requests==88,
+    require(!omitted.Result(true).supported && owned.supported && owned.additional_requests==384+settings_bytes &&
+      owned.covered_requests==88 && owned.blocks[idx(Kind::SettingsValue)]==1 && owned.blocks[idx(Kind::SettingsBudget)]==1,
       "returned batch required for scheduler retained-slot equality");
     {
-      UChunkLoadScheduler::PendingResult alias;alias.resultSlot=returned[0].resultSlot;returned.push_back(std::move(alias));
+      UChunkLoadScheduler::PendingResult alias;alias.resultSlot=returned[0].resultSlot;
+      alias.request.settings=returned[0].request.settings;returned.push_back(std::move(alias));
       AllocatorOwnerCensus aliases(64);aliases.SchedulerWithReturned(*scheduler,returned,origin);
-      require(aliases.Result(true).supported && aliases.Result(true).additional_requests==384 && aliases.Result(true).covered_requests==88,"caller guard aliases count once");
+      require(aliases.Result(true).supported && aliases.Result(true).additional_requests==384+settings_bytes &&
+        aliases.Result(true).covered_requests==88,"caller guard and settings aliases count once");
       returned.pop_back();
       std::vector<UChunkLoadScheduler::PendingResult> foreign(1);
       foreign[0].resultSlot=std::make_shared<UChunkLoadScheduler::ResultSlotGuard>();
@@ -49,9 +58,12 @@ struct AllocatorReturnedControlsProbe {
       require(!wrong_counter.Result(true).supported && !wrong_origin.Result(true).supported,"unrelated returned counter and missing factory origin rejected");
     }
     scheduler.reset();AllocatorOwnerCensus escaped(64);escaped.ReturnedResults(returned,origin);
-    const auto live=escaped.Result(true);require(live.supported && live.additional_requests==336 && live.covered_requests==88 &&
-      !origin.expired() && !job.expired() && counter_witness->load()==1,"returned owners survive scheduler facade");
+    const auto live=escaped.Result(true);require(live.supported && live.additional_requests==336+settings_bytes+settings_budget_bytes &&
+      live.covered_requests==88 && !origin.expired() && !job.expired() && counter_witness->load()==1 &&
+      !settings_owner.expired() && !settings_budget.expired(),"returned owners and exact request survive scheduler facade");
     returned.clear();require(budget_witness->UsedBytes()==0 && counter_witness->load()==0,"returned last payload releases quota and result credit");
+    require(settings_owner.expired() && settings_budget.expired(),"last result retires the immutable request and its settings budget");
+    settings_owner.reset();settings_budget.reset();
     budget_witness.reset();counter_witness.reset();
     require(budget.expired() && job.expired() && guard.expired() && counter.expired() && !origin.expired(),"weak controls preserve allocator resource only");
     {
@@ -83,6 +95,8 @@ struct AllocatorReturnedControlsProbe {
     AllocatorOwnerCensus mismatch(16);mismatch.History(old);require(!mismatch.Result(true).supported,"live source-slot reassignment rejected");
     return {{"schema","allocator-returned-controls.v1"},{"status","PASS"},{"scheduler_and_caller_additional",owned.additional_requests},
       {"escaped_additional",live.additional_requests},{"escaped_covered",live.covered_requests},{"weak_only",shells.weak_only},
+      {"retained_settings_value_bytes",settings_bytes},{"retained_settings_budget_bytes",settings_budget_bytes},
+      {"last_result_releases_settings",true},
       {"weak_additional",shells.additional_requests},{"weak_covered",shells.covered_requests},
       {"after_weak_guard_control_requests",40},{"remaining_additional",remaining.additional_requests},{"remaining_covered",remaining.covered_requests},
       {"final_additional",final.additional_requests},{"missing_caller_rejected",true},{"missing_late_reassigned_history_rejected",true},

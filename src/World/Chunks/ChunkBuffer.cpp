@@ -264,23 +264,32 @@ uint8_t UChunkBuffer::GetLightPacked(glm::ivec3 worldPos) const
   return it->second;
 }
 
-bool UChunkBuffer::AddsTerrainColumn(const UChunkManager &chunks) const
+std::optional<glm::ivec3> UChunkBuffer::FindNewTerrainColumn(const UChunkManager &chunks) const
 {
   if (!Payload)
-    return false;
-  const auto adds_section = [&](glm::ivec3 coord) {
-    return !chunks.HasResidentTerrainColumn(coord);
+    return std::nullopt;
+  const auto new_column = [&](glm::ivec3 coord) -> std::optional<glm::ivec3> {
+    coord.y = 0;
+    return chunks.HasResidentTerrainColumn(coord) ? std::nullopt : std::optional{coord};
   };
-  const auto adds_at_block = [&](const auto &entry) {
-    return adds_section(UChunkManager::WorldToChunk(entry.first));
+  const auto new_column_for_writes = [&](const auto &writes) -> std::optional<glm::ivec3> {
+    for (const auto &entry : writes)
+      if (auto column = new_column(UChunkManager::WorldToChunk(entry.first)))
+        return column;
+    return std::nullopt;
   };
   const auto &state = Payload->State;
   // A nonresident column reads as AIR, so its stored block writes also pass
   // ApplyTo's cross-owner conflict rules. Fluid bytes apply via those blocks.
-  return (state.HasChunkLight && adds_section(state.ChunkLightCoord)) ||
-         (state.HasChunkWeather && adds_section(state.ChunkWeatherCoord)) ||
-         std::any_of(Payload->Blocks.begin(), Payload->Blocks.end(), adds_at_block) ||
-         std::any_of(Payload->LightPacked.begin(), Payload->LightPacked.end(), adds_at_block);
+  if (state.HasChunkLight)
+    if (auto column = new_column(state.ChunkLightCoord))
+      return column;
+  if (state.HasChunkWeather)
+    if (auto column = new_column(state.ChunkWeatherCoord))
+      return column;
+  if (auto column = new_column_for_writes(Payload->Blocks))
+    return column;
+  return new_column_for_writes(Payload->LightPacked);
 }
 
 void UChunkBuffer::ApplyTo(UBlockWorld &world) const
