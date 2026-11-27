@@ -102,10 +102,16 @@ bool TryGenerateGeode(WorldGenContext &ctx, int x, int z, uint32_t seed,
                       BlockId calcite, BlockId amethyst)
 {
   constexpr int kCellSize = 32;
+  constexpr int kAnchorOffset = 8;
+  constexpr int kMinRadius = 4;
+  constexpr int kMaxRadius = 6;
+  static_assert(kCellSize % CHUNK_SIZE == 0);
+  static_assert(kAnchorOffset % CHUNK_SIZE >= kMaxRadius);
+  static_assert(kAnchorOffset % CHUNK_SIZE + kMaxRadius < CHUNK_SIZE);
   const int cell_x = x >= 0 ? x / kCellSize : (x - kCellSize + 1) / kCellSize;
   const int cell_z = z >= 0 ? z / kCellSize : (z - kCellSize + 1) / kCellSize;
-  const int anchor_x = cell_x * kCellSize + 8;
-  const int anchor_z = cell_z * kCellSize + 8;
+  const int anchor_x = cell_x * kCellSize + kAnchorOffset;
+  const int anchor_z = cell_z * kCellSize + kAnchorOffset;
   if (x != anchor_x || z != anchor_z || smoothBasalt == ctx.Blocks.Stone ||
       calcite == ctx.Blocks.Stone || amethyst == ctx.Blocks.Stone)
   {
@@ -120,7 +126,7 @@ bool TryGenerateGeode(WorldGenContext &ctx, int x, int z, uint32_t seed,
   {
     return false;
   }
-  const int radius = 4 + static_cast<int>((hash >> 8U) % 3U);
+  const int radius = kMinRadius + static_cast<int>((hash >> 8U) % (kMaxRadius - kMinRadius + 1));
   const int highest_center = ctx.Settings.SeaLevel - radius - 2;
   const int lowest_center = radius + 2;
   if (highest_center < lowest_center)

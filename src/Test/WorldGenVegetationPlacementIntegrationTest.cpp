@@ -8,6 +8,7 @@
 #include "World/Chunks/ChunkGenerationToken.h"
 #include "World/Core/BlockWorld.h"
 #include "World/Objects/ObjectLibrary.h"
+#include "World/Objects/ObjectUtil.h"
 #include "World/Math/GridMath.h"
 #include "WorldGen/Core/IUChunkPopulator.h"
 #include "WorldGen/Core/IUWorldGenPipeline.h"
@@ -16,6 +17,7 @@
 #include "WorldGen/Core/WorldGenContentPin.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
 #include "WorldGen/Features/OreVeinPlacer.h"
+#include "WorldGen/Features/RavineCarver.h"
 #include "WorldGen/Features/ValleyCarver.h"
 #include "WorldGen/Core/WorldGeneratorDescriptor.h"
 #include "WorldGen/Core/RuntimeSettingsText.h"
@@ -27,6 +29,7 @@
 #include "WorldGen/Sampling/BiomeSource.h"
 #include "WorldGen/Sampling/ColumnSample.h"
 #include "WorldGen/Pipelines/ComposableWorldGenerator.h"
+#include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Stages/WorldGenStages.h"
 
 #include <algorithm>
@@ -1826,6 +1829,131 @@ static void TestPlacementWorkingBudget(cutum::UBlockRegistry &registry)
       kTestName,"working placement containers and per-chunk scatter state obey shared job quota and lifetime");
 }
 
+static void TestGenerationWriteExtents()
+{
+  using namespace cutum;
+  const auto expect = [](bool result, const char *description) {
+    FluidTest::Expect(result, kTestName, description);
+  };
+  const auto directory = fs::temp_directory_path() /
+      ("cubatarium-worldgen-write-extent-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+  const auto path = directory / "offset_test.json";
+  const auto fire_path = directory / "fire_patch.json";
+  expect(fs::create_directory(directory), "create isolated generation fixture");
+  std::ofstream(path) << R"({"anchor":[5,0,-3],"blocks":[{"dx":-29,"dy":0,"dz":-19,"type":"stone"},{"dx":29,"dy":0,"dz":17,"type":"stone"}]})";
+  std::ofstream(fire_path) << R"({"blocks":[{"dx":0,"dy":0,"dz":0,"type":"stone"},{"dx":0,"dy":1,"dz":0,"type":"stone"},{"dx":-34,"dy":0,"dz":-16,"type":"stone"},{"dx":24,"dy":0,"dz":20,"type":"stone"}]})";
+
+  auto definitions = std::make_shared<UBlockDefinitionStorage>();
+  BlockDefinition stone;
+  stone.Name = "stone";
+  stone.Physics = BlockPhysicsProfile::Solid();
+  definitions->ReplaceAll({{7, stone}}, {{"stone", 7}, {"bedrock", 7}, {"dirt", 7}, {"grass", 7}});
+  UBlockRegistry registry(nullptr, definitions);
+  UObjectLibrary objects;
+  objects.Load(directory.string(), registry);
+  fs::remove(path);
+  fs::remove(fire_path);
+  fs::remove(directory);
+  const auto prefab = objects.GetShared("offset_test");
+  expect(prefab && prefab->voxels.size() == 2, "load the authored signed prefab");
+
+  UBlockWorld world;
+  ProceduralSettings settings;
+  settings.MinHeight = 0;
+  settings.MaxHeight = 24;
+  settings.WorldGenProfileVersion = 3;
+  settings.Ravines.enabled = true;
+  settings.Ravines.rarity = 1;
+  settings.EnableDecoration = true;
+  WorldGenContext context(world, registry, settings, &objects);
+  const auto dry = GetPrefabWriteExtent(context, "offset_test");
+  expect(dry.min_x == -34 && dry.max_x == 24 && dry.min_z == -16 && dry.max_z == 20,
+         "bounds subtract the prefab anchor from the authored offsets");
+  const auto placed = PlaceObjectAt(world, registry, *prefab, {-32, 4, -1}, false);
+  expect(placed.placedCount == 2 && world.GetBlock({-66, 4, -17}) == 7 &&
+         world.GetBlock({-8, 4, 19}) == 7 && world.GetChunkManager().GetResidentTerrainColumnCount() == 2,
+         "actual prefab placement crosses signed terrain boundaries");
+
+  ObjectFeatureConfig features;
+  auto &rule = features.Decoration.emplace_back();
+  rule.ObjectName = "offset_test";
+  rule.Surface.Kind = SurfaceConstraintKind::WaterSurface;
+  rule.Surface.NearWaterRadius = 5;
+  context.ObjectFeatures = &features;
+  ComposableWorldGenConfig config;
+  config.Decoration = true;
+  config.Ravines = true;
+  UComposableWorldGenerator generator(context, config);
+  const auto combined = GetWorldGenWriteExtents(generator);
+  expect(combined && combined->worker_sample.min_x == -39 && combined->worker_sample.max_x == 29 &&
+         combined->worker_sample.min_z == -21 && combined->worker_sample.max_z == 25 &&
+         combined->synchronous_sample.MaxSampleColumns() == 24 && combined->worker_sample.AlignedChunkColumns() == 30,
+         "surface-anchor search composes with the real prefab and chunk alignment");
+
+  config.Decoration = false;
+  UComposableWorldGenerator ravines_only(context, config);
+  const auto ravine_extent = GetWorldGenWriteExtents(ravines_only);
+  expect(ravine_extent && ravine_extent->synchronous_sample.MaxSampleColumns() == 9 &&
+         ravine_extent->worker_sample.AlignedChunkColumns() == 1,
+         "only the synchronous ravine stage can write beyond its source chunk");
+  UBlockWorld wet;
+  WorldGenContext wet_context(wet, registry, settings);
+  wet_context.Blocks.Water = 8;
+  auto params = settings.Ravines;
+  params.gentleRadius = 14;
+  params.fillWater = true;
+  CarveColumnRavinesDeterministic(wet_context, -32, -16, 12, params, 14);
+  const auto actual = wet.GetChunkManager().GetResidentTerrainColumnCount();
+  expect(actual == 4 && wet.GetBlock({-33, 12, -17}) == 8 &&
+         actual <= ravine_extent->synchronous_sample.MaxSampleColumns(),
+         "a wet ravine spans all four adjacent columns at a signed chunk corner");
+
+  settings.MaxHeight = 64;
+  settings.SeaLevel = 0;
+  settings.Generator = ProceduralGenerator::Overworld;
+  settings.TerrainBackendMode = TerrainBackend::Heightmap;
+  settings.Ravines.enabled = false;
+  settings.FillWater = settings.FillLava = false;
+  settings.FillFire = true;
+  settings.EnableTrees = settings.EnableGroundCover = settings.EnableDecoration =
+      settings.EnableStructures = settings.EnableOres = settings.EnableCaves = false;
+  UBlockWorld direct;
+  auto pipeline = UProceduralWorldGenFactory::Create({direct, registry, settings, &objects});
+  auto *composable = dynamic_cast<UComposableWorldGenerator *>(pipeline.get());
+  expect(composable != nullptr, "discover the production generator type");
+  const auto fire_extent = GetWorldGenWriteExtents(*composable);
+  const int y = composable->BuildColumnSample(8, 8).SurfaceY + 1;
+  expect(fire_extent && fire_extent->synchronous_sample.MaxSampleColumns() == 20 &&
+         fire_extent->worker_sample.AlignedChunkColumns() == 24,
+         "the built-in feature uses the authored prefab extent in both entry points");
+  pipeline->GenerateColumn(8, 8);
+  UPipelineChunkPopulator populator(registry, &objects, {});
+  ChunkPopulateRequest request{};
+  request.settings = settings;
+  request.content = CaptureWorldGenContentSnapshot();
+  auto outcome = populator.Populate(request);
+  UBlockWorld output;
+  outcome.buffer.ApplyTo(output);
+  for (const auto *result : {&direct, &output})
+  {
+    expect(result->GetChunkManager().GetResidentTerrainColumnCount() == 3 &&
+           result->GetBlock({-26, y, -8}) == 7 && result->GetBlock({32, y, 28}) == 7,
+           "both normal generation entry points write the two actual cross-column offsets");
+  }
+
+  struct UnspecifiedExtent final : IObjectFeaturePlacementStrategy
+  {
+    bool Place(WorldGenContext &, int, int, int, const ObjectFeatureRule &) const override { return false; }
+  };
+  rule.Mode = static_cast<ObjectFeatureRuleMode>(128);
+  expect(UObjectFeaturePlacementStrategyRegistry::Register(rule.Mode, std::make_shared<UnspecifiedExtent>()),
+         "register an alternative feature strategy");
+  expect(!GetWorldGenWriteExtents(generator), "an unspecified strategy has no reported extent");
+  std::cout << "generation writes: prefab_actual=2 sample_bound=24 worker_bound=30"
+            << " ravine_actual=" << actual << " ravine_bound=9 worker_ravine_bound=1"
+            << " fire_direct=3 fire_worker=3 fire_direct_bound=20 fire_worker_bound=24" << std::endl;
+}
+
 int main(int argc, char **argv)
 {
   const fs::path repo_root = FindRepoRoot();
@@ -1864,6 +1992,11 @@ int main(int argc, char **argv)
       cutum::UWorldGenPack::AquifersConfig().Loaded, kTestName,
       "aquifer configuration loads from the active worldgen pack");
   TestPackDefaultsRespectUserFieldsInProfile3();
+  if (argc > 1 && std::string(argv[1]) == "--generation-write-extents-only")
+  {
+    TestGenerationWriteExtents();
+    return 0;
+  }
   if (argc > 1 && std::string(argv[1]) == "--population-metrics-only")
   {
     constexpr size_t window=1024;

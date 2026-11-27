@@ -1,0 +1,91 @@
+{
+  "schema": "s4-q01-feature-write-extents.v1",
+  "status": "SCOPED_Q01_L2_GENERATION_WRITE_EXTENTS_PASS_Q01_L2_OPEN",
+  "baseline_commit": "b74de544c16830bd3c9088f4479853cbd563703e",
+  "scope": "The query joins the generator stage mask and resolved stage order with the same feature rules and strategy registry used by placement. It covers aligned local stages, signed prefab offset minus anchor and surface-water search, scatter, authored tree and shrub profiles, lava, fire and the separate synchronous and chunk ravine write domains. The rectangle is a conservative column bound for stable content and valid engine coordinates. An unmodeled strategy yields an unknown bound. The model counts direct terrain columns for one sample or one aligned worker result.",
+  "remaining": "Apply the bounds to cooperative startup generation and load, including disk input and overlap with other owners. Join direct edits, record-only owners and the live disk index and registry. The whole-world, outer-ring, cave, wet visual and performance acceptance matrix remains open at 23 of 42 packages.",
+  "source_sha256": "78c2a1362a15f7911c67b6ae9f7fb6e942d2e49858dadb787e7e5b225c8581bc",
+  "desktop_exe_sha256": "e7b72b75209e968418049c0bfe34298362a7cd60bdcaf09ae929b3709cc27220",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_fixture": {
+    "signed_prefab_direct_columns": 2,
+    "combined_water_prefab_sample_upper": 24,
+    "combined_water_prefab_worker_upper": 30,
+    "wet_ravine_direct_columns": 4,
+    "ravine_sample_upper": 9,
+    "ravine_worker_upper": 1,
+    "built_in_prefab_direct_columns": 3,
+    "built_in_prefab_worker_columns": 3,
+    "built_in_prefab_sample_upper": 20,
+    "built_in_prefab_worker_upper": 24,
+    "unmodeled_strategy_reported_unknown": true
+  },
+  "native_profiles": {
+    "flat": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    },
+    "full": {
+      "runtime": "PASS",
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "generation_shutdown": "PASS",
+      "build_provenance": "PASS",
+      "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75"
+    }
+  },
+  "native_generator_fixture": {
+    "cases": [
+      {
+        "mode": "Flat",
+        "synchronous_columns_upper": 1,
+        "worker_columns_upper": 1
+      },
+      {
+        "mode": "LegacyHash",
+        "synchronous_columns_upper": 1,
+        "worker_columns_upper": 1
+      },
+      {
+        "mode": "Overworld",
+        "synchronous_columns_upper": 9,
+        "worker_columns_upper": 9
+      }
+    ],
+    "status": "PASS"
+  },
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q01-write-extents-provenance.json": "436261c64054b44053a3bba18c2b5d257363c68947a17e507988a0bb16e61858",
+    "build/desktop-msvc/s4-q01-write-extents-build.log": "d33d265fec3e18172a41a64769dce388bb001dfbc660c2b51c7eca5abf2c301b",
+    "build/desktop-msvc/s4-q01-write-extents-focused-build.log": "7f5f640e3106d43eb986cca0bdd69820d004bb2a2a7e4b2a715ab2fe9dec411b",
+    "build/desktop-msvc/s4-q01-write-extents-worker-build.log": "e986032e3e095fc43eb7bea9ec656cbb9cad7c8e331ec97b9fda2f88035ae8b0",
+    "build/desktop-msvc/s4-q01-write-extents-focused.log": "9c1a17a5ba8cccba6bc4f245c0a31da8cde211259aaa3439f127c32a08395e1e",
+    "build/desktop-msvc/s4-q01-write-extents-ctest.log": "57c9d6261e52fd7f07ff41ab46215ee72caa761321626cef6194265695e3a966",
+    "build/desktop-msvc/s4-q01-write-extents-buffer.log": "d22ca83f306aa7e842991d9877c9d272f343bcac44365bfdd8633078dce300c8",
+    "build/desktop-msvc/s4-q01-write-extents-biome.log": "fd0c04387581d58d0be3697c31e8280e0266a05e012388649d36a40ed5dba102",
+    "build/desktop-msvc/Release/worldgen_vegetation_placement_integration_test.exe": "0dd9f9ac856990e75a2b7da48441678240b6b6c4291aa56ba60f3de0403e34b2",
+    "build/desktop-msvc/Release/worldgen_scatter_block_resolve_test.exe": "49badde8fabb0af73de95efecf36bab26cdac3eba65fcfaef972b47c9fbf69cf",
+    "build/desktop-msvc/Release/chunk_buffer_capture_test.exe": "3f60c7bb088da600167282ecef46ff0adba9cf840ec1ec56f92d95b1bd65c11a",
+    "build/desktop-msvc/s4-q01-write-extents-flat/route.json": "79a3ac38f745026fd0797ca89d01c285c91e3abfe532befd2ddb8e85d608cf4e",
+    "build/desktop-msvc/s4-q01-write-extents-flat/smoke-verdict.json": "3aa06f2e1a95c028fb5e757a400f1732394f0be89fb3236a77ee97cb340ba8da",
+    "build/desktop-msvc/s4-q01-write-extents-flat/flight_sim_report.json": "839ac4bc6396b6145eaac289dd3f4eb0021bde558962acc6d48ca247422e6a79",
+    "build/desktop-msvc/s4-q01-write-extents-flat/desktop-normal-shutdown.json": "6b155f355b235dfb90cb8a9f1333f335619cae4a6e46862d9fb1744560b33702",
+    "build/desktop-msvc/s4-q01-write-extents-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-write-extents-flat/legacy-gates.json": "e3be3427cb072379cc5382e88d6913ac5a7eb7430c312dcec0cf609a5b152084",
+    "build/desktop-msvc/s4-q01-write-extents-flat.log": "5b698c9519daa6d918f07b1f80da82221d1edc9d9240457b146b4f7a22eb1d52",
+    "build/desktop-msvc/s4-q01-write-extents-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q01-write-extents-flat/terrain-save-probe/report.json": "90575405ae76800fee6ba14fb2c8046861d8dba7a2837e23617b2dee7b8e00cf",
+    "build/desktop-msvc/s4-q01-write-extents-full/route.json": "58839859ef8052db60bf5b663dc1cea51b2aa2ed159a476c1d270c276d5722af",
+    "build/desktop-msvc/s4-q01-write-extents-full/smoke-verdict.json": "b7a976c981b3efb88aaa48afa2e9bcb2216e73dfa2772a9cae6ac3aaf631f584",
+    "build/desktop-msvc/s4-q01-write-extents-full/flight_sim_report.json": "e0f79006d204a18814abfab8953c4c4784b90b66945eb5546ec002ca3819162b",
+    "build/desktop-msvc/s4-q01-write-extents-full/desktop-normal-shutdown.json": "bf1f8d1cd3ee3da33c24a32f59d9e34e17028e1113e5deee07c38cba88831ee5",
+    "build/desktop-msvc/s4-q01-write-extents-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q01-write-extents-full/legacy-gates.json": "913530874d5e97f84313dd3c3fc22042e58d2363b4179b43b59318223508c501",
+    "build/desktop-msvc/s4-q01-write-extents-full.log": "ee2eac8efd5ea2301a2cb414998660febb40369636f113c9fcb9cc8ee662c699",
+    "build/desktop-msvc/s4-q01-write-extents-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}

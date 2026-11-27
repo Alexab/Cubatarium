@@ -1260,6 +1260,15 @@ class UScatterBlocksPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
+  std::optional<WorldGenWriteExtent>
+  WriteExtent(const WorldGenContext &, const ObjectFeatureRule &rule) const override
+  {
+    WorldGenWriteExtent extent;
+    const int radius = std::max(0, rule.Scatter.Radius);
+    extent.IncludeRadius(radius, radius);
+    return extent;
+  }
+
   bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
              const ObjectFeatureRule &rule) const override
   {
@@ -1276,6 +1285,34 @@ class UProceduralTreePlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
+  std::optional<WorldGenWriteExtent>
+  WriteExtent(const WorldGenContext &ctx, const ObjectFeatureRule &rule) const override
+  {
+    const auto max_radius = [](int radius) {
+      return std::clamp(static_cast<int64_t>(radius) + 1, int64_t{1}, int64_t{9});
+    };
+    const auto x = max_radius(rule.Tree.CrownRadiusX);
+    const auto z = max_radius(rule.Tree.CrownRadiusZ);
+    WorldGenWriteExtent extent;
+    if (ctx.Settings.WorldGenProfileVersion >= 3)
+    {
+      const auto foliage = std::clamp(std::max(x, z) - 1, int64_t{2}, int64_t{4});
+      // Each umbrella arm shifts at most once per two trunk levels.
+      const int64_t height = rule.Tree.HeightMax;
+      const auto upper_arm = std::max(int64_t{0}, height - std::max(int64_t{2}, height * 3 / 5));
+      const auto bend = rule.Tree.CrownShape == TreeCrownShape::Umbrella ? (upper_arm + 1) / 2 : 0;
+      extent.IncludeRadius(foliage + bend, foliage + bend);
+    }
+    else
+    {
+      // Lobes shift and grow by at most one radius each. Branch foliage
+      // reaches one voxel past a branch of length at most max(2, x, z).
+      const auto branch = std::max({int64_t{2}, x, z}) + 1;
+      extent.IncludeRadius(std::max(2 * x, branch), std::max(2 * z, branch));
+    }
+    return extent;
+  }
+
   bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
              const ObjectFeatureRule &rule) const override
   {
@@ -1294,6 +1331,19 @@ class UProceduralShrubPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
+  std::optional<WorldGenWriteExtent>
+  WriteExtent(const WorldGenContext &, const ObjectFeatureRule &rule) const override
+  {
+    const auto max_radius = [](int radius) {
+      return std::clamp(static_cast<int64_t>(radius) + 1, int64_t{1}, int64_t{7});
+    };
+    // The lobe shift and the lobe radius each fit inside the core radius.
+    WorldGenWriteExtent extent;
+    extent.IncludeRadius(2 * max_radius(rule.Shrub.RadiusX),
+                         2 * max_radius(rule.Shrub.RadiusZ));
+    return extent;
+  }
+
   bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
              const ObjectFeatureRule &rule) const override
   {
@@ -1312,6 +1362,14 @@ class UObjectPrefabPlacementStrategy final
     : public IObjectFeaturePlacementStrategy
 {
 public:
+  std::optional<WorldGenWriteExtent>
+  WriteExtent(const WorldGenContext &ctx, const ObjectFeatureRule &rule) const override
+  {
+    const int search = rule.Surface.Kind == SurfaceConstraintKind::WaterSurface
+                           ? rule.Surface.NearWaterRadius : 0;
+    return GetPrefabWriteExtent(ctx, rule.ObjectName, search);
+  }
+
   bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
              const ObjectFeatureRule &rule) const override
   {
@@ -1775,6 +1833,57 @@ const ObjectFeatureConfig &GetObjectFeatures(const WorldGenContext &ctx)
 
 } // namespace
 
+WorldGenWriteExtent GetPrefabWriteExtent(const WorldGenContext &ctx,
+                                        const std::string &name,
+                                        int anchor_search_radius)
+{
+  WorldGenWriteExtent extent;
+  const auto prefab = ctx.Objects ? ctx.Objects->GetShared(name) : nullptr;
+  if (!prefab)
+    return extent;
+  const int64_t search = std::max(0, anchor_search_radius);
+  for (const auto &voxel : prefab->voxels)
+  {
+    // Placement uses voxel.offset minus the authored anchor. Surface
+    // following only changes Y after this translation.
+    const auto x = static_cast<int64_t>(voxel.offset.x) - prefab->anchor.x;
+    const auto z = static_cast<int64_t>(voxel.offset.z) - prefab->anchor.z;
+    extent.Include({x - search, x + search, z - search, z + search});
+  }
+  return extent;
+}
+
+std::optional<WorldGenWriteExtent>
+GetObjectFeatureWriteExtent(const WorldGenContext &ctx, ObjectFeaturePool pool)
+{
+  const auto &config = GetObjectFeatures(ctx);
+  const std::vector<ObjectFeatureRule> *rules = nullptr;
+  switch (pool)
+  {
+  case ObjectFeaturePool::Vegetation: rules = &config.Vegetation; break;
+  case ObjectFeaturePool::GroundCover: rules = &config.GroundCover; break;
+  case ObjectFeaturePool::Decoration: rules = &config.Decoration; break;
+  case ObjectFeaturePool::Structures: rules = &config.Structures; break;
+  }
+  if (!rules)
+    return std::nullopt;
+  WorldGenWriteExtent extent;
+  if (rules->empty())
+    return extent;
+  EnsureBuiltinFeaturePlacementStrategies();
+  for (const auto &rule : *rules)
+  {
+    const auto strategy = UObjectFeaturePlacementStrategyRegistry::Find(rule.Mode);
+    if (!strategy)
+      continue;
+    const auto contribution = strategy->WriteExtent(ctx, rule);
+    if (!contribution)
+      return std::nullopt;
+    extent.Include(*contribution);
+  }
+  return extent;
+}
+
 ObjectFeatureChunkDiagnosticsScope::ObjectFeatureChunkDiagnosticsScope(
     bool enabled)
 {
@@ -2038,6 +2147,8 @@ class UMossPatchCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
+  bool WritesWithinTerrainColumn() const override { return true; }
+
   bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
              glm::ivec3 floorPosition, BlockId featureBlock, uint32_t,
              glm::ivec3 chunkCoordinate,
@@ -2078,6 +2189,8 @@ class UStalagmiteCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
+  bool WritesWithinTerrainColumn() const override { return true; }
+
   bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
              glm::ivec3 floorPosition, BlockId featureBlock, uint32_t hash,
              glm::ivec3, const std::function<bool(BlockId)> &) const override
@@ -2113,6 +2226,8 @@ class UAmethystClusterCavePlacementStrategy final
     : public ICaveFeaturePlacementStrategy
 {
 public:
+  bool WritesWithinTerrainColumn() const override { return true; }
+
   bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
              glm::ivec3 floorPosition, BlockId featureBlock, uint32_t hash,
              glm::ivec3 chunkCoordinate,
@@ -2161,6 +2276,21 @@ void EnsureBuiltinCaveFeatureStrategies()
 }
 
 } // namespace
+
+bool CaveFeaturesWriteWithinTerrainColumn(const WorldGenContext &ctx)
+{
+  const auto &rules = GetObjectFeatures(ctx).CaveFeatures;
+  if (rules.empty())
+    return true;
+  EnsureBuiltinCaveFeatureStrategies();
+  for (const auto &rule : rules)
+  {
+    const auto strategy = UCaveFeaturePlacementStrategyRegistry::Find(rule.Kind);
+    if (strategy && !strategy->WritesWithinTerrainColumn())
+      return false;
+  }
+  return true;
+}
 
 template<class KeyFunction> static bool TryPlaceCaveFeaturesImpl(
     WorldGenContext &ctx, int x, int z, int surfaceY,

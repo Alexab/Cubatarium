@@ -38,6 +38,7 @@
 #include "Core/FrameDeadline.h"
 #include "Core/Jobs/JobThreadBudget.h"
 #include "WorldGen/Core/WorldGenContext.h"
+#include "WorldGen/Pipelines/WorldGenStageRunner.h"
 #include "WorldGen/Core/CatalogStorageCensus.h"
 #include "WorldGen/Core/CatalogRuntimeDomain.h"
 #include "WorldGen/Core/SourceInputStorageCensus.h"
@@ -579,6 +580,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
     });
     RunTerrainProbePhase([&] {
       auto cases = Json::array();
+      auto extents = Json::array();
       for (const auto generator : {ProceduralGenerator::Flat, ProceduralGenerator::Heightmap,
                                    ProceduralGenerator::Overworld})
       {
@@ -627,6 +629,16 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
                     world.BlockWorld.GetBlock(first) == (local ? BlockId(7) : BLOCK_AIR),
                 "real local generation continues at capacity and feature-capable generation waits");
         const auto mode = generator == ProceduralGenerator::Flat ? "Flat" : local ? "LegacyHash" : "Overworld";
+        const auto *pipeline = dynamic_cast<const UComposableWorldGenerator *>(world.WorldGen.get());
+        require(pipeline, "discover the initialized composable generator");
+        const auto footprint = GetWorldGenWriteExtents(*pipeline);
+        require(footprint.has_value(), "bound the direct write domain of the initialized generator");
+        const auto synchronous_columns = footprint->synchronous_sample.MaxSampleColumns();
+        const auto worker_columns = footprint->worker_sample.AlignedChunkColumns();
+        require(!local || (synchronous_columns == 1 && worker_columns == 1),
+                "local generator estimates agree with its single-column write domain");
+        extents.push_back({{"mode", mode}, {"synchronous_columns_upper", synchronous_columns},
+                           {"worker_columns_upper", worker_columns}});
         Json row = {{"mode", mode}, {"terrain_limit", limit}, {"wrote_resident_sample", local}};
         if (local)
         {
@@ -656,6 +668,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         cases.push_back(std::move(row));
       }
       report["synchronous_generation_residency"] = {{"status", "PASS"}, {"cases", cases}};
+      report["generation_write_extents"] = {{"status", "PASS"}, {"cases", extents}};
     });
     RunTerrainProbePhase([&] {
       auto owner = std::make_unique<UWorld>(nullptr, nullptr);

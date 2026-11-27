@@ -1,5 +1,6 @@
 #pragma once
 #include "WorldGen/Features/ObjectFeatureDiagnosticState.h"
+#include "WorldGen/Core/WorldGenWriteExtent.h"
 
 #include "WorldGen/Sampling/BiomeRegistry.h"
 #include "WorldGen/Sampling/BiomeSampler.h"
@@ -151,6 +152,7 @@ class ICaveFeaturePlacementStrategy
 {
 public:
   virtual ~ICaveFeaturePlacementStrategy() = default;
+  virtual bool WritesWithinTerrainColumn() const { return false; }
   virtual bool Place(WorldGenContext &ctx, const CaveFeatureRule &rule,
                      glm::ivec3 floorPosition, BlockId featureBlock,
                      uint32_t featureHash, glm::ivec3 chunkCoordinate,
@@ -207,6 +209,11 @@ class IObjectFeaturePlacementStrategy
 {
 public:
   virtual ~IObjectFeaturePlacementStrategy() = default;
+  virtual std::optional<WorldGenWriteExtent>
+  WriteExtent(const WorldGenContext &, const ObjectFeatureRule &) const
+  {
+    return std::nullopt;
+  }
   virtual bool Place(WorldGenContext &ctx, int x, int z, int surfaceY,
                      const ObjectFeatureRule &rule) const = 0;
 };

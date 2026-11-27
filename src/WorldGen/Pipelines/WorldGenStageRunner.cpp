@@ -287,6 +287,78 @@ uint32_t WorldGenStageSkipBit(WorldGenStageId id)
   return 1u << static_cast<uint32_t>(id);
 }
 
+std::optional<WorldGenWriteExtents>
+GetWorldGenWriteExtents(const UComposableWorldGenerator &generator)
+{
+  const auto mode = generator.GetConfig().TerrainMode;
+  if (mode == ComposableTerrainMode::Flat || mode == ComposableTerrainMode::LegacyHash)
+    return WorldGenWriteExtents{};
+
+  const auto &ctx = generator.GetContext();
+  const auto &settings = ctx.Settings;
+  const auto &mask = generator.GetStageMask();
+  WorldGenWriteExtent common;
+  int ravine_reach = 0;
+  for (const auto stage : ResolvedStageOrder())
+  {
+    if (!mask.IsEnabled(stage))
+      continue;
+    std::optional<ObjectFeaturePool> pool;
+    switch (stage)
+    {
+    case WorldGenStageId::Ravines:
+      ravine_reach = MaxRavineColumnWriteReach(settings.Ravines, settings.WorldGenProfileVersion);
+      break;
+    case WorldGenStageId::Vegetation:
+      if (settings.EnableTrees)
+        pool = ObjectFeaturePool::Vegetation;
+      break;
+    case WorldGenStageId::GroundCover:
+      if (settings.EnableGroundCover)
+        pool = ObjectFeaturePool::GroundCover;
+      break;
+    case WorldGenStageId::Decoration:
+      if (settings.EnableDecoration)
+        pool = ObjectFeaturePool::Decoration;
+      break;
+    case WorldGenStageId::Structures:
+      if (settings.EnableStructures)
+        pool = ObjectFeaturePool::Structures;
+      break;
+    case WorldGenStageId::LavaPools:
+      if (settings.FillLava)
+        common.IncludeRadius(1, 1);
+      break;
+    case WorldGenStageId::FirePatch:
+      if (settings.FillFire)
+        common.Include(GetPrefabWriteExtent(ctx, "fire_patch"));
+      break;
+    case WorldGenStageId::CaveFeatures:
+      if (settings.EnableCaves && !CaveFeaturesWriteWithinTerrainColumn(ctx))
+        return std::nullopt;
+      break;
+    default:
+      // Terrain, valleys, lakes, caves, fluids, aquifers and ores write to
+      // the requested XZ. Geology's geode is aligned inside its source chunk.
+      break;
+    }
+    if (pool)
+    {
+      const auto extent = GetObjectFeatureWriteExtent(ctx, *pool);
+      if (!extent)
+        return std::nullopt;
+      common.Include(*extent);
+    }
+  }
+
+  // Populate replaces the column ravine stage with a chunk pass. That pass,
+  // the chunk valley and mudflow passes, and the seals stay in the owner XZ
+  // rectangle. Pruning can only remove existing blocks.
+  WorldGenWriteExtents result{common, common};
+  result.synchronous_sample.IncludeRadius(ravine_reach, ravine_reach);
+  return result;
+}
+
 void RunPostTerrainStagesExcluding(
     UComposableWorldGenerator &generator, const ColumnSampleContext &sample,
     int world_x, int world_z, uint32_t skip_stage_mask,

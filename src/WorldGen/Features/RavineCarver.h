@@ -11,6 +11,8 @@ struct WorldGenContext;
 
 using RavineSurfaceYCallback = std::function<int(int x, int z)>;
 
+int MaxRavineColumnWriteReach(const RavineParams &params, int profile_version);
+
 void CarveColumnRavines(WorldGenContext &ctx, int x, int z, int surface_y,
                         uint32_t seed, const RavineParams &params, int sea_level,
                         const RavineSurfaceYCallback &get_surface_y = {});

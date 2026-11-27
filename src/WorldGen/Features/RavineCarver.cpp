@@ -14,6 +14,8 @@ namespace cutum
 namespace
 {
 
+constexpr int kGentleRavineMaxReach = 14;
+
 uint32_t RavineHash(int x, int z, uint32_t seed)
 {
   return static_cast<uint32_t>(x * 374761393 + z * 668265263) ^ (seed + 4400);
@@ -91,7 +93,7 @@ std::optional<RavineParams> RavineTriggerParams(int x, int z, uint32_t seed,
         static_cast<int>(depth_factor *
                          static_cast<float>(kGentleMaxDepth - kGentleMinDepth));
     effective.minDepth = effective.maxDepth;
-    effective.gentleRadius = std::min(14, effective.maxDepth * 3 / 2 + 4);
+    effective.gentleRadius = std::min(kGentleRavineMaxReach, effective.maxDepth * 3 / 2 + 4);
   }
   return effective;
 }
@@ -210,6 +212,13 @@ void MaterializeRavineChunkCarves(
 
 } // namespace
 
+int MaxRavineColumnWriteReach(const RavineParams &params, int profile_version)
+{
+  if (!params.enabled || params.rarity <= 0)
+    return 0;
+  return profile_version >= 3 ? kGentleRavineMaxReach : RavineReach(params);
+}
+
 void CarveColumnRavinesDeterministic(WorldGenContext &ctx, int x, int z,
                                      int surface_y, const RavineParams &params,
                                      int sea_level,
@@ -289,7 +298,7 @@ void CarveChunkRavines(WorldGenContext &ctx, int base_x, int base_z,
   }
 
   const bool gentle = ctx.Settings.WorldGenProfileVersion >= 3;
-  const int kHalo = gentle ? 14 : 3;
+  const int kHalo = gentle ? kGentleRavineMaxReach : 3;
   for (int tz = base_z - kHalo; tz < base_z + CHUNK_SIZE + kHalo; ++tz)
   {
     for (int tx = base_x - kHalo; tx < base_x + CHUNK_SIZE + kHalo; ++tx)

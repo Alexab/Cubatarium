@@ -82,4 +82,13 @@ void ResetScatterChunkCounts();
 /// Ensure built-in placement strategies are available for direct registry use.
 void RegisterBuiltinObjectFeaturePlacementStrategies();
 
+// Uses the same rules and strategy registry as placement, with the snapshot
+// and object library held stable by the caller for the inspected operation.
+std::optional<WorldGenWriteExtent>
+GetObjectFeatureWriteExtent(const WorldGenContext &ctx, ObjectFeaturePool pool);
+bool CaveFeaturesWriteWithinTerrainColumn(const WorldGenContext &ctx);
+WorldGenWriteExtent GetPrefabWriteExtent(const WorldGenContext &ctx,
+                                        const std::string &name,
+                                        int anchor_search_radius = 0);
+
 } // namespace cutum
