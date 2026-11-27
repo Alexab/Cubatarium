@@ -88,10 +88,11 @@ inline nlohmann::json Run(const std::filesystem::path &reportPath)
     glDisable(GL_SCISSOR_TEST);
   glClearColor(originalClear[0], originalClear[1], originalClear[2], originalClear[3]);
 
-  const auto queue = [&](uint32_t index, nlohmann::json receipt = nullptr) {
-    return Probe::Queue(capture, output / (std::to_string(index) + ".png"), index, std::move(receipt));
+  const auto queue = [&](uint32_t index) {
+    return Probe::Queue(capture, output / (std::to_string(index) + ".png"), index,
+                       FlightCaptureReceipt{index, 100 + index, {1.25f, -12.5f, 0.125f}, 27.5f, -2.5f});
   };
-  Require(queue(0, {{"schema", "diagnostic-capture-receipt.v1"}, {"capture_id", 0}}), "start the encoder on a real frame");
+  Require(queue(0), "start the encoder on a real frame");
   glFinish();
   Require(capture.IsDiagnosticCaptureReady() && gate.Wait(), "hold the encoder with its first live codec allocation");
   for (uint32_t i = 1; i <= 4; ++i)
@@ -111,6 +112,15 @@ inline nlohmann::json Run(const std::filesystem::path &reportPath)
               live.copiedSlots == 3 && live.queuedFrames == 4 && live.slotPixelBytes == 3 * bytes &&
               live.queuedPixelBytes == 4 * bytes && live.encoderPixelBytes == bytes && live.FrameBytes() == 8 * bytes,
           "observe eight simultaneous real frame backings and live PNG scratch");
+  Require(live.activeSlots == 3 && live.slotReceipts == 3 && live.queuedReceipts == 4 && live.encoderReceipt == 1 &&
+              saturated.receiptInlineBytes == sizeof(FlightCaptureReceipt) && saturated.workerFrameInlineBytes > saturated.receiptInlineBytes,
+          "retain all eight inline receipts with their owning frames under backpressure");
+#ifdef _WIN32
+  Require(saturated.pathBackingSupported && saturated.workerHandleObserved && live.encoderPathBytes > 0 &&
+              live.slotPathBytes == 3 * live.encoderPathBytes && live.queuedPathBytes == 4 * live.encoderPathBytes &&
+              live.MetadataBytes() == 8 * live.encoderPathBytes && live.TrackedLiveBytes() == live.LiveBytes() + live.MetadataBytes(),
+          "observe concurrent MSVC path backing and the worker handle before drain");
+#endif
   gate.Release();
   FlightCaptureGpuCheckpoint checkpoint;
   Probe::Drain(capture, checkpoint);
@@ -120,6 +130,26 @@ inline nlohmann::json Run(const std::filesystem::path &reportPath)
               drained.atPeakAdmission.AdmittedBytes() >= drained.atPeakLive.LiveBytes() &&
               drained.peakCodecLiveRequestBytes > 0 && checkpoint.afterShutdown.namesWithoutObject == 3,
           "drain every accepted frame and retire CPU backing, codec allocations and pack stores");
+  Require(!drained.current.TrackedLiveBytes() && !drained.current.activeSlots && !drained.current.slotReceipts &&
+              !drained.current.queuedReceipts && !drained.current.encoderReceipt && !drained.workerHandleObserved,
+          "retire the receipt, path and worker state after every frame has drained");
+#ifdef _WIN32
+  const auto &pngWrite = drained.lastWrite[static_cast<size_t>(FlightCaptureOutput::Png)];
+  const auto &receiptWrite = drained.lastWrite[static_cast<size_t>(FlightCaptureOutput::Receipt)];
+  Require(drained.opens == 16 && drained.closes == 16 && drained.peakOpenFiles == 1 && !drained.current.liveOutputFiles &&
+              !drained.openFailures && !drained.closeFailures && drained.atPeakTracked.TrackedLiveBytes() >= live.TrackedLiveBytes(),
+          "open and close one native output file at a time while draining sixteen artifacts");
+  for (const auto *row : {&pngWrite, &receiptWrite})
+    Require(row->fileHandleObserved && row->capture.liveOutputFiles == 1 && row->capture.encoderReceipt == 1 &&
+                row->payloadBytes && row->processHandlesObserved && row->processHandles && row->process.observed &&
+                row->process.privateCommit && row->workerThreadId && row->workerStack.observed && row->workerStack.committed &&
+                row->workerStack.committed <= row->workerStack.reserved && row->workerStack.guard <= row->workerStack.committed,
+            "sample the file handle, worker stack and process with an output file open");
+  Require(pngWrite.workerThreadId == receiptWrite.workerThreadId && pngWrite.capture.codecLiveRequestBytes &&
+              !pngWrite.capture.writeTemporaryBytes && !receiptWrite.capture.codecLiveRequestBytes &&
+              receiptWrite.capture.writeTemporaryBytes >= receiptWrite.payloadBytes,
+          "distinguish live PNG codec requests from receipt serialization on the same worker");
+#endif
 
   for (uint32_t i = 0; i < 8; ++i)
   {
@@ -146,7 +176,40 @@ inline nlohmann::json Run(const std::filesystem::path &reportPath)
   nlohmann::json receipt;
   receiptFile >> receipt;
   Require(receipt.at("png_fnv1a64") == hex.str() && receipt.at("width") == width && receipt.at("height") == height &&
-              receipt.at("capture_index") == 0, "capture receipt matches the actual persisted file");
+              receipt.at("capture_index") == 0 && receipt.at("capture_id") == 0 && receipt.at("frame_sequence") == 100 &&
+              receipt.at("schema") == "diagnostic-capture-receipt.v1" && receipt.at("source") == "GL_BACK" &&
+              receipt.at("png") == "0.png" && receipt.at("yaw") == 27.5 && receipt.at("pitch") == -2.5 &&
+              receipt.at("position") == nlohmann::json::array({1.25, -12.5, 0.125}),
+          "capture receipt preserves the readback identity and pose and matches the persisted file");
+
+  UWindowManager recovery;
+  Probe::Attach(recovery);
+  Probe::Profile(recovery, {});
+  const auto refusedFile = output / "refused.png";
+  Require(std::filesystem::create_directory(refusedFile) && Probe::Queue(recovery, refusedFile, 0),
+          "admit a frame whose output path is occupied by a directory");
+  glFinish();
+  Require(recovery.IsDiagnosticCaptureReady(), "send the refused output to the worker");
+  const std::string retryName = "retry-\xC3\xA9.png";
+  const auto retry = output / std::filesystem::u8path(retryName);
+  Require(Probe::Queue(recovery, retry, 1, FlightCaptureReceipt{1, 101, {}, 0.f, 0.f}),
+          "queue a new frame on the same worker at a UTF-8 output path");
+  FlightCaptureGpuCheckpoint recovered;
+  Probe::Drain(recovery, recovered);
+  const auto &retryStorage = recovered.cpuAfterShutdown;
+  auto retryReceiptPath = retry;
+  retryReceiptPath += ".json";
+  std::ifstream retryReceiptFile(retryReceiptPath, std::ios::binary);
+  nlohmann::json retryReceipt;
+  retryReceiptFile >> retryReceipt;
+  Require(std::filesystem::is_directory(refusedFile) && std::filesystem::is_regular_file(retry) &&
+              retryReceipt.at("png") == retryName && retryStorage.acceptedFrames == 2 && retryStorage.persistedFrames == 1 &&
+              !retryStorage.current.TrackedLiveBytes() && !retryStorage.current.liveOutputFiles && !retryStorage.workerHandleObserved,
+          "retire the refused capture and persist the next frame and its UTF-8 receipt");
+#ifdef _WIN32
+  Require(retryStorage.opens == 2 && retryStorage.closes == 2 && retryStorage.openFailures == 1 && !retryStorage.closeFailures,
+          "balance native handle lifetime after an actual file open refusal");
+#endif
 
   const std::array<unsigned char, 48> source{};
   const RgbaPngView image{source.data(), source.size(), 4, 3, true};
@@ -166,6 +229,7 @@ inline nlohmann::json Run(const std::filesystem::path &reportPath)
               glGetError() == GL_NO_ERROR, "retire partial codec backing and retry the same image");
   return {{"status", "PASS"}, {"frame_pixel_bytes", bytes}, {"saturated", DescribeFlightCaptureCpuStorage(saturated)},
           {"after_shutdown", DescribeFlightCaptureCpuStorage(drained)}, {"retired_gpu_buffers", checkpoint.afterShutdown.namesWithoutObject},
-          {"verified_images", 8}, {"verified_receipt", true}, {"codec_refusal_retried", true}};
+          {"verified_images", 8}, {"verified_receipt", true}, {"codec_refusal_retried", true},
+          {"file_open_refusal_recovered", true}, {"recovery_after_shutdown", DescribeFlightCaptureCpuStorage(retryStorage)}};
 }
 } // namespace cutum::flight_capture_cpu_storage_fixture

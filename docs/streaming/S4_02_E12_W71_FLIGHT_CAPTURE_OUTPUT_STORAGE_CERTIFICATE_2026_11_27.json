@@ -1,0 +1,4180 @@
+{
+  "schema": "s4-e12-w71-flight-capture-output-storage.v1",
+  "status": "SCOPED_FLIGHT_CAPTURE_OUTPUT_STORAGE_PASS_E12_OPEN",
+  "baseline_commit": "5ea5d3a4ae67ed41c26551dc91707ed08e1b7a00",
+  "prior_certificate": "S4_02_E12_W70_FLIGHT_CAPTURE_CPU_STORAGE_CERTIFICATE_2026_11_27.json",
+  "profile": {
+    "os": "Windows x64",
+    "sdk": "10.0.26100.0",
+    "msvc": "14.51.36231",
+    "runtime": "MultiThreaded"
+  },
+  "summary": "W71 measures native path storage through three GPU slots, four fixed queue entries and one worker frame, with capture identity and pose stored inline. The writer uses one native handle and observes its worker stack, process handle count and PSAPI counters while a file is open. The eight-frame saturation fixture checks sixteen output lifetimes and independently hashes each PNG and verifies its receipt. A real file-open refusal retires the affected frame, and the same worker persists a new capture and receipt with a UTF-8 filename. Flat and Full desktop startup runs preserve configuration and verify normal PNG output. All 46 Release groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W71. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. Next, account remaining transient owners and outside-library filesystem, diagnostic and driver retention, and verify the residual whole-process terms. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows Release diagnostic capture retained paths, inline receipt payloads, receipt output requests and file/worker lifetime under real readback and draining",
+  "composition_rule": "Path requests and selected live receipt requests are joined to concurrent frame and codec requests. The service inline extent includes its fixed slots, queue and report. The current worker frame inline extent is contained by its native stack. PSAPI, handle counts, stack and GL stores are observed as separate dimensions.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations"
+  ],
+  "capture_cpu_fixture": {
+    "after_shutdown": {
+      "accepted_frames": 8,
+      "codec_sampled": true,
+      "current": {
+        "active_slots": 0,
+        "admitted_bytes": 0,
+        "codec_live_request_bytes": 0,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 0,
+        "encoder_path_bytes": 0,
+        "encoder_pixel_bytes": 0,
+        "encoder_receipt": 0,
+        "frame_pixel_bytes": 0,
+        "live_bytes": 0,
+        "live_output_files": 0,
+        "metadata_bytes": 0,
+        "queued_frames": 0,
+        "queued_path_bytes": 0,
+        "queued_pixel_bytes": 0,
+        "queued_receipts": 0,
+        "slot_path_bytes": 0,
+        "slot_pixel_bytes": 0,
+        "slot_receipts": 0,
+        "tracked_live_bytes": 0,
+        "write_temporary_bytes": 0
+      },
+      "file_close_failures": 0,
+      "file_closes": 16,
+      "file_open_failures": 0,
+      "file_opens": 16,
+      "path_backing_supported": true,
+      "peak_admission": {
+        "active_slots": 3,
+        "admitted_bytes": 303222,
+        "codec_live_request_bytes": 151231,
+        "codec_pending_request_bytes": 439,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 302783,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 304319,
+        "write_temporary_bytes": 0
+      },
+      "peak_codec_live_request_bytes": 151423,
+      "peak_live": {
+        "active_slots": 3,
+        "admitted_bytes": 302975,
+        "codec_live_request_bytes": 151423,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 302975,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 304511,
+        "write_temporary_bytes": 0
+      },
+      "peak_open_files": 1,
+      "peak_tracked": {
+        "active_slots": 3,
+        "admitted_bytes": 302975,
+        "codec_live_request_bytes": 151423,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 302975,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 304511,
+        "write_temporary_bytes": 0
+      },
+      "persisted_frames": 8,
+      "png_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 19288,
+          "codec_live_request_bytes": 344,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 192,
+          "encoder_pixel_bytes": 18944,
+          "encoder_receipt": 1,
+          "frame_pixel_bytes": 18944,
+          "live_bytes": 19288,
+          "live_output_files": 1,
+          "metadata_bytes": 192,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 19480,
+          "write_temporary_bytes": 0
+        },
+        "file_handle_observed": true,
+        "payload_bytes": 296,
+        "process_handles": 443,
+        "process_handles_observed": true,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 20432,
+          "observed": true,
+          "paged_pool_quota_bytes": 371288,
+          "peak_private_commit_bytes": 220352512,
+          "peak_working_set_bytes": 170602496,
+          "private_commit_bytes": 216285184,
+          "working_set_bytes": 167419904
+        },
+        "worker_stack": {
+          "committed_bytes": 20480,
+          "guard_bytes": 12288,
+          "observed": true,
+          "reserved_bytes": 1048576
+        },
+        "worker_thread_id": 22172
+      },
+      "queue_limit": 4,
+      "receipt_inline_bytes": 40,
+      "receipt_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 18944,
+          "codec_live_request_bytes": 0,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 192,
+          "encoder_pixel_bytes": 18944,
+          "encoder_receipt": 1,
+          "frame_pixel_bytes": 18944,
+          "live_bytes": 18944,
+          "live_output_files": 1,
+          "metadata_bytes": 1022,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 19966,
+          "write_temporary_bytes": 830
+        },
+        "file_handle_observed": true,
+        "payload_bytes": 241,
+        "process_handles": 443,
+        "process_handles_observed": true,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 20432,
+          "observed": true,
+          "paged_pool_quota_bytes": 371288,
+          "peak_private_commit_bytes": 220352512,
+          "peak_working_set_bytes": 170602496,
+          "private_commit_bytes": 216285184,
+          "working_set_bytes": 167419904
+        },
+        "worker_stack": {
+          "committed_bytes": 20480,
+          "guard_bytes": 12288,
+          "observed": true,
+          "reserved_bytes": 1048576
+        },
+        "worker_thread_id": 22172
+      },
+      "schema": "flight-capture-cpu-storage.v1",
+      "service_inline_bytes": 2464,
+      "slot_limit": 3,
+      "worker_frame_inline_bytes": 136,
+      "worker_handle_observed": false
+    },
+    "codec_refusal_retried": true,
+    "file_open_refusal_recovered": true,
+    "frame_pixel_bytes": 18944,
+    "recovery_after_shutdown": {
+      "accepted_frames": 2,
+      "codec_sampled": true,
+      "current": {
+        "active_slots": 0,
+        "admitted_bytes": 0,
+        "codec_live_request_bytes": 0,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 0,
+        "encoder_path_bytes": 0,
+        "encoder_pixel_bytes": 0,
+        "encoder_receipt": 0,
+        "frame_pixel_bytes": 0,
+        "live_bytes": 0,
+        "live_output_files": 0,
+        "metadata_bytes": 0,
+        "queued_frames": 0,
+        "queued_path_bytes": 0,
+        "queued_pixel_bytes": 0,
+        "queued_receipts": 0,
+        "slot_path_bytes": 0,
+        "slot_pixel_bytes": 0,
+        "slot_receipts": 0,
+        "tracked_live_bytes": 0,
+        "write_temporary_bytes": 0
+      },
+      "file_close_failures": 0,
+      "file_closes": 2,
+      "file_open_failures": 1,
+      "file_opens": 2,
+      "path_backing_supported": true,
+      "peak_admission": {
+        "active_slots": 0,
+        "admitted_bytes": 189558,
+        "codec_live_request_bytes": 151231,
+        "codec_pending_request_bytes": 439,
+        "copied_slots": 0,
+        "encoder_path_bytes": 208,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 0,
+        "frame_pixel_bytes": 37888,
+        "live_bytes": 189119,
+        "live_output_files": 0,
+        "metadata_bytes": 416,
+        "queued_frames": 1,
+        "queued_path_bytes": 208,
+        "queued_pixel_bytes": 18944,
+        "queued_receipts": 1,
+        "slot_path_bytes": 0,
+        "slot_pixel_bytes": 0,
+        "slot_receipts": 0,
+        "tracked_live_bytes": 189535,
+        "write_temporary_bytes": 0
+      },
+      "peak_codec_live_request_bytes": 151423,
+      "peak_live": {
+        "active_slots": 0,
+        "admitted_bytes": 189311,
+        "codec_live_request_bytes": 151423,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 0,
+        "encoder_path_bytes": 208,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 0,
+        "frame_pixel_bytes": 37888,
+        "live_bytes": 189311,
+        "live_output_files": 0,
+        "metadata_bytes": 416,
+        "queued_frames": 1,
+        "queued_path_bytes": 208,
+        "queued_pixel_bytes": 18944,
+        "queued_receipts": 1,
+        "slot_path_bytes": 0,
+        "slot_pixel_bytes": 0,
+        "slot_receipts": 0,
+        "tracked_live_bytes": 189727,
+        "write_temporary_bytes": 0
+      },
+      "peak_open_files": 1,
+      "peak_tracked": {
+        "active_slots": 0,
+        "admitted_bytes": 189311,
+        "codec_live_request_bytes": 151423,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 0,
+        "encoder_path_bytes": 208,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 0,
+        "frame_pixel_bytes": 37888,
+        "live_bytes": 189311,
+        "live_output_files": 0,
+        "metadata_bytes": 416,
+        "queued_frames": 1,
+        "queued_path_bytes": 208,
+        "queued_pixel_bytes": 18944,
+        "queued_receipts": 1,
+        "slot_path_bytes": 0,
+        "slot_pixel_bytes": 0,
+        "slot_receipts": 0,
+        "tracked_live_bytes": 189727,
+        "write_temporary_bytes": 0
+      },
+      "persisted_frames": 1,
+      "png_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 19288,
+          "codec_live_request_bytes": 344,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 208,
+          "encoder_pixel_bytes": 18944,
+          "encoder_receipt": 1,
+          "frame_pixel_bytes": 18944,
+          "live_bytes": 19288,
+          "live_output_files": 1,
+          "metadata_bytes": 208,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 19496,
+          "write_temporary_bytes": 0
+        },
+        "file_handle_observed": true,
+        "payload_bytes": 296,
+        "process_handles": 445,
+        "process_handles_observed": true,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 20432,
+          "observed": true,
+          "paged_pool_quota_bytes": 371288,
+          "peak_private_commit_bytes": 220352512,
+          "peak_working_set_bytes": 170602496,
+          "private_commit_bytes": 216285184,
+          "working_set_bytes": 167424000
+        },
+        "worker_stack": {
+          "committed_bytes": 20480,
+          "guard_bytes": 12288,
+          "observed": true,
+          "reserved_bytes": 1048576
+        },
+        "worker_thread_id": 16628
+      },
+      "queue_limit": 4,
+      "receipt_inline_bytes": 40,
+      "receipt_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 18944,
+          "codec_live_request_bytes": 0,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 208,
+          "encoder_pixel_bytes": 18944,
+          "encoder_receipt": 1,
+          "frame_pixel_bytes": 18944,
+          "live_bytes": 18944,
+          "live_output_files": 1,
+          "metadata_bytes": 1142,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 20086,
+          "write_temporary_bytes": 934
+        },
+        "file_handle_observed": true,
+        "payload_bytes": 231,
+        "process_handles": 445,
+        "process_handles_observed": true,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 20432,
+          "observed": true,
+          "paged_pool_quota_bytes": 371288,
+          "peak_private_commit_bytes": 220352512,
+          "peak_working_set_bytes": 170602496,
+          "private_commit_bytes": 216285184,
+          "working_set_bytes": 167424000
+        },
+        "worker_stack": {
+          "committed_bytes": 20480,
+          "guard_bytes": 12288,
+          "observed": true,
+          "reserved_bytes": 1048576
+        },
+        "worker_thread_id": 16628
+      },
+      "schema": "flight-capture-cpu-storage.v1",
+      "service_inline_bytes": 2464,
+      "slot_limit": 3,
+      "worker_frame_inline_bytes": 136,
+      "worker_handle_observed": false
+    },
+    "retired_gpu_buffers": 3,
+    "saturated": {
+      "accepted_frames": 8,
+      "codec_sampled": true,
+      "current": {
+        "active_slots": 3,
+        "admitted_bytes": 170576,
+        "codec_live_request_bytes": 19024,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 170576,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 172112,
+        "write_temporary_bytes": 0
+      },
+      "file_close_failures": 0,
+      "file_closes": 0,
+      "file_open_failures": 0,
+      "file_opens": 0,
+      "path_backing_supported": true,
+      "peak_admission": {
+        "active_slots": 3,
+        "admitted_bytes": 170576,
+        "codec_live_request_bytes": 19024,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 170576,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 172112,
+        "write_temporary_bytes": 0
+      },
+      "peak_codec_live_request_bytes": 19024,
+      "peak_live": {
+        "active_slots": 3,
+        "admitted_bytes": 170576,
+        "codec_live_request_bytes": 19024,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 170576,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 172112,
+        "write_temporary_bytes": 0
+      },
+      "peak_open_files": 0,
+      "peak_tracked": {
+        "active_slots": 3,
+        "admitted_bytes": 170576,
+        "codec_live_request_bytes": 19024,
+        "codec_pending_request_bytes": 0,
+        "copied_slots": 3,
+        "encoder_path_bytes": 192,
+        "encoder_pixel_bytes": 18944,
+        "encoder_receipt": 1,
+        "frame_pixel_bytes": 151552,
+        "live_bytes": 170576,
+        "live_output_files": 0,
+        "metadata_bytes": 1536,
+        "queued_frames": 4,
+        "queued_path_bytes": 768,
+        "queued_pixel_bytes": 75776,
+        "queued_receipts": 4,
+        "slot_path_bytes": 576,
+        "slot_pixel_bytes": 56832,
+        "slot_receipts": 3,
+        "tracked_live_bytes": 172112,
+        "write_temporary_bytes": 0
+      },
+      "persisted_frames": 0,
+      "png_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 0,
+          "codec_live_request_bytes": 0,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 0,
+          "encoder_pixel_bytes": 0,
+          "encoder_receipt": 0,
+          "frame_pixel_bytes": 0,
+          "live_bytes": 0,
+          "live_output_files": 0,
+          "metadata_bytes": 0,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 0,
+          "write_temporary_bytes": 0
+        },
+        "file_handle_observed": false,
+        "payload_bytes": 0,
+        "process_handles": 0,
+        "process_handles_observed": false,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 0,
+          "observed": false,
+          "paged_pool_quota_bytes": 0,
+          "peak_private_commit_bytes": 0,
+          "peak_working_set_bytes": 0,
+          "private_commit_bytes": 0,
+          "working_set_bytes": 0
+        },
+        "worker_stack": {
+          "committed_bytes": 0,
+          "guard_bytes": 0,
+          "observed": false,
+          "reserved_bytes": 0
+        },
+        "worker_thread_id": 0
+      },
+      "queue_limit": 4,
+      "receipt_inline_bytes": 40,
+      "receipt_write": {
+        "capture": {
+          "active_slots": 0,
+          "admitted_bytes": 0,
+          "codec_live_request_bytes": 0,
+          "codec_pending_request_bytes": 0,
+          "copied_slots": 0,
+          "encoder_path_bytes": 0,
+          "encoder_pixel_bytes": 0,
+          "encoder_receipt": 0,
+          "frame_pixel_bytes": 0,
+          "live_bytes": 0,
+          "live_output_files": 0,
+          "metadata_bytes": 0,
+          "queued_frames": 0,
+          "queued_path_bytes": 0,
+          "queued_pixel_bytes": 0,
+          "queued_receipts": 0,
+          "slot_path_bytes": 0,
+          "slot_pixel_bytes": 0,
+          "slot_receipts": 0,
+          "tracked_live_bytes": 0,
+          "write_temporary_bytes": 0
+        },
+        "file_handle_observed": false,
+        "payload_bytes": 0,
+        "process_handles": 0,
+        "process_handles_observed": false,
+        "process_memory": {
+          "nonpaged_pool_quota_bytes": 0,
+          "observed": false,
+          "paged_pool_quota_bytes": 0,
+          "peak_private_commit_bytes": 0,
+          "peak_working_set_bytes": 0,
+          "private_commit_bytes": 0,
+          "working_set_bytes": 0
+        },
+        "worker_stack": {
+          "committed_bytes": 0,
+          "guard_bytes": 0,
+          "observed": false,
+          "reserved_bytes": 0
+        },
+        "worker_thread_id": 0
+      },
+      "schema": "flight-capture-cpu-storage.v1",
+      "service_inline_bytes": 2464,
+      "slot_limit": 3,
+      "worker_frame_inline_bytes": 136,
+      "worker_handle_observed": true
+    },
+    "status": "PASS",
+    "verified_images": 8,
+    "verified_receipt": true
+  },
+  "native": {
+    "flat": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 819,
+      "phases": {
+        "menu": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 28464,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 53,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 34,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 12480,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 4368,
+              "unique_objects": 14,
+              "references": 32,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 8640,
+              "unique_objects": 9,
+              "references": 9,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1440,
+              "unique_objects": 7,
+              "references": 7,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 1536,
+              "unique_objects": 1,
+              "references": 1,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1440,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 7,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 7,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 1536,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 1,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 1,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 24989776,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4003,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2064,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "handles": 337,
+            "handles_observed": true,
+            "memory_observed": true,
+            "nonpaged_pool_quota_bytes": 22200,
+            "paged_pool_quota_bytes": 379744,
+            "peak_nonpaged_pool_quota_bytes": 22264,
+            "peak_paged_pool_quota_bytes": 393736,
+            "peak_private_commit_bytes": 236101632,
+            "peak_working_set_bytes": 203325440,
+            "per_object_charge_observed": false,
+            "private_commit_bytes": 233615360,
+            "schema": "windows-process-resources.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "working_set_bytes": 194867200
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 69017600,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 11,
+            "process_threads": 20,
+            "unregistered_process_threads": 9,
+            "reserved_bytes": 11534336,
+            "committed_bytes": 536576,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 383064,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 400,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 11,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 1254,
+              "ucrt_ptd_requested_upper": 10648,
+              "vcrt_worker_ptd_requested_upper": 1280,
+              "whole_runtime_complete": false,
+              "worker_scopes": 10
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 176,
+              "block_data_bytes_including_template": 383240,
+              "heap_entry_overhead_bytes": 88,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 11,
+              "sampled_threads": 11,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 383064,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        },
+        "in-game": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 138164856,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 158,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 135,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 134330168,
+              "unique_objects": 30,
+              "references": 30,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 240,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 23728,
+              "unique_objects": 16,
+              "references": 38,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 121200,
+              "unique_objects": 75,
+              "references": 75,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1504,
+              "unique_objects": 8,
+              "references": 8,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 3688016,
+              "unique_objects": 3,
+              "references": 3,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1504,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 8,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 64,
+                "objects": 1
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 8,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 3688016,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 3,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 80,
+                "objects": 1
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 3686400,
+                "objects": 1
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 29244068,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4012,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2073,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "fluid_surfaces": {
+                "images": 3,
+                "logical_bytes": 103680
+              },
+              "block_icon": {
+                "images": 3,
+                "logical_bytes": 49152
+              },
+              "item_albedo": {
+                "images": 1,
+                "logical_bytes": 349524
+              },
+              "cloud_field": {
+                "images": 1,
+                "logical_bytes": 65536
+              },
+              "opaque_depth": {
+                "images": 1,
+                "logical_bytes": 3686400
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "handles": 358,
+            "handles_observed": true,
+            "memory_observed": true,
+            "nonpaged_pool_quota_bytes": 28544,
+            "paged_pool_quota_bytes": 382528,
+            "peak_nonpaged_pool_quota_bytes": 29016,
+            "peak_paged_pool_quota_bytes": 393736,
+            "peak_private_commit_bytes": 986316800,
+            "peak_working_set_bytes": 427950080,
+            "per_object_charge_observed": false,
+            "private_commit_bytes": 986316800,
+            "schema": "windows-process-resources.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "working_set_bytes": 426852352
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 250236928,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 23,
+            "process_threads": 32,
+            "unregistered_process_threads": 9,
+            "reserved_bytes": 24117248,
+            "committed_bytes": 1024000,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 800952,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 880,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 23,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 2622,
+              "ucrt_ptd_requested_upper": 22264,
+              "vcrt_worker_ptd_requested_upper": 2816,
+              "whole_runtime_complete": false,
+              "worker_scopes": 22
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 368,
+              "block_data_bytes_including_template": 801320,
+              "heap_entry_overhead_bytes": 184,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 23,
+              "sampled_threads": 23,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 800952,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        },
+        "after-loop": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 134613288,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 173,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 150,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 134446232,
+              "unique_objects": 44,
+              "references": 44,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 240,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 23728,
+              "unique_objects": 16,
+              "references": 38,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 139968,
+              "unique_objects": 77,
+              "references": 77,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1504,
+              "unique_objects": 8,
+              "references": 8,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 1616,
+              "unique_objects": 2,
+              "references": 2,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1504,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 8,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 64,
+                "objects": 1
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 8,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 1616,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 2,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 80,
+                "objects": 1
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 2,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 29244068,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4012,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2073,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "fluid_surfaces": {
+                "images": 3,
+                "logical_bytes": 103680
+              },
+              "block_icon": {
+                "images": 3,
+                "logical_bytes": 49152
+              },
+              "item_albedo": {
+                "images": 1,
+                "logical_bytes": 349524
+              },
+              "cloud_field": {
+                "images": 1,
+                "logical_bytes": 65536
+              },
+              "opaque_depth": {
+                "images": 1,
+                "logical_bytes": 3686400
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "observed": true,
+            "peak_private_commit_bytes": 1222205440,
+            "peak_working_set_bytes": 549404672,
+            "private_commit_bytes": 1222205440,
+            "working_set_bytes": 536207360
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 274354176,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 22,
+            "process_threads": 33,
+            "unregistered_process_threads": 11,
+            "reserved_bytes": 23068672,
+            "committed_bytes": 1527808,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 766128,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 840,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 22,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 2508,
+              "ucrt_ptd_requested_upper": 21296,
+              "vcrt_worker_ptd_requested_upper": 2688,
+              "whole_runtime_complete": false,
+              "worker_scopes": 21
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 352,
+              "block_data_bytes_including_template": 766480,
+              "heap_entry_overhead_bytes": 176,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 22,
+              "sampled_threads": 22,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 766128,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        }
+      },
+      "window_capture_lifetime": {
+        "after_shutdown": {
+          "failed_queries": 0,
+          "logical_bytes": 0,
+          "names_without_object": 1,
+          "overflow": false,
+          "references": 1,
+          "roles": {
+            "block_cracks": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "block_debris": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "influence_lines": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "sky_gradient": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "weather_particles": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "window_capture": {
+              "logical_bytes": 0,
+              "objects": 0
+            }
+          },
+          "schema": "effects-gpu-buffers.v1",
+          "shared_across_roles": 0,
+          "status": "PASS",
+          "unique_objects": 0,
+          "whole_runtime_complete": false
+        },
+        "before_shutdown": {
+          "failed_queries": 0,
+          "logical_bytes": 3686400,
+          "names_without_object": 0,
+          "overflow": false,
+          "references": 1,
+          "roles": {
+            "block_cracks": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "block_debris": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "influence_lines": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "sky_gradient": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "weather_particles": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "window_capture": {
+              "logical_bytes": 3686400,
+              "objects": 1
+            }
+          },
+          "schema": "effects-gpu-buffers.v1",
+          "shared_across_roles": 0,
+          "status": "PASS",
+          "unique_objects": 1,
+          "whole_runtime_complete": false
+        }
+      },
+      "window_capture_cpu_storage": {
+        "after_shutdown": {
+          "accepted_frames": 3,
+          "codec_sampled": true,
+          "current": {
+            "active_slots": 0,
+            "admitted_bytes": 0,
+            "codec_live_request_bytes": 0,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 0,
+            "encoder_pixel_bytes": 0,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 0,
+            "live_bytes": 0,
+            "live_output_files": 0,
+            "metadata_bytes": 0,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 0,
+            "write_temporary_bytes": 0
+          },
+          "file_close_failures": 0,
+          "file_closes": 3,
+          "file_open_failures": 0,
+          "file_opens": 3,
+          "path_backing_supported": true,
+          "peak_admission": {
+            "active_slots": 0,
+            "admitted_bytes": 12753118,
+            "codec_live_request_bytes": 7493799,
+            "codec_pending_request_bytes": 1572919,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11180199,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11180391,
+            "write_temporary_bytes": 0
+          },
+          "peak_codec_live_request_bytes": 8317551,
+          "peak_live": {
+            "active_slots": 0,
+            "admitted_bytes": 12003951,
+            "codec_live_request_bytes": 8317551,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 12003951,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 12004143,
+            "write_temporary_bytes": 0
+          },
+          "peak_open_files": 1,
+          "peak_tracked": {
+            "active_slots": 0,
+            "admitted_bytes": 12003951,
+            "codec_live_request_bytes": 8317551,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 12003951,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 12004143,
+            "write_temporary_bytes": 0
+          },
+          "persisted_frames": 3,
+          "png_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 4835526,
+              "codec_live_request_bytes": 1149126,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 192,
+              "encoder_pixel_bytes": 3686400,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 3686400,
+              "live_bytes": 4835526,
+              "live_output_files": 1,
+              "metadata_bytes": 192,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 4835718,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": true,
+            "payload_bytes": 1149078,
+            "process_handles": 369,
+            "process_handles_observed": true,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 29064,
+              "observed": true,
+              "paged_pool_quota_bytes": 383424,
+              "peak_private_commit_bytes": 1133838336,
+              "peak_working_set_bytes": 549404672,
+              "private_commit_bytes": 1079951360,
+              "working_set_bytes": 537710592
+            },
+            "worker_stack": {
+              "committed_bytes": 20480,
+              "guard_bytes": 12288,
+              "observed": true,
+              "reserved_bytes": 1048576
+            },
+            "worker_thread_id": 20808
+          },
+          "queue_limit": 4,
+          "receipt_inline_bytes": 40,
+          "receipt_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 0,
+              "codec_live_request_bytes": 0,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 0,
+              "encoder_pixel_bytes": 0,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 0,
+              "live_bytes": 0,
+              "live_output_files": 0,
+              "metadata_bytes": 0,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 0,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": false,
+            "payload_bytes": 0,
+            "process_handles": 0,
+            "process_handles_observed": false,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 0,
+              "observed": false,
+              "paged_pool_quota_bytes": 0,
+              "peak_private_commit_bytes": 0,
+              "peak_working_set_bytes": 0,
+              "private_commit_bytes": 0,
+              "working_set_bytes": 0
+            },
+            "worker_stack": {
+              "committed_bytes": 0,
+              "guard_bytes": 0,
+              "observed": false,
+              "reserved_bytes": 0
+            },
+            "worker_thread_id": 0
+          },
+          "schema": "flight-capture-cpu-storage.v1",
+          "service_inline_bytes": 2464,
+          "slot_limit": 3,
+          "worker_frame_inline_bytes": 136,
+          "worker_handle_observed": false
+        },
+        "before_shutdown": {
+          "accepted_frames": 3,
+          "codec_sampled": true,
+          "current": {
+            "active_slots": 0,
+            "admitted_bytes": 0,
+            "codec_live_request_bytes": 0,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 0,
+            "encoder_pixel_bytes": 0,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 0,
+            "live_bytes": 0,
+            "live_output_files": 0,
+            "metadata_bytes": 0,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 0,
+            "write_temporary_bytes": 0
+          },
+          "file_close_failures": 0,
+          "file_closes": 3,
+          "file_open_failures": 0,
+          "file_opens": 3,
+          "path_backing_supported": true,
+          "peak_admission": {
+            "active_slots": 0,
+            "admitted_bytes": 12753118,
+            "codec_live_request_bytes": 7493799,
+            "codec_pending_request_bytes": 1572919,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11180199,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11180391,
+            "write_temporary_bytes": 0
+          },
+          "peak_codec_live_request_bytes": 8317551,
+          "peak_live": {
+            "active_slots": 0,
+            "admitted_bytes": 12003951,
+            "codec_live_request_bytes": 8317551,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 12003951,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 12004143,
+            "write_temporary_bytes": 0
+          },
+          "peak_open_files": 1,
+          "peak_tracked": {
+            "active_slots": 0,
+            "admitted_bytes": 12003951,
+            "codec_live_request_bytes": 8317551,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 12003951,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 12004143,
+            "write_temporary_bytes": 0
+          },
+          "persisted_frames": 3,
+          "png_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 4835526,
+              "codec_live_request_bytes": 1149126,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 192,
+              "encoder_pixel_bytes": 3686400,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 3686400,
+              "live_bytes": 4835526,
+              "live_output_files": 1,
+              "metadata_bytes": 192,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 4835718,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": true,
+            "payload_bytes": 1149078,
+            "process_handles": 369,
+            "process_handles_observed": true,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 29064,
+              "observed": true,
+              "paged_pool_quota_bytes": 383424,
+              "peak_private_commit_bytes": 1133838336,
+              "peak_working_set_bytes": 549404672,
+              "private_commit_bytes": 1079951360,
+              "working_set_bytes": 537710592
+            },
+            "worker_stack": {
+              "committed_bytes": 20480,
+              "guard_bytes": 12288,
+              "observed": true,
+              "reserved_bytes": 1048576
+            },
+            "worker_thread_id": 20808
+          },
+          "queue_limit": 4,
+          "receipt_inline_bytes": 40,
+          "receipt_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 0,
+              "codec_live_request_bytes": 0,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 0,
+              "encoder_pixel_bytes": 0,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 0,
+              "live_bytes": 0,
+              "live_output_files": 0,
+              "metadata_bytes": 0,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 0,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": false,
+            "payload_bytes": 0,
+            "process_handles": 0,
+            "process_handles_observed": false,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 0,
+              "observed": false,
+              "paged_pool_quota_bytes": 0,
+              "peak_private_commit_bytes": 0,
+              "peak_working_set_bytes": 0,
+              "private_commit_bytes": 0,
+              "working_set_bytes": 0
+            },
+            "worker_stack": {
+              "committed_bytes": 0,
+              "guard_bytes": 0,
+              "observed": false,
+              "reserved_bytes": 0
+            },
+            "worker_thread_id": 0
+          },
+          "schema": "flight-capture-cpu-storage.v1",
+          "service_inline_bytes": 2464,
+          "slot_limit": 3,
+          "worker_frame_inline_bytes": 136,
+          "worker_handle_observed": true
+        }
+      },
+      "persisted_frame_count": 3
+    },
+    "full": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 484,
+      "phases": {
+        "menu": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 28464,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 53,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 34,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 12480,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 4368,
+              "unique_objects": 14,
+              "references": 32,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 8640,
+              "unique_objects": 9,
+              "references": 9,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1440,
+              "unique_objects": 7,
+              "references": 7,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 1536,
+              "unique_objects": 1,
+              "references": 1,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1440,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 7,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 7,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 1536,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 1,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 1,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 24989776,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4003,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2064,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "handles": 337,
+            "handles_observed": true,
+            "memory_observed": true,
+            "nonpaged_pool_quota_bytes": 22336,
+            "paged_pool_quota_bytes": 379744,
+            "peak_nonpaged_pool_quota_bytes": 22400,
+            "peak_paged_pool_quota_bytes": 393736,
+            "peak_private_commit_bytes": 252489728,
+            "peak_working_set_bytes": 206958592,
+            "per_object_charge_observed": false,
+            "private_commit_bytes": 241901568,
+            "schema": "windows-process-resources.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "working_set_bytes": 195039232
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 73211904,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 11,
+            "process_threads": 20,
+            "unregistered_process_threads": 9,
+            "reserved_bytes": 11534336,
+            "committed_bytes": 540672,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 383064,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 400,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 11,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 1254,
+              "ucrt_ptd_requested_upper": 10648,
+              "vcrt_worker_ptd_requested_upper": 1280,
+              "whole_runtime_complete": false,
+              "worker_scopes": 10
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 176,
+              "block_data_bytes_including_template": 383240,
+              "heap_entry_overhead_bytes": 88,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 11,
+              "sampled_threads": 11,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 383064,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        },
+        "in-game": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 180420924,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 183,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 160,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 176586236,
+              "unique_objects": 55,
+              "references": 55,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 240,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 23728,
+              "unique_objects": 16,
+              "references": 38,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 121200,
+              "unique_objects": 75,
+              "references": 75,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1504,
+              "unique_objects": 8,
+              "references": 8,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 3688016,
+              "unique_objects": 3,
+              "references": 3,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1504,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 8,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 64,
+                "objects": 1
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 8,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 3688016,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 3,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 80,
+                "objects": 1
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 3686400,
+                "objects": 1
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 3,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 62093988,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4014,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2075,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "light_atlas": {
+                "images": 1,
+                "logical_bytes": 32768000
+              },
+              "light_metadata": {
+                "images": 1,
+                "logical_bytes": 131072
+              },
+              "fluid_surfaces": {
+                "images": 3,
+                "logical_bytes": 103680
+              },
+              "block_icon": {
+                "images": 3,
+                "logical_bytes": 49152
+              },
+              "item_albedo": {
+                "images": 1,
+                "logical_bytes": 349524
+              },
+              "cloud_field": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "opaque_depth": {
+                "images": 1,
+                "logical_bytes": 3686400
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "handles": 370,
+            "handles_observed": true,
+            "memory_observed": true,
+            "nonpaged_pool_quota_bytes": 29904,
+            "paged_pool_quota_bytes": 383760,
+            "peak_nonpaged_pool_quota_bytes": 30376,
+            "peak_paged_pool_quota_bytes": 393736,
+            "peak_private_commit_bytes": 1344811008,
+            "peak_working_set_bytes": 681975808,
+            "per_object_charge_observed": false,
+            "private_commit_bytes": 1344811008,
+            "schema": "windows-process-resources.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "working_set_bytes": 680919040
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 352481280,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 27,
+            "process_threads": 34,
+            "unregistered_process_threads": 7,
+            "reserved_bytes": 28311552,
+            "committed_bytes": 1499136,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 940248,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 1040,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 27,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 3078,
+              "ucrt_ptd_requested_upper": 26136,
+              "vcrt_worker_ptd_requested_upper": 3328,
+              "whole_runtime_complete": false,
+              "worker_scopes": 26
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 432,
+              "block_data_bytes_including_template": 940680,
+              "heap_entry_overhead_bytes": 216,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 27,
+              "sampled_threads": 27,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 940248,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        },
+        "after-loop": {
+          "selected_buffer_totals": {
+            "failed_queries": 0,
+            "logical_bytes": 176766236,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 185,
+            "schema": "selected-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 162,
+            "whole_runtime_complete": false
+          },
+          "contributing_groups": {
+            "terrain": {
+              "logical_bytes": 176604588,
+              "unique_objects": 56,
+              "references": 56,
+              "names_without_object": 0
+            },
+            "gui": {
+              "logical_bytes": 240,
+              "unique_objects": 3,
+              "references": 4,
+              "names_without_object": 0
+            },
+            "preview": {
+              "logical_bytes": 23728,
+              "unique_objects": 16,
+              "references": 38,
+              "names_without_object": 0
+            },
+            "icon_readback": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            },
+            "actor": {
+              "logical_bytes": 134560,
+              "unique_objects": 77,
+              "references": 77,
+              "names_without_object": 0
+            },
+            "geometry": {
+              "logical_bytes": 1504,
+              "unique_objects": 8,
+              "references": 8,
+              "names_without_object": 0
+            },
+            "effects": {
+              "logical_bytes": 1616,
+              "unique_objects": 2,
+              "references": 2,
+              "names_without_object": 0
+            },
+            "compute": {
+              "logical_bytes": 0,
+              "unique_objects": 0,
+              "references": 0,
+              "names_without_object": 0
+            }
+          },
+          "geometry": {
+            "failed_queries": 0,
+            "logical_bytes": 1504,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 8,
+            "roles": {
+              "geometry_crosshair_vertices": {
+                "logical_bytes": 64,
+                "objects": 1
+              },
+              "geometry_cube_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_cube_instances": {
+                "logical_bytes": 0,
+                "objects": 1
+              },
+              "geometry_cube_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              },
+              "geometry_face_indices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_instances": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_face_vertices": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "geometry_outline_indices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_outline_vertices": {
+                "logical_bytes": 96,
+                "objects": 1
+              },
+              "geometry_preview_indices": {
+                "logical_bytes": 144,
+                "objects": 1
+              },
+              "geometry_preview_vertices": {
+                "logical_bytes": 480,
+                "objects": 1
+              }
+            },
+            "schema": "geometry-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 8,
+            "whole_runtime_complete": false
+          },
+          "effects": {
+            "failed_queries": 0,
+            "logical_bytes": 1616,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 2,
+            "roles": {
+              "block_cracks": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "block_debris": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "influence_lines": {
+                "logical_bytes": 1536,
+                "objects": 1
+              },
+              "sky_gradient": {
+                "logical_bytes": 80,
+                "objects": 1
+              },
+              "weather_particles": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "window_capture": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "effects-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 2,
+            "whole_runtime_complete": false
+          },
+          "compute": {
+            "failed_queries": 0,
+            "logical_bytes": 0,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 0,
+            "roles": {
+              "blocklight_flood": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "fluid_column_scan": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "light_transport_scratch": {
+                "logical_bytes": 0,
+                "objects": 0
+              },
+              "transparent_sort": {
+                "logical_bytes": 0,
+                "objects": 0
+              }
+            },
+            "schema": "compute-gpu-buffers.v1",
+            "shared_across_roles": 0,
+            "status": "PASS",
+            "unique_objects": 0,
+            "whole_runtime_complete": false
+          },
+          "render_images": {
+            "failed_queries": 0,
+            "images_without_storage": 0,
+            "logical_bytes": 62514508,
+            "names_without_object": 0,
+            "overflow": false,
+            "references": 4016,
+            "schema": "render-image-storage.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false,
+            "observed_images": 2077,
+            "disjoint_role_sets": {
+              "text_glyph": {
+                "images": 123,
+                "logical_bytes": 10320
+              },
+              "creature_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "item_preview_color": {
+                "images": 1,
+                "logical_bytes": 262144
+              },
+              "icon_target_color": {
+                "images": 1,
+                "logical_bytes": 16384
+              },
+              "light_atlas": {
+                "images": 1,
+                "logical_bytes": 32768000
+              },
+              "light_metadata": {
+                "images": 1,
+                "logical_bytes": 131072
+              },
+              "fluid_surfaces": {
+                "images": 3,
+                "logical_bytes": 103680
+              },
+              "block_icon": {
+                "images": 3,
+                "logical_bytes": 49152
+              },
+              "item_albedo": {
+                "images": 3,
+                "logical_bytes": 720892
+              },
+              "cloud_field": {
+                "images": 1,
+                "logical_bytes": 65536
+              },
+              "opaque_depth": {
+                "images": 1,
+                "logical_bytes": 3686400
+              },
+              "creature_texture": {
+                "images": 178,
+                "logical_bytes": 13127680
+              },
+              "block_atlas": {
+                "images": 1757,
+                "logical_bytes": 10905600
+              },
+              "creature_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "item_preview_depth": {
+                "images": 1,
+                "logical_bytes": 196608
+              },
+              "icon_target_depth": {
+                "images": 1,
+                "logical_bytes": 12288
+              }
+            }
+          },
+          "windows_process": {
+            "observed": true,
+            "peak_private_commit_bytes": 1476734976,
+            "peak_working_set_bytes": 734904320,
+            "private_commit_bytes": 1426542592,
+            "working_set_bytes": 667824128
+          },
+          "wddm": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 405958656,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "known_native_stacks_and_crt": {
+            "schema": "native-thread-stacks.v1",
+            "status": "PASS",
+            "matched_threads": 26,
+            "process_threads": 33,
+            "unregistered_process_threads": 7,
+            "reserved_bytes": 27262976,
+            "committed_bytes": 1527808,
+            "linked_crt_thread_storage": {
+              "exe_tls_raw_per_thread": 34824,
+              "exe_tls_template_payload": 905424,
+              "exe_tls_zero_fill_per_thread": 0,
+              "launch_parameter_requested_upper": 1000,
+              "main_vcrt_static_bytes": 128,
+              "primary_scopes": 26,
+              "schema": "windows-crt-thread-storage.v1",
+              "status": "PASS",
+              "time_scratch_requested_upper": 2964,
+              "ucrt_ptd_requested_upper": 25168,
+              "vcrt_worker_ptd_requested_upper": 3200,
+              "whole_runtime_complete": false,
+              "worker_scopes": 25
+            },
+            "crt_locale_storage": {
+              "calling_locale_root_requested_bytes": 344,
+              "calling_multibyte_root_requested_bytes": 552,
+              "calling_thread_initial_locale": false,
+              "calling_thread_initial_multibyte": false,
+              "calling_thread_private_mode": false,
+              "initial_named_bytes_per_image": 3308,
+              "schema": "windows-crt-locale-storage.v1",
+              "snapshot_requested_bytes": 16,
+              "status": "PASS",
+              "whole_runtime_complete": false
+            },
+            "windows_executable_tls_heap": {
+              "above_template_data_bytes": 416,
+              "block_data_bytes_including_template": 905840,
+              "heap_entry_overhead_bytes": 208,
+              "largest_block_data_bytes": 34840,
+              "registered_threads": 26,
+              "sampled_threads": 26,
+              "schema": "windows-executable-tls-heap.v1",
+              "status": "PASS",
+              "template_payload_bytes": 905424,
+              "whole_runtime_complete": false
+            },
+            "whole_runtime_complete": false
+          }
+        }
+      },
+      "window_capture_lifetime": {
+        "after_shutdown": {
+          "failed_queries": 0,
+          "logical_bytes": 0,
+          "names_without_object": 1,
+          "overflow": false,
+          "references": 1,
+          "roles": {
+            "block_cracks": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "block_debris": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "influence_lines": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "sky_gradient": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "weather_particles": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "window_capture": {
+              "logical_bytes": 0,
+              "objects": 0
+            }
+          },
+          "schema": "effects-gpu-buffers.v1",
+          "shared_across_roles": 0,
+          "status": "PASS",
+          "unique_objects": 0,
+          "whole_runtime_complete": false
+        },
+        "before_shutdown": {
+          "failed_queries": 0,
+          "logical_bytes": 3686400,
+          "names_without_object": 0,
+          "overflow": false,
+          "references": 1,
+          "roles": {
+            "block_cracks": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "block_debris": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "influence_lines": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "sky_gradient": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "weather_particles": {
+              "logical_bytes": 0,
+              "objects": 0
+            },
+            "window_capture": {
+              "logical_bytes": 3686400,
+              "objects": 1
+            }
+          },
+          "schema": "effects-gpu-buffers.v1",
+          "shared_across_roles": 0,
+          "status": "PASS",
+          "unique_objects": 1,
+          "whole_runtime_complete": false
+        }
+      },
+      "window_capture_cpu_storage": {
+        "after_shutdown": {
+          "accepted_frames": 3,
+          "codec_sampled": true,
+          "current": {
+            "active_slots": 0,
+            "admitted_bytes": 0,
+            "codec_live_request_bytes": 0,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 0,
+            "encoder_pixel_bytes": 0,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 0,
+            "live_bytes": 0,
+            "live_output_files": 0,
+            "metadata_bytes": 0,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 0,
+            "write_temporary_bytes": 0
+          },
+          "file_close_failures": 0,
+          "file_closes": 3,
+          "file_open_failures": 0,
+          "file_opens": 3,
+          "path_backing_supported": true,
+          "peak_admission": {
+            "active_slots": 0,
+            "admitted_bytes": 12701038,
+            "codec_live_request_bytes": 7441719,
+            "codec_pending_request_bytes": 1572919,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11128119,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11128311,
+            "write_temporary_bytes": 0
+          },
+          "peak_codec_live_request_bytes": 8257767,
+          "peak_live": {
+            "active_slots": 0,
+            "admitted_bytes": 11944167,
+            "codec_live_request_bytes": 8257767,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11944167,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11944359,
+            "write_temporary_bytes": 0
+          },
+          "peak_open_files": 1,
+          "peak_tracked": {
+            "active_slots": 0,
+            "admitted_bytes": 11944167,
+            "codec_live_request_bytes": 8257767,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11944167,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11944359,
+            "write_temporary_bytes": 0
+          },
+          "persisted_frames": 3,
+          "png_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 4827339,
+              "codec_live_request_bytes": 1140939,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 192,
+              "encoder_pixel_bytes": 3686400,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 3686400,
+              "live_bytes": 4827339,
+              "live_output_files": 1,
+              "metadata_bytes": 192,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 4827531,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": true,
+            "payload_bytes": 1140891,
+            "process_handles": 385,
+            "process_handles_observed": true,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 31104,
+              "observed": true,
+              "paged_pool_quota_bytes": 388464,
+              "peak_private_commit_bytes": 1476734976,
+              "peak_working_set_bytes": 734904320,
+              "private_commit_bytes": 1408843776,
+              "working_set_bytes": 669003776
+            },
+            "worker_stack": {
+              "committed_bytes": 20480,
+              "guard_bytes": 12288,
+              "observed": true,
+              "reserved_bytes": 1048576
+            },
+            "worker_thread_id": 6548
+          },
+          "queue_limit": 4,
+          "receipt_inline_bytes": 40,
+          "receipt_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 0,
+              "codec_live_request_bytes": 0,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 0,
+              "encoder_pixel_bytes": 0,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 0,
+              "live_bytes": 0,
+              "live_output_files": 0,
+              "metadata_bytes": 0,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 0,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": false,
+            "payload_bytes": 0,
+            "process_handles": 0,
+            "process_handles_observed": false,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 0,
+              "observed": false,
+              "paged_pool_quota_bytes": 0,
+              "peak_private_commit_bytes": 0,
+              "peak_working_set_bytes": 0,
+              "private_commit_bytes": 0,
+              "working_set_bytes": 0
+            },
+            "worker_stack": {
+              "committed_bytes": 0,
+              "guard_bytes": 0,
+              "observed": false,
+              "reserved_bytes": 0
+            },
+            "worker_thread_id": 0
+          },
+          "schema": "flight-capture-cpu-storage.v1",
+          "service_inline_bytes": 2464,
+          "slot_limit": 3,
+          "worker_frame_inline_bytes": 136,
+          "worker_handle_observed": false
+        },
+        "before_shutdown": {
+          "accepted_frames": 3,
+          "codec_sampled": true,
+          "current": {
+            "active_slots": 0,
+            "admitted_bytes": 0,
+            "codec_live_request_bytes": 0,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 0,
+            "encoder_pixel_bytes": 0,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 0,
+            "live_bytes": 0,
+            "live_output_files": 0,
+            "metadata_bytes": 0,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 0,
+            "write_temporary_bytes": 0
+          },
+          "file_close_failures": 0,
+          "file_closes": 3,
+          "file_open_failures": 0,
+          "file_opens": 3,
+          "path_backing_supported": true,
+          "peak_admission": {
+            "active_slots": 0,
+            "admitted_bytes": 12701038,
+            "codec_live_request_bytes": 7441719,
+            "codec_pending_request_bytes": 1572919,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11128119,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11128311,
+            "write_temporary_bytes": 0
+          },
+          "peak_codec_live_request_bytes": 8257767,
+          "peak_live": {
+            "active_slots": 0,
+            "admitted_bytes": 11944167,
+            "codec_live_request_bytes": 8257767,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11944167,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11944359,
+            "write_temporary_bytes": 0
+          },
+          "peak_open_files": 1,
+          "peak_tracked": {
+            "active_slots": 0,
+            "admitted_bytes": 11944167,
+            "codec_live_request_bytes": 8257767,
+            "codec_pending_request_bytes": 0,
+            "copied_slots": 0,
+            "encoder_path_bytes": 192,
+            "encoder_pixel_bytes": 3686400,
+            "encoder_receipt": 0,
+            "frame_pixel_bytes": 3686400,
+            "live_bytes": 11944167,
+            "live_output_files": 0,
+            "metadata_bytes": 192,
+            "queued_frames": 0,
+            "queued_path_bytes": 0,
+            "queued_pixel_bytes": 0,
+            "queued_receipts": 0,
+            "slot_path_bytes": 0,
+            "slot_pixel_bytes": 0,
+            "slot_receipts": 0,
+            "tracked_live_bytes": 11944359,
+            "write_temporary_bytes": 0
+          },
+          "persisted_frames": 3,
+          "png_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 4827339,
+              "codec_live_request_bytes": 1140939,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 192,
+              "encoder_pixel_bytes": 3686400,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 3686400,
+              "live_bytes": 4827339,
+              "live_output_files": 1,
+              "metadata_bytes": 192,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 4827531,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": true,
+            "payload_bytes": 1140891,
+            "process_handles": 385,
+            "process_handles_observed": true,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 31104,
+              "observed": true,
+              "paged_pool_quota_bytes": 388464,
+              "peak_private_commit_bytes": 1476734976,
+              "peak_working_set_bytes": 734904320,
+              "private_commit_bytes": 1408843776,
+              "working_set_bytes": 669003776
+            },
+            "worker_stack": {
+              "committed_bytes": 20480,
+              "guard_bytes": 12288,
+              "observed": true,
+              "reserved_bytes": 1048576
+            },
+            "worker_thread_id": 6548
+          },
+          "queue_limit": 4,
+          "receipt_inline_bytes": 40,
+          "receipt_write": {
+            "capture": {
+              "active_slots": 0,
+              "admitted_bytes": 0,
+              "codec_live_request_bytes": 0,
+              "codec_pending_request_bytes": 0,
+              "copied_slots": 0,
+              "encoder_path_bytes": 0,
+              "encoder_pixel_bytes": 0,
+              "encoder_receipt": 0,
+              "frame_pixel_bytes": 0,
+              "live_bytes": 0,
+              "live_output_files": 0,
+              "metadata_bytes": 0,
+              "queued_frames": 0,
+              "queued_path_bytes": 0,
+              "queued_pixel_bytes": 0,
+              "queued_receipts": 0,
+              "slot_path_bytes": 0,
+              "slot_pixel_bytes": 0,
+              "slot_receipts": 0,
+              "tracked_live_bytes": 0,
+              "write_temporary_bytes": 0
+            },
+            "file_handle_observed": false,
+            "payload_bytes": 0,
+            "process_handles": 0,
+            "process_handles_observed": false,
+            "process_memory": {
+              "nonpaged_pool_quota_bytes": 0,
+              "observed": false,
+              "paged_pool_quota_bytes": 0,
+              "peak_private_commit_bytes": 0,
+              "peak_working_set_bytes": 0,
+              "private_commit_bytes": 0,
+              "working_set_bytes": 0
+            },
+            "worker_stack": {
+              "committed_bytes": 0,
+              "guard_bytes": 0,
+              "observed": false,
+              "reserved_bytes": 0
+            },
+            "worker_thread_id": 0
+          },
+          "schema": "flight-capture-cpu-storage.v1",
+          "service_inline_bytes": 2464,
+          "slot_limit": 3,
+          "worker_frame_inline_bytes": 136,
+          "worker_handle_observed": true
+        }
+      },
+      "persisted_frame_count": 3
+    }
+  },
+  "backend_coverage": {
+    "Windows_Release": "PASS"
+  },
+  "api_documentation": [
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glGetBufferParameter.xml",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_queryvideomemoryinfo",
+    "https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glBufferData.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glBufferSubData.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glReadPixels.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glPixelStore.xml",
+    "https://raw.githubusercontent.com/KhronosGroup/OpenGL-Refpages/main/gl4/glMemoryBarrier.xml",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-wglgetcurrentcontext",
+    "https://www.rfc-editor.org/rfc/rfc1951.html",
+    "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-writefile",
+    "https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-gethandleinformation"
+  ],
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "3c14da9a5dc28179327b9e488e89fb765adde625c8311fceb679b1bdfd9dae1c",
+  "source_sha256_raw": {
+    "src/App/Platform/FlightCaptureCpuStorage.h": "736fd1d39d7616f1a56ccc4bd6c0ca40616e9d234d7097842098f20237254e07",
+    "src/App/Platform/FlightCaptureReceipt.h": "74339980a160c710e0a4486c81e7e3a6430c9a16e35fb9d7c959f0d9b9c68fa8",
+    "src/App/Platform/FlightCaptureStorageReport.h": "0a73cfc092247bbe4e8ce3962f06329ce497468255a5e3f8bbef92d59214d852",
+    "src/App/Platform/WindowManager.cpp": "878c41c1c33651f63191a145f97d0058560ce995614532f47581abfb8b7d9b9a",
+    "src/App/Platform/WindowManager.h": "9f4cbfe8ce6f3d03d6aa4ce210fc2f1829914c340ed9d78286cb34048a8bd94b",
+    "src/Test/EffectsGpuStorageFixture.h": "45eb5ac8314e8625a2c9bc2ad7f927e077e2c12e6986d1dfd1baab3472a9e05b",
+    "src/Test/FlightCaptureCpuStorageFixture.h": "90916e972289c86a519988608e07985e6b987d72827bcb5ade022b5214f0894a"
+  },
+  "desktop_exe_sha256": "5fa31002563aa418b2087d42781d6c80c0fd9b48d75972944ab6fff794fe203f",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-capture-io-provenance.json": "3dff7710f0734992a36d1a0be2278f13f8839f5c30a46a081ab4febb41ad5a26",
+    "build/desktop-msvc/s4-capture-io-frozen-source.json": "235a57035978de2e5661a27b6449d1cbdc8e99f13ed7514d596f059710cd985b",
+    "build/desktop-msvc/s4-capture-io-regressions.json": "58cfe8fa95a1dd6c12e79edc67e0ed81ec01f4550362ed8d31f677df8e0e9343",
+    "build/desktop-msvc/s4-capture-io-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-capture-io-focused.json": "a50b07d6d68301f5a866b1bc729bccaf0eeee5b92cbf337e1236a849fafabdb3",
+    "build/desktop-msvc/s4-capture-io-application-ops.json": "3b080a09b991d68baba0957a06a666de62c9d9e0c9fb09205620883f374be77e",
+    "build/desktop-msvc/s4-capture-io-item_render_asset_test.log": "46bd7f7a70e4a9fd91f8fed4d2b5f01129e1448334362f9f915058244838900a",
+    "build/desktop-msvc/s4-capture-io-creature_skinned_draw_test.log": "ce06c07d7df1d223a5f1573e8a178b603c603b3ccf50ed5a7c85473a4277af46",
+    "build/desktop-msvc/s4-capture-io-creature_draw_queue_test.log": "dd90302ce77dd27336830ce918df14a30ffca8df65dfa3f98b76539d26238cf8",
+    "build/desktop-msvc/s4-capture-io-gpu_light_transport_driver_test.log": "1f05c28a1982b26d50f8dc2d98c92820f522608f3f380c3498eccb557cc81ad9",
+    "build/desktop-msvc/s4-capture-io-gpu_relight_snapshot_driver_test.log": "7492918bc9d5c13c23b77ec365a52212a46704145b72368850419a1c5f1e6209",
+    "build/desktop-msvc/s4-capture-io-gpu_relight_snapshot_driver_test-gl33.log": "1ab3652cfc841a62d87484f62bbf075daf93638ddd704bd29ced1155834e3d21",
+    "build/desktop-msvc/s4-capture-io-gpu_fluid_column_scan_test.log": "619e46be87ab163e95bbc74113ebac736c29d558fc0cc9fed100f3ee38ab6055",
+    "build/desktop-msvc/s4-capture-io-focused.json.window-capture/1.png": "7b0c7be071b596dd805f32bbdef6c825b57701d0bacdc1cc9c3238e0a33f2289",
+    "build/desktop-msvc/s4-capture-io-focused.json.window-capture/2.png": "1186e9c1c07be5e34b88638b1ceaf71bebb7998d21c5fa9c00b684bf5a30bf74",
+    "build/desktop-msvc/s4-capture-io-focused.json.window-capture/3.png": "47760dd7774b62c56e9e05a501e230bb79cfe1b56a0fd284ede0c08d78f94218",
+    "build/desktop-msvc/s4-capture-io-focused.json.window-capture/4.png": "e86024095efc4ae968f8b186b4aa5af2784a986f7f612856319067a0b7ea2966",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/0.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/0.png.json": "32884fce2cc52357610205d41dade3cc0b3bf3b2316e8326b198f554e2dfb79c",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/1.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/1.png.json": "6d186ac7f82ca5e44cbedd141b854d0b40c51fb379ca99133b4c0c8809c59d40",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/2.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/2.png.json": "f0c543b485d0836e772c0bba9a029f71e39a242ce1aecba07224b6db6d3c3ec2",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/3.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/3.png.json": "3a773106b212cadd616669ed4ff2434f0583b998384d3dc00daa7790e1d24633",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/4.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/4.png.json": "d06d5ec93c69b2f607ec6c64175ef3b2ae1970de9366876a14f426d29498f00f",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/5.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/5.png.json": "930ca8b5007516a6122fd1b430fe9931eb67d8a40de10184123c9bf51802637a",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/6.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/6.png.json": "bfab439ffce39766f18a3d93fb61f93ef450e721af3eb2e77c9781940f6a0aca",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/7.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/7.png.json": "49e8042fb566fabed00264de34a37901a1f4e80eb2a6948c745cda14958add49",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/retry-é.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-focused.json.capture-cpu/retry-é.png.json": "99ea1414c96bdf0a4f92415fb6646325a54ab3010e5aec6000f40eafc18d6815",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.window-capture/1.png": "7b0c7be071b596dd805f32bbdef6c825b57701d0bacdc1cc9c3238e0a33f2289",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.window-capture/2.png": "1186e9c1c07be5e34b88638b1ceaf71bebb7998d21c5fa9c00b684bf5a30bf74",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.window-capture/3.png": "47760dd7774b62c56e9e05a501e230bb79cfe1b56a0fd284ede0c08d78f94218",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.window-capture/4.png": "e86024095efc4ae968f8b186b4aa5af2784a986f7f612856319067a0b7ea2966",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/0.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/0.png.json": "32884fce2cc52357610205d41dade3cc0b3bf3b2316e8326b198f554e2dfb79c",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/1.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/1.png.json": "6d186ac7f82ca5e44cbedd141b854d0b40c51fb379ca99133b4c0c8809c59d40",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/2.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/2.png.json": "f0c543b485d0836e772c0bba9a029f71e39a242ce1aecba07224b6db6d3c3ec2",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/3.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/3.png.json": "3a773106b212cadd616669ed4ff2434f0583b998384d3dc00daa7790e1d24633",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/4.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/4.png.json": "d06d5ec93c69b2f607ec6c64175ef3b2ae1970de9366876a14f426d29498f00f",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/5.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/5.png.json": "930ca8b5007516a6122fd1b430fe9931eb67d8a40de10184123c9bf51802637a",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/6.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/6.png.json": "bfab439ffce39766f18a3d93fb61f93ef450e721af3eb2e77c9781940f6a0aca",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/7.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/7.png.json": "49e8042fb566fabed00264de34a37901a1f4e80eb2a6948c745cda14958add49",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/retry-é.png": "687cf3d87f4581a5ecb1f47b1d7d60e95563fd051b5a9c9095e205be48a0364b",
+    "build/desktop-msvc/s4-capture-io-application-ops.json.capture-cpu/retry-é.png.json": "99ea1414c96bdf0a4f92415fb6646325a54ab3010e5aec6000f40eafc18d6815",
+    "build/desktop-msvc/s4-capture-io-flat-native/smoke-verdict.json": "77e17c235e9fce2453d56ab69b35b7ac2f2e355de3f5034452903d425f102cfa",
+    "build/desktop-msvc/s4-capture-io-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-capture-io-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-capture-io-flat-native/owner-domain/flight-menu.json": "07426f12f195877ff98392d46b4ed28f8a7cf01bed8375052a1ed2492fde3f08",
+    "build/desktop-msvc/s4-capture-io-flat-native/owner-domain/flight-in-game.json": "6e22a6d3f03ad591d28463a7b24257c5af5d81763de897d70ed5fb4502acc91e",
+    "build/desktop-msvc/s4-capture-io-flat-native/flight_sim_report.json": "fd689775cf2ac8101d17128a071d016d85caebcaacca7f2e73736980016aa7e1",
+    "build/desktop-msvc/s4-capture-io-flat-native/captures/frame_000.png": "cc53481b150beca5cda9d1de79b13b1d00b5a62a63f5a497b93198408f0393c2",
+    "build/desktop-msvc/s4-capture-io-flat-native/captures/frame_001.png": "e0b37f9c53e1532cbe25f199d049c2c7d86c901b65379b6b7638ccd7deff7ce7",
+    "build/desktop-msvc/s4-capture-io-flat-native/captures/frame_002.png": "5f9050cb216f53f64f6a0877a9e3d2d4e233abb0632b157f53c4cbd707c592ae",
+    "build/desktop-msvc/s4-capture-io-full-native/smoke-verdict.json": "2878f7b0c53d3b9973c78c09e26cf02f6f61bcfe68635fdb28b60c8475d298ba",
+    "build/desktop-msvc/s4-capture-io-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-capture-io-full-native/owner-domain/flight-menu.json": "ea5ab2ff37f12fb36e78a079b83e741592715cea7c0ef927216b736d6c4d4b3a",
+    "build/desktop-msvc/s4-capture-io-full-native/owner-domain/flight-in-game.json": "f0ac04d97a1afbe398ee2e02af6f00bbb502bea99f2106f310beb2e9c1317f13",
+    "build/desktop-msvc/s4-capture-io-full-native/flight_sim_report.json": "81ddf115d4527a361e13b715bf0fbbb25894838c43bb063b112d04be062467ca",
+    "build/desktop-msvc/s4-capture-io-full-native/captures/frame_000.png": "8cc6abdbd186cd259e596bf98e7efba3ae7c3a982e00db27076cf2824857e6f2",
+    "build/desktop-msvc/s4-capture-io-full-native/captures/frame_001.png": "cfa44ba0dc0ebfefeceeb02b0321c47ae79505948751c8f44cfcc74357fed5c3",
+    "build/desktop-msvc/s4-capture-io-full-native/captures/frame_002.png": "a278f87495ad70a7cab39bb8f8d9cd9e64911ba8e547b0e85c1e5ac79f0f552b",
+    "build/desktop-msvc/s4-capture-io-full-native/preview-gpu-lifecycle.json": "6969bfed9642b4373c3ffea526fae1bce0916dc8c46647d134f28e58bc595d6c"
+  }
+}

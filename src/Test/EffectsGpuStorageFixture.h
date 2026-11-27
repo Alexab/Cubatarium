@@ -32,7 +32,7 @@ struct WindowCaptureGpuStorageProbe
 {
   static void Attach(UWindowManager &manager) { manager.Window = glfwGetCurrentContext(); }
   static bool Queue(UWindowManager &manager, const std::filesystem::path &path, uint32_t index,
-                    nlohmann::json receipt = nullptr)
+                    std::optional<FlightCaptureReceipt> receipt = std::nullopt)
   {
     return manager.QueueFlightCapture(path, index, 0.f, 0.f, GL_BACK, std::move(receipt));
   }

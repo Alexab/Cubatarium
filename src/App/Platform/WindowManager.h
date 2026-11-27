@@ -3,6 +3,7 @@
 
 #define GLFW_INCLUDE_NONE
 #include "App/Platform/InputManager.h"
+#include "App/Platform/FlightCaptureReceipt.h"
 #include "Render/Engine/TextRenderer.h"
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
@@ -14,7 +15,6 @@
 #include <memory>
 #include <optional>
 #include <filesystem>
-#include <nlohmann/json_fwd.hpp>
 #include <unordered_map>
 
 namespace cutum
@@ -142,7 +142,7 @@ private: // Instances of core systems
   void SetFlightCaptureMemoryProbe(PngAllocationObserver observer);
   FlightCaptureCpuStorage InspectFlightCaptureCpuStorage() const;
   bool QueueFlightCapture(const std::filesystem::path &path, uint32_t index,
-                          float cameraX, float cameraY, GLenum source, nlohmann::json receipt);
+                          float cameraX, float cameraY, GLenum source, std::optional<FlightCaptureReceipt> receipt = std::nullopt);
   void StopFlightCapture(FlightCaptureGpuCheckpoint *checkpoint = nullptr);
   std::unique_ptr<UFlightCaptureService> FlightCapture;
   std::optional<unsigned> PendingDiagnosticCapture;

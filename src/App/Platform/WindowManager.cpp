@@ -10,6 +10,7 @@
 #include "Core/FrameStageWatchdog.h"
 #include "Core/Memory/NativeThreadStack.h"
 #include "Core/Memory/ScopedPngEncoder.h"
+#include "Core/Memory/StlSourceStorage.h"
 #include "Core/Progress/IUProgressSink.h"
 #include "Creatures/Core/Creature.h"
 #include "Creatures/Core/CreatureInventory.h"
@@ -48,7 +49,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <nlohmann/json.hpp>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -147,7 +147,7 @@ public:
 
   ~UFlightCaptureService() { Shutdown(); }
 
-  FlightCaptureCpuStorage InspectCpuStorage() const
+  FlightCaptureCpuStorage InspectCpuStorage()
   {
     std::lock_guard lock(Mutex);
     auto snapshot = Cpu;
@@ -155,6 +155,13 @@ public:
     snapshot.slotLimit = KPboSlotCount;
     snapshot.queueLimit = KMaxQueuedImages;
     snapshot.codecSampled = SampleCodec;
+    snapshot.pathBackingSupported = StlSourceStorage::SupportedProfile();
+    snapshot.workerFrameInlineBytes = sizeof(Frame);
+    snapshot.receiptInlineBytes = sizeof(FlightCaptureReceipt);
+#ifdef _WIN32
+    DWORD flags{};
+    snapshot.workerHandleObserved = Worker.joinable() && GetHandleInformation(Worker.native_handle(), &flags) != 0;
+#endif
     return snapshot;
   }
 
@@ -225,7 +232,7 @@ public:
   bool QueueCapture(GLFWwindow *window, const std::filesystem::path &path,
                     uint32_t index, float camera_x, float camera_y,
                     GLenum source_buffer,
-                    nlohmann::json receipt = nullptr)
+                    std::optional<FlightCaptureReceipt> receipt)
   {
     if (!window)
     {
@@ -260,6 +267,9 @@ public:
     }
     const auto byte_count = static_cast<GLsizeiptr>(extentBytes);
     Frame payload{width, height, path, index, camera_x, camera_y, source_buffer, {}, std::move(receipt)};
+    StlSourceStorage pathStorage;
+    pathStorage.Text(payload.Path.native());
+    payload.PathBytes = pathStorage.bytes.requested;
 
     const PackCaptureScope pack(source_buffer);
     const bool cold = !slot->Buffer;
@@ -306,6 +316,10 @@ public:
     {
       std::lock_guard lock(Mutex);
       ++Cpu.acceptedFrames;
+      ++Cpu.current.activeSlots;
+      Cpu.current.slotPathBytes += slot->Payload.PathBytes;
+      Cpu.current.slotReceipts += slot->Payload.Receipt.has_value();
+      ObserveCpuStorage();
     }
     return true;
   }
@@ -357,7 +371,8 @@ private:
     float CameraY{};
     GLenum SourceBuffer{GL_BACK};
     std::vector<unsigned char> Pixels;
-    nlohmann::json Receipt;
+    std::optional<FlightCaptureReceipt> Receipt;
+    size_t PathBytes{};
   };
 
   struct PboSlot
@@ -410,6 +425,8 @@ private:
       Cpu.atPeakLive = s;
     if (s.AdmittedBytes() > Cpu.atPeakAdmission.AdmittedBytes())
       Cpu.atPeakAdmission = s;
+    if (s.TrackedLiveBytes() > Cpu.atPeakTracked.TrackedLiveBytes())
+      Cpu.atPeakTracked = s;
     Cpu.peakCodecLiveRequestBytes = std::max(Cpu.peakCodecLiveRequestBytes, s.codecLiveRequestBytes);
   }
 
@@ -473,6 +490,12 @@ private:
         --Cpu.current.copiedSlots;
         Cpu.current.slotPixelBytes -= charge;
       }
+      if (slot.Payload.Width)
+      {
+        --Cpu.current.activeSlots;
+        Cpu.current.slotPathBytes -= slot.Payload.PathBytes;
+        Cpu.current.slotReceipts -= slot.Payload.Receipt.has_value();
+      }
       slot.Payload = Frame{};
     }
     slot.Busy = false;
@@ -492,12 +515,19 @@ private:
       return false;
     }
     const auto charge = slot.Payload.Pixels.capacity();
+    const auto pathCharge = slot.Payload.PathBytes;
+    const bool hasReceipt = slot.Payload.Receipt.has_value();
     ImageJobs[(QueueHead + Cpu.current.queuedFrames) % KMaxQueuedImages] = std::move(slot.Payload);
     slot.Payload = Frame{};
     --Cpu.current.copiedSlots;
     Cpu.current.slotPixelBytes -= charge;
+    --Cpu.current.activeSlots;
+    Cpu.current.slotPathBytes -= pathCharge;
+    Cpu.current.slotReceipts -= hasReceipt;
     ++Cpu.current.queuedFrames;
     Cpu.current.queuedPixelBytes += charge;
+    Cpu.current.queuedPathBytes += pathCharge;
+    Cpu.current.queuedReceipts += hasReceipt;
     ObserveCpuStorage();
     lock.unlock();
     WorkAvailable.notify_one();
@@ -539,6 +569,79 @@ private:
     }
   }
 
+  bool WriteOutput(const std::filesystem::path &path, const unsigned char *data, size_t length,
+                   FlightCaptureOutput output, size_t temporaryBytes)
+  {
+#ifdef _WIN32
+    struct File
+    {
+      HANDLE handle;
+      ~File()
+      {
+        if (handle != INVALID_HANDLE_VALUE)
+          CloseHandle(handle);
+      }
+    } file{CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr,
+                       CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    if (file.handle == INVALID_HANDLE_VALUE)
+    {
+      std::lock_guard lock(Mutex);
+      ++Cpu.openFailures;
+      return false;
+    }
+    {
+      std::lock_guard lock(Mutex);
+      ++Cpu.opens;
+      ++Cpu.current.liveOutputFiles;
+      Cpu.peakOpenFiles = std::max(Cpu.peakOpenFiles, Cpu.current.liveOutputFiles);
+      Cpu.current.writeTemporaryBytes = temporaryBytes;
+      ObserveCpuStorage();
+      if (SampleCodec)
+      {
+        auto &sample = Cpu.lastWrite[static_cast<size_t>(output)];
+        DWORD flags{}, handles{};
+        sample.capture = Cpu.current;
+        sample.payloadBytes = length;
+        sample.fileHandleObserved = GetHandleInformation(file.handle, &flags) != 0;
+        sample.workerThreadId = GetCurrentThreadId();
+        sample.workerStack = ReadCurrentNativeStack();
+        sample.processHandlesObserved = GetProcessHandleCount(GetCurrentProcess(), &handles) != 0;
+        sample.processHandles = handles;
+        sample.process = ReadWindowsProcessMemory();
+      }
+    }
+    size_t offset = 0;
+    while (offset < length)
+    {
+      const auto request = static_cast<DWORD>(std::min<size_t>(length - offset, MAXDWORD));
+      DWORD written{};
+      if (!WriteFile(file.handle, data + offset, request, &written, nullptr) || !written)
+        break;
+      offset += written;
+    }
+    {
+      std::lock_guard lock(Mutex);
+      const bool closed = CloseHandle(file.handle) != 0;
+      if (closed)
+        file.handle = INVALID_HANDLE_VALUE;
+      --Cpu.current.liveOutputFiles;
+      Cpu.current.writeTemporaryBytes = 0;
+      Cpu.closes += closed;
+      Cpu.closeFailures += !closed;
+      return offset == length && closed;
+    }
+#else
+    (void)output;
+    (void)temporaryBytes;
+    std::ofstream file(path, std::ios::binary | std::ios::trunc);
+    if (!file)
+      return false;
+    file.write(reinterpret_cast<const char *>(data), static_cast<std::streamsize>(length));
+    file.close();
+    return !file.fail();
+#endif
+  }
+
   void WorkerLoop()
   {
     const NativeThreadStackOwner nativeStack(NativeThreadKind::FrameCapture);
@@ -559,6 +662,10 @@ private:
         --Cpu.current.queuedFrames;
         Cpu.current.queuedPixelBytes -= frame.Pixels.capacity();
         Cpu.current.encoderPixelBytes = frame.Pixels.capacity();
+        Cpu.current.queuedPathBytes -= frame.PathBytes;
+        Cpu.current.encoderPathBytes = frame.PathBytes;
+        Cpu.current.queuedReceipts -= frame.Receipt.has_value();
+        Cpu.current.encoderReceipt = frame.Receipt.has_value();
         ObserveCpuStorage();
       }
       QueueSpaceAvailable.notify_one();
@@ -579,21 +686,17 @@ private:
         std::filesystem::create_directories(frame.Path.parent_path(), ec);
         struct Output
         {
+          UFlightCaptureService &service;
           const Frame &frame;
           uint64_t checksum{14695981039346656037ull};
-        } output{frame};
+        } output{*this, frame};
         saved = !ec && EncodeRgbaPng({frame.Pixels.data(), frame.Pixels.size(), frame.Width,
                                       frame.Height, true}, &output,
             [](void *context, const unsigned char *png, size_t length, size_t) {
               auto &out = *static_cast<Output *>(context);
-              std::ofstream file(out.frame.Path, std::ios::binary | std::ios::trunc);
-              if (!file)
+              if (!out.service.WriteOutput(out.frame.Path, png, length, FlightCaptureOutput::Png, 0))
                 return false;
-              file.write(reinterpret_cast<const char *>(png), static_cast<std::streamsize>(length));
-              file.close();
-              if (file.fail())
-                return false;
-              if (!out.frame.Receipt.is_null())
+              if (out.frame.Receipt)
                 for (size_t i = 0; i < length; ++i)
                 {
                   out.checksum ^= png[i];
@@ -601,22 +704,23 @@ private:
                 }
               return true;
             }, SampleCodec ? PngAllocationObserver{this, ObserveCodec} : PngAllocationObserver{});
-        if (saved && !frame.Receipt.is_null())
+        if (saved && frame.Receipt)
         {
           // Bind the completed encoder output to the immutable readback pose.
-          // FNV-1a detects accidental replacement; it is not an authenticity hash.
-          std::ostringstream hex;
-          hex << std::hex << std::setw(16) << std::setfill('0') << output.checksum;
-          frame.Receipt["png_fnv1a64"] = hex.str();
-          frame.Receipt["width"] = frame.Width;
-          frame.Receipt["height"] = frame.Height;
-          frame.Receipt["capture_index"] = frame.Index;
-          frame.Receipt["png"] = frame.Path.filename().string();
-          std::ofstream receipt(frame.Path.string() + ".json",
-                                std::ios::binary | std::ios::trunc);
-          receipt << frame.Receipt.dump() << '\n';
-          receipt.close();
-          saved = !receipt.fail();
+          const auto base = frame.Path.filename();
+          const auto name = base.u8string();
+          auto receiptPath = frame.Path;
+          receiptPath += ".json";
+          const auto text = EncodeFlightCaptureReceipt(*frame.Receipt, frame.Index, frame.Width,
+              frame.Height, output.checksum, {reinterpret_cast<const char *>(name.data()), name.size()},
+              frame.SourceBuffer == GL_FRONT);
+          StlSourceStorage storage;
+          storage.Text(base.native());
+          storage.Text(name);
+          storage.Text(receiptPath.native());
+          storage.Text(text);
+          saved = WriteOutput(receiptPath, reinterpret_cast<const unsigned char *>(text.data()),
+                              text.size(), FlightCaptureOutput::Receipt, storage.bytes.requested);
         }
       }
       catch (...)
@@ -629,13 +733,22 @@ private:
         Cpu.current.encoderPixelBytes = 0;
         Cpu.persistedFrames += saved;
       }
-      CubatariumLogInfo(
-          "FlightCapture",
-          std::string(saved ? "saved" : "write failed") +
-              " index=" + std::to_string(frame.Index) + " source=" +
-              (frame.SourceBuffer == GL_FRONT ? "GL_FRONT" : "GL_BACK") +
-              " camera_x=" + std::to_string(frame.CameraX) + " camera_y=" +
-              std::to_string(frame.CameraY) + " path=" + frame.Path.string());
+      {
+        const auto path = frame.Path.u8string();
+        CubatariumLogInfo(
+            "FlightCapture",
+            std::string(saved ? "saved" : "write failed") +
+                " index=" + std::to_string(frame.Index) + " source=" +
+                (frame.SourceBuffer == GL_FRONT ? "GL_FRONT" : "GL_BACK") +
+                " camera_x=" + std::to_string(frame.CameraX) + " camera_y=" +
+                std::to_string(frame.CameraY) + " path=" + std::string(path.begin(), path.end()));
+      }
+      {
+        std::lock_guard lock(Mutex);
+        frame = Frame{};
+        Cpu.current.encoderPathBytes = 0;
+        Cpu.current.encoderReceipt = 0;
+      }
     }
   }
 
@@ -1132,16 +1245,12 @@ void UWindowManager::Run(FlightCaptureGpuCheckpoint *captureCheckpoint)
             const float camera_y =
                 camera ? camera->GetPosition().y
                        : std::numeric_limits<float>::quiet_NaN();
-            nlohmann::json receipt = nullptr;
+            std::optional<FlightCaptureReceipt> receipt;
             if (PendingDiagnosticCapture && camera)
             {
               const auto position = camera->GetPosition();
-              receipt = {{"schema", "diagnostic-capture-receipt.v1"},
-                         {"capture_id", *PendingDiagnosticCapture},
-                         {"frame_sequence", rendered_frame_sequence},
-                         {"source", "GL_BACK"},
-                         {"position", {position.x, position.y, position.z}},
-                         {"yaw", camera->GetYaw()}, {"pitch", camera->GetPitch()}};
+              receipt = FlightCaptureReceipt{*PendingDiagnosticCapture, rendered_frame_sequence,
+                  {position.x, position.y, position.z}, camera->GetYaw(), camera->GetPitch()};
             }
             if (!QueueFlightCapture(capture_path, frame_index, camera_x, camera_y, GL_BACK,
                                     std::move(receipt)))
@@ -1191,7 +1300,7 @@ void UWindowManager::Run(FlightCaptureGpuCheckpoint *captureCheckpoint)
     {
       UFrameStageWatchdog::Scope stage("window.frame_capture_front");
       if (!QueueFlightCapture(front_capture_path, front_capture_index,
-                              front_capture_camera_x, front_capture_camera_y, GL_FRONT, nullptr))
+                              front_capture_camera_x, front_capture_camera_y, GL_FRONT))
       {
         CubatariumLogInfo(
             "FlightCapture",
@@ -1248,7 +1357,8 @@ void UWindowManager::RecordFrameTiming(double swap_wait_ms,
 }
 
 bool UWindowManager::QueueFlightCapture(const std::filesystem::path &path, uint32_t index,
-                                         float cameraX, float cameraY, GLenum source, nlohmann::json receipt)
+                                         float cameraX, float cameraY, GLenum source,
+                                         std::optional<FlightCaptureReceipt> receipt)
 {
   if (!Window)
     return false;
