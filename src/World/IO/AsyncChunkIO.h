@@ -83,6 +83,19 @@ struct AsyncLoadReadProbeGate
   std::chrono::milliseconds limit{5000};
 };
 
+enum class AsyncSaveOperation : uint8_t { TerrainSlice, LightReceipts, SliceRange, FullColumn };
+
+inline const char *AsyncSaveOperationName(AsyncSaveOperation operation) noexcept
+{
+  switch (operation)
+  {
+  case AsyncSaveOperation::LightReceipts: return "column_light_receipts";
+  case AsyncSaveOperation::SliceRange: return "slice_range";
+  case AsyncSaveOperation::FullColumn: return "full_column";
+  default: return "terrain_slice";
+  }
+}
+
 struct AsyncChunkSaveRequest
 {
   std::shared_ptr<AsyncIoCredit> writeCredit;
@@ -90,14 +103,14 @@ struct AsyncChunkSaveRequest
   glm::ivec3 coord;
   glm::ivec3 groundCoord;
   std::string worldFolder;
-  std::string filePath;
-  std::string cleanupOperation;
   ChunkDiskFormat format{ChunkDiskFormat::Binary};
+  AsyncSaveOperation operation{AsyncSaveOperation::TerrainSlice};
   bool success{false};
-  bool cleanupOnly{false};
-  int cleanupSliceCount{0};
+  int64_t cleanupSliceCount{0};
   double cleanupMs{0.0};
   std::string error;
+
+  bool IsCleanup() const noexcept { return operation != AsyncSaveOperation::TerrainSlice; }
 };
 
 struct AsyncColumnLightFlagsSaveResult
@@ -167,6 +180,11 @@ public:
       : LoadPool(LoadWorkerBudget(), "ChunkIoLoad"),
         BackgroundIoPool(CreateBackgroundIoPool())
   {
+    // A valid result keeps its admission credit through queueing and delivery.
+    // Prepare the ring memory before accepting any world I/O.
+    CompletedLoads.ReserveStorage(kMaxOutstandingLoads);
+    CompletedSaves.ReserveStorage(kMaxOutstandingWrites);
+    CompletedColumnLightFlagsSaves.ReserveStorage(kMaxOutstandingFlagSaves);
   }
 
   static constexpr size_t kMaxOutstandingLoads = 256;

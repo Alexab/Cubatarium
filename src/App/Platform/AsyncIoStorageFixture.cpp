@@ -262,7 +262,7 @@ struct AsyncIoStorageProbe
                 save_publish->encoded_bytes == save->encoded_bytes && flags_entered &&
                 flags_streaming && flags_encoded && !flags_streaming->encoded_bytes &&
                 !flags_encoded->encoded_bytes && flags_encoded->path_bytes &&
-                flags_entered->sources.queued_backing == flags_streaming->sources.queued_backing &&
+                flags_entered->sources.queued_backing > flags_streaming->sources.queued_backing &&
                 flags_streaming->sources.queued_backing >=
                     flags_encoded->sources.queued_backing + 600 * sizeof(glm::ivec2),
             "the flag vector remains live during streaming and retires before replacement");
@@ -322,6 +322,7 @@ struct AsyncIoStorageProbe
     Gate gate;
     UAsyncChunkIO io;
     Release resume{gate};
+    const auto cold_slots = Inspect(io).completed_slots_bytes;
     Park(io, gate, false);
     auto cancelled = std::make_shared<std::atomic<bool>>(false);
     const glm::ivec3 absent(coord.x, coord.y + 300, coord.z);
@@ -329,12 +330,16 @@ struct AsyncIoStorageProbe
       return io.RequestLoad(slice, storage, registry, folder, {coord, 2}, cancelled, demand);
     };
     Require(request(coord, 1), "real queued reader reserves one credit");
+    const auto queued_path_backing = Inspect(io).queued_backing;
     for (size_t i = 1; i < cap; ++i)
       Require(request(absent, 1 + i), "absent result fills an admitted slot");
     Require(io.GetOutstandingLoadCount() == cap && io.GetLoadResultQueueDepth() == cap - 1 &&
                 !request(coord, cap + 1), "queued and ready readers share the same limit");
     gate.released.store(true);
     Require(io.WaitIdleFor(std::chrono::seconds(5)), "queued reader drains before deadline");
+    const auto full_slots = Inspect(io).completed_slots_bytes;
+    Require(cold_slots == full_slots && full_slots[0] > 0 && full_slots[1] > 0 && full_slots[2] > 0,
+            "the first and full completion cohorts use the admission-sized reserve");
     auto returned = io.DrainLoads();
     Require(returned.size() == cap && returned.back().success && io.GetOutstandingLoadCount() == cap &&
                 !request(coord, cap + 1), "drained results retain their credits");
@@ -352,7 +357,9 @@ struct AsyncIoStorageProbe
     held = {};
     Require(io.GetOutstandingLoadCount() == 0, "last returned result releases the last load credit");
     return {{"status", "PASS"}, {"limit", cap}, {"queued_while_full", 1},
-            {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0}};
+            {"ready_while_full", cap - 1}, {"escaped_demand", held_demand}, {"outstanding_after", 0},
+            {"queued_path_backing", queued_path_backing}, {"cold_slot_requests", cold_slots},
+            {"full_slot_requests", full_slots}, {"load_record_width", sizeof(AsyncChunkLoadResult)}};
   }
 
   static nlohmann::json CheckBinaryReadEnvelope(const std::filesystem::path &root, UBlockRegistry &registry)
@@ -702,7 +709,8 @@ struct AsyncIoStorageProbe
     const auto saves = io.DrainSaves();
     Require(saves.size() == 1 && saves[0].success && saves[0].format == ChunkDiskFormat::Json,
             "real JSON save publishes");
-    const auto file_size = std::filesystem::file_size(saves[0].filePath);
+    const auto file_size = std::filesystem::file_size(
+        storage.ChunkFilePath(saves[0].worldFolder, saves[0].coord, saves[0].format));
     UBlockWorld cold;
     Require(file_size <= UJsonChunkSerializer::MaxFrameBytes() &&
                 storage.LoadChunk(coord, cold, folder, registry) == CHUNK_VOLUME &&
@@ -953,6 +961,19 @@ struct AsyncIoStorageProbe
     Require(results.size() == limit && io.GetOutstandingWriteCount() == limit &&
                 std::all_of(results.begin(), results.end(), [](const auto &done) { return done.success; }),
             "every distinct detached snapshot saves while returned receipts retain their credits");
+    StlSourceStorage delivered, texts;
+    delivered.Buffer(results.capacity(), sizeof(AsyncChunkSaveRequest));
+    for (const auto &result : results)
+    {
+      texts.Text(result.worldFolder);
+      texts.Text(result.error);
+    }
+    Require(texts.bytes.supported && texts.bytes.requested == completed.completed_backing,
+            "moving the returned results preserves exactly the observed live text allocations");
+    Require(completed.completed_backing == capacity.queued_backing &&
+                completed.completed_slots_bytes[1] == capacity.completed_slots_bytes[1] &&
+                completed.completed_slots_bytes[1] == delivered.bytes.requested,
+            "only the folder path travels and neither completion ring nor returned cohort needs extra slots");
     results.clear();
     Require(!io.GetOutstandingWriteCount(), "the last returned receipt releases all queued write reservations");
     std::ifstream file(storage.ChunkFilePath(folder, first_coord, ChunkDiskFormat::Binary), std::ios::binary);
@@ -961,11 +982,55 @@ struct AsyncIoStorageProbe
     return {{"status", "PASS"}, {"limit", limit}, {"chunk_owners", chunks}, {"field_owners", fields},
             {"snapshot_bytes", bytes_per_snapshot}, {"queued_bytes", snapshot_bytes},
             {"padded_retired_before_write", true}, {"completed_without_snapshot", true},
-            {"retired_credits", true}, {"physical_byte_match", true}};
+            {"retired_credits", true}, {"physical_byte_match", true},
+            {"write_record_width", sizeof(AsyncChunkSaveRequest)},
+            {"completed_slot_request", completed.completed_slots_bytes[1]},
+            {"returned_slot_request", delivered.bytes.requested},
+            {"completed_text_request", completed.completed_backing},
+            {"queued_folder_request", capacity.queued_backing}};
 #else
     (void)root;
     return {{"supported", false}};
 #endif
+  }
+
+  static nlohmann::json CheckCleanupResultStorage(const std::filesystem::path &root)
+  {
+    namespace fs = std::filesystem;
+    constexpr int count = 64;
+    constexpr int removable = 31;
+    const auto folder = root.string();
+    const glm::ivec3 ground{-8, 0, 3};
+    UChunkStorageService storage;
+    const auto path = [&](int y) {
+      return storage.ChunkFilePath(folder, {ground.x, y, ground.z}, ChunkDiskFormat::Binary);
+    };
+    Require(fs::create_directories(root / "chunks"), "cleanup fixture requires a fresh directory");
+    for (int y = 0; y < count; ++y)
+    {
+      if (y == removable)
+        std::ofstream(path(y)).put('0');
+      else
+      {
+        Require(fs::create_directory(path(y)), "create controlled cleanup refusal");
+        std::ofstream(fs::path(path(y)) / "owned").put('0');
+      }
+    }
+    UAsyncChunkIO io;
+    Require(io.RequestRemoveChunkSlices(ground, 0, count - 1, storage, folder, 71) &&
+                io.WaitIdleFor(std::chrono::seconds(6)),
+            "run the entire controlled cleanup range");
+    auto done = io.DrainSaves();
+    Require(done.size() == 1 && !done[0].success && done[0].saveBatchId == 71 &&
+                done[0].worldFolder == folder && done[0].cleanupSliceCount == count &&
+                done[0].operation == AsyncSaveOperation::SliceRange &&
+                done[0].error.find(path(0)) != std::string::npos && !fs::exists(path(removable)) &&
+                done[0].error.find(path(count - 1)) == std::string::npos &&
+                fs::is_regular_file(fs::path(path(count - 1)) / "owned"),
+            "a failed range reports its first file and keeps processing the remaining slices");
+    return {{"status", "PASS"}, {"range", count}, {"text_bytes", done[0].error.size()},
+            {"last_path_retained", done[0].error.find(path(count - 1)) != std::string::npos},
+            {"later_slice_removed", true}};
   }
 
   static nlohmann::json CheckPoolLifetime(const std::filesystem::path &shutdown,
@@ -1241,6 +1306,7 @@ struct AsyncIoStorageProbe
             {"json_streaming", CheckStreamingJson(root / "json-streaming", registry)},
             {"legacy_synthetic_json", CheckLegacySyntheticJson(root / "legacy-synthetic-json")},
             {"terrain_save_snapshot_queue", CheckSaveSnapshotQueue(root / "save-snapshot-queue")},
+            {"cleanup_result_storage", CheckCleanupResultStorage(root / "cleanup-metadata")},
             {"native_stdio", CheckNativeStdio(root)},
             {"pool_lifetime", pool_lifetime},
             {"active_worker_storage_complete", false}};

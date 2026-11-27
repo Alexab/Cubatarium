@@ -712,7 +712,7 @@ bool UChunkStorageService::RemoveChunkSliceFromDisk(
     if (ec)
     {
       success = false;
-      if (first_error.empty())
+      if (outError && first_error.empty())
       {
         first_error = filePath + ": " + ec.message();
       }

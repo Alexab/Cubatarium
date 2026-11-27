@@ -92,12 +92,19 @@ public:
         done.groundCoord != Ground || done.coord.x != Ground.x || done.coord.z != Ground.z)
       return false;
     int key = done.coord.y;
-    if (!done.cleanupOnly && (key == Light || key == Cleanup)) return false;
-    if (done.cleanupOnly)
+    switch (done.operation)
     {
-      if (done.cleanupOperation == "column_light_receipts") key = Light;
-      else if (done.cleanupOperation == "slice_range") key = Cleanup;
-      else return false;
+    case AsyncSaveOperation::TerrainSlice:
+      if (key == Light || key == Cleanup) return false;
+      break;
+    case AsyncSaveOperation::LightReceipts:
+      key = Light;
+      break;
+    case AsyncSaveOperation::SliceRange:
+      key = Cleanup;
+      break;
+    default:
+      return false;
     }
     if (!Remaining.erase(key)) return false;
     Failed |= !done.success;

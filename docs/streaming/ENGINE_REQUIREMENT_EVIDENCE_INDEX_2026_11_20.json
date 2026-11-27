@@ -3660,11 +3660,19 @@
       "receipt": "build/desktop-msvc/s4-q10-disk-index-acceptance.json",
       "scope": "Retain sorted unique signed slice coordinates in one packed array per indexed column. Derive the highest slice and presence from the same array. Preserve filename grammar and both disk encodings. An allocation refusal after a physical commit retires the stale cache and the next lookup rebuilds it from disk. The fixtures observe four folders at most, one speculative warmup, native dual-format deduplication and recovery.",
       "remaining": "Join measured per-folder column and slice high water, bucket history and directory traversal with the dirty refresh overlap, result metadata, path roots, read registry and Q01.L2. The complete S0-S6 native, performance and memory matrix stays in scope. 23 of 42 packages complete."
+    },
+    {
+      "id": "S4.02.LIMIT.Q10.IO_METADATA",
+      "status": "SCOPED_Q10_IO_METADATA_PASS_Q10_OPEN",
+      "certificate": "S4_02_Q10_IO_METADATA_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q10-io-metadata-acceptance.json",
+      "scope": "Move the authored world folder from job to result, keep stable operation tags, and derive the terrain path only in the physical write or active diagnostics. A failed range cleanup reports the first failure and processes all remaining slices. Prepare lossless completion ring backing for the existing credit limits, including growth from a wrapped head. A held result retains its credit until delivery and release.",
+      "remaining": "The completion rings are allocated up front per active I/O instance. Compose their simultaneous returned-vector backing, retained strings, paths, read registry, disk-index high water, flag and terrain payloads and Q01.L2. Full native, performance, memory and S0-S6 acceptance remain in scope. 23 of 42 packages complete."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 LIMIT-C1.Q10. Свести метаданные результатов I/O и пути с компактным индексом и памятью чанков, квитанций и флагов. Учесть реестр чтения и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
+  "next_action": "S4.02 LIMIT-C1.Q10. Проверить память реестра при чтении сохранений и свести её с данными и метаданными I/O, путями, дисковым индексом и Q01.L2. Полный объём S0–S6 остаётся в плане. Закрыто 23 из 42 пакетов."
 }

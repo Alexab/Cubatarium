@@ -35,6 +35,15 @@ int main()
     Expect(reserved.GetStorageSnapshot().bytes==storage.bytes && reserved.DiscardedOverflow()==0,
            "drain retains fixed empty slots without overflow");
   }
+  for (int n = 0; n < 3; ++n)
+    reserved.Push(n);
+  Expect(reserved.DrainUpTo(2) == std::vector<int>({0, 1}), "advance the reserved ring head");
+  for (int n = 3; n < 6; ++n)
+    reserved.Push(n);
+  Expect(reserved.GetStorageSnapshot().bytes == storage.bytes &&
+             reserved.DrainAll() == std::vector<int>({2, 3, 4, 5}) &&
+             reserved.DiscardedOverflow() == 0,
+         "growth through a wrapped ring uses the reserve and preserves order");
   cutum::UCompletedJobQueue<int> q;
   q.SetCapacity(3);
   Expect(q.Capacity() == 3, "capacity set");

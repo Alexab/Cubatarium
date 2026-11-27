@@ -5180,13 +5180,14 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
     const auto save_drain_started = std::chrono::steady_clock::now();
     for (AsyncChunkSaveRequest &save : AsyncChunkIo->DrainSaves())
     {
-      if (!save.cleanupOnly)
+      const bool cleanup = save.IsCleanup();
+      if (!cleanup)
       {
         ++metrics.saves_processed_n;
       }
       // A successful old-folder job still changed that folder's disk index.
       // This is independent of permission to ACK/retire current-world data.
-      if (save.success && !save.cleanupOnly)
+      if (save.success && !cleanup)
         ChunkStorage->RecordChunkSliceSaved(save.worldFolder, save.coord);
       auto pending_it = PendingAsyncColumnSaveSlices.find(save.groundCoord);
       if (save.worldFolder != WorldFolderPath ||
@@ -5206,23 +5207,25 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
         PendingAsyncColumnSaveSlices.erase(pending_it);
         ChunkStorage->ClearColumnSavePending(save.groundCoord);
       }
-      std::string outcome;
+      if (save.success && !IsWorldColumnSaveTraceEnabled())
+        continue;
+      const char *outcome;
       std::string details;
-      if (save.cleanupOnly)
+      if (cleanup)
       {
-        outcome = save.cleanupOperation == "column_light_receipts"
+        outcome = save.operation == AsyncSaveOperation::LightReceipts
                       ? (save.success ? "light_receipts_written"
                                       : "light_receipts_failed")
                       : (save.success ? "stale_cleanup_done"
                                       : "stale_cleanup_failed");
-        details = "operation=" + save.cleanupOperation +
+        details = std::string("operation=") + AsyncSaveOperationName(save.operation) +
                   " slices=" + std::to_string(save.cleanupSliceCount) +
                   " duration_ms=" + std::to_string(save.cleanupMs);
       }
       else
       {
         outcome = save.success ? "slice_written" : "slice_failed";
-        details = "file=" + save.filePath;
+        details = "file=" + ChunkStorage->ChunkFilePath(save.worldFolder, save.coord, save.format);
       }
       if (!save.error.empty())
       {
@@ -5237,7 +5240,7 @@ AsyncChunkIoTickMetrics UWorldPersistence::TickAsyncChunkIo(
           std::to_string(AsyncChunkIo->GetLoadPendingJobCount()) +
           " io_background_jobs=" +
           std::to_string(AsyncChunkIo->GetBackgroundPendingJobCount());
-      LogWorldColumnSave(outcome.c_str(), save.coord, details, !save.success);
+      LogWorldColumnSave(outcome, save.coord, details, !save.success);
     }
     metrics.save_drain_ms =
         std::chrono::duration<double, std::milli>(

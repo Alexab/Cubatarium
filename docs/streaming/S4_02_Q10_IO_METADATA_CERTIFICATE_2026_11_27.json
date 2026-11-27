@@ -1,0 +1,326 @@
+{
+  "schema": "s4-q10-io-metadata.v1",
+  "status": "SCOPED_Q10_IO_METADATA_PASS_Q10_OPEN",
+  "baseline_commit": "a806ee949d9d8f6d11924a1e5774b0dcf34014c1",
+  "scope": "Move the authored world folder from job to result, keep stable operation tags, and derive the terrain path only in the physical write or active diagnostics. A failed range cleanup reports the first failure and processes all remaining slices. Prepare lossless completion ring backing for the existing credit limits, including growth from a wrapped head. A held result retains its credit until delivery and release.",
+  "remaining": "The completion rings are allocated up front per active I/O instance. Compose their simultaneous returned-vector backing, retained strings, paths, read registry, disk-index high water, flag and terrain payloads and Q01.L2. Full native, performance, memory and S0-S6 acceptance remain in scope. 23 of 42 packages complete.",
+  "baseline_exe_sha256": "9aae2a9e01d1ec5d798599698e1e9376389291e664ed4d5a0dbf6066e9fed735",
+  "before": {
+    "terrain_save_snapshot_queue": {
+      "chunk_owners": 256,
+      "completed_slot_request": 63239,
+      "completed_text_request": 66778,
+      "completed_without_snapshot": true,
+      "field_owners": 256,
+      "limit": 256,
+      "padded_retired_before_write": true,
+      "physical_byte_match": true,
+      "queued_bytes": 4478976,
+      "queued_folder_request": 24576,
+      "retired_credits": true,
+      "returned_slot_request": 51239,
+      "snapshot_bytes": 17496,
+      "status": "PASS",
+      "write_record_width": 200
+    },
+    "load_credits": {
+      "cold_slot_requests": [
+        0,
+        0,
+        0
+      ],
+      "escaped_demand": 256,
+      "full_slot_requests": [
+        60711,
+        0,
+        0
+      ],
+      "limit": 256,
+      "load_record_width": 192,
+      "outstanding_after": 0,
+      "queued_path_backing": 176,
+      "queued_while_full": 1,
+      "ready_while_full": 255,
+      "status": "PASS"
+    },
+    "cleanup_result_storage": {
+      "last_path_retained": true,
+      "later_slice_removed": true,
+      "range": 64,
+      "status": "PASS",
+      "text_bytes": 8871
+    }
+  },
+  "after": {
+    "terrain_save_snapshot_queue": {
+      "chunk_owners": 256,
+      "completed_slot_request": 34855,
+      "completed_text_request": 32768,
+      "completed_without_snapshot": true,
+      "field_owners": 256,
+      "limit": 256,
+      "padded_retired_before_write": true,
+      "physical_byte_match": true,
+      "queued_bytes": 4478976,
+      "queued_folder_request": 32768,
+      "retired_credits": true,
+      "returned_slot_request": 34855,
+      "snapshot_bytes": 17496,
+      "status": "PASS",
+      "write_record_width": 136
+    },
+    "load_credits": {
+      "cold_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "escaped_demand": 256,
+      "full_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "limit": 256,
+      "load_record_width": 192,
+      "outstanding_after": 0,
+      "queued_path_backing": 167,
+      "queued_while_full": 1,
+      "ready_while_full": 255,
+      "status": "PASS"
+    },
+    "cleanup_result_storage": {
+      "last_path_retained": false,
+      "later_slice_removed": true,
+      "range": 64,
+      "status": "PASS",
+      "text_bytes": 165
+    }
+  },
+  "focused": {
+    "terrain_save_snapshot_queue": {
+      "chunk_owners": 256,
+      "completed_slot_request": 34855,
+      "completed_text_request": 24576,
+      "completed_without_snapshot": true,
+      "field_owners": 256,
+      "limit": 256,
+      "padded_retired_before_write": true,
+      "physical_byte_match": true,
+      "queued_bytes": 4478976,
+      "queued_folder_request": 24576,
+      "retired_credits": true,
+      "returned_slot_request": 34855,
+      "snapshot_bytes": 17496,
+      "status": "PASS",
+      "write_record_width": 136
+    },
+    "load_credits": {
+      "cold_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "escaped_demand": 256,
+      "full_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "limit": 256,
+      "load_record_width": 192,
+      "outstanding_after": 0,
+      "queued_path_backing": 119,
+      "queued_while_full": 1,
+      "ready_while_full": 255,
+      "status": "PASS"
+    },
+    "cleanup_result_storage": {
+      "last_path_retained": false,
+      "later_slice_removed": true,
+      "range": 64,
+      "status": "PASS",
+      "text_bytes": 139
+    }
+  },
+  "physical_metadata": {
+    "terrain_save_snapshot_queue": {
+      "chunk_owners": 256,
+      "completed_slot_request": 34855,
+      "completed_text_request": 32768,
+      "completed_without_snapshot": true,
+      "field_owners": 256,
+      "limit": 256,
+      "padded_retired_before_write": true,
+      "physical_byte_match": true,
+      "queued_bytes": 4478976,
+      "queued_folder_request": 32768,
+      "retired_credits": true,
+      "returned_slot_request": 34855,
+      "snapshot_bytes": 17496,
+      "status": "PASS",
+      "write_record_width": 136
+    },
+    "load_credits": {
+      "cold_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "escaped_demand": 256,
+      "full_slot_requests": [
+        49191,
+        34855,
+        112
+      ],
+      "limit": 256,
+      "load_record_width": 192,
+      "outstanding_after": 0,
+      "queued_path_backing": 128,
+      "queued_while_full": 1,
+      "ready_while_full": 255,
+      "status": "PASS"
+    },
+    "cleanup_result_storage": {
+      "last_path_retained": false,
+      "later_slice_removed": true,
+      "range": 64,
+      "status": "PASS",
+      "text_bytes": 168
+    }
+  },
+  "preallocated_completion_bytes_per_io": 84158,
+  "physical_index": {
+    "cancelled_retry": true,
+    "evicted_folder_rebuilt": true,
+    "folder_limit": 4,
+    "outstanding_after": 0,
+    "packed_slice_bytes": 20,
+    "packed_slices": 5,
+    "packed_tables": 9,
+    "status": "PASS",
+    "visited_folders": 5
+  },
+  "physical_flag_read": {
+    "grown_buckets": 2048,
+    "grown_requested_heap": 57431,
+    "heap_supported": true,
+    "invalid_tail_refused": true,
+    "published": 1025,
+    "reset_buckets": 8,
+    "retry": true,
+    "status": "PASS"
+  },
+  "physical_flag_producer": {
+    "bounded_while_active": true,
+    "cold_edit": true,
+    "deferred_flag_revision": true,
+    "final_flags": 0,
+    "final_writes": 0,
+    "rejected_with_free_slots": 24,
+    "required_writes": 25,
+    "status": "PASS",
+    "write_limit": 256
+  },
+  "physical_receipt_read": {
+    "receipt_read_scratch": 0,
+    "receipt_read_output": 8664,
+    "receipt_read_stack_buffer": 12368,
+    "receipt_checksum_stack": 12656,
+    "receipt_restore_payload": 8847,
+    "receipt_restore_handoff": true
+  },
+  "physical_receipt_write": {
+    "receipt_encode_buffer": 288,
+    "receipt_write_dom": 0,
+    "receipt_write_output": 16461
+  },
+  "profiles": {
+    "flat": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 934,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED",
+      "streamed_disk_fixture": "PASS",
+      "compact_io_metadata": "PASS"
+    },
+    "full": {
+      "startup": "PASS",
+      "normal_shutdown": "PASS",
+      "frames": 525,
+      "native_exit": 0,
+      "startup_only_aggregate": "UNTESTED"
+    }
+  },
+  "source_world_sha256": "820e89c6c84294655a4f38b0abdc009439799e81edbe8d629c2c11fbfe3fee75",
+  "source_sha256": "7e601200d110d8f7992ee5fcd22abf95b1fef4b122f02560a6944878377b7299",
+  "exe_sha256": "1bbcab7b167b79bcc58d9e02660e19d605b68dfb9013c49972b51a2c7a7066ae",
+  "config_restored_sha256": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+  "release_regressions": [
+    "async_io_storage_test",
+    "application_operation_storage_test",
+    "catalog_worker_retirement_test",
+    "chunk_streamer_committed_column_test",
+    "negative_height_storage_test",
+    "ready_data_admission_test",
+    "fluid_chunk_io_test",
+    "chunk_lighting_propagation_test",
+    "light_cache_certificate_test",
+    "relight_result_install_test",
+    "worldgen_scatter_block_resolve_test",
+    "decor_mesh_integration_test",
+    "normal_shutdown_test",
+    "completed_job_queue_test",
+    "async_relight_lifecycle_test"
+  ],
+  "evidence_sha256": {
+    "build/desktop-msvc/s4-q10-io-metadata-provenance.json": "c42ba73fc6ff6f48b5408c7c10186aa45dbb62afebd82f80cb2fd842776ce072",
+    "build/desktop-msvc/s4-q10-io-metadata-build.log": "07b6d8f8e1b79e6cef966eb69f1e42ef3aac1d4e78a33532a14513be27dc6750",
+    "build/desktop-msvc/s4-q10-io-metadata-regressions.json": "03bc1aaf37a8cef26f73296acf005d91e1e84e950c920c4648182d87d158b816",
+    "build/desktop-msvc/s4-q10-io-metadata-regression-build.log": "06ca706ca8469c31ea8e2970f1399f3596a6ec4cb7dc4c6087e9bd328e0ce4af",
+    "build/desktop-msvc/s4-q10-io-metadata-io-storage.json": "5e6ddddacf3887759b52c9dc897293c75981480b1a67aee6c07792f9041d26d1",
+    "build/desktop-msvc/s4-q10-io-metadata-before.exe": "9aae2a9e01d1ec5d798599698e1e9376389291e664ed4d5a0dbf6066e9fed735",
+    "build/desktop-msvc/s4-q10-io-metadata-before-exe.sha256": "5a06d5a0f3da4035c9e313ad92b2eade95f0a8b3e8eff281ae6524852e438aac",
+    "build/desktop-msvc/s4-q10-io-metadata-before.json": "0b4d2eabae5984ba27d9199453c46d6fdcabd7c228544f7b2e7cfcd8adb0ef4a",
+    "build/desktop-msvc/s4-q10-io-metadata-before.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-io-metadata-before-build.log": "371c043185949651b398c07fbef6fa012e31b18c9233037e58833e9e77841625",
+    "docs/streaming/S4_02_Q10_DISK_INDEX_CERTIFICATE_2026_11_27.json": "6b20c4781a0e1714052bda71a88976fffe5378871f15339fb7adb12d735a540d",
+    "build/desktop-msvc/s4-q10-io-metadata-async_io_storage_test.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-io-metadata-application_operation_storage_test.log": "3961a1846a54917690b8738870f8e79d3a93ded6ab1ff364762349c15987eb22",
+    "build/desktop-msvc/s4-q10-io-metadata-catalog_worker_retirement_test.log": "891c0b703bdc51f762ef6e1b6010cfc21014546ef31ed1376365ddafcbb036da",
+    "build/desktop-msvc/s4-q10-io-metadata-chunk_streamer_committed_column_test.log": "2120954e056c4e51c7ea15c360e5fa09103bd9800110518aa5f521d7219c1916",
+    "build/desktop-msvc/s4-q10-io-metadata-negative_height_storage_test.log": "425a621504cf80c0f4e604979085ec21167d9ad314f36a342735903396c45852",
+    "build/desktop-msvc/s4-q10-io-metadata-ready_data_admission_test.log": "5f7b2032ed7285943a7870b4843a357e306b0ad81a7d8687fa521d5eddabcb8f",
+    "build/desktop-msvc/s4-q10-io-metadata-fluid_chunk_io_test.log": "2d5a425d043b44006ed8519d5e1ffcc9d17f4cb25f0be65a2f81a0bfb0ea08d3",
+    "build/desktop-msvc/s4-q10-io-metadata-chunk_lighting_propagation_test.log": "ed3dfbe34f9da1c33e19c20dca699c5c082d505d581170dc797fd0929f4c88a7",
+    "build/desktop-msvc/s4-q10-io-metadata-light_cache_certificate_test.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build/desktop-msvc/s4-q10-io-metadata-relight_result_install_test.log": "4341d3bf06613af3c0006e388d6f88e28212c1cc81dd101552767278e820df9a",
+    "build/desktop-msvc/s4-q10-io-metadata-worldgen_scatter_block_resolve_test.log": "a9f0e2c4ed7c2d6ddfa08f094094a19cc877919f5f96b57ed18df792058c345c",
+    "build/desktop-msvc/s4-q10-io-metadata-decor_mesh_integration_test.log": "dd762f0b81b86359fbccf835453ab88c530674fd1160267b9578760df63c0e60",
+    "build/desktop-msvc/s4-q10-io-metadata-normal_shutdown_test.log": "3e6e7291c7f9af398374aa7a1638092c416faa04b3c18305c29f4baa8527ca35",
+    "build/desktop-msvc/s4-q10-io-metadata-completed_job_queue_test.log": "c7730b8fbbc3c67ea79c44795ad9bfad49bd0b3262b9a0e89f8f84299a760eb5",
+    "build/desktop-msvc/s4-q10-io-metadata-async_relight_lifecycle_test.log": "ff887f931ce0f2afd49ec37ee33fe7c5794f3a04262e935e32d72a5371043455",
+    "build/desktop-msvc/s4-q10-io-metadata-focused.json": "5b7363ff540195d061994227df971bfec48d9a9cd7d3b7394e747f7c26b38aaa",
+    "build/desktop-msvc/s4-q10-io-metadata-focused.log": "5eda3f07be04d9a3fc1238c935fa442a4a0139f51da1155829536bbd31668acf",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/route.json": "e716ffb0f229907e4aff274dbedc46c9817c912c4974baab3c2ac971d05e328a",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/smoke-verdict.json": "701a016806852e7d3f580a5bd3c5057321274d1a7b268e2bd5e30f3618fe9fc0",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/flight_sim_report.json": "e65b1801e879d1b29996c087f39a518c581f6aaa66b422de2b01755a4def9b07",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/desktop-normal-shutdown.json": "0ee1f533d0a5d650f31a7b78e6f53a6c238c27c7b0e77893d5374adc04638b3d",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/legacy-gates.json": "57848a6d4ddb5d0ab9564511abd1eaad25eccb6d6c7cdfd18e33d52e3f5537ff",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-io-metadata-flat-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-io-metadata-flat.log": "e6181f822dcdc38be66955868c5a7dc4c59047e24f772d3a56d7e93f00d77f8b",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/runner.log": "43502c3e3a1411e7bdaf59389452ea84ce0b0dc85ec691b2009021601c7d1abd",
+    "build/desktop-msvc/s4-q10-io-metadata-flat/terrain-save-probe/report.json": "147e1ebecfca0d2aead4cde9bda57cee9f46416138dc6849bec448104d62e2d5",
+    "build/desktop-msvc/s4-q10-io-metadata-full/route.json": "b5421794b0ee706f3dc7c4689cd2fd80ded4ac708263d035e60d315697b3891e",
+    "build/desktop-msvc/s4-q10-io-metadata-full/smoke-verdict.json": "57f2d8176f07e256d2856d1ff4cc710410ca44defe33d175b626577c6b0ba843",
+    "build/desktop-msvc/s4-q10-io-metadata-full/flight_sim_report.json": "809d0faf46ab420a84b9e89e67d7cdb3cff2a0c99fd1a9906c36ad48f787cacc",
+    "build/desktop-msvc/s4-q10-io-metadata-full/desktop-normal-shutdown.json": "2f0d3da9fe13398d62b509802af32761f3cd681526602ab4725a6b163424a69f",
+    "build/desktop-msvc/s4-q10-io-metadata-full/legacy-gates.json": "493363420bc3b0d9450f90d686eb8cc0b95d549f6850a379ac36e6d3cde49a0a",
+    "build/desktop-msvc/s4-q10-io-metadata-full/generation-shutdown.json": "17287a9a716bc7e4398def3cc6953558d62b027cb518f86e456ad68e5a53d595",
+    "build/desktop-msvc/s4-q10-io-metadata-full-config.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-q10-io-metadata-full.log": "5875b6278f71b80c781f95cc0fbc800a4ef8dc91774b23d7a987c40c23e7d7cd",
+    "build/desktop-msvc/s4-q10-io-metadata-full/runner.log": "42236bcf4f9c126c00be7a3147d14567bc31d2724cafb698e0848e943cbbdd86"
+  }
+}

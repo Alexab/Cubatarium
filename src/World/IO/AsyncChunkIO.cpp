@@ -134,7 +134,7 @@ struct AsyncIoWorkerLocals
   const AsyncChunkSaveRequest *save{};
   const AsyncColumnLightFlagsSaveResult *flags{};
   const std::vector<uint8_t> *encoded_bytes{};
-  const std::string *temporary_name{}, *diagnostic{};
+  const std::string *file_name{}, *temporary_name{};
   const std::filesystem::path *target_path{}, *temporary_path{};
   const IoCodecStorage *codec{};
   const IoDiskIndexStorage *disk_index{};
@@ -219,7 +219,7 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
   const auto worker_started = std::chrono::steady_clock::now();
   AsyncColumnLightFlagsSaveResult result;
   result.writeCredit = credit;
-  result.worldFolder = worldFolder;
+  result.worldFolder = std::move(worldFolder);
   result.revision = revision;
   result.worker_queue_wait_ms = std::chrono::duration<double, std::milli>(
                                     worker_started - enqueue_started)
@@ -230,7 +230,7 @@ void UAsyncChunkIO::SaveFlagsJob::operator()()
     const std::string escaped_signature = json(lightSignature).dump();
 
     const std::filesystem::path target =
-        std::filesystem::path(worldFolder) / "column_light.json";
+        std::filesystem::path(result.worldFolder) / "column_light.json";
     const std::filesystem::path temp = target.string() + ".tmp";
     const auto observe = [&](AsyncIoWorkerStage stage, size_t stack_bytes) {
       if (!owner->WorkerProbe || !owner->WorkerProbe->phase.IsOpen())
@@ -421,7 +421,7 @@ struct UAsyncChunkIO::LoadJob
   std::shared_ptr<AsyncIoCredit> credit;
   UAsyncChunkIO *owner;
   glm::ivec3 coord;
-  const std::string filePath;
+  std::string filePath;
   ChunkGenerationToken token;
   const ChunkDiskFormat format;
   const Clock::time_point submitted_at;
@@ -649,14 +649,14 @@ bool UAsyncChunkIO::RequestLoad(glm::ivec3 coord, UChunkStorageService &storage,
     return true;
   }
 
-  const std::string filePath =
+  auto filePath = format == ChunkDiskFormat::Absent ? std::string{} :
       storage.ChunkFilePath(worldFolder, coord, format);
   const ChunkStorageSettings worker_storage_settings = storage.GetSettings();
   const auto read_probe_gate = LoadReadProbeGate;
   LoadPool.Enqueue(
-      LoadJob{std::move(credit), this, coord, filePath, token, format, submitted_at, format_detect_ms,
+      LoadJob{std::move(credit), this, coord, std::move(filePath), token, format, submitted_at, format_detect_ms,
               trace_io, cancellation, demandId, registry, worker_storage_settings,
-              includeColumnLight, worldFolder, injectInvalidFrame, read_probe_gate});
+              includeColumnLight, includeColumnLight ? worldFolder : std::string{}, injectInvalidFrame, read_probe_gate});
   return true;
 }
 
@@ -670,29 +670,26 @@ struct UAsyncChunkIO::SaveReceiptsJob
   std::string worldFolder;
   uint64_t saveBatchId;
 
-  void operator()() const;
+  void operator()();
 };
 
-void UAsyncChunkIO::SaveReceiptsJob::operator()() const
+void UAsyncChunkIO::SaveReceiptsJob::operator()()
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Receipts, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
   done.writeCredit = credit;
   done.saveBatchId = saveBatchId;
   done.coord = done.groundCoord = column;
-  done.worldFolder = worldFolder;
-  done.filePath =
-      UChunkStorageService::ColumnLightFilePath(worldFolder, column);
+  done.worldFolder = std::move(worldFolder);
   // Metadata never enters the terrain disk index or changes known-AIR
   // evidence.
-  done.cleanupOnly = true;
-  done.cleanupOperation = "column_light_receipts";
+  done.operation = AsyncSaveOperation::LightReceipts;
   try
   {
     UChunkStorageService worker_storage(settings);
     done.success = receipts && WithCodecProbe(owner->WorkerProbe && owner->WorkerProbe->phase.IsOpen(),
         [&](const IoCodecProbe *probe) {
-          return worker_storage.WriteColumnLight(worldFolder, column, *receipts, nullptr, probe);
+          return worker_storage.WriteColumnLight(done.worldFolder, column, *receipts, nullptr, probe);
         }, [&](const IoCodecStorage &codec) noexcept {
           AsyncIoWorkerLocals locals(done);
           locals.codec = &codec;
@@ -752,10 +749,10 @@ struct UAsyncChunkIO::SaveJob
   uint64_t saveBatchId;
   const std::shared_ptr<AsyncSaveWriteProbeGate> probe_gate;
 
-  void operator()() const;
+  void operator()();
 };
 
-void UAsyncChunkIO::SaveJob::operator()() const
+void UAsyncChunkIO::SaveJob::operator()()
 {
   owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Entered, saveBatchId, {});
   AsyncChunkSaveRequest done;
@@ -763,14 +760,13 @@ void UAsyncChunkIO::SaveJob::operator()() const
   done.saveBatchId = saveBatchId;
   done.coord = coord;
   done.groundCoord = ground;
-  done.worldFolder = worldFolder;
-  const auto finish = [this, &done](const std::string &error = {},
+  done.worldFolder = std::move(worldFolder);
+  const auto finish = [this, &done](std::string error = {},
                                     AsyncIoWorkerLocals locals = {})
   {
     done.success = error.empty();
-    done.error = error;
+    done.error = std::move(error);
     locals.save = &done;
-    locals.diagnostic = &error;
     owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::BeforePublish,
                          saveBatchId, locals);
     owner->CompletedSaves.Push(std::move(done));
@@ -781,7 +777,6 @@ void UAsyncChunkIO::SaveJob::operator()() const
     UChunkStorageService worker_storage(settings);
     if (!snapshot)
     {
-      done.filePath = worker_storage.ChunkFilePath(worldFolder, coord, ChunkDiskFormat::Binary);
       finish("chunk_missing_before_serialize");
       return;
     }
@@ -813,20 +808,20 @@ void UAsyncChunkIO::SaveJob::operator()() const
                                saveBatchId, locals);
         });
     done.format = serialized.format;
-    done.filePath = worker_storage.ChunkFilePath(
-        worldFolder, coord, serialized.format);
+    const auto filePath = worker_storage.ChunkFilePath(done.worldFolder, coord, serialized.format);
     AsyncIoWorkerLocals locals(done);
+    locals.file_name = &filePath;
     locals.encoded_bytes = &serialized.bytes;
 
     std::error_code ec;
     std::filesystem::create_directories(
-        std::filesystem::path(done.filePath).parent_path(), ec);
+        std::filesystem::path(filePath).parent_path(), ec);
     if (ec)
     {
       finish("create_directories: " + ec.message(), locals);
       return;
     }
-    const std::string tempPath = done.filePath + ".tmp";
+    const std::string tempPath = filePath + ".tmp";
     locals.temporary_name = &tempPath;
     owner->ObserveWorker(*this, AsyncIoJobKind::Save, AsyncIoWorkerStage::Encoded, saveBatchId, locals);
     {
@@ -849,7 +844,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
     }
     ec.clear();
 #ifdef _WIN32
-    const std::filesystem::path targetPath(done.filePath);
+    const std::filesystem::path targetPath(filePath);
     const std::filesystem::path temporaryPath(tempPath);
     locals.target_path = &targetPath;
     locals.temporary_path = &temporaryPath;
@@ -857,7 +852,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
                      MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
       ec = std::error_code(GetLastError(), std::system_category());
 #else
-    std::filesystem::rename(tempPath, done.filePath, ec);
+    std::filesystem::rename(tempPath, filePath, ec);
 #endif
     if (ec)
     {
@@ -872,7 +867,7 @@ void UAsyncChunkIO::SaveJob::operator()() const
         settings.deleteLegacyJsonOnBinarySave)
     {
       const std::string legacy_json = worker_storage.ChunkFilePath(
-          worldFolder, coord, ChunkDiskFormat::Json);
+          done.worldFolder, coord, ChunkDiskFormat::Json);
       std::error_code cleanup_ec;
       std::filesystem::remove(legacy_json, cleanup_ec);
     }
@@ -935,20 +930,12 @@ bool UAsyncChunkIO::RemoveSlices::operator()(UChunkStorageService &worker_storag
                                      std::string &error) const
 {
   bool success = true;
-  for (int cy = firstCy; cy <= lastCy; ++cy)
+  for (int64_t cy = firstCy; cy <= lastCy; ++cy)
   {
-    std::string remove_error;
     if (!worker_storage.RemoveChunkSliceFromDisk(
-            folder, glm::ivec3(groundCoord.x, cy, groundCoord.z),
-            &remove_error))
-    {
+            folder, glm::ivec3(groundCoord.x, static_cast<int>(cy), groundCoord.z),
+            error.empty() ? &error : nullptr))
       success = false;
-      if (!error.empty())
-      {
-        error += "; ";
-      }
-      error += remove_error;
-    }
   }
   return success;
 }
@@ -978,8 +965,8 @@ struct UAsyncChunkIO::CleanupJob
   glm::ivec3 groundCoord;
   glm::ivec3 resultCoord;
   std::string worldFolder;
-  std::string cleanupOperation;
-  const int cleanupSliceCount;
+  AsyncSaveOperation operation;
+  const int64_t cleanupSliceCount;
   StorageCleanupJob cleanup;
   uint64_t saveBatchId;
 
@@ -994,14 +981,13 @@ void UAsyncChunkIO::CleanupJob::operator()()
   done.saveBatchId = saveBatchId;
   done.coord = resultCoord;
   done.groundCoord = groundCoord;
-  done.worldFolder = worldFolder;
-  done.cleanupOperation = std::move(cleanupOperation);
-  done.cleanupOnly = true;
+  done.worldFolder = std::move(worldFolder);
+  done.operation = operation;
   done.cleanupSliceCount = cleanupSliceCount;
   const auto started = std::chrono::steady_clock::now();
   try
   {
-    done.success = cleanup(storage, worldFolder, done.error);
+    done.success = cleanup(storage, done.worldFolder, done.error);
   }
   catch (const std::exception &e)
   {
@@ -1026,8 +1012,8 @@ UAsyncChunkIO::CleanupJob UAsyncChunkIO::MakeRemoveSlicesJob(
     UChunkStorageService &storage, const std::string &worldFolder, uint64_t saveBatchId)
 {
   const glm::ivec3 result(ground.x, firstCy, ground.z);
-  return CleanupJob{std::move(credit), this, storage, ground, result, worldFolder, "slice_range",
-                    lastCy - firstCy + 1, RemoveSlices{ground, firstCy, lastCy}, saveBatchId};
+  return CleanupJob{std::move(credit), this, storage, ground, result, worldFolder, AsyncSaveOperation::SliceRange,
+                    int64_t{lastCy} - firstCy + 1, RemoveSlices{ground, firstCy, lastCy}, saveBatchId};
 }
 
 bool UAsyncChunkIO::RequestRemoveChunkSlices(
@@ -1054,7 +1040,7 @@ bool UAsyncChunkIO::RequestRemoveTerrainColumn(
     return false;
   groundCoord.y = 0;
   EnqueueBackgroundIo(CleanupJob{std::move(credit), this, storage, groundCoord, groundCoord,
-      worldFolder, "full_column", -1, RemoveColumn{groundCoord, maxWorldY, minWorldY}, 0});
+      worldFolder, AsyncSaveOperation::FullColumn, -1, RemoveColumn{groundCoord, maxWorldY, minWorldY}, 0});
   return true;
 }
 
@@ -1131,10 +1117,10 @@ struct AsyncIoStorageInspector
       inspector.SaveResult(*locals.save);
     if (locals.flags)
       inspector.FlagsResult(*locals.flags);
-    if (locals.diagnostic)
-      inspector.Text(inspector.Result.completed_backing, *locals.diagnostic);
     if (locals.encoded_bytes)
       inspector.Buffer(sample.encoded_bytes, locals.encoded_bytes->capacity(), sizeof(uint8_t));
+    if (locals.file_name)
+      inspector.Text(sample.path_bytes, *locals.file_name);
     if (locals.temporary_name)
       inspector.Text(sample.path_bytes, *locals.temporary_name);
     if (locals.target_path)
@@ -1398,7 +1384,6 @@ private:
     Credit(job.credit);
     Borrow(Result.storage_root, &job.storage);
     Text(Result.queued_backing, job.worldFolder);
-    Text(Result.queued_backing, job.cleanupOperation);
     if (job.cleanup.target<Io::RemoveSlices>())
       Add(Result.callable_bytes, KnownCallbackRequestBytes<Io::RemoveSlices>(job.cleanup));
     else if (job.cleanup.target<Io::RemoveColumn>())
@@ -1434,8 +1419,8 @@ private:
   void SaveResult(const AsyncChunkSaveRequest &value)
   {
     Credit(value.writeCredit);
-    for (const auto *text : {&value.worldFolder, &value.filePath, &value.cleanupOperation, &value.error})
-      Text(Result.completed_backing, *text);
+    Text(Result.completed_backing, value.worldFolder);
+    Text(Result.completed_backing, value.error);
   }
 
   void FlagsResult(const AsyncColumnLightFlagsSaveResult &value)

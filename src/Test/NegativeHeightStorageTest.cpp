@@ -139,8 +139,8 @@ static void TestColumnLightPersistence(const std::filesystem::path &folder_path)
          "actual metadata write worker completes");
   const auto saves = io.DrainSaves();
   Expect(
-      saves.size() == 1 && saves[0].success && saves[0].cleanupOnly &&
-          saves[0].cleanupOperation == "column_light_receipts" &&
+      saves.size() == 1 && saves[0].success && saves[0].IsCleanup() &&
+          saves[0].operation == AsyncSaveOperation::LightReceipts &&
           storage.GetHighestChunkSliceOnDisk(folder, column) ==
               kNoChunkSliceOnDisk,
       "async metadata write completes separately from terrain slice indexing");
@@ -1256,7 +1256,7 @@ static void TestColumnSaveReceipts()
   Expect(!completion.Consume(bad), "foreign folder cannot advance this save");
   bad = done.front(); ++bad.groundCoord.x;
   Expect(!completion.Consume(bad), "foreign column cannot advance this save");
-  bad = done.front(); bad.cleanupOnly = false; bad.coord.y = ColumnSaveCompletion::Light;
+  bad = done.front(); bad.operation = AsyncSaveOperation::TerrainSlice; bad.coord.y = ColumnSaveCompletion::Light;
   Expect(!completion.Consume(bad), "terrain ACK cannot impersonate metadata completion");
   std::reverse(done.begin(), done.end());
   for (const auto &result : done)

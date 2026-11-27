@@ -653,7 +653,14 @@ private:
       return false;
     }
     // Grow a full wrapped ring from its logical Head==0 order.
-    if (Head != 0)
+    if (Head != 0 && Items.size() < Items.capacity())
+    {
+      // A reserved ring can already fit this append. Preserve its allocation
+      // and logical ordering when the occupied range wraps.
+      std::rotate(Items.begin(), Items.begin() + Head, Items.end());
+      Head = 0;
+    }
+    else if (Head != 0)
     {
       std::vector<T> linear;
       linear.reserve(Count + 1);
