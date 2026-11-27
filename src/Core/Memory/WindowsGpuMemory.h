@@ -75,17 +75,9 @@ struct OpenAdapters
       Close(entry);
   }
 };
-} // namespace windows_gpu_memory_detail
-#endif
-
-// Reports process-attributed WDDM usage after opening only adapter query handles.
-// Each physical node and segment is sampled separately. These charges are
-// separate observations from engine object payload and PSAPI process memory.
-inline WindowsGpuMemory ReadWindowsGpuMemory()
+inline WindowsGpuMemory ReadForProcess(HANDLE process)
 {
   WindowsGpuMemory result;
-#if CUTUM_WINDOWS_GPU_MEMORY_API
-  using namespace windows_gpu_memory_detail;
   const Gdi32 gdi;
   if (!gdi.module)
     return result;
@@ -112,7 +104,6 @@ inline WindowsGpuMemory ReadWindowsGpuMemory()
     return result;
   result.complete = true;
   result.adapters.reserve(request.NumAdapters);
-  const auto process = GetCurrentProcess();
   for (std::uint32_t i = 0; i < request.NumAdapters; ++i)
   {
     auto &entry = handles.entries[i];
@@ -166,7 +157,19 @@ inline WindowsGpuMemory ReadWindowsGpuMemory()
         *adapter.physicalCountStatus == 0 && adapter.physicalAdapterCount != 0 &&
         adapter.closeStatus && *adapter.closeStatus == 0;
   }
-#endif
   return result;
+}
+} // namespace windows_gpu_memory_detail
+#endif
+
+// Each physical node and segment is sampled separately. These charges are
+// separate observations from engine object payload and PSAPI process memory.
+inline WindowsGpuMemory ReadWindowsGpuMemory()
+{
+#if CUTUM_WINDOWS_GPU_MEMORY_API
+  return windows_gpu_memory_detail::ReadForProcess(GetCurrentProcess());
+#else
+  return {};
+#endif
 }
 } // namespace cutum

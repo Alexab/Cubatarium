@@ -14,6 +14,7 @@
 #include "Render/Lighting/SectionLightBindingTable.h"
 #include "Render/Lighting/SectionLightDrawTable.h"
 #include "Test/Native/WindowsGpuMemoryFixture.h"
+#include "Test/Native/WindowsGpuProcessLifetimeFixture.h"
 #include <GLFW/glfw3.h>
 #endif
 #include "Render/Mesh/ChunkMeshCache.h"
@@ -9120,6 +9121,24 @@ static void TestTerrainGpuBuffers(const char *path)
 
 int main(int argc, char **argv)
 {
+#if defined(SECTION_LIGHT_BINDING_DRIVER) && CUTUM_WINDOWS_GPU_MEMORY_API
+  if ((argc == 3 && std::string(argv[1]) == "--windows-gpu-memory-process") ||
+      (argc == 4 && std::string(argv[1]) == "--windows-gpu-memory-process-child"))
+  {
+    try
+    {
+      if (argc == 3)
+        return cutum::windows_gpu_process_fixture::Run(argv[2]);
+      return cutum::windows_gpu_process_fixture::RunChild(
+          reinterpret_cast<HANDLE>(std::stoull(argv[2])), reinterpret_cast<HANDLE>(std::stoull(argv[3])));
+    }
+    catch (const std::exception &error)
+    {
+      std::cerr << error.what() << '\n';
+      return 1;
+    }
+  }
+#endif
   if(argc==3 && std::string(argv[1])=="--catalog-queue-owners"){
     TestCatalogMeshQueueOwners(argv[2]);return 0;
   }

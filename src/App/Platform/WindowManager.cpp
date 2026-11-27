@@ -2334,7 +2334,13 @@ void UWindowManager::Shutdown(DesktopShutdownCheckpoint *checkpoint)
   }
 
   if (checkpoint)
+  {
     checkpoint->contextReleased = checkpoint->contextBefore && !glfwGetCurrentContext();
+#ifdef _WIN32
+    if (checkpoint->contextReleased && !wglGetCurrentContext())
+      checkpoint->gpuAfterWindowDestroy = ReadWindowsGpuMemory();
+#endif
+  }
   glfwTerminate();
   IsInitialized = false;
   IsRunning = false;

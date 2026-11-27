@@ -13,6 +13,7 @@ struct DesktopShutdownCheckpoint
 {
   WindowsTlsVectorHistory tlsHistory;
   WindowsMemoryCheckpoint beforeWindow, afterWindow, beforeOwners, afterOwners, afterContext;
+  std::optional<WindowsGpuMemory> gpuAfterWindowDestroy;
   TerrainGpuBufferSnapshot buffersBefore, buffersAfter;
   RenderImageSnapshot imagesBefore, imagesAfter;
   std::array<bool, DesktopShutdownOwnerNames.size()> ownersBefore{}, ownersRetired{};
@@ -52,6 +53,8 @@ inline nlohmann::json DescribeDesktopShutdown(const DesktopShutdownCheckpoint &r
       {"before_window_initialization", memory(row.beforeWindow)},
       {"after_window_initialization", memory(row.afterWindow)},
       {"before_owner_release", memory(row.beforeOwners)}, {"after_owner_release", memory(row.afterOwners)},
+      {"windows_gpu_memory_after_window_destroy", row.gpuAfterWindowDestroy ?
+          DescribeWindowsGpuMemory(*row.gpuAfterWindowDestroy) : nlohmann::json(nullptr)},
       {"after_context_destroy", memory(row.afterContext)}, {"buffers_before", buffers(row.buffersBefore)},
       {"buffers_after", buffers(row.buffersAfter)}, {"images_before", DescribeRenderImages(row.imagesBefore)},
       {"images_after", DescribeRenderImages(row.imagesAfter)}, {"whole_runtime_complete", false}};
