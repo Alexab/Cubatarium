@@ -5,7 +5,7 @@
 #include "Creatures/Visual/CreatureBonePaletteGpu.h"
 #include "App/Core.h"
 #include "App/Application.h"
-#include "App/Platform/WindowsGpuMemoryReport.h"
+#include "App/Platform/WindowsMemoryCheckpoint.h"
 #include "Render/Engine/GeometryEngine.h"
 #include "Render/Engine/RenderImageStorageReport.h"
 #include "Render/Engine/TerrainGpuBufferReport.h"
@@ -35,7 +35,6 @@
 #include "Core/Memory/WindowsCrtLocaleStorage.h"
 #include "Core/Memory/WindowsCrtThreadStorage.h"
 #include "Core/Memory/WindowsExecutableTlsStorage.h"
-#include "Core/Memory/WindowsProcessMemory.h"
 #include "Core/Memory/NativeThreadStack.h"
 #include "Items/ItemSceneCursor.h"
 #include "Creatures/Visual/BoneSkeleton/BoneSkeletonCubeMeshBuilder.h"
@@ -502,8 +501,8 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {"resize_pointer_tables_upper", crtFiles.resizePointerTablesUpper}, {"requested_heap_upper", crtFiles.requestedHeapUpper},
       {"process_handles", crtFiles.processHandles}, {"process_handles_observed", crtFiles.processHandlesObserved},
       {"whole_runtime_complete", false}};
-  const auto memory = ReadWindowsProcessMemory();
-  const auto driverMemory = ReadWindowsGpuMemory();
+  const auto checkpoint = ReadWindowsMemoryCheckpoint();
+  const auto &memory = checkpoint.before;
   report["windows_process_resources"] = {
       {"schema", "windows-process-resources.v1"},
       {"status", memory.observed && crtFiles.processHandlesObserved ? "PASS" : "UNSUPPORTED"},
@@ -560,7 +559,8 @@ inline void WriteCatalogRuntimeDomain(const UCore &core,const UApplication &appl
       {&terrainBuffers, &guiBuffers, &previewBuffers, &iconReadbacks, &actorBuffers, &geometryBuffers, &effectsBuffers, &computeBuffers});
   application.InspectRenderImages(renderImages);
   report["render_images"] = DescribeRenderImages(renderImages.Read());
-  report["windows_gpu_memory"] = DescribeWindowsGpuMemory(driverMemory);
+  report["windows_gpu_memory"] = DescribeWindowsGpuMemory(checkpoint.driver);
+  report["windows_memory_checkpoint"] = DescribeWindowsMemoryCheckpoint(checkpoint);
   const auto itemScenes = GetItemSceneTraversals();
   const auto &scene = itemScenes.largest;
   report["item_scene_traversal"] = {

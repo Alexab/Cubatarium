@@ -3416,9 +3416,11 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
           geometry_engine->InspectRenderImages(renderImages);
           application->InspectRenderImages(renderImages);
           report << "  \"render_images_after_loop\": " << DescribeRenderImages(renderImages.Read()).dump() << ",\n";
-          const auto process = ReadWindowsProcessMemory();
-          const auto driver = ReadWindowsGpuMemory();
-          report << "  \"windows_gpu_memory_after_loop\": " << DescribeWindowsGpuMemory(driver).dump() << ",\n";
+          const auto checkpoint = ReadWindowsMemoryCheckpoint();
+          const auto &process = checkpoint.before;
+          report << "  \"windows_gpu_memory_after_loop\": " << DescribeWindowsGpuMemory(checkpoint.driver).dump() << ",\n";
+          report << "  \"windows_memory_checkpoint_after_loop\": "
+                 << DescribeWindowsMemoryCheckpoint(checkpoint).dump() << ",\n";
           report << "  \"windows_process_memory_after_loop\": " << nlohmann::json{
               {"observed", process.observed}, {"working_set_bytes", process.workingSet},
               {"peak_working_set_bytes", process.peakWorkingSet}, {"private_commit_bytes", process.privateCommit},
@@ -3555,6 +3557,16 @@ int RunFlightSim(IUPlatformPaths &paths, const FlightSimOptions &options)
     std::cout << "flight-sim: report written path=" << report_path.string()
               << " — shutting down (fast)" << std::endl;
     world->PrepareForShutdownFast();
+    if (native_thread_stack_detail::Enabled())
+    {
+      const auto checkpoint = ReadWindowsMemoryCheckpoint();
+      std::ofstream memoryReport(report_path.parent_path() / "flight-memory-after-shutdown-request.json");
+      memoryReport << nlohmann::json{{"phase", "after_fast_world_shutdown_request"},
+          {"checkpoint", DescribeWindowsMemoryCheckpoint(checkpoint)},
+          {"windows_gpu_memory", DescribeWindowsGpuMemory(checkpoint.driver)}}.dump(2) << '\n';
+      if (!memoryReport)
+        CubatariumLogError("FlightSim", "could not write the process memory checkpoint after the world shutdown request");
+    }
     // Flight-sim exits with std::_Exit to avoid unbounded worker joins. Flush
     // the app log after cancellation so the final audit/shutdown records are
     // persisted even though normal logging destructors will not run.

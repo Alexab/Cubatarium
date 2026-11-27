@@ -9153,8 +9153,8 @@ int main(int argc, char **argv)
       terrain_buffers_driver ||
       (argc == 2 && std::string(argv[1]) == "--light-binding-driver"))
   {
-    const auto cold_gpu_memory = gpu_memory_driver ? cutum::ReadWindowsGpuMemory() : cutum::WindowsGpuMemory{};
-    if (gpu_memory_driver && !cold_gpu_memory.apiAvailable)
+    const auto cold_gpu_memory = gpu_memory_driver ? cutum::ReadWindowsMemoryCheckpoint() : cutum::WindowsMemoryCheckpoint{};
+    if (gpu_memory_driver && !cold_gpu_memory.driver.apiAvailable)
       return 77;
     if (!glfwInit())
       return 77;

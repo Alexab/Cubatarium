@@ -1,0 +1,1984 @@
+{
+  "schema": "s4-e12-w72-windows-memory-checkpoint.v1",
+  "status": "SCOPED_WINDOWS_MEMORY_CHECKPOINT_PASS_E12_OPEN",
+  "baseline_commit": "c0360baf66e6f00f1242481e7756ee2c1220c52b",
+  "prior_certificate": "S4_02_E12_W71_FLIGHT_CAPTURE_OUTPUT_STORAGE_CERTIFICATE_2026_11_27.json",
+  "summary": "W72 samples PSAPI private and shared commit and private working set before and after a bounded address-space walk and per-node WDDM queries, retains each source at menu, first in-game, after the loop and after the fast world shutdown request, and records the duration and process identity. The held-range fixture verifies guard pages, private reserve/commit/decommit, shared mapping and copy-on-write, a truncated walk and both release paths. A Release OpenGL driver fixture verifies real texture contents and compares the same observations before texture allocation, after texture deletion and after context retirement. All 46 Release groups, seven related cases and scoped Flat and Full startup checks pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W72. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. Next, take before/after checkpoints along the existing normal desktop shutdown path and verify application/context retirement, then account unresolved filesystem and platform owners against those phases. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Windows Release process and driver observations at named lifecycle checkpoints",
+  "composition_rule": "The address walk partitions virtual ranges by state and original mapping type. PSAPI records private and shared commitment and resident working sets around that walk and the WDDM query. The readings are sequential. The driver and engine logical store readings retain their own dimensions. Their overlaps and per-owner physical charges are unassigned.",
+  "remaining_measurements": [
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "TLS gaps and complete native, process, performance and memory matrix",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualquery",
+    "https://learn.microsoft.com/en-us/windows/win32/api/psapi/ns-psapi-process_memory_counters_ex2",
+    "https://learn.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-mapviewoffile",
+    "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_queryvideomemoryinfo"
+  ],
+  "cpu_fixture": {
+    "authored_extent_bytes": 8388608,
+    "baseline": {
+      "extended_observed": true,
+      "observed": true,
+      "peak_private_commit_bytes": 3903488,
+      "peak_working_set_bytes": 8253440,
+      "private_commit_bytes": 2609152,
+      "private_working_set_bytes": 1474560,
+      "shared_commit_bytes": 3059712,
+      "working_set_bytes": 7225344
+    },
+    "committed": {
+      "committed_bytes": 8388608,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 4096,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 16777216,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 8388608,
+      "range_bytes": 16777216,
+      "region_limit_reached": false,
+      "regions": 3,
+      "reserved_bytes": 8388608,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "copy_on_write": {
+      "committed_bytes": 8388608,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 8388608,
+      "mapped_committed_bytes": 8388608,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 8388608,
+      "region_limit_reached": false,
+      "regions": 2,
+      "reserved_bytes": 0,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "decommitted": {
+      "committed_bytes": 0,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 16777216,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 16777216,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 16777216,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "full_address_space": {
+      "committed_bytes": 32010240,
+      "free_bytes": 140733096271872,
+      "guard_bytes_within_committed": 49152,
+      "image_committed_bytes": 27095040,
+      "inspected_bytes": 140737488224256,
+      "mapped_committed_bytes": 3883008,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 1032192,
+      "range_bytes": 140737488224256,
+      "region_limit_reached": false,
+      "regions": 216,
+      "reserved_bytes": 4359942144,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "image": {
+      "committed_bytes": 4096,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 4096,
+      "inspected_bytes": 4096,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 4096,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 0,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "mapped": {
+      "committed_bytes": 8388608,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 8388608,
+      "mapped_committed_bytes": 8388608,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 8388608,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 0,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "page_bytes": 4096,
+    "private_live": {
+      "extended_observed": true,
+      "observed": true,
+      "peak_private_commit_bytes": 11014144,
+      "peak_working_set_bytes": 15618048,
+      "private_commit_bytes": 11014144,
+      "private_working_set_bytes": 9863168,
+      "shared_commit_bytes": 3059712,
+      "working_set_bytes": 15613952
+    },
+    "private_retired": {
+      "extended_observed": true,
+      "observed": true,
+      "peak_private_commit_bytes": 11014144,
+      "peak_working_set_bytes": 15618048,
+      "private_commit_bytes": 2609152,
+      "private_working_set_bytes": 1474560,
+      "shared_commit_bytes": 3059712,
+      "working_set_bytes": 7229440
+    },
+    "released": {
+      "committed_bytes": 0,
+      "free_bytes": 16777216,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 16777216,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 16777216,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 0,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "reserved": {
+      "committed_bytes": 0,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 16777216,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 16777216,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 16777216,
+      "status": "PASS",
+      "win32_error": 0
+    },
+    "shared_live": {
+      "extended_observed": true,
+      "observed": true,
+      "peak_private_commit_bytes": 11014144,
+      "peak_working_set_bytes": 15622144,
+      "private_commit_bytes": 2625536,
+      "private_working_set_bytes": 1474560,
+      "shared_commit_bytes": 11448320,
+      "working_set_bytes": 15618048
+    },
+    "shared_retired": {
+      "extended_observed": true,
+      "observed": true,
+      "peak_private_commit_bytes": 11030528,
+      "peak_working_set_bytes": 15626240,
+      "private_commit_bytes": 2609152,
+      "private_working_set_bytes": 1474560,
+      "shared_commit_bytes": 3059712,
+      "working_set_bytes": 7233536
+    },
+    "status": "PASS",
+    "truncated": {
+      "committed_bytes": 4096,
+      "free_bytes": 0,
+      "guard_bytes_within_committed": 4096,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 4096,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 4096,
+      "range_bytes": 16777216,
+      "region_limit_reached": true,
+      "regions": 1,
+      "reserved_bytes": 0,
+      "status": "PARTIAL",
+      "win32_error": 0
+    },
+    "unmapped": {
+      "committed_bytes": 0,
+      "free_bytes": 8388608,
+      "guard_bytes_within_committed": 0,
+      "image_committed_bytes": 0,
+      "inspected_bytes": 8388608,
+      "mapped_committed_bytes": 0,
+      "noaccess_bytes_within_committed": 0,
+      "other_committed_bytes": 0,
+      "private_committed_bytes": 0,
+      "range_bytes": 8388608,
+      "region_limit_reached": false,
+      "regions": 1,
+      "reserved_bytes": 0,
+      "status": "PASS",
+      "win32_error": 0
+    }
+  },
+  "driver_fixture": {
+    "cold": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "context_retired": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 85471232,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "context_retired_usage_bytes": 85471232,
+    "gl_renderer": "AMD Radeon (TM) Graphics",
+    "live": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 152846336,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "live_usage_bytes": 152846336,
+    "observed_adapter": {
+      "luid_high": 0,
+      "luid_low": 32939,
+      "physical_adapter_index": 0,
+      "segment": "local"
+    },
+    "process_checkpoints": {
+      "cold": {
+        "address_space": {
+          "committed_bytes": 48513024,
+          "free_bytes": 140733079605248,
+          "guard_bytes_within_committed": 49152,
+          "image_committed_bytes": 44154880,
+          "inspected_bytes": 140737488224256,
+          "mapped_committed_bytes": 3883008,
+          "noaccess_bytes_within_committed": 0,
+          "other_committed_bytes": 0,
+          "private_committed_bytes": 475136,
+          "range_bytes": 140737488224256,
+          "region_limit_reached": false,
+          "regions": 239,
+          "reserved_bytes": 4360105984,
+          "status": "PASS",
+          "win32_error": 0
+        },
+        "after": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 13316096,
+          "peak_working_set_bytes": 7016448,
+          "private_commit_bytes": 13316096,
+          "private_working_set_bytes": 1163264,
+          "shared_commit_bytes": 3059712,
+          "working_set_bytes": 7012352
+        },
+        "before": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 13316096,
+          "peak_working_set_bytes": 6971392,
+          "private_commit_bytes": 13316096,
+          "private_working_set_bytes": 1163264,
+          "shared_commit_bytes": 3059712,
+          "working_set_bytes": 6967296
+        },
+        "driver_complete": true,
+        "elapsed_us": 721,
+        "process_id": 11360,
+        "schema": "windows-memory-checkpoint.v1",
+        "status": "PASS",
+        "whole_runtime_complete": false
+      },
+      "context_retired": {
+        "address_space": {
+          "committed_bytes": 298573824,
+          "free_bytes": 140732691562496,
+          "guard_bytes_within_committed": 110592,
+          "image_committed_bytes": 128942080,
+          "inspected_bytes": 140737488224256,
+          "mapped_committed_bytes": 5353472,
+          "noaccess_bytes_within_committed": 4096,
+          "other_committed_bytes": 0,
+          "private_committed_bytes": 164278272,
+          "range_bytes": 140737488224256,
+          "region_limit_reached": false,
+          "regions": 599,
+          "reserved_bytes": 4498087936,
+          "status": "PASS",
+          "win32_error": 0
+        },
+        "after": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 180633600,
+          "private_working_set_bytes": 92491776,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 111333376
+        },
+        "before": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 180633600,
+          "private_working_set_bytes": 92491776,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 111333376
+        },
+        "driver_complete": true,
+        "elapsed_us": 2861,
+        "process_id": 11360,
+        "schema": "windows-memory-checkpoint.v1",
+        "status": "PASS",
+        "whole_runtime_complete": false
+      },
+      "live": {
+        "address_space": {
+          "committed_bytes": 417148928,
+          "free_bytes": 140732588433408,
+          "guard_bytes_within_committed": 122880,
+          "image_committed_bytes": 128942080,
+          "inspected_bytes": 140737488224256,
+          "mapped_committed_bytes": 5353472,
+          "noaccess_bytes_within_committed": 77824,
+          "other_committed_bytes": 0,
+          "private_committed_bytes": 282853376,
+          "range_bytes": 140737488224256,
+          "region_limit_reached": false,
+          "regions": 600,
+          "reserved_bytes": 4482641920,
+          "status": "PASS",
+          "win32_error": 0
+        },
+        "after": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 299405312,
+          "private_working_set_bytes": 189870080,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 208625664
+        },
+        "before": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 299405312,
+          "private_working_set_bytes": 189870080,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 208625664
+        },
+        "driver_complete": true,
+        "elapsed_us": 4315,
+        "process_id": 11360,
+        "schema": "windows-memory-checkpoint.v1",
+        "status": "PASS",
+        "whole_runtime_complete": false
+      },
+      "texture_deleted": {
+        "address_space": {
+          "committed_bytes": 350035968,
+          "free_bytes": 140732655554560,
+          "guard_bytes_within_committed": 122880,
+          "image_committed_bytes": 128942080,
+          "inspected_bytes": 140737488224256,
+          "mapped_committed_bytes": 5353472,
+          "noaccess_bytes_within_committed": 77824,
+          "other_committed_bytes": 0,
+          "private_committed_bytes": 215740416,
+          "range_bytes": 140737488224256,
+          "region_limit_reached": false,
+          "regions": 596,
+          "reserved_bytes": 4482633728,
+          "status": "PASS",
+          "win32_error": 0
+        },
+        "after": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 232165376,
+          "private_working_set_bytes": 122757120,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 141553664
+        },
+        "before": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 299405312,
+          "peak_working_set_bytes": 209928192,
+          "private_commit_bytes": 232165376,
+          "private_working_set_bytes": 122757120,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 141553664
+        },
+        "driver_complete": true,
+        "elapsed_us": 4018,
+        "process_id": 11360,
+        "schema": "windows-memory-checkpoint.v1",
+        "status": "PASS",
+        "whole_runtime_complete": false
+      },
+      "warm": {
+        "address_space": {
+          "committed_bytes": 209977344,
+          "free_bytes": 140732790038528,
+          "guard_bytes_within_committed": 122880,
+          "image_committed_bytes": 128942080,
+          "inspected_bytes": 140737488224256,
+          "mapped_committed_bytes": 5353472,
+          "noaccess_bytes_within_committed": 77824,
+          "other_committed_bytes": 0,
+          "private_committed_bytes": 75681792,
+          "range_bytes": 140737488224256,
+          "region_limit_reached": false,
+          "regions": 592,
+          "reserved_bytes": 4488208384,
+          "status": "PASS",
+          "win32_error": 0
+        },
+        "after": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 91832320,
+          "peak_working_set_bytes": 68460544,
+          "private_commit_bytes": 91832320,
+          "private_working_set_bytes": 50077696,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 68456448
+        },
+        "before": {
+          "extended_observed": true,
+          "observed": true,
+          "peak_private_commit_bytes": 91832320,
+          "peak_working_set_bytes": 68456448,
+          "private_commit_bytes": 91832320,
+          "private_working_set_bytes": 50077696,
+          "shared_commit_bytes": 39133184,
+          "working_set_bytes": 68452352
+        },
+        "driver_complete": true,
+        "elapsed_us": 3348,
+        "process_id": 11360,
+        "schema": "windows-memory-checkpoint.v1",
+        "status": "PASS",
+        "whole_runtime_complete": false
+      }
+    },
+    "schema": "windows-gpu-memory-fixture.v1",
+    "status": "PASS",
+    "texture_bytes": 67108864,
+    "texture_deleted": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 85471232,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "texture_deleted_usage_bytes": 85471232,
+    "texture_retired": true,
+    "verified_pixels": 2,
+    "warm": {
+      "adapters": [
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 32939,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 8823762944,
+                "budget_bytes": 17379090432,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 13119488,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": false,
+          "type_ntstatus": 0,
+          "video_present_sources": 5
+        },
+        {
+          "close_ntstatus": 0,
+          "luid_high": 0,
+          "luid_low": 36471,
+          "nodes": [
+            {
+              "local": {
+                "available_for_reservation_bytes": 7758532608,
+                "budget_bytes": 15248629760,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "non_local": {
+                "available_for_reservation_bytes": 0,
+                "budget_bytes": 0,
+                "current_reservation_bytes": 0,
+                "current_usage_bytes": 0,
+                "ntstatus": 0,
+                "observed": true
+              },
+              "physical_adapter_index": 0
+            }
+          ],
+          "physical_adapter_count": 1,
+          "physical_count_ntstatus": 0,
+          "render_supported": true,
+          "software_device": true,
+          "type_ntstatus": 0,
+          "video_present_sources": 0
+        }
+      ],
+      "capacity_ntstatus": 0,
+      "enumeration_ntstatus": 0,
+      "schema": "windows-wddm-process-gpu-memory.v1",
+      "scope": "current_process_per_physical_adapter_and_segment",
+      "status": "PASS",
+      "whole_runtime_complete": false
+    },
+    "warm_usage_bytes": 13119488
+  },
+  "native": {
+    "flat": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 796,
+      "phases": {
+        "menu": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 362803200,
+              "free_bytes": 140732662517760,
+              "guard_bytes_within_committed": 245760,
+              "image_committed_bytes": 140980224,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 925696,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 216469504,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 1149,
+              "reserved_bytes": 4462903296,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 237035520,
+              "peak_working_set_bytes": 199979008,
+              "private_commit_bytes": 233439232,
+              "private_working_set_bytes": 163893248,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 190021632
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 237035520,
+              "peak_working_set_bytes": 199979008,
+              "private_commit_bytes": 233439232,
+              "private_working_set_bytes": 163893248,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 190005248
+            },
+            "driver_complete": true,
+            "elapsed_us": 8809,
+            "process_id": 9016,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 69017600,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "in-game": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1112227840,
+              "free_bytes": 140731724587008,
+              "guard_bytes_within_committed": 393216,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 1679360,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 965844992,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 1808,
+              "reserved_bytes": 4651409408,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 984567808,
+              "peak_working_set_bytes": 422699008,
+              "private_commit_bytes": 984567808,
+              "private_working_set_bytes": 390950912,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 421167104
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 984567808,
+              "peak_working_set_bytes": 422699008,
+              "private_commit_bytes": 984567808,
+              "private_working_set_bytes": 390950912,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 421163008
+            },
+            "driver_complete": true,
+            "elapsed_us": 12272,
+            "process_id": 9016,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 250236928,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "after-loop": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1352269824,
+              "free_bytes": 140731547136000,
+              "guard_bytes_within_committed": 405504,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 3895296,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 1205886976,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 2791,
+              "reserved_bytes": 4588818432,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1224970240,
+              "peak_working_set_bytes": 547504128,
+              "private_commit_bytes": 1224970240,
+              "private_working_set_bytes": 502292480,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 533778432
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1224970240,
+              "peak_working_set_bytes": 547504128,
+              "private_commit_bytes": 1224970240,
+              "private_working_set_bytes": 502292480,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 533778432
+            },
+            "driver_complete": true,
+            "elapsed_us": 11675,
+            "process_id": 9016,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 274354176,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "after-shutdown-request": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1356861440,
+              "free_bytes": 140731551330304,
+              "guard_bytes_within_committed": 356352,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 3878912,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 1210478592,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 2767,
+              "reserved_bytes": 4580032512,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1233231872,
+              "peak_working_set_bytes": 547504128,
+              "private_commit_bytes": 1229553664,
+              "private_working_set_bytes": 506773504,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 538263552
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1233231872,
+              "peak_working_set_bytes": 547504128,
+              "private_commit_bytes": 1229553664,
+              "private_working_set_bytes": 506773504,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 538263552
+            },
+            "driver_complete": true,
+            "elapsed_us": 10914,
+            "process_id": 9016,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 274354176,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        }
+      }
+    },
+    "full": {
+      "startup_aggregate": "UNTESTED",
+      "flight_frames": 503,
+      "phases": {
+        "menu": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 370798592,
+              "free_bytes": 140732646023168,
+              "guard_bytes_within_committed": 245760,
+              "image_committed_bytes": 140980224,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 1097728,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 224464896,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 1254,
+              "reserved_bytes": 4471402496,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 244604928,
+              "peak_working_set_bytes": 211611648,
+              "private_commit_bytes": 241446912,
+              "private_working_set_bytes": 175923200,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 202067968
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 244604928,
+              "peak_working_set_bytes": 211611648,
+              "private_commit_bytes": 241446912,
+              "private_working_set_bytes": 175923200,
+              "shared_commit_bytes": 39133184,
+              "working_set_bytes": 202051584
+            },
+            "driver_complete": true,
+            "elapsed_us": 5028,
+            "process_id": 11536,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 69017600,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "in-game": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1479577600,
+              "free_bytes": 140731549413376,
+              "guard_bytes_within_committed": 417792,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 7094272,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 1333194752,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 4375,
+              "reserved_bytes": 4459233280,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1352347648,
+              "peak_working_set_bytes": 698241024,
+              "private_commit_bytes": 1352347648,
+              "private_working_set_bytes": 665616384,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 696545280
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1352347648,
+              "peak_working_set_bytes": 698241024,
+              "private_commit_bytes": 1352347648,
+              "private_working_set_bytes": 665616384,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 696541184
+            },
+            "driver_complete": true,
+            "elapsed_us": 15365,
+            "process_id": 11536,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 354578432,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "after-loop": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1576263680,
+              "free_bytes": 140731379585024,
+              "guard_bytes_within_committed": 405504,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 4407296,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 1429880832,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 4015,
+              "reserved_bytes": 4532375552,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1480642560,
+              "peak_working_set_bytes": 747827200,
+              "private_commit_bytes": 1449385984,
+              "private_working_set_bytes": 659824640,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 691204096
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1480642560,
+              "peak_working_set_bytes": 747827200,
+              "private_commit_bytes": 1449385984,
+              "private_working_set_bytes": 659824640,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 691204096
+            },
+            "driver_complete": true,
+            "elapsed_us": 14905,
+            "process_id": 11536,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 407007232,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        },
+        "after-shutdown-request": {
+          "checkpoint": {
+            "address_space": {
+              "committed_bytes": 1577594880,
+              "free_bytes": 140731383779328,
+              "guard_bytes_within_committed": 356352,
+              "image_committed_bytes": 141029376,
+              "inspected_bytes": 140737488224256,
+              "mapped_committed_bytes": 5353472,
+              "noaccess_bytes_within_committed": 4407296,
+              "other_committed_bytes": 0,
+              "private_committed_bytes": 1431212032,
+              "range_bytes": 140737488224256,
+              "region_limit_reached": false,
+              "regions": 3924,
+              "reserved_bytes": 4526850048,
+              "status": "PASS",
+              "win32_error": 0
+            },
+            "after": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1480642560,
+              "peak_working_set_bytes": 747827200,
+              "private_commit_bytes": 1450708992,
+              "private_working_set_bytes": 660975616,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 692383744
+            },
+            "before": {
+              "extended_observed": true,
+              "observed": true,
+              "peak_private_commit_bytes": 1480642560,
+              "peak_working_set_bytes": 747827200,
+              "private_commit_bytes": 1450708992,
+              "private_working_set_bytes": 660975616,
+              "shared_commit_bytes": 40181760,
+              "working_set_bytes": 692383744
+            },
+            "driver_complete": true,
+            "elapsed_us": 14500,
+            "process_id": 11536,
+            "schema": "windows-memory-checkpoint.v1",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          },
+          "windows_gpu_memory": {
+            "adapters": [
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 32939,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 8823762944,
+                      "budget_bytes": 17379090432,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 407007232,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": false,
+                "type_ntstatus": 0,
+                "video_present_sources": 5
+              },
+              {
+                "close_ntstatus": 0,
+                "luid_high": 0,
+                "luid_low": 36471,
+                "nodes": [
+                  {
+                    "local": {
+                      "available_for_reservation_bytes": 7758532608,
+                      "budget_bytes": 15248629760,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "non_local": {
+                      "available_for_reservation_bytes": 0,
+                      "budget_bytes": 0,
+                      "current_reservation_bytes": 0,
+                      "current_usage_bytes": 0,
+                      "ntstatus": 0,
+                      "observed": true
+                    },
+                    "physical_adapter_index": 0
+                  }
+                ],
+                "physical_adapter_count": 1,
+                "physical_count_ntstatus": 0,
+                "render_supported": true,
+                "software_device": true,
+                "type_ntstatus": 0,
+                "video_present_sources": 0
+              }
+            ],
+            "capacity_ntstatus": 0,
+            "enumeration_ntstatus": 0,
+            "schema": "windows-wddm-process-gpu-memory.v1",
+            "scope": "current_process_per_physical_adapter_and_segment",
+            "status": "PASS",
+            "whole_runtime_complete": false
+          }
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "0f99a9f4fa2cc4b4a9de2f305d440e8dfc30e0a33c66d98a50864443135aef4a",
+  "source_sha256_raw": {
+    "src/App/Platform/AppRunner.cpp": "62c8591904c8f564f214455285b5884239f69d773a7a2d7561c0dadf2f2de36f",
+    "src/App/Platform/CatalogRuntimeDomainProbe.h": "00523296a285aac84bcb0ae7aead9e58de4dc5805968f9e006a0189a770735b6",
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "32eaabdde13416d9605e4fa55bc5181168f64b113556b833db8483fe0f046d9f",
+    "src/Core/Memory/WindowsAddressSpace.h": "313c0cfcf3739cbb9c7eb6752a6cece34c94e857f77952d3c6c9bfaf55629793",
+    "src/Core/Memory/WindowsProcessMemory.h": "c7cc85b75e9e4dd08f4d334e4ab24f16038bf241343ad5bd590af09feb9e063e",
+    "src/Test/AsyncIoStorageTest.cpp": "aab3c9eb42bf76a32d67846b4dda79913a259a5b379a1042e222ed8291551017",
+    "src/Test/DecorMeshIntegrationTest.cpp": "e8538cc3390f70f06140ccc0a87197e70f89879cdefb054cc05036b3d8aed43d",
+    "src/Test/Native/WindowsGpuMemoryFixture.h": "fed9e584589c58ac21a72dded0664eeb5c3165aa363353cc7b31764f2525df80",
+    "src/Test/WindowsAddressSpaceFixture.h": "5934a2788e1ec76d8bb9e59eb9c2453a9a73e1eabda257666565c168d3b18088"
+  },
+  "desktop_exe_sha256": "6fd155b5e492677ea43405119db4749bfc7a6c11cc959a66bfabc44a46866f7e",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-provenance.json": "48eb37acdc776649f569437c8e972a0ef68a04ff88a2c17b66709ea6256a2318",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-frozen-source.json": "eba2430c620be994f23a10767ed3ec999ca66bb83448c75e9c11435cf88bb31e",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-regressions.json": "78c47749c71cea674b2032950316877e204cc3906929605e5328c12b4e1a8fab",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-focused.json": "b457875ca3f0df9380318b6c207ce8f73074b881f135fde11b3d52c01e508667",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-driver.json": "e65ef9d5721e4314b9e0565b87cda396ab3d79cd151a3b89d997fdb55508e362",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-io-owners.json": "8d33ae081a9c0b754fc72dc59b68591335292e52ef65618123a46b72541a7107",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/smoke-verdict.json": "83a21d0cbffc28ef3ef2e72bd51d0b77d248ff00294212ba7dfc0cad15249d5b",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/flight_sim_report.json": "69bc152a7039a4f425ec18922c68e847712ce62e0cb5dbf92eab048411135a8e",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/flight-memory-after-shutdown-request.json": "ed904195ba5b5238c01c3ed6387a30e59be6de9d663076b96cea8dfb6359a596",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/owner-domain/flight-menu.json": "0e4581cab018bdab2338729dee00156aa3d6c95c77fbfd325b10d993b6e56aab",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-flat-native/owner-domain/flight-in-game.json": "32967b1d08b0b3a738565e8065c2895df0ef30d08ed76569b47c57f4b8f4f7cd",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-native/smoke-verdict.json": "43f5528d6a102dbc6ecaf6a16e2c9aad7318ff28ee2991a1bc113c4ba06751c4",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-native/flight_sim_report.json": "1c43609e9cc7deb5b3b53a2d179bc3240c3b0bd0602e301619eacdf2336a0a17",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-native/flight-memory-after-shutdown-request.json": "2551038ee1ff94b0dde3d59686123bd8d3caef123743654b7d97562f4852163c",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-native/owner-domain/flight-menu.json": "0565183986c94e2528692e4ff56a8b206471f4bf2ae0ffc5f4373fe0dca79764",
+    "build/desktop-msvc/s4-process-memory-checkpoint-final-full-native/owner-domain/flight-in-game.json": "d36f42753cc37fb519787f94ec149a51e0290f7d27222c933218d5ca7bfe3225"
+  }
+}

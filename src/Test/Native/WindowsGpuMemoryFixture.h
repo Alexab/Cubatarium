@@ -1,6 +1,6 @@
 #pragma once
 
-#include "App/Platform/WindowsGpuMemoryReport.h"
+#include "App/Platform/WindowsMemoryCheckpoint.h"
 #include "Render/GlIncludes.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -38,7 +38,7 @@ inline std::optional<std::uint64_t> CurrentUsage(const WindowsGpuMemory &memory,
   return {};
 }
 
-inline int Run(GLFWwindow *window, const char *outPath, const WindowsGpuMemory &cold)
+inline int Run(GLFWwindow *window, const char *outPath, const WindowsMemoryCheckpoint &cold)
 {
   constexpr GLsizei side = 4096;
   constexpr std::uint64_t textureBytes = std::uint64_t{side} * side * 4;
@@ -46,8 +46,8 @@ inline int Run(GLFWwindow *window, const char *outPath, const WindowsGpuMemory &
   const auto *renderer = reinterpret_cast<const char *>(glGetString(GL_RENDERER));
   Require(renderer != nullptr, "identify the driver of the current OpenGL context");
   const std::string rendererName(renderer);
-  const auto warm = ReadWindowsGpuMemory();
-  WindowsGpuMemory live;
+  const auto warm = ReadWindowsMemoryCheckpoint();
+  WindowsMemoryCheckpoint live;
   GLuint textureName{};
   {
     struct TextureTarget
@@ -80,28 +80,28 @@ inline int Run(GLFWwindow *window, const char *outPath, const WindowsGpuMemory &
     Require(first == pixels.front() && last == pixels.back() && glGetError() == GL_NO_ERROR,
             "verify the authored texture is live in the actual OpenGL context");
     textureName = target.texture;
-    live = ReadWindowsGpuMemory();
+    live = ReadWindowsMemoryCheckpoint();
   }
   glFinish();
   Require(!glIsTexture(textureName) && glGetError() == GL_NO_ERROR,
           "retire the OpenGL object before measuring the separate driver charge");
-  const auto deleted = ReadWindowsGpuMemory();
+  const auto deleted = ReadWindowsMemoryCheckpoint();
   glfwMakeContextCurrent(nullptr);
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  Require(cold.complete && warm.complete && live.complete && deleted.complete,
+  Require(cold.driver.complete && warm.driver.complete && live.driver.complete && deleted.driver.complete,
           "observe every enumerated physical node and close all adapter query handles at each stage");
   std::optional<NodeAddress> growing;
   std::uint64_t warmUsage{}, liveUsage{};
-  for (const auto &adapter : live.adapters)
+  for (const auto &adapter : live.driver.adapters)
     if (adapter.renderSupported && !adapter.softwareDevice)
       for (const auto &node : adapter.nodes)
         for (const auto nonLocal : {false, true})
         {
           const NodeAddress address{adapter.luidHigh, adapter.luidLow, node.index, nonLocal};
           const auto &segment = nonLocal ? node.nonLocal : node.local;
-          const auto baseline = CurrentUsage(warm, address);
+          const auto baseline = CurrentUsage(warm.driver, address);
           if (baseline && segment.usage >= *baseline && segment.usage - *baseline >= observableDelta &&
               segment.usage - *baseline > liveUsage - warmUsage)
           {
@@ -111,19 +111,19 @@ inline int Run(GLFWwindow *window, const char *outPath, const WindowsGpuMemory &
           }
         }
   Require(growing.has_value(), "the real upload increases current process usage on a hardware adapter segment");
-  WindowsGpuMemory retired;
+  WindowsMemoryCheckpoint retired;
   std::optional<std::uint64_t> retiredUsage;
   for (int sample = 0; sample < 12; ++sample)
   {
-    retired = ReadWindowsGpuMemory();
-    retiredUsage = CurrentUsage(retired, *growing);
-    if (retired.complete && retiredUsage && *retiredUsage <= liveUsage - observableDelta)
+    retired = ReadWindowsMemoryCheckpoint();
+    retiredUsage = CurrentUsage(retired.driver, *growing);
+    if (retired.driver.complete && retiredUsage && *retiredUsage <= liveUsage - observableDelta)
       break;
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
-  Require(retired.complete && retiredUsage && *retiredUsage <= liveUsage - observableDelta,
+  Require(retired.driver.complete && retiredUsage && *retiredUsage <= liveUsage - observableDelta,
           "observe an actual process usage decrease after graphics context retirement");
-  const auto deletedUsage = CurrentUsage(deleted, *growing);
+  const auto deletedUsage = CurrentUsage(deleted.driver, *growing);
   Require(deletedUsage.has_value(), "retain the adapter identity across texture retirement and context teardown");
   const nlohmann::json report{
       {"schema", "windows-gpu-memory-fixture.v1"}, {"status", "PASS"}, {"gl_renderer", rendererName},
@@ -132,9 +132,13 @@ inline int Run(GLFWwindow *window, const char *outPath, const WindowsGpuMemory &
           {"physical_adapter_index", growing->index}, {"segment", growing->nonLocal ? "non_local" : "local"}}},
       {"warm_usage_bytes", warmUsage}, {"live_usage_bytes", liveUsage},
       {"texture_deleted_usage_bytes", *deletedUsage}, {"context_retired_usage_bytes", *retiredUsage},
-      {"cold", DescribeWindowsGpuMemory(cold)}, {"warm", DescribeWindowsGpuMemory(warm)},
-      {"live", DescribeWindowsGpuMemory(live)}, {"texture_deleted", DescribeWindowsGpuMemory(deleted)},
-      {"context_retired", DescribeWindowsGpuMemory(retired)}};
+      {"cold", DescribeWindowsGpuMemory(cold.driver)}, {"warm", DescribeWindowsGpuMemory(warm.driver)},
+      {"live", DescribeWindowsGpuMemory(live.driver)}, {"texture_deleted", DescribeWindowsGpuMemory(deleted.driver)},
+      {"context_retired", DescribeWindowsGpuMemory(retired.driver)},
+      {"process_checkpoints", {{"cold", DescribeWindowsMemoryCheckpoint(cold)},
+          {"warm", DescribeWindowsMemoryCheckpoint(warm)}, {"live", DescribeWindowsMemoryCheckpoint(live)},
+          {"texture_deleted", DescribeWindowsMemoryCheckpoint(deleted)},
+          {"context_retired", DescribeWindowsMemoryCheckpoint(retired)}}}};
   std::ofstream output(outPath);
   output << report.dump(2) << '\n';
   Require(static_cast<bool>(output), "write the GPU memory lifecycle report");

@@ -3,6 +3,7 @@
 #include "Test/AsyncIoStorageFixture.h"
 #include "Test/IoCodecAllocationFixture.h"
 #include "Test/NativeThreadStackFixture.h"
+#include "Test/WindowsAddressSpaceFixture.h"
 #include "Test/WindowsCrtThreadFixture.h"
 #include "Test/WindowsCrtLocaleFixture.h"
 #include "Test/WindowsExecutableTlsFixture.h"
@@ -171,6 +172,7 @@ int main(int argc, char **argv)
     const auto stdio = std::filesystem::path(folder) / "stdio.bin";
     result["crt_file_tables"] = CheckCrtFileTables(stdio);
     result["windows_io_resources"] = cutum::windows_io_resource_fixture::Run(stdio);
+    result["windows_address_space"] = cutum::windows_address_space_fixture::Run();
     result["native_thread_stacks"] = cutum::native_thread_stack_fixture::Run();
     result["windows_crt_threads"] = cutum::windows_crt_thread_fixture::Run();
     result["windows_crt_locale"] = cutum::windows_crt_locale_fixture::Run();
