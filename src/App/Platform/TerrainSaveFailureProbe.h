@@ -186,6 +186,7 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       constexpr auto columns = UWorldPersistence::kMaxPendingTerrainColumnLoads;
       constexpr auto reads = UAsyncChunkIO::kMaxOutstandingLoads;
       const glm::ivec3 target(0);
+      const glm::ivec3 resident(static_cast<int>(columns), 0, 0);
       const glm::ivec3 outside_profile(static_cast<int>(columns + 1), 0, 0);
       for (size_t i = 0; i <= columns; ++i)
         for (int cy = -4; cy <= 19; ++cy)
@@ -193,15 +194,41 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       write_slice({outside_profile.x, 9000, outside_profile.z});
       world.SetWorldFolderPath(folder.string());
       auto &io = *persistence.AsyncChunkIo;
-      for (size_t i = 1; i <= columns; ++i)
+      require(storage.LoadChunk({resident.x, 19, 0}, world.BlockWorld, folder.string(), *world.BlockRegistry) == 1,
+              "prepare a decoded resident column with missing lower slices");
+      for (size_t i = 1; i < columns; ++i)
         require(persistence.RequestAsyncTerrainColumnLoad(world, {static_cast<int>(i), 0, 0}, i) ==
                     TerrainColumnRead::Pending, "admitted column keeps its remaining slices");
       const auto &retained = persistence.PendingAsyncColumnLoadSlices;
-      const auto original = retained.at({1, 0, 0}).cancellation;
+      const glm::ivec3 first_cold(1, 0, 0);
+      const auto original = retained.at(first_cold).cancellation;
+      require(io.WaitIdleFor(5s), "cold read completions are ready before resident demand");
+      const auto cold_credits = io.GetOutstandingLoadCount();
+      require(persistence.RequestAsyncTerrainColumnLoad(world, resident, 5001) == TerrainColumnRead::Pending &&
+                  io.WaitIdleFor(5s), "admit the resident continuation behind the ready cold reads");
       require(retained.size() == columns && io.GetOutstandingLoadCount() == reads &&
                   persistence.RequestAsyncTerrainColumnLoad(world, {1, 7, 0}, 5000) == TerrainColumnRead::Pending &&
-                  retained.at({1, 0, 0}).cancellation == original && retained.at({1, 0, 0}).demand_id == 1,
+                  retained.at(first_cold).cancellation == original && retained.at(first_cold).demand_id == 1,
               "both production limits saturate and coalescing preserves the admitted owner");
+      const auto resident_step = persistence.TickAsyncChunkIo(world, 48, 200.0, 1);
+      report["resident_disk_read_saturation"] = {{"cold_credits", cold_credits},
+          {"first_resident_applies", resident_step.applied_slices_n}};
+      require(cold_credits == reads - 1 && resident_step.applied_slices_n == 1,
+              "resident read makes progress while ready cold results cannot publish");
+      const auto resident_deadline = std::chrono::steady_clock::now() + 10s;
+      while (retained.count(resident))
+      {
+        persistence.TickAsyncChunkIo(world, 48, 200.0, 1);
+        require(std::chrono::steady_clock::now() < resident_deadline,
+                "resident read finishes without requiring a cold completion to publish");
+        std::this_thread::yield();
+      }
+      require(IsTerrainChunkComplete(world.BlockWorld, resident, 319, 19, -64) &&
+                  world.BlockWorld.GetChunkManager().GetResidentTerrainColumnCount() == 1 &&
+                  io.GetOutstandingLoadCount() == cold_credits && retained.at(first_cold).cancellation == original,
+              "resident completion keeps the original cold owners and credits deferred");
+      report["resident_disk_read_saturation"].update({{"status", "PASS"}, {"resident_finished", true},
+          {"cold_request_preserved", true}, {"total_read_limit", reads}, {"total_column_limit", columns}});
       bool accepted_at_capacity = true;
       require(persistence.RequestAsyncTerrainColumnLoad(world, target, 6000) == TerrainColumnRead::Deferred &&
                   !streamer.EnsureChunkLoaded(target, true, &accepted_at_capacity) && !accepted_at_capacity &&
@@ -378,13 +405,16 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
       constexpr auto owner_limit = UWorldPersistence::kMaxTerrainReadOwners;
       auto &cooldowns = persistence.FailedColumnRetryAfter;
       const auto fixture_deadline = std::chrono::steady_clock::now() + 60s;
-      for (size_t i = 1; i < owner_limit; ++i)
+      for (size_t i = 1; i < owner_limit - 1; ++i)
         cooldowns.emplace(glm::ivec3(static_cast<int>(i), 0, 3100), fixture_deadline);
       require(persistence.RequestAsyncTerrainColumnLoad(world, outside_profile) == TerrainColumnRead::Pending &&
-                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Deferred &&
+                  retained.size() + cooldowns.size() == owner_limit - 1 &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Pending &&
+                  persistence.RequestAsyncTerrainColumnLoad(world, resident) == TerrainColumnRead::Deferred &&
                   persistence.RequestAsyncTerrainColumnLoad(world, missing) == TerrainColumnRead::Absent &&
                   retained.size() + cooldowns.size() == owner_limit,
-              "an active failed-read candidate reserves its timer without blocking a disk miss");
+              "a resident read uses the reserved owner while both phases share the original cap");
+      persistence.CancelAsyncTerrainColumnLoad(world, target);
       const auto retry_deadline = std::chrono::steady_clock::now() + 10s;
       while (!retained.empty())
       {
@@ -395,11 +425,13 @@ inline void RunTerrainSaveFailureProbe(UCore &core)
         std::this_thread::yield();
       }
       auto &manager = world.BlockWorld.GetChunkManager();
-      require(cooldowns.size() == owner_limit && cooldowns.count(outside_profile) &&
+      require(cooldowns.size() == owner_limit - 1 && cooldowns.count(outside_profile) &&
                   manager.HasUnresolvedTerrainColumnRead(outside_profile) &&
                   persistence.RequestAsyncTerrainColumnLoad(world, outside_profile) == TerrainColumnRead::Deferred &&
-                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Deferred,
-              "retry exhaustion retains the exact failed column under full owner admission");
+                  persistence.RequestAsyncTerrainColumnLoad(world, target) == TerrainColumnRead::Pending &&
+                  retained.size() + cooldowns.size() == owner_limit,
+              "retry exhaustion protects the failed column and keeps admission for a resident read");
+      persistence.CancelAsyncTerrainColumnLoad(world, target);
       for (auto &[column, expiry] : cooldowns)
         expiry = std::chrono::steady_clock::now();
       persistence.TickAsyncChunkIo(world);

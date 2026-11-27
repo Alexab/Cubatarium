@@ -3724,11 +3724,19 @@
       "receipt": "build/desktop-msvc/s4-q01-ready-disk-verified-acceptance.json",
       "scope": "The normal streaming tick limits a near-full ranked batch by remaining residency slots. At saturation the existing ready selector leaves live cold results on their credited completion owners. It selects resident slices and retires obsolete results as usual. Both preferred field input and ordinary ranking use the same filter. An all-blocked selection requests no backing. The Flat native control uses both signed slices, one remaining slot and two peers. It proves exact resumption and compares the normal scoped drain with an unrestricted drain placing a 51st column. Cooperative bootstrap and teardown retain their existing drain scopes.",
       "remaining": "Whole-world cardinality, generation footprints including cross-column output, cooperative loading and direct edits, record-only owners and the joined live index and registry remain open. Test resident-read progress when held cold reads use all physical I/O credits. Startup-only evidence leaves motion, outer-ring, cave, wet, visual and performance acceptance open. Full S0-S6 acceptance remains open at 23 of 42 packages."
+    },
+    {
+      "id": "S4.02.LIMIT.Q01.L2.RESIDENT_READ_PROGRESS",
+      "status": "SCOPED_Q01_L2_RESIDENT_DISK_PROGRESS_PASS_Q01_L2_OPEN",
+      "certificate": "S4_02_Q01_RESIDENT_READ_PROGRESS_CERTIFICATE_2026_11_27.json",
+      "receipt": "build/desktop-msvc/s4-q01-read-progress-acceptance.json",
+      "scope": "Physical slice scheduling and active and combined retry owner admission each leave the last slot available for resident terrain. The Release baseline keeps 256 cold slice results ready and applies zero resident slices at terrain capacity. The corrected Flat fixture keeps 255 cold credits, uses the existing 256th for the resident, and completes its full signed column before any cold publication. It preserves the original cold owner and subsequently installs the deferred streaming demand. The existing hard limits remain 256 physical reads, 32 concurrent column plans and 256 combined active plans and retry timers.",
+      "remaining": "Whole-world cardinality still needs procedural generation including cross-column writes, cooperative loading, direct edits, record-only owners and the live disk index and registry. The startup-only runs leave motion, outer-ring, cave, wet, visual and performance acceptance open. Full S0-S6 acceptance remains open at 23 of 42 packages."
     }
   ],
   "completed_handoff": {
     "P0": "sync/unpacked scoped CPU draw and independent RGB PASS; overall visual UNTESTED",
     "native_artifacts": "build\\desktop-msvc\\physical-current-rgb-air-sync-rd4-20261120-native"
   },
-  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Проверен порог публикации готовых дисковых срезов. Проверить прогресс при занятых чтениями кредитах, учесть область генерации, прямые изменения и другие записи колонок, затем свести с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
+  "next_action": "S4.02 Q01.L2 и LIMIT-C1.Q10. Проверено продолжение чтения загруженной колонки при насыщении готовыми результатами. Учесть публикацию генерации, включая соседние колонки, прямые изменения и другие владельцы записей, затем свести с индексом и реестром. Закрыто 23 из 42 пакетов. Полный объём S0–S6 в плане."
 }

@@ -5569,7 +5569,11 @@ void UWorldPersistence::SubmitTerrainColumnReads(UWorld &world, glm::ivec3 groun
     PendingAsyncColumnLoadState &state)
 {
   // Admission and the read-failure probe are both owned by this world thread.
-  while (AsyncChunkIo->GetOutstandingLoadCount() < UAsyncChunkIO::kMaxOutstandingLoads)
+  // Ready cold slices may all wait for a terrain slot. Keep the last read
+  // credit for a column whose slices can publish at terrain capacity.
+  const bool resident = world.BlockWorld.GetChunkManager().HasResidentTerrainColumn(ground);
+  const auto read_limit = UAsyncChunkIO::kMaxOutstandingLoads - (resident ? 0u : 1u);
+  while (AsyncChunkIo->GetOutstandingLoadCount() < read_limit)
   {
     auto next = state.read_order;
     const auto cy = next.TakeNext();
@@ -5670,14 +5674,18 @@ TerrainColumnRead UWorldPersistence::RequestAsyncTerrainColumnLoad(
                                      FloorDiv(world.ProceduralTemplate.MaxHeight, CHUNK_SIZE));
   if (state.highest_cy_on_disk < min_cy)
     return TerrainColumnRead::Absent;
-  if (PendingAsyncColumnLoadSlices.size() >= kMaxPendingTerrainColumnLoads)
+  // Reserve admission for a resident continuation at both owner limits.
+  const bool resident = world.BlockWorld.GetChunkManager().HasResidentTerrainColumn(ground_coord);
+  const auto reserved = resident ? 0u : 1u;
+  if (PendingAsyncColumnLoadSlices.size() >= kMaxPendingTerrainColumnLoads - reserved)
     return TerrainColumnRead::Deferred;
-  if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= kMaxTerrainReadOwners)
+  const auto owner_limit = kMaxTerrainReadOwners - reserved;
+  if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= owner_limit)
   {
     ExpireTerrainReadCooldowns(now);
     // The final read completion replaces its active plan with a cooldown on
     // failure. Reserve both phases with the same limit.
-    if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= kMaxTerrainReadOwners)
+    if (PendingAsyncColumnLoadSlices.size() + FailedColumnRetryAfter.size() >= owner_limit)
       return TerrainColumnRead::Deferred;
   }
 
