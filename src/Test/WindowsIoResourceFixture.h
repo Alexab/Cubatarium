@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Memory/WindowsProcessMemory.h"
+#include "App/Platform/WindowsMemoryCheckpoint.h"
 #include "Test/IoCodecAllocationFixture.h"
 #include <array>
 #include <memory>
@@ -25,6 +25,7 @@ using Search = std::unique_ptr<void, CloseSearch>;
 struct Sample
 {
   WindowsProcessMemory memory;
+  WindowsPlatformResources platform;
   DWORD handles{};
   std::size_t validated{};
 
@@ -34,7 +35,8 @@ struct Sample
         {"peak_working_set_bytes", memory.peakWorkingSet}, {"private_commit_bytes", memory.privateCommit},
         {"peak_private_commit_bytes", memory.peakPrivateCommit}, {"paged_pool_quota_bytes", memory.pagedPoolQuota},
         {"peak_paged_pool_quota_bytes", memory.peakPagedPoolQuota}, {"nonpaged_pool_quota_bytes", memory.nonpagedPoolQuota},
-        {"peak_nonpaged_pool_quota_bytes", memory.peakNonpagedPoolQuota}};
+        {"peak_nonpaged_pool_quota_bytes", memory.peakNonpagedPoolQuota},
+        {"platform_resources", DescribeWindowsPlatformResources(platform)}};
   }
 };
 
@@ -42,9 +44,13 @@ inline Sample Observe(const HANDLE *selection = nullptr, std::size_t selectionSi
 {
   const HANDLE self = GetCurrentProcess();
   Sample result;
+  result.platform = ObserveWindowsPlatformResources();
   result.memory = ReadWindowsProcessMemory();
   Require(result.memory.observed && GetProcessHandleCount(self, &result.handles) && result.handles,
           "sample current process memory, pool charges and handles");
+  if (result.platform.handles.supported)
+    Require(result.platform.handles.Complete() && result.platform.handles.entries == result.handles,
+            "join the current process handle cohort to its independent total");
   for (std::size_t i = 0; i < selectionSize; ++i)
   {
     DWORD flags{};
@@ -52,6 +58,49 @@ inline Sample Observe(const HANDLE *selection = nullptr, std::size_t selectionSi
     ++result.validated;
   }
   return result;
+}
+
+inline void CheckFileObjects(const Sample &baseline, const Sample &sample, std::size_t entries, std::size_t objects)
+{
+  if (!baseline.platform.handles.supported)
+    return;
+  const auto fileTotals = [](const Sample &point) -> std::pair<std::size_t, std::size_t> {
+    for (const auto &type : point.platform.handles.types)
+      if (type.type == "File")
+        return {type.entries, type.objects.value()};
+    return {};
+  };
+  const auto previous = fileTotals(baseline);
+  const auto current = fileTotals(sample);
+  Require(current.first == previous.first + entries && current.second == previous.second + objects,
+          "distinct File objects and handle entries must follow the selected owner lifetime");
+}
+
+inline Json CheckGuiObjects()
+{
+  (void)ObserveWindowsPlatformResources();
+  const auto before = ObserveWindowsPlatformResources();
+  Require(before.gdi && before.user && before.peakGdi && before.peakUser, "read current and peak GDI and USER counts");
+  const auto destroyMenu = [](void *menu) { DestroyMenu(static_cast<HMENU>(menu)); };
+  const auto deleteBitmap = [](void *bitmap) { DeleteObject(static_cast<HBITMAP>(bitmap)); };
+  std::unique_ptr<void, decltype(destroyMenu)> menu(CreatePopupMenu(), destroyMenu);
+  std::unique_ptr<void, decltype(deleteBitmap)> bitmap(CreateBitmap(2, 2, 1, 1, nullptr), deleteBitmap);
+  Require(menu && bitmap, "create one menu and one memory bitmap");
+  const auto live = ObserveWindowsPlatformResources();
+  Require(live.gdi == *before.gdi + 1 && live.user == *before.user + 1 &&
+      live.peakGdi && *live.peakGdi >= *live.gdi && live.peakUser && *live.peakUser >= *live.user,
+      "observe the exact additional GUI resources and both high-water counts");
+  Require(DestroyMenu(static_cast<HMENU>(menu.get())) != 0, "destroy the controlled menu");
+  menu.release();
+  Require(DeleteObject(static_cast<HBITMAP>(bitmap.get())) != 0, "delete the controlled bitmap");
+  bitmap.release();
+  const auto retired = ObserveWindowsPlatformResources();
+  Require(retired.gdi == before.gdi && retired.user == before.user &&
+      retired.peakGdi && *retired.peakGdi >= *live.peakGdi && retired.peakUser && *retired.peakUser >= *live.peakUser,
+      "observe GUI resource retirement and retained high-water counts");
+  return {{"before", DescribeWindowsPlatformResources(before)["gui_objects"]},
+      {"live", DescribeWindowsPlatformResources(live)["gui_objects"]},
+      {"retired", DescribeWindowsPlatformResources(retired)["gui_objects"]}};
 }
 
 inline Json Run(const std::filesystem::path &file)
@@ -175,6 +224,14 @@ inline Json Run(const std::filesystem::path &file)
   }
   const auto afterIterators = Observe();
   Require(afterIterators.handles == baseline.handles, "closing the last iterator retires its search");
+  CheckFileObjects(baseline, independent, count, count);
+  CheckFileObjects(baseline, duplicate, count + 1, 1);
+  CheckFileObjects(baseline, lastDuplicate, 1, 1);
+  CheckFileObjects(baseline, search, count, count);
+  CheckFileObjects(baseline, iterators, count, count);
+  CheckFileObjects(baseline, lastIterator, 1, 1);
+  for (const auto *retired : {&afterIndependent, &afterDuplicate, &afterSearch, &afterIterators})
+    CheckFileObjects(baseline, *retired, 0, 0);
   return {{"status", "PASS"}, {"concurrent_owners", count}, {"baseline", baseline.Report()},
       {"independent_files", independent.Report()}, {"after_independent", afterIndependent.Report()},
       {"duplicate_handles", duplicate.Report()}, {"last_duplicate", lastDuplicate.Report()},
@@ -182,6 +239,7 @@ inline Json Run(const std::filesystem::path &file)
       {"after_search", afterSearch.Report()}, {"stl_iterators", iterators.Report()},
       {"last_iterator_copy", lastIterator.Report()}, {"after_iterators", afterIterators.Report()},
       {"same_file_independent_objects", true}, {"duplicate_shared_object", true},
+      {"gui_lifetime", CheckGuiObjects()},
       {"unmatched_search_retired", true}, {"per_object_charge_observed", false}};
 }
 #else

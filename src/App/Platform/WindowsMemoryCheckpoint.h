@@ -1,6 +1,7 @@
 #pragma once
 
 #include "App/Platform/WindowsGpuMemoryReport.h"
+#include "Core/Memory/WindowsPlatformResources.h"
 #include "Core/Memory/WindowsSlotStorage.h"
 #include "Core/Memory/WindowsTlsVectorHistory.h"
 #include <chrono>
@@ -17,8 +18,10 @@ struct WindowsMemoryCheckpoint
   std::optional<WindowsModuleTlsStorage> moduleTls;
   std::optional<WindowsReplacedTlsVectors> replacedTlsVectors;
   std::optional<WindowsSlotStorage> slotStorage;
+  std::optional<WindowsPlatformResources> platformResources;
   std::uint64_t elapsedMicros{};
   std::uint32_t processId{};
+  std::uint32_t tlsSamplingAttempts{};
 };
 
 enum class WindowsMemoryDetail { Summary, ModuleImages };
@@ -34,10 +37,22 @@ inline WindowsMemoryCheckpoint ReadWindowsMemoryCheckpoint(WindowsMemoryDetail d
   if (detail == WindowsMemoryDetail::ModuleImages)
   {
     result.images = ReadWindowsImageMemory(result.addressSpace);
-    result.moduleTls = ObserveWindowsModuleTls(*result.images);
+    // An exiting worker can change the FLS ring between matched checkpoint
+    // reads. Resample the pair with the same thread IDs before recording it.
+    constexpr std::uint32_t attempts = 3;
+    for (std::uint32_t attempt = 1; attempt <= attempts; ++attempt)
+    {
+      result.tlsSamplingAttempts = attempt;
+      result.moduleTls = ObserveWindowsModuleTls(*result.images);
+      result.slotStorage = ObserveWindowsSlots(&*result.moduleTls);
+      if (result.slotStorage->stable || !result.slotStorage->supported)
+        break;
+      if (attempt < attempts)
+        SwitchToThread();
+    }
     if (history)
       result.replacedTlsVectors = history->Observe(*result.moduleTls);
-    result.slotStorage = ObserveWindowsSlots();
+    result.platformResources = ObserveWindowsPlatformResources();
   }
   else
     result.addressSpace = ReadWindowsAddressSpace();
@@ -70,6 +85,10 @@ inline nlohmann::json DescribeWindowsProcessCommit(const WindowsProcessMemory &m
   return {{"observed", memory.observed}, {"extended_observed", memory.extendedObserved},
       {"working_set_bytes", memory.workingSet}, {"peak_working_set_bytes", memory.peakWorkingSet},
       {"private_commit_bytes", memory.privateCommit}, {"peak_private_commit_bytes", memory.peakPrivateCommit},
+      {"paged_pool_quota_bytes", memory.observed ? Json(memory.pagedPoolQuota) : Json(nullptr)},
+      {"peak_paged_pool_quota_bytes", memory.observed ? Json(memory.peakPagedPoolQuota) : Json(nullptr)},
+      {"nonpaged_pool_quota_bytes", memory.observed ? Json(memory.nonpagedPoolQuota) : Json(nullptr)},
+      {"peak_nonpaged_pool_quota_bytes", memory.observed ? Json(memory.peakNonpagedPoolQuota) : Json(nullptr)},
       {"private_working_set_bytes", memory.extendedObserved ? Json(memory.privateWorkingSet) : Json(nullptr)},
       {"shared_commit_bytes", memory.extendedObserved ? Json(memory.sharedCommit) : Json(nullptr)}};
 }
@@ -155,6 +174,27 @@ inline nlohmann::json DescribeWindowsSlotStorage(const WindowsSlotStorage &row)
       {"fls_chunks", storage(row.flsChunks)}, {"distinct_default_heap_payload", storage(row.distinctPayload)}};
 }
 
+inline nlohmann::json DescribeWindowsPlatformResources(const WindowsPlatformResources &row)
+{
+  using Json = nlohmann::json;
+  const auto number = [](const auto &value) { return value ? Json(*value) : Json(nullptr); };
+  const auto &handles = row.handles;
+  auto types = Json::object();
+  for (const auto &type : handles.types)
+    types[type.type] = {{"entries", type.entries}, {"objects", number(type.objects)}};
+  return {{"schema", "windows-platform-resources.v1"},
+      {"executive_handles", {
+          {"status", handles.Complete() ? "PASS" : handles.supported ? "PARTIAL" : "UNSUPPORTED"},
+          {"stable", handles.stable}, {"before", handles.beforeObserved ? Json(handles.before) : Json(nullptr)},
+          {"after", handles.afterObserved ? Json(handles.after) : Json(nullptr)},
+          {"entries", handles.stable ? Json(handles.entries) : Json(nullptr)},
+          {"untyped_entries", handles.stable ? Json(handles.untyped) : Json(nullptr)}, {"types", std::move(types)},
+          {"object_comparisons", handles.comparisons}, {"entry_limit_reached", handles.entryLimitReached},
+          {"comparison_limit_reached", handles.comparisonLimitReached}}},
+      {"gui_objects", {{"gdi", number(row.gdi)}, {"peak_gdi", number(row.peakGdi)},
+                       {"user", number(row.user)}, {"peak_user", number(row.peakUser)}}}};
+}
+
 inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpoint &checkpoint)
 {
   const bool complete = checkpoint.before.extendedObserved && checkpoint.after.extendedObserved &&
@@ -173,7 +213,12 @@ inline nlohmann::json DescribeWindowsMemoryCheckpoint(const WindowsMemoryCheckpo
   if (checkpoint.replacedTlsVectors)
     report["replaced_tls_vectors"] = DescribeWindowsReplacedTlsVectors(*checkpoint.replacedTlsVectors);
   if (checkpoint.slotStorage)
+  {
     report["slot_storage"] = DescribeWindowsSlotStorage(*checkpoint.slotStorage);
+    report["tls_sampling_attempts"] = checkpoint.tlsSamplingAttempts;
+  }
+  if (checkpoint.platformResources)
+    report["platform_resources"] = DescribeWindowsPlatformResources(*checkpoint.platformResources);
   return report;
 }
 } // namespace cutum

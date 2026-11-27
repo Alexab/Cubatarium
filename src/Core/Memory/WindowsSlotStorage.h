@@ -239,7 +239,7 @@ inline void Summarize(WindowsSlotStorage &result, const std::vector<SlotTarget> 
 } // namespace windows_slot_detail
 #endif
 
-inline WindowsSlotStorage ObserveWindowsSlots()
+inline WindowsSlotStorage ObserveWindowsSlots(const WindowsModuleTlsStorage *cohort = nullptr)
 {
   WindowsSlotStorage result;
 #if CUTUM_WINDOWS_STATIC_THREAD_CRT_PROFILE
@@ -257,6 +257,9 @@ inline WindowsSlotStorage ObserveWindowsSlots()
     return result;
 
   result.processThreads = ids.size();
+  if (cohort && (!cohort->complete || !std::equal(ids.begin(), ids.end(),
+          cohort->threads.begin(), cohort->threads.end(), [](auto id, const auto &thread) { return id == thread.id; })))
+    return result;
   std::vector<ThreadSlots> threads(ids.size());
   std::vector<std::uintptr_t> active;
   std::vector<SlotTarget> targets;
@@ -314,6 +317,8 @@ inline WindowsSlotStorage ObserveWindowsSlots()
   result.detachedFlsRoots = fls.roots.size() - matchedActive;
   Summarize(result, targets);
   result.stable = true;
+#else
+  (void)cohort;
 #endif
   return result;
 }

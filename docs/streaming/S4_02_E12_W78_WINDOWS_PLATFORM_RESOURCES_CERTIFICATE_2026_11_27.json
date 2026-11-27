@@ -1,0 +1,1753 @@
+{
+  "schema": "s4-e12-w78-windows-platform-resources.v1",
+  "status": "SCOPED_WINDOWS_PLATFORM_RESOURCES_PASS_E12_OPEN",
+  "baseline_commit": "3b7fdab818f31c3c02ad8e1fb94d2836a6be311c",
+  "prior_certificate": "S4_02_E12_W77_WINDOWS_SLOT_STORAGE_CERTIFICATE_2026_11_27.json",
+  "summary": "W78 observes stable current-process executive handle tables across five Windows Release desktop phases. Typed entries and distinct kernel objects are measured separately. The I/O fixture verifies independent open files, shared duplicates, directory searches and last-owner retirement. The platform fixture verifies exact bitmap and menu lifetimes. Current and peak GDI, USER and pool observations are aligned with independent WDDM usage. A bounded paired TLS and FLS resample preserves a matched thread cohort after the initial Full snapshot reported PARTIAL. Flat and Full retain startup and normal-shutdown evidence. All 46 Release regression groups and seven related cases pass.",
+  "remaining": "Continue S4.02 LIMIT.Q09 E12 from W78. W20 covers selected I/O roots, launch and drain. W21 covers selected GUI context, router and renderer backing. W22 and W23 cover progress and main-menu subtrees. W24 covers desktop HUD and W25 covers desktop console, chat and command history. W26 adds the death overlay and known button actions. W27 adds the live shared player window and retires the unreachable standalone survival tree. W28 adds the live catalog grid snapshot, staged widget batches, row-index actions and visible-first icon updates. W29 adds icon warmup completion, explicit texture ownership, temporary preview attachments and bounded GPU readback retirement. W30 adds transactional character page publication, a screen-bound host, status rows and preview cache metadata. W31 adds transactional catalog shell publication, shared tab backing, allocation-free availability probes, an inactive hosted hotbar strip and retryable preview publication. W32 adds owned character snapshot backing, viewport recovery projection, direct vitals and look sources, and full diagnostic preservation. W33 adds staged crafting publication, captured recipe input, and one active inventory trial per batch. W34 adds anvil ownership, stable description and identity-bound repair transactions and input retirement. W35 adds WorldGenPalette shell and grid publication, typed row identities, source grid backing and capture retirement. W36 joins the application WorldGen owner, shell, grids and hosted preview backing and verifies replacement retirement. W37 verifies single-pane WorldGen terrain and ore actions, pane-transition input and owned preview texture retirement. W38 joins the shared content preview renderer and verifies its cube upload, persistent target resize and owned and borrowed output lifetime. W39 joins object and block icon storage, FIFO names and the shared GL resource builders. W40 joins the shared inventory icon service, retained manifest and paths, item readback records and pack buffers, and staged publication and invalidation. W41 observes transient icon manifest and PNG sources, publishes complete PNGs and verifies OpenGL upload state and codec retirement. W42 joins the live creature and item cache records, item fingerprints and state, and shares each of the two preview renderers across its actual routes. W43 observes cold status publication, the three shared asset tables and the shared creature mesh uploads. W44 joins the shared item and creature texture owners and verifies alias, refusal and reload retirement. W45 observes retained rigid sources and keeps the mesh buffers alive in all queued creature and equipment mesh requests. W46 composes observed detached skeletal, glTF, item, rigid, legacy mesh and draw allocations across actual preview, world, queue, held and first-person owners. W47 joins the cold visual document and binary stages with managed source retirement and checks the accessor extents. W48 joins moved skeletal mesh assembly and its exact selected candidate requests, removes copied item JSON and small attribute arrays, and releases glTF geometry scratch earlier. W49 joins the explicit visual read buffers, the observed simultaneous stream associations and selected item/glTF resource path backings. W50 bounds explicit item traversal backing by node count and verifies deep decode and error retirement without native scene recursion. W51 bounds the static UCRT FILE slots and lowio tables and observes process handle counts. W52 bounds selected visual STL path operations and observes the real item texture directory owner. W53 observes current and peak process memory and process-charged pool quota with controlled file, duplicate and search handle retirement evidence. W54 joins known native stack owners and Windows thread counts, with reservation, commit, guard and retirement evidence. W55 joins base CRT thread records, launch context during registered worker scopes, time scratch and image TLS template widths. Complete remaining filesystem callers, Windows-internal file/search/kernel backing, unmatched stacks, launch transitions, CRT locale transition peaks and other scratch, TLS runtime vectors, extra module TLS, unregistered or transitional thread allocations, fibers and driver owners. W56 accounts the named initial C roots, the current locale and code-page blocks and selected private numeric allocations with returned alias retirement. W57 observes actual executable TLS heap backing and entry overhead for continuously registered primary threads. W58 samples WDDM charges by physical adapter and memory segment alongside PSAPI in actual Release scopes. Measure loader-owned vectors and other module TLS across actual module and thread lifecycles. W59 joins logical GL terrain buffer stores across the current and retained draw paths with separate WDDM observations. W60 measures the selected level-zero atlas and metadata, depth and fluid copies, weather maps and preview target images. The overlay owner retires both its vertex and index backing. W61 joins block, creature, model, item mip and reachable icon texture storage and observes logical old/new coexistence for a controlled atlas replacement. W62 verifies exact rollback for a recoverable later error in the desktop in-place atlas batch, including candidate retirement and retry. A driver rejection during restoration is reported separately. The fixture covers a usable GL context. W63 measures the live GUI and text vertex stores and glyph images, verifies retry-safe text replacement, and checks retirement of the actual GL names. W64 verifies live shared preview and Item Lab buffer ownership, legacy scratch resize and retry, and native retirement of local buffers and images. W65 measures old and candidate preview attachment overlap, stages a separate depth for different extents, and joins real live inventory icon pack stores and their bounded queue lifetime. W66 joins the CPU creature mesh source counts to actual GL buffers, accounts for world and first-person item owners, and pairs the same Release phases with independent PSAPI and WDDM observations. W67 joins the persistent and lazy geometry stores, verifies their teardown and matches selected buffer, image, process, stack, CRT and WDDM observations by phase. W68 joins sky, crack, debris, influence and weather buffers and the desktop capture pack slots. It checks actual retirement, retry, caller state and PNG output. W69 observes persistent and transient compute storage, rejects incomplete uploads before dispatch and joins the desktop native compute checkpoint. W70 joins copy, fixed queue, encoder input and PNG request overlap, verifies eight-frame saturation and drains every admitted frame. W71 joins the live capture paths, inline receipts, selected serialization backing, owned output handles and worker/process observations at file open. W72 joins a bounded Windows address-space census, PSAPI private/shared commitment and private working set, and per-node WDDM observations through the fast world shutdown request and controlled GL context retirement. W73 verifies normal desktop shutdown, selected GL name retirement and exact application owner expiry across Flat and Full, and fixes block-atlas release while the context is current. W74 attributes committed and resident image spans and declared module TLS at four matched desktop phases. W75 joins live static TLS vector and loaded-module allocations to observed process threads at the four native phases. W76 observes retained previously sampled static TLS vectors, their checked worker retirement and actual dynamic TLS expansion arrays. W77 joins live inline and expanded TLS values, active and detached FLS slot storage and their direct default-heap references by physical allocation. W78 joins stable typed handle cohort counts, distinct referenced objects, GUI counts, process-charged pool quota and WDDM usage across the five desktop phases. Next, resolve remaining file/search backing and actual platform or driver ownership outside mapped images using the matched phase evidence. Preserve the unmatched kernel and driver allocation domains. Resolve older unobserved static vectors, FLS callback metadata, indirectly reached allocations and independent ownership before whole-process composition. Retain the matched workload and whole-process acceptance matrix. Join remaining GL and GUI resources, short-lived framebuffer and upload candidates, and driver-owned retention. Account driver or shared-memory overlap and unmatched whole-process composition without double counting. Finish transient candidate ownership, remaining native stack, driver, diagnostics and old/current publication joins before the process composition. Include renderer scratch, static fallback graphics, per-actor appearance and pose, and temporary/out-of-scope visual holders in the remaining source composition. Confirm warmed legacy equipment/viewmodel and enabled foot diagnostic owner routes in a targeted native fixture. Preserve the W40 service, W41 codecs and W42 icon evidence. Include cold status catalog and visual cache construction as separate source owners. Preserve native tab and recovery behavior. Continue with other actual overlays and callbacks. Account shared renderer, shader and text roots through existing owner census. Unknown or externally-supplied objects remain open. Then complete all actual world/pool/input/OS-thread domains, escaped and detached owners, process-exit, window/capture service/GLFW and unpinned E11 construction. CRT per-thread parameter storage and per-thread data, retained loader layers, kernel handles, directory iterator opening and advance peaks, shared CRT slot and locale ownership, exception and system costs remain open. Logger cold init/rollback,historical main30344 remainder,VLOG/site/symbolizer/signal/utility roots,cleaner scans,stdio/CRT/locale/ exception/stack/TLS loader/OS/driver/GPU/total process still need explicit source/platform envelopes. No global asset/ process quota introduced. Complete original matched whole-process/RSS/high-water/frame/performance/memory/native matrix under S6.06/S6.05. S4.02 then S4.03..06/S5/S6 OPEN;23/42 unchanged;ecology S6.05 [-48,-1] data vs [-48,-4] oracle OPEN. Full S0..S6 preserved,no reduced acceptance.",
+  "scope": "Current Windows Release x64 executive handles, GDI and USER objects, process pool quota and WDDM usage at the same five desktop phases",
+  "composition_rule": "Executive table entries and distinct objects referenced by them are different counts. Windows type File can include disk files, directories, devices and redirected streams. GDI and USER counts use separate tables. PSAPI reports process-level charged quota. WDDM reports process usage per physical adapter and segment. The domains have no additive byte identity or independent per-driver allocation attribution.",
+  "remaining_measurements": [
+    "Static vectors replaced between checkpoints and FLS global callback backing",
+    "Resources reachable indirectly from slots, index liveness, allocations outside the default heap and independent ownership attribution",
+    "Escaped asset owners, render resources beyond the selected graph, and actual driver retention",
+    "Transient item or GUI upload and framebuffer candidates and peak overlap",
+    "Transient filesystem internals, logging and format conversion scratch, kernel file object backing and remaining encoding thread runtime allocations",
+    "Matched full process, memory, performance and native acceptance matrix",
+    "Application versus platform retention, file and search backing, kernel object allocation sizes, and attribution of retained driver resources below WDDM totals"
+  ],
+  "api_documentation": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesshandlecount",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntqueryobject",
+    "https://learn.microsoft.com/en-us/windows/win32/api/handleapi/nf-handleapi-compareobjecthandles",
+    "https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getguiresources"
+  ],
+  "fixture": {
+    "file_lifetime": {
+      "baseline": {
+        "table_entries": 79,
+        "file_type": {
+          "entries": 15,
+          "objects": 15
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "independent_files": {
+        "table_entries": 175,
+        "file_type": {
+          "entries": 111,
+          "objects": 111
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "after_independent": {
+        "table_entries": 79,
+        "file_type": {
+          "entries": 15,
+          "objects": 15
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "duplicate_handles": {
+        "table_entries": 176,
+        "file_type": {
+          "entries": 112,
+          "objects": 16
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "last_duplicate": {
+        "table_entries": 80,
+        "file_type": {
+          "entries": 16,
+          "objects": 16
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "after_duplicate": {
+        "table_entries": 79,
+        "file_type": {
+          "entries": 15,
+          "objects": 15
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "win32_searches": {
+        "table_entries": 175,
+        "file_type": {
+          "entries": 111,
+          "objects": 111
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "after_search": {
+        "table_entries": 79,
+        "file_type": {
+          "entries": 15,
+          "objects": 15
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "stl_iterators": {
+        "table_entries": 175,
+        "file_type": {
+          "entries": 111,
+          "objects": 111
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "last_iterator_copy": {
+        "table_entries": 80,
+        "file_type": {
+          "entries": 16,
+          "objects": 16
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      },
+      "after_iterators": {
+        "table_entries": 79,
+        "file_type": {
+          "entries": 15,
+          "objects": 15
+        },
+        "quota": {
+          "paged_pool_quota_bytes": 137488,
+          "peak_paged_pool_quota_bytes": 137616,
+          "nonpaged_pool_quota_bytes": 6656,
+          "peak_nonpaged_pool_quota_bytes": 9288
+        }
+      }
+    },
+    "gui_lifetime": {
+      "before": {
+        "gdi": 0,
+        "peak_gdi": 0,
+        "peak_user": 1,
+        "user": 1
+      },
+      "live": {
+        "gdi": 1,
+        "peak_gdi": 1,
+        "peak_user": 2,
+        "user": 2
+      },
+      "retired": {
+        "gdi": 0,
+        "peak_gdi": 1,
+        "peak_user": 2,
+        "user": 1
+      }
+    }
+  },
+  "initial_native_observation": {
+    "profile": "full",
+    "phase": "before_owner_release",
+    "platform_entries": 380,
+    "fls_thread_count": 34,
+    "fls_status": "PARTIAL",
+    "fls_list_observed": false
+  },
+  "native": {
+    "flat": {
+      "flight_frames": 785,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 108,
+              "before": 108,
+              "comparison_limit_reached": false,
+              "entries": 108,
+              "entry_limit_reached": false,
+              "object_comparisons": 1299,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 47,
+                  "objects": 47
+                },
+                "Event": {
+                  "entries": 15,
+                  "objects": 15
+                },
+                "File": {
+                  "entries": 10,
+                  "objects": 9
+                },
+                "IRTimer": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "IoCompletion": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "Key": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "Mutant": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Semaphore": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "TpWorkerFactory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "WaitCompletionPacket": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 0,
+              "peak_gdi": 0,
+              "peak_user": 1,
+              "user": 1
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 167896,
+            "peak_paged_pool_quota_bytes": 168096,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 167896,
+            "peak_paged_pool_quota_bytes": 168096,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 4,
+          "retained_static_vectors": 0,
+          "observed_fls_roots": 1,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 146214
+        },
+        "after_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 325,
+              "before": 325,
+              "comparison_limit_reached": false,
+              "entries": 325,
+              "entry_limit_reached": false,
+              "object_comparisons": 11515,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 10,
+                  "objects": 10
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 116,
+                  "objects": 116
+                },
+                "File": {
+                  "entries": 14,
+                  "objects": 13
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 8,
+                  "objects": 5
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 10
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 392848,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 19616,
+            "peak_nonpaged_pool_quota_bytes": 19752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 376648,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 19480,
+            "peak_nonpaged_pool_quota_bytes": 19752
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 21831680
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 10,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 167150
+        },
+        "before_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 362,
+              "before": 362,
+              "comparison_limit_reached": false,
+              "entries": 362,
+              "entry_limit_reached": false,
+              "object_comparisons": 13343,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 128,
+                  "objects": 128
+                },
+                "File": {
+                  "entries": 16,
+                  "objects": 15
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 30,
+                  "objects": 27
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 383544,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 30288,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 383544,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 30288,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 273305600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 33,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 30,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 227183
+        },
+        "after_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 343,
+              "before": 343,
+              "comparison_limit_reached": false,
+              "entries": 343,
+              "entry_limit_reached": false,
+              "object_comparisons": 13020,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 128,
+                  "objects": 128
+                },
+                "File": {
+                  "entries": 16,
+                  "objects": 15
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 11,
+                  "objects": 8
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 383544,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 28792,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 383544,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 28792,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 273305600
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 14,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 11,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 166078
+        },
+        "after_context_destroy": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 339,
+              "before": 339,
+              "comparison_limit_reached": false,
+              "entries": 339,
+              "entry_limit_reached": false,
+              "object_comparisons": 12865,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 9,
+                  "objects": 9
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 127,
+                  "objects": 127
+                },
+                "File": {
+                  "entries": 15,
+                  "objects": 14
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 10,
+                  "objects": 7
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 7,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 4
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 381736,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 27704,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 381736,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 27704,
+            "peak_nonpaged_pool_quota_bytes": 31752
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 269049856
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 13,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 10,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 160084
+        }
+      }
+    },
+    "full": {
+      "flight_frames": 471,
+      "checkpoint_phases": {
+        "before_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 108,
+              "before": 108,
+              "comparison_limit_reached": false,
+              "entries": 108,
+              "entry_limit_reached": false,
+              "object_comparisons": 1299,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 47,
+                  "objects": 47
+                },
+                "Event": {
+                  "entries": 15,
+                  "objects": 15
+                },
+                "File": {
+                  "entries": 10,
+                  "objects": 9
+                },
+                "IRTimer": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "IoCompletion": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "Key": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "Mutant": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Semaphore": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "TpWorkerFactory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "WaitCompletionPacket": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 0,
+              "peak_gdi": 0,
+              "peak_user": 1,
+              "user": 1
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 167896,
+            "peak_paged_pool_quota_bytes": 168096,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 167896,
+            "peak_paged_pool_quota_bytes": 168096,
+            "nonpaged_pool_quota_bytes": 7472,
+            "peak_nonpaged_pool_quota_bytes": 8928
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 4,
+          "retained_static_vectors": 0,
+          "observed_fls_roots": 1,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 123934
+        },
+        "after_window_initialization": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 325,
+              "before": 325,
+              "comparison_limit_reached": false,
+              "entries": 325,
+              "entry_limit_reached": false,
+              "object_comparisons": 11515,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 10,
+                  "objects": 10
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 116,
+                  "objects": 116
+                },
+                "File": {
+                  "entries": 14,
+                  "objects": 13
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Section": {
+                  "entries": 4,
+                  "objects": 4
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 8,
+                  "objects": 5
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 10
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 392848,
+            "peak_paged_pool_quota_bytes": 392848,
+            "nonpaged_pool_quota_bytes": 19616,
+            "peak_nonpaged_pool_quota_bytes": 19752
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 376648,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 19480,
+            "peak_nonpaged_pool_quota_bytes": 19888
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 21831680
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 10,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 181387
+        },
+        "before_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 374,
+              "before": 374,
+              "comparison_limit_reached": false,
+              "entries": 374,
+              "entry_limit_reached": false,
+              "object_comparisons": 14637,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 137,
+                  "objects": 137
+                },
+                "File": {
+                  "entries": 18,
+                  "objects": 17
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 33,
+                  "objects": 30
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 388696,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 30448,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 388696,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 30448,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 405958656
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 30,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 30,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 245704
+        },
+        "after_owner_release": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 351,
+              "before": 351,
+              "comparison_limit_reached": false,
+              "entries": 351,
+              "entry_limit_reached": false,
+              "object_comparisons": 14223,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 137,
+                  "objects": 137
+                },
+                "File": {
+                  "entries": 18,
+                  "objects": 17
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 8,
+                  "objects": 8
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 10,
+                  "objects": 7
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 18,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 11
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 388696,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 28408,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 388696,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 28408,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 405958656
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 7,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 190699
+        },
+        "after_context_destroy": {
+          "platform_resources": {
+            "executive_handles": {
+              "after": 347,
+              "before": 347,
+              "comparison_limit_reached": false,
+              "entries": 347,
+              "entry_limit_reached": false,
+              "object_comparisons": 14058,
+              "stable": true,
+              "status": "PASS",
+              "types": {
+                "ALPC Port": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "Desktop": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Directory": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "EtwRegistration": {
+                  "entries": 93,
+                  "objects": 93
+                },
+                "Event": {
+                  "entries": 136,
+                  "objects": 136
+                },
+                "File": {
+                  "entries": 17,
+                  "objects": 16
+                },
+                "IRTimer": {
+                  "entries": 6,
+                  "objects": 6
+                },
+                "IoCompletion": {
+                  "entries": 7,
+                  "objects": 7
+                },
+                "IoCompletionReserve": {
+                  "entries": 1,
+                  "objects": 1
+                },
+                "Key": {
+                  "entries": 12,
+                  "objects": 12
+                },
+                "Mutant": {
+                  "entries": 13,
+                  "objects": 13
+                },
+                "Section": {
+                  "entries": 5,
+                  "objects": 5
+                },
+                "Semaphore": {
+                  "entries": 14,
+                  "objects": 14
+                },
+                "Thread": {
+                  "entries": 9,
+                  "objects": 6
+                },
+                "Timer": {
+                  "entries": 2,
+                  "objects": 2
+                },
+                "TpWorkerFactory": {
+                  "entries": 3,
+                  "objects": 3
+                },
+                "WaitCompletionPacket": {
+                  "entries": 18,
+                  "objects": 18
+                },
+                "WindowStation": {
+                  "entries": 2,
+                  "objects": 1
+                }
+              },
+              "untyped_entries": 0
+            },
+            "gui_objects": {
+              "gdi": 7,
+              "peak_gdi": 23,
+              "peak_user": 11,
+              "user": 4
+            },
+            "schema": "windows-platform-resources.v1"
+          },
+          "pool_quota_before": {
+            "paged_pool_quota_bytes": 386552,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 27456,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "pool_quota_after": {
+            "paged_pool_quota_bytes": 386552,
+            "peak_paged_pool_quota_bytes": 393040,
+            "nonpaged_pool_quota_bytes": 27456,
+            "peak_nonpaged_pool_quota_bytes": 30992
+          },
+          "wddm": [
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 368926720
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 32939,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "local",
+              "usage_bytes": 0
+            },
+            {
+              "luid_high": 0,
+              "luid_low": 36471,
+              "physical_adapter_index": 0,
+              "segment": "non_local",
+              "usage_bytes": 0
+            }
+          ],
+          "process_threads": 7,
+          "retained_static_vectors": 1,
+          "observed_fls_roots": 7,
+          "tls_sampling_attempts": 1,
+          "elapsed_us": 196458
+        }
+      }
+    }
+  },
+  "release_groups": [
+    "io-owners",
+    "negative-height",
+    "ready-data",
+    "fluid-chunk-io",
+    "chunk-lighting",
+    "chunk-streamer-committed",
+    "application-ops",
+    "member-callbacks",
+    "root-storage",
+    "world-owned",
+    "engine-tls",
+    "name-storage",
+    "pipeline-storage",
+    "producer-retirement",
+    "normal-shutdown",
+    "returned-controls",
+    "worker-threads",
+    "owner-census",
+    "owner-graph",
+    "allocator-owner",
+    "control-refusal",
+    "job-admission",
+    "field-ownership",
+    "stbi-source",
+    "stbi-conversion-range",
+    "glog-resources",
+    "runtime-inline",
+    "noise-storage",
+    "noise-legacy",
+    "glog-source",
+    "weak-shell",
+    "actual-tls",
+    "logger",
+    "pack",
+    "settings",
+    "prefab",
+    "cpu-texture",
+    "runtime-domain",
+    "worker",
+    "cooperative",
+    "mesh-queues",
+    "relight-queues",
+    "relight-lifecycle",
+    "publication-cpu",
+    "publication-gl",
+    "decor-full"
+  ],
+  "related_release_tests": [
+    {
+      "target": "item_render_asset_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/item_render_asset_test.exe",
+      "returncode": 0,
+      "sha256": "a70e04a6170630822ded84ded465c79c2a8bf8c67893733df611d4234269c4a5"
+    },
+    {
+      "target": "creature_skinned_draw_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_skinned_draw_test.exe",
+      "returncode": 0,
+      "sha256": "c79a2b379e4215a30fe0c4bfcf93b3f3c41b67208e1658fa8ab4cb125b465479"
+    },
+    {
+      "target": "creature_draw_queue_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/creature_draw_queue_test.exe",
+      "returncode": 0,
+      "sha256": "d6c858cae87d008a6281190a23dfd714fd129d51812b034abbe8def246591171"
+    },
+    {
+      "target": "gpu_light_transport_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_light_transport_driver_test.exe",
+      "returncode": 0,
+      "sha256": "4457d965b43d781d0cac64b9567e1f02fa786343f11364a2dd4217a61b264ea2"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_relight_snapshot_driver_test",
+      "args": [
+        "--gl33"
+      ],
+      "exe": "build/desktop-msvc/Release/gpu_relight_snapshot_driver_test.exe",
+      "returncode": 0,
+      "sha256": "246a70aa642c9ff8c8c4f001546528f5801068a34fea117f9b022b4b990dd07d"
+    },
+    {
+      "target": "gpu_fluid_column_scan_test",
+      "args": [],
+      "exe": "build/desktop-msvc/Release/gpu_fluid_column_scan_test.exe",
+      "returncode": 0,
+      "sha256": "b3f8e8ff99174f5714dc9b5a531f96cb10486ad61ccc1978737721f2bb30bbd5"
+    }
+  ],
+  "source_sha256": "362ad6c3227d4749676b36f470ee70644087164f31e35a8e130595c6cedfc73d",
+  "source_sha256_raw": {
+    "src/App/Platform/WindowsMemoryCheckpoint.h": "c743ab9aa3c6fd239f87af705ce88c2615151a6ed12ebd83199f1aae619ec115",
+    "src/Core/Memory/WindowsPlatformResources.h": "ff97ec23b8aa3799cad7bd9d93dd773962d857b6b789aa37933a971837f46f69",
+    "src/Core/Memory/WindowsSlotStorage.h": "9564cf5426f7ff0f41402bef0c0378193e343ee3e89ec1a22c6c1b5247ee36b3",
+    "src/Test/WindowsIoResourceFixture.h": "de6cf0836be7c6fdb27371d14fdcccd832855dd9fdd78dcc5006a1e453558f0a"
+  },
+  "desktop_exe_sha256": "a3d9330ee86e8853aaf5970b2a31d20901dfae3f3d66c33b680be5e0e87c726f",
+  "config_bytes_restored": true,
+  "completed_packages": "23/42",
+  "whole_runtime_complete": false,
+  "full_S0_S6": "OPEN",
+  "artifact_sha256": {
+    "build/desktop-msvc/s4-platform-resources-verified-provenance.json": "b199a0713b84edd34767b7fa29646ea8453e119ae6bbe2ba798496d9c0fc8126",
+    "build/desktop-msvc/s4-platform-resources-verified-frozen-source.json": "7789d8b9395b89ec142fa50c4b0d5db0e84e9440b959ed4ebeb1501220c82eee",
+    "build/desktop-msvc/s4-platform-resources-verified-regressions.json": "31b4cb16fe578c37dc1c5fabbaf0e94ed2adbb8982758811d53b5cdc62164d99",
+    "build/desktop-msvc/s4-platform-resources-verified-related.json": "220540c0a6216fa7b6dfa491cf869433c7dde669cad033e0eb2f26d4c4e95afa",
+    "build/desktop-msvc/s4-platform-resources-verified-focused.json": "1e23b3f0328bce265abcc7c4251e3ed9cd223b019bec04c7ce5b81448231f3d7",
+    "build/desktop-msvc/s4-platform-resources-verified-io-owners.json": "c7b7f2062955dabd5dee832a5fc6ce1612aa8385f0143e5560ec89c95fde1ee3",
+    "build/desktop-msvc/Release/windows_module_tls_fixture.dll": "16a24723db6c428963b8b3e54260a795b8872b825536272fa9ec42eaef31a807",
+    "build/desktop-msvc/s4-handle-snapshot-probe2.log": "87a5321b31e1d5ec1fbbe4d788e5bb7b180ed49f4bc1e3e0d33ae28d035c255d",
+    "build/desktop-msvc/s4-current-handle-probe.log": "a1b05105ad3790b768d8f46603938a7aec2b73d364d1118b1637c58b33e1fd34",
+    "build/desktop-msvc/s4-platform-resources-full-native/desktop-normal-shutdown.json": "4563aafb255b160268dbc0369d7cf750ba8fe8ae4017c081cda826b1f1232e45",
+    "build/desktop-msvc/s4-platform-resources-provenance.json": "ac65faa3166b2ab0903fcfcee2c518a0704477dd3f56c2ec722553f7c2c49616",
+    "build/desktop-msvc/s4-platform-resources-full-native/route.json": "f01a7f004f0d3c73f8eaea52c1447b1de522123fae22615bbaba9a5ca9fa59f4",
+    "build/desktop-msvc/s4-platform-resources-flat-native/desktop-normal-shutdown.json": "9a437424dab51220c27f01921faf8a30be1a01240635873122beec9ba421c17b",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/smoke-verdict.json": "e22c1929acc8ebca4a54b06571dc88da9450059d029090ea6168ca5850b667c5",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/flight_sim_report.json": "c222f55f8fe0879a81490b05245e3635451f97d7a896c67a10b63cbe9059307d",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/desktop-normal-shutdown.json": "b552d5c47eb68a476958ef4e7ecd5c75e561979caee7bb1aaf017bc0d4e83293",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/legacy-gates.json": "3e2b38521bb568d870fc259b159ccfaa84747209a72dbc34c3c6972fe9d27da8",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/route.json": "395e982d9b73e687de27b7b52ed2f7f169e6e4b06eb69bb3ce000b8a16d65cd5",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/runner.log": "432bc2d24cf2ccfee1154538d78689c91f1965f246587295e2962b03d03cea3b",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93",
+    "build/desktop-msvc/s4-platform-resources-verified-flat-native/config.flat-publication.json": "eed6f890920b2a1bb96c657e92b39690b4694b017cc4a7111dd2c0a0e2e583c6",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/smoke-verdict.json": "0fbaafff50f00a4cfacb7b31fca545de3dae8044879ac76a9ac318536d0e9022",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/flight_sim_report.json": "d09e58d06c6fff2e1fa4c044c50d2ff3fedb29380395063b34d32a10ec4a845c",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/desktop-normal-shutdown.json": "8026391fc9a31659aac3cb9bb0e53ef2ca0e592bc35d44247f4ecdfeec28fa77",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/legacy-gates.json": "661672fd3ebfe16859b8621ca21200609c1dcb70adddc5f6dba7dcf6111118f3",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/route.json": "f06906cd14b3d0af73b4d2d972500dbfe21c9dcf82493e1e6b430c2d97cf1b05",
+    "build/desktop-msvc/s4-platform-resources-verified-full-native/runner.log": "485ab5423a4077c19e2ba29151b11acfee4564d6a9b5e6f826c267e3a02fb54b",
+    "build/desktop-msvc/s4-platform-resources-verified-full-config-before.bin": "b6cfe0701bcf00c2433cc0aaad85951fbe588abd24949fe59761d0369962fd93"
+  }
+}
