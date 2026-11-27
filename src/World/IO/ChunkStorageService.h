@@ -89,6 +89,10 @@ public:
   void PrepareHighestChunkSliceIndex(const std::string &worldFolder,
                                     const IoCodecProbe *probe = nullptr) const;
   static constexpr size_t kMaxCachedDiskIndexes = 4;
+  static constexpr size_t kMaxDirtyDiskColumns = 256;
+  // Limits stale backing only. A compatible column with more live slices
+  // remains readable; deleting from it retires its folder cache instead.
+  static constexpr size_t kMaxDirtyDiskSliceSlots = kMaxDirtyDiskColumns * 64;
   IoDiskIndexStorage InspectDiskIndexStorage() const;
   bool RemoveChunkSliceFromDisk(const std::string &worldFolder,
                                 glm::ivec3 chunkCoord,
@@ -198,8 +202,16 @@ private:
         slice_cys;
     std::unordered_set<DiskTerrainColumnKey, DiskTerrainColumnKeyHash>
         dirty_columns;
+    size_t dirty_slice_slots{0};
 
     void RecordSlice(DiskTerrainColumnKey column, int cy);
+    bool MarkDirty(DiskTerrainColumnKey column);
+  };
+
+  struct DiskColumnEvidence
+  {
+    int highest{kNoChunkSliceOnDisk};
+    bool slice_present{false};
   };
 
   IUChunkSerializer &MutableSerializer(ChunkDiskFormat format);
@@ -213,9 +225,11 @@ private:
                                    IoCodecStorage *directory_peak = nullptr) const;
   std::vector<int> ScanDiskColumnSlices(const std::string &worldFolder,
                                       glm::ivec3 groundCoord) const;
-  void RefreshDiskColumnIndex(const std::string &worldFolder,
+  bool RefreshDiskColumnIndex(const std::string &worldFolder,
                               glm::ivec3 groundCoord,
                               DiskTerrainColumnIndex &index) const;
+  DiskColumnEvidence LookupDiskColumn(const std::string &worldFolder,
+                                     glm::ivec3 coord, bool checkSlice) const;
 
   inline static std::atomic<uint64_t> NextKnownAirEvidenceIdentity{1};
   uint64_t KnownAirEvidenceIdentity{NextKnownAirEvidenceIdentity.fetch_add(1)};

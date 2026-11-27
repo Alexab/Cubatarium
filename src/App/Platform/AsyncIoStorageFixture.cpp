@@ -548,6 +548,87 @@ struct AsyncIoStorageProbe
             {"packed_slices", joined.slices}, {"packed_slice_bytes", joined.slice_requested}};
   }
 
+  static nlohmann::json CheckDiskIndexHistory(const std::filesystem::path &root)
+  {
+    constexpr auto limit = UChunkStorageService::kMaxDirtyDiskColumns;
+    constexpr auto columns = limit + 64;
+    const auto folder = root.string();
+    const auto chunks = root / "chunks";
+    std::filesystem::create_directories(chunks);
+    UChunkStorageService storage;
+    const auto slice = [](size_t n) { return glm::ivec3(100 + static_cast<int>(n), -2, -4); };
+    const auto write = [](const std::filesystem::path &path) {
+      std::ofstream file(path);
+      file.put('0');
+      file.close();
+      Require(file.good(), "write an indexed physical filename");
+    };
+    const auto write_canonical = [&](glm::ivec3 coord) {
+      write(storage.ChunkFilePath(folder, coord, ChunkDiskFormat::Binary));
+    };
+    for (size_t n = 0; n < columns; ++n)
+      write_canonical(slice(n));
+    const glm::ivec3 alias(6, -3, 2);
+    write_canonical(alias);
+    write(chunks / "+06_-3_ 02.json");
+    storage.PrepareHighestChunkSliceIndex(folder);
+    const auto warm = storage.InspectDiskIndexStorage();
+    for (int n = 0; n < 16; ++n)
+      Require(storage.RemoveChunkSliceFromDisk(folder, {-10 - n, -2, -4}), "remove an absent slice");
+    const auto absent = storage.InspectDiskIndexStorage();
+    Require(absent.dirty == 0 && absent.requested == warm.requested,
+            "absent cleanup adds no indexed history");
+    const glm::ivec3 delayed(-40, -2, -4);
+    write_canonical(delayed);
+    Require(storage.RemoveChunkSliceFromDisk(folder, delayed), "remove a file before its save acknowledgement");
+    storage.RecordChunkSliceSaved(folder, delayed);
+    Require(storage.InspectDiskIndexStorage().requested == warm.requested &&
+                storage.IsChunkSliceAbsentOnDisk(folder, delayed),
+            "a late save acknowledgement cannot put a removed slice back into the index");
+    Require(storage.RemoveChunkSliceFromDisk(folder, alias) &&
+                storage.GetHighestChunkSliceOnDisk(folder, alias) == alias.y &&
+                !storage.IsChunkSliceAbsentOnDisk(folder, alias) &&
+                !storage.ReadKnownAbsentTerrainSlice(folder, alias),
+            "dirty refresh keeps an existing alias with noncanonical signed horizontal fields");
+
+    for (size_t n = 0; n < limit; ++n)
+      Require(storage.RemoveChunkSliceFromDisk(folder, slice(n)), "build bounded removal history");
+    auto successor = slice(0);
+    successor.y = 3;
+    write_canonical(successor);
+    storage.RecordChunkSliceSaved(folder, successor);
+    const auto dirty = storage.InspectDiskIndexStorage();
+    Require(dirty.dirty == limit && dirty.dirty_slice_slots == limit && dirty.folders == 1,
+            "a committed replacement leaves the old dirty backing charge exact");
+    Require(storage.RemoveChunkSliceFromDisk(folder, slice(limit)) && storage.InspectDiskIndexStorage().folders == 0,
+            "the next dirty column retires the folder cache");
+    Require(storage.GetHighestChunkSliceOnDisk(folder, slice(1)) == kNoChunkSliceOnDisk &&
+                storage.GetHighestChunkSliceOnDisk(folder, successor) == successor.y &&
+                storage.GetHighestChunkSliceOnDisk(folder, alias) == alias.y &&
+                !storage.IsChunkSliceAbsentOnDisk(folder, slice(columns - 1)),
+            "rebuild recovers saved, missing and legacy slices exactly");
+    const auto rebuilt = storage.InspectDiskIndexStorage();
+    for (size_t n = limit + 1; n < columns - 1; ++n)
+    {
+      const auto coord = slice(n);
+      Require(storage.RemoveChunkSliceFromDisk(folder, coord) && storage.IsChunkSliceAbsentOnDisk(folder, coord),
+              "consume a removal and release its slice backing");
+    }
+    const auto compacted = storage.InspectDiskIndexStorage();
+    Require(compacted.folders == 1 && compacted.columns == 3 && compacted.dirty == 0 &&
+                compacted.dirty_slice_slots == 0 && compacted.bucket_slots < rebuilt.bucket_slots &&
+                compacted.requested < rebuilt.requested &&
+                !storage.IsChunkSliceAbsentOnDisk(folder, successor) && !storage.IsChunkSliceAbsentOnDisk(folder, alias),
+            "bucket compaction releases history while leaving live rows usable");
+    return {{"status", "PASS"}, {"absent_cleanup_requests", absent.requested - warm.requested},
+            {"dirty_column_limit", limit}, {"dirty_slice_slot_limit", UChunkStorageService::kMaxDirtyDiskSliceSlots},
+            {"observed_dirty_slots", dirty.dirty_slice_slots}, {"eviction_reloads_committed_successor", true},
+            {"noncanonical_alias_visible", true}, {"delayed_save_ack_ignored", true},
+            {"rebuilt_requests", rebuilt.requested},
+            {"compacted_requests", compacted.requested}, {"rebuilt_buckets", rebuilt.bucket_slots},
+            {"compacted_buckets", compacted.bucket_slots}, {"live_after_compaction", compacted.columns}};
+  }
+
   static nlohmann::json CheckJoinedExecution(const std::string &folder, const glm::ivec3 &coord,
                                              UChunkStorageService &storage, UBlockRegistry &registry)
   {
@@ -1416,6 +1497,7 @@ struct AsyncIoStorageProbe
             {"joined_execution", CheckJoinedExecution(folder, coord, storage, registry)},
             {"load_credits", CheckLoadCredits(folder, coord, storage, registry)},
             {"index_warmup", CheckIndexWarmup(root / "index-warmup", registry)},
+            {"disk_index_history", CheckDiskIndexHistory(root / "index-history")},
             {"binary_read_envelope", CheckBinaryReadEnvelope(root / "binary-read-envelope", registry)},
             {"json_cancelled", CheckJsonAndCancellation(folder, world, registry)},
             {"json_streaming", CheckStreamingJson(root / "json-streaming", registry)},
